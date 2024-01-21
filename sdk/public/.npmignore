@@ -1,0 +1,10 @@
+src/
+scripts/
+node_modules/
+.git/
+.turbo/
+.env
+test/
+**/*.tsbuildinfo
+tsconfig.json
+tsconfig.*.json

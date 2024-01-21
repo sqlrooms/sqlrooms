@@ -1,0 +1,20 @@
+{
+  "name": "@flowmapcity/utils",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "license": "MIT",
+  "scripts": {
+    "build": "tsc",
+    "test": "jest",
+    "test:watch": "jest --watch"
+  },
+  "dependencies": {
+    "seedrandom": "^3.0.5"
+  },
+  "peerDependencies": {
+    "d3-time-format": "*",
+    "dayjs": "*"
+  }
+}

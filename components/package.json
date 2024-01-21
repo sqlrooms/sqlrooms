@@ -1,0 +1,16 @@
+{
+  "name": "@flowmapcity/components",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {},
+  "peerDependencies": {
+    "@chakra-ui/icon": "*",
+    "@chakra-ui/react": "*"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}

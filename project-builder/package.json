@@ -1,0 +1,24 @@
+{
+  "name": "@flowmapcity/project-builder",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "@flowmapcity/duckdb": "*",
+    "@flowmapcity/components": "*",
+    "@flowmapcity/project-config": "*"
+  },
+  "peerDependencies": {
+    "@chakra-ui/react": "*",
+    "@chakra-ui/icons": "*",
+    "@uwdata/mosaic-sql": "*",
+    "react": "*",
+    "immer": "*",
+    "zustand": "*"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}

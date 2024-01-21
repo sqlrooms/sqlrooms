@@ -1,0 +1,830 @@
+{
+  "$id": "https://flowmap.city/schemas/ProjectConfig.json",
+  "title": "ProjectConfig",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "number",
+      "const": 1,
+      "default": 1,
+      "description": "Config version, currently 1."
+    },
+    "title": {
+      "type": "string",
+      "default": "Untitled project",
+      "description": "Project title."
+    },
+    "description": {
+      "type": "string",
+      "description": "Project description."
+    },
+    "dataSources": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/DataSource"
+      },
+      "default": [],
+      "description": "Data sources. Each data source must have a unique tableName."
+    },
+    "views": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ViewConfig"
+      },
+      "default": [],
+      "description": "Views are data representations or various configuration panels."
+    },
+    "charts": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/ChartConfig"
+      }
+    },
+    "layout": {
+      "$ref": "#/definitions/LayoutConfig",
+      "default": {
+        "type": "mosaic",
+        "nodes": "main-view"
+      },
+      "description": "Layout specifies how views are arranged on the screen."
+    }
+  },
+  "additionalProperties": false,
+  "description": "Project configuration.",
+  "definitions": {
+    "ViewConfig": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FlowmapViewConfig"
+        }
+      ],
+      "description": "View configuration."
+    },
+    "BasemapSettings": {
+      "anyOf": [
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean",
+              "default": true
+            },
+            "opacity": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "default": 50
+            },
+            "mapStyle": {
+              "type": "string",
+              "enum": [
+                "default",
+                "standard",
+                "dark",
+                "light",
+                "streets",
+                "outdoors",
+                "satellite",
+                "satelliteStreets",
+                "navigationDay",
+                "navigationNight"
+              ],
+              "default": "default"
+            },
+            "accessToken": {
+              "type": "string"
+            }
+          },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "$ref": "#/definitions/BasemapSettings/anyOf/0/properties/enabled"
+            },
+            "opacity": {
+              "$ref": "#/definitions/BasemapSettings/anyOf/0/properties/opacity"
+            },
+            "mapStyle": {
+              "type": "string",
+              "const": "custom"
+            },
+            "accessToken": {
+              "$ref": "#/definitions/BasemapSettings/anyOf/0/properties/accessToken"
+            },
+            "mapStyleUrl": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "mapStyle",
+            "mapStyleUrl"
+          ],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "MapViewport": {
+      "type": "object",
+      "properties": {
+        "latitude": {
+          "type": "number",
+          "default": 0
+        },
+        "longitude": {
+          "type": "number",
+          "default": 0
+        },
+        "zoom": {
+          "type": "number",
+          "default": 0.5
+        },
+        "pitch": {
+          "type": "number",
+          "default": 0
+        },
+        "bearing": {
+          "type": "number",
+          "default": 0
+        }
+      },
+      "additionalProperties": false,
+      "description": "Map viewport configuration."
+    },
+    "FlowmapSettings": {
+      "type": "object",
+      "properties": {
+        "animationEnabled": {
+          "type": "boolean",
+          "description": "Whether to use animation to show flow directions.",
+          "default": false
+        },
+        "fadeEnabled": {
+          "type": "boolean",
+          "description": "Whether to fade out flows with smaller magnitudes.",
+          "default": true
+        },
+        "fadeAmount": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "The amount of fading out for flows with smaller magnitudes.",
+          "default": 50
+        },
+        "fadeOpacityEnabled": {
+          "type": "boolean",
+          "description": "Whether to use opacity to fade out flows.",
+          "default": false
+        },
+        "locationsEnabled": {
+          "type": "boolean",
+          "description": "Whether to show locations.",
+          "default": true
+        },
+        "locationTotalsEnabled": {
+          "type": "boolean",
+          "description": "Whether to show location totals.",
+          "default": true
+        },
+        "clusteringEnabled": {
+          "type": "boolean",
+          "description": "Whether to cluster locations.",
+          "default": true
+        },
+        "clusteringAuto": {
+          "type": "boolean",
+          "description": "Whether to automatically choose the clustering level depending on the map zoom level.",
+          "default": true
+        },
+        "clusteringLevel": {
+          "type": "number",
+          "description": "Clustering level for manual clustering."
+        },
+        "darkMode": {
+          "type": "boolean",
+          "default": true,
+          "description": "Whether to use dark mode for the base map and the flow map.  The color scheme will be reversed if dark mode is enabled."
+        },
+        "colorScheme": {
+          "anyOf": [
+            {
+              "type": "string",
+              "enum": [
+                "Default",
+                "Alt",
+                "Alt2",
+                "Pl2",
+                "Pl3",
+                "Blues",
+                "BluGrn",
+                "BluYl",
+                "BrwnYl",
+                "BuGn",
+                "BuPu",
+                "Burg",
+                "BurgYl",
+                "Cool",
+                "DarkMint",
+                "Emrld",
+                "GnBu",
+                "Grayish",
+                "Greens",
+                "Greys",
+                "Inferno",
+                "Magenta",
+                "Magma",
+                "Mint",
+                "Oranges",
+                "OrRd",
+                "OrYel",
+                "Peach",
+                "Plasma",
+                "PinkYl",
+                "PuBu",
+                "PuBuGn",
+                "PuRd",
+                "Purp",
+                "Purples",
+                "PurpOr",
+                "RdPu",
+                "RedOr",
+                "Reds",
+                "Sunset",
+                "SunsetDark",
+                "Teal",
+                "TealGrn",
+                "Viridis",
+                "Warm",
+                "YlGn",
+                "YlGnBu",
+                "YlOrBr",
+                "YlOrRd"
+              ]
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          ],
+          "description": "Color scheme for flow map. Can be either one of the predefined ones or a list of hex colors.",
+          "default": "Default"
+        },
+        "highlightColor": {
+          "type": "string",
+          "default": "orange",
+          "description": "Color for highlighted flows."
+        },
+        "maxTopFlowsDisplayNum": {
+          "type": "number",
+          "description": "Maximum number of top flows to display at any time. If exceeded, only the flows with the top magnitudes will be displayed",
+          "default": 5000
+        }
+      },
+      "additionalProperties": false
+    },
+    "FlowmapLocationFilterMode": {
+      "type": "string",
+      "enum": [
+        "ALL",
+        "INCOMING",
+        "OUTGOING",
+        "BETWEEN"
+      ]
+    },
+    "FlowmapAttrFilterValue": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "ATTR"
+        },
+        "attr": {
+          "type": "string"
+        },
+        "value": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "type",
+        "attr",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "FlowmapLocationFilterValue": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "LOCATIONS"
+        },
+        "value": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          }
+        },
+        "mode": {
+          "$ref": "#/definitions/FlowmapLocationFilterMode"
+        }
+      },
+      "required": [
+        "type",
+        "value",
+        "mode"
+      ],
+      "additionalProperties": false
+    },
+    "FlowmapTimeFilterValue": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "TIME"
+        },
+        "value": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        }
+      },
+      "required": [
+        "type",
+        "value"
+      ],
+      "additionalProperties": false
+    },
+    "FlowmapFilterValue": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FlowmapAttrFilterValue"
+        },
+        {
+          "$ref": "#/definitions/FlowmapLocationFilterValue"
+        },
+        {
+          "$ref": "#/definitions/FlowmapTimeFilterValue"
+        }
+      ]
+    },
+    "FlowmapFilterState": {
+      "type": "object",
+      "properties": {
+        "selectedLocations": {
+          "type": "array",
+          "items": {
+            "type": [
+              "string",
+              "number"
+            ]
+          }
+        },
+        "locationFilterMode": {
+          "$ref": "#/definitions/FlowmapLocationFilterMode"
+        },
+        "selectedTimeRange": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": [
+            {
+              "type": "string",
+              "format": "date-time"
+            },
+            {
+              "type": "string",
+              "format": "date-time"
+            }
+          ]
+        },
+        "attrs": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/definitions/FlowmapAttrFilterValue"
+          }
+        },
+        "fixClusterZoom": {
+          "type": "number",
+          "description": "If set, cluster zoom level will be fixed."
+        }
+      },
+      "additionalProperties": false
+    },
+    "FlowmapColumnMapping": {
+      "type": "object",
+      "properties": {
+        "locations": {
+          "type": "object",
+          "properties": {
+            "tableName": {
+              "type": "string",
+              "pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,62}$"
+            },
+            "columns": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "string"
+              }
+            },
+            "attributes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "numeric",
+                      "string",
+                      "date"
+                    ]
+                  },
+                  "column": {
+                    "type": "string",
+                    "pattern": "^[a-zA-Z_][a-zA-Z0-9_]{0,62}$"
+                  },
+                  "label": {
+                    "type": "string",
+                    "minLength": 2,
+                    "maxLength": 128,
+                    "pattern": "^.*$"
+                  },
+                  "expression": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 128
+                  }
+                },
+                "required": [
+                  "column",
+                  "label",
+                  "expression"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "columns"
+          ],
+          "additionalProperties": false,
+          "description": "Column mapping for locations."
+        },
+        "flows": {
+          "type": "object",
+          "properties": {
+            "tableName": {
+              "$ref": "#/definitions/FlowmapColumnMapping/properties/locations/properties/tableName"
+            },
+            "columns": {
+              "$ref": "#/definitions/FlowmapColumnMapping/properties/locations/properties/columns"
+            },
+            "attributes": {
+              "$ref": "#/definitions/FlowmapColumnMapping/properties/locations/properties/attributes"
+            }
+          },
+          "required": [
+            "columns"
+          ],
+          "additionalProperties": false,
+          "description": "Column mapping for flows."
+        },
+        "numericTimeFormat": {
+          "type": "string",
+          "enum": [
+            "sec",
+            "ms"
+          ]
+        }
+      },
+      "required": [
+        "locations",
+        "flows"
+      ],
+      "additionalProperties": false,
+      "description": "Column mapping for flowmap view."
+    },
+    "FlowmapViewConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "od-flowmap"
+        },
+        "id": {
+          "type": "string",
+          "description": "Unique view ID."
+        },
+        "columnMapping": {
+          "$ref": "#/definitions/FlowmapColumnMapping"
+        },
+        "filter": {
+          "$ref": "#/definitions/FlowmapFilterState"
+        },
+        "viewport": {
+          "$ref": "#/definitions/MapViewport",
+          "default": {
+            "latitude": 0,
+            "longitude": 0,
+            "zoom": 0.5,
+            "pitch": 0,
+            "bearing": 0
+          },
+          "description": "Map viewport configuration."
+        },
+        "settings": {
+          "$ref": "#/definitions/FlowmapSettings",
+          "default": {
+            "darkMode": true,
+            "fadeAmount": 50,
+            "locationsEnabled": true,
+            "locationTotalsEnabled": true,
+            "locationLabelsEnabled": false,
+            "animationEnabled": false,
+            "clusteringEnabled": true,
+            "fadeEnabled": true,
+            "fadeOpacityEnabled": false,
+            "clusteringAuto": true,
+            "colorScheme": "Default",
+            "highlightColor": "orange",
+            "maxTopFlowsDisplayNum": 5000
+          }
+        },
+        "basemap": {
+          "$ref": "#/definitions/BasemapSettings",
+          "default": {
+            "opacity": 50,
+            "enabled": true,
+            "mapStyle": "default"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "id",
+        "columnMapping"
+      ],
+      "additionalProperties": false
+    },
+    "LayoutConfig": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MosaicLayoutConfig"
+        }
+      ]
+    },
+    "MosaicLayoutConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "mosaic"
+        },
+        "nodes": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/MosaicLayoutNode"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "pinned": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "fixed": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/MosaicLayoutConfig/properties/pinned/items"
+          }
+        }
+      },
+      "required": [
+        "type",
+        "nodes"
+      ],
+      "additionalProperties": false
+    },
+    "MosaicLayoutNode": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/MosaicLayoutConfig/properties/pinned/items"
+        },
+        {
+          "$ref": "#/definitions/MosaicLayoutParent"
+        }
+      ]
+    },
+    "MosaicLayoutParent": {
+      "type": "object",
+      "properties": {
+        "direction": {
+          "type": "string",
+          "enum": [
+            "row",
+            "column"
+          ]
+        },
+        "splitPercentage": {
+          "type": "number"
+        },
+        "first": {
+          "$ref": "#/definitions/MosaicLayoutNode"
+        },
+        "second": {
+          "$ref": "#/definitions/MosaicLayoutNode"
+        }
+      },
+      "required": [
+        "direction",
+        "first",
+        "second"
+      ],
+      "additionalProperties": false
+    },
+    "ChartConfig": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/VgPlotChartConfig"
+        }
+      ],
+      "description": "Chart configuration."
+    },
+    "VgPlotChartConfig": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "vgplot",
+          "description": "Chart type."
+        },
+        "title": {
+          "type": "string",
+          "description": "Chart title."
+        },
+        "description": {
+          "type": "string",
+          "description": "Chart description."
+        },
+        "spec": {
+          "allOf": [
+            {
+              "type": "object",
+              "properties": {
+                "style": {
+                  "type": "object",
+                  "additionalProperties": {}
+                }
+              }
+            },
+            {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          ],
+          "description": "Mosaic vgplot specification for a chart. See https://uwdata.github.io/mosaic/vgplot/"
+        }
+      },
+      "required": [
+        "type",
+        "spec"
+      ],
+      "additionalProperties": false
+    },
+    "VgPlotSpec": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/VgPlotChartConfig/properties/spec/allOf/0"
+        },
+        {
+          "$ref": "#/definitions/VgPlotChartConfig/properties/spec/allOf/1"
+        }
+      ],
+      "description": "Mosaic vgplot specification for a chart. See https://uwdata.github.io/mosaic/vgplot/"
+    },
+    "DataSource": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/FileDataSource"
+        },
+        {
+          "$ref": "#/definitions/UrlDataSource"
+        },
+        {
+          "$ref": "#/definitions/SqlQueryDataSource"
+        }
+      ],
+      "description": "Data source specification."
+    },
+    "BaseDataSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "enum": [
+            "file",
+            "url",
+            "sql"
+          ]
+        },
+        "tableName": {
+          "type": "string",
+          "description": "Unique table name used to store the data loaded from the data source."
+        }
+      },
+      "required": [
+        "type",
+        "tableName"
+      ],
+      "additionalProperties": false
+    },
+    "UrlDataSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "url"
+        },
+        "tableName": {
+          "$ref": "#/definitions/BaseDataSource/properties/tableName"
+        },
+        "url": {
+          "type": "string",
+          "description": "URL to fetch data from. Currently only CSV and Parquet files are supported."
+        }
+      },
+      "required": [
+        "type",
+        "tableName",
+        "url"
+      ],
+      "additionalProperties": false
+    },
+    "SqlQueryDataSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "sql"
+        },
+        "tableName": {
+          "$ref": "#/definitions/BaseDataSource/properties/tableName"
+        },
+        "sqlQuery": {
+          "type": "string",
+          "description": "SQL query to execute."
+        }
+      },
+      "required": [
+        "type",
+        "tableName",
+        "sqlQuery"
+      ],
+      "additionalProperties": false
+    },
+    "FileDataSource": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "type": "string",
+          "const": "file"
+        },
+        "tableName": {
+          "$ref": "#/definitions/BaseDataSource/properties/tableName"
+        },
+        "fileName": {
+          "type": "string",
+          "description": "Currently only CSV and Parquet files are supported."
+        }
+      },
+      "required": [
+        "type",
+        "tableName",
+        "fileName"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}
