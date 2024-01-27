@@ -1,7 +1,6 @@
-import {Button, Flex, List, ListItem, useToast} from '@chakra-ui/react';
-import {useDuckConn} from '@flowmapcity/duckdb';
+import {Button, Flex, List, ListItem} from '@chakra-ui/react';
 import {TableCellsIcon} from '@heroicons/react/24/solid';
-import {FC, useCallback} from 'react';
+import {FC} from 'react';
 type Props = {
   schema: string;
   tableNames: string[];
@@ -15,11 +14,11 @@ type Props = {
 };
 const TablesList: FC<Props> = (props) => {
   const {
-    schema = 'main',
+    // schema = 'main',
     tableNames,
     selectedTable,
     onSelect,
-    onChange,
+    // onChange,
     renderTableButton = (tableName: string, onSelect: Props['onSelect']) => (
       <Button
         width="100%"
@@ -43,38 +42,38 @@ const TablesList: FC<Props> = (props) => {
       </Button>
     ),
   } = props;
-  const {conn} = useDuckConn();
+  // const toast = useToast();
+  // const {conn} = useDuckConn();
 
-  const toast = useToast();
-  const onError = useCallback(
-    (message: string) => {
-      toast.closeAll();
-      toast({
-        description: message,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-      });
-    },
-    [toast],
-  );
+  // const onError = useCallback(
+  //   (message: string) => {
+  //     toast.closeAll();
+  //     toast({
+  //       description: message,
+  //       status: 'error',
+  //       duration: 5000,
+  //       isClosable: true,
+  //     });
+  //   },
+  //   [toast],
+  // );
 
-  const handleDeleteTable = useCallback(
-    async (table: string) => {
-      if (!conn) return;
-      const confirm = window.confirm(
-        `Are you sure you want to delete table "${table}"?`,
-      );
-      if (!confirm) return;
-      try {
-        await conn.query(`DROP VIEW ${schema}.${table}`);
-        onChange?.();
-      } catch (e) {
-        onError(`Error deleting table "${table}"`);
-      }
-    },
-    [conn, schema, onChange, onError],
-  );
+  // const handleDeleteTable = useCallback(
+  //   async (table: string) => {
+  //     if (!conn) return;
+  //     const confirm = window.confirm(
+  //       `Are you sure you want to delete table "${table}"?`,
+  //     );
+  //     if (!confirm) return;
+  //     try {
+  //       await conn.query(`DROP VIEW ${schema}.${table}`);
+  //       onChange?.();
+  //     } catch (e) {
+  //       onError(`Error deleting table "${table}"`);
+  //     }
+  //   },
+  //   [conn, schema, onChange, onError],
+  // );
 
   return (
     <Flex height="100%" bg="gray.800" px="2" py="4">

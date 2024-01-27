@@ -1,8 +1,10 @@
-import {TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons';
+import {DownloadIcon, TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons';
 import {
   Badge,
   Box,
+  Button,
   Flex,
+  Icon,
   IconButton,
   Input,
   Select,
@@ -42,11 +44,13 @@ export type DataTablePaginatedProps<Data extends object> = {
   pageCount?: number | undefined;
   numRows?: number | undefined;
   isFetching?: boolean;
+  isExporting?: boolean;
   // error?: any;
   pagination?: PaginationState;
   sorting?: SortingState;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
+  onExport?: () => void;
 };
 
 const fetchingKeyframes = keyframes`
@@ -65,6 +69,8 @@ export default function DataTablePaginated<Data extends object>({
   sorting,
   onPaginationChange,
   onSortingChange,
+  onExport,
+  isExporting,
   isFetching,
 }: // error,
 DataTablePaginatedProps<Data>) {
@@ -174,6 +180,9 @@ DataTablePaginatedProps<Data>) {
                           opacity="0.3"
                           fontSize={9}
                           variant="outline"
+                          maxWidth={'70px'}
+                          textOverflow="ellipsis"
+                          overflow="hidden"
                         >{`${meta?.type}`}</Badge>
                       </Flex>
                     </Th>
@@ -342,6 +351,17 @@ DataTablePaginatedProps<Data>) {
             <Box color="white" fontWeight="normal" fontSize="xs">
               {`${formatCount(numRows)} rows`}
             </Box>
+          ) : null}
+
+          {onExport ? (
+            <Button
+              isLoading={isExporting}
+              size={'xs'}
+              leftIcon={<Icon as={DownloadIcon} h={5} w={5} />}
+              onClick={onExport}
+            >
+              Export CSV
+            </Button>
           ) : null}
         </Flex>
       </TableContainer>

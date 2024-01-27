@@ -16,6 +16,7 @@ import {
   ProjectPanelTypes,
   SqlQueryDataSource,
 } from '@flowmapcity/project-config';
+import {TableCellsIcon} from '@heroicons/react/24/solid';
 import {createContext, FC, useCallback, useContext} from 'react';
 import {PiFileSql} from 'react-icons/pi';
 
@@ -25,6 +26,7 @@ import {FolderIcon} from '@heroicons/react/24/outline';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
+import TablesPanel from './TablesPanel';
 
 type Props = {
   // no props
@@ -121,7 +123,7 @@ const DataSourcesPanel: FC<Props> = () => {
               flexDir="column"
               display="flex"
               allowMultiple={true}
-              defaultIndex={[0, 1]}
+              defaultIndex={[0, 1, 2]}
             >
               <AccordionItem>
                 <AccordionButton px={0} gap={1}>
@@ -156,6 +158,21 @@ const DataSourcesPanel: FC<Props> = () => {
                   </AccordionPanel>
                 </AccordionItem>
               )}
+
+              <AccordionItem>
+                <AccordionButton px={0} gap={1}>
+                  <CustomAccordionIcon />
+                  <HStack color="gray.400">
+                    <TableCellsIcon width={16} height={16} />
+                    <Heading as="h3" fontSize="xs" textTransform="uppercase">
+                      TABLES
+                    </Heading>
+                  </HStack>
+                </AccordionButton>
+                <AccordionPanel pb={5} pt={1} paddingInline="5px">
+                  <TablesPanel />
+                </AccordionPanel>
+              </AccordionItem>
             </Accordion>
           </Flex>
         </>

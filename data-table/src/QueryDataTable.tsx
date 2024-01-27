@@ -1,6 +1,12 @@
 import {AppContext, SpinnerPane} from '@flowmapcity/components';
-import {escapeId, getColValAsNumber, useDuckConn} from '@flowmapcity/duckdb';
-import {useQuery, useQueryClient} from '@tanstack/react-query';
+import {
+  escapeId,
+  exportToCsv,
+  getColValAsNumber,
+  useDuckConn,
+} from '@flowmapcity/duckdb';
+import {genRandomStr} from '@flowmapcity/utils';
+import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {PaginationState, SortingState} from '@tanstack/table-core';
 import {FC, Suspense, useContext, useEffect, useMemo, useState} from 'react';
 import DataTablePaginated from './DataTablePaginated';
@@ -41,8 +47,9 @@ const QueryDataTable: FC<Props> = ({query}) => {
     },
     {
       staleTime: Infinity, // never refetch
-      suspense: true,
+      suspense: false,
       retry: false,
+      keepPreviousData: true,
     },
   );
 
@@ -66,13 +73,19 @@ const QueryDataTable: FC<Props> = ({query}) => {
     },
     {
       staleTime: Infinity, // never refetch
-      suspense: true,
+      suspense: false,
       keepPreviousData: true,
       retry: false,
     },
   );
 
   const arrowTableData = useArrowDataTable(dataQuery.data);
+
+  const exportMutation = useMutation(async () => {
+    if (!query) return;
+    await exportToCsv(query, `flowmapcity-export-${genRandomStr(5)}.csv`);
+  }, {});
+
   return (
     <DataTablePaginated
       {...arrowTableData}
@@ -84,6 +97,8 @@ const QueryDataTable: FC<Props> = ({query}) => {
       onPaginationChange={setPagination}
       sorting={sorting}
       onSortingChange={setSorting}
+      onExport={exportMutation.mutate}
+      isExporting={exportMutation.isLoading}
     />
   );
 };
