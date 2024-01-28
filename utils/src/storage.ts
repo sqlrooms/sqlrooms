@@ -4,7 +4,7 @@ import {postData} from './xhr';
 export async function getSignedFileUrl(
   params:
     | {fname: string; upload?: boolean}
-    | {projectId: string; fname: string; upload?: boolean},
+    | {projectId: string; fname: string; upload?: boolean; password?: string},
 ) {
   const {url: locationsUrl} = await postData({
     url: '/api/gen-signed-url',

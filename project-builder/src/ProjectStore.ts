@@ -71,6 +71,7 @@ export type ProjectState = {
   getLoadingProgress: () => TaskProgress | undefined;
   captureException: (exception: any, captureContext?: any) => void;
   projectId: string | undefined; // undefined if the project is new
+  password: string | undefined; // Password for protected published projects (needs to be sent to get access to data)
   projectFolder: string | undefined; // will be derived from project title, if not explicitly set
   projectConfig: ProjectConfig;
   projectPanels: Record<ProjectPanelTypes | string, ProjectPanelInfo>;
@@ -86,6 +87,7 @@ export type ProjectState = {
     project?: {id?: string; config: ProjectConfig};
     isReadOnly?: boolean;
     isPublic?: boolean;
+    password?: string;
     captureException?: (exception: any, captureContext?: any) => void;
   }) => Promise<void>;
   setProjectConfig: (config: ProjectConfig) => void;
@@ -173,6 +175,7 @@ const baseInitialValues = {
   },
   tasksProgress: {},
   projectId: undefined,
+  password: undefined,
   projectConfig: initialProjectConfig,
   projectFolder: undefined,
   projectPanels: DEFAULT_PROJECT_BUILDER_PANELS,
@@ -223,6 +226,7 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
               isPublic = false,
               isReadOnly = false,
               captureException,
+              password,
             } = opts ?? {};
 
             const {reset, addView, setLayout} = get();
@@ -247,6 +251,7 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
               projectConfig,
               lastSavedConfig: projectConfig,
               captureException: captureException ?? console.error,
+              password,
             });
 
             if (!project) {
@@ -757,6 +762,7 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
           const {
             isPublic: isPublicProject,
             projectId,
+            password,
             setProjectFileProgress,
             setTableRowCount,
             setTables,
@@ -799,7 +805,12 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
                   ds.type === DataSourceTypes.Enum.file
                     ? await getSignedFileUrl(
                         isPublicProject
-                          ? {projectId, fname: fileName, upload: false}
+                          ? {
+                              projectId,
+                              fname: fileName,
+                              upload: false,
+                              password,
+                            }
                           : {fname: fileName, upload: false},
                       )
                     : ds.url;

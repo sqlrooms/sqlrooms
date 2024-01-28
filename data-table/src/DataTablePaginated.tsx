@@ -224,7 +224,7 @@ DataTablePaginatedProps<Data>) {
                       <Td
                         key={cell.id}
                         isNumeric={meta?.isNumeric}
-                        fontSize="xs"
+                        fontSize="11px"
                         color="white"
                         borderRight="1px solid"
                         borderColor="gray.900"
