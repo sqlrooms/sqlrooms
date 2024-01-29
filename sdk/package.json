@@ -16,7 +16,7 @@
     "@flowmapcity/components": "*",
     "@flowmapcity/project-builder": "*",
     "@flowmapcity/project-config": "*",
-    "@sentry/react": "^7.86.0",
+    "@sentry/react": "^7.98.0",
     "maplibre-gl": "^3.6.2",
     "react-mosaic-component": "^5.3.0",
     "zod-validation-error": "^2.1.0"
