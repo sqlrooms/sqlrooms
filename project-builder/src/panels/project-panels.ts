@@ -43,13 +43,6 @@ export const DEFAULT_PROJECT_BUILDER_PANELS: Record<
     component: DataSourcesPanel,
     placement: 'sidebar',
   },
-  [ProjectPanelTypes.DATA_TABLES]: {
-    title: 'Data Tables',
-    // icon: CircleStackIcon,
-    icon: TableCellsIcon,
-    component: DataTablesPanel,
-    placement: 'sidebar',
-  },
   [ProjectPanelTypes.VIEW_CONFIGURATION]: {
     title: 'View Config',
     icon: AdjustmentsHorizontalIcon,
@@ -60,6 +53,13 @@ export const DEFAULT_PROJECT_BUILDER_PANELS: Record<
     title: 'Filter',
     icon: FunnelIcon,
     component: FiltersPanel,
+    placement: 'sidebar',
+  },
+  [ProjectPanelTypes.DATA_TABLES]: {
+    title: 'Data Tables',
+    // icon: CircleStackIcon,
+    icon: TableCellsIcon,
+    component: DataTablesPanel,
     placement: 'sidebar',
   },
   [ProjectPanelTypes.CHARTS]: {

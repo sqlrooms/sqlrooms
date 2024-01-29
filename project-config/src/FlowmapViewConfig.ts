@@ -61,7 +61,7 @@ export const FlowmapColorSchemeKey = z.enum([
 ]);
 export type FlowmapColorSchemeKey = z.infer<typeof FlowmapColorSchemeKey>;
 
-const DEFAULT_BASEMAP_OPACITY = 50;
+const DEFAULT_BASEMAP_OPACITY = 60;
 
 export const DEFAULT_BASEMAP_SETTINGS: BasemapSettings = {
   opacity: DEFAULT_BASEMAP_OPACITY,
@@ -144,7 +144,7 @@ export type MapViewport = z.infer<typeof MapViewport>;
 export const DEFAULT_COLOR_SCHEME = FlowmapColorSchemeKey.enum.Default;
 export const DEFAULT_FLOWMAP_SETTINGS = {
   darkMode: true,
-  fadeAmount: 50,
+  fadeAmount: 40,
   locationsEnabled: true,
   locationTotalsEnabled: true,
   locationLabelsEnabled: false,
