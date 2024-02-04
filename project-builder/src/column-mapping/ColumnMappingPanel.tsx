@@ -4,47 +4,30 @@ import {
   Button,
   Flex,
   Heading,
-  HStack,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Portal,
   Spacer,
   Text,
-  useDisclosure,
-  useToast,
   VStack,
+  useDisclosure,
 } from '@chakra-ui/react';
 import {AppContext} from '@flowmapcity/components';
-import {
-  DataTable,
-  DuckQueryError,
-  escapeId,
-  getAttributeColumnType,
-} from '@flowmapcity/duckdb';
-import {AttributeType, ColumnMapping} from '@flowmapcity/project-config';
-import {
-  convertToUniqueColumnOrTableName,
-  formatNumber,
-} from '@flowmapcity/utils';
-import {CodeBracketIcon} from '@heroicons/react/24/outline';
-import {ChevronDownIcon, PlusIcon} from '@heroicons/react/24/solid';
+import {DataTable} from '@flowmapcity/duckdb';
+import {ColumnMapping} from '@flowmapcity/project-config';
+import {formatNumber} from '@flowmapcity/utils';
+import {PlusIcon} from '@heroicons/react/24/solid';
 import {Select} from 'chakra-react-select';
 import {produce} from 'immer';
 import {FC, useContext, useMemo} from 'react';
 import {BsMagic} from 'react-icons/bs';
+import {MdOutlineSplitscreen} from 'react-icons/md';
 import {useProjectStore} from '../ProjectStateProvider';
 import {ColumnMappingValidationResult, ColumnSpec} from '../types';
 import AttributesColumnConfigurator from './AttributesColumnConfigurator';
-import autoSelectColumns from './autoSelectColumns';
 import ColumnMappingConfigurator from './ColumnMappingConfigurator';
 import {InputColumnOption} from './FieldSelect';
 import SuggestedFixModal from './SuggestedFixModal';
-import TableFieldLabel from './TableFieldLabel';
+import autoSelectColumns from './autoSelectColumns';
 
 type Props = {
-  isReadOnly?: boolean;
   columnMapping?: ColumnMapping;
   onChange: (columnMapping: ColumnMapping | undefined) => void;
   outputColumnSpecs: ColumnSpec[];
@@ -54,7 +37,6 @@ type Props = {
 
 const ColumnMappingPanel: FC<Props> = (props) => {
   const {
-    isReadOnly,
     validationResult,
     columnMapping,
     outputColumnSpecs,
@@ -62,6 +44,7 @@ const ColumnMappingPanel: FC<Props> = (props) => {
     onChange,
   } = props;
 
+  const isReadOnly = useProjectStore((state) => state.isReadOnly);
   const tables = useProjectStore((state) => state.tables);
   const tableRowCounts = useProjectStore((state) => state.tableRowCounts);
 
@@ -83,25 +66,21 @@ const ColumnMappingPanel: FC<Props> = (props) => {
   }, [dataTable?.columns]);
 
   const usedOutputColNames = useMemo(() => {
-    return Object.keys(columnMapping?.columns || {}).concat(
-      columnMapping?.attributes?.map((d) => d.column) || [],
-    );
-  }, [columnMapping?.attributes, columnMapping?.columns]);
+    return Object.keys(columnMapping?.columns || {})
+      .concat(columnMapping?.attributes?.map((d) => d.column) || [])
+      .concat(columnMapping?.partitionBy?.map((d) => d.column) || []);
+  }, [
+    columnMapping?.attributes,
+    columnMapping?.columns,
+    columnMapping?.partitionBy,
+  ]);
 
   const unusedInputColumns: Array<InputColumnOption> = useMemo(() => {
     if (!dataTable?.columns) return [];
-    const usedCols = Object.values(columnMapping?.columns || {}).concat(
-      columnMapping?.attributes?.map((d) => d.expression) || [],
-    );
     return inputTableColumns.filter(
-      (col) => !usedCols.includes((col as InputColumnOption).value),
+      (col) => !usedOutputColNames.includes((col as InputColumnOption).value),
     );
-  }, [
-    dataTable?.columns,
-    columnMapping?.columns,
-    columnMapping?.attributes,
-    inputTableColumns,
-  ]);
+  }, [dataTable?.columns, inputTableColumns, usedOutputColNames]);
 
   const handleSelectTable = (table: DataTable | null) => {
     if (!table) {
@@ -114,49 +93,6 @@ const ColumnMappingPanel: FC<Props> = (props) => {
       {tableName: table.tableName, columns: {}, attributes: []},
     );
     onChange(nextResult);
-  };
-  const {captureException} = useContext(AppContext);
-  const toast = useToast();
-  const handleAddAttribute = async (columnName: string) => {
-    if (!columnMapping?.tableName || !unusedInputColumns.length) return;
-
-    let type: AttributeType | undefined;
-    try {
-      type = await getAttributeColumnType(
-        columnMapping.tableName,
-        escapeId(columnName),
-      );
-    } catch (err) {
-      toast({
-        title: `Could not add attribute`,
-        description:
-          err instanceof DuckQueryError ? err.getMessageForUser() : `${err}`,
-        status: 'error',
-        duration: 5000,
-        isClosable: true,
-        position: 'top',
-      });
-      console.error(err);
-      captureException(err);
-      return;
-    }
-
-    onChange(
-      produce(columnMapping, (draft) => {
-        if (!draft.attributes) draft.attributes = [];
-        // TODO:
-        const newColName = convertToUniqueColumnOrTableName(
-          columnName,
-          usedOutputColNames,
-        );
-        draft.attributes.push({
-          label: columnName,
-          column: newColName,
-          expression: escapeId(columnName),
-          type,
-        });
-      }),
-    );
   };
 
   const handleSelectAttribute = (
@@ -175,14 +111,6 @@ const ColumnMappingPanel: FC<Props> = (props) => {
       } else {
         delete draft.columns[column];
       }
-    });
-    onChange(nextResult);
-  };
-
-  const handleAttrsChange = (attributes?: ColumnMapping['attributes']) => {
-    if (!columnMapping) return;
-    const nextResult = produce(columnMapping, (draft) => {
-      draft.attributes = attributes;
     });
     onChange(nextResult);
   };
@@ -297,72 +225,37 @@ const ColumnMappingPanel: FC<Props> = (props) => {
                 onSelect={handleSelectAttribute}
               />
               {allowCustomColumns && columnMapping?.tableName ? (
-                <>
-                  <Flex flexDir="column" gap="3" mt="3">
-                    {/*<Heading
-                      fontSize="xs"
-                      textTransform="uppercase"
-                      color="gray.400"
-                    >
-                      Additional Columns
-                    </Heading>
-                     <Text fontSize="xs">
-                      Add more columns to use as attributes
-                    </Text> */}
-
-                    {!isReadOnly ? (
-                      <Menu placement="bottom-end">
-                        <MenuButton
-                          as={Button}
-                          size="sm"
-                          variant="solid"
-                          color="white"
-                          rightIcon={<ChevronDownIcon width={15} height={15} />}
-                          // isDisabled={!unusedInputColumns.length}
-                        >
-                          <Flex justifyContent="center">
-                            <HStack>
-                              <PlusIcon width={15} height={15} />
-                              <Text>Add column</Text>
-                            </HStack>
-                          </Flex>
-                        </MenuButton>
-                        <Portal>
-                          <MenuList>
-                            {unusedInputColumns.map((column) => (
-                              <MenuItem
-                                fontSize="sm"
-                                key={column.value}
-                                color="white"
-                                onClick={() => handleAddAttribute(column.value)}
-                              >
-                                <TableFieldLabel
-                                  field={column.row}
-                                  showTypeBadge
-                                />
-                              </MenuItem>
-                            ))}
-                            <MenuItem
-                              icon={<CodeBracketIcon width="16px" />}
-                              fontSize="sm"
-                              color="white"
-                              isDisabled={true}
-                            >
-                              SQL expression
-                            </MenuItem>
-                          </MenuList>
-                        </Portal>
-                      </Menu>
-                    ) : null}
-                  </Flex>
+                <Flex flexDir="column" gap="8" mt="3" pb="1">
                   <AttributesColumnConfigurator
-                    isReadOnly={isReadOnly}
+                    mode="attributes"
+                    columnMapping={columnMapping}
+                    title="Additional columns"
+                    helpText={`Add more columns to the resulting flows table to
+                          enable filtering and grouping by them.`}
+                    buttonLabel="Add columns"
+                    buttonIcon={<PlusIcon width={15} height={15} />}
                     inputTableColumns={inputTableColumns}
                     usedOutputColNames={usedOutputColNames}
+                    unusedInputColumns={unusedInputColumns}
                     attributes={columnMapping?.attributes}
-                    onChange={handleAttrsChange}
+                    onChange={onChange}
                   />
-                </>
+
+                  <AttributesColumnConfigurator
+                    mode="partitionBy"
+                    columnMapping={columnMapping}
+                    title="Partition by"
+                    buttonLabel="Partition by"
+                    helpText={`Choose columns by which to partition the dataset into multiple 
+                      subsets, if you only want to look at one subset at a time.`}
+                    buttonIcon={<MdOutlineSplitscreen width={15} height={15} />}
+                    inputTableColumns={inputTableColumns}
+                    usedOutputColNames={usedOutputColNames}
+                    unusedInputColumns={unusedInputColumns}
+                    attributes={columnMapping?.partitionBy}
+                    onChange={onChange}
+                  />
+                </Flex>
               ) : null}
             </Flex>
           </VStack>

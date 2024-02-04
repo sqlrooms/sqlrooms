@@ -1,17 +1,8 @@
-import FieldSelect, {InputColumnOption} from './FieldSelect';
-import {
-  FormControl,
-  HStack,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Tooltip,
-  Tr,
-} from '@chakra-ui/react';
-import React, {FC, useCallback} from 'react';
-import {QuestionOutlineIcon} from '@chakra-ui/icons';
+import {FormControl, Table, Tbody, Td, Text, Tr} from '@chakra-ui/react';
+import {InfoBox} from '@flowmapcity/components';
+import {FC, useCallback} from 'react';
 import {ColumnSpec} from '../types';
+import FieldSelect, {InputColumnOption} from './FieldSelect';
 
 type Props = {
   isReadOnly?: boolean;
@@ -32,12 +23,9 @@ const OutputSpecColumnRow: FC<
     <Tr>
       <Td>
         {col.comment ? (
-          <Tooltip p={3} label={col.comment} hasArrow placement="left">
-            <HStack _hover={{color: 'white'}} transition="color 0.2s ease">
-              <QuestionOutlineIcon />
-              <Text color={'gray.200'}>{col.name}</Text>
-            </HStack>
-          </Tooltip>
+          <InfoBox content={col.comment}>
+            <Text color={'gray.200'}>{col.name}</Text>
+          </InfoBox>
         ) : (
           <Text>{col.name}</Text>
         )}

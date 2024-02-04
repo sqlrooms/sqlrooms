@@ -30,12 +30,22 @@ export type AttributeType = z.infer<typeof AttributeType>;
 
 export const AttributeColumn = z.object({
   type: AttributeType.optional(),
-  column: z.string().regex(VALID_TABLE_OR_COLUMN_REGEX),
+  column: z
+    .string()
+    .regex(VALID_TABLE_OR_COLUMN_REGEX)
+    .describe('Column name which is created in the prepared data table.'),
   label: z.string().min(2).max(128).regex(VALID_TITLE_REGEX),
-  expression: z.string().min(1).max(128),
+  expression: z
+    .string()
+    .min(1)
+    .max(128)
+    .describe('Expression to select from the original data table.'),
   // buckets: z.array(z.number()).optional(),
 });
 export type AttributeColumn = z.infer<typeof AttributeColumn>;
+
+export const AttributesList = z.array(AttributeColumn);
+export type AttributesList = z.infer<typeof AttributesList>;
 
 // TODO: make the whole thing optional but not the individual fields
 export const ColumnMapping = z.object({
@@ -43,7 +53,12 @@ export const ColumnMapping = z.object({
   columns: z.record(z.string()),
   attributes: z.preprocess(
     (val) => (Array.isArray(val) ? val : []),
-    z.array(AttributeColumn).optional(),
+    AttributesList.describe(
+      'Add columns to the resulting table to enable filtering and grouping by them.',
+    ).optional(),
   ),
+  partitionBy: AttributesList.describe(
+    'Choose columns to partition the dataset into multiple subsets.',
+  ).optional(),
 });
 export type ColumnMapping = z.infer<typeof ColumnMapping>;

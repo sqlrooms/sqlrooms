@@ -271,6 +271,7 @@ export const FlowmapFilterValue = z.discriminatedUnion('type', [
 export type FlowmapFilterValue = z.infer<typeof FlowmapFilterValue>;
 
 export const FlowmapFilterState = z.object({
+  selectedPartitions: z.record(z.string()).optional(),
   selectedLocations: z.array(z.union([z.string(), z.number()])).optional(),
   locationFilterMode: FlowmapLocationFilterMode.optional(),
   // TODO: why do we have both selectedTimeRange and FlowmapTimeFilterValue?

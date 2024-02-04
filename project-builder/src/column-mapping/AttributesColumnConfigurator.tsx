@@ -1,100 +1,126 @@
+import {Flex, Heading, useToast} from '@chakra-ui/react';
+import {AppContext, InfoBox} from '@flowmapcity/components';
 import {
-  IconButton,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
-import {EditableText} from '@flowmapcity/components';
-import {AttributeColumn, ColumnMapping} from '@flowmapcity/project-config';
+  DuckQueryError,
+  escapeId,
+  getAttributeColumnType,
+} from '@flowmapcity/duckdb';
+import {
+  AttributeType,
+  AttributesList,
+  ColumnMapping,
+} from '@flowmapcity/project-config';
 import {convertToUniqueColumnOrTableName} from '@flowmapcity/utils';
-import {TrashIcon} from '@heroicons/react/24/outline';
 import {produce} from 'immer';
-import {FC} from 'react';
-import {ColumnSpec} from '../types';
+import {FC, useContext} from 'react';
+import {useProjectStore} from '../ProjectStateProvider';
+import {
+  AttributesColumnsList,
+  Props as AttributesColumnsListProps,
+} from './AttributesColumnsList';
+import ColumnOrExpressionSelect from './ColumnOrExpressionSelect';
 import {InputColumnOption} from './FieldSelect';
 
 type Props = {
-  isReadOnly?: boolean;
-  inputTableColumns: InputColumnOption[];
-  attributes?: ColumnMapping['attributes'];
-  outputColumnSpecs?: ColumnSpec[];
-  usedOutputColNames: string[];
-  onChange: (attributes?: ColumnMapping['attributes']) => void;
-};
+  mode: 'attributes' | 'partitionBy';
+  title: string;
+  helpText: string;
+  buttonLabel: string;
+  buttonIcon: React.ReactElement;
+  onChange: (columnMapping: ColumnMapping | undefined) => void;
+  columnMapping?: ColumnMapping;
+  unusedInputColumns: Array<InputColumnOption>;
+} & Omit<AttributesColumnsListProps, 'onChange'>;
 
 export const AttributesColumnConfigurator: FC<Props> = (props) => {
-  const {isReadOnly, attributes, usedOutputColNames, onChange} = props;
-  const handleDelete = (attr: AttributeColumn) => {
-    const nextAttrs = attributes?.filter((a) => a.column !== attr.column);
-    onChange(nextAttrs);
-  };
-  const handleChangeColumn = (attr: AttributeColumn, label: string) => {
-    if (!attributes) return;
-    const nextLabel = label.trim() || attr.label;
-    const nextColName = convertToUniqueColumnOrTableName(
-      nextLabel,
-      usedOutputColNames,
-    );
-    const nextAttrs = produce(attributes, (draft) => {
-      const nextAttr = draft.find((a) => a.expression === attr.expression);
-      if (nextAttr) {
-        nextAttr.label = nextLabel;
-        nextAttr.column = nextColName;
-      }
+  const {
+    mode,
+    title,
+    helpText,
+    buttonLabel,
+    buttonIcon,
+    columnMapping,
+    usedOutputColNames,
+    unusedInputColumns,
+    onChange,
+  } = props;
+  const {captureException} = useContext(AppContext);
+  const isReadOnly = useProjectStore((state) => state.isReadOnly);
+  const toast = useToast();
+
+  const handleAttrsChange = (attributes?: AttributesList) => {
+    if (!columnMapping) return;
+    const nextResult = produce(columnMapping, (draft) => {
+      draft[mode] = attributes;
     });
-    onChange(nextAttrs);
-    return nextLabel; // Pass to EditableText
+    onChange(nextResult);
   };
-  if (!attributes?.length) return null;
+
+  const handleAddAttribute = async (columnName: string) => {
+    if (!columnMapping?.tableName || !unusedInputColumns.length) return;
+
+    let type: AttributeType | undefined;
+    try {
+      type = await getAttributeColumnType(
+        columnMapping.tableName,
+        escapeId(columnName),
+      );
+    } catch (err) {
+      toast({
+        title: `Could not add attribute`,
+        description:
+          err instanceof DuckQueryError ? err.getMessageForUser() : `${err}`,
+        status: 'error',
+        duration: 5000,
+        isClosable: true,
+        position: 'top',
+      });
+      console.error(err);
+      captureException(err);
+      return;
+    }
+
+    onChange(
+      produce(columnMapping, (draft) => {
+        // TODO:
+        const newColName = convertToUniqueColumnOrTableName(
+          columnName,
+          usedOutputColNames,
+        );
+        const cols = draft[mode] ?? [];
+        cols.push({
+          label: columnName,
+          column: newColName,
+          expression: escapeId(columnName),
+          type,
+        });
+        draft[mode] = cols;
+      }),
+    );
+  };
+
   return (
-    <Table size="sm" css={{'& td,& th': {padding: '2px 0'}}}>
-      <Thead>
-        <Tr>
-          <Th />
-          <Th>Label</Th>
-          <Th>Expression</Th>
-        </Tr>
-      </Thead>
-      <Tbody>
-        {attributes?.map((attrColumn, i) => (
-          <Tr key={i}>
-            <Td>
-              <IconButton
-                variant="ghost"
-                size="xs"
-                aria-label="delete"
-                color="gray.300"
-                onClick={() => handleDelete(attrColumn)}
-                icon={<TrashIcon width="15px" />}
-              />
-            </Td>
-            <Td>
-              {isReadOnly ? (
-                <Text>{attrColumn.label}</Text>
-              ) : (
-                <EditableText
-                  textAlign="left"
-                  maxWidth="200px"
-                  color={'gray.200'}
-                  value={attrColumn.label}
-                  onValidate={(name) =>
-                    AttributeColumn.shape.label.safeParse(name)
-                  }
-                  onChange={(name) => handleChangeColumn(attrColumn, name)}
-                  error={undefined}
-                  isLoading={false}
-                />
-              )}
-            </Td>
-            <Td maxWidth="100px">{attrColumn.expression}</Td>
-          </Tr>
-        ))}
-      </Tbody>
-    </Table>
+    <Flex flexDir="column" gap="3">
+      <Flex flexDir="column" gap="3">
+        <Flex>
+          <InfoBox content={helpText}>
+            <Heading fontSize="xs" textTransform="uppercase" color="gray.400">
+              {title}
+            </Heading>
+          </InfoBox>
+        </Flex>
+
+        {!isReadOnly ? (
+          <ColumnOrExpressionSelect
+            title={buttonLabel}
+            icon={buttonIcon}
+            onSelect={handleAddAttribute}
+            unusedInputColumns={unusedInputColumns}
+          />
+        ) : null}
+      </Flex>
+      <AttributesColumnsList {...props} onChange={handleAttrsChange} />
+    </Flex>
   );
 };
 
