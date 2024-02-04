@@ -1,6 +1,6 @@
 import {Text} from '@chakra-ui/react';
-import {VgPlotChart} from '@flowmapcity/charts';
-import {ChartConfig, ChartTypes} from '@flowmapcity/project-config';
+import {VgPlotChart} from '@sqlrooms/charts';
+import {ChartConfig, ChartTypes} from '@sqlrooms/project-config';
 import {FC} from 'react';
 type Props = {chart: ChartConfig};
 

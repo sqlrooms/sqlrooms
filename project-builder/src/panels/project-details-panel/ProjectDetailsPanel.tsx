@@ -1,10 +1,10 @@
 import {Flex, Text, Textarea, VStack} from '@chakra-ui/react';
-import {EditableText} from '@flowmapcity/components';
-import {useProjectStore} from '@flowmapcity/project-builder';
+import {EditableText} from '@sqlrooms/components';
+import {useProjectStore} from '@sqlrooms/project-builder';
 import {
   DEFAULT_PROJECT_TITLE,
   ProjectPanelTypes,
-} from '@flowmapcity/project-config';
+} from '@sqlrooms/project-config';
 import {useCallback} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 

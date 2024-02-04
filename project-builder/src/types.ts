@@ -1,5 +1,5 @@
-import {ViewConfig} from '@flowmapcity/project-config';
-import {ProgressInfo} from '@flowmapcity/utils';
+import {ViewConfig} from '@sqlrooms/project-config';
+import {ProgressInfo} from '@sqlrooms/utils';
 
 export type SuggestedFix = {
   description: string | JSX.Element;

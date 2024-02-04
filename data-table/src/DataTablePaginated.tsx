@@ -19,13 +19,13 @@ import {
   Tr,
   keyframes,
 } from '@chakra-ui/react';
-import {formatCount} from '@flowmapcity/utils';
 import {
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/solid';
+import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   PaginationState,

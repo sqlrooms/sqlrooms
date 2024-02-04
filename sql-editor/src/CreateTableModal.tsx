@@ -18,10 +18,10 @@ import {
   UseDisclosureReturn,
   useTheme,
 } from '@chakra-ui/react';
-import {AppContext} from '@flowmapcity/components';
-import {DuckQueryError} from '@flowmapcity/duckdb';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import {VALID_TABLE_OR_COLUMN_REGEX} from '@flowmapcity/project-config';
+import {AppContext} from '@sqlrooms/components';
+import {DuckQueryError} from '@sqlrooms/duckdb';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {VALID_TABLE_OR_COLUMN_REGEX} from '@sqlrooms/project-config';
 import {FC, FormEvent, useCallback, useContext} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
 

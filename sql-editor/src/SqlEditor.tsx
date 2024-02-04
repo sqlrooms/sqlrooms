@@ -12,22 +12,22 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import {SpinnerPane, TablesList} from '@flowmapcity/components';
+import {SpinnerPane, TablesList} from '@sqlrooms/components';
 import {
   DataTableVirtualized,
   QueryDataTable,
   useArrowDataTable,
-} from '@flowmapcity/data-table';
+} from '@sqlrooms/data-table';
 import {
   DuckQueryError,
   escapeId,
   getDuckTables,
   useDuckConn,
-} from '@flowmapcity/duckdb';
-import {MosaicLayout} from '@flowmapcity/layout';
-import {DocumentationPanel} from '@flowmapcity/project-builder';
-import {isMosaicLayoutParent} from '@flowmapcity/project-config';
-import {genRandomStr} from '@flowmapcity/utils';
+} from '@sqlrooms/duckdb';
+import {MosaicLayout} from '@sqlrooms/layout';
+import {DocumentationPanel} from '@sqlrooms/project-builder';
+import {isMosaicLayoutParent} from '@sqlrooms/project-config';
+import {genRandomStr} from '@sqlrooms/utils';
 import {BookOpenIcon, PlayIcon, PlusIcon} from '@heroicons/react/24/outline';
 import {useQuery} from '@tanstack/react-query';
 import {Table} from 'apache-arrow';
@@ -181,7 +181,7 @@ const SqlEditor: React.FC<Props> = (props) => {
     const blob = new Blob([csvFormat(results.toArray())], {
       type: 'text/plain;charset=utf-8',
     });
-    saveAs(blob, `flowmapcity-${genRandomStr(5)}.csv`);
+    saveAs(blob, `export-${genRandomStr(5)}.csv`);
   };
 
   const createTableModal = useDisclosure();

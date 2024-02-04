@@ -10,7 +10,7 @@ import {
   ModalOverlay,
   useDisclosure,
 } from '@chakra-ui/react';
-import {ChartConfig} from '@flowmapcity/project-config';
+import {ChartConfig} from '@sqlrooms/project-config';
 import {FC} from 'react';
 import ChartView from './ChartView';
 type Props = {

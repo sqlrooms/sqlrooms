@@ -9,11 +9,11 @@ import {
   VStack,
   useDisclosure,
 } from '@chakra-ui/react';
-import {AppContext} from '@flowmapcity/components';
-import {DataTable} from '@flowmapcity/duckdb';
-import {ColumnMapping} from '@flowmapcity/project-config';
-import {formatNumber} from '@flowmapcity/utils';
 import {PlusIcon} from '@heroicons/react/24/solid';
+import {AppContext} from '@sqlrooms/components';
+import {DataTable} from '@sqlrooms/duckdb';
+import {ColumnMapping} from '@sqlrooms/project-config';
+import {formatNumber} from '@sqlrooms/utils';
 import {Select} from 'chakra-react-select';
 import {produce} from 'immer';
 import {FC, useContext, useMemo} from 'react';

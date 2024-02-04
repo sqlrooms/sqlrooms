@@ -18,8 +18,8 @@ import {
   UseDisclosureReturn,
   useTheme,
 } from '@chakra-ui/react';
-import {AppContext} from '@flowmapcity/components';
-import {DuckQueryError} from '@flowmapcity/duckdb';
+import {AppContext} from '@sqlrooms/components';
+import {DuckQueryError} from '@sqlrooms/duckdb';
 import {FC, FormEvent, useCallback, useContext} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
 import {BsMagic} from 'react-icons/bs';

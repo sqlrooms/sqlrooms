@@ -1,5 +1,5 @@
 {
-  "name": "@flowmapcity/layout",
+  "name": "@sqlrooms/layout",
   "version": "1.0.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
@@ -8,7 +8,7 @@
   "dependencies": {},
   "peerDependencies": {
     "@chakra-ui/react": "*",
-    "@flowmapcity/project-config": "*",
+    "@sqlrooms/project-config": "*",
     "react": "*",
     "react-mosaic-component": "*"
   },

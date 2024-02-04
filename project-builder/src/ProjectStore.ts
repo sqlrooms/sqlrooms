@@ -1,4 +1,4 @@
-import {clearMosaicPlotConn, getMosaicPlotConn} from '@flowmapcity/charts';
+import {clearMosaicPlotConn, getMosaicPlotConn} from '@sqlrooms/charts';
 import {
   DataTable,
   DuckQueryError,
@@ -12,13 +12,13 @@ import {
   getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
-} from '@flowmapcity/duckdb';
+} from '@sqlrooms/duckdb';
 import {
   FlowmapViewStore,
   createFlowmapViewStore,
   getDefaultFlowmapViewConfig,
 } from '@flowmapcity/flowmap';
-import {makeMosaicStack, removeMosaicNodeByKey} from '@flowmapcity/layout';
+import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_PROJECT_TITLE,
@@ -31,7 +31,7 @@ import {
   SqlQueryDataSource,
   UrlDataSource,
   isMosaicLayoutParent,
-} from '@flowmapcity/project-config';
+} from '@sqlrooms/project-config';
 import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
@@ -39,7 +39,7 @@ import {
   downloadFile,
   getSignedFileUrl,
   splitFilePath,
-} from '@flowmapcity/utils';
+} from '@sqlrooms/utils';
 import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
 import {create} from 'zustand';

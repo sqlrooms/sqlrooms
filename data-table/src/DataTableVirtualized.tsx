@@ -11,8 +11,8 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import {ErrorPane, SpinnerPane} from '@flowmapcity/components';
-import {formatCount} from '@flowmapcity/utils';
+import {ErrorPane, SpinnerPane} from '@sqlrooms/components';
+import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   SortingState,

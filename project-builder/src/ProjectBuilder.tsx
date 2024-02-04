@@ -2,10 +2,10 @@ import {Flex} from '@chakra-ui/react';
 import React, {useCallback, useContext, useMemo} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
 // import ErrorBoundary from '../../../app/components/ErrorBoundary';
-import {AppContext, ProgressModal} from '@flowmapcity/components';
-import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@flowmapcity/layout';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import {isProjectPanelType} from '@flowmapcity/project-config';
+import {AppContext, ProgressModal} from '@sqlrooms/components';
+import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {isProjectPanelType} from '@sqlrooms/project-config';
 
 type Props = {
   // nothing yet

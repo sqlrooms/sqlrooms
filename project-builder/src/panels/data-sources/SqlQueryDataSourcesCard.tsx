@@ -1,22 +1,22 @@
 import {
-  Flex,
-  Spacer,
-  Menu,
-  MenuButton,
-  IconButton,
-  Portal,
-  MenuList,
-  MenuItem,
-  Progress,
-  Text,
   Alert,
   AlertIcon,
+  Flex,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Portal,
+  Progress,
+  Spacer,
+  Text,
 } from '@chakra-ui/react';
-import {PiFileSql} from 'react-icons/pi';
 import {EllipsisHorizontalIcon, XMarkIcon} from '@heroicons/react/24/solid';
-import React, {FC, useCallback} from 'react';
-import {useProjectStore, DataSourceStatus} from '@flowmapcity/project-builder';
-import {SqlQueryDataSource} from '@flowmapcity/project-config';
+import {DataSourceStatus, useProjectStore} from '@sqlrooms/project-builder';
+import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {FC, useCallback} from 'react';
+import {PiFileSql} from 'react-icons/pi';
 
 type Props = {
   isReadOnly?: boolean;

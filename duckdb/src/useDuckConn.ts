@@ -1,6 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {DataTable} from '@flowmapcity/duckdb';
-import {AttributeType} from '@flowmapcity/project-config';
+import {DataTable} from '@sqlrooms/duckdb';
+import {AttributeType} from '@sqlrooms/project-config';
 import {useQuery} from '@tanstack/react-query';
 import * as arrow from 'apache-arrow';
 

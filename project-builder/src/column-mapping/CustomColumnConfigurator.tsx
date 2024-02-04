@@ -1,10 +1,10 @@
-import React, {FC, useState} from 'react';
-import {Text, HStack, Input, Flex, Spinner} from '@chakra-ui/react';
-import {escapeId, useDuckConn} from '@flowmapcity/duckdb';
+import {Flex, HStack, Input, Spinner, Text} from '@chakra-ui/react';
+import {escapeId, useDuckConn} from '@sqlrooms/duckdb';
+import {AttributeColumn} from '@sqlrooms/project-config';
 import {useQuery} from '@tanstack/react-query';
-import {InputColumnOption} from './FieldSelect';
 import * as arrow from 'apache-arrow';
-import {AttributeColumn} from '@flowmapcity/project-config';
+import {FC, useState} from 'react';
+import {InputColumnOption} from './FieldSelect';
 
 type Props = {
   inputTableName: string;

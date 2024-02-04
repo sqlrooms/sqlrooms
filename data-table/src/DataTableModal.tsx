@@ -11,7 +11,7 @@ import {
   useDisclosure,
   useTheme,
 } from '@chakra-ui/react';
-import {AppContext} from '@flowmapcity/components';
+import {AppContext} from '@sqlrooms/components';
 import {FC, useContext} from 'react';
 import QueryDataTable from './QueryDataTable';
 

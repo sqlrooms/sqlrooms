@@ -2,7 +2,7 @@ import {
   DEFAULT_MOSAIC_LAYOUT,
   isMosaicLayoutParent,
   MosaicLayoutNode,
-} from '@flowmapcity/project-config';
+} from '@sqlrooms/project-config';
 import {
   createRemoveUpdate,
   MosaicDirection,

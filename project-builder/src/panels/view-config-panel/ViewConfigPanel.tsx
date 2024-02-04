@@ -3,7 +3,7 @@ import {
   FlowmapViewConfigPanel,
   FlowmapViewStateProvider,
 } from '@flowmapcity/flowmap';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import React, {FC, useState} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 type Props = {

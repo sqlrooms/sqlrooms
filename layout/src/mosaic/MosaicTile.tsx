@@ -1,6 +1,6 @@
 import {Flex} from '@chakra-ui/react';
-import {ProjectBuilderPanelHeader} from '@flowmapcity/project-builder';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
+import {ProjectBuilderPanelHeader} from '@sqlrooms/project-builder';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC} from 'react';
 import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
 

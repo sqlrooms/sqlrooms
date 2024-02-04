@@ -1,11 +1,11 @@
-import React, {FC} from 'react';
 import {Flex} from '@chakra-ui/react';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
-import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import {
-  FlowmapViewStateProvider,
   FlowmapFiltersPanel,
+  FlowmapViewStateProvider,
 } from '@flowmapcity/flowmap';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {FC} from 'react';
+import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 
 type Props = {
   // nothing yet

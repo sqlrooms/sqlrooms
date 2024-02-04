@@ -10,8 +10,8 @@ import {
   Portal,
   Text,
 } from '@chakra-ui/react';
-import {shorten} from '@flowmapcity/utils';
 import {ClipboardIcon} from '@heroicons/react/24/outline';
+import {shorten} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';

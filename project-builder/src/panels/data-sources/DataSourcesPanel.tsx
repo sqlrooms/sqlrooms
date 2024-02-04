@@ -11,18 +11,18 @@ import {
   Spacer,
   useDisclosure,
 } from '@chakra-ui/react';
+import {TableCellsIcon} from '@heroicons/react/24/solid';
 import {
   DataSourceTypes,
   ProjectPanelTypes,
   SqlQueryDataSource,
-} from '@flowmapcity/project-config';
-import {TableCellsIcon} from '@heroicons/react/24/solid';
+} from '@sqlrooms/project-config';
 import {createContext, FC, useCallback, useContext} from 'react';
 import {PiFileSql} from 'react-icons/pi';
 
-import {CustomAccordionIcon} from '@flowmapcity/components';
-import {useProjectStore} from '@flowmapcity/project-builder';
 import {FolderIcon} from '@heroicons/react/24/outline';
+import {CustomAccordionIcon} from '@sqlrooms/components';
+import {useProjectStore} from '@sqlrooms/project-builder';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';

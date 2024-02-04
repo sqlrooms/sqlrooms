@@ -1,14 +1,14 @@
 {
-  "name": "@flowmapcity/project-builder",
+  "name": "@sqlrooms/project-builder",
   "version": "1.0.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
-    "@flowmapcity/duckdb": "*",
-    "@flowmapcity/components": "*",
-    "@flowmapcity/project-config": "*"
+    "@sqlrooms/duckdb": "*",
+    "@sqlrooms/components": "*",
+    "@sqlrooms/project-config": "*"
   },
   "peerDependencies": {
     "@chakra-ui/react": "*",

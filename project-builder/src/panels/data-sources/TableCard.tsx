@@ -10,8 +10,8 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import {DataTable} from '@flowmapcity/duckdb';
-import {formatNumber} from '@flowmapcity/utils';
+import {DataTable} from '@sqlrooms/duckdb';
+import {formatNumber} from '@sqlrooms/utils';
 import {FC} from 'react';
 
 export type Props = {

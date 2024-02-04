@@ -1,5 +1,5 @@
-import {DataTable} from '@flowmapcity/duckdb';
-import {ColumnMapping} from '@flowmapcity/project-config';
+import {DataTable} from '@sqlrooms/duckdb';
+import {ColumnMapping} from '@sqlrooms/project-config';
 import {ColumnSpec} from '../types';
 
 export default function autoSelectColumns(

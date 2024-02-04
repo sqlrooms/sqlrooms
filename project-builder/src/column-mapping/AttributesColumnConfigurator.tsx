@@ -1,16 +1,16 @@
 import {Flex, Heading, useToast} from '@chakra-ui/react';
-import {AppContext, InfoBox} from '@flowmapcity/components';
+import {AppContext, InfoBox} from '@sqlrooms/components';
 import {
   DuckQueryError,
   escapeId,
   getAttributeColumnType,
-} from '@flowmapcity/duckdb';
+} from '@sqlrooms/duckdb';
 import {
   AttributeType,
   AttributesList,
   ColumnMapping,
-} from '@flowmapcity/project-config';
-import {convertToUniqueColumnOrTableName} from '@flowmapcity/utils';
+} from '@sqlrooms/project-config';
+import {convertToUniqueColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {FC, useContext} from 'react';
 import {useProjectStore} from '../ProjectStateProvider';

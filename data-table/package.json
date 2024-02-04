@@ -1,14 +1,14 @@
 {
-  "name": "@flowmapcity/data-table",
+  "name": "@sqlrooms/data-table",
   "version": "1.0.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
-    "@flowmapcity/components": "*",
-    "@flowmapcity/duckdb": "*",
-    "@flowmapcity/utils": "*",
+    "@sqlrooms/components": "*",
+    "@sqlrooms/duckdb": "*",
+    "@sqlrooms/utils": "*",
     "@tanstack/react-query": "4.29.19",
     "@tanstack/react-table": "8.10.7",
     "@tanstack/table-core": "8.10.7",

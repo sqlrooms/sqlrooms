@@ -1,6 +1,6 @@
 import {Flex} from '@chakra-ui/react';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import React, {FC} from 'react';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {FC} from 'react';
 import FileDataSourceCard from './FileDataSourceCard';
 type Props = {
   // no props

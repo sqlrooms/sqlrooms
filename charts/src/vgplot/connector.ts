@@ -1,4 +1,4 @@
-import {getDuckConn} from '@flowmapcity/duckdb';
+import {getDuckConn} from '@sqlrooms/duckdb';
 import {useQuery} from '@tanstack/react-query';
 import {coordinator} from '@uwdata/vgplot';
 

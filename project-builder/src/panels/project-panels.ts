@@ -1,4 +1,3 @@
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
 import {
   AdjustmentsHorizontalIcon,
   BookOpenIcon,
@@ -9,6 +8,7 @@ import {
   MapIcon,
   TableCellsIcon,
 } from '@heroicons/react/24/outline';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import ChartsPanel from './charts-panel/ChartsPanel';
 import DataSourcesPanel from './data-sources/DataSourcesPanel';
 import DataTablesPanel from './data-tables-panel/DataTablesPanel';

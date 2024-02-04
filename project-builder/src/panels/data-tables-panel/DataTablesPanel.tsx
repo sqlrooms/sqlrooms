@@ -1,12 +1,12 @@
 import {Flex, Select, Text} from '@chakra-ui/react';
-import {QueryDataTable} from '@flowmapcity/data-table';
+import {QueryDataTable} from '@sqlrooms/data-table';
 import {
   FlowmapViewStateProvider,
   useFlowmapViewState,
 } from '@flowmapcity/flowmap';
 import {getFlowsFilterClause} from '@flowmapcity/flowmap/src/views/flowmap/data/layers-data';
-import {ProjectBuilderPanelHeader} from '@flowmapcity/project-builder';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
+import {ProjectBuilderPanelHeader} from '@sqlrooms/project-builder';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC, useMemo, useState} from 'react';
 
 type Props = {

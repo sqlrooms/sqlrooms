@@ -13,13 +13,13 @@ import {
   Spacer,
   Tooltip,
 } from '@chakra-ui/react';
-import {CustomAccordionIcon} from '@flowmapcity/components';
+import {CustomAccordionIcon} from '@sqlrooms/components';
 import {
   FlowmapViewStateProvider,
   useFlowmapViewState,
 } from '@flowmapcity/flowmap';
 import {getFlowsFilterClause} from '@flowmapcity/flowmap/src/views/flowmap/data/layers-data';
-import {ChartConfig, ProjectPanelTypes} from '@flowmapcity/project-config';
+import {ChartConfig, ProjectPanelTypes} from '@sqlrooms/project-config';
 import {range} from 'd3-array';
 import {FC, useMemo, useState} from 'react';
 import {ImEnlarge2} from 'react-icons/im';

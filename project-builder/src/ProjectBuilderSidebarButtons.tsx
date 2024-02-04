@@ -7,10 +7,10 @@ import {
   useDisclosure,
   VStack,
 } from '@chakra-ui/react';
-import {getVisibleMosaicLayoutPanels} from '@flowmapcity/layout';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
-import {SqlEditorModal} from '@flowmapcity/sql-editor';
+import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import React, {FC, useMemo} from 'react';
 import {TbDatabaseSearch} from 'react-icons/tb';
 type Props = {

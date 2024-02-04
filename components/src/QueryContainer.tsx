@@ -1,5 +1,5 @@
 import {Progress} from '@chakra-ui/react';
-import {AppContext, ClientOnly} from '@flowmapcity/components';
+import {AppContext, ClientOnly} from '@sqlrooms/components';
 import {QueryErrorResetBoundary} from '@tanstack/react-query';
 import React, {Suspense, useContext} from 'react';
 import SkeletonPane from './SkeletonPane';

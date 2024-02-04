@@ -8,10 +8,10 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import {EditableText} from '@flowmapcity/components';
-import {AttributeColumn, ColumnMapping} from '@flowmapcity/project-config';
-import {convertToUniqueColumnOrTableName} from '@flowmapcity/utils';
 import {TrashIcon} from '@heroicons/react/24/outline';
+import {EditableText} from '@sqlrooms/components';
+import {AttributeColumn, ColumnMapping} from '@sqlrooms/project-config';
+import {convertToUniqueColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {FC} from 'react';
 import {useProjectStore} from '../ProjectStateProvider';

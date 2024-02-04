@@ -1,4 +1,4 @@
-import {ChartConfig} from '@flowmapcity/project-config';
+import {ChartConfig} from '@sqlrooms/project-config';
 
 export const getDefaultCharts = (
   preparedDataSchema: string,

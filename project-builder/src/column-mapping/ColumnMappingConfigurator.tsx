@@ -1,5 +1,5 @@
 import {FormControl, Table, Tbody, Td, Text, Tr} from '@chakra-ui/react';
-import {InfoBox} from '@flowmapcity/components';
+import {InfoBox} from '@sqlrooms/components';
 import {FC, useCallback} from 'react';
 import {ColumnSpec} from '../types';
 import FieldSelect, {InputColumnOption} from './FieldSelect';

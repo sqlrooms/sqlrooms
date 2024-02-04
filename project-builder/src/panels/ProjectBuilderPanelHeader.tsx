@@ -1,9 +1,9 @@
 import {Box, Flex, Heading} from '@chakra-ui/react';
-import React, {FC, useMemo} from 'react';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
-import {PanelHeaderButton} from '@flowmapcity/components';
 import {XMarkIcon} from '@heroicons/react/24/solid';
+import {PanelHeaderButton} from '@sqlrooms/components';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {FC, useMemo} from 'react';
 import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
 
 type Props = {

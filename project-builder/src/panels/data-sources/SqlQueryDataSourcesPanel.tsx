@@ -1,7 +1,7 @@
 import {Flex} from '@chakra-ui/react';
-import {SqlQueryDataSource} from '@flowmapcity/project-config';
-import {useProjectStore} from '@flowmapcity/project-builder';
-import React, {FC} from 'react';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {FC} from 'react';
 import SqlQueryDataSourcesCard from './SqlQueryDataSourcesCard';
 type Props = {
   queryDataSources: SqlQueryDataSource[];

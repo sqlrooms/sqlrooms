@@ -1,34 +1,34 @@
 import {
-  Flex,
-  Spacer,
-  Menu,
-  MenuButton,
-  IconButton,
-  Portal,
-  MenuList,
-  MenuItem,
-  Progress,
-  Text,
-  Tooltip,
   Alert,
   AlertIcon,
+  Flex,
   Icon,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
+  Portal,
+  Progress,
+  Spacer,
+  Text,
+  Tooltip,
 } from '@chakra-ui/react';
 import {
+  CloudArrowDownIcon,
+  CloudArrowUpIcon,
+  CloudIcon,
+  DocumentTextIcon,
+} from '@heroicons/react/24/outline';
+import {
+  ArrowDownTrayIcon,
   EllipsisHorizontalIcon,
   XMarkIcon,
-  ArrowDownTrayIcon,
 } from '@heroicons/react/24/solid';
-import {
-  DocumentTextIcon,
-  CloudArrowUpIcon,
-  CloudArrowDownIcon,
-  CloudIcon,
-} from '@heroicons/react/24/outline';
-import {formatBytes} from '@flowmapcity/utils';
-import React, {FC, useCallback} from 'react';
+import {useProjectStore} from '@sqlrooms/project-builder';
+import {formatBytes} from '@sqlrooms/utils';
+import {FC, useCallback} from 'react';
 import {ProjectFileInfo, ProjectFileState} from '../../types';
-import {useProjectStore} from '@flowmapcity/project-builder';
 
 type Props = {
   isReadOnly?: boolean;
@@ -152,12 +152,12 @@ const FileDataSourceCard: FC<Props> = (props) => {
             fileState?.status === 'done'
               ? 'File synced'
               : fileState?.status === 'download'
-              ? 'Downloading file…'
-              : fileState?.status === 'upload'
-              ? 'Uploading file…'
-              : fileState?.status === 'error'
-              ? `Failed to sync file: ${fileState.message}`
-              : 'File not synced'
+                ? 'Downloading file…'
+                : fileState?.status === 'upload'
+                  ? 'Uploading file…'
+                  : fileState?.status === 'error'
+                    ? `Failed to sync file: ${fileState.message}`
+                    : 'File not synced'
           }
           hasArrow
         >

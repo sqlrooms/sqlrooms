@@ -1,11 +1,11 @@
-import {AppContext, SpinnerPane} from '@flowmapcity/components';
+import {AppContext, SpinnerPane} from '@sqlrooms/components';
 import {
   escapeId,
   exportToCsv,
   getColValAsNumber,
   useDuckConn,
-} from '@flowmapcity/duckdb';
-import {genRandomStr} from '@flowmapcity/utils';
+} from '@sqlrooms/duckdb';
+import {genRandomStr} from '@sqlrooms/utils';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {PaginationState, SortingState} from '@tanstack/table-core';
 import {FC, Suspense, useContext, useEffect, useMemo, useState} from 'react';
@@ -83,7 +83,7 @@ const QueryDataTable: FC<Props> = ({query}) => {
 
   const exportMutation = useMutation(async () => {
     if (!query) return;
-    await exportToCsv(query, `flowmapcity-export-${genRandomStr(5)}.csv`);
+    await exportToCsv(query, `export-${genRandomStr(5)}.csv`);
   }, {});
 
   return (

@@ -1,16 +1,16 @@
 {
-  "name": "@flowmapcity/sql-editor",
+  "name": "@sqlrooms/sql-editor",
   "version": "1.0.0",
   "main": "src/index.ts",
   "types": "src/index.ts",
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
-    "@flowmapcity/duckdb": "*",
-    "@flowmapcity/layout": "*",
-    "@flowmapcity/project-builder": "*",
-    "@flowmapcity/project-config": "*",
-    "@flowmapcity/components": "*"
+    "@sqlrooms/duckdb": "*",
+    "@sqlrooms/layout": "*",
+    "@sqlrooms/project-builder": "*",
+    "@sqlrooms/project-config": "*",
+    "@sqlrooms/components": "*"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",

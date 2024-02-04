@@ -1,7 +1,7 @@
 import {Flex, useDisclosure, VStack} from '@chakra-ui/react';
-import {DataTableModal} from '@flowmapcity/data-table';
-import {DataTable} from '@flowmapcity/duckdb';
-import {useProjectStore} from '@flowmapcity/project-builder';
+import {DataTableModal} from '@sqlrooms/data-table';
+import {DataTable} from '@sqlrooms/duckdb';
+import {useProjectStore} from '@sqlrooms/project-builder';
 import {FC, useState} from 'react';
 import TableCard from './TableCard';
 

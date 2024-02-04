@@ -1,7 +1,7 @@
 import {Flex} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {SkeletonPane} from '@flowmapcity/components';
-import {ProjectPanelTypes} from '@flowmapcity/project-config';
+import {SkeletonPane} from '@sqlrooms/components';
+import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import React, {FC, useEffect} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 type Props = {

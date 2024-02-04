@@ -1,5 +1,5 @@
 import {Flex, useTheme} from '@chakra-ui/react';
-import {VgPlotChartConfig, VgPlotSpec} from '@flowmapcity/project-config';
+import {VgPlotChartConfig, VgPlotSpec} from '@sqlrooms/project-config';
 import {parseSpec} from '@uwdata/vgplot';
 import {FC, useEffect, useRef} from 'react';
 import {useMosaicPlotConn} from './connector';

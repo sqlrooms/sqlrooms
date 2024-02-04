@@ -1,6 +1,6 @@
 import {Badge, useTheme} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {AppContext} from '@flowmapcity/components';
+import {AppContext} from '@sqlrooms/components';
 import {Select} from 'chakra-react-select';
 import {useContext} from 'react';
 import TableFieldLabel from './TableFieldLabel';
