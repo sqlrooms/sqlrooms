@@ -13,11 +13,6 @@ import {
   getDuckTableSchemas,
   getDuckTables,
 } from '@sqlrooms/duckdb';
-import {
-  FlowmapViewStore,
-  createFlowmapViewStore,
-  getDefaultFlowmapViewConfig,
-} from '@flowmapcity/flowmap';
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   DEFAULT_MOSAIC_LAYOUT,
@@ -30,6 +25,7 @@ import {
   ProjectPanelTypes,
   SqlQueryDataSource,
   UrlDataSource,
+  ViewConfig,
   isMosaicLayoutParent,
 } from '@sqlrooms/project-config';
 import {
@@ -42,7 +38,7 @@ import {
 } from '@sqlrooms/utils';
 import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
-import {create} from 'zustand';
+import {StoreApi, create} from 'zustand';
 import {devtools} from 'zustand/middleware';
 import {
   DEFAULT_PROJECT_BUILDER_PANELS,
@@ -55,7 +51,26 @@ import {
   ProjectFileState,
 } from './types';
 
-export type ViewStore = FlowmapViewStore; // TODO: add more view stores
+export type ViewState = {
+  config: {
+    id: string;
+  };
+  onDataUpdated: () => void;
+  readyToRender: boolean;
+};
+
+export type ViewStore = StoreApi<ViewState>;
+
+export type ProjectStore = ReturnType<typeof createProjectStore>;
+export type CreateProjectStoreProps = {
+  schema?: string;
+  viewStoreFactories?: {
+    [viewId: string]: (
+      projectStore: ProjectState,
+      viewConfig: ViewConfig,
+    ) => ViewStore;
+  };
+};
 
 export type TaskProgress = {
   progress?: number | undefined;
@@ -117,45 +132,10 @@ export type ProjectState = {
   setDescription(description: string): void;
   viewStores: {[key: string]: {viewStore: ViewStore; unsubscribe: () => void}};
   getViewStore(viewId: string): ViewStore | undefined;
-  addView: (viewId: string, store: ViewStore) => void;
+  addView: (view: ViewConfig) => void;
   removeView: (viewId: string) => void;
   areDatasetsReady(): boolean;
   areViewsReadyToRender(): boolean;
-};
-
-const INITIAL_MOSAIC_NEW_PROJECT_LAYOUT: LayoutConfig = {
-  type: 'mosaic',
-  nodes: makeMosaicStack('row', [
-    {
-      node: makeMosaicStack('column', [
-        {node: ProjectPanelTypes.PROJECT_DETAILS, weight: 1},
-        {node: ProjectPanelTypes.DATA_SOURCES, weight: 2},
-      ]),
-      weight: 1,
-    },
-    {node: ProjectPanelTypes.VIEW_CONFIGURATION, weight: 1},
-    {node: ProjectPanelTypes.DOCS, weight: 2},
-  ]),
-  pinned: [
-    ProjectPanelTypes.PROJECT_DETAILS,
-    ProjectPanelTypes.DATA_SOURCES,
-    ProjectPanelTypes.VIEW_CONFIGURATION,
-  ],
-  fixed: [ProjectPanelTypes.MAIN_VIEW],
-};
-const INITIAL_MOSAIC_READY_TO_RENDER_LAYOUT: LayoutConfig = {
-  type: 'mosaic',
-  nodes: makeMosaicStack('row', [
-    {node: ProjectPanelTypes.VIEW_CONFIGURATION, weight: 1},
-    {node: ProjectPanelTypes.MAIN_VIEW, weight: 3},
-  ]),
-  fixed: [ProjectPanelTypes.MAIN_VIEW],
-};
-
-const INITIAL_MOSAIC_PUBLIC_LAYOUT: LayoutConfig = {
-  type: 'mosaic',
-  nodes: ProjectPanelTypes.MAIN_VIEW,
-  fixed: [ProjectPanelTypes.MAIN_VIEW],
 };
 
 export const initialProjectConfig: ProjectConfig = {
@@ -189,15 +169,6 @@ const baseInitialValues = {
   tableRowCounts: {},
   dataSourceStates: {},
 };
-export type ViewState = {
-  onDataUpdated: () => void;
-  readyToRender: boolean;
-};
-
-export type ProjectStore = ReturnType<typeof createProjectStore>;
-export type CreateProjectStoreProps = {
-  schema?: string;
-};
 
 export const createProjectStore = (props?: CreateProjectStoreProps) =>
   create<ProjectState>()(
@@ -227,7 +198,7 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
               password,
             } = opts ?? {};
 
-            const {reset, addView, setLayout} = get();
+            const {reset} = get();
 
             try {
               // Clean up DuckDB
@@ -252,27 +223,11 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
               password,
             });
 
-            if (!project) {
-              // Initialize the project with the default layout
-              if (isReadOnly) {
-                setLayout(INITIAL_MOSAIC_PUBLIC_LAYOUT);
-              } else {
-                setLayout(INITIAL_MOSAIC_NEW_PROJECT_LAYOUT);
-              }
+            const {addView} = get();
+            for (const view of projectConfig.views) {
+              addView(view);
             }
 
-            // Add the default flowmap view
-            // TODO: don't add automatically, but let the user choose
-            // or read from loaded config
-            addView(
-              'flowmap',
-              createFlowmapViewStore(
-                get(),
-                // TODO: find appropriate viewId
-                projectConfig.views.find((v) => v.id === 'flowmap') ??
-                  getDefaultFlowmapViewConfig('flowmap'),
-              ),
-            );
             updateReadyDataSources();
             set({initialized: true});
             get().maybeDownloadDataSources();
@@ -315,7 +270,18 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
             return get().viewStores[viewId]?.viewStore;
           },
 
-          addView(viewId, viewStore) {
+          addView(view) {
+            const viewId = view.id;
+            if (get().viewStores[viewId]) {
+              console.log(`View with id ${viewId} already exists`);
+              return;
+            }
+            const createViewStore = props?.viewStoreFactories?.[view.type];
+            if (!createViewStore) {
+              throw new Error(`No factory for view type: ${view.type}`);
+            }
+            const viewStore = createViewStore(get(), view);
+
             // TODO: Consider using monolithic store which custom set functions
             //       for child objects to avoid having to manage subscriptions
             // See https://github.com/pmndrs/zustand/issues/163#issuecomment-678821969
@@ -328,18 +294,6 @@ export const createProjectStore = (props?: CreateProjectStoreProps) =>
                   views[index >= 0 ? index : views.length] = config;
                 }),
               );
-              const {projectId, projectConfig} = get();
-              if (
-                !projectId &&
-                projectConfig.layout === INITIAL_MOSAIC_NEW_PROJECT_LAYOUT
-              ) {
-                // if it's a new project and the layout is still the initial one
-                // change the layout, when the data is ready to render
-                const newReadyToRender = get().areViewsReadyToRender();
-                if (newReadyToRender) {
-                  get().setLayout(INITIAL_MOSAIC_READY_TO_RENDER_LAYOUT);
-                }
-              }
             });
             set((state) =>
               produce(state, (draft) => {

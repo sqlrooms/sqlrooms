@@ -20,9 +20,10 @@ type Props = {
 const SidebarButton: FC<{
   title: string;
   isSelected: boolean;
+  isDisabled?: boolean;
   icon: React.ComponentType<any>;
   onClick: () => void;
-}> = ({title, isSelected, icon: Icon, onClick}) => {
+}> = ({title, isSelected, isDisabled = false, icon: Icon, onClick}) => {
   return (
     <Tooltip label={title} placement="right" hasArrow>
       <IconButton
@@ -30,6 +31,7 @@ const SidebarButton: FC<{
         size="sm"
         aria-label={title}
         bg={isSelected ? 'gray.600' : 'gray.700'}
+        isDisabled={isDisabled}
         onClick={onClick}
       />
     </Tooltip>
@@ -39,6 +41,7 @@ const SidebarButton: FC<{
 export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
   type,
 }) => {
+  const initialized = useProjectStore((state) => state.initialized);
   const layout = useProjectStore((state) => state.projectConfig.layout);
   const projectPanels = useProjectStore((state) => state.projectPanels);
   const visibleProjectPanels = useMemo(
@@ -53,6 +56,7 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
       key={type}
       title={title}
       isSelected={visibleProjectPanels.includes(type)}
+      isDisabled={!initialized}
       icon={Icon}
       onClick={() => togglePanel(type)}
     />
@@ -60,12 +64,12 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
 };
 
 const ProjectBuilderSidebarButtons: FC<Props> = () => {
-  const initialized = useProjectStore((state) => state.initialized);
   const projectPanels = useProjectStore((state) => state.projectPanels);
   const sqlEditor = useDisclosure();
-  if (!initialized) {
-    return null;
-  }
+  // const initialized = useProjectStore((state) => state.initialized);
+  // if (!initialized) {
+  //   return null;
+  // }
 
   return (
     <Flex flexDir="column" flexGrow={1} h="100%">
