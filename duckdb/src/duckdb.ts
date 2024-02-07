@@ -47,7 +47,7 @@ export async function createViewFromRegisteredFile(
       ? `read_json_auto(${quotedFileName})` // requires json extension (duckdb 0.9.2)
       : fileNameLower.endsWith('.parquet')
         ? `parquet_scan(${quotedFileName})`
-        : fileNameLower.endsWith('.csv')
+        : fileNameLower.endsWith('.csv') || fileNameLower.endsWith('.tsv')
           ? `read_csv(${quotedFileName}, SAMPLE_SIZE=-1, AUTO_DETECT=TRUE)`
           : quotedFileName;
   // const readFileQuery = fileNameLower.endsWith('.csv')
