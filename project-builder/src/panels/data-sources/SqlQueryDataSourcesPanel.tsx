@@ -1,5 +1,5 @@
 import {Flex} from '@chakra-ui/react';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {FC} from 'react';
 import SqlQueryDataSourcesCard from './SqlQueryDataSourcesCard';
@@ -9,7 +9,7 @@ type Props = {
 const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
   const {queryDataSources} = props;
 
-  const isReadOnly = useProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
   return (
     <Flex flexDir="column" overflow="auto" flexGrow="1">
       {queryDataSources.map((ds, i) => (

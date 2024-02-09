@@ -1,7 +1,7 @@
 import {Flex, useDisclosure, VStack} from '@chakra-ui/react';
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {FC, useState} from 'react';
 import TableCard from './TableCard';
 
@@ -16,10 +16,10 @@ type Props = {
 const TablesPanel: FC<Props> = (props) => {
   // const theme = useTheme();
   const {} = props;
-  const isReadOnly = useProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
 
-  const tables = useProjectStore((state) => state.tables);
-  const tableRowCounts = useProjectStore((state) => state.tableRowCounts);
+  const tables = useBaseProjectStore((state) => state.tables);
+  const tableRowCounts = useBaseProjectStore((state) => state.tableRowCounts);
 
   // const sqlEditor = useDisclosure();
 

@@ -5,11 +5,10 @@
   "types": "src/index.ts",
   "module": "src/index.ts",
   "license": "MIT",
-  "dependencies": {},
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
-    "apache-arrow": "*",
-    "@tanstack/react-query": "*"
+    "@tanstack/react-query": "*",
+    "apache-arrow": "*"
   },
   "scripts": {
     "build": "tsc"

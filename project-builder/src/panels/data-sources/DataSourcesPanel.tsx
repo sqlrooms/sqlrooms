@@ -22,7 +22,7 @@ import {PiFileSql} from 'react-icons/pi';
 
 import {FolderIcon} from '@heroicons/react/24/outline';
 import {CustomAccordionIcon} from '@sqlrooms/components';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
@@ -38,15 +38,15 @@ export const DataSourcesPanelAddDataModalContext = createContext<FC<{
 }> | null>(null);
 
 const DataSourcesPanel: FC<Props> = () => {
-  const isReadOnly = useProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
   const AddDataModal = useContext(DataSourcesPanelAddDataModalContext);
   const addDataModal = useDisclosure();
-  // const dataSources = useProjectStore(
+  // const dataSources = useBaseProjectStore(
   //   (state) => state.projectConfig.dataSources,
   // );
-  // const tables = useProjectStore((state) => state.tables);
-  const projectFiles = useProjectStore((state) => state.projectFiles);
-  const queryDataSources = useProjectStore(
+  // const tables = useBaseProjectStore((state) => state.tables);
+  const projectFiles = useBaseProjectStore((state) => state.projectFiles);
+  const queryDataSources = useBaseProjectStore(
     (state) =>
       state.projectConfig.dataSources.filter(
         (ds) => ds.type === DataSourceTypes.enum.sql,

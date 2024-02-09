@@ -20,7 +20,7 @@ import {
 } from '@chakra-ui/react';
 import {AppContext} from '@sqlrooms/components';
 import {DuckQueryError} from '@sqlrooms/duckdb';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {VALID_TABLE_OR_COLUMN_REGEX} from '@sqlrooms/project-config';
 import {FC, FormEvent, useCallback, useContext} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
@@ -43,7 +43,7 @@ const CreateTableModal: FC<Props> = (props) => {
     useForm<FormData>({values: {tableName: '', query: props.query.trim()}});
   const {errors, isSubmitting} = formState;
 
-  const addQuery = useProjectStore((state) => state.addSqlQuery);
+  const addQuery = useBaseProjectStore((state) => state.addSqlQuery);
 
   const onSubmit = useCallback(
     (ev: FormEvent<HTMLFormElement>) => {

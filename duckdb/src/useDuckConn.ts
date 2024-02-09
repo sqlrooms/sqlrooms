@@ -1,6 +1,5 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DataTable} from '@sqlrooms/duckdb';
-import {AttributeType} from '@sqlrooms/project-config';
 import {useQuery} from '@tanstack/react-query';
 import * as arrow from 'apache-arrow';
 
@@ -282,32 +281,4 @@ export async function dropFile(fname: string): Promise<void> {
 export async function dropAllFiles(): Promise<void> {
   const {db} = await getDuckConn();
   db.dropFiles();
-}
-
-export async function getAttributeColumnType(
-  tableName: string,
-  expr: string,
-): Promise<AttributeType> {
-  const {conn} = await getDuckConn();
-  const res = await conn.query(
-    `SELECT ${expr} AS result FROM ${tableName} LIMIT 1`,
-  );
-  const type = res.getChild('result')?.type.toString().toLowerCase();
-  if (!type) throw new Error(`Couldn't determine type of expression ${expr}`);
-  if (
-    type.startsWith('int') ||
-    type.endsWith('int') ||
-    type.endsWith('integer') ||
-    type.startsWith('decimal') ||
-    type.startsWith('float') ||
-    type.startsWith('real') ||
-    type.startsWith('double') ||
-    type.startsWith('float') ||
-    type.startsWith('numeric')
-  ) {
-    return AttributeType.enum.numeric;
-  } else if (type.startsWith('date') || type.startsWith('time')) {
-    return AttributeType.enum.date;
-  }
-  return AttributeType.enum.string;
 }

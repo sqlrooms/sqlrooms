@@ -1,7 +1,7 @@
 import {Box, Flex, Heading} from '@chakra-ui/react';
 import {XMarkIcon} from '@heroicons/react/24/solid';
 import {PanelHeaderButton} from '@sqlrooms/components';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC, useMemo} from 'react';
 import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
@@ -11,11 +11,11 @@ type Props = {
 };
 const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   const {panelKey: type} = props;
-  const projectPanels = useProjectStore((state) => state.projectPanels);
+  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const {icon: Icon, title} = projectPanels[type];
-  const togglePanel = useProjectStore((state) => state.togglePanel);
-  const togglePanelPin = useProjectStore((state) => state.togglePanelPin);
-  const pinnedPanels = useProjectStore(
+  const togglePanel = useBaseProjectStore((state) => state.togglePanel);
+  const togglePanelPin = useBaseProjectStore((state) => state.togglePanelPin);
+  const pinnedPanels = useBaseProjectStore(
     (state) => state.projectConfig.layout.pinned,
   );
   const isPinned = useMemo(

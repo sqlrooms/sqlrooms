@@ -1,5 +1,5 @@
 import {Flex} from '@chakra-ui/react';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {FC} from 'react';
 import FileDataSourceCard from './FileDataSourceCard';
 type Props = {
@@ -7,11 +7,11 @@ type Props = {
 };
 const FileDataSourcesPanel: FC<Props> = (props) => {
   const {} = props;
-  const projectFiles = useProjectStore((state) => state.projectFiles);
-  const projectFilesProgress = useProjectStore(
+  const projectFiles = useBaseProjectStore((state) => state.projectFiles);
+  const projectFilesProgress = useBaseProjectStore(
     (state) => state.projectFilesProgress,
   );
-  const isReadOnly = useProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
 
   return (
     <>

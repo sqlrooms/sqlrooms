@@ -12,6 +12,7 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
+import {BookOpenIcon, PlayIcon, PlusIcon} from '@heroicons/react/24/outline';
 import {SpinnerPane, TablesList} from '@sqlrooms/components';
 import {
   DataTableVirtualized,
@@ -28,7 +29,6 @@ import {MosaicLayout} from '@sqlrooms/layout';
 import {DocumentationPanel} from '@sqlrooms/project-builder';
 import {isMosaicLayoutParent} from '@sqlrooms/project-config';
 import {genRandomStr} from '@sqlrooms/utils';
-import {BookOpenIcon, PlayIcon, PlusIcon} from '@heroicons/react/24/outline';
 import {useQuery} from '@tanstack/react-query';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
@@ -90,7 +90,7 @@ const SqlEditor: React.FC<Props> = (props) => {
     };
   }, [toast]);
 
-  // const tableNames = useProjectStore((state) =>
+  // const tableNames = useBaseProjectStore((state) =>
   //   state.tables.map((t) => t.tableName),
   // );
 

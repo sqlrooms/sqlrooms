@@ -4,7 +4,7 @@ import {MosaicNode} from 'react-mosaic-component';
 // import ErrorBoundary from '../../../app/components/ErrorBoundary';
 import {AppContext, ProgressModal} from '@sqlrooms/components';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {isProjectPanelType} from '@sqlrooms/project-config';
 
 type Props = {
@@ -12,12 +12,12 @@ type Props = {
 };
 
 const ProjectBuilder: React.FC<Props> = () => {
-  // const projectConfig = useProjectStore((state) => state.projectConfig);
+  // const projectConfig = useBaseProjectStore((state) => state.projectConfig);
   // console.log(projectConfig);
-  const layout = useProjectStore((state) => state.projectConfig.layout);
-  const setLayout = useProjectStore((state) => state.setLayout);
-  const projectPanels = useProjectStore((state) => state.projectPanels);
-  const loadingProgress = useProjectStore((state) =>
+  const layout = useBaseProjectStore((state) => state.projectConfig.layout);
+  const setLayout = useBaseProjectStore((state) => state.setLayout);
+  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
+  const loadingProgress = useBaseProjectStore((state) =>
     state.getLoadingProgress(),
   );
 

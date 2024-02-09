@@ -5,7 +5,6 @@
   "types": "src/index.ts",
   "module": "src/index.ts",
   "license": "MIT",
-  "dependencies": {},
   "peerDependencies": {
     "@chakra-ui/icon": "*",
     "@chakra-ui/react": "*"

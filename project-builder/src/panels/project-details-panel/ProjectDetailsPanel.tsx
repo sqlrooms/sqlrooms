@@ -1,6 +1,6 @@
 import {Flex, Text, Textarea, VStack} from '@chakra-ui/react';
 import {EditableText} from '@sqlrooms/components';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {
   DEFAULT_PROJECT_TITLE,
   ProjectPanelTypes,
@@ -9,13 +9,13 @@ import {useCallback} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 
 export default function ProjectDetailsPanel() {
-  const title = useProjectStore((state) => state.projectConfig.title);
-  const isReadOnly = useProjectStore((state) => state.isReadOnly);
-  const setProjectTitle = useProjectStore((state) => state.setProjectTitle);
-  const description = useProjectStore(
+  const title = useBaseProjectStore((state) => state.projectConfig.title);
+  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+  const setProjectTitle = useBaseProjectStore((state) => state.setProjectTitle);
+  const description = useBaseProjectStore(
     (state) => state.projectConfig.description,
   );
-  const setDescription = useProjectStore((state) => state.setDescription);
+  const setDescription = useBaseProjectStore((state) => state.setDescription);
 
   const handleSetProjectTitle = useCallback(
     (title: string) => {

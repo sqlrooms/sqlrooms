@@ -1,7 +1,7 @@
 import {z} from 'zod';
-import {DEFAULT_PROJECT_TITLE} from './common';
-import {FlowmapViewConfig} from './FlowmapViewConfig';
 import LayoutConfig, {DEFAULT_MOSAIC_LAYOUT} from './LayoutConfig';
+export const DEFAULT_PROJECT_TITLE = 'Untitled project';
+export const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
 /*
 1. No database uuids should be used in the map config types
@@ -60,43 +60,16 @@ export const DataSource = z
   .describe('Data source specification.');
 export type DataSource = z.infer<typeof DataSource>;
 
-export const ChartTypes = z.enum(['vgplot']);
-export type ChartTypes = z.infer<typeof ChartTypes>;
-
-export const VgPlotSpec = z
-  .intersection(
-    z.object({
-      style: z.record(z.unknown()).optional(),
-    }),
-    z.record(z.unknown()),
-  )
-  .describe(
-    'Mosaic vgplot specification for a chart. See https://uwdata.github.io/mosaic/vgplot/',
-  );
-export type VgPlotSpec = z.infer<typeof VgPlotSpec>;
-
-export const VgPlotChartConfig = z.object({
-  // id: z.string(),
-  type: z.literal(ChartTypes.enum.vgplot).describe('Chart type.'),
-  title: z.string().optional().describe('Chart title.'),
-  description: z.string().optional().describe('Chart description.'),
-  spec: VgPlotSpec.describe(VgPlotSpec._def.description ?? 'Chart spec.'),
-});
-export type VgPlotChartConfig = z.infer<typeof VgPlotChartConfig>;
-
-export const ChartConfig = z
-  .discriminatedUnion('type', [VgPlotChartConfig])
-  .describe('Chart configuration.');
-export type ChartConfig = z.infer<typeof ChartConfig>;
-
-export const ViewConfig = z
-  .discriminatedUnion('type', [FlowmapViewConfig])
-  .describe('View configuration.');
-export type ViewConfig = z.infer<typeof ViewConfig>;
-
-export const ProjectConfig = z
+export const BaseViewConfig = z
   .object({
-    version: z.literal(1).default(1).describe('Config version, currently 1.'),
+    id: z.string().describe('Unique view identifier'),
+    type: z.string().describe('View type'),
+  })
+  .describe('View configuration.');
+export type BaseViewConfig = z.infer<typeof BaseViewConfig>;
+
+export const BaseProjectConfig = z
+  .object({
     title: z.string().default(DEFAULT_PROJECT_TITLE).describe('Project title.'),
     description: z.string().optional().describe('Project description.'),
     dataSources: z
@@ -104,16 +77,12 @@ export const ProjectConfig = z
       .default([])
       .describe('Data sources. Each data source must have a unique tableName.'),
     views: z
-      .array(ViewConfig)
+      .array(BaseViewConfig)
       .default([])
-      .describe(
-        'Views are data representations or various configuration panels.',
-      ),
-    charts: z.array(ChartConfig).optional(),
+      .describe('Views are data representations.'),
     layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
       'Layout specifies how views are arranged on the screen.',
     ),
   })
   .describe('Project configuration.');
-
-export type ProjectConfig = z.infer<typeof ProjectConfig>;
+export type BaseProjectConfig = z.infer<typeof BaseProjectConfig>;

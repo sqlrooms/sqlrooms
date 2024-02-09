@@ -1,4 +1,10 @@
 {
   "extends": "../../tsconfig.json",
-  "include": ["src/**/*", "test/**/*", "../../typings.d.ts"]
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "../../typings.d.ts",
+    "../../packages/core/src/project-panels.ts",
+    "../../packages/core/src/panels/view-config-panel"
+  ]
 }

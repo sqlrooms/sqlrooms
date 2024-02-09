@@ -1,4 +1,2 @@
-export * from './common';
-export * from './FlowmapViewConfig';
+export * from './BaseProjectConfig';
 export * from './LayoutConfig';
-export * from './ProjectConfig';

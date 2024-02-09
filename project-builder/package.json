@@ -6,16 +6,16 @@
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
-    "@sqlrooms/duckdb": "*",
     "@sqlrooms/components": "*",
+    "@sqlrooms/duckdb": "*",
     "@sqlrooms/project-config": "*"
   },
   "peerDependencies": {
-    "@chakra-ui/react": "*",
     "@chakra-ui/icons": "*",
+    "@chakra-ui/react": "*",
     "@uwdata/mosaic-sql": "*",
-    "react": "*",
     "immer": "*",
+    "react": "*",
     "zustand": "*"
   },
   "scripts": {

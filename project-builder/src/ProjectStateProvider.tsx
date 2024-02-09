@@ -1,4 +1,5 @@
-import React, {createContext, FC, useContext, useRef} from 'react';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
+import React, {createContext, ReactNode, useContext, useRef} from 'react';
 import {useStore} from 'zustand';
 import {
   createProjectStore,
@@ -9,32 +10,36 @@ import {
 
 // See https://docs.pmnd.rs/zustand/guides/initialize-state-with-props
 
-export const ProjectStateContext = createContext<ProjectStore | null>(null);
+export const ProjectStateContext =
+  createContext<ProjectStore<BaseProjectConfig> | null>(null);
 
-type Props = React.PropsWithChildren<
-  CreateProjectStoreProps & {projectStore?: ProjectStore}
+type Props<PC extends BaseProjectConfig> = React.PropsWithChildren<
+  CreateProjectStoreProps<PC> & {projectStore?: ProjectStore<PC>}
 >;
 
-export const ProjectStateProvider: FC<Props> = ({
-  children,
-  projectStore,
-  ...props
-}) => {
-  const storeRef = useRef<ProjectStore>();
+export function ProjectStateProvider<PC extends BaseProjectConfig>(
+  props: Props<PC>,
+): ReactNode {
+  const {children, projectStore, ...restProps} = props;
+  const storeRef = useRef<ProjectStore<PC>>();
   if (!storeRef.current) {
-    storeRef.current = projectStore ?? createProjectStore(props);
+    storeRef.current = projectStore ?? createProjectStore<PC>(restProps);
   }
   return (
-    <ProjectStateContext.Provider value={storeRef.current}>
+    <ProjectStateContext.Provider
+      value={storeRef.current as unknown as ProjectStore<BaseProjectConfig>}
+    >
       {children}
     </ProjectStateContext.Provider>
   );
-};
+}
 
-export function useProjectStore<T>(selector: (state: ProjectState) => T): T {
+export function useBaseProjectStore<PC extends BaseProjectConfig, T>(
+  selector: (state: ProjectState<PC>) => T,
+): T {
   const store = useContext(ProjectStateContext);
   if (!store) {
     throw new Error('Missing ProjectStateProvider in the tree');
   }
-  return useStore(store, selector);
+  return useStore(store as unknown as ProjectStore<PC>, selector);
 }

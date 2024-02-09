@@ -1,5 +1,19 @@
 import {z} from 'zod';
-import {ProjectPanelTypes} from './common';
+
+export enum ProjectPanelTypes {
+  PROJECT_DETAILS = 'project-details',
+  DATA_SOURCES = 'data-sources',
+  DATA_TABLES = 'data-tables',
+  FILTERS = 'filters',
+  VIEW_CONFIGURATION = 'view-configuration',
+  DOCS = 'docs',
+  CHARTS = 'charts',
+  MAIN_VIEW = 'main-view',
+}
+
+export function isProjectPanelType(value: any): value is ProjectPanelTypes {
+  return Object.values(ProjectPanelTypes).includes(value);
+}
 
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;

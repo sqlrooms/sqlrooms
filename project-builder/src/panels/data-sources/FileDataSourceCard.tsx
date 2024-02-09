@@ -25,7 +25,7 @@ import {
   EllipsisHorizontalIcon,
   XMarkIcon,
 } from '@heroicons/react/24/solid';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {formatBytes} from '@sqlrooms/utils';
 import {FC, useCallback} from 'react';
 import {ProjectFileInfo, ProjectFileState} from '../../types';
@@ -39,7 +39,9 @@ type Props = {
 const FileDataSourceCard: FC<Props> = (props) => {
   const {isReadOnly, fileInfo, fileState} = props;
   const {pathname, size} = fileInfo;
-  const removeProjectFile = useProjectStore((state) => state.removeProjectFile);
+  const removeProjectFile = useBaseProjectStore(
+    (state) => state.removeProjectFile,
+  );
   const handleRemoveFromProject = useCallback(() => {
     removeProjectFile(fileInfo.pathname);
   }, [fileInfo.pathname, removeProjectFile]);

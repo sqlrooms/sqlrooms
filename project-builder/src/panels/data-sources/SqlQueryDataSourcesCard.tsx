@@ -13,7 +13,7 @@ import {
   Text,
 } from '@chakra-ui/react';
 import {EllipsisHorizontalIcon, XMarkIcon} from '@heroicons/react/24/solid';
-import {DataSourceStatus, useProjectStore} from '@sqlrooms/project-builder';
+import {DataSourceStatus, useBaseProjectStore} from '@sqlrooms/project-builder';
 import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {FC, useCallback} from 'react';
 import {PiFileSql} from 'react-icons/pi';
@@ -26,9 +26,11 @@ type Props = {
 const SqlQueryDataSourcesCard: FC<Props> = (props) => {
   const {isReadOnly, dataSource} = props;
   const {tableName} = dataSource;
-  const dataSourceStates = useProjectStore((state) => state.dataSourceStates);
+  const dataSourceStates = useBaseProjectStore(
+    (state) => state.dataSourceStates,
+  );
   const dsState = dataSourceStates[tableName];
-  const removeSqlQueryDataSource = useProjectStore(
+  const removeSqlQueryDataSource = useBaseProjectStore(
     (state) => state.removeSqlQueryDataSource,
   );
   const handleRemoveSqlQueryDataSource = useCallback(() => {

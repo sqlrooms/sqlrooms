@@ -6,11 +6,11 @@
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
+    "@sqlrooms/components": "*",
     "@sqlrooms/duckdb": "*",
     "@sqlrooms/layout": "*",
     "@sqlrooms/project-builder": "*",
-    "@sqlrooms/project-config": "*",
-    "@sqlrooms/components": "*"
+    "@sqlrooms/project-config": "*"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",

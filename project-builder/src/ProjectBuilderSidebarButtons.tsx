@@ -8,7 +8,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import {useProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import React, {FC, useMemo} from 'react';
@@ -41,14 +41,14 @@ const SidebarButton: FC<{
 export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
   type,
 }) => {
-  const initialized = useProjectStore((state) => state.initialized);
-  const layout = useProjectStore((state) => state.projectConfig.layout);
-  const projectPanels = useProjectStore((state) => state.projectPanels);
+  const initialized = useBaseProjectStore((state) => state.initialized);
+  const layout = useBaseProjectStore((state) => state.projectConfig.layout);
+  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const visibleProjectPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),
     [layout],
   );
-  const togglePanel = useProjectStore((state) => state.togglePanel);
+  const togglePanel = useBaseProjectStore((state) => state.togglePanel);
   const {icon: Icon, title} = projectPanels[type as ProjectPanelTypes];
 
   return (
@@ -64,9 +64,9 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
 };
 
 const ProjectBuilderSidebarButtons: FC<Props> = () => {
-  const projectPanels = useProjectStore((state) => state.projectPanels);
+  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const sqlEditor = useDisclosure();
-  // const initialized = useProjectStore((state) => state.initialized);
+  // const initialized = useBaseProjectStore((state) => state.initialized);
   // if (!initialized) {
   //   return null;
   // }
