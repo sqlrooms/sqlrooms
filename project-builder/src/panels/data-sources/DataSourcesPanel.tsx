@@ -26,7 +26,7 @@ import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
-import TablesPanel from './TablesPanel';
+import TablesListPanel from './TablesListPanel';
 
 type Props = {
   // no props
@@ -170,7 +170,7 @@ const DataSourcesPanel: FC<Props> = () => {
                   </HStack>
                 </AccordionButton>
                 <AccordionPanel pb={5} pt={1} paddingInline="5px">
-                  <TablesPanel />
+                  <TablesListPanel />
                 </AccordionPanel>
               </AccordionItem>
             </Accordion>

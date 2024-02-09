@@ -13,7 +13,7 @@ type Props = {
   // ...
 };
 
-const TablesPanel: FC<Props> = (props) => {
+const TablesListPanel: FC<Props> = (props) => {
   // const theme = useTheme();
   const {} = props;
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
@@ -77,4 +77,4 @@ const TablesPanel: FC<Props> = (props) => {
   );
 };
 
-export default TablesPanel;
+export default TablesListPanel;

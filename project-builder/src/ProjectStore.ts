@@ -38,7 +38,6 @@ import {
 import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
 import {StateCreator, StoreApi, create} from 'zustand';
-import {devtools} from 'zustand/middleware';
 import {
   clearMosaicPlotConn,
   getMosaicPlotConn,
@@ -865,10 +864,5 @@ export function createProjectStore<PC extends BaseProjectConfig>(
     }
   };
 
-  return create<ProjectState<PC>>()(
-    devtools(store, {
-      store: 'ProjectStore',
-      enabled: process.env.NODE_ENV === 'development',
-    }),
-  );
+  return create<ProjectState<PC>>()(store);
 }
