@@ -24,9 +24,9 @@ type Props = {
 const ErrorPane: FC<Props & Partial<FlexProps>> = ({
   embed,
   title = 'Something went wrong',
+  //error,
   text = `We are sorry, but something unexpected happened. We were notified
-              and will be working on resolving the issue as soon as possible.`,
-  error,
+          and will be working on resolving the issue as soon as possible.`,
   onRetry,
   actions = false,
   onGoToStart,
