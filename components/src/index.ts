@@ -15,6 +15,8 @@ export {default as SkeletonPane} from './SkeletonPane';
 export {default as SpinnerPane} from './SpinnerPane';
 export {default as TablesList} from './TablesList';
 export {default as customStorageManager} from './customStorageManager';
+export {default as SearchableGrid} from './searchable-grid/SearchableGrid';
+export * from './searchable-grid/matchesSearchQuery';
 export * from './theme';
 export * from './tooltip';
 export {default as useDebounced} from './useDebounced';

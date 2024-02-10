@@ -7,7 +7,8 @@
   "license": "MIT",
   "peerDependencies": {
     "@chakra-ui/icon": "*",
-    "@chakra-ui/react": "*"
+    "@chakra-ui/react": "*",
+    "@tanstack/react-query": "*"
   },
   "scripts": {
     "build": "tsc"
