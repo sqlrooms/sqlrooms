@@ -46,6 +46,7 @@ enum SqlEditorViews {
 export interface Props {
   schema: string;
   isOpen: boolean;
+  sqlDocumentationPageUrl?: string;
   onClose: () => void;
 }
 
@@ -66,7 +67,7 @@ const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
 };
 
 const SqlEditor: React.FC<Props> = (props) => {
-  const {schema} = props;
+  const {schema, sqlDocumentationPageUrl} = props;
   const duckConn = useDuckConn();
 
   const [showDocs, setShowDocs] = useState(false);
@@ -214,11 +215,15 @@ const SqlEditor: React.FC<Props> = (props) => {
   }, [mosaicState]);
 
   const views: {[viewId: string]: JSX.Element | null} = {
-    [SqlEditorViews.DOCS]: showDocs ? (
-      <Flex flexDir="column" height="100%">
-        <DocumentationPanel showHeader={false} pageUrl="/sql" />
-      </Flex>
-    ) : null,
+    [SqlEditorViews.DOCS]:
+      showDocs && sqlDocumentationPageUrl ? (
+        <Flex flexDir="column" height="100%">
+          <DocumentationPanel
+            showHeader={false}
+            pageUrl={sqlDocumentationPageUrl}
+          />
+        </Flex>
+      ) : null,
     [SqlEditorViews.TABLES_LIST]: (
       <TablesList
         schema="information_schema"

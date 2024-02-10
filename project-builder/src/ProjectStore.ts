@@ -86,7 +86,7 @@ export type ProjectPanelInfo = {
   title: string;
   icon: React.ComponentType<any>;
   component: React.ComponentType<any>;
-  placement: 'sidebar' | 'top-bar';
+  placement: 'sidebar' | 'sidebar-bottom' | 'hidden' | 'top-bar';
 };
 
 export const INITIAL_BASE_PROJECT_STATE: Omit<

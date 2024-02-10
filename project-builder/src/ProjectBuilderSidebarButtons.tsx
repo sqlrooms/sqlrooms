@@ -4,20 +4,17 @@ import {
   IconButton,
   Spacer,
   Tooltip,
-  useDisclosure,
   VStack,
 } from '@chakra-ui/react';
 import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
-import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import React, {FC, useMemo} from 'react';
-import {TbDatabaseSearch} from 'react-icons/tb';
 type Props = {
   // nothing yet
 };
 
-const SidebarButton: FC<{
+export const SidebarButton: FC<{
   title: string;
   isSelected: boolean;
   isDisabled?: boolean;
@@ -65,7 +62,6 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
 
 const ProjectBuilderSidebarButtons: FC<Props> = () => {
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
-  const sqlEditor = useDisclosure();
   // const initialized = useBaseProjectStore((state) => state.initialized);
   // if (!initialized) {
   //   return null;
@@ -77,9 +73,6 @@ const ProjectBuilderSidebarButtons: FC<Props> = () => {
         {Object.keys(projectPanels)
           .filter((key) => projectPanels[key].placement === 'sidebar')
           .map((type) => {
-            // if (type === ProjectPanelTypes.MAIN_VIEW) {
-            //   return null;
-            // }
             return (
               <ProjectBuilderSidebarButton
                 key={type}
@@ -90,19 +83,18 @@ const ProjectBuilderSidebarButtons: FC<Props> = () => {
       </VStack>
       <Spacer />
       <Divider />
-      <SidebarButton
-        title="SQL Editor"
-        onClick={sqlEditor.onToggle}
-        isSelected={false}
-        icon={() => <TbDatabaseSearch size="19px" />}
-      />
-      {sqlEditor.isOpen ? (
-        <SqlEditorModal
-          schema={'main'}
-          isOpen={sqlEditor.isOpen}
-          onClose={sqlEditor.onClose}
-        />
-      ) : null}
+      <VStack>
+        {Object.keys(projectPanels)
+          .filter((key) => projectPanels[key].placement === 'sidebar-bottom')
+          .map((type) => {
+            return (
+              <ProjectBuilderSidebarButton
+                key={type}
+                type={type as ProjectPanelTypes}
+              />
+            );
+          })}
+      </VStack>
     </Flex>
   );
 };

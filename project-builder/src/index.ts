@@ -2,6 +2,7 @@ export {default as ProjectBuilder} from './ProjectBuilder';
 export {
   ProjectBuilderSidebarButton,
   default as ProjectBuilderSidebarButtons,
+  SidebarButton,
 } from './ProjectBuilderSidebarButtons';
 export * from './ProjectStateProvider';
 export * from './ProjectStore';

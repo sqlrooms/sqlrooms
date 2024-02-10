@@ -9,11 +9,6 @@ type Props = {
   pageUrl?: string;
 };
 
-const DOCS_URL =
-  process.env.NODE_ENV === 'development'
-    ? 'http://localhost:3000'
-    : 'https://docs.flowmap.city';
-
 const Container = styled.div`
   display: flex;
   width: 100%;
@@ -55,7 +50,7 @@ const DocumentationPanel: FC<Props> = ({
       )}
       <Flex position="relative" flexGrow="1">
         <Container ref={containerRef} className={isLoaded ? 'loaded' : ''}>
-          <iframe src={`${DOCS_URL}${pageUrl}`} />
+          <iframe src={pageUrl} />
         </Container>
         {!isLoaded && (
           <Flex position="absolute" top="0" h="100%" w="100%" bg="gray.700">
