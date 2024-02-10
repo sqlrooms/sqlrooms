@@ -1,5 +1,5 @@
 import {extendTheme, ThemeConfig} from '@chakra-ui/react';
-import {opacifyHex} from '@flowmap.gl/data';
+import {opacifyHex} from '@sqlrooms/utils';
 
 export function createTheme(fonts: any) {
   const primary = '#162d3c';

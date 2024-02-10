@@ -1,7 +1,7 @@
-import React, {forwardRef, Ref, useMemo} from 'react';
-import {Coords} from '@floating-ui/react-dom-interactions';
 import {useTheme} from '@chakra-ui/react';
-import {opacifyHex} from '@flowmap.gl/data';
+import {Coords} from '@floating-ui/react-dom-interactions';
+import {opacifyHex} from '@sqlrooms/utils';
+import React, {forwardRef, Ref, useMemo} from 'react';
 
 export interface Props {
   arrow: (Partial<Coords> & {centerOffset: number}) | undefined;

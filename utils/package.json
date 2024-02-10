@@ -11,7 +11,8 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "seedrandom": "^3.0.5"
+    "seedrandom": "^3.0.5",
+    "d3-color": "*"
   },
   "peerDependencies": {
     "d3-time-format": "*",
