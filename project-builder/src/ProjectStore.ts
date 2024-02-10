@@ -35,13 +35,10 @@ import {
   getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
+import {clearMosaicPlotConn, getMosaicPlotConn} from '@sqlrooms/vgplot';
 import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
 import {StateCreator, StoreApi, create} from 'zustand';
-import {
-  clearMosaicPlotConn,
-  getMosaicPlotConn,
-} from '../../../packages/vgplot/src';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -533,6 +530,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         return get().tables.find((t) => t.tableName === tableName);
       },
 
+      /** Currently only used by the SDK to support adding data directly */
       async addTable(tableName, data) {
         const {tables} = get();
         const table = tables.find((t) => t.tableName === tableName);
