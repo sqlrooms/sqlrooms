@@ -1,11 +1,10 @@
 import {Flex} from '@chakra-ui/react';
-import React, {useCallback, useContext, useMemo} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
-// import ErrorBoundary from '../../../app/components/ErrorBoundary';
 import {AppContext, ProgressModal} from '@sqlrooms/components';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {isProjectPanelType} from '@sqlrooms/project-config';
+import React, {useCallback, useContext, useMemo} from 'react';
+import {MosaicNode} from 'react-mosaic-component';
 
 type Props = {
   // nothing yet
