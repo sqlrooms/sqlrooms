@@ -4,7 +4,7 @@
   "main": "src/index.ts",
   "types": "src/index.ts",
   "module": "src/index.ts",
-  "license": "MIT",
+  "private": true,
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
     "@tanstack/react-query": "*",
