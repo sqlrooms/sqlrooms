@@ -6,7 +6,7 @@
   "module": "src/index.ts",
   "license": "MIT",
   "dependencies": {
-    "@heroicons/react/": "*",
+    "@heroicons/react": "*",
     "@sqlrooms/duckdb": "*",
     "@sqlrooms/utils": "*",
     "d3-array": "*",
