@@ -9,15 +9,17 @@
     "@sqlrooms/components": "*",
     "@sqlrooms/duckdb": "*",
     "@sqlrooms/utils": "*",
-    "react-virtual": "^2.10.4",
     "@tanstack/react-table": "^8.10.7",
-    "@tanstack/table-core": "^8.10.7"
+    "@tanstack/table-core": "^8.10.7",
+    "react-virtual": "2.10.4"
   },
   "peerDependencies": {
     "apache-arrow": "*",
     "@tanstack/react-query": "*",
     "@chakra-ui/icons": "*",
-    "@chakra-ui/react": "*"
+    "@chakra-ui/react": "*",
+    "react": "*",
+    "react-dom": "*"
   },
   "scripts": {
     "build": "tsc"

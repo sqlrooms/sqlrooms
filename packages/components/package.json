@@ -6,7 +6,8 @@
   "module": "src/index.ts",
   "private": true,
   "dependencies": {
-    "@sqlrooms/utils": "*"
+    "@sqlrooms/utils": "*",
+    "reselect": "4.1.6"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",
