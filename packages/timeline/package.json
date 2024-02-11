@@ -1,0 +1,27 @@
+{
+  "name": "@sqlrooms/timeline",
+  "version": "1.0.0",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "module": "src/index.ts",
+  "license": "MIT",
+  "dependencies": {
+    "@heroicons/react/": "*",
+    "@sqlrooms/duckdb": "*",
+    "@sqlrooms/utils": "*",
+    "d3-array": "*",
+    "d3-scale": "*",
+    "d3-time": "*",
+    "d3-time-format": "*",
+    "mjolnir.js": "*",
+    "react-use": "*"
+  },
+  "peerDependencies": {
+    "@chakra-ui/icon": "*",
+    "@chakra-ui/react": "*",
+    "@emotion/styled": "*"
+  },
+  "scripts": {
+    "build": "tsc"
+  }
+}
