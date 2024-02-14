@@ -6,8 +6,6 @@ export {default as EditableText} from './EditableText';
 export {default as ErrorPane} from './ErrorPane';
 export {default as Fullbox} from './Fullbox';
 export {default as InfoBox} from './InfoBox';
-export {default as Logo} from './Logo';
-export {default as LogoText} from './LogoText';
 export {default as PanelHeaderButton} from './PanelHeaderButton';
 export {default as ProgressModal} from './ProgressModal';
 export {default as QueryContainer} from './QueryContainer';
