@@ -1,9 +1,10 @@
 {
   "name": "@sqlrooms/components",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "src/index.ts",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@sqlrooms/utils": "*",
@@ -15,6 +16,7 @@
     "@tanstack/react-query": "*"
   },
   "scripts": {
+    "dev": "tsc -w",
     "build": "tsc"
   }
 }

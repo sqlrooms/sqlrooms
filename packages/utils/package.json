@@ -1,11 +1,13 @@
 {
   "name": "@sqlrooms/utils",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "src/index.ts",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
+  "type": "module",
   "private": true,
   "scripts": {
+    "dev": "tsc -w",
     "build": "tsc",
     "test": "jest",
     "test:watch": "jest --watch"
