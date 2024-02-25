@@ -1,4 +1,4 @@
-import {createContext, FC, ReactNode} from 'react';
+import { createContext, FC, ReactNode } from 'react';
 
 export type ErrorBoundaryProps = {
   onReset?: () => void;
@@ -9,13 +9,16 @@ export type PortalContextType = React.RefObject<HTMLElement | null> | undefined;
 
 export type AppContextType = {
   mode: 'app' | 'sdk';
-  AttributionComponent?: FC<any>;
-  MapComponent?: FC<any>;
-  mapProps: Record<string, any>;
-  basemapCssSelector: string;
   ErrorBoundary: FC<ErrorBoundaryProps>;
   captureException: (exception: any, captureContext?: any) => void;
   portalRef: PortalContextType;
+
+  // TODO: generalize these to be more flexible not mention maps
+  AttributionComponent?: FC<any>;
+  MapComponent?: FC<any>;
+  mapProps?: Record<string, any>;
+  basemapCssSelector?: string;
+
 };
 
 export const AppContext = createContext<AppContextType>({
