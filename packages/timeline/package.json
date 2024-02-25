@@ -1,9 +1,10 @@
 {
   "name": "@sqlrooms/timeline",
   "version": "1.0.0",
-  "main": "src/index.ts",
+  "main": "dist/index.js",
   "types": "src/index.ts",
-  "module": "src/index.ts",
+  "module": "dist/index.js",
+  "type": "module",
   "private": true,
   "dependencies": {
     "@heroicons/react": "*",
@@ -22,6 +23,7 @@
     "@emotion/styled": "*"
   },
   "scripts": {
+    "dev": "tsc -w",
     "build": "tsc"
   }
 }
