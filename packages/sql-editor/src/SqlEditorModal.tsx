@@ -1,12 +1,8 @@
-import {Modal, ModalBody, ModalContent, ModalOverlay} from '@chakra-ui/react';
-import {AppContext, SpinnerPane} from '@sqlrooms/components';
-import dynamic from 'next/dynamic';
-import React, {Suspense, useContext} from 'react';
-import {Props} from './SqlEditor';
+import { Modal, ModalBody, ModalContent, ModalOverlay } from '@chakra-ui/react';
+import { AppContext, SpinnerPane } from '@sqlrooms/components';
+import React, { Suspense, useContext } from 'react';
+import SqlEditor, { Props } from './SqlEditor';
 
-const SqlEditor = dynamic(() => import('./SqlEditor'), {
-  loading: () => <SpinnerPane h="100%" />,
-});
 
 const SqlEditorModal: React.FC<Props> = (props) => {
   const {isOpen, onClose} = props;
