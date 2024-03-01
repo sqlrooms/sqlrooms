@@ -56,6 +56,7 @@ export type TaskProgress = {
   message: string;
 };
 
+const INIT_PROJECT_TASK = 'init-project';
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 
 export type ViewStore<VC extends BaseViewConfig> = StoreApi<ViewState<VC>>;
@@ -152,6 +153,7 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
+  reset: () => Promise<void>;
   reinitialize: (opts?: {
     project?: {id?: string; config: PC};
     isReadOnly?: boolean;
@@ -212,6 +214,21 @@ export function createProjectStore<PC extends BaseProjectConfig>(
     const projectState: ProjectState<PC> = {
       ...initialState,
 
+      reset: async () => {
+        const {viewStores, removeView} = get();
+        for (const viewId of Object.keys(viewStores)) {
+          removeView(viewId);
+        }
+        set(initialState);
+        try {
+          // Clean up DuckDB
+          await Promise.all([dropAllFiles(), dropAllTables()]);
+          await clearMosaicPlotConn();
+        } catch (err) {
+          console.error(err);
+        }
+      },
+
       reinitialize: async (opts) => {
         const {
           project,
@@ -220,24 +237,14 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           captureException,
           password,
         } = opts ?? {};
+        await get().reset();
 
         // Remove and unsubscribe from all views
-        const {viewStores, removeView} = get();
-        for (const viewId of Object.keys(viewStores)) {
-          removeView(viewId);
-        }
-        try {
-          // Clean up DuckDB
-          await Promise.all([dropAllFiles(), dropAllTables()]);
-          await clearMosaicPlotConn();
-        } catch (err) {
-          console.error(err);
-        }
-
         // TODO: show some error message if the project config is invalid
         const projectConfig = project?.config ?? initialState.projectConfig;
 
         set({
+          ...initialState,
           projectId: project?.id ?? undefined,
           isPublic,
           isReadOnly,
@@ -253,8 +260,13 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           addView(view as ElementType<PC['views']>);
         }
 
+        get().setTaskProgress(INIT_PROJECT_TASK, {
+          message: 'Initializing project…',
+          progress: undefined,
+        });
         await updateReadyDataSources();
         await get().maybeDownloadDataSources();
+        get().setTaskProgress(INIT_PROJECT_TASK, undefined);
       },
 
       setTaskProgress(id, taskProgress) {
@@ -269,12 +281,13 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
       },
 
-      /** Returns the progress of the first task */
+      /** Returns the progress of the last task */
       getLoadingProgress() {
         const {tasksProgress} = get();
-        const [firstKey] = Object.keys(tasksProgress);
-        if (firstKey) {
-          return tasksProgress[firstKey];
+        const keys = Object.keys(tasksProgress);
+        const lastKey = keys[keys.length - 1];
+        if (lastKey) {
+          return tasksProgress[lastKey];
         }
         return undefined;
       },
@@ -672,7 +685,11 @@ export function createProjectStore<PC extends BaseProjectConfig>(
 
       areViewsReadyToRender: () => {
         const {viewStores} = get();
-        return Object.values(viewStores).every(
+        const stores = Object.values(viewStores);
+        if (stores.length === 0) {
+          return false;
+        }
+        return stores.every(
           ({viewStore}) => viewStore.getState().readyToRender,
         );
       },
