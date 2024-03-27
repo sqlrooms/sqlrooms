@@ -37,6 +37,7 @@ const TablesList: FC<Props> = (props) => {
         fontSize="sm"
         textAlign="left"
         overflowWrap="anywhere"
+        userSelect="text"
       >
         {tableName}
       </Button>
@@ -76,7 +77,7 @@ const TablesList: FC<Props> = (props) => {
   // );
 
   return (
-    <Flex height="100%" bg="gray.800" px="2" py="4">
+    <Flex height="100%" bg="gray.800" px="2" py="4" overflow="auto">
       <List spacing={1}>
         {tableNames.map((tableName, i) => (
           <ListItem key={i}>
