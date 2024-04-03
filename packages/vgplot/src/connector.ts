@@ -25,6 +25,9 @@ export async function getMosaicPlotConn() {
       con: conn,
       query: async (query: {type: string; sql: string}) => {
         const {type, sql} = query;
+        if (process.env.NODE_ENV === 'development') {
+          console.log(sql);
+        }
         const result = await conn.query(sql);
         return type === 'exec'
           ? undefined
