@@ -1,7 +1,9 @@
 import {getDuckConn} from '@sqlrooms/duckdb';
 import {useQuery} from '@tanstack/react-query';
-import {Coordinator} from '@uwdata/mosaic-core';
-import {createAPIContext} from '@uwdata/vgplot';
+import {
+  createAPIContext,
+  coordinator as createCoordinator,
+} from '@uwdata/vgplot';
 
 type MosaicPlotConn = {
   db: any;
@@ -41,7 +43,9 @@ export async function getMosaicPlotConn(): Promise<MosaicPlotConn> {
     },
   };
   // TODO: support socketConnector("ws://localhost:8001/")
-  const coordinator = new Coordinator(connector);
+  const coordinator = createCoordinator();
+  // const coordinator = new Coordinator();
+  coordinator.databaseConnector(connector);
   // TODO: context should be recreated when loading a new project
   const mosaicApi = createAPIContext({coordinator});
   const mpc = {...connector, coordinator, mosaicApi};
