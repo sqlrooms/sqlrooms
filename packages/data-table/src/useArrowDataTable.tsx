@@ -33,6 +33,34 @@ export type ArrowColumnMeta = {
 
 const MAX_VALUE_LENGTH = 64;
 
+function valueToString(type: arrow.DataType, value: any): string {
+  if (value === null || value === undefined) {
+    return 'NULL';
+  }
+  if (arrow.DataType.isTimestamp(type)) {
+    switch (typeof value) {
+      case 'number':
+      case 'bigint':
+        return new Date(Number(value)).toISOString();
+      case 'string':
+        return new Date(value).toISOString();
+      default:
+        return String(value);
+    }
+  }
+  if (arrow.DataType.isTime(type)) {
+    switch (typeof value) {
+      case 'number':
+      case 'bigint':
+        return new Date(Number(value) / 1000).toISOString().substring(11, 19);
+      case 'string':
+        return new Date(value).toISOString().substring(11, 19);
+      default:
+        return String(value);
+    }
+  }
+  return String(value);
+}
 // Only use for small tables or in combination with pagination
 export default function useArrowDataTable(
   table: arrow.Table | undefined,
@@ -46,9 +74,7 @@ export default function useArrowDataTable(
         columnHelper.accessor((row, i) => table.getChild(field.name)?.get(i), {
           cell: (info) => {
             const value = info.getValue();
-            const valueStr = arrow.DataType.isTimestamp(field.type)
-              ? new Date(value).toISOString()
-              : String(value);
+            const valueStr = valueToString(field.type, value);
 
             return valueStr.length > MAX_VALUE_LENGTH ? (
               <Popover trigger="hover">

@@ -36,18 +36,24 @@ export const NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
 
 export const formatNumber = NUMBER_FORMAT.format;
 
-const DATE_TIME_FORMAT_ISO = timeFormat('%Y-%m-%d %H:%M:%S');
-const DATE_FORMAT_ISO = timeFormat('%Y-%m-%d');
+const TIME_OF_DAY_FORMAT = timeFormat('%I:%M %p');
+const DATE_TIME_FORMAT = timeFormat('%Y-%m-%d %I:%M %p');
+const DATE_FORMAT = timeFormat('%Y-%m-%d');
 
-export const formatDateTime = (d: Date | number) => {
-  const date = d instanceof Date ? d : new Date(d);
+export const formatDateTime = (d: Date | number | bigint) => {
+  const date = d instanceof Date ? d : new Date(Number(d));
   // return date.toISOString();
-  return DATE_TIME_FORMAT_ISO(date);
+  return DATE_TIME_FORMAT(date);
 };
 
-export const formatDate = (d: Date | number) => {
-  const date = d instanceof Date ? d : new Date(d);
-  return DATE_FORMAT_ISO(date);
+export const formatDate = (d: Date | number | bigint) => {
+  const date = d instanceof Date ? d : new Date(Number(d));
+  return DATE_FORMAT(date);
+};
+
+export const formatTimeOfDay = (d: Date | number | bigint) => {
+  const date = d instanceof Date ? d : new Date(Number(d));
+  return TIME_OF_DAY_FORMAT(date);
 };
 
 export const formatTimeRelative = (d: ConfigType) => {

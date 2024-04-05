@@ -1,6 +1,5 @@
 import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {formatDate} from '@sqlrooms/utils';
 import {max} from 'd3-array';
 import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
 import {EventManager} from 'mjolnir.js';
@@ -16,6 +15,7 @@ interface Props {
   darkMode: boolean;
   timeGranularity: TimeGranularity;
   onChange: (range: [Date, Date]) => void;
+  formatDateTime: (d: Date | number | bigint) => string;
 }
 
 export interface CountByTime {
@@ -502,8 +502,14 @@ TimelineChart.displayName = 'TimelineChart';
 
 const Timeline: React.FC<Props> = (props) => {
   const [measureRef, dimensions] = useMeasure();
-  const {timeExtent, selectedRange, timeGranularity, darkMode, onChange} =
-    props;
+  const {
+    formatDateTime,
+    timeExtent,
+    selectedRange,
+    timeGranularity,
+    darkMode,
+    onChange,
+  } = props;
   const [internalRange, setInternalRange] =
     useState<[Date, Date]>(selectedRange);
   const throttledRange = useThrottle(internalRange, 100);
@@ -559,7 +565,7 @@ const Timeline: React.FC<Props> = (props) => {
     <VStack height="100%" padding="5px 20px" userSelect="none" gap={0}>
       {internalRange ? (
         <Text fontSize="xs">
-          {`${formatDate(internalRange[0])} - ${formatDate(internalRange[1])}`}
+          {`${formatDateTime(internalRange[0])} - ${formatDateTime(internalRange[1])}`}
         </Text>
       ) : null}
       <HStack flexGrow={1} gap={0} width="100%">
