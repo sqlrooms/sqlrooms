@@ -1,6 +1,6 @@
 import {Flex, useTheme} from '@chakra-ui/react';
 import {VgPlotChartConfig, VgPlotSpec} from '@sqlrooms/vgplot';
-import {parseSpec} from '@uwdata/vgplot';
+import {parseSpec, astToDOM} from '@uwdata/mosaic-spec';
 import {FC, useEffect, useRef} from 'react';
 import {useMosaicPlotConn} from './connector';
 
@@ -11,15 +11,17 @@ const VgPlotChart: FC<Props> = (props) => {
   const theme = useTheme();
 
   const {chart} = props;
-  useMosaicPlotConn();
+  const {coordinator} = useMosaicPlotConn();
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     (async () => {
       if (containerRef.current) {
-        // TODO: update when filter changes
-        containerRef.current?.replaceChildren(
-          await parseSpec(addDefaultStyle(chart.spec, theme)),
-        );
+        const ast = await parseSpec(addDefaultStyle(chart.spec, theme));
+        const {
+          element, // root DOM element of the application
+          params   // Map of all named Params and Selections
+        } = await astToDOM(ast);
+        containerRef.current?.replaceChildren(element);        
       }
     })();
   }, [chart.spec, containerRef, theme]);
