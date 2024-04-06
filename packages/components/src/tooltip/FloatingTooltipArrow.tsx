@@ -1,7 +1,7 @@
-import {useTheme} from '@chakra-ui/react';
-import {Coords} from '@floating-ui/react-dom-interactions';
-import {opacifyHex} from '@sqlrooms/utils';
-import React, {forwardRef, Ref, useMemo} from 'react';
+import { useTheme } from '@chakra-ui/react';
+import { Coords } from '@floating-ui/react-dom-interactions';
+import { opacifyHex } from '@sqlrooms/utils';
+import { forwardRef, Ref, useMemo } from 'react';
 
 export interface Props {
   arrow: (Partial<Coords> & {centerOffset: number}) | undefined;
@@ -13,8 +13,8 @@ export interface Props {
 
 export const DEFAULT_ARROW_SIZE = 7;
 
-const FloatingTooltipArrow: React.FC<Props> = forwardRef<
-  HTMLElement | null,
+const FloatingTooltipArrow = forwardRef<
+  HTMLElement,
   Props
 >((props, ref) => {
   const theme = useTheme();

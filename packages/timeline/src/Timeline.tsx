@@ -1,12 +1,12 @@
-import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
+import { Box, HStack, Text, useTheme, VStack } from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {max} from 'd3-array';
-import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
-import {EventManager} from 'mjolnir.js';
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
-import {useMeasure, useThrottle} from 'react-use';
+import { max } from 'd3-array';
+import { scaleLinear, ScaleTime, scaleTime } from 'd3-scale';
+import { EventManager } from 'mjolnir.js';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useMeasure, useThrottle } from 'react-use';
 import PlayControl from './PlayControl';
-import {areRangesEqual, tickMultiFormat, TimeGranularity} from './time';
+import { areRangesEqual, tickMultiFormat, TimeGranularity } from './time';
 
 interface Props {
   selectedRange: [Date, Date];
@@ -90,10 +90,10 @@ const TickLine = styled.line({
   shapeRendering: 'crispEdges',
 } as any);
 
-const TickText = styled.text<{darkMode: boolean}>(() => ({
+const TickText = styled.text({
   fontSize: 10,
   textAnchor: 'start',
-}));
+});
 
 const Bar = styled.rect<{darkMode: boolean}>(() => ({
   // props.darkMode ? Colors.LIGHT_GRAY1 : ColorScheme.primary,
@@ -427,7 +427,6 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
               {xPos < chartWidth && (
                 <TickText
                   fill={theme.colors.gray[500]}
-                  darkMode={darkMode}
                   x={3}
                   y={AXIS_AREA_HEIGHT - 3}
                 >
