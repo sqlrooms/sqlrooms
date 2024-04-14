@@ -9,7 +9,7 @@
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
     "@tanstack/react-query": "*",
-    "apache-arrow": "^13.0.0"
+    "apache-arrow": "*"
   },
   "scripts": {
     "dev": "tsc -w",
