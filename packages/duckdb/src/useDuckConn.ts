@@ -161,7 +161,7 @@ export function getColValAsNumber(
   return v[0] ?? v;
 }
 
-export const escapeVal = (val: string) => {
+export const escapeVal = (val: any) => {
   return `'${String(val).replace(/'/g, "''")}'`;
 };
 
