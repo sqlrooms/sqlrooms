@@ -42,7 +42,7 @@ export function convertToUniqueColumnOrTableName(
   const base = filename.replace(/\.[^/.]+$/, '');
 
   // Replace any invalid character with underscore, and convert to lowercase
-  let tableName = base.replace(/[^a-z0-9_]/gi, '_').toLowerCase();
+  let tableName = base.replace(/[^a-z0-9_]/gi, '_');
 
   // If the first character is a number, prepend an underscore
   if (/^\d/.test(tableName)) {
@@ -60,8 +60,10 @@ export function convertToUniqueColumnOrTableName(
 }
 
 export function generateUniqueName(name: string, usedNames?: string[]) {
+  const usedNamesLower = usedNames?.map((n) => n.toLowerCase());
+
   // If tableName exists in the list
-  if (usedNames?.includes(name)) {
+  if (usedNamesLower?.includes(name.toLowerCase())) {
     let baseName = name;
     let i = 0;
 
@@ -75,7 +77,7 @@ export function generateUniqueName(name: string, usedNames?: string[]) {
     do {
       i++;
       name = `${baseName}_${i}`;
-    } while (usedNames.includes(name));
+    } while (usedNamesLower.includes(name.toLowerCase()));
   }
 
   return name;
