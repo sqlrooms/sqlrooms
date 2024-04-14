@@ -9,7 +9,7 @@ export async function createTableFromQuery(tableName: string, query: string) {
   const {conn} = await getDuckConn();
   const rowCount = getColValAsNumber(
     await conn.query(
-      `CREATE TABLE main.${tableName} AS (
+      `CREATE OR REPLACE TABLE main.${tableName} AS (
         ${query}
       )`,
     ),

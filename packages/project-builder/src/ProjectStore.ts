@@ -32,6 +32,7 @@ import {
   convertToUniqueColumnOrTableName,
   convertToUniqueS3FolderPath,
   downloadFile,
+  generateUniqueName,
   getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
@@ -170,7 +171,11 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   setLayout(layout: LayoutConfig): void;
   togglePanel: (panel: string, show?: boolean) => void;
   togglePanelPin: (panel: string) => void;
-  addSqlQuery(tableName: string, query: string): void;
+  addOrUpdateSqlQuery(
+    tableName: string,
+    query: string,
+    oldTableName?: string,
+  ): void;
   removeSqlQueryDataSource(tableName: string): void;
   addProjectFile(info: ProjectFileInfo, desiredTableName?: string): void;
   removeProjectFile(pathname: string): void;
@@ -393,17 +398,33 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
       },
 
-      addSqlQuery: async (tableName, query) => {
-        const {rowCount} = await createTableFromQuery(tableName, query);
-        get().setTableRowCount(tableName, rowCount);
+      addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
+        const {schema} = get();
+        const newTableName =
+          tableName !== oldTableName
+            ? generateUniqueName(tableName, await getDuckTables(schema))
+            : tableName;
+        const {rowCount} = await createTableFromQuery(newTableName, query);
+        get().setTableRowCount(newTableName, rowCount);
         set((state) =>
           produce(state, (draft) => {
-            draft.projectConfig.dataSources.push({
+            const newDataSource = {
               type: DataSourceTypes.enum.sql,
               sqlQuery: query,
-              tableName,
-            });
-            draft.dataSourceStates[tableName] = {
+              tableName: newTableName,
+            };
+            if (oldTableName) {
+              draft.projectConfig.dataSources =
+                draft.projectConfig.dataSources.map((dataSource) =>
+                  dataSource.tableName === oldTableName
+                    ? newDataSource
+                    : dataSource,
+                );
+              delete draft.dataSourceStates[oldTableName];
+            } else {
+              draft.projectConfig.dataSources.push(newDataSource);
+            }
+            draft.dataSourceStates[newTableName] = {
               status: DataSourceStatus.READY,
             };
           }),
