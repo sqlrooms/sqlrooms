@@ -2,7 +2,6 @@ import { Flex } from '@chakra-ui/react';
 import { AppContext, ProgressModal } from '@sqlrooms/components';
 import { MosaicLayout, getVisibleMosaicLayoutPanels } from '@sqlrooms/layout';
 import { useBaseProjectStore } from '@sqlrooms/project-builder';
-import { isProjectPanelType } from '@sqlrooms/project-config';
 import React, { useCallback, useContext, useMemo } from 'react';
 import { MosaicNode } from 'react-mosaic-component';
 
@@ -36,8 +35,8 @@ const ProjectBuilder: React.FC<Props> = () => {
   const {ErrorBoundary} = useContext(AppContext);
   const renderedPanels: Map<string, JSX.Element> = useMemo(() => {
     return Array.from(visibleProjectPanels).reduce((acc, id: string) => {
-      if (isProjectPanelType(id)) {
-        const {component: PanelComp} = projectPanels[id];
+      const PanelComp = projectPanels[id]?.component;
+      if (PanelComp) {
         acc.set(
           id,
           <ErrorBoundary>

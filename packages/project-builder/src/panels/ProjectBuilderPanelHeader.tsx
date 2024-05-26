@@ -7,7 +7,7 @@ import {FC, useMemo} from 'react';
 import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
 
 type Props = {
-  panelKey: ProjectPanelTypes;
+  panelKey: ProjectPanelTypes | string;
 };
 const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   const {panelKey: type} = props;

@@ -11,10 +11,6 @@ export enum ProjectPanelTypes {
   MAIN_VIEW = 'main-view',
 }
 
-export function isProjectPanelType(value: any): value is ProjectPanelTypes {
-  return Object.values(ProjectPanelTypes).includes(value);
-}
-
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;
 
