@@ -140,7 +140,7 @@ const DataSourcesPanel: FC<Props> = () => {
                 </AccordionPanel>
               </AccordionItem>
 
-              {queryDataSources.length > 0 && (
+              {!isReadOnly || queryDataSources.length > 0 ? (
                 <AccordionItem>
                   <AccordionButton px={0} gap={1}>
                     <CustomAccordionIcon />
@@ -157,7 +157,7 @@ const DataSourcesPanel: FC<Props> = () => {
                     />
                   </AccordionPanel>
                 </AccordionItem>
-              )}
+              ) : null}
 
               <AccordionItem>
                 <AccordionButton px={0} gap={1}>

@@ -9,6 +9,7 @@
   "dependencies": {
     "@sqlrooms/components": "*",
     "@sqlrooms/duckdb": "*",
+    "@sqlrooms/sql-editor": "*",
     "@sqlrooms/project-config": "*"
   },
   "peerDependencies": {

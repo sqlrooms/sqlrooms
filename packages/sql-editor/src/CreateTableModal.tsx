@@ -21,13 +21,17 @@ import {
 import {AppContext} from '@sqlrooms/components';
 import {DuckQueryError} from '@sqlrooms/duckdb';
 import {useBaseProjectStore} from '@sqlrooms/project-builder';
-import {VALID_TABLE_OR_COLUMN_REGEX} from '@sqlrooms/project-config';
+import {
+  SqlQueryDataSource,
+  VALID_TABLE_OR_COLUMN_REGEX,
+} from '@sqlrooms/project-config';
 import {FC, FormEvent, useCallback, useContext} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
 
 type Props = {
   query: string;
   disclosure: UseDisclosureReturn;
+  editDataSource?: SqlQueryDataSource;
 };
 
 type FormData = {
@@ -37,13 +41,20 @@ type FormData = {
 };
 
 const CreateTableModal: FC<Props> = (props) => {
-  const {disclosure} = props;
+  const {editDataSource, disclosure} = props;
   const theme = useTheme();
   const {register, handleSubmit, formState, setError, clearErrors, reset} =
-    useForm<FormData>({values: {tableName: '', query: props.query.trim()}});
+    useForm<FormData>({
+      values: {
+        tableName: editDataSource?.tableName ?? '',
+        query: editDataSource?.sqlQuery ?? props.query.trim(),
+      },
+    });
   const {errors, isSubmitting} = formState;
 
-  const addQuery = useBaseProjectStore((state) => state.addSqlQuery);
+  const addOrUpdateSqlQuery = useBaseProjectStore(
+    (state) => state.addOrUpdateSqlQuery,
+  );
 
   const onSubmit = useCallback(
     (ev: FormEvent<HTMLFormElement>) => {
@@ -51,7 +62,11 @@ const CreateTableModal: FC<Props> = (props) => {
       handleSubmit(async (data: FormData) => {
         try {
           const {tableName, query} = data;
-          await addQuery(tableName, query);
+          await addOrUpdateSqlQuery(
+            tableName,
+            query,
+            editDataSource?.tableName,
+          );
           reset();
           disclosure.onClose();
         } catch (err) {
@@ -65,7 +80,15 @@ const CreateTableModal: FC<Props> = (props) => {
         }
       })(ev);
     },
-    [addQuery, clearErrors, disclosure, handleSubmit, reset, setError],
+    [
+      addOrUpdateSqlQuery,
+      clearErrors,
+      disclosure,
+      handleSubmit,
+      reset,
+      setError,
+      editDataSource?.tableName,
+    ],
   );
   const appContext = useContext(AppContext);
 
@@ -82,12 +105,14 @@ const CreateTableModal: FC<Props> = (props) => {
       <ModalContent>
         <form onSubmit={onSubmit}>
           <ModalHeader>
-            Create table
-            <Text fontSize="xs" color="gray.300" fontWeight="normal">
-              Create a new table from the results of an SQL query.
-              {/* Add a new query to the project data sources */}
-              {/* The table will be recreated each time when the project is opened. */}
-            </Text>
+            {editDataSource ? `Edit table query` : `Create table from query`}
+            {editDataSource ? null : (
+              <Text fontSize="xs" color="gray.300" fontWeight="normal">
+                Create a new table from the results of an SQL query.
+                {/* Add a new query to the project data sources */}
+                {/* The table will be recreated each time when the project is opened. */}
+              </Text>
+            )}
           </ModalHeader>
           <ModalBody display="flex" flexDir="column" gap="2">
             <FormControl isInvalid={Boolean(errors.formError)}>
@@ -144,13 +169,12 @@ const CreateTableModal: FC<Props> = (props) => {
             </Button>
             <Button
               colorScheme="blue"
-              mr={3}
               type="submit"
               isLoading={isSubmitting}
               // onClick={handleConfirm}
               // isDisabled={Boolean(loadingStatus) || !canConfirm}
             >
-              Create
+              {editDataSource ? 'Update' : `Create`}
             </Button>
           </ModalFooter>
         </form>
