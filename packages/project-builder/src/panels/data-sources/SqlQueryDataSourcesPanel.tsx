@@ -60,6 +60,10 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
     [removeSqlQueryDataSource],
   );
 
+  const addOrUpdateSqlQuery = useBaseProjectStore(
+    (state) => state.addOrUpdateSqlQuery,
+  );
+
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
   return (
     <Flex flexDir="column" overflow="auto" flexGrow="1">
@@ -79,6 +83,7 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
         disclosure={editModal}
         editDataSource={selectedDataSource}
         query=""
+        onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
       />
 
       <Flex flexDir="column" overflow="auto" flexGrow="1">

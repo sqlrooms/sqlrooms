@@ -1,9 +1,9 @@
-import { Flex } from '@chakra-ui/react';
-import { AppContext, ProgressModal } from '@sqlrooms/components';
-import { MosaicLayout, getVisibleMosaicLayoutPanels } from '@sqlrooms/layout';
-import { useBaseProjectStore } from '@sqlrooms/project-builder';
-import React, { useCallback, useContext, useMemo } from 'react';
-import { MosaicNode } from 'react-mosaic-component';
+import {Flex} from '@chakra-ui/react';
+import {AppContext, ProgressModal} from '@sqlrooms/components';
+import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import React, {useCallback, useContext, useMemo} from 'react';
+import {MosaicNode} from 'react-mosaic-component';
+import {useBaseProjectStore} from './ProjectStateProvider';
 
 type Props = {
   // nothing yet

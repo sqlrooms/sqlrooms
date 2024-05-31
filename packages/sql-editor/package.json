@@ -10,7 +10,6 @@
     "@sqlrooms/components": "*",
     "@sqlrooms/duckdb": "*",
     "@sqlrooms/layout": "*",
-    "@sqlrooms/project-builder": "*",
     "@sqlrooms/project-config": "*"
   },
   "peerDependencies": {

@@ -175,7 +175,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     tableName: string,
     query: string,
     oldTableName?: string,
-  ): void;
+  ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): void;
   addProjectFile(info: ProjectFileInfo, desiredTableName?: string): void;
   removeProjectFile(pathname: string): void;

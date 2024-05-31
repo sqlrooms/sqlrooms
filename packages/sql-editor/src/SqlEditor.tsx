@@ -26,7 +26,6 @@ import {
   useDuckConn,
 } from '@sqlrooms/duckdb';
 import {MosaicLayout} from '@sqlrooms/layout';
-import {DocumentationPanel} from '@sqlrooms/project-builder';
 import {isMosaicLayoutParent} from '@sqlrooms/project-config';
 import {genRandomStr} from '@sqlrooms/utils';
 import {useQuery} from '@tanstack/react-query';
@@ -35,7 +34,9 @@ import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
-import CreateTableModal from './CreateTableModal';
+import CreateTableModal, {
+  Props as CreateTableModalProps,
+} from './CreateTableModal';
 
 enum SqlEditorViews {
   DOCS = 'docs',
@@ -43,12 +44,13 @@ enum SqlEditorViews {
   QUERY_PANE = 'queryPane',
 }
 
-export interface Props {
+export type Props = {
   schema: string;
   isOpen: boolean;
-  sqlDocumentationPageUrl?: string;
+  documentationPanel?: JSX.Element;
   onClose: () => void;
-}
+  onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
+};
 
 const LOCAL_STORAGE_QUERY_KEY = 'sqlEditor.query';
 const DOCS_PANE_SPLIT_PERCENTAGE = 30;
@@ -67,7 +69,7 @@ const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
 };
 
 const SqlEditor: React.FC<Props> = (props) => {
-  const {schema, sqlDocumentationPageUrl} = props;
+  const {schema, documentationPanel, onAddOrUpdateSqlQuery} = props;
   const duckConn = useDuckConn();
 
   const [showDocs, setShowDocs] = useState(false);
@@ -215,15 +217,7 @@ const SqlEditor: React.FC<Props> = (props) => {
   }, [mosaicState]);
 
   const views: {[viewId: string]: JSX.Element | null} = {
-    [SqlEditorViews.DOCS]:
-      showDocs && sqlDocumentationPageUrl ? (
-        <Flex flexDir="column" height="100%">
-          <DocumentationPanel
-            showHeader={false}
-            pageUrl={sqlDocumentationPageUrl}
-          />
-        </Flex>
-      ) : null,
+    [SqlEditorViews.DOCS]: showDocs ? documentationPanel ?? null : null,
     [SqlEditorViews.TABLES_LIST]: (
       <TablesList
         schema="information_schema"
@@ -337,7 +331,11 @@ const SqlEditor: React.FC<Props> = (props) => {
             onChange={handleMosaicChange}
           />
         </Box>
-        <CreateTableModal query={query} disclosure={createTableModal} />
+        <CreateTableModal
+          query={query}
+          disclosure={createTableModal}
+          onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
+        />
       </Flex>
     </>
   );

@@ -20,7 +20,6 @@ import {
 } from '@chakra-ui/react';
 import {AppContext} from '@sqlrooms/components';
 import {DuckQueryError} from '@sqlrooms/duckdb';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {
   SqlQueryDataSource,
   VALID_TABLE_OR_COLUMN_REGEX,
@@ -28,10 +27,15 @@ import {
 import {FC, FormEvent, useCallback, useContext} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
 
-type Props = {
+export type Props = {
   query: string;
   disclosure: UseDisclosureReturn;
   editDataSource?: SqlQueryDataSource;
+  onAddOrUpdateSqlQuery: (
+    tableName: string,
+    query: string,
+    oldTableName?: string,
+  ) => Promise<void>;
 };
 
 type FormData = {
@@ -41,7 +45,7 @@ type FormData = {
 };
 
 const CreateTableModal: FC<Props> = (props) => {
-  const {editDataSource, disclosure} = props;
+  const {editDataSource, disclosure, onAddOrUpdateSqlQuery} = props;
   const theme = useTheme();
   const {register, handleSubmit, formState, setError, clearErrors, reset} =
     useForm<FormData>({
@@ -52,17 +56,13 @@ const CreateTableModal: FC<Props> = (props) => {
     });
   const {errors, isSubmitting} = formState;
 
-  const addOrUpdateSqlQuery = useBaseProjectStore(
-    (state) => state.addOrUpdateSqlQuery,
-  );
-
   const onSubmit = useCallback(
     (ev: FormEvent<HTMLFormElement>) => {
       clearErrors('formError');
       handleSubmit(async (data: FormData) => {
         try {
           const {tableName, query} = data;
-          await addOrUpdateSqlQuery(
+          await onAddOrUpdateSqlQuery(
             tableName,
             query,
             editDataSource?.tableName,
@@ -81,7 +81,7 @@ const CreateTableModal: FC<Props> = (props) => {
       })(ev);
     },
     [
-      addOrUpdateSqlQuery,
+      onAddOrUpdateSqlQuery,
       clearErrors,
       disclosure,
       handleSubmit,
