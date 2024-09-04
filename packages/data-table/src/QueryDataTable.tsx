@@ -40,7 +40,7 @@ const QueryDataTable: FC<Props> = ({query}) => {
     [...queryKeysPrefix, 'count'],
     async () => {
       return getColValAsNumber(
-        await conn.query(`SELECT COUNT(*) FROM (
+        await conn.query(`SELECT COUNT(*)::int FROM (
         ${query}
         )`),
       );

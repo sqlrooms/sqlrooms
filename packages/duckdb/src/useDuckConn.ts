@@ -100,7 +100,9 @@ export async function getDuckConn(): Promise<DuckConn> {
     })(logger, worker);
     await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
     URL.revokeObjectURL(workerUrl);
-    await db.open({path: ':memory:', query: {castBigIntToDouble: true}});
+    await db.open({path: ':memory:', query: {
+      // castBigIntToDouble: true
+    }});
     const conn = await db.connect();
     // Replace conn.query to include full query in the error message
     const connQuery = conn.query;
