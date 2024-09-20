@@ -138,7 +138,7 @@ const TableCard: FC<Props> = (props) => {
                           <Badge
                             colorScheme="blue"
                             opacity="0.5"
-                            fontSize={9}
+                            fontSize={'xx-small'}
                             variant="outline"
                           >
                             {row.type}
@@ -146,7 +146,7 @@ const TableCard: FC<Props> = (props) => {
                         </Box>
                         <Flex
                           color="gray.300"
-                          fontSize={'xs'}
+                          fontSize={'x-small'}
                           maxWidth={'100px'}
                         >
                           {row.name}
