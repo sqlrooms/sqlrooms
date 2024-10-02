@@ -1,5 +1,4 @@
 import {
-  Divider,
   Flex,
   IconButton,
   Spacer,
@@ -82,19 +81,19 @@ const ProjectBuilderSidebarButtons: FC<Props> = () => {
           })}
       </VStack>
       <Spacer />
-      <Divider />
       <VStack>
         {Object.keys(projectPanels)
           .filter((key) => projectPanels[key].placement === 'sidebar-bottom')
           .map((type) => {
             return (
               <ProjectBuilderSidebarButton
-                key={type}
-                type={type as ProjectPanelTypes}
+              key={type}
+              type={type as ProjectPanelTypes}
               />
             );
           })}
       </VStack>
+       
     </Flex>
   );
 };
