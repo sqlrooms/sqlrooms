@@ -645,10 +645,8 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             produce(state, (draft) => {
               const layout = draft.projectConfig.layout;
               const root = layout.nodes;
-              const side =
-                draft.projectPanels[panel]?.placement === 'sidebar'
-                  ? 'first'
-                  : 'second';
+              const placement = draft.projectPanels[panel]?.placement;
+              const side = placement === 'sidebar' ? 'first' : 'second';
               const toReplace = isMosaicLayoutParent(root)
                 ? root[side]
                 : undefined;
@@ -670,7 +668,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
                 };
                 // add to to the left
                 layout.nodes = makeMosaicStack(
-                  'row',
+                  placement === 'sidebar-bottom' ? 'column' : 'row',
                   side === 'first'
                     ? [panelNode, restNode]
                     : [restNode, panelNode],
