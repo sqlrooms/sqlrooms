@@ -8,9 +8,11 @@ import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
 
 type Props = {
   panelKey: ProjectPanelTypes | string;
+  showHeader?: boolean;
+  children?: React.ReactNode;
 };
 const ProjectBuilderPanelHeader: FC<Props> = (props) => {
-  const {panelKey: type} = props;
+  const {showHeader = true, panelKey: type, children} = props;
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const {icon: Icon, title} = projectPanels[type];
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
@@ -25,15 +27,20 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   return (
     <>
       <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
-        <Icon width="20px" />
-        <Heading
-          as="h2"
-          fontSize={'xs'}
-          textTransform="uppercase"
-          color="gray.400"
-        >
-          {title}
-        </Heading>
+        {showHeader && (
+           <>
+            <Icon width="20px" />
+            <Heading
+              as="h2"
+              fontSize={'xs'}
+              textTransform="uppercase"
+              color="gray.400"
+            >
+              {title}
+              </Heading>
+            </>
+          )}
+        {children}
       </Flex>
       <Box position="absolute" right="3px" top="1px" bg={'gray.700'}>
         <PanelHeaderButton
