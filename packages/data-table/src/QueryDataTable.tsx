@@ -14,9 +14,10 @@ import useArrowDataTable from './useArrowDataTable';
 
 type Props = {
   query: string;
+  queryKeyComponents?: any[];
 };
 
-const QueryDataTable: FC<Props> = ({query}) => {
+const QueryDataTable: FC<Props> = ({query, queryKeyComponents = []}) => {
   const {conn} = useDuckConn();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -25,7 +26,7 @@ const QueryDataTable: FC<Props> = ({query}) => {
   });
 
   const queryKeysPrefix: string[] = useMemo(
-    () => ['queryDataTable', query],
+    () => ['queryDataTable', query, ...queryKeyComponents],
     [query],
   );
 
@@ -53,9 +54,12 @@ const QueryDataTable: FC<Props> = ({query}) => {
     },
   );
 
+  const dataQueryKey = [...queryKeysPrefix, 'data', pagination, sorting];
+
   const dataQuery = useQuery(
-    [...queryKeysPrefix, 'data', pagination, sorting],
+    dataQueryKey,
     async () => {
+     
       return await conn.query(
         // TODO: revisit timestamps conversion https://github.com/duckdb/duckdb-wasm/issues/393
         `SELECT * FROM (
