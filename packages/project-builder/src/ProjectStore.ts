@@ -101,6 +101,7 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   password: undefined,
   projectFolder: undefined,
   initialized: false,
+  isDataAvailable: false,
   isReadOnly: false,
   isPublic: false,
   viewStores: {},
@@ -145,6 +146,7 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   projectFilesProgress: {[pathname: string]: ProjectFileState};
   lastSavedConfig: PC | undefined;
   initialized: boolean; // Whether the project has been initialized so we can render UI
+  isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
   dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
   tableRowCounts: {[tableName: string]: number};
   viewStores: ViewStores<PC>;
@@ -258,6 +260,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           captureException: captureException ?? console.error,
           password,
           initialized: true,
+          isDataAvailable: false,
         });
 
         const {addView} = get();
@@ -272,6 +275,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         await updateReadyDataSources();
         await get().maybeDownloadDataSources();
         get().setTaskProgress(INIT_PROJECT_TASK, undefined);
+        set({isDataAvailable: true})
       },
 
       setTaskProgress(id, taskProgress) {
@@ -586,6 +590,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       },
 
       setTables: (tables) => {
+        console.log(new Error().stack)
         set({tables});
         updateReadyDataSources();
       },
