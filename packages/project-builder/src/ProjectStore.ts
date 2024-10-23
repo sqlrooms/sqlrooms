@@ -366,9 +366,9 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         set((state) =>
           produce(state, (draft) => {
             const dataSources = draft.projectConfig.dataSources;
-            const tableName = dataSource.tableName.toLowerCase();
+            const tableName = dataSource.tableName;
             const index = dataSources.findIndex(
-              (d) => d.tableName.toLowerCase() === tableName,
+              (d) => d.tableName === tableName,
             );
             if (index >= 0) {
               dataSources[index] = dataSource;
