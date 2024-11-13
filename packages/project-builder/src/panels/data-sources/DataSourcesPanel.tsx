@@ -1,4 +1,4 @@
-import {AddIcon} from '@chakra-ui/icons';
+import { AddIcon } from '@chakra-ui/icons';
 import {
   Accordion,
   AccordionButton,
@@ -11,18 +11,18 @@ import {
   Spacer,
   useDisclosure,
 } from '@chakra-ui/react';
-import {TableCellsIcon} from '@heroicons/react/24/solid';
+import { TableCellsIcon } from '@heroicons/react/24/solid';
 import {
   DataSourceTypes,
   ProjectPanelTypes,
   SqlQueryDataSource,
 } from '@sqlrooms/project-config';
-import {createContext, FC, useCallback, useContext} from 'react';
-import {PiFileSql} from 'react-icons/pi';
+import { createContext, FC, useCallback, useContext } from 'react';
+import { PiFileSql } from 'react-icons/pi';
 
-import {FolderIcon} from '@heroicons/react/24/outline';
-import {CustomAccordionIcon} from '@sqlrooms/components';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
+import { FolderIcon } from '@heroicons/react/24/outline';
+import { CustomAccordionIcon } from '@sqlrooms/components';
+import { useBaseProjectStore } from '@sqlrooms/project-builder';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
@@ -53,25 +53,7 @@ const DataSourcesPanel: FC<Props> = () => {
       ) as SqlQueryDataSource[],
   );
 
-  const showFullPanelButton = !projectFiles?.length;
-
-  // const {dbFilesQuery} = useProjectFilesDuckSync();
-
-  // const handleDrop = useCallback(
-  //   async (files: File[]) => {
-  //     // addDataModal.onToggle();
-  //     for (const file of files) {
-  //       await db.registerFileHandle(
-  //         file.name,
-  //         file,
-  //         DuckDBDataProtocol.BROWSER_FILEREADER,
-  //         true,
-  //       );
-  //       dbFiles.refetch();
-  //     }
-  //   },
-  //   [dbFiles, db],
-  // );
+  const isProjectEmpty = !projectFiles?.length;
 
   const handleModalClose = useCallback(() => {
     addDataModal.onClose();
@@ -81,41 +63,26 @@ const DataSourcesPanel: FC<Props> = () => {
     // dbFilesQuery
   ]);
 
+  const addButton = <Button
+    leftIcon={<AddIcon />}
+    variant="solid"
+    size="sm"
+    onClick={addDataModal.onToggle}
+    py={4}
+  >
+    Add
+  </Button>;
+
   return (
     <Flex flexDir="column" flexGrow={1} gap={3} height="100%">
       <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DATA_SOURCES} />
-      {showFullPanelButton ? (
-        <Spacer minHeight="32px">
-          {isReadOnly ? null : (
-            <Button
-              isDisabled={isReadOnly || !AddDataModal}
-              leftIcon={<AddIcon />}
-              variant="ghost"
-              size="sm"
-              onClick={addDataModal.onToggle}
-              width="100%"
-              height={'100%'}
-              alignItems={'center'}
-              justifyContent="center"
-              cursor="pointer"
-            >
-              Add
-            </Button>
-          )}
-        </Spacer>
+      {isReadOnly ? null : addButton}
+      {isProjectEmpty ? (
+        <>
+
+        </>
       ) : (
         <>
-          {isReadOnly ? null : (
-            <Button
-              leftIcon={<AddIcon />}
-              variant="solid"
-              size="sm"
-              onClick={addDataModal.onToggle}
-              py={4}
-            >
-              Add
-            </Button>
-          )}
 
           <Flex overflow="auto" flexDir="column" alignItems="stretch">
             <Accordion
@@ -138,7 +105,7 @@ const DataSourcesPanel: FC<Props> = () => {
                 <AccordionPanel pb={5} pt={1} paddingInline="5px">
                   <FileDataSourcesPanel />
                 </AccordionPanel>
-              </AccordionItem>
+              </AccordionItem >
 
               {!isReadOnly || queryDataSources.length > 0 ? (
                 <AccordionItem>
@@ -173,17 +140,19 @@ const DataSourcesPanel: FC<Props> = () => {
                   <TablesListPanel />
                 </AccordionPanel>
               </AccordionItem>
-            </Accordion>
-          </Flex>
+            </Accordion >
+          </Flex >
         </>
       )}
 
       {/* <FileDropzone onDrop={handleDrop} /> */}
       {/* )} */}
-      {AddDataModal ? (
-        <AddDataModal isOpen={addDataModal.isOpen} onClose={handleModalClose} />
-      ) : null}
-    </Flex>
+      {
+        AddDataModal ? (
+          <AddDataModal isOpen={addDataModal.isOpen} onClose={handleModalClose} />
+        ) : null
+      }
+    </Flex >
   );
 };
 
