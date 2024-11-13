@@ -9,8 +9,8 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import {FC, useContext} from 'react';
-import {AppContext} from './AppContext';
+import { FC, useContext } from 'react';
+import { AppContext } from './AppContext';
 
 type Props = {
   isOpen: boolean;
@@ -19,9 +19,12 @@ type Props = {
   progress?: number;
 };
 const ProgressModal: FC<Props> = (props) => {
-  const {isOpen, title, loadingStage, progress} = props;
+  const { isOpen, title, loadingStage, progress } = props;
   const appContext = useContext(AppContext);
-
+  console.log('ProgressModal', props)
+  if (!isOpen) {
+    return null
+  }
   return (
     // <Delayed delay={300}>
     <Modal

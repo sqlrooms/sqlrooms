@@ -8,6 +8,7 @@ import {
   dropAllTables,
   dropFile,
   dropTable,
+  getDuckConn,
   getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
@@ -57,6 +58,7 @@ export type TaskProgress = {
   message: string;
 };
 
+const INIT_DB_TASK = 'init-db';
 const INIT_PROJECT_TASK = 'init-project';
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 
@@ -179,7 +181,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     oldTableName?: string,
   ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): void;
-  addProjectFile(info: ProjectFileInfo, desiredTableName?: string): void;
+  addProjectFile(info: ProjectFileInfo, desiredTableName?: string): Promise<DataTable | undefined>;
   removeProjectFile(pathname: string): void;
   maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
@@ -263,19 +265,30 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           isDataAvailable: false,
         });
 
-        const {addView} = get();
+        const {addView, setTaskProgress} = get();
         for (const view of projectConfig.views) {
           addView(view as ElementType<PC['views']>);
         }
 
-        get().setTaskProgress(INIT_PROJECT_TASK, {
+        console.log('reinitialize', INIT_DB_TASK);
+        setTaskProgress(INIT_DB_TASK, {
+          message: 'Initializing database…',
+          progress: undefined,
+        });
+        await getDuckConn();
+        setTaskProgress(INIT_DB_TASK, undefined);
+        console.log('reinitialize', INIT_DB_TASK, 'end');
+
+        setTaskProgress(INIT_PROJECT_TASK, {
           message: 'Initializing project…',
           progress: undefined,
         });
         await updateReadyDataSources();
         await get().maybeDownloadDataSources();
-        get().setTaskProgress(INIT_PROJECT_TASK, undefined);
-        set({isDataAvailable: true})
+        setTaskProgress(INIT_PROJECT_TASK, undefined);
+        if (get().projectConfig.dataSources.length > 0) {
+          set({isDataAvailable: true})
+        }
       },
 
       setTaskProgress(id, taskProgress) {
@@ -487,7 +500,15 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             ? DataSourceStatus.READY
             : DataSourceStatus.PENDING,
         );
-        get().setTables(await getDuckTableSchemas());
+        const tables = await getDuckTableSchemas();
+        get().setTables(tables);
+        set((state) =>
+          produce(state, (draft) => {
+            draft.isDataAvailable = true
+          }),
+        );
+        const table = tables.find((table) => table.tableName === tableName)
+        return table
       },
       removeProjectFile(pathname) {
         set((state) =>
@@ -568,7 +589,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         return get().tables.find((t) => t.tableName === tableName);
       },
 
-      /** Currently only used by the SDK to support adding data directly */
       async addTable(tableName, data) {
         const {tables} = get();
         const table = tables.find((t) => t.tableName === tableName);
@@ -590,7 +610,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       },
 
       setTables: (tables) => {
-        console.log(new Error().stack)
         set({tables});
         updateReadyDataSources();
       },
