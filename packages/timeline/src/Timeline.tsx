@@ -16,6 +16,8 @@ interface Props {
   timeGranularity: TimeGranularity;
   onChange: (range: [Date, Date]) => void;
   formatDateTime: (d: Date | number | bigint) => string;
+  animationSpeed: number;
+  onAnimationSpeedChange: (speed: number) => void;
 }
 
 export interface CountByTime {
@@ -508,6 +510,8 @@ const Timeline: React.FC<Props> = (props) => {
     timeGranularity,
     darkMode,
     onChange,
+    animationSpeed,
+    onAnimationSpeedChange,
   } = props;
   const [internalRange, setInternalRange] =
     useState<[Date, Date]>(selectedRange);
@@ -561,7 +565,14 @@ const Timeline: React.FC<Props> = (props) => {
   const isAllSelected = getAllSelected(selectedRange, timeExtent);
 
   return (
-    <VStack height="100%" padding="5px 20px" userSelect="none" gap={0}>
+    <VStack
+      height="100%"
+      padding="5px 20px"
+      userSelect="none"
+      gap={0}
+      data-timeline-container
+      tabIndex={0}
+    >
       {internalRange ? (
         <Text fontSize="sm">
           {`${formatDateTime(internalRange[0])} - ${formatDateTime(internalRange[1])}`}
@@ -574,8 +585,9 @@ const Timeline: React.FC<Props> = (props) => {
             timeExtent={timeExtent}
             current={internalRange[0]}
             interval={timeGranularity.interval}
-            speed={1}
+            speed={animationSpeed}
             isDisabled={isAllSelected}
+            onSpeedChange={onAnimationSpeedChange}
             isPlaying={isPlaying}
             onPlay={handlePlay}
             onPause={() => setPlaying(false)}
