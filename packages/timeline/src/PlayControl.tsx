@@ -1,14 +1,20 @@
-import React from 'react';
-import {TimeInterval} from 'd3-time';
 import {Button, Icon} from '@chakra-ui/react';
 import {PauseIcon, PlayIcon} from '@heroicons/react/24/solid';
+import {TimeInterval} from 'd3-time';
+import React from 'react';
 
 interface Props {
   darkMode: boolean;
   current: Date;
   timeExtent: [Date, Date];
   interval: TimeInterval;
-  stepDuration: number;
+  /**
+   * Controls how frequently the animation updates (in milliseconds)
+   */
+  updateInterval: number;
+  /**
+   * `speed` controls how much time advances per update (e.g., 100ms * 2 = 200ms)
+   */
   speed: number;
   isPlaying: boolean;
   isDisabled: boolean;
@@ -21,6 +27,7 @@ class PlayControl extends React.Component<Props> {
   playTimeout: NodeJS.Timeout | undefined;
   static defaultProps = {
     speed: 1,
+    updateInterval: 200,
   };
 
   componentWillUnmount(): void {
@@ -57,8 +64,8 @@ class PlayControl extends React.Component<Props> {
 
   scheduleNextStep = () => {
     this.clearPlayTimeOut();
-    const {stepDuration} = this.props;
-    this.playTimeout = setTimeout(this.nextStep, stepDuration);
+    const {updateInterval} = this.props;
+    this.playTimeout = setTimeout(this.nextStep, updateInterval);
   };
 
   nextStep = () => {

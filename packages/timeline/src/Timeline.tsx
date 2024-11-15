@@ -1,12 +1,12 @@
-import { Box, HStack, Text, useTheme, VStack } from '@chakra-ui/react';
+import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import { max } from 'd3-array';
-import { scaleLinear, ScaleTime, scaleTime } from 'd3-scale';
-import { EventManager } from 'mjolnir.js';
-import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useMeasure, useThrottle } from 'react-use';
+import {max} from 'd3-array';
+import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
+import {EventManager} from 'mjolnir.js';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useMeasure, useThrottle} from 'react-use';
 import PlayControl from './PlayControl';
-import { areRangesEqual, tickMultiFormat, TimeGranularity } from './time';
+import {areRangesEqual, tickMultiFormat, TimeGranularity} from './time';
 
 interface Props {
   selectedRange: [Date, Date];
@@ -563,7 +563,7 @@ const Timeline: React.FC<Props> = (props) => {
   return (
     <VStack height="100%" padding="5px 20px" userSelect="none" gap={0}>
       {internalRange ? (
-        <Text fontSize="xs">
+        <Text fontSize="sm">
           {`${formatDateTime(internalRange[0])} - ${formatDateTime(internalRange[1])}`}
         </Text>
       ) : null}
@@ -574,7 +574,6 @@ const Timeline: React.FC<Props> = (props) => {
             timeExtent={timeExtent}
             current={internalRange[0]}
             interval={timeGranularity.interval}
-            stepDuration={100}
             speed={1}
             isDisabled={isAllSelected}
             isPlaying={isPlaying}

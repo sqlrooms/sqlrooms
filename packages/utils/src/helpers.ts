@@ -37,7 +37,7 @@ export const NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
 export const formatNumber = NUMBER_FORMAT.format;
 
 const TIME_OF_DAY_FORMAT = timeFormat('%I:%M %p');
-const DATE_TIME_FORMAT = timeFormat('%Y-%m-%d %I:%M %p');
+const DATE_TIME_FORMAT = timeFormat('%a %Y-%m-%d %I:%M %p');
 const DATE_FORMAT = timeFormat('%Y-%m-%d');
 
 export const formatDateTime = (d: Date | number | bigint) => {
