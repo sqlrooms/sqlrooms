@@ -1,5 +1,6 @@
 import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
 import styled from '@emotion/styled';
+import {TimelineMode} from '@flowmapcity/project-config';
 import {max} from 'd3-array';
 import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
 import {EventManager} from 'mjolnir.js';
@@ -16,8 +17,15 @@ interface Props {
   timeGranularity: TimeGranularity;
   onChange: (range: [Date, Date]) => void;
   formatDateTime: (d: Date | number | bigint) => string;
+  isPlaying: boolean;
+  isDisabled: boolean;
   animationSpeed: number;
-  onAnimationSpeedChange: (speed: number) => void;
+  onTogglePlay: () => void;
+  onStepForward: () => void;
+  onStepBackward: () => void;
+  onSpeedChange: (speed: number) => void;
+  mode: TimelineMode;
+  onModeChange: (mode: TimelineMode) => void;
 }
 
 export interface CountByTime {
@@ -510,14 +518,24 @@ const Timeline: React.FC<Props> = (props) => {
     timeGranularity,
     darkMode,
     onChange,
+    isPlaying,
+    isDisabled,
     animationSpeed,
-    onAnimationSpeedChange,
+    onTogglePlay,
+    onStepForward,
+    onStepBackward,
+    onSpeedChange,
+    mode,
+    onModeChange,
   } = props;
+
   const [internalRange, setInternalRange] =
     useState<[Date, Date]>(selectedRange);
   const throttledRange = useThrottle(internalRange, 100);
+
   const onChangeRef = useRef<(range: [Date, Date]) => void>();
   onChangeRef.current = (range) => onChange(range);
+
   useEffect(() => {
     const {current} = onChangeRef;
     if (current) current(throttledRange);
@@ -529,39 +547,13 @@ const Timeline: React.FC<Props> = (props) => {
     setPrevSelectedRange(selectedRange);
   }
 
-  const [isPlaying, setPlaying] = useState(false);
-
-  const handlePlay = () => {
-    const {interval} = timeGranularity;
-    if (selectedRange[1] >= timeExtent[1]) {
-      const length = (interval as any).count(
-        selectedRange[0],
-        selectedRange[1],
-      );
-      setInternalRange([timeExtent[0], interval.offset(timeExtent[0], length)]);
-    }
-    setPlaying(true);
-  };
-
-  const handlePlayAdvance = (start: Date) => {
-    const {interval} = timeGranularity;
-    const length = (interval as any).count(selectedRange[0], selectedRange[1]);
-    const end = interval.offset(start, length);
-    if (end >= timeExtent[1]) {
-      setPlaying(false);
-      setInternalRange([interval.offset(end, -length), end]);
-    } else {
-      setInternalRange([start, end]);
-    }
-  };
-
   const handleMove = useCallback(
     (range: [Date, Date]) => {
       setInternalRange(range);
-      setPlaying(false);
     },
-    [setInternalRange, setPlaying],
+    [setInternalRange],
   );
+
   const isAllSelected = getAllSelected(selectedRange, timeExtent);
 
   return (
@@ -582,16 +574,15 @@ const Timeline: React.FC<Props> = (props) => {
         <Box alignSelf="center">
           <PlayControl
             darkMode={darkMode}
-            timeExtent={timeExtent}
-            current={internalRange[0]}
-            interval={timeGranularity.interval}
-            speed={animationSpeed}
-            isDisabled={isAllSelected}
-            onSpeedChange={onAnimationSpeedChange}
             isPlaying={isPlaying}
-            onPlay={handlePlay}
-            onPause={() => setPlaying(false)}
-            onAdvance={handlePlayAdvance}
+            isDisabled={isDisabled || isAllSelected}
+            speed={animationSpeed}
+            mode={mode}
+            onTogglePlay={onTogglePlay}
+            onStepForward={onStepForward}
+            onStepBackward={onStepBackward}
+            onSpeedChange={onSpeedChange}
+            onModeChange={onModeChange}
           />
         </Box>
         <Box
