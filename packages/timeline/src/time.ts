@@ -148,7 +148,7 @@ export function getTimeGranularityByOrder(order: number): TimeGranularity {
 
 export function getTimeGranularityForDateRange(
   [minTime, maxTime]: [number, number],
-  maxBuckets: number = 300,
+  maxBuckets: number = 400,
 ): TimeGranularityKey {
   const totalMilliseconds = maxTime - minTime;
 
