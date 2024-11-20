@@ -6,6 +6,8 @@ import {
   PopoverBody,
   PopoverContent,
   PopoverTrigger,
+  Radio,
+  RadioGroup,
   Slider,
   SliderFilledTrack,
   SliderThumb,
@@ -13,152 +15,39 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { ChevronLeftIcon, ChevronRightIcon } from '@heroicons/react/24/outline';
+import {TimelineMode} from '@flowmapcity/project-config';
+import {ChevronLeftIcon, ChevronRightIcon} from '@heroicons/react/24/outline';
 import {
   AdjustmentsHorizontalIcon,
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/solid';
-import { TimeInterval } from 'd3-time';
-import { FC, useCallback, useEffect, useRef } from 'react';
+import {FC, useEffect} from 'react';
 
 interface Props {
   darkMode: boolean;
-  current: Date;
-  timeExtent: [Date, Date];
-  interval: TimeInterval;
-  /**
-   * `speed` controls how much time advances per update (e.g., 100ms * 2 = 200ms)
-   */
-  speed: number;
   isPlaying: boolean;
   isDisabled: boolean;
-  onPlay: () => void;
-  onPause: () => void;
-  onAdvance: (date: Date) => void;
-  onSpeedChange?: (speed: number) => void;
+  speed: number;
+  mode: TimelineMode;
+  onTogglePlay: () => void;
+  onStepForward: () => void;
+  onStepBackward: () => void;
+  onSpeedChange: (speed: number) => void;
+  onModeChange: (mode: TimelineMode) => void;
 }
 
-/**
- * Controls how frequently the animation updates (in milliseconds)
- */
-const updateInterval = 50;
-
 const PlayControl: FC<Props> = ({
-  current,
-  timeExtent,
-  interval,
-  speed = 1,
   isPlaying,
   isDisabled,
-  onPlay,
-  onPause,
-  onAdvance,
+  speed,
+  mode,
+  onTogglePlay,
+  onStepForward,
+  onStepBackward,
   onSpeedChange,
+  onModeChange,
 }) => {
-  const playTimeoutRef = useRef<NodeJS.Timeout>();
-  const partialStepRef = useRef<number>(0);
-
-  useEffect(() => {
-    return () => {
-      if (playTimeoutRef.current) {
-        clearTimeout(playTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const clearPlayTimeout = useCallback(() => {
-    if (playTimeoutRef.current != null) {
-      clearTimeout(playTimeoutRef.current);
-      playTimeoutRef.current = undefined;
-    }
-  }, []);
-
-  const nextStep = useCallback(() => {
-    if (isPlaying) {
-      if (speed >= 1) {
-        // For normal/fast speeds, behavior stays the same
-        const next = interval.offset(current, Math.floor(speed));
-        if (next > timeExtent[1]) {
-          onAdvance(timeExtent[0]);
-        } else {
-          onAdvance(next);
-        }
-      } else {
-        // For slow speeds, accumulate partial steps
-        // (because interval.offset() is flooring to interval boundaries)
-        partialStepRef.current += speed;
-        if (partialStepRef.current >= 1) {
-          // We have accumulated enough for a full step
-          const next = interval.offset(current, 1);
-          partialStepRef.current -= 1; // Subtract the used step
-          if (next > timeExtent[1]) {
-            onAdvance(timeExtent[0]);
-          } else {
-            onAdvance(next);
-          }
-        }
-      }
-      scheduleNextStep();
-    }
-  }, [isPlaying, interval, timeExtent, current, speed, onAdvance]);
-
-  const scheduleNextStep = useCallback(() => {
-    clearPlayTimeout();
-    playTimeoutRef.current = setTimeout(nextStep, updateInterval);
-  }, [clearPlayTimeout, nextStep]);
-
-  useEffect(() => {
-    if (isPlaying) {
-      scheduleNextStep();
-    } else {
-      clearPlayTimeout();
-    }
-  }, [isPlaying, scheduleNextStep, clearPlayTimeout]);
-
-  const start = useCallback(() => {
-    if (!isPlaying) {
-      if (current >= timeExtent[1]) {
-        onAdvance(timeExtent[0]);
-      }
-      onPlay();
-    }
-  }, [isPlaying, onPlay, current, timeExtent, onAdvance]);
-
-  const stop = useCallback(() => {
-    clearPlayTimeout();
-    partialStepRef.current = 0;
-    if (isPlaying) {
-      onPause();
-    }
-  }, [clearPlayTimeout, isPlaying, onPause]);
-
-  const handleTogglePlay = useCallback(() => {
-    if (isPlaying) {
-      stop();
-    } else {
-      start();
-    }
-  }, [isPlaying, stop, start]);
-
-  const stepBackward = useCallback(() => {
-    if (!isPlaying) {
-      const next = interval.offset(current, -1);
-      if (next >= timeExtent[0]) {
-        onAdvance(next);
-      }
-    }
-  }, [isPlaying, interval, current, timeExtent, onAdvance]);
-
-  const stepForward = useCallback(() => {
-    if (!isPlaying) {
-      const next = interval.offset(current, 1);
-      if (next <= timeExtent[1]) {
-        onAdvance(next);
-      }
-    }
-  }, [isPlaying, interval, current, timeExtent, onAdvance]);
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (
@@ -168,15 +57,15 @@ const PlayControl: FC<Props> = ({
         return;
 
       if (e.key === 'ArrowLeft') {
-        stepBackward();
+        onStepBackward();
       } else if (e.key === 'ArrowRight') {
-        stepForward();
+        onStepForward();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isDisabled, stepBackward, stepForward]);
+  }, [isDisabled, onStepBackward, onStepForward]);
 
   const iconSize = 10;
   return (
@@ -189,7 +78,7 @@ const PlayControl: FC<Props> = ({
             variant="ghost"
             color="gray.400"
             isDisabled={isDisabled}
-            onClick={handleTogglePlay}
+            onClick={onTogglePlay}
           >
             <Icon
               w={iconSize}
@@ -211,23 +100,45 @@ const PlayControl: FC<Props> = ({
             </PopoverTrigger>
             <PopoverContent w="200px">
               <PopoverBody>
-                <VStack spacing={2} align="stretch">
-                  <Text fontSize="sm">Animation Speed</Text>
-                  <Slider
-                    min={-1}
-                    max={1}
-                    step={0.01}
-                    value={Math.log10(speed)}
-                    onChange={(value) => onSpeedChange?.(Math.pow(10, value))}
-                  >
-                    <SliderTrack>
-                      <SliderFilledTrack />
-                    </SliderTrack>
-                    <SliderThumb />
-                  </Slider>
-                  <Text fontSize="xs" textAlign="center">
-                    {speed.toFixed(1)}x
-                  </Text>
+                <VStack spacing={4} align="stretch">
+                  <VStack spacing={2} align="stretch">
+                    <Text fontSize="sm">Animation Speed</Text>
+                    <Slider
+                      min={-1}
+                      max={1}
+                      step={0.1}
+                      value={Math.log10(speed)}
+                      onChange={(value) => onSpeedChange(Math.pow(10, value))}
+                    >
+                      <SliderTrack>
+                        <SliderFilledTrack />
+                      </SliderTrack>
+                      <SliderThumb />
+                    </Slider>
+                    <Text fontSize="xs" textAlign="center">
+                      {speed < 1
+                        ? `${speed.toFixed(2)}x`
+                        : `${speed.toFixed(1)}x`}
+                    </Text>
+                  </VStack>
+
+                  <VStack spacing={2} align="stretch">
+                    <Text fontSize="sm">Animation Mode</Text>
+                    <RadioGroup
+                      value={mode}
+                      onChange={(value) => onModeChange(value as TimelineMode)}
+                      size="sm"
+                    >
+                      <VStack align="start" spacing={1}>
+                        <Radio value="sliding">
+                          <Text fontSize="xs">Sliding Window</Text>
+                        </Radio>
+                        <Radio value="incremental">
+                          <Text fontSize="xs">Incremental</Text>
+                        </Radio>
+                      </VStack>
+                    </RadioGroup>
+                  </VStack>
                 </VStack>
               </PopoverBody>
             </PopoverContent>
@@ -240,7 +151,7 @@ const PlayControl: FC<Props> = ({
             variant="ghost"
             color="gray.400"
             isDisabled={isDisabled || isPlaying}
-            onClick={stepBackward}
+            onClick={onStepBackward}
           >
             <Icon w={5} h={5} as={ChevronLeftIcon} />
           </Button>
@@ -250,7 +161,7 @@ const PlayControl: FC<Props> = ({
             variant="ghost"
             color="gray.400"
             isDisabled={isDisabled || isPlaying}
-            onClick={stepForward}
+            onClick={onStepForward}
           >
             <Icon w={5} h={5} as={ChevronRightIcon} />
           </Button>

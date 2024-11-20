@@ -1,5 +1,5 @@
 import {
-  TimeInterval,
+  CountableTimeInterval,
   timeDay,
   timeHour,
   timeMinute,
@@ -45,7 +45,7 @@ export enum TimeGranularityKey {
 export interface TimeGranularity {
   key: TimeGranularityKey;
   order: number;
-  interval: TimeInterval;
+  interval: CountableTimeInterval;
   format: (date: Date) => string;
   formatFull: (date: Date) => string;
 }
