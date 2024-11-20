@@ -146,6 +146,29 @@ export function getTimeGranularityByOrder(order: number): TimeGranularity {
   return granularity;
 }
 
+export function getTimeGranularityForDateRange(
+  [minTime, maxTime]: [number, number],
+  maxBuckets: number = 300,
+): TimeGranularityKey {
+  const totalMilliseconds = maxTime - minTime;
+
+  if (totalMilliseconds / 1000 < maxBuckets) {
+    return TimeGranularityKey.SECOND;
+  } else if (totalMilliseconds / (60 * 1000) < maxBuckets) {
+    return TimeGranularityKey.MINUTE;
+  } else if (totalMilliseconds / (60 * 60 * 1000) < maxBuckets) {
+    return TimeGranularityKey.HOUR;
+  } else if (totalMilliseconds / (24 * 60 * 60 * 1000) < maxBuckets) {
+    return TimeGranularityKey.DAY;
+  } else if (totalMilliseconds / (30 * 24 * 60 * 60 * 1000) < maxBuckets) {
+    return TimeGranularityKey.MONTH;
+  } else if (totalMilliseconds / (365 * 24 * 60 * 60 * 1000) < maxBuckets) {
+    return TimeGranularityKey.YEAR;
+  } else {
+    return TimeGranularityKey.YEAR;
+  }
+}
+
 export function getTimeGranularityForDate(date: Date): TimeGranularity {
   let prev = undefined;
   for (const current of TIME_GRANULARITIES) {
