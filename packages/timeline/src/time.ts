@@ -128,12 +128,22 @@ export const TIME_GRANULARITIES: TimeGranularity[] = [
   },
 ];
 
-export function getTimeGranularityByKey(key: TimeGranularityKey) {
-  return TIME_GRANULARITIES.find((s) => s.key === key);
+export function getTimeGranularityByKey(
+  key: TimeGranularityKey,
+): TimeGranularity {
+  const granularity = TIME_GRANULARITIES.find((s) => s.key === key);
+  if (!granularity) {
+    throw new Error(`Time granularity not found for key: ${key}`);
+  }
+  return granularity;
 }
 
-export function getTimeGranularityByOrder(order: number) {
-  return TIME_GRANULARITIES.find((s) => s.order === order);
+export function getTimeGranularityByOrder(order: number): TimeGranularity {
+  const granularity = TIME_GRANULARITIES.find((s) => s.order === order);
+  if (!granularity) {
+    throw new Error(`Time granularity not found for order: ${order}`);
+  }
+  return granularity;
 }
 
 export function getTimeGranularityForDate(date: Date): TimeGranularity {
