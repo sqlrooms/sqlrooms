@@ -44,8 +44,6 @@ function valueToString(type: arrow.DataType, value: any): string {
         return new Date(Number(value)).toISOString();
       case 'string':
         return new Date(value).toISOString();
-      default:
-        return String(value);
     }
   }
   if (arrow.DataType.isTime(type)) {
@@ -55,8 +53,11 @@ function valueToString(type: arrow.DataType, value: any): string {
         return new Date(Number(value) / 1000).toISOString().substring(11, 19);
       case 'string':
         return new Date(value).toISOString().substring(11, 19);
-      default:
-        return String(value);
+    }
+  }
+  if (arrow.DataType.isDate(type)) {
+    if (value instanceof Date) {
+      return value.toISOString();
     }
   }
   return String(value);
