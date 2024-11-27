@@ -2,6 +2,7 @@ import {
   Badge,
   Box,
   Flex,
+  FlexProps,
   HStack,
   Table,
   Tbody,
@@ -10,9 +11,9 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import {DataTable} from '@sqlrooms/duckdb';
-import {formatNumber} from '@sqlrooms/utils';
-import {FC} from 'react';
+import { DataTable } from '@sqlrooms/duckdb';
+import { formatNumber } from '@sqlrooms/utils';
+import { FC } from 'react';
 
 export type Props = {
   isReadOnly?: boolean;
@@ -20,10 +21,9 @@ export type Props = {
   rowCount?: number;
   onReset?: () => void;
   onClick?: () => void;
-};
+} & FlexProps;
 
-const TableCard: FC<Props> = (props) => {
-  const {isReadOnly, value, rowCount, onReset, onClick} = props;
+const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, ...rest }) => {
   if (!value) return null;
 
   return (
@@ -41,7 +41,8 @@ const TableCard: FC<Props> = (props) => {
       cursor="pointer"
       onClick={onClick}
       transition={'border-color 0.2s ease-in-out'}
-      _hover={{borderColor: 'gray.100'}}
+      _hover={{ borderColor: 'gray.100' }}
+      {...rest}
     >
       {/* <Box position="absolute" top={1} right={2}>
         <Menu placement={'bottom-end'}>
@@ -120,7 +121,7 @@ const TableCard: FC<Props> = (props) => {
                       whiteSpace={'nowrap'}
                       textOverflow={'ellipsis'}
                       overflow={'hidden'}
-                      // textTransform={'lowercase'}
+                    // textTransform={'lowercase'}
                     >
                       {value.tableName}
                     </Box>

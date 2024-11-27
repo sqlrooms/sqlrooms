@@ -181,6 +181,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     oldTableName?: string,
   ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): void;
+  replaceProjectFile(projectFile: ProjectFileInfo): Promise<DataTable | undefined>;
   addProjectFile(info: ProjectFileInfo, desiredTableName?: string): Promise<DataTable | undefined>;
   removeProjectFile(pathname: string): void;
   maybeDownloadDataSources(): Promise<void>;
@@ -465,10 +466,40 @@ export function createProjectStore<PC extends BaseProjectConfig>(
 
       setProjectFiles: (projectFiles) => set(() => ({projectFiles})),
 
+      async replaceProjectFile(projectFile) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.projectFiles = draft.projectFiles.map((f) => f.pathname === projectFile.pathname ? projectFile : f);
+          }),
+        );
+        const dataSource = get().projectConfig.dataSources.find(
+          (d) => d.type === DataSourceTypes.enum.file && d.fileName === projectFile.pathname
+        );
+        if (dataSource) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.dataSourceStates[dataSource.tableName] = {
+                status: DataSourceStatus.READY,
+              };
+            }),
+          );
+          if (projectFile.duckdbFileName) {   
+            const {rowCount} = await createViewFromRegisteredFile(
+              projectFile.duckdbFileName,
+              'main',
+              dataSource.tableName,
+            );
+            get().setTableRowCount(dataSource.tableName, rowCount);
+          }
+        }
+        await updateTables();
+        return dataSource ? findTableByName(dataSource.tableName) : undefined;
+      },
+
       async addProjectFile(projectFile, desiredTableName) {
         const {duckdbFileName, pathname} = projectFile;
         if (get().projectFiles.some((f) => f.pathname === pathname)) {
-          return;
+          return await get().replaceProjectFile(projectFile);
         }
         const {name} = splitFilePath(pathname);
         const tableName =
@@ -500,15 +531,9 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             ? DataSourceStatus.READY
             : DataSourceStatus.PENDING,
         );
-        const tables = await getDuckTableSchemas();
-        get().setTables(tables);
-        set((state) =>
-          produce(state, (draft) => {
-            draft.isDataAvailable = true
-          }),
-        );
-        const table = tables.find((table) => table.tableName === tableName)
-        return table
+        await updateTables();
+        setIsDataAvailable(true);
+        return findTableByName(tableName);
       },
       removeProjectFile(pathname) {
         set((state) =>
@@ -920,7 +945,26 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       }
       get().setTables(await getDuckTableSchemas());
     }
+
+    async function updateTables(): Promise<DataTable[]> {
+      const tables = await getDuckTableSchemas();
+      get().setTables(tables);
+      return tables;
+    }
+
+    function findTableByName(tableName: string): DataTable | undefined {
+      return get().tables.find((t) => t.tableName === tableName);
+    }
+
+    function setIsDataAvailable(isDataAvailable: boolean) {
+      set((state) =>
+        produce(state, (draft) => {
+          draft.isDataAvailable = isDataAvailable;
+        }),
+      );
+    }
   };
+
 
   return create<ProjectState<PC>>()(store);
 }
