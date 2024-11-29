@@ -90,8 +90,6 @@ const SqlEditor: React.FC<Props> = (props) => {
   const [mosaicState, setMosaicState] =
     useState<MosaicNode<string>>(MOSAIC_INITIAL_STATE);
 
-  const [selectedQueryIndex, setSelectedQueryIndex] = useState(0);
-
   const [results, setResults] = useState<Table>();
   const resultsTableData = useArrowDataTable(results);
   const toast = useToast();
@@ -175,12 +173,28 @@ const SqlEditor: React.FC<Props> = (props) => {
     tablesQuery.refetch();
   };
 
+  const getQueryIndexById = (id: string) => {
+    return sqlEditorConfig.queries.findIndex(q => q.id === id);
+  };
+
+  const getCurrentQueryIndex = () => {
+    return getQueryIndexById(sqlEditorConfig.selectedQueryId);
+  };
+
+  const handleTabChange = (index: number) => {
+    onChange({
+      ...sqlEditorConfig,
+      selectedQueryId: sqlEditorConfig.queries[index].id
+    });
+  };
+
   const handleUpdateQuery = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     if (!sqlEditorConfig) return;
 
+    const currentIndex = getCurrentQueryIndex();
     const newQueries = [...sqlEditorConfig.queries];
-    newQueries[selectedQueryIndex] = {
-      ...newQueries[selectedQueryIndex],
+    newQueries[currentIndex] = {
+      ...newQueries[currentIndex],
       query: e.target.value,
     };
 
@@ -245,7 +259,7 @@ const SqlEditor: React.FC<Props> = (props) => {
     }
   }, [mosaicState]);
 
-  const currentQuery = sqlEditorConfig.queries[selectedQueryIndex]?.query ?? DEFAULT_QUERY;
+  const currentQuery = sqlEditorConfig.queries[getCurrentQueryIndex()]?.query ?? DEFAULT_QUERY;
 
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
 
@@ -272,14 +286,33 @@ const SqlEditor: React.FC<Props> = (props) => {
   };
 
   const handleDeleteQuery = (queryId: string, event: React.MouseEvent) => {
-    event.stopPropagation(); // Prevent tab selection when clicking delete
-    // Store current index before deletion
-    const currentIndex = sqlEditorConfig.queries.findIndex(q => q.id === queryId);
+    event.stopPropagation();
+    const currentIndex = getQueryIndexById(queryId);
     setQueryToDelete(queryId);
+
     // Pre-select the previous query if we're deleting the current one
-    if (currentIndex === selectedQueryIndex && currentIndex > 0) {
-      setSelectedQueryIndex(currentIndex - 1);
+    if (queryId === sqlEditorConfig.selectedQueryId && currentIndex > 0) {
+      onChange({
+        ...sqlEditorConfig,
+        selectedQueryId: sqlEditorConfig.queries[currentIndex - 1].id
+      });
     }
+  };
+
+  const handleNewQuery = () => {
+    const newQueries = [...sqlEditorConfig.queries];
+    const newQuery = {
+      id: genRandomStr(8),
+      name: generateUniqueName('Untitled', newQueries.map(q => q.name)),
+      query: DEFAULT_QUERY
+    };
+    newQueries.push(newQuery);
+
+    onChange({
+      ...sqlEditorConfig,
+      queries: newQueries,
+      selectedQueryId: newQuery.id
+    });
   };
 
   const views: { [viewId: string]: JSX.Element | null } = {
@@ -296,12 +329,16 @@ const SqlEditor: React.FC<Props> = (props) => {
       <>
         <Flex flexDir="column" height="100%" gap="2">
 
-          <Tabs onChange={setSelectedQueryIndex} size="sm"
+          <Tabs
+            onChange={handleTabChange}
+            index={getCurrentQueryIndex()}
+            size="sm"
             display="flex"
             flexDir="column"
             flexGrow={1}
             variant="enclosed-colored"
-            overflow="hidden">
+            overflow="hidden"
+          >
 
             <TabList flexWrap="wrap">
               <Button
@@ -369,19 +406,7 @@ const SqlEditor: React.FC<Props> = (props) => {
                 aria-label="New query"
                 size="sm"
                 icon={<PlusIcon width="16px" height="16px" />}
-                onClick={() => {
-                  const newQueries = [...sqlEditorConfig.queries];
-                  newQueries.push({
-                    id: genRandomStr(8),
-                    name: generateUniqueName('Untitled', newQueries.map(q => q.name)),
-                    query: DEFAULT_QUERY
-                  });
-                  onChange({
-                    ...sqlEditorConfig,
-                    queries: newQueries
-                  });
-                  setSelectedQueryIndex(newQueries.length - 1);
-                }}
+                onClick={handleNewQuery}
                 ml={2}
               />
             </TabList>
@@ -493,12 +518,14 @@ const SqlEditor: React.FC<Props> = (props) => {
           onClose={() => setQueryToDelete(null)}
           onConfirm={() => {
             const newQueries = sqlEditorConfig.queries.filter(q => q.id !== queryToDelete);
+            const deletedIndex = getQueryIndexById(queryToDelete!);
+
             onChange({
               ...sqlEditorConfig,
-              queries: newQueries
+              queries: newQueries,
+              selectedQueryId: newQueries[Math.min(deletedIndex, newQueries.length - 1)]?.id || newQueries[0].id
             });
             setQueryToDelete(null);
-            setSelectedQueryIndex(Math.min(selectedQueryIndex, newQueries.length - 1));
           }}
         />
         <RenameSqlQueryModal

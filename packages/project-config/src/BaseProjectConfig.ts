@@ -6,6 +6,7 @@ export const DEFAULT_PROJECT_TITLE = 'Untitled project';
 export const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 export const DEFAULT_SQL_EDITOR_CONFIG = {
   queries: [{id: 'default', name: 'Untitled', query: ''}],
+  selectedQueryId: 'default',
 } satisfies SqlEditorConfig;
 
 /*

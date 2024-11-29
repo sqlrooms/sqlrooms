@@ -8,5 +8,8 @@ export const SqlEditorConfig = z.object({
       query: z.string().describe('SQL query to execute.'),
     }),
   ),
+  selectedQueryId: z
+    .string()
+    .describe('The id of the currently selected query.'),
 });
 export type SqlEditorConfig = z.infer<typeof SqlEditorConfig>;
