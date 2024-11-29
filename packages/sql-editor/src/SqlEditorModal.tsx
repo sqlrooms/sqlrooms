@@ -3,9 +3,8 @@ import { AppContext, SpinnerPane } from '@sqlrooms/components';
 import React, { Suspense, useContext } from 'react';
 import SqlEditor, { Props } from './SqlEditor';
 
-
 const SqlEditorModal: React.FC<Props> = (props) => {
-  const {isOpen, onClose} = props;
+  const { isOpen, onClose } = props;
   const appContext = useContext(AppContext);
   return (
     <>

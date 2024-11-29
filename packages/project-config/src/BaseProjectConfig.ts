@@ -1,7 +1,12 @@
 import {z} from 'zod';
 import LayoutConfig, {DEFAULT_MOSAIC_LAYOUT} from './LayoutConfig';
+import {SqlEditorConfig} from './SqlEditorConfig';
+
 export const DEFAULT_PROJECT_TITLE = 'Untitled project';
 export const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
+export const DEFAULT_SQL_EDITOR_CONFIG = {
+  queries: [{id: 'default', name: 'Untitled', query: ''}],
+} satisfies SqlEditorConfig;
 
 /*
 1. No database uuids should be used in the map config types
@@ -82,6 +87,9 @@ export const BaseProjectConfig = z
       .describe('Views are data representations.'),
     layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
       'Layout specifies how views are arranged on the screen.',
+    ),
+    sqlEditor: SqlEditorConfig.describe('SQL editor configuration.').default(
+      DEFAULT_SQL_EDITOR_CONFIG,
     ),
   })
   .describe('Project configuration.');

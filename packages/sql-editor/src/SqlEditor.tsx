@@ -3,16 +3,26 @@ import {
   Box,
   Button,
   Flex,
-  Heading,
   HStack,
+  Heading,
   Icon,
+  IconButton,
+  Menu,
+  MenuButton,
+  MenuItem,
+  MenuList,
   ModalCloseButton,
   Spacer,
+  Tab,
+  TabList,
+  TabPanel,
+  TabPanels,
+  Tabs,
   Textarea,
   useDisclosure,
-  useToast,
+  useToast
 } from '@chakra-ui/react';
-import { BookOpenIcon, PlayIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { BookOpenIcon, EllipsisVerticalIcon, PlayIcon, PlusIcon } from '@heroicons/react/24/outline';
 import { SpinnerPane, TablesList } from '@sqlrooms/components';
 import {
   DataTableVirtualized,
@@ -26,8 +36,8 @@ import {
   useDuckConn,
 } from '@sqlrooms/duckdb';
 import { MosaicLayout } from '@sqlrooms/layout';
-import { isMosaicLayoutParent } from '@sqlrooms/project-config';
-import { genRandomStr } from '@sqlrooms/utils';
+import { SqlEditorConfig, isMosaicLayoutParent } from '@sqlrooms/project-config';
+import { genRandomStr, generateUniqueName } from '@sqlrooms/utils';
 import { useQuery } from '@tanstack/react-query';
 import { Table } from 'apache-arrow';
 import { csvFormat } from 'd3-dsv';
@@ -37,6 +47,8 @@ import { MosaicNode } from 'react-mosaic-component';
 import CreateTableModal, {
   Props as CreateTableModalProps,
 } from './CreateTableModal';
+import DeleteSqlQueryModal from './DeleteSqlQueryModal';
+import RenameSqlQueryModal from './RenameSqlQueryModal';
 
 enum SqlEditorViews {
   DOCS = 'docs',
@@ -48,13 +60,14 @@ export type Props = {
   schema: string;
   isOpen: boolean;
   documentationPanel?: JSX.Element;
+  sqlEditorConfig: SqlEditorConfig;
+  onChange: (config: SqlEditorConfig) => void;
   onClose: () => void;
   onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
 };
 
-const LOCAL_STORAGE_QUERY_KEY = 'sqlEditor.query';
 const DOCS_PANE_SPLIT_PERCENTAGE = 30;
-const DEFAULT_QUERY = `SELECT 1`;
+const DEFAULT_QUERY = '';
 
 const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
   direction: 'column',
@@ -69,7 +82,7 @@ const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
 };
 
 const SqlEditor: React.FC<Props> = (props) => {
-  const { schema, documentationPanel, onAddOrUpdateSqlQuery } = props;
+  const { schema, documentationPanel, onAddOrUpdateSqlQuery, sqlEditorConfig, onChange } = props;
   const duckConn = useDuckConn();
 
   const [showDocs, setShowDocs] = useState(false);
@@ -77,9 +90,8 @@ const SqlEditor: React.FC<Props> = (props) => {
   const [mosaicState, setMosaicState] =
     useState<MosaicNode<string>>(MOSAIC_INITIAL_STATE);
 
-  const [query, setQuery] = useState(
-    window.localStorage.getItem(LOCAL_STORAGE_QUERY_KEY) ?? DEFAULT_QUERY,
-  );
+  const [selectedQueryIndex, setSelectedQueryIndex] = useState(0);
+
   const [results, setResults] = useState<Table>();
   const resultsTableData = useArrowDataTable(results);
   const toast = useToast();
@@ -158,14 +170,24 @@ const SqlEditor: React.FC<Props> = (props) => {
       textarea.selectionEnd
     );
 
-    const queryToRun = selectedText || query;
+    const queryToRun = selectedText || currentQuery;
     await runQuery(queryToRun);
     tablesQuery.refetch();
   };
 
   const handleUpdateQuery = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    setQuery(e.target.value);
-    window.localStorage.setItem(LOCAL_STORAGE_QUERY_KEY, e.target.value);
+    if (!sqlEditorConfig) return;
+
+    const newQueries = [...sqlEditorConfig.queries];
+    newQueries[selectedQueryIndex] = {
+      ...newQueries[selectedQueryIndex],
+      query: e.target.value,
+    };
+
+    onChange({
+      ...sqlEditorConfig,
+      queries: newQueries,
+    });
   };
   const handleRunQueryRef = useRef(handleRunQuery);
   handleRunQueryRef.current = handleRunQuery;
@@ -223,6 +245,43 @@ const SqlEditor: React.FC<Props> = (props) => {
     }
   }, [mosaicState]);
 
+  const currentQuery = sqlEditorConfig.queries[selectedQueryIndex]?.query ?? DEFAULT_QUERY;
+
+  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
+
+  const [queryToRename, setQueryToRename] = useState<{ id: string, name: string } | null>(null);
+
+  const handleStartRename = (queryId: string, currentName: string, event: React.MouseEvent) => {
+    event.preventDefault();
+    setQueryToRename({ id: queryId, name: currentName });
+  };
+
+  const handleFinishRename = (newName: string) => {
+    if (queryToRename) {
+      const newQueries = sqlEditorConfig.queries.map(q =>
+        q.id === queryToRename.id
+          ? { ...q, name: newName || q.name }
+          : q
+      );
+      onChange({
+        ...sqlEditorConfig,
+        queries: newQueries
+      });
+    }
+    setQueryToRename(null);
+  };
+
+  const handleDeleteQuery = (queryId: string, event: React.MouseEvent) => {
+    event.stopPropagation(); // Prevent tab selection when clicking delete
+    // Store current index before deletion
+    const currentIndex = sqlEditorConfig.queries.findIndex(q => q.id === queryId);
+    setQueryToDelete(queryId);
+    // Pre-select the previous query if we're deleting the current one
+    if (currentIndex === selectedQueryIndex && currentIndex > 0) {
+      setSelectedQueryIndex(currentIndex - 1);
+    }
+  };
+
   const views: { [viewId: string]: JSX.Element | null } = {
     [SqlEditorViews.DOCS]: showDocs ? documentationPanel ?? null : null,
     [SqlEditorViews.TABLES_LIST]: (
@@ -236,54 +295,115 @@ const SqlEditor: React.FC<Props> = (props) => {
     [SqlEditorViews.QUERY_PANE]: (
       <>
         <Flex flexDir="column" height="100%" gap="2">
-          <HStack>
-            <Button
-              aria-label="Run query"
-              size="sm"
-              textTransform="uppercase"
-              colorScheme="blue"
-              leftIcon={<PlayIcon width="16px" height="16px" />}
-              onClick={handleRunQuery}
-              _hover={{ bg: 'gray.600' }}
-              _active={{ bg: 'gray.500' }}
-            >
-              Run
-            </Button>
 
-            <Spacer />
+          <Tabs onChange={setSelectedQueryIndex} size="sm"
+            display="flex"
+            flexDir="column"
+            flexGrow={1}
+            variant="enclosed-colored"
+            overflow="hidden">
 
-            <Button
-              aria-label="Create table"
-              size="sm"
-              isDisabled={!resultsTableData}
-              leftIcon={<PlusIcon width="16px" height="16px" />}
-              onClick={handleCreateTable}
-              _hover={{ bg: 'gray.600' }}
-              _active={{ bg: 'gray.500' }}
-            >
-              New table
-            </Button>
-            <Button
-              disabled={!Boolean(results)}
-              size={'sm'}
-              leftIcon={<Icon as={DownloadIcon} h={5} w={5} />}
-              onClick={handleExport}
-            >
-              Export
-            </Button>
-          </HStack>
-          <Textarea
-            flexGrow="1"
-            fontSize="xs"
-            fontFamily="mono"
-            value={query}
-            onChange={handleUpdateQuery}
-            bg={'gray.800'}
-            color={'gray.100'}
-            width="100%"
-            height="100%"
-            resize="none"
-          />
+            <TabList flexWrap="wrap">
+              <Button
+                aria-label="Run query"
+                size="sm"
+                textTransform="uppercase"
+                colorScheme="blue"
+                leftIcon={<PlayIcon width="16px" height="16px" />}
+                onClick={handleRunQuery}
+                _hover={{ bg: 'gray.600' }}
+                _active={{ bg: 'gray.500' }}
+              >
+                Run
+              </Button>
+              <Spacer />
+              {sqlEditorConfig.queries.map((q) => (
+                <Tab
+                  key={q.id}
+                  position="relative"
+                  minWidth="60px"
+                  px={6}
+                >
+                  <span>{q.name}</span>
+                  <Menu>
+                    <MenuButton
+                      as={IconButton}
+                      aria-label="Query options"
+                      icon={<EllipsisVerticalIcon width="12px" height="12px" />}
+                      size="xs"
+                      variant="ghost"
+                      position="absolute"
+                      right={0}
+                      top="50%"
+                      transform="translateY(-50%)"
+                      onClick={(e) => e.stopPropagation()} // Prevent tab selection
+                      _hover={{ bg: 'gray.600' }}
+                    />
+                    <MenuList minW="120px">
+                      <MenuItem
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleStartRename(q.id, q.name, e);
+                        }}
+                        fontSize="sm"
+                      >
+                        Rename
+                      </MenuItem>
+                      {sqlEditorConfig.queries.length > 1 && (
+                        <MenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteQuery(q.id, e);
+                          }}
+                          color="red.300"
+                          fontSize="sm"
+                        >
+                          Delete
+                        </MenuItem>
+                      )}
+                    </MenuList>
+                  </Menu>
+                </Tab>
+              ))}
+              <IconButton
+                aria-label="New query"
+                size="sm"
+                icon={<PlusIcon width="16px" height="16px" />}
+                onClick={() => {
+                  const newQueries = [...sqlEditorConfig.queries];
+                  newQueries.push({
+                    id: genRandomStr(8),
+                    name: generateUniqueName('Untitled', newQueries.map(q => q.name)),
+                    query: DEFAULT_QUERY
+                  });
+                  onChange({
+                    ...sqlEditorConfig,
+                    queries: newQueries
+                  });
+                  setSelectedQueryIndex(newQueries.length - 1);
+                }}
+                ml={2}
+              />
+            </TabList>
+            <TabPanels flexGrow={1}>
+              {sqlEditorConfig.queries.map((q) => (
+                <TabPanel key={q.id} p={0} h="100%">
+                  <Textarea
+                    flexGrow="1"
+                    fontSize="xs"
+                    fontFamily="mono"
+                    value={q.query}
+                    onChange={handleUpdateQuery}
+                    bg={'gray.800'}
+                    color={'gray.100'}
+                    width="100%"
+                    height="100%"
+                    resize="none"
+                  />
+                </TabPanel>
+              ))}
+            </TabPanels>
+          </Tabs>
         </Flex>
       </>
     ),
@@ -307,7 +427,32 @@ const SqlEditor: React.FC<Props> = (props) => {
             </Box>
           </Flex>
         ) : resultsTableData ? (
-          <DataTableVirtualized {...resultsTableData} />
+          <Flex flexGrow={1} overflow="hidden" flexDir="column" position="relative">
+            <DataTableVirtualized {...resultsTableData} />
+            <Flex position="absolute" bottom={0} right={0}>
+              <Button
+                aria-label="Create table"
+                size="sm"
+                isDisabled={!resultsTableData}
+                leftIcon={<PlusIcon width="16px" height="16px" />}
+                onClick={handleCreateTable}
+                _hover={{ bg: 'gray.600' }}
+                _active={{ bg: 'gray.500' }}
+              >
+                Create table
+              </Button>
+              <Button
+                disabled={!Boolean(results)}
+                size={'sm'}
+                leftIcon={<Icon as={DownloadIcon} h={5} w={5} />}
+                onClick={handleExport}
+              >
+                Export
+              </Button>
+
+
+            </Flex>
+          </Flex>
         ) : null}
       </Flex>
     ),
@@ -339,9 +484,28 @@ const SqlEditor: React.FC<Props> = (props) => {
           />
         </Box>
         <CreateTableModal
-          query={query}
+          query={currentQuery}
           disclosure={createTableModal}
           onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
+        />
+        <DeleteSqlQueryModal
+          isOpen={queryToDelete !== null}
+          onClose={() => setQueryToDelete(null)}
+          onConfirm={() => {
+            const newQueries = sqlEditorConfig.queries.filter(q => q.id !== queryToDelete);
+            onChange({
+              ...sqlEditorConfig,
+              queries: newQueries
+            });
+            setQueryToDelete(null);
+            setSelectedQueryIndex(Math.min(selectedQueryIndex, newQueries.length - 1));
+          }}
+        />
+        <RenameSqlQueryModal
+          isOpen={queryToRename !== null}
+          onClose={() => setQueryToRename(null)}
+          initialName={queryToRename?.name ?? ''}
+          onRename={handleFinishRename}
         />
       </Flex>
     </>
