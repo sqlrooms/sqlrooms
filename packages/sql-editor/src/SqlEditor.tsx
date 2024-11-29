@@ -162,7 +162,7 @@ const SqlEditor: React.FC<Props> = (props) => {
   };
   const handleRunQuery = async () => {
     setSelectedTable(undefined);
-    const textarea = document.querySelector('textarea');
+    const textarea = document.querySelector(`textarea[id="${sqlEditorConfig.selectedQueryId}"]`);
     const selectedText = textarea?.value.substring(
       textarea.selectionStart,
       textarea.selectionEnd
@@ -414,6 +414,7 @@ const SqlEditor: React.FC<Props> = (props) => {
               {sqlEditorConfig.queries.map((q) => (
                 <TabPanel key={q.id} p={0} h="100%">
                   <Textarea
+                    id={q.id}
                     flexGrow="1"
                     fontSize="xs"
                     fontFamily="mono"
