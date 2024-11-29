@@ -1,4 +1,4 @@
-import {TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons';
+import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
 import {
   Badge,
   Flex,
@@ -11,8 +11,8 @@ import {
   Thead,
   Tr,
 } from '@chakra-ui/react';
-import {ErrorPane, SpinnerPane} from '@sqlrooms/components';
-import {formatCount} from '@sqlrooms/utils';
+import { ErrorPane, SpinnerPane } from '@sqlrooms/components';
+import { formatCount } from '@sqlrooms/utils';
 import {
   ColumnDef,
   SortingState,
@@ -22,7 +22,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import * as React from 'react';
-import {useVirtual} from 'react-virtual';
+import { useVirtual } from 'react-virtual';
 
 export type Props<Data extends object> = {
   data?: ArrayLike<Data>;
@@ -38,7 +38,7 @@ export type DataTableProps<Data extends object> = {
   isPreview?: boolean;
 };
 
-function DataTableVirtualized<Data extends object>({
+const DataTableVirtualized = React.memo(function DataTableVirtualized<Data extends object>({
   data,
   columns,
   isPreview,
@@ -56,13 +56,13 @@ function DataTableVirtualized<Data extends object>({
   });
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const {rows} = table.getRowModel();
+  const { rows } = table.getRowModel();
   const rowVirtualizer = useVirtual({
     parentRef: tableContainerRef,
     size: rows.length,
     overscan: 20,
   });
-  const {virtualItems: virtualRows, totalSize} = rowVirtualizer;
+  const { virtualItems: virtualRows, totalSize } = rowVirtualizer;
 
   const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0;
   const paddingBottom =
@@ -127,7 +127,7 @@ function DataTableVirtualized<Data extends object>({
                       borderColor="gray.900"
                       color="gray.400"
                       bg="gray.800"
-                      _hover={{bg: 'gray.600'}}
+                      _hover={{ bg: 'gray.600' }}
                       maxWidth="500px"
                       overflow="hidden"
                       textOverflow="ellipsis"
@@ -178,7 +178,7 @@ function DataTableVirtualized<Data extends object>({
                   key={row.id}
                   // bg={virtualRow.index % 2 ? 'gray.700' : 'gray.800'}
                   bg={'gray.700'}
-                  _hover={{bg: 'gray.600'}}
+                  _hover={{ bg: 'gray.600' }}
                 >
                   <Td
                     fontSize="xs"
@@ -271,13 +271,13 @@ function DataTableVirtualized<Data extends object>({
       </TableContainer>
     </Flex>
   );
-}
+});
 
 export default function DataTableWithLoader<Data extends object>(
   props: Props<Data>,
 ) {
-  const {isPreview, isFetching, error, ...rest} = props;
-  const {data, columns} = rest;
+  const { isPreview, isFetching, error, ...rest } = props;
+  const { data, columns } = rest;
   return error ? (
     <ErrorPane error={error} />
   ) : isFetching ? (
