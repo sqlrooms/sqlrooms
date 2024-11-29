@@ -10,6 +10,7 @@ export const SqlEditorConfig = z.object({
   ),
   selectedQueryId: z
     .string()
+    .default('default')
     .describe('The id of the currently selected query.'),
 });
 export type SqlEditorConfig = z.infer<typeof SqlEditorConfig>;
