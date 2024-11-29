@@ -1,4 +1,4 @@
-import {DownloadIcon} from '@chakra-ui/icons';
+import { DownloadIcon } from '@chakra-ui/icons';
 import {
   Box,
   Button,
@@ -12,8 +12,8 @@ import {
   useDisclosure,
   useToast,
 } from '@chakra-ui/react';
-import {BookOpenIcon, PlayIcon, PlusIcon} from '@heroicons/react/24/outline';
-import {SpinnerPane, TablesList} from '@sqlrooms/components';
+import { BookOpenIcon, PlayIcon, PlusIcon } from '@heroicons/react/24/outline';
+import { SpinnerPane, TablesList } from '@sqlrooms/components';
 import {
   DataTableVirtualized,
   QueryDataTable,
@@ -25,15 +25,15 @@ import {
   getDuckTables,
   useDuckConn,
 } from '@sqlrooms/duckdb';
-import {MosaicLayout} from '@sqlrooms/layout';
-import {isMosaicLayoutParent} from '@sqlrooms/project-config';
-import {genRandomStr} from '@sqlrooms/utils';
-import {useQuery} from '@tanstack/react-query';
-import {Table} from 'apache-arrow';
-import {csvFormat} from 'd3-dsv';
-import {saveAs} from 'file-saver';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
+import { MosaicLayout } from '@sqlrooms/layout';
+import { isMosaicLayoutParent } from '@sqlrooms/project-config';
+import { genRandomStr } from '@sqlrooms/utils';
+import { useQuery } from '@tanstack/react-query';
+import { Table } from 'apache-arrow';
+import { csvFormat } from 'd3-dsv';
+import { saveAs } from 'file-saver';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { MosaicNode } from 'react-mosaic-component';
 import CreateTableModal, {
   Props as CreateTableModalProps,
 } from './CreateTableModal';
@@ -69,7 +69,7 @@ const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
 };
 
 const SqlEditor: React.FC<Props> = (props) => {
-  const {schema, documentationPanel, onAddOrUpdateSqlQuery} = props;
+  const { schema, documentationPanel, onAddOrUpdateSqlQuery } = props;
   const duckConn = useDuckConn();
 
   const [showDocs, setShowDocs] = useState(false);
@@ -152,7 +152,14 @@ const SqlEditor: React.FC<Props> = (props) => {
   };
   const handleRunQuery = async () => {
     setSelectedTable(undefined);
-    await runQuery(query);
+    const textarea = document.querySelector('textarea');
+    const selectedText = textarea?.value.substring(
+      textarea.selectionStart,
+      textarea.selectionEnd
+    );
+
+    const queryToRun = selectedText || query;
+    await runQuery(queryToRun);
     tablesQuery.refetch();
   };
 
@@ -216,7 +223,7 @@ const SqlEditor: React.FC<Props> = (props) => {
     }
   }, [mosaicState]);
 
-  const views: {[viewId: string]: JSX.Element | null} = {
+  const views: { [viewId: string]: JSX.Element | null } = {
     [SqlEditorViews.DOCS]: showDocs ? documentationPanel ?? null : null,
     [SqlEditorViews.TABLES_LIST]: (
       <TablesList
@@ -237,8 +244,8 @@ const SqlEditor: React.FC<Props> = (props) => {
               colorScheme="blue"
               leftIcon={<PlayIcon width="16px" height="16px" />}
               onClick={handleRunQuery}
-              _hover={{bg: 'gray.600'}}
-              _active={{bg: 'gray.500'}}
+              _hover={{ bg: 'gray.600' }}
+              _active={{ bg: 'gray.500' }}
             >
               Run
             </Button>
@@ -251,8 +258,8 @@ const SqlEditor: React.FC<Props> = (props) => {
               isDisabled={!resultsTableData}
               leftIcon={<PlusIcon width="16px" height="16px" />}
               onClick={handleCreateTable}
-              _hover={{bg: 'gray.600'}}
-              _active={{bg: 'gray.500'}}
+              _hover={{ bg: 'gray.600' }}
+              _active={{ bg: 'gray.500' }}
             >
               New table
             </Button>
