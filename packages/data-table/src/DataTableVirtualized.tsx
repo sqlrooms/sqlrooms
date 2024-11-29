@@ -283,6 +283,6 @@ export default function DataTableWithLoader<Data extends object>(
   ) : isFetching ? (
     <SpinnerPane h="100%" />
   ) : data && columns ? (
-    <DataTableVirtualized data={data} columns={columns} isPreview={isPreview} />
+    <DataTableVirtualized data={data} columns={columns as any} isPreview={isPreview} />
   ) : null;
 }

@@ -19,11 +19,13 @@ import {
   BaseViewConfig,
   DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_PROJECT_TITLE,
+  DEFAULT_SQL_EDITOR_CONFIG,
   DataSource,
   DataSourceTypes,
   FileDataSource,
   LayoutConfig,
   ProjectPanelTypes,
+  SqlEditorConfig,
   SqlQueryDataSource,
   UrlDataSource,
   isMosaicLayoutParent,
@@ -124,6 +126,7 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   dataSources: [],
   views: [],
   layout: DEFAULT_MOSAIC_LAYOUT,
+  sqlEditor: DEFAULT_SQL_EDITOR_CONFIG,
 };
 
 export type ViewStores<PC extends BaseProjectConfig> = {
@@ -181,8 +184,13 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     oldTableName?: string,
   ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): void;
-  replaceProjectFile(projectFile: ProjectFileInfo): Promise<DataTable | undefined>;
-  addProjectFile(info: ProjectFileInfo, desiredTableName?: string): Promise<DataTable | undefined>;
+  replaceProjectFile(
+    projectFile: ProjectFileInfo,
+  ): Promise<DataTable | undefined>;
+  addProjectFile(
+    info: ProjectFileInfo,
+    desiredTableName?: string,
+  ): Promise<DataTable | undefined>;
   removeProjectFile(pathname: string): void;
   maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
@@ -199,6 +207,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   removeView: (viewId: string) => void;
   areDatasetsReady(): boolean;
   areViewsReadyToRender(): boolean;
+  setSqlEditorConfig: (config: SqlEditorConfig) => void;
 };
 
 export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
@@ -288,7 +297,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         await get().maybeDownloadDataSources();
         setTaskProgress(INIT_PROJECT_TASK, undefined);
         if (get().projectConfig.dataSources.length > 0) {
-          set({isDataAvailable: true})
+          set({isDataAvailable: true});
         }
       },
 
@@ -469,11 +478,15 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       async replaceProjectFile(projectFile) {
         set((state) =>
           produce(state, (draft) => {
-            draft.projectFiles = draft.projectFiles.map((f) => f.pathname === projectFile.pathname ? projectFile : f);
+            draft.projectFiles = draft.projectFiles.map((f) =>
+              f.pathname === projectFile.pathname ? projectFile : f,
+            );
           }),
         );
         const dataSource = get().projectConfig.dataSources.find(
-          (d) => d.type === DataSourceTypes.enum.file && d.fileName === projectFile.pathname
+          (d) =>
+            d.type === DataSourceTypes.enum.file &&
+            d.fileName === projectFile.pathname,
         );
         if (dataSource) {
           set((state) =>
@@ -483,7 +496,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
               };
             }),
           );
-          if (projectFile.duckdbFileName) {   
+          if (projectFile.duckdbFileName) {
             const {rowCount} = await createViewFromRegisteredFile(
               projectFile.duckdbFileName,
               'main',
@@ -742,6 +755,14 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
       },
 
+      setSqlEditorConfig: (config: SqlEditorConfig) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.projectConfig.sqlEditor = config;
+          }),
+        );
+      },
+
       areDatasetsReady: () => {
         const {projectConfig, dataSourceStates} = get();
         const dataSources = projectConfig.dataSources;
@@ -964,7 +985,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       );
     }
   };
-
 
   return create<ProjectState<PC>>()(store);
 }
