@@ -147,10 +147,10 @@ export function getTimeGranularityByOrder(order: number): TimeGranularity {
 }
 
 export function getTimeGranularityForDateRange(
-  [minTime, maxTime]: [number, number],
+  [minTime, maxTime]: [Date, Date],
   maxBuckets: number = 400,
 ): TimeGranularityKey {
-  const totalMilliseconds = maxTime - minTime;
+  const totalMilliseconds = maxTime.getTime() - minTime.getTime();
 
   if (totalMilliseconds / 1000 < maxBuckets) {
     return TimeGranularityKey.SECOND;
