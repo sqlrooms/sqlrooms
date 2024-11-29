@@ -163,11 +163,10 @@ const SqlEditor: React.FC<Props> = (props) => {
   const handleRunQuery = async () => {
     setSelectedTable(undefined);
     const textarea = document.querySelector(`textarea[id="${sqlEditorConfig.selectedQueryId}"]`);
-    if (!textarea) return;
-    const selectedText = textarea?.value.substring(
+    const selectedText = textarea instanceof HTMLTextAreaElement ? textarea?.value.substring(
       textarea.selectionStart,
       textarea.selectionEnd
-    );
+    ) : undefined;
 
     const queryToRun = selectedText || currentQuery;
     await runQuery(queryToRun);
