@@ -20,6 +20,8 @@ import {
   ErrorPane,
   SkeletonPane,
   matchesSearchQuery,
+  matchesSearchWords,
+  splitIntoWords,
 } from '@sqlrooms/components';
 import type {UseQueryResult} from '@tanstack/react-query';
 
@@ -58,13 +60,14 @@ function SearchableGrid<T>(props: Props<T>): JSX.Element {
     if (e.code === 'Escape') handleClearSearchQuery();
   };
 
-  const filteredItems = useMemo(
-    () =>
-      items?.filter((item) =>
-        matchesSearchQuery(searchQuery, getSearchString(item)),
-      ),
-    [getSearchString, items, searchQuery],
-  );
+  const filteredItems = useMemo(() => {
+    const searchWords = splitIntoWords(searchQuery);
+    return searchWords
+      ? items?.filter((item) =>
+          matchesSearchWords(searchWords, getSearchString(item)),
+        )
+      : items;
+  }, [getSearchString, items, searchQuery]);
 
   return (
     <>
