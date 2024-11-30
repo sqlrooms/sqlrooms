@@ -8,9 +8,9 @@
   "private": true,
   "dependencies": {
     "@sqlrooms/duckdb": "*",
-    "@uwdata/vgplot": "^0.7.1",
-    "@uwdata/mosaic-core": "^0.7.1",
-    "@uwdata/mosaic-spec": "^0.7.1",
+    "@uwdata/vgplot": "^0.12.0",
+    "@uwdata/mosaic-core": "^0.12.0",
+    "@uwdata/mosaic-spec": "^0.12.0",
     "lodash.throttle": "^4.1.1"
   },
   "peerDependencies": {
