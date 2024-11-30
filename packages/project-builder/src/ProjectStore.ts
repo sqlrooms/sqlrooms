@@ -290,7 +290,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         console.log('reinitialize', INIT_DB_TASK, 'end');
 
         setTaskProgress(INIT_PROJECT_TASK, {
-          message: 'Initializing project…',
+          message: 'Loading data sources…',
           progress: undefined,
         });
         await updateReadyDataSources();
