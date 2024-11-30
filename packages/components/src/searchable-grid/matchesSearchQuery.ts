@@ -1,6 +1,6 @@
 import {defaultMemoize} from 'reselect';
 
-const splitIntoWords = defaultMemoize((str: string) => {
+export const splitIntoWords = (str: string) => {
   // https://stackoverflow.com/a/25575009/120779
   return (
     str
@@ -10,7 +10,8 @@ const splitIntoWords = defaultMemoize((str: string) => {
         /([^\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~\s]+)/g,
       )
   );
-});
+};
+const memoizedSplitIntoWords = defaultMemoize(splitIntoWords);
 
 /**
  * Checks whether the text matches the query. Both are split into words.
@@ -18,7 +19,14 @@ const splitIntoWords = defaultMemoize((str: string) => {
  * begins with it. Case-insensitive.
  */
 export function matchesSearchQuery(query: string, text: string) {
-  const queryWords = splitIntoWords(query);
+  const queryWords = memoizedSplitIntoWords(query);
+  if (!queryWords) {
+    return false;
+  }
+  return matchesSearchWords(queryWords, text);
+}
+
+export function matchesSearchWords(queryWords: string[], text: string) {
   if (!queryWords || queryWords.length === 0) {
     return true;
   }
