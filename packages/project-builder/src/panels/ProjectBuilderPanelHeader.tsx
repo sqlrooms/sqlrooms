@@ -1,4 +1,4 @@
-import {Box, Flex, Heading} from '@chakra-ui/react';
+import {Box, Flex, Heading, HStack} from '@chakra-ui/react';
 import {XMarkIcon} from '@heroicons/react/24/solid';
 import {PanelHeaderButton} from '@sqlrooms/components';
 import {useBaseProjectStore} from '@sqlrooms/project-builder';
@@ -25,7 +25,7 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
     [pinnedPanels, type],
   );
   return (
-    <>
+    <Flex>
       <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
         {showHeader && (
            <>
@@ -42,7 +42,7 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
           )}
         {children}
       </Flex>
-      <Box position="absolute" right="3px" top="1px" bg={'gray.700'}>
+      <HStack gap={0} bg={'gray.700'}>
         <PanelHeaderButton
           isPinned={isPinned}
           icon={
@@ -60,8 +60,8 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
           onClick={() => togglePanel(type)}
           label={`Close panel "${title}"`}
         />
-      </Box>
-    </>
+      </HStack>
+    </Flex>
   );
 };
 
