@@ -15,7 +15,6 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import {TimelineMode} from '@flowmapcity/project-config';
 import {ChevronLeftIcon, ChevronRightIcon} from '@heroicons/react/24/outline';
 import {
   AdjustmentsHorizontalIcon,
@@ -23,6 +22,7 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/solid';
 import {FC, useEffect} from 'react';
+import {TimelineMode} from '@sqlrooms/project-config';
 
 interface Props {
   darkMode: boolean;

@@ -1,6 +1,6 @@
 import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {TimelineMode} from '@flowmapcity/project-config';
+import {TimelineMode} from '@sqlrooms/project-config';
 import {max} from 'd3-array';
 import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
 import {EventManager} from 'mjolnir.js';
