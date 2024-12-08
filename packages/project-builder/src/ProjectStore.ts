@@ -198,7 +198,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   addDataSource: (dataSource: DataSource, status?: DataSourceStatus) => void;
   getTable(tableName: string): DataTable | undefined;
   addTable(tableName: string, data: Record<string, any>[]): Promise<DataTable>;
-  setTables(dataTable: DataTable[]): void;
+  setTables(dataTable: DataTable[]): Promise<void>;
   setTableRowCount(tableName: string, rowCount: number): void;
   setProjectTitle(title: string): void;
   setDescription(description: string): void;
@@ -456,7 +456,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             };
           }),
         );
-        get().setTables(await getDuckTableSchemas());
+        await get().setTables(await getDuckTableSchemas());
       },
 
       removeSqlQueryDataSource: async (tableName) => {
@@ -470,7 +470,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             delete draft.dataSourceStates[tableName];
           }),
         );
-        get().setTables(await getDuckTableSchemas());
+        await get().setTables(await getDuckTableSchemas());
       },
 
       setProjectFiles: (projectFiles) => set(() => ({projectFiles})),
@@ -643,13 +643,13 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             draft.tables.push(newTable);
           }),
         );
-        updateReadyDataSources();
+        await updateReadyDataSources();
         return newTable;
       },
 
-      setTables: (tables) => {
+      setTables: async (tables) => {
         set({tables});
-        updateReadyDataSources();
+        await updateReadyDataSources();
       },
 
       setProjectTitle: (title) =>
@@ -788,7 +788,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
     /**
      * Update the status of all data sources based on the current tables.
      */
-    function updateReadyDataSources() {
+    async function updateReadyDataSources() {
       const {projectConfig, tables, dataSourceStates} = get();
       const dataSources = projectConfig.dataSources;
       set({
@@ -810,9 +810,9 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       });
 
       const {viewStores} = get();
-      for (const view of Object.values(viewStores)) {
-        view.viewStore.getState().onDataUpdated();
-      }
+      await Promise.all(Object.values(viewStores).map((view) =>
+        view.viewStore.getState().onDataUpdated())
+      );
     }
 
     function updateTotalFileDownloadProgress() {
@@ -924,7 +924,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         }),
       );
       if (loadedFiles.length) {
-        setTables(await getDuckTableSchemas());
+        await setTables(await getDuckTableSchemas());
       }
     }
 
@@ -964,12 +964,12 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           get().togglePanel(ProjectPanelTypes.DATA_SOURCES, true);
         }
       }
-      get().setTables(await getDuckTableSchemas());
+      await get().setTables(await getDuckTableSchemas());
     }
 
     async function updateTables(): Promise<DataTable[]> {
       const tables = await getDuckTableSchemas();
-      get().setTables(tables);
+      await get().setTables(tables);
       return tables;
     }
 
