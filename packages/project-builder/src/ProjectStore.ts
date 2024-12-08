@@ -52,7 +52,7 @@ import {
 
 export type ViewState<VC extends BaseViewConfig> = {
   config: VC;
-  onDataUpdated: () => void;
+  onDataUpdated: () => Promise<void>;
   readyToRender: boolean;
 };
 export type TaskProgress = {
