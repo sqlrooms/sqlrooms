@@ -18,7 +18,6 @@ const ProjectBuilder: React.FC<Props> = () => {
   const loadingProgress = useBaseProjectStore((state) =>
     state.getLoadingProgress(),
   );
-  console.log('loadingProgress', loadingProgress);
 
   const visibleProjectPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),

@@ -21,7 +21,6 @@ type Props = {
 const ProgressModal: FC<Props> = (props) => {
   const { isOpen, title, loadingStage, progress } = props;
   const appContext = useContext(AppContext);
-  console.log('ProgressModal', props)
   if (!isOpen) {
     return null
   }
