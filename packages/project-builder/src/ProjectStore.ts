@@ -208,6 +208,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   areDatasetsReady(): boolean;
   areViewsReadyToRender(): boolean;
   setSqlEditorConfig: (config: SqlEditorConfig) => void;
+  findTableByName(tableName: string): DataTable | undefined;
 };
 
 export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
@@ -506,7 +507,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           }
         }
         await updateTables();
-        return dataSource ? findTableByName(dataSource.tableName) : undefined;
+        return dataSource ? get().findTableByName(dataSource.tableName) : undefined;
       },
 
       async addProjectFile(projectFile, desiredTableName) {
@@ -546,7 +547,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
         await updateTables();
         setIsDataAvailable(true);
-        return findTableByName(tableName);
+        return get().findTableByName(tableName);
       },
       removeProjectFile(pathname) {
         set((state) =>
@@ -782,6 +783,10 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           ({viewStore}) => viewStore.getState().readyToRender,
         );
       },
+
+      findTableByName(tableName: string) {
+        return get().tables.find((t) => t.tableName === tableName);
+      },
     };
     return projectState;
 
@@ -971,10 +976,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       const tables = await getDuckTableSchemas();
       await get().setTables(tables);
       return tables;
-    }
-
-    function findTableByName(tableName: string): DataTable | undefined {
-      return get().tables.find((t) => t.tableName === tableName);
     }
 
     function setIsDataAvailable(isDataAvailable: boolean) {
