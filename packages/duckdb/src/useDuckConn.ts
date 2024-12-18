@@ -120,8 +120,12 @@ export async function getDuckConn(): Promise<DuckConn> {
         // );
       }
     }) as any;
+    await conn.query(`
+      SET max_expression_depth TO 100000;
+      SET memory_limit = '10GB';
+    `);
     duckConn = {db, conn, worker};
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     resolve!(duckConn);
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
