@@ -44,7 +44,7 @@ export async function createViewFromRegisteredFile(
     fileNameLower.endsWith('.json') ||
     fileNameLower.endsWith('.geojson') ||
     fileNameLower.endsWith('.ndjson')
-      ? `read_json_auto(${quotedFileName})` // requires json extension (duckdb 0.9.2)
+      ? `read_json_auto(${quotedFileName}, maximum_object_size=104857600)` // 100MB
       : fileNameLower.endsWith('.parquet')
         ? `parquet_scan(${quotedFileName})`
         : fileNameLower.endsWith('.csv') || fileNameLower.endsWith('.tsv')
