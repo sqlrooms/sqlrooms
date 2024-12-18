@@ -195,7 +195,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
   setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
-  addDataSource: (dataSource: DataSource, status?: DataSourceStatus) => void;
+  addDataSource: (dataSource: DataSource, status?: DataSourceStatus) => Promise<void>;
   getTable(tableName: string): DataTable | undefined;
   addTable(tableName: string, data: Record<string, any>[]): Promise<DataTable>;
   setTables(dataTable: DataTable[]): Promise<void>;
@@ -297,9 +297,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         await updateReadyDataSources();
         await get().maybeDownloadDataSources();
         setTaskProgress(INIT_PROJECT_TASK, undefined);
-        if (get().projectConfig.dataSources.length > 0) {
-          set({isDataAvailable: true});
-        }
       },
 
       setTaskProgress(id, taskProgress) {
@@ -386,7 +383,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
       },
 
-      addDataSource: (dataSource, status = DataSourceStatus.PENDING) => {
+      addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
         set((state) =>
           produce(state, (draft) => {
             const dataSources = draft.projectConfig.dataSources;
@@ -402,7 +399,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             draft.dataSourceStates[tableName] = {status};
           }),
         );
-        get().maybeDownloadDataSources();
+        await get().maybeDownloadDataSources();
       },
 
       setProjectFolder: (projectFolder) =>
@@ -535,7 +532,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           }),
         );
         // TODO: pass rowCount to setTables?
-        get().addDataSource(
+        await get().addDataSource(
           {
             type: DataSourceTypes.enum.file,
             fileName: pathname,
@@ -612,6 +609,10 @@ export function createProjectStore<PC extends BaseProjectConfig>(
 
         if (queriesToRun.length > 0) {
           await runDataSourceQueries(queriesToRun);
+        }
+
+        if (get().projectConfig.dataSources.length > 0) {
+          set({isDataAvailable: true});
         }
 
         // await create
