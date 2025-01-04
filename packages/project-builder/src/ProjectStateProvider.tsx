@@ -34,5 +34,5 @@ export function useBaseProjectStore<PC extends BaseProjectConfig, T>(
   if (!store) {
     throw new Error('Missing ProjectStateProvider in the tree');
   }
-  return useStore(store, selector);
+  return useStore(store as ProjectStore<PC>, selector);
 }
