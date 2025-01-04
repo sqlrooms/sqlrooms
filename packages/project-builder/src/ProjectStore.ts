@@ -62,10 +62,6 @@ export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
   ProjectState<PC>
 >;
 
-// ReturnType<
-//   typeof createProjectSlice<PC>
-// >;
-
 export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
   initialState: Partial<ProjectStateProps<PC>> &
     Required<Pick<ProjectStateProps<PC>, 'projectConfig'>>;
@@ -192,7 +188,6 @@ export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
 export function createProjectSlice<PC extends BaseProjectConfig>(
   props: CreateProjectSliceProps<PC>,
 ) {
-
   const initialState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
     ...props.initialState,
@@ -275,6 +270,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         await updateReadyDataSources();
         await get().maybeDownloadDataSources();
         setTaskProgress(INIT_PROJECT_TASK, undefined);
+
+        await get().onDataUpdated();
       },
 
       setTaskProgress(id, taskProgress) {
