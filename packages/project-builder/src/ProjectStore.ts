@@ -108,7 +108,6 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   title: '',
   description: '',
   dataSources: [],
-  views: [],
   layout: DEFAULT_MOSAIC_LAYOUT,
   sqlEditor: DEFAULT_SQL_EDITOR_CONFIG,
 };
@@ -192,6 +191,7 @@ export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
 export function createProjectSlice<PC extends BaseProjectConfig>(
   props: CreateProjectSliceProps<PC>,
 ) {
+
   const initialState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
     ...props.initialState,

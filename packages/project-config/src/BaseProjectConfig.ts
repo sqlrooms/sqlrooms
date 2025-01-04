@@ -82,10 +82,6 @@ export const BaseProjectConfig = z
       .array(DataSource)
       .default([])
       .describe('Data sources. Each data source must have a unique tableName.'),
-    views: z
-      .array(BaseViewConfig)
-      .default([])
-      .describe('Views are data representations.'),
     layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
       'Layout specifies how views are arranged on the screen.',
     ),
