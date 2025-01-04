@@ -16,7 +16,6 @@ import {
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   BaseProjectConfig,
-  BaseViewConfig,
   DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_PROJECT_TITLE,
   DEFAULT_SQL_EDITOR_CONFIG,
@@ -42,7 +41,7 @@ import {
 import {clearMosaicPlotConn, getMosaicPlotConn} from '@sqlrooms/vgplot';
 import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
-import {StateCreator, StoreApi, create} from 'zustand';
+import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -50,11 +49,6 @@ import {
   ProjectFileState,
 } from './types';
 
-export type ViewState<VC extends BaseViewConfig> = {
-  config: VC;
-  onDataUpdated: () => Promise<void>;
-  readyToRender: boolean;
-};
 export type TaskProgress = {
   progress?: number | undefined;
   message: string;
@@ -64,28 +58,18 @@ const INIT_DB_TASK = 'init-db';
 const INIT_PROJECT_TASK = 'init-project';
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 
-export type ViewStore<VC extends BaseViewConfig> = StoreApi<ViewState<VC>>;
-
-type ElementType<T> = T extends (infer U)[] ? U : never;
-
-export type ProjectStore<PC extends BaseProjectConfig> = ReturnType<
-  typeof createProjectStore<PC>
+export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
+  ProjectState<PC>
 >;
 
-export type ViewStoreFactory<PC extends BaseProjectConfig> = (
-  projectStore: ProjectState<PC>,
-  viewConfig: ElementType<PC['views']>,
-) => ViewStore<ElementType<PC['views']>>;
+// ReturnType<
+//   typeof createProjectSlice<PC>
+// >;
 
-export type ViewStoreFactories<PC extends BaseProjectConfig> = {
-  [viewId: string]: ViewStoreFactory<PC>;
-};
-
-export type CreateProjectStoreProps<PC extends BaseProjectConfig> = {
+export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
   initialState: Partial<ProjectStateProps<PC>> &
     Required<Pick<ProjectStateProps<PC>, 'projectConfig'>>;
   schema?: string;
-  viewStoreFactories?: ViewStoreFactories<PC>;
 };
 
 export type ProjectPanelInfo = {
@@ -108,7 +92,6 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   isDataAvailable: false,
   isReadOnly: false,
   isPublic: false,
-  viewStores: {},
   projectFiles: [],
   projectFilesProgress: {},
   // userId: undefined,
@@ -129,13 +112,6 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   sqlEditor: DEFAULT_SQL_EDITOR_CONFIG,
 };
 
-export type ViewStores<PC extends BaseProjectConfig> = {
-  [key: string]: {
-    viewStore: ViewStore<ElementType<PC['views']>>;
-    unsubscribe: () => void;
-  };
-};
-
 export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
   tasksProgress: Record<string, TaskProgress>;
@@ -154,7 +130,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
   dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
   tableRowCounts: {[tableName: string]: number};
-  viewStores: ViewStores<PC>;
   captureException: (exception: any, captureContext?: any) => void;
 };
 
@@ -195,27 +170,28 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
   setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
-  addDataSource: (dataSource: DataSource, status?: DataSourceStatus) => Promise<void>;
+  addDataSource: (
+    dataSource: DataSource,
+    status?: DataSourceStatus,
+  ) => Promise<void>;
   getTable(tableName: string): DataTable | undefined;
   addTable(tableName: string, data: Record<string, any>[]): Promise<DataTable>;
   setTables(dataTable: DataTable[]): Promise<void>;
   setTableRowCount(tableName: string, rowCount: number): void;
   setProjectTitle(title: string): void;
   setDescription(description: string): void;
-  getViewStore(viewId: string): ViewStore<ElementType<PC['views']>> | undefined;
-  addView: (view: ElementType<PC['views']>) => void;
-  removeView: (viewId: string) => void;
   areDatasetsReady(): boolean;
-  areViewsReadyToRender(): boolean;
   setSqlEditorConfig: (config: SqlEditorConfig) => void;
   findTableByName(tableName: string): DataTable | undefined;
+  onDataUpdated: () => Promise<void>;
+  areViewsReadyToRender(): boolean;
 };
 
 export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
   ProjectStateActions<PC>;
 
-export function createProjectStore<PC extends BaseProjectConfig>(
-  props: CreateProjectStoreProps<PC>,
+export function createProjectSlice<PC extends BaseProjectConfig>(
+  props: CreateProjectSliceProps<PC>,
 ) {
   const initialState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
@@ -230,15 +206,20 @@ export function createProjectStore<PC extends BaseProjectConfig>(
     lastSavedConfig: undefined,
   };
 
-  const store: StateCreator<ProjectState<PC>> = (set, get) => {
+  const slice: StateCreator<ProjectState<PC>> = (set, get) => {
     const projectState: ProjectState<PC> = {
       ...initialState,
 
+      onDataUpdated: async () => {
+        // Do nothing: to be overridden by the view store
+      },
+
+      areViewsReadyToRender: () => {
+        // Can be overridden by the view store
+        return true;
+      },
+
       reset: async () => {
-        const {viewStores, removeView} = get();
-        for (const viewId of Object.keys(viewStores)) {
-          removeView(viewId);
-        }
         set(initialState);
         try {
           // Clean up DuckDB
@@ -276,10 +257,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           isDataAvailable: false,
         });
 
-        const {addView, setTaskProgress} = get();
-        for (const view of projectConfig.views) {
-          addView(view as ElementType<PC['views']>);
-        }
+        const {setTaskProgress} = get();
 
         console.log('reinitialize', INIT_DB_TASK);
         setTaskProgress(INIT_DB_TASK, {
@@ -330,57 +308,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       hasUnsavedChanges: () => {
         const {projectConfig, lastSavedConfig} = get();
         return projectConfig !== lastSavedConfig;
-      },
-
-      getViewStore(viewId) {
-        return get().viewStores[viewId]?.viewStore;
-      },
-
-      addView(view) {
-        const viewId = view.id;
-        if (get().viewStores[viewId]) {
-          console.log(`View with id ${viewId} already exists`);
-          return;
-        }
-        const createViewStore = props?.viewStoreFactories?.[view.type];
-        if (!createViewStore) {
-          throw new Error(`No factory for view type: ${view.type}`);
-        }
-        const viewStore = createViewStore(get(), view);
-
-        // TODO: Consider using monolithic store which custom set functions
-        //       for child objects to avoid having to manage subscriptions
-        // See https://github.com/pmndrs/zustand/issues/163#issuecomment-678821969
-        // Listen to changes in the view store and update the project config
-        const unsubscribe = viewStore.subscribe(({config}) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const views = draft.projectConfig.views;
-              const index = views.findIndex(({id}) => id === viewId);
-              views[index >= 0 ? index : views.length] = config;
-            }),
-          );
-        });
-        set((state) =>
-          produce(state, (draft) => {
-            draft.viewStores[viewId] = {viewStore, unsubscribe};
-          }),
-        );
-      },
-
-      removeView(viewId) {
-        set((state) =>
-          produce(state, (draft) => {
-            const viewStore = draft.viewStores[viewId];
-            if (viewStore) {
-              viewStore.unsubscribe();
-              delete draft.viewStores[viewId];
-              draft.projectConfig.views = draft.projectConfig.views.filter(
-                ({id}) => id !== viewId,
-              );
-            }
-          }),
-        );
       },
 
       addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
@@ -504,7 +431,9 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           }
         }
         await updateTables();
-        return dataSource ? get().findTableByName(dataSource.tableName) : undefined;
+        return dataSource
+          ? get().findTableByName(dataSource.tableName)
+          : undefined;
       },
 
       async addProjectFile(projectFile, desiredTableName) {
@@ -543,7 +472,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             : DataSourceStatus.PENDING,
         );
         await updateTables();
-        setIsDataAvailable(true);
+        set({isDataAvailable: true});
         return get().findTableByName(tableName);
       },
       removeProjectFile(pathname) {
@@ -588,6 +517,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
             !dataSourceStates[ds.tableName] ||
             dataSourceStates[ds.tableName]?.status === DataSourceStatus.PENDING,
         );
+
         const filesToDownload = pendingDataSources.filter((ds) => {
           switch (ds.type) {
             case DataSourceTypes.Enum.file:
@@ -614,8 +544,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         if (get().projectConfig.dataSources.length > 0) {
           set({isDataAvailable: true});
         }
-
-        // await create
       },
 
       setTableRowCount: (tableName, rowCount) =>
@@ -675,7 +603,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         ),
 
       togglePanel: (panel, show) => {
-        const {projectConfig, areViewsReadyToRender} = get();
+        const {projectConfig} = get();
         if (projectConfig.layout?.nodes === panel) {
           // don't hide the view if it's the only one
           return;
@@ -688,7 +616,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         if (isShown) {
           if (
             show ||
-            (panel === ProjectPanelTypes.MAIN_VIEW && areViewsReadyToRender())
+            panel === ProjectPanelTypes.MAIN_VIEW /*&& areViewsReadyToRender()*/
           ) {
             return;
           }
@@ -774,17 +702,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
         );
       },
 
-      areViewsReadyToRender: () => {
-        const {viewStores} = get();
-        const stores = Object.values(viewStores);
-        if (stores.length === 0) {
-          return false;
-        }
-        return stores.every(
-          ({viewStore}) => viewStore.getState().readyToRender,
-        );
-      },
-
       findTableByName(tableName: string) {
         return get().tables.find((t) => t.tableName === tableName);
       },
@@ -814,11 +731,6 @@ export function createProjectStore<PC extends BaseProjectConfig>(
           {...dataSourceStates},
         ),
       });
-
-      const {viewStores} = get();
-      await Promise.all(Object.values(viewStores).map((view) =>
-        view.viewStore.getState().onDataUpdated())
-      );
     }
 
     function updateTotalFileDownloadProgress() {
@@ -978,15 +890,7 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       await get().setTables(tables);
       return tables;
     }
-
-    function setIsDataAvailable(isDataAvailable: boolean) {
-      set((state) =>
-        produce(state, (draft) => {
-          draft.isDataAvailable = isDataAvailable;
-        }),
-      );
-    }
   };
 
-  return create<ProjectState<PC>>()(store);
+  return slice;
 }
