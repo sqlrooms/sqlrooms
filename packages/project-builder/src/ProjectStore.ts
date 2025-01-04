@@ -16,7 +16,6 @@ import {
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   BaseProjectConfig,
-  BaseViewConfig,
   DEFAULT_MOSAIC_LAYOUT,
   DEFAULT_PROJECT_TITLE,
   DEFAULT_SQL_EDITOR_CONFIG,

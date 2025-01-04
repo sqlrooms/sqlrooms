@@ -66,14 +66,6 @@ export const DataSource = z
   .describe('Data source specification.');
 export type DataSource = z.infer<typeof DataSource>;
 
-export const BaseViewConfig = z
-  .object({
-    id: z.string().describe('Unique view identifier'),
-    type: z.string().describe('View type'),
-  })
-  .describe('View configuration.');
-export type BaseViewConfig = z.infer<typeof BaseViewConfig>;
-
 export const BaseProjectConfig = z
   .object({
     title: z.string().default(DEFAULT_PROJECT_TITLE).describe('Project title.'),
