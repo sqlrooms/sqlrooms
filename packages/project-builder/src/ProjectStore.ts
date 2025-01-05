@@ -9,7 +9,6 @@ import {
   dropFile,
   dropTable,
   getDuckConn,
-  getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
 } from '@sqlrooms/duckdb';
@@ -38,10 +37,8 @@ import {
   getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
-import {clearMosaicPlotConn, getMosaicPlotConn} from '@sqlrooms/vgplot';
-import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
-import {StateCreator, StoreApi, create} from 'zustand';
+import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -58,13 +55,9 @@ const INIT_DB_TASK = 'init-db';
 const INIT_PROJECT_TASK = 'init-project';
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 
-
-export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<ProjectState<PC>>
-
-// ReturnType<
-//   typeof createProjectSlice<PC>
-// >;
-
+export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
+  ProjectState<PC>
+>;
 
 export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
   initialState: Partial<ProjectStateProps<PC>> &
@@ -110,7 +103,6 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   layout: DEFAULT_MOSAIC_LAYOUT,
   sqlEditor: DEFAULT_SQL_EDITOR_CONFIG,
 };
-
 
 export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
@@ -172,14 +164,17 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
   addDataSource: (dataSource: DataSource, status?: DataSourceStatus) => Promise<void>;
   getTable(tableName: string): DataTable | undefined;
-  addTable(tableName: string, data: Record<string, any>[]): Promise<DataTable>;
-  setTables(dataTable: DataTable[]): void;
+  setTables(dataTable: DataTable[]): Promise<void>;
   setTableRowCount(tableName: string, rowCount: number): void;
   setProjectTitle(title: string): void;
   setDescription(description: string): void;
   areDatasetsReady(): boolean;
   setSqlEditorConfig: (config: SqlEditorConfig) => void;
   findTableByName(tableName: string): DataTable | undefined;
+  /**
+   * Update the status of all data sources based on the current tables.
+   */
+  updateReadyDataSources(): Promise<void>;
   onDataUpdated: () => Promise<void>;
   areViewsReadyToRender(): boolean;
 };
@@ -222,7 +217,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         try {
           // Clean up DuckDB
           await Promise.all([dropAllFiles(), dropAllTables()]);
-          await clearMosaicPlotConn();
         } catch (err) {
           console.error(err);
         }
@@ -270,9 +264,19 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           message: 'Loading data sources…',
           progress: undefined,
         });
-        await updateReadyDataSources();
+        await getDuckConn();
+        setTaskProgress(INIT_DB_TASK, undefined);
+        console.log('reinitialize', INIT_DB_TASK, 'end');
+
+        setTaskProgress(INIT_PROJECT_TASK, {
+          message: 'Loading data sources…',
+          progress: undefined,
+        });
+        await get().updateReadyDataSources();
         await get().maybeDownloadDataSources();
         setTaskProgress(INIT_PROJECT_TASK, undefined);
+
+        await get().onDataUpdated();
       },
 
       setTaskProgress(id, taskProgress) {
@@ -307,7 +311,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         const {projectConfig, lastSavedConfig} = get();
         return projectConfig !== lastSavedConfig;
       },
-
 
       addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
         set((state) =>
@@ -380,7 +383,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             };
           }),
         );
-        get().setTables(await getDuckTableSchemas());
+        await get().setTables(await getDuckTableSchemas());
       },
 
       removeSqlQueryDataSource: async (tableName) => {
@@ -394,7 +397,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             delete draft.dataSourceStates[tableName];
           }),
         );
-        get().setTables(await getDuckTableSchemas());
+        await get().setTables(await getDuckTableSchemas());
       },
 
       setProjectFiles: (projectFiles) => set(() => ({projectFiles})),
@@ -430,7 +433,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }
         }
         await updateTables();
-        return dataSource ? get().findTableByName(dataSource.tableName) : undefined;
+        return dataSource
+          ? get().findTableByName(dataSource.tableName)
+          : undefined;
       },
 
       async addProjectFile(projectFile, desiredTableName) {
@@ -539,7 +544,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           await runDataSourceQueries(queriesToRun);
         }
 
-        
         if (get().projectConfig.dataSources.length > 0) {
           set({isDataAvailable: true});
         }
@@ -556,29 +560,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         return get().tables.find((t) => t.tableName === tableName);
       },
 
-      async addTable(tableName, data) {
-        const {tables} = get();
-        const table = tables.find((t) => t.tableName === tableName);
-        if (table) {
-          return table;
-        }
-
-        const {coordinator} = await getMosaicPlotConn();
-        await coordinator.exec(loadObjects(tableName, data));
-        const newTable = await getDuckTableSchema(tableName);
-
-        set((state) =>
-          produce(state, (draft) => {
-            draft.tables.push(newTable);
-          }),
-        );
-        updateReadyDataSources();
-        return newTable;
-      },
-
-      setTables: (tables) => {
+      async setTables (tables) {
         set({tables});
-        updateReadyDataSources();
+        await get().updateReadyDataSources();
       },
 
       setProjectTitle: (title) =>
@@ -704,33 +688,31 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       findTableByName(tableName: string) {
         return get().tables.find((t) => t.tableName === tableName);
       },
+
+      async updateReadyDataSources() {
+        const {projectConfig, tables, dataSourceStates} = get();
+        const dataSources = projectConfig.dataSources;
+        set({
+          dataSourceStates: dataSources.reduce(
+            (acc, ds) => {
+              const tableName = ds.tableName;
+              const table = tables.find((t) => t.tableName === tableName);
+              acc[tableName] = {
+                status: table
+                  ? DataSourceStatus.READY
+                  : // Don't change the existing status which could be ERROR or PENDING
+                    dataSourceStates[tableName]?.status ??
+                    DataSourceStatus.PENDING,
+              };
+              return acc;
+            },
+            {...dataSourceStates},
+          ),
+        });
+      },
     };
     return projectState;
 
-    /**
-     * Update the status of all data sources based on the current tables.
-     */
-    function updateReadyDataSources() {
-      const {projectConfig, tables, dataSourceStates} = get();
-      const dataSources = projectConfig.dataSources;
-      set({
-        dataSourceStates: dataSources.reduce(
-          (acc, ds) => {
-            const tableName = ds.tableName;
-            const table = tables.find((t) => t.tableName === tableName);
-            acc[tableName] = {
-              status: table
-                ? DataSourceStatus.READY
-                : // Don't change the existing status which could be ERROR or PENDING
-                  dataSourceStates[tableName]?.status ??
-                  DataSourceStatus.PENDING,
-            };
-            return acc;
-          },
-          {...dataSourceStates},
-        ),
-      });
-    }
 
     function updateTotalFileDownloadProgress() {
       const {projectFilesProgress, setTaskProgress} = get();
@@ -841,7 +823,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         }),
       );
       if (loadedFiles.length) {
-        setTables(await getDuckTableSchemas());
+        await setTables(await getDuckTableSchemas());
       }
     }
 
@@ -881,8 +863,10 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           get().togglePanel(ProjectPanelTypes.DATA_SOURCES, true);
         }
       }
-      get().setTables(await getDuckTableSchemas());
+      await get().setTables(await getDuckTableSchemas());
     }
+
+
 
     async function updateTables(): Promise<DataTable[]> {
       const tables = await getDuckTableSchemas();
