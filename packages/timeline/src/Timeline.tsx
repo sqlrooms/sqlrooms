@@ -1,11 +1,11 @@
 import {Box, HStack, Text, useTheme, VStack} from '@chakra-ui/react';
 import styled from '@emotion/styled';
-import {TimelineMode} from '@sqlrooms/project-config';
 import {max} from 'd3-array';
 import {scaleLinear, ScaleTime, scaleTime} from 'd3-scale';
 import {EventManager} from 'mjolnir.js';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useMeasure, useThrottle} from 'react-use';
+import {TimelineMode} from './TimelineConfig';
 import PlayControl from './PlayControl';
 import {areRangesEqual, tickMultiFormat, TimeGranularity} from './time';
 

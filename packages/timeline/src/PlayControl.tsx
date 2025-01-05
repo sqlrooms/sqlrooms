@@ -22,7 +22,7 @@ import {
   PlayIcon,
 } from '@heroicons/react/24/solid';
 import {FC, useEffect} from 'react';
-import {TimelineMode} from '@sqlrooms/project-config';
+import {TimelineMode} from './TimelineConfig';
 
 interface Props {
   darkMode: boolean;
