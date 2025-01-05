@@ -6,6 +6,10 @@
     },
     "lint": {},
     "dev": {
+      "persistent": true
+    },
+    "ladle": {
+      "persistent": true
     },
     "test": {},
     "test:watch": {

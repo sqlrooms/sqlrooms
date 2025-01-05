@@ -10,10 +10,10 @@
     "@sqlrooms/utils": "*"
   },
   "peerDependencies": {
-    "react": "*",
     "@chakra-ui/icon": "*",
     "@chakra-ui/react": "*",
-    "@heroicons/react": "*"
+    "@heroicons/react": "*",
+    "react": "*"
   },
   "scripts": {
     "dev": "tsc -w",

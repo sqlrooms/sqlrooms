@@ -6,11 +6,16 @@
   "module": "dist/index.js",
   "type": "module",
   "private": true,
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc"
+  },
   "dependencies": {
     "@sqlrooms/components": "*",
     "@sqlrooms/duckdb": "*",
+    "@sqlrooms/project-config": "*",
     "@sqlrooms/sql-editor": "*",
-    "@sqlrooms/project-config": "*"
+    "react-mosaic-component": "5.3.0"
   },
   "peerDependencies": {
     "@chakra-ui/icons": "*",
@@ -18,9 +23,5 @@
     "immer": "*",
     "react": "*",
     "zustand": "*"
-  },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc"
   }
 }

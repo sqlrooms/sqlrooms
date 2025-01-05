@@ -15,10 +15,10 @@
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {
-    "apache-arrow": "*",
-    "@tanstack/react-query": "*",
     "@chakra-ui/icons": "*",
     "@chakra-ui/react": "*",
+    "@tanstack/react-query": "*",
+    "apache-arrow": "*",
     "react": "*",
     "react-dom": "*"
   },

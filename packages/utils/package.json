@@ -13,13 +13,13 @@
     "test:watch": "jest --watch"
   },
   "dependencies": {
-    "seedrandom": "^3.0.5",
-    "d3-color": "*"
+    "d3-color": "*",
+    "seedrandom": "^3.0.5"
   },
   "peerDependencies": {
+    "@aws-sdk/client-s3": "*",
     "d3-time-format": "*",
     "dayjs": "*",
-    "@aws-sdk/client-s3": "*",
     "zod": "*"
   }
 }
