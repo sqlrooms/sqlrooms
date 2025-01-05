@@ -15,7 +15,6 @@
   "peerDependencies": {
     "@chakra-ui/icons": "*",
     "@chakra-ui/react": "*",
-    "@uwdata/mosaic-sql": "*",
     "immer": "*",
     "react": "*",
     "zustand": "*"

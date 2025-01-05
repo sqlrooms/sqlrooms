@@ -9,7 +9,6 @@ import {
   dropFile,
   dropTable,
   getDuckConn,
-  getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
 } from '@sqlrooms/duckdb';
@@ -38,8 +37,6 @@ import {
   getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
-import {clearMosaicPlotConn, getMosaicPlotConn} from '@sqlrooms/vgplot';
-import {loadObjects} from '@uwdata/mosaic-sql';
 import {produce} from 'immer';
 import {StateCreator, StoreApi} from 'zustand';
 import {
@@ -170,7 +167,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     status?: DataSourceStatus,
   ) => Promise<void>;
   getTable(tableName: string): DataTable | undefined;
-  addTable(tableName: string, data: Record<string, any>[]): Promise<DataTable>;
   setTables(dataTable: DataTable[]): Promise<void>;
   setTableRowCount(tableName: string, rowCount: number): void;
   setProjectTitle(title: string): void;
@@ -178,6 +174,10 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   areDatasetsReady(): boolean;
   setSqlEditorConfig: (config: SqlEditorConfig) => void;
   findTableByName(tableName: string): DataTable | undefined;
+  /**
+   * Update the status of all data sources based on the current tables.
+   */
+  updateReadyDataSources(): Promise<void>;
   onDataUpdated: () => Promise<void>;
   areViewsReadyToRender(): boolean;
 };
@@ -219,7 +219,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         try {
           // Clean up DuckDB
           await Promise.all([dropAllFiles(), dropAllTables()]);
-          await clearMosaicPlotConn();
         } catch (err) {
           console.error(err);
         }
@@ -267,7 +266,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           message: 'Loading data sources…',
           progress: undefined,
         });
-        await updateReadyDataSources();
+        await get().updateReadyDataSources();
         await get().maybeDownloadDataSources();
         setTaskProgress(INIT_PROJECT_TASK, undefined);
 
@@ -554,29 +553,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         return get().tables.find((t) => t.tableName === tableName);
       },
 
-      async addTable(tableName, data) {
-        const {tables} = get();
-        const table = tables.find((t) => t.tableName === tableName);
-        if (table) {
-          return table;
-        }
-
-        const {coordinator} = await getMosaicPlotConn();
-        await coordinator.exec(loadObjects(tableName, data));
-        const newTable = await getDuckTableSchema(tableName);
-
-        set((state) =>
-          produce(state, (draft) => {
-            draft.tables.push(newTable);
-          }),
-        );
-        await updateReadyDataSources();
-        return newTable;
-      },
-
       setTables: async (tables) => {
         set({tables});
-        await updateReadyDataSources();
+        await get().updateReadyDataSources();
       },
 
       setProjectTitle: (title) =>
@@ -702,33 +681,30 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       findTableByName(tableName: string) {
         return get().tables.find((t) => t.tableName === tableName);
       },
+
+      async updateReadyDataSources() {
+        const {projectConfig, tables, dataSourceStates} = get();
+        const dataSources = projectConfig.dataSources;
+        set({
+          dataSourceStates: dataSources.reduce(
+            (acc, ds) => {
+              const tableName = ds.tableName;
+              const table = tables.find((t) => t.tableName === tableName);
+              acc[tableName] = {
+                status: table
+                  ? DataSourceStatus.READY
+                  : // Don't change the existing status which could be ERROR or PENDING
+                    dataSourceStates[tableName]?.status ??
+                    DataSourceStatus.PENDING,
+              };
+              return acc;
+            },
+            {...dataSourceStates},
+          ),
+        });
+      },
     };
     return projectState;
-
-    /**
-     * Update the status of all data sources based on the current tables.
-     */
-    async function updateReadyDataSources() {
-      const {projectConfig, tables, dataSourceStates} = get();
-      const dataSources = projectConfig.dataSources;
-      set({
-        dataSourceStates: dataSources.reduce(
-          (acc, ds) => {
-            const tableName = ds.tableName;
-            const table = tables.find((t) => t.tableName === tableName);
-            acc[tableName] = {
-              status: table
-                ? DataSourceStatus.READY
-                : // Don't change the existing status which could be ERROR or PENDING
-                  dataSourceStates[tableName]?.status ??
-                  DataSourceStatus.PENDING,
-            };
-            return acc;
-          },
-          {...dataSourceStates},
-        ),
-      });
-    }
 
     function updateTotalFileDownloadProgress() {
       const {projectFilesProgress, setTaskProgress} = get();
