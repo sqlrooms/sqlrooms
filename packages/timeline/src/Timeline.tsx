@@ -125,7 +125,7 @@ interface HandleProps {
 const TimelineHandle: React.FC<HandleProps> = (props) => {
   const {width, height, side, darkMode, onMove} = props;
   const theme = useTheme();
-  const handleMoveRef = useRef<any>();
+  const handleMoveRef = useRef<any>(null);
   handleMoveRef.current = ({center}: any) => {
     onMove(center.x, side);
   };
@@ -271,7 +271,7 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
     return undefined;
   };
 
-  const handleMoveRef = useRef<any>();
+  const handleMoveRef = useRef<any>(null);
   handleMoveRef.current = ({center}: any) => {
     if (offset == null) {
       const pos = mousePosition(center.x);
@@ -311,13 +311,13 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
     setOffset(undefined);
   };
 
-  const handleClickRef = useRef<any>();
+  const handleClickRef = useRef<any>(null);
   handleClickRef.current = () => {
     onChange(timeExtent);
   };
   const handleClick = (evt: any) => handleClickRef.current(evt);
 
-  const handlePanStartRef = useRef<any>();
+  const handlePanStartRef = useRef<any>(null);
   handlePanStartRef.current = ({center}: any) => {
     let start = timeFromPos(center.x);
     if (start) {
@@ -330,7 +330,7 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
   };
   const handlePanStart = (evt: any) => handlePanStartRef.current(evt);
 
-  const handlePanMoveRef = useRef<any>();
+  const handlePanMoveRef = useRef<any>(null);
   handlePanMoveRef.current = ({center}: any) => {
     let end = timeFromPos(center.x);
     if (panStart && end) {
@@ -376,7 +376,7 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
     };
   }, []);
 
-  const handleMoveSideRef = useRef<MoveSideHandler>();
+  const handleMoveSideRef = useRef<MoveSideHandler>(null);
   handleMoveSideRef.current = (pos, side) => {
     let t = timeFromPos(pos);
     if (t != null) {
@@ -533,7 +533,7 @@ const Timeline: React.FC<Props> = (props) => {
     useState<[Date, Date]>(selectedRange);
   const throttledRange = useThrottle(internalRange, 100);
 
-  const onChangeRef = useRef<(range: [Date, Date]) => void>();
+  const onChangeRef = useRef<(range: [Date, Date]) => void>(null);
   onChangeRef.current = (range) => onChange(range);
 
   useEffect(() => {

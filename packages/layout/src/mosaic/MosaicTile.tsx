@@ -1,5 +1,4 @@
 import {Flex} from '@chakra-ui/react';
-import {ProjectBuilderPanelHeader} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC} from 'react';
 import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
@@ -9,7 +8,7 @@ const ENABLE_LAYOUT_REARRANGE = false;
 type Props = {
   id: string;
   path: MosaicBranch[];
-  content: JSX.Element;
+  content: React.ReactNode;
   isDragging: boolean;
 };
 
@@ -50,7 +49,7 @@ const MosaicTile: FC<Props> = (props) => {
           <div />
         ) : (
           <div style={{display: 'flex', width: '100%', height: '100%'}}>
-            <ProjectBuilderPanelHeader panelKey={id as ProjectPanelTypes} />
+            {/* <ProjectBuilderPanelHeader panelKey={id as ProjectPanelTypes} /> */}
           </div>
         )
       }

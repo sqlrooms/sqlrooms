@@ -17,8 +17,8 @@ import {
 } from '@chakra-ui/react';
 import {ArrowUturnUpIcon, FolderIcon} from '@heroicons/react/24/outline';
 import {formatBytes, formatTimeRelative} from '@sqlrooms/utils';
-import {S3FileOrDirectory} from '@sqlrooms/s3-browser';
 import {FC, useCallback, useEffect, useMemo} from 'react';
+import { S3FileOrDirectory } from './S3FileOrDirectory';
 
 type Props = {
   files?: S3FileOrDirectory[];

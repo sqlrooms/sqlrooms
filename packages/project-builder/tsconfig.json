@@ -1,5 +1,12 @@
 {
   "extends": "../../tsconfig.json",
-  "compilerOptions": {"outDir": "dist"},
-  "include": ["src/**/*", "test/**/*", "../../typings.d.ts"]
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": [
+    "src/**/*",
+    "test/**/*",
+    "../../typings.d.ts",
+    "src/panels/ProjectBuilderPanelHeader.tsx"
+  ]
 }

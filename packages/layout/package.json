@@ -8,7 +8,7 @@
   "private": true,
   "peerDependencies": {
     "@chakra-ui/react": "*",
-    "@sqlrooms/project-config": "*",
+    "@sqlrooms/project-config": "workspace:*",
     "react": "*",
     "react-mosaic-component": "5.3.0"
   },

@@ -1,7 +1,7 @@
 {
   "compilerOptions": {
     "target": "esnext",
-    "lib": ["dom", "dom.iterable", "es6"],
+    "lib": ["dom", "dom.iterable", "es2016"],
     "allowJs": true,
     "skipLibCheck": true,
     "strict": true,
@@ -22,5 +22,10 @@
       }
     ]
   },
-  "exclude": ["**/node_modules"]
+  "exclude": [
+    "**/node_modules",
+    "packages/*/src/**/*.test.ts",
+    "packages/*/src/**/*.test.tsx",
+    "packages/*/src/**/*.stories.tsx"
+  ]
 }

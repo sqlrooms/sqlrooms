@@ -7,7 +7,7 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@sqlrooms/utils": "*",
+    "@sqlrooms/utils": "workspace:*",
     "reselect": "4.1.6"
   },
   "peerDependencies": {

@@ -11,10 +11,10 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@sqlrooms/components": "*",
-    "@sqlrooms/duckdb": "*",
-    "@sqlrooms/project-config": "*",
-    "@sqlrooms/sql-editor": "*",
+    "@sqlrooms/components": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
     "react-mosaic-component": "5.3.0"
   },
   "peerDependencies": {

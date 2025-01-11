@@ -1,7 +1,7 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {DataTable} from '@sqlrooms/duckdb';
 import {useQuery} from '@tanstack/react-query';
 import * as arrow from 'apache-arrow';
+import {DataTable} from './types';
 
 export type DuckConn = {
   db: duckdb.AsyncDuckDB;
@@ -125,7 +125,7 @@ export async function getDuckConn(): Promise<DuckConn> {
       SET memory_limit = '10GB';
     `);
     duckConn = {db, conn, worker};
-      // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
+    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     resolve!(duckConn);
   } catch (err) {
     // eslint-disable-next-line @typescript-eslint/no-non-null-assertion

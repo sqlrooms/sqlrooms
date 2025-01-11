@@ -7,10 +7,10 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@sqlrooms/components": "*",
-    "@sqlrooms/duckdb": "*",
-    "@sqlrooms/layout": "*",
-    "@sqlrooms/project-config": "*"
+    "@sqlrooms/components": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",

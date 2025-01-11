@@ -1,10 +1,10 @@
 import {Box, Flex, Heading, HStack} from '@chakra-ui/react';
 import {XMarkIcon} from '@heroicons/react/24/solid';
 import {PanelHeaderButton} from '@sqlrooms/components';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC, useMemo} from 'react';
 import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
+import { useBaseProjectStore } from '../ProjectStateProvider';
 
 type Props = {
   panelKey: ProjectPanelTypes | string;

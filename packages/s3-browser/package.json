@@ -7,7 +7,9 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@sqlrooms/utils": "*"
+    "@aws-sdk/client-s3": "^3.726.1",
+    "@sqlrooms/utils": "workspace:*",
+    "zod": "^3.23.1"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",

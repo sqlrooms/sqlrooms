@@ -1,16 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "pipeline": {
+  "tasks": {
     "build": {
       "outputs": ["packages/*/dist"]
     },
     "lint": {},
-    "dev": {
-      "persistent": true
-    },
-    "ladle": {
-      "persistent": true
-    },
+    "dev": {},
     "test": {},
     "test:watch": {
       "cache": false

@@ -7,9 +7,9 @@
   "type": "module",
   "private": true,
   "dependencies": {
-    "@sqlrooms/components": "*",
-    "@sqlrooms/duckdb": "*",
-    "@sqlrooms/utils": "*",
+    "@sqlrooms/components": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.10.7",
     "@tanstack/table-core": "^8.10.7",
     "react-virtual": "2.10.4"

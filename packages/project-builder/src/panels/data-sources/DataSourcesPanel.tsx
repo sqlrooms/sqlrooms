@@ -1,4 +1,4 @@
-import { AddIcon } from '@chakra-ui/icons';
+import {AddIcon} from '@chakra-ui/icons';
 import {
   Accordion,
   AccordionButton,
@@ -11,18 +11,18 @@ import {
   Spacer,
   useDisclosure,
 } from '@chakra-ui/react';
-import { TableCellsIcon } from '@heroicons/react/24/solid';
+import {TableCellsIcon} from '@heroicons/react/24/solid';
 import {
   DataSourceTypes,
   ProjectPanelTypes,
   SqlQueryDataSource,
 } from '@sqlrooms/project-config';
-import { createContext, FC, useCallback, useContext } from 'react';
-import { PiFileSql } from 'react-icons/pi';
+import {createContext, FC, useCallback, useContext} from 'react';
+import {PiFileSql} from 'react-icons/pi';
 
-import { FolderIcon } from '@heroicons/react/24/outline';
-import { CustomAccordionIcon } from '@sqlrooms/components';
-import { useBaseProjectStore } from '@sqlrooms/project-builder';
+import {FolderIcon} from '@heroicons/react/24/outline';
+import {CustomAccordionIcon} from '@sqlrooms/components';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
@@ -63,27 +63,26 @@ const DataSourcesPanel: FC<Props> = () => {
     // dbFilesQuery
   ]);
 
-  const addButton = <Button
-    leftIcon={<AddIcon />}
-    variant="solid"
-    size="sm"
-    onClick={addDataModal.onToggle}
-    py={4}
-  >
-    Add
-  </Button>;
+  const addButton = (
+    <Button
+      leftIcon={<AddIcon />}
+      variant="solid"
+      size="sm"
+      onClick={addDataModal.onToggle}
+      py={4}
+    >
+      Add
+    </Button>
+  );
 
   return (
     <Flex flexDir="column" flexGrow={1} gap={3} height="100%">
       <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DATA_SOURCES} />
       {isReadOnly ? null : addButton}
       {isProjectEmpty ? (
-        <>
-
-        </>
+        <></>
       ) : (
         <>
-
           <Flex overflow="auto" flexDir="column" alignItems="stretch">
             <Accordion
               reduceMotion={true}
@@ -105,7 +104,7 @@ const DataSourcesPanel: FC<Props> = () => {
                 <AccordionPanel pb={5} pt={1} paddingInline="5px">
                   <FileDataSourcesPanel />
                 </AccordionPanel>
-              </AccordionItem >
+              </AccordionItem>
 
               {!isReadOnly || queryDataSources.length > 0 ? (
                 <AccordionItem>
@@ -140,19 +139,17 @@ const DataSourcesPanel: FC<Props> = () => {
                   <TablesListPanel />
                 </AccordionPanel>
               </AccordionItem>
-            </Accordion >
-          </Flex >
+            </Accordion>
+          </Flex>
         </>
       )}
 
       {/* <FileDropzone onDrop={handleDrop} /> */}
       {/* )} */}
-      {
-        AddDataModal ? (
-          <AddDataModal isOpen={addDataModal.isOpen} onClose={handleModalClose} />
-        ) : null
-      }
-    </Flex >
+      {AddDataModal ? (
+        <AddDataModal isOpen={addDataModal.isOpen} onClose={handleModalClose} />
+      ) : null}
+    </Flex>
   );
 };
 
