@@ -15,26 +15,21 @@ import {
   Text,
 } from '@chakra-ui/react';
 import React, {KeyboardEventHandler, useMemo, useState} from 'react';
-
-import {
-  ErrorPane,
-  SkeletonPane,
-  matchesSearchQuery,
-  matchesSearchWords,
-  splitIntoWords,
-} from '@sqlrooms/components';
 import type {UseQueryResult} from '@tanstack/react-query';
+import ErrorPane from '../ErrorPane';
+import SkeletonPane from '../SkeletonPane';
+import {splitIntoWords, matchesSearchWords} from './matchesSearchQuery';
 
 type Props<T> = {
   title: string;
   description: string;
   query: UseQueryResult<T[] | undefined>;
   getSearchString: (item: T) => string;
-  renderItem: (item: T, onChange: () => void) => JSX.Element;
-  actionButtons?: JSX.Element;
-  emptyState?: JSX.Element | string;
+  renderItem: (item: T, onChange: () => void) => React.ReactNode;
+  actionButtons?: React.ReactNode;
+  emptyState?: React.ReactNode | string;
 };
-function SearchableGrid<T>(props: Props<T>): JSX.Element {
+function SearchableGrid<T>(props: Props<T>): React.ReactNode {
   const {
     title,
     description,
@@ -167,7 +162,7 @@ function SearchableGrid<T>(props: Props<T>): JSX.Element {
                       {' '}
                       {filteredItems.map((item, idx) => (
                         <React.Fragment key={idx}>
-                          {renderItem(item, () => refetch())}
+                          {renderItem(item, () => void refetch())}
                         </React.Fragment>
                       ))}
                     </Grid>

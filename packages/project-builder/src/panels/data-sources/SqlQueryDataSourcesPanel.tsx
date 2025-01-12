@@ -20,18 +20,19 @@ import {
   PlusIcon,
   XMarkIcon,
 } from '@heroicons/react/24/solid';
-import { DataSourceStatus, useBaseProjectStore } from '@sqlrooms/project-builder';
-import { SqlQueryDataSource } from '@sqlrooms/project-config';
-import { CreateTableModal } from '@sqlrooms/sql-editor';
-import { FC, useCallback, useState } from 'react';
-import { FiRefreshCw } from 'react-icons/fi';
-import { PiFileSql } from 'react-icons/pi';
+import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {CreateTableModal} from '@sqlrooms/sql-editor';
+import {FC, useCallback, useState} from 'react';
+import {FiRefreshCw} from 'react-icons/fi';
+import {PiFileSql} from 'react-icons/pi';
+import {useBaseProjectStore} from '../../ProjectStateProvider';
+import {DataSourceStatus} from '../../types';
 
 type Props = {
   queryDataSources: SqlQueryDataSource[];
 };
 const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
-  const { queryDataSources } = props;
+  const {queryDataSources} = props;
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();
   const editModal = useDisclosure({
@@ -54,7 +55,7 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
 
   const handleRemove = useCallback(
     (dataSource: SqlQueryDataSource) => {
-      const { tableName } = dataSource;
+      const {tableName} = dataSource;
       removeSqlQueryDataSource(tableName);
     },
     [removeSqlQueryDataSource],
@@ -140,7 +141,7 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
             </Flex>
             <Flex flexDir="row" gap={1} alignItems="center">
               {dataSourceStates[dataSource.tableName]?.status ===
-                DataSourceStatus.ERROR ? (
+              DataSourceStatus.ERROR ? (
                 <Alert
                   status="error"
                   fontSize="xs"

@@ -1,6 +1,5 @@
 import {Box, Flex, Skeleton, Stack, useInterval} from '@chakra-ui/react';
 import React from 'react';
-import {range} from 'd3-array';
 import {StackProps} from '@chakra-ui/layout';
 
 export type Props = {
@@ -23,7 +22,7 @@ const SkeletonPane: React.FC<Props> = (props) => {
   return (
     <Flex direction="column" width="100%" justifyContent="center" {...rest}>
       <Stack gap={2}>
-        {range(n).map((i) =>
+        {Array.from({length: n}).map((_, i) =>
           i < count ? (
             <Skeleton key={i} height={rowHeight} />
           ) : (

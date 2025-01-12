@@ -7,17 +7,28 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@heroicons/react": "*",
     "@sqlrooms/components": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*"
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "d3-dsv": "^3.0.1",
+    "file-saver": "^2.0.5",
+    "react-hook-form": "^7.54.2"
   },
   "peerDependencies": {
     "@chakra-ui/icon": "*",
-    "@chakra-ui/react": "*"
+    "@chakra-ui/react": "*",
+    "react-mosaic-component": "*"
   },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc"
+  },
+  "devDependencies": {
+    "@types/d3-dsv": "^3.0.7",
+    "@types/file-saver": "^2.0.7"
   }
 }

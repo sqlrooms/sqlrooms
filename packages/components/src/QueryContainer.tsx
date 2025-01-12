@@ -1,9 +1,10 @@
 import {Progress} from '@chakra-ui/react';
-import {AppContext, ClientOnly} from '@sqlrooms/components';
 import {QueryErrorResetBoundary} from '@tanstack/react-query';
 import React, {Suspense, useContext} from 'react';
 import SkeletonPane from './SkeletonPane';
 import SpinnerPane from './SpinnerPane';
+import {AppContext} from './AppContext';
+import ClientOnly from './ClientOnly';
 // import {TRPCClientError} from '@trpc/client';
 
 type Props = {

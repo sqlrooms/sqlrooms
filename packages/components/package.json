@@ -7,6 +7,9 @@
   "type": "module",
   "private": true,
   "dependencies": {
+    "@chakra-ui/layout": "2.3.1",
+    "@floating-ui/react-dom-interactions": "^0.13.3",
+    "@heroicons/react": "*",
     "@sqlrooms/utils": "workspace:*",
     "reselect": "4.1.6"
   },

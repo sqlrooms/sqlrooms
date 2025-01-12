@@ -20,7 +20,7 @@ const SilentLogger = {
 // TODO: shut DB down at some point
 
 let duckConn: DuckConn;
-let initialize: Promise<DuckConn>;
+let initialize: Promise<DuckConn> | undefined;
 
 export class DuckQueryError extends Error {
   readonly cause: unknown;
@@ -49,7 +49,7 @@ export async function getDuckConn(): Promise<DuckConn> {
   }
   if (duckConn) {
     return duckConn;
-  } else if (initialize) {
+  } else if (initialize !== undefined) {
     // The initialization has already been started, wait for it to finish
     return initialize;
   }
@@ -125,10 +125,8 @@ export async function getDuckConn(): Promise<DuckConn> {
       SET memory_limit = '10GB';
     `);
     duckConn = {db, conn, worker};
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     resolve!(duckConn);
   } catch (err) {
-    // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
     reject!(err);
     throw err;
   }
@@ -144,7 +142,6 @@ export function useDuckConn() {
     },
     {suspense: true},
   );
-  // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
   return res.data!;
 }
 

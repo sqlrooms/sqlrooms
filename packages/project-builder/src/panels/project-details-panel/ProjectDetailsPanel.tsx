@@ -1,12 +1,12 @@
 import {Flex, Text, Textarea, VStack} from '@chakra-ui/react';
 import {EditableText} from '@sqlrooms/components';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {
   DEFAULT_PROJECT_TITLE,
   ProjectPanelTypes,
 } from '@sqlrooms/project-config';
 import {useCallback} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
+import {useBaseProjectStore} from '../../ProjectStateProvider';
 
 export default function ProjectDetailsPanel() {
   const title = useBaseProjectStore((state) => state.projectConfig.title);

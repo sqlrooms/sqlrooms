@@ -1,17 +1,11 @@
-import { Flex } from '@chakra-ui/react';
-import { AppContext, ProgressModal } from '@sqlrooms/components';
-import { MosaicLayout, getVisibleMosaicLayoutPanels } from '@sqlrooms/layout';
-import React, { useCallback, useContext, useMemo } from 'react';
-import { MosaicNode } from 'react-mosaic-component';
-import { useBaseProjectStore } from './ProjectStateProvider';
+import {Flex} from '@chakra-ui/react';
+import {AppContext, ProgressModal} from '@sqlrooms/components';
+import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
+import React, {useCallback, useContext, useMemo} from 'react';
+import {MosaicNode} from 'react-mosaic-component';
+import {useBaseProjectStore} from './ProjectStateProvider';
 
-type Props = {
-  // nothing yet
-};
-
-const ProjectBuilder: React.FC<Props> = () => {
-  // const projectConfig = useBaseProjectStore((state) => state.projectConfig);
-  // console.log(projectConfig);
+const ProjectBuilder: React.FC = () => {
   const layout = useBaseProjectStore((state) => state.projectConfig.layout);
   const setLayout = useBaseProjectStore((state) => state.setLayout);
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
@@ -27,13 +21,13 @@ const ProjectBuilder: React.FC<Props> = () => {
   const handleLayoutChange = useCallback(
     (nodes: MosaicNode<string> | null) => {
       // Keep layout properties, e.g. 'pinned' and 'fixed'
-      setLayout({ ...layout, nodes });
+      setLayout({...layout, nodes});
     },
     [setLayout, layout],
   );
 
-  const { ErrorBoundary } = useContext(AppContext);
-  const renderedPanels: Map<string, JSX.Element> = useMemo(() => {
+  const {ErrorBoundary} = useContext(AppContext);
+  const renderedPanels: Map<string, React.ReactNode> = useMemo(() => {
     return Array.from(visibleProjectPanels).reduce((acc, id: string) => {
       const PanelComp = projectPanels[id]?.component;
       if (PanelComp) {
@@ -45,7 +39,7 @@ const ProjectBuilder: React.FC<Props> = () => {
         );
       }
       return acc;
-    }, new Map<string, JSX.Element>());
+    }, new Map<string, React.ReactNode>());
   }, [ErrorBoundary, projectPanels, visibleProjectPanels]);
 
   return (

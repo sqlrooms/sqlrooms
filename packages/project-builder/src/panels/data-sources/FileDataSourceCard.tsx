@@ -25,10 +25,10 @@ import {
   EllipsisHorizontalIcon,
   XMarkIcon,
 } from '@heroicons/react/24/solid';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {formatBytes} from '@sqlrooms/utils';
 import {FC, useCallback} from 'react';
 import {ProjectFileInfo, ProjectFileState} from '../../types';
+import {useBaseProjectStore} from '../..';
 
 type Props = {
   isReadOnly?: boolean;

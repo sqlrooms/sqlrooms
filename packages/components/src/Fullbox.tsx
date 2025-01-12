@@ -1,5 +1,5 @@
 import {Flex} from '@chakra-ui/react';
-import {FlexProps} from '@chakra-ui/layout';
+import type {FlexProps} from '@chakra-ui/layout';
 
 const Fullbox: React.FC<FlexProps> = (props) => {
   return (

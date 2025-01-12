@@ -1,17 +1,8 @@
-import {
-  Flex,
-  IconButton,
-  Spacer,
-  Tooltip,
-  VStack,
-} from '@chakra-ui/react';
+import {Flex, IconButton, Spacer, Tooltip, VStack} from '@chakra-ui/react';
 import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import React, {FC, useMemo} from 'react';
-type Props = {
-  // nothing yet
-};
+import {useBaseProjectStore} from './ProjectStateProvider';
 
 export const SidebarButton: FC<{
   title: string;
@@ -45,7 +36,7 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
     [layout],
   );
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
-  const {icon: Icon, title} = projectPanels[type as ProjectPanelTypes];
+  const {icon: Icon, title} = projectPanels[type];
 
   return (
     <SidebarButton
@@ -59,7 +50,7 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
   );
 };
 
-const ProjectBuilderSidebarButtons: FC<Props> = () => {
+const ProjectBuilderSidebarButtons: FC = () => {
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   // const initialized = useBaseProjectStore((state) => state.initialized);
   // if (!initialized) {
@@ -87,13 +78,12 @@ const ProjectBuilderSidebarButtons: FC<Props> = () => {
           .map((type) => {
             return (
               <ProjectBuilderSidebarButton
-              key={type}
-              type={type as ProjectPanelTypes}
+                key={type}
+                type={type as ProjectPanelTypes}
               />
             );
           })}
       </VStack>
-       
     </Flex>
   );
 };

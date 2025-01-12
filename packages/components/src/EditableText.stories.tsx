@@ -6,7 +6,10 @@ export const EditableTextStory = () => {
   return (
     <EditableText
       value={value}
-      onChange={setValue}
+      onChange={(nextValue) => {
+        setValue(nextValue);
+        return nextValue;
+      }}
       error={undefined}
       isLoading={false}
     />

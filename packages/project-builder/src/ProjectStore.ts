@@ -150,7 +150,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     query: string,
     oldTableName?: string,
   ): Promise<void>;
-  removeSqlQueryDataSource(tableName: string): void;
+  removeSqlQueryDataSource(tableName: string): Promise<void>;
   replaceProjectFile(
     projectFile: ProjectFileInfo,
   ): Promise<DataTable | undefined>;
@@ -463,9 +463,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             fileName: pathname,
             tableName,
           },
-          Boolean(duckdbFileName)
-            ? DataSourceStatus.READY
-            : DataSourceStatus.PENDING,
+          duckdbFileName ? DataSourceStatus.READY : DataSourceStatus.PENDING,
         );
         await updateTables();
         set({isDataAvailable: true});
@@ -531,7 +529,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
 
         const queriesToRun = pendingDataSources.filter(
           (ds) => ds.type === DataSourceTypes.Enum.sql,
-        ) as SqlQueryDataSource[];
+        );
 
         if (queriesToRun.length > 0) {
           await runDataSourceQueries(queriesToRun);
@@ -694,8 +692,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
                 status: table
                   ? DataSourceStatus.READY
                   : // Don't change the existing status which could be ERROR or PENDING
-                    dataSourceStates[tableName]?.status ??
-                    DataSourceStatus.PENDING,
+                    (dataSourceStates[tableName]?.status ??
+                    DataSourceStatus.PENDING),
               };
               return acc;
             },

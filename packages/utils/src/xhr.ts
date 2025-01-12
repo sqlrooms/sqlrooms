@@ -17,9 +17,10 @@ export const postData = async ({
     try {
       message = (await res.json()).error.message;
       console.error(message);
-    } finally {
-      throw new Error(message);
+    } catch {
+      // ignore
     }
+    throw new Error(message);
   }
 
   return res.json();

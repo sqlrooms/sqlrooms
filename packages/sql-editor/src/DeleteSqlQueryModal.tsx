@@ -7,7 +7,7 @@ import {
   AlertDialogOverlay,
   Button,
 } from '@chakra-ui/react';
-import React, { useRef } from 'react';
+import React, {useRef} from 'react';
 
 interface Props {
   isOpen: boolean;
@@ -15,11 +15,15 @@ interface Props {
   onConfirm: () => void;
 }
 
-const DeleteSqlQueryModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) => {
-  const cancelRef = useRef<HTMLButtonElement>(null);
+const DeleteSqlQueryModal: React.FC<Props> = ({isOpen, onClose, onConfirm}) => {
+  const cancelRef = useRef<HTMLButtonElement | null>(null);
 
   return (
-    <AlertDialog isOpen={isOpen} leastDestructiveRef={cancelRef} onClose={onClose}>
+    <AlertDialog
+      isOpen={isOpen}
+      leastDestructiveRef={cancelRef as React.RefObject<HTMLButtonElement>}
+      onClose={onClose}
+    >
       <AlertDialogOverlay>
         <AlertDialogContent>
           <AlertDialogHeader fontSize="lg" fontWeight="bold">
@@ -27,7 +31,8 @@ const DeleteSqlQueryModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) =>
           </AlertDialogHeader>
 
           <AlertDialogBody>
-            Are you sure you want to delete this query? This action cannot be undone.
+            Are you sure you want to delete this query? This action cannot be
+            undone.
           </AlertDialogBody>
 
           <AlertDialogFooter>
@@ -44,4 +49,4 @@ const DeleteSqlQueryModal: React.FC<Props> = ({ isOpen, onClose, onConfirm }) =>
   );
 };
 
-export default DeleteSqlQueryModal; 
+export default DeleteSqlQueryModal;

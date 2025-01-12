@@ -1,6 +1,6 @@
 import {Button, Flex, List, ListItem} from '@chakra-ui/react';
 import {TableCellsIcon} from '@heroicons/react/24/solid';
-import {FC} from 'react';
+import type {FC} from 'react';
 type Props = {
   schema: string;
   tableNames: string[];
@@ -10,7 +10,7 @@ type Props = {
   renderTableButton?: (
     tableName: string,
     onSelect: Props['onSelect'],
-  ) => JSX.Element;
+  ) => React.ReactNode;
 };
 const TablesList: FC<Props> = (props) => {
   const {

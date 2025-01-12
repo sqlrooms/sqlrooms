@@ -1,12 +1,9 @@
 import {Flex} from '@chakra-ui/react';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
 import {FC} from 'react';
 import FileDataSourceCard from './FileDataSourceCard';
-type Props = {
-  // no props
-};
-const FileDataSourcesPanel: FC<Props> = (props) => {
-  const {} = props;
+import {useBaseProjectStore} from '../../ProjectStateProvider';
+
+const FileDataSourcesPanel: FC = () => {
   const projectFiles = useBaseProjectStore((state) => state.projectFiles);
   const projectFilesProgress = useBaseProjectStore(
     (state) => state.projectFilesProgress,

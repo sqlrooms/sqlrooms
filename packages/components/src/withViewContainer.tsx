@@ -1,9 +1,7 @@
 import React from 'react';
 import QueryContainer from './QueryContainer';
 
-export type Props = {
-  // nothing yet
-};
+export type Props = object;
 
 export default function withViewContainer<T extends Props = Props>(
   Component: React.ComponentType<T>,

@@ -1,25 +1,25 @@
-import {RefObject, useCallback, useEffect, useRef} from 'react';
 import {
   arrow,
+  autoUpdate,
   flip,
   getOverflowAncestors,
   offset,
   ReferenceType,
   shift,
   useFloating,
+  UseFloatingProps,
   UseFloatingReturn,
-  autoUpdate,
 } from '@floating-ui/react-dom-interactions';
+import {RefObject, useCallback, useEffect, useRef} from 'react';
 import {DEFAULT_ARROW_SIZE} from './FloatingTooltipArrow';
-import {UseFloatingProps} from '@floating-ui/react-dom-interactions';
 
 export type UseFloatingTooltipReturn<
   ContainerElementType extends Element = Element,
   TargetElementType extends ReferenceType = ReferenceType,
 > = {
-  containerRef: RefObject<ContainerElementType>;
+  containerRef: RefObject<ContainerElementType | null>;
   floating: UseFloatingReturn<TargetElementType>;
-  floatingArrowRef: RefObject<HTMLElement>;
+  floatingArrowRef: RefObject<HTMLElement | null>;
 };
 
 export type Props = Partial<UseFloatingProps> & {

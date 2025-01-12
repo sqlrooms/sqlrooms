@@ -206,10 +206,10 @@ const Bars = React.memo(
             darkMode={darkMode}
             key={time.getTime()}
             x={timeScale(time)}
-            y={height - totalCountScale(count)!}
+            y={height - totalCountScale(count)}
             width={Math.max(
-              timeScale(timeGranularity.interval.offset(time))! -
-                timeScale(time)! -
+              timeScale(timeGranularity.interval.offset(time)) -
+                timeScale(time) -
                 1,
               1,
             )}
@@ -476,7 +476,7 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
             ref={selectedRangeRectRef}
             fill={theme.colors.gray[500]}
             height={chartHeight}
-            width={timeScale(selectedRange[1])! - timeScale(selectedRange[0])!}
+            width={timeScale(selectedRange[1]) - timeScale(selectedRange[0])}
           />
         </g>
         <g
@@ -492,7 +492,7 @@ const TimelineChart: React.FC<TimelineChartProps> = React.memo((props) => {
         </g>
         <g
           transform={`translate(${
-            timeScale(selectedRange[1])! - handleWidth
+            timeScale(selectedRange[1]) - handleWidth
           },${-handleHGap})`}
         >
           <TimelineHandle

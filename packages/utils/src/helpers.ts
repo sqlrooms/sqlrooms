@@ -34,7 +34,7 @@ export const NUMBER_FORMAT = new Intl.NumberFormat('en-US', {
   minimumFractionDigits: 0,
 });
 
-export const formatNumber = NUMBER_FORMAT.format;
+export const formatNumber = (n: number) => NUMBER_FORMAT.format(n);
 
 const TIME_OF_DAY_FORMAT = timeFormat('%I:%M %p');
 const DATE_TIME_FORMAT = timeFormat('%a %Y-%m-%d %I:%M %p');

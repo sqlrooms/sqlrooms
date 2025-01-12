@@ -22,7 +22,7 @@ export type Props<
 function FloatingTooltip<
   ContainerElementType extends Element = Element,
   TargetElementType extends ReferenceType = ReferenceType,
->(props: Props<ContainerElementType, TargetElementType>): JSX.Element {
+>(props: Props<ContainerElementType, TargetElementType>): React.ReactNode {
   const theme = useTheme();
   const {floatingTooltip, children} = props;
   const {floating, floatingArrowRef} = floatingTooltip;

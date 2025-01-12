@@ -2,14 +2,12 @@ import {defaultMemoize} from 'reselect';
 
 export const splitIntoWords = (str: string) => {
   // https://stackoverflow.com/a/25575009/120779
-  return (
-    str
-      .toLowerCase()
-      // eslint-disable-next-line
-      .match(
-        /([^\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~\s]+)/g,
-      )
-  );
+  return str
+    .toLowerCase()
+
+    .match(
+      /([^\u2000-\u206F\u2E00-\u2E7F\\'!"#$%&()*+,\-.\/:;<=>?@\[\]^_`{|}~\s]+)/g,
+    );
 };
 const memoizedSplitIntoWords = defaultMemoize(splitIntoWords);
 

@@ -1,2 +1,2 @@
-npm run typescript
-npx lint-staged
+pnpm run build
+pnpx lint-staged

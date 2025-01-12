@@ -22,10 +22,6 @@
       }
     ]
   },
-  "exclude": [
-    "**/node_modules",
-    "packages/*/src/**/*.test.ts",
-    "packages/*/src/**/*.test.tsx",
-    "packages/*/src/**/*.stories.tsx"
-  ]
+  "include": ["packages/*/src/**/*.ts", "packages/*/src/**/*.tsx"],
+  "exclude": ["**/node_modules", "packages/*/dist"]
 }

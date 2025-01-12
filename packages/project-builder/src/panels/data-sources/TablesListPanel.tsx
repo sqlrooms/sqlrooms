@@ -1,7 +1,7 @@
 import {Flex, useDisclosure, VStack} from '@chakra-ui/react';
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectStore} from '../../ProjectStateProvider';
 import {FC, useState} from 'react';
 import TableCard from './TableCard';
 
@@ -9,13 +9,9 @@ import TableCard from './TableCard';
 //   ssr: false,
 // });
 
-type Props = {
-  // ...
-};
-
-const TablesListPanel: FC<Props> = (props) => {
+const TablesListPanel: FC = () => {
   // const theme = useTheme();
-  const {} = props;
+
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
 
   const tables = useBaseProjectStore((state) => state.tables);
