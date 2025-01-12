@@ -14,7 +14,7 @@ import {FolderIcon} from '@heroicons/react/24/outline';
 import {TableCellsIcon} from '@heroicons/react/24/solid';
 import {CustomAccordionIcon} from '@sqlrooms/components';
 import {DataSourceTypes, ProjectPanelTypes} from '@sqlrooms/project-config';
-import {createContext, FC, useCallback, useContext} from 'react';
+import {createContext, FC, useCallback, useContext, useMemo} from 'react';
 import {PiFileSql} from 'react-icons/pi';
 import {useBaseProjectStore} from '../../ProjectStateProvider';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
@@ -31,15 +31,13 @@ const DataSourcesPanel: FC = () => {
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
   const AddDataModal = useContext(DataSourcesPanelAddDataModalContext);
   const addDataModal = useDisclosure();
-  // const dataSources = useBaseProjectStore(
-  //   (state) => state.projectConfig.dataSources,
-  // );
-  // const tables = useBaseProjectStore((state) => state.tables);
   const projectFiles = useBaseProjectStore((state) => state.projectFiles);
-  const queryDataSources = useBaseProjectStore((state) =>
-    state.projectConfig.dataSources.filter(
-      (ds) => ds.type === DataSourceTypes.enum.sql,
-    ),
+  const dataSources = useBaseProjectStore(
+    (state) => state.projectConfig.dataSources,
+  );
+  const queryDataSources = useMemo(
+    () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
+    [dataSources],
   );
 
   const isProjectEmpty = !projectFiles?.length;

@@ -5,13 +5,11 @@ import {
   ProjectBuilder,
   ProjectBuilderSidebarButtons,
   SidebarButton,
-  useBaseProjectStore,
 } from '@sqlrooms/project-builder';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {TbDatabaseSearch} from 'react-icons/tb';
 import AddDataModal from './components/add-data/AddDataModal';
-
-const useProjectStore = useBaseProjectStore;
+import useProjectStore from './store/DemoProjectStore';
 
 export const App = () => {
   const sqlEditor = useDisclosure();
