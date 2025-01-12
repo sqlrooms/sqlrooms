@@ -1,10 +1,10 @@
-import {Box, Flex, Heading, HStack} from '@chakra-ui/react';
+import {Flex, Heading, HStack} from '@chakra-ui/react';
 import {XMarkIcon} from '@heroicons/react/24/solid';
 import {PanelHeaderButton} from '@sqlrooms/components';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {FC, useMemo} from 'react';
 import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
-import { useBaseProjectStore } from '../ProjectStateProvider';
+import {useBaseProjectStore} from '../ProjectStateProvider';
 
 type Props = {
   panelKey: ProjectPanelTypes | string;
@@ -28,7 +28,7 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
     <Flex>
       <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
         {showHeader && (
-           <>
+          <>
             <Icon width="20px" />
             <Heading
               as="h2"
@@ -37,9 +37,9 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
               color="gray.400"
             >
               {title}
-              </Heading>
-            </>
-          )}
+            </Heading>
+          </>
+        )}
         {children}
       </Flex>
       <HStack gap={0} bg={'gray.700'}>

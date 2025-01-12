@@ -45,7 +45,7 @@ function FloatingTooltip<
           py={2}
         >
           <FloatingTooltipArrow
-            ref={floatingArrowRef}
+            ref={floatingArrowRef as React.RefObject<HTMLElement>}
             placement={floating.placement}
             arrow={floating.middlewareData.arrow}
           />

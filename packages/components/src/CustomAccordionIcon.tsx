@@ -1,4 +1,3 @@
-import React from 'react';
 import {IconProps} from '@chakra-ui/icon';
 import {AccordionIcon, Box} from '@chakra-ui/react';
 

@@ -5,7 +5,12 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['**/dist/**', 'eslint.config.mjs', '.ladle/**/*.mjs'],
+    ignores: [
+      '**/dist/**',
+      'eslint.config.mjs',
+      '.ladle/**/*.mjs',
+      'examples/*/vite.config.ts',
+    ],
   },
   eslint.configs.recommended,
   tseslint.configs.recommendedTypeChecked,
@@ -37,6 +42,7 @@ export default tseslint.config(
       '@typescript-eslint/unbound-method': 'warn',
       '@typescript-eslint/no-unsafe-enum-comparison': 'warn',
       '@typescript-eslint/require-await': 'warn',
+      '@typescript-eslint/no-misused-promises': 'warn',
     },
   },
 );

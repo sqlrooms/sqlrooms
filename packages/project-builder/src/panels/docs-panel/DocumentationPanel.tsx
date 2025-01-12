@@ -4,7 +4,8 @@ import {SkeletonPane} from '@sqlrooms/components';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import React, {FC, useEffect} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
-type Props = {
+
+export type DocumentationPanelProps = {
   showHeader?: boolean;
   pageUrl?: string;
 };
@@ -25,7 +26,7 @@ const Container = styled.div`
   }
 `;
 
-const DocumentationPanel: FC<Props> = ({
+const DocumentationPanel: FC<DocumentationPanelProps> = ({
   pageUrl = '/docs',
   showHeader = true,
 }) => {

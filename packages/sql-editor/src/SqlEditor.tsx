@@ -525,7 +525,7 @@ const SqlEditor: React.FC<Props> = (props) => {
         </HStack>
         <Box flexGrow={1} height="100%" bg="gray.800">
           <MosaicLayout
-            renderTile={(id) => views[id] ?? <></>}
+            renderTile={(id) => <>{views[id]}</>}
             value={mosaicState}
             onChange={handleMosaicChange}
           />

@@ -55,7 +55,7 @@ const ProjectBuilder: React.FC = () => {
       >
         {layout ? (
           <MosaicLayout
-            renderTile={(id) => renderedPanels.get(id) ?? <></>}
+            renderTile={(id) => <>{renderedPanels.get(id)}</>}
             value={layout.nodes}
             onChange={handleLayoutChange}
           />

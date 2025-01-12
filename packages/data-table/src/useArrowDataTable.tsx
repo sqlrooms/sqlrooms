@@ -72,7 +72,7 @@ export default function useArrowDataTable(
     const columns: ColumnDef<any, any>[] = [];
     for (const field of table.schema.fields) {
       columns.push(
-        columnHelper.accessor((row, i) => table.getChild(field.name)?.get(i), {
+        columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
           cell: (info) => {
             const value = info.getValue();
             const valueStr = valueToString(field.type, value);

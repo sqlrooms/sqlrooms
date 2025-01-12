@@ -1,7 +1,6 @@
 import {
   Button,
   HStack,
-  Icon,
   Popover,
   PopoverBody,
   PopoverContent,
@@ -15,14 +14,43 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import {ChevronLeftIcon, ChevronRightIcon} from '@heroicons/react/24/outline';
 import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
   AdjustmentsHorizontalIcon,
   PauseIcon,
   PlayIcon,
 } from '@heroicons/react/24/solid';
+import type {ComponentType} from 'react';
 import {FC, useEffect} from 'react';
 import {TimelineMode} from './TimelineConfig';
+
+// Cast icons to ComponentType to fix TypeScript errors
+const PlayIconComponent = PlayIcon as ComponentType<{
+  width: number;
+  height: number;
+  className: string;
+}>;
+const PauseIconComponent = PauseIcon as ComponentType<{
+  width: number;
+  height: number;
+  className: string;
+}>;
+const AdjustmentsIconComponent = AdjustmentsHorizontalIcon as ComponentType<{
+  width: number;
+  height: number;
+  className: string;
+}>;
+const ChevronLeftIconComponent = ChevronLeftIcon as ComponentType<{
+  width: number;
+  height: number;
+  className: string;
+}>;
+const ChevronRightIconComponent = ChevronRightIcon as ComponentType<{
+  width: number;
+  height: number;
+  className: string;
+}>;
 
 interface Props {
   darkMode: boolean;
@@ -80,11 +108,19 @@ const PlayControl: FC<Props> = ({
             isDisabled={isDisabled}
             onClick={onTogglePlay}
           >
-            <Icon
-              w={iconSize}
-              h={iconSize}
-              as={isPlaying ? PauseIcon : PlayIcon}
-            />
+            {isPlaying ? (
+              <PauseIconComponent
+                width={iconSize * 4}
+                height={iconSize * 4}
+                className="text-current"
+              />
+            ) : (
+              <PlayIconComponent
+                width={iconSize * 4}
+                height={iconSize * 4}
+                className="text-current"
+              />
+            )}
           </Button>
           <Popover placement="top">
             <PopoverTrigger>
@@ -95,7 +131,11 @@ const PlayControl: FC<Props> = ({
                 color="gray.400"
                 isDisabled={isDisabled}
               >
-                <Icon w={5} h={5} as={AdjustmentsHorizontalIcon} />
+                <AdjustmentsIconComponent
+                  width={20}
+                  height={20}
+                  className="text-current"
+                />
               </Button>
             </PopoverTrigger>
             <PopoverContent w="200px">
@@ -153,7 +193,11 @@ const PlayControl: FC<Props> = ({
             isDisabled={isDisabled || isPlaying}
             onClick={onStepBackward}
           >
-            <Icon w={5} h={5} as={ChevronLeftIcon} />
+            <ChevronLeftIconComponent
+              width={20}
+              height={20}
+              className="text-current"
+            />
           </Button>
           <Button
             w={6}
@@ -163,7 +207,11 @@ const PlayControl: FC<Props> = ({
             isDisabled={isDisabled || isPlaying}
             onClick={onStepForward}
           >
-            <Icon w={5} h={5} as={ChevronRightIcon} />
+            <ChevronRightIconComponent
+              width={20}
+              height={20}
+              className="text-current"
+            />
           </Button>
         </HStack>
       </VStack>

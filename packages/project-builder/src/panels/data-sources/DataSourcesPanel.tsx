@@ -13,11 +13,7 @@ import {
 import {FolderIcon} from '@heroicons/react/24/outline';
 import {TableCellsIcon} from '@heroicons/react/24/solid';
 import {CustomAccordionIcon} from '@sqlrooms/components';
-import {
-  DataSourceTypes,
-  ProjectPanelTypes,
-  SqlQueryDataSource,
-} from '@sqlrooms/project-config';
+import {DataSourceTypes, ProjectPanelTypes} from '@sqlrooms/project-config';
 import {createContext, FC, useCallback, useContext} from 'react';
 import {PiFileSql} from 'react-icons/pi';
 import {useBaseProjectStore} from '../../ProjectStateProvider';

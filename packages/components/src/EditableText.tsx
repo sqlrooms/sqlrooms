@@ -74,8 +74,7 @@ const EditableControls: FC<{
 const Preview: FC<{
   value: string;
   maxWidth: EditableProps['maxWidth'];
-}> = ({value, maxWidth}) => {
-  const {isEditing} = useEditableControls();
+}> = ({maxWidth}) => {
   return (
     // <Tooltip
     //   hasArrow

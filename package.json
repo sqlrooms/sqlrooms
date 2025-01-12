@@ -6,7 +6,8 @@
   "private": true,
   "packageManager": "pnpm@9.15.1",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
   "type": "module",
   "scripts": {
@@ -15,7 +16,7 @@
     "build": "pnpm clean && turbo build",
     "test": "turbo test",
     "prepare": "husky",
-    "lint": "eslint --fix \"**/*.{ts,tsx}\"",
+    "lint": "eslint --quiet --fix \"**/*.{ts,tsx}\"",
     "typescript": "tsc --noEmit",
     "ladle": "ladle serve",
     "graph": "turbo run build --graph"
@@ -31,8 +32,8 @@
     "@tanstack/react-query": "4",
     "@types/jest": "^29.5.14",
     "@types/mocha": "^10.0.10",
-    "@types/react": "^19.0.4",
-    "@types/react-dom": "^18",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
     "@typescript-eslint/parser": "^8.19.1",
     "apache-arrow": "^18.1.0",
     "eslint": "^9.18.0",

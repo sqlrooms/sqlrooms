@@ -44,7 +44,7 @@ const MosaicTile: FC<Props> = (props) => {
       path={path}
       // onDragStart={() => console.log('MosaicWindow.onDragStart')}
       // onDragEnd={(type) => console.log('MosaicWindow.onDragEnd', type)}
-      renderToolbar={(props, draggable) =>
+      renderToolbar={() =>
         id === ProjectPanelTypes.MAIN_VIEW ? (
           <div />
         ) : (
