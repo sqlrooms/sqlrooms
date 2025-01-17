@@ -6,6 +6,12 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
+  "scripts": {
+    "dev": "npm run copy-tailwind-preset && tsc -w",
+    "build": "tsc && npm run copy-tailwind-preset",
+    "copy-tailwind-preset": "cp src/tailwind-preset.css dist/tailwind-preset.css",
+    "lint": "eslint ."
+  },
   "dependencies": {
     "class-variance-authority": "^0.7.1",
     "@radix-ui/react-slot": "^1.1.1",
@@ -13,12 +19,10 @@
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7"
   },
+  "devDependencies": {
+    "autoprefixer": "^10.4.20"
+  },
   "peerDependencies": {
     "tailwindcss": "^3.4.17"
-  },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "lint": "eslint ."
   }
 }

@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=12 & pnpm run ladle",
+    "dev": "turbo dev --concurrency=12 --filter=@sqlrooms/* & pnpm run ladle",
     "clean": "rimraf \"packages/*/dist\"",
     "build": "pnpm clean && turbo build",
     "test": "turbo test",

@@ -1,3 +1,5 @@
+/* @import '@sqlrooms/ui/dist/tailwind-preset.css'; */
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;

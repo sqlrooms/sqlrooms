@@ -9,7 +9,7 @@ import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
 import {Suspense} from 'react';
 import 'react-mosaic-component/react-mosaic-component.css';
 import {createDemoProjectStore} from './store/DemoProjectStore.tsx';
-import theme from './theme';
+import theme from './theme.ts';
 
 const colorModeManager = customStorageManager(false);
 

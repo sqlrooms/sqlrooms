@@ -6,3 +6,9 @@ npm-debug.log*
 *.tsbuildinfo
 .turbo
 .vscode
+
+# Build Outputs
+.next/
+out/
+build
+dist
