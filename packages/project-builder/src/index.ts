@@ -11,3 +11,4 @@ export {default as ProjectBuilderPanelHeader} from './panels/ProjectBuilderPanel
 export {DataSourcesPanelAddDataModalContext} from './panels/data-sources/DataSourcesPanel';
 export {default as DocumentationPanel} from './panels/docs-panel/DocumentationPanel';
 export * from './types';
+export * from './SqlRoomsProvider';

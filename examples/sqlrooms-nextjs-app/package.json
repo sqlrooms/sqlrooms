@@ -10,19 +10,22 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "0.456.0",
-    "next-themes": "^0.4.3",
     "next": "^15.1.0",
+    "next-themes": "^0.4.3",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@sqlrooms/eslint-config": "workspace:^",
+    "@sqlrooms/typescript-config": "workspace:*",
     "@types/node": "^20",
     "@types/react": "18.3.0",
     "@types/react-dom": "18.3.1",
-    "@sqlrooms/eslint-config": "workspace:^",
-    "@sqlrooms/typescript-config": "workspace:*",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
     "typescript": "^5"

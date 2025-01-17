@@ -11,6 +11,8 @@ import 'react-mosaic-component/react-mosaic-component.css';
 import {createDemoProjectStore} from './store/DemoProjectStore.tsx';
 import theme from './theme.ts';
 
+const projectStore = createDemoProjectStore();
+
 const colorModeManager = customStorageManager(false);
 
 const queryClient = new QueryClient({
@@ -21,7 +23,6 @@ const queryClient = new QueryClient({
   },
 });
 
-const projectStore = createDemoProjectStore();
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>

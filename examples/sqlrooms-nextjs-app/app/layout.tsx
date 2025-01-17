@@ -24,7 +24,9 @@ export default function RootLayout({
       <body
         className={`${fontSans.variable} ${fontMono.variable} font-sans antialiased `}
       >
-        <Providers>{children}</Providers>
+        <div className="w-svw h-svh">
+          <Providers>{children}</Providers>
+        </div>
       </body>
     </html>
   );

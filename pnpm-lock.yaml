@@ -97,6 +97,12 @@ importers:
 
   examples/sqlrooms-nextjs-app:
     dependencies:
+      '@sqlrooms/project-builder':
+        specifier: workspace:*
+        version: link:../../packages/project-builder
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../../packages/project-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -115,6 +121,9 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
     devDependencies:
       '@sqlrooms/eslint-config':
         specifier: workspace:^
@@ -14205,5 +14214,12 @@ snapshots:
       immer: 10.1.1
       react: 18.3.1
       use-sync-external-store: 1.4.0(react@18.3.1)
+
+  zustand@5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0)):
+    optionalDependencies:
+      '@types/react': 18.3.18
+      immer: 10.1.1
+      react: 19.0.0
+      use-sync-external-store: 1.4.0(react@19.0.0)
 
   zwitch@2.0.4: {}

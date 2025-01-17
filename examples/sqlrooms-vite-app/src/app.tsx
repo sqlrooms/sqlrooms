@@ -1,5 +1,4 @@
 import {Flex, useDisclosure} from '@chakra-ui/react';
-import {Button} from '@sqlrooms/ui';
 import {
   DataSourcesPanelAddDataModalContext,
   DocumentationPanel,
@@ -21,10 +20,8 @@ export const App = () => {
   const sqlEditorConfig = useProjectStore((s) => s.projectConfig.sqlEditor);
   const onChangeSqlEditorConfig = useProjectStore((s) => s.setSqlEditorConfig);
 
-  // console.log(duckConn);
   return (
     <Flex flex={1} w="100vw" h="100vh">
-      <Button>Click me</Button>
       {/* <ProjectBuilderTopBar /> */}
       <Flex direction="row" flexGrow="1">
         <Flex
