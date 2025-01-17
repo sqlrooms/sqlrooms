@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/project-builder",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
@@ -13,9 +13,9 @@
   "dependencies": {
     "@heroicons/react": "*",
     "@sqlrooms/components": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

@@ -23,13 +23,16 @@ export function makeMosaicStack(
     return null;
   }
   if (childrenWithoutEmpty.length === 1) {
-    return childrenWithoutEmpty[0].node;
+    return childrenWithoutEmpty[0]?.node ?? null;
   }
 
-  let stack = childrenWithoutEmpty[0].node;
-  let accumulatedWeight = childrenWithoutEmpty[0].weight;
+  let stack = childrenWithoutEmpty[0]?.node;
+  if (!stack) return null;
+  let accumulatedWeight = childrenWithoutEmpty[0]?.weight ?? 0;
   for (let i = 1; i < childrenWithoutEmpty.length; i++) {
-    const {node, weight} = childrenWithoutEmpty[i];
+    const child = childrenWithoutEmpty[i];
+    if (!child) continue;
+    const {node, weight} = child;
     const splitPercentage =
       (accumulatedWeight * 100) / (accumulatedWeight + weight);
     accumulatedWeight += weight;
@@ -99,6 +102,7 @@ export function removeMosaicNodeByKey(
       ]),
     };
   } catch (err) {
+    console.error(err);
     // might happen when removing main view
     return {success: false};
   }

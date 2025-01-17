@@ -39,6 +39,7 @@ export async function processDroppedFile({
       await conn.query(`SELECT COUNT(*) FROM ${escapeVal(duckdbFileName)}`),
     );
   } catch (err) {
+    console.error(err);
     // do nothing
   }
   if (numRows > 0) {

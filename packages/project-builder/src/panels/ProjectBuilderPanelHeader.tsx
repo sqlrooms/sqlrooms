@@ -14,7 +14,7 @@ type Props = {
 const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
-  const {icon: Icon, title} = projectPanels[type];
+  const {icon: Icon, title} = projectPanels[type] ?? {};
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
   const togglePanelPin = useBaseProjectStore((state) => state.togglePanelPin);
   const pinnedPanels = useBaseProjectStore(
@@ -29,7 +29,7 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
       <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
         {showHeader && (
           <>
-            <Icon width="20px" />
+            {Icon ? <Icon width="20px" /> : null}
             <Heading
               as="h2"
               fontSize={'xs'}

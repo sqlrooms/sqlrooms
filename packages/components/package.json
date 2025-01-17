@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/components",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
@@ -8,12 +8,17 @@
   "private": true,
   "dependencies": {
     "@chakra-ui/layout": "2.3.1",
-    "@floating-ui/react-dom-interactions": "^0.13.3",
     "@heroicons/react": "*",
     "@sqlrooms/utils": "workspace:*",
-    "reselect": "4.1.6"
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.471.1",
+    "reselect": "4.1.6",
+    "tailwind-merge": "^2.6.0",
+    "tailwindcss-animate": "^1.0.7"
   },
   "peerDependencies": {
+    "tailwindcss": "^3.4.17",
     "@chakra-ui/icon": "*",
     "@chakra-ui/react": "*",
     "@tanstack/react-query": "*"

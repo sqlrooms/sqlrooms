@@ -200,7 +200,7 @@ const SqlEditor: React.FC<Props> = (props) => {
   const handleTabChange = (index: number) => {
     onChange({
       ...sqlEditorConfig,
-      selectedQueryId: sqlEditorConfig.queries[index].id,
+      selectedQueryId: sqlEditorConfig.queries[index]?.id ?? '',
     });
   };
 
@@ -209,6 +209,7 @@ const SqlEditor: React.FC<Props> = (props) => {
 
     const currentIndex = getCurrentQueryIndex();
     const newQueries = [...sqlEditorConfig.queries];
+    if (!newQueries[currentIndex]) return;
     newQueries[currentIndex] = {
       ...newQueries[currentIndex],
       query: e.target.value,
@@ -314,10 +315,13 @@ const SqlEditor: React.FC<Props> = (props) => {
 
     // Pre-select the previous query if we're deleting the current one
     if (queryId === sqlEditorConfig.selectedQueryId && currentIndex > 0) {
-      onChange({
-        ...sqlEditorConfig,
-        selectedQueryId: sqlEditorConfig.queries[currentIndex - 1].id,
-      });
+      const prevId = sqlEditorConfig.queries[currentIndex - 1]?.id;
+      if (prevId) {
+        onChange({
+          ...sqlEditorConfig,
+          selectedQueryId: prevId,
+        });
+      }
     }
   };
 
@@ -544,13 +548,16 @@ const SqlEditor: React.FC<Props> = (props) => {
             );
             const deletedIndex = getQueryIndexById(queryToDelete!);
 
-            onChange({
-              ...sqlEditorConfig,
-              queries: newQueries,
-              selectedQueryId:
-                newQueries[Math.min(deletedIndex, newQueries.length - 1)]?.id ||
-                newQueries[0].id,
-            });
+            const selectedQueryId =
+              newQueries[Math.min(deletedIndex, newQueries.length - 1)]?.id ||
+              newQueries[0]?.id;
+            if (selectedQueryId) {
+              onChange({
+                ...sqlEditorConfig,
+                queries: newQueries,
+                selectedQueryId,
+              });
+            }
             setQueryToDelete(null);
           }}
         />

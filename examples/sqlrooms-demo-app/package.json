@@ -12,6 +12,7 @@
   "dependencies": {
     "@heroicons/react": "*",
     "@sqlrooms/components": "workspace:^",
+    "@sqlrooms/ui": "workspace:^",
     "@sqlrooms/data-table": "workspace:^",
     "@sqlrooms/duckdb": "workspace:^",
     "@sqlrooms/project-builder": "workspace:^",
@@ -24,6 +25,7 @@
     "react-dropzone": "^14.3.5",
     "react-icons": "^5.4.0",
     "react-mosaic-component": "5.3.0",
+    "tailwindcss": "^3.4.17",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

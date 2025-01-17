@@ -1,4 +1,5 @@
 import {Flex, useDisclosure} from '@chakra-ui/react';
+import {Button} from '@sqlrooms/ui';
 import {
   DataSourcesPanelAddDataModalContext,
   DocumentationPanel,
@@ -23,6 +24,7 @@ export const App = () => {
   // console.log(duckConn);
   return (
     <Flex flex={1} w="100vw" h="100vh">
+      <Button>Click me</Button>
       {/* <ProjectBuilderTopBar /> */}
       <Flex direction="row" flexGrow="1">
         <Flex

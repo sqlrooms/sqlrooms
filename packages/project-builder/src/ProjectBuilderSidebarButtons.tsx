@@ -36,15 +36,15 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
     [layout],
   );
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
-  const {icon: Icon, title} = projectPanels[type];
+  const {icon: Icon, title} = projectPanels[type] ?? {};
 
   return (
     <SidebarButton
       key={type}
-      title={title}
+      title={title ?? ''}
       isSelected={visibleProjectPanels.includes(type)}
       isDisabled={!initialized}
-      icon={Icon}
+      icon={Icon ?? (() => null)}
       onClick={() => togglePanel(type)}
     />
   );
@@ -61,7 +61,7 @@ const ProjectBuilderSidebarButtons: FC = () => {
     <Flex flexDir="column" flexGrow={1} h="100%">
       <VStack>
         {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key].placement === 'sidebar')
+          .filter((key) => projectPanels[key]?.placement === 'sidebar')
           .map((type) => {
             return (
               <ProjectBuilderSidebarButton
@@ -74,7 +74,7 @@ const ProjectBuilderSidebarButtons: FC = () => {
       <Spacer />
       <VStack>
         {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key].placement === 'sidebar-bottom')
+          .filter((key) => projectPanels[key]?.placement === 'sidebar-bottom')
           .map((type) => {
             return (
               <ProjectBuilderSidebarButton

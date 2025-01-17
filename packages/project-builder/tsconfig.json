@@ -1,12 +1,8 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@sqlrooms/typescript-config/react-library.json",
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": [
-    "src/**/*",
-    "test/**/*",
-    "../../typings.d.ts",
-    "src/panels/ProjectBuilderPanelHeader.tsx"
-  ]
+  "include": ["src", "turbo"],
+  "exclude": ["node_modules", "dist"]
 }

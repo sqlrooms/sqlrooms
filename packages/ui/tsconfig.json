@@ -1,0 +1,11 @@
+{
+  "extends": "@sqlrooms/typescript-config/react-library.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "paths": {
+      "@/ui/*": ["./src/*"]
+    }
+  },
+  "include": ["src", "turbo"],
+  "exclude": ["node_modules", "dist"]
+}

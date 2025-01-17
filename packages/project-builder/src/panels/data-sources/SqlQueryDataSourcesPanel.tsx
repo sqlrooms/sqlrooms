@@ -151,7 +151,7 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
                   bg="red.900"
                 >
                   <AlertIcon />
-                  {dataSourceStates[dataSource.tableName].message}
+                  {dataSourceStates[dataSource.tableName]?.message}
                 </Alert>
               ) : dataSourceStates[dataSource.tableName]?.status ===
                 DataSourceStatus.FETCHING ? (
