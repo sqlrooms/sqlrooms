@@ -1,6 +1,5 @@
 import {
   createProjectSlice,
-  CreateProjectSliceProps,
   ProjectState,
   useBaseProjectStore,
 } from '@sqlrooms/project-builder';
@@ -14,15 +13,10 @@ export type DemoProjectStore = ReturnType<typeof createDemoProjectStore>;
 
 export type DemoProjectState = ProjectState<DemoProjectConfig> & {};
 
-export const createDemoProjectStore = (
-  createProjectProps: CreateProjectSliceProps<DemoProjectConfig> = {
-    initialState: INITIAL_PROJECT_STATE,
-    schema: 'main',
-  },
-) =>
+export const createDemoProjectStore = () =>
   createStore<DemoProjectState>()((set, get, store) => {
     const baseProjectStore = createProjectSlice<DemoProjectConfig>(
-      createProjectProps,
+      INITIAL_PROJECT_STATE,
     )(set, get, store);
     const demoProjectState: DemoProjectState = {
       // Base project store provided by @sqlrooms/project-builder

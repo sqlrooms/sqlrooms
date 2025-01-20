@@ -1,3 +1,0 @@
-{
-  "**/*.{ts,tsx}": ["eslint --config .eslintrc.js --max-warnings=50", "prettier --write"]
-}

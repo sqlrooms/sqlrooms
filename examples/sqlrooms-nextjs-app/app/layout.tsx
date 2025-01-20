@@ -1,8 +1,7 @@
 import {Geist, Geist_Mono} from 'next/font/google';
 import {Providers} from '@/components/providers';
 
-import '@sqlrooms/ui/dist/tailwind-preset.css';
-// import './globals.css';
+import './globals.css';
 
 const fontSans = Geist({
   subsets: ['latin'],

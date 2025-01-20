@@ -18,13 +18,12 @@ import {
   UseDisclosureReturn,
   useTheme,
 } from '@chakra-ui/react';
-import {AppContext} from '@sqlrooms/components';
 import {DuckQueryError} from '@sqlrooms/duckdb';
 import {
   SqlQueryDataSource,
   VALID_TABLE_OR_COLUMN_REGEX,
 } from '@sqlrooms/project-config';
-import {FC, FormEvent, useCallback, useContext} from 'react';
+import {FC, FormEvent, useCallback} from 'react';
 import {FieldError, useForm} from 'react-hook-form';
 
 export type Props = {
@@ -90,7 +89,6 @@ const CreateTableModal: FC<Props> = (props) => {
       editDataSource?.tableName,
     ],
   );
-  const appContext = useContext(AppContext);
 
   return (
     <Modal
@@ -99,7 +97,6 @@ const CreateTableModal: FC<Props> = (props) => {
       isOpen={disclosure.isOpen}
       onClose={disclosure.onClose}
       closeOnOverlayClick={false}
-      preserveScrollBarGap={appContext.mode === 'sdk'} // to avoid layout jumping and CSS added to host document
     >
       <ModalOverlay backdropFilter={theme.backdropFilter} />
       <ModalContent>

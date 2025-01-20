@@ -25,7 +25,8 @@
   },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint ."
   },
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",

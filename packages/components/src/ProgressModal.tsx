@@ -9,8 +9,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { FC, useContext } from 'react';
-import { AppContext } from './AppContext';
+import {FC} from 'react';
 
 type Props = {
   isOpen: boolean;
@@ -19,10 +18,9 @@ type Props = {
   progress?: number;
 };
 const ProgressModal: FC<Props> = (props) => {
-  const { isOpen, title, loadingStage, progress } = props;
-  const appContext = useContext(AppContext);
+  const {isOpen, title, loadingStage, progress} = props;
   if (!isOpen) {
-    return null
+    return null;
   }
   return (
     // <Delayed delay={300}>
@@ -33,7 +31,6 @@ const ProgressModal: FC<Props> = (props) => {
         // do nothing
       }}
       motionPreset="none"
-      preserveScrollBarGap={appContext.mode === 'sdk'} // to avoid layout jumping and CSS added to host document
     >
       {/* <ModalOverlay /> */}
       <ModalContent>

@@ -28,6 +28,7 @@ import {
   UrlDataSource,
   isMosaicLayoutParent,
 } from '@sqlrooms/project-config';
+import {ErrorBoundary} from '@sqlrooms/ui';
 import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
@@ -38,6 +39,7 @@ import {
   splitFilePath,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
+import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
@@ -45,6 +47,7 @@ import {
   ProjectFileInfo,
   ProjectFileState,
 } from './types';
+import {processDroppedFile} from './utils/processDroppedFiles';
 
 export type TaskProgress = {
   progress?: number | undefined;
@@ -59,17 +62,16 @@ export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
   ProjectState<PC>
 >;
 
-export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
-  initialState: Partial<ProjectStateProps<PC>> &
-    Required<Pick<ProjectStateProps<PC>, 'projectConfig'>>;
-  schema?: string;
-};
+export type CreateProjectSliceProps<PC extends BaseProjectConfig> = Partial<
+  ProjectStateProps<PC>
+> &
+  Required<Pick<ProjectStateProps<PC>, 'projectConfig' | 'projectPanels'>>;
 
 export type ProjectPanelInfo = {
   title: string;
-  icon: React.ComponentType<any>;
-  component: React.ComponentType<any>;
-  placement: 'sidebar' | 'sidebar-bottom' | 'hidden' | 'top-bar';
+  icon: React.ComponentType<{className?: string}>;
+  component: React.ComponentType;
+  placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
 
 export const INITIAL_BASE_PROJECT_STATE: Omit<
@@ -91,9 +93,10 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   tables: [],
   tableRowCounts: {},
   dataSourceStates: {},
-  captureException(exception: any) {
+  captureException(exception: unknown) {
     console.error(exception);
   },
+  CustomErrorBoundary: ErrorBoundary,
 };
 
 export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
@@ -122,7 +125,11 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
   dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
   tableRowCounts: {[tableName: string]: number};
-  captureException: (exception: any, captureContext?: any) => void;
+  captureException: (exception: unknown, captureContext?: unknown) => void;
+  CustomErrorBoundary: React.ComponentType<{
+    onRetry?: () => void;
+    children?: ReactNode;
+  }>;
 };
 
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
@@ -134,7 +141,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     isReadOnly?: boolean;
     isPublic?: boolean;
     password?: string;
-    captureException?: (exception: any, captureContext?: any) => void;
+    captureException?: ProjectStateProps<PC>['captureException'];
   }) => Promise<void>;
   setProjectConfig: (config: PC) => void;
   setProjectId: (projectId: string | undefined) => void;
@@ -155,7 +162,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     projectFile: ProjectFileInfo,
   ): Promise<DataTable | undefined>;
   addProjectFile(
-    info: ProjectFileInfo,
+    info: File | ProjectFileInfo,
     desiredTableName?: string,
   ): Promise<DataTable | undefined>;
   removeProjectFile(pathname: string): void;
@@ -190,13 +197,11 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
 ) {
   const initialState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
-    ...props.initialState,
+    ...props,
+    schema: props.schema ?? INITIAL_BASE_PROJECT_STATE.schema,
     projectConfig: {
-      INITIAL_BASE_PROJECT_CONFIG,
-      ...props.initialState.projectConfig,
-    },
-    projectPanels: {
-      ...props.initialState.projectPanels,
+      ...INITIAL_BASE_PROJECT_CONFIG,
+      ...props.projectConfig,
     },
     lastSavedConfig: undefined,
   };
@@ -432,10 +437,20 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           : undefined;
       },
 
-      async addProjectFile(projectFile, desiredTableName) {
-        const {duckdbFileName, pathname} = projectFile;
+      async addProjectFile(info, desiredTableName) {
+        const fileInfo =
+          info instanceof File
+            ? (
+                await processDroppedFile({
+                  file: info,
+                  existingTables: await getDuckTables(),
+                })
+              ).fileInfo
+            : info;
+
+        const {duckdbFileName, pathname} = fileInfo;
         if (get().projectFiles.some((f) => f.pathname === pathname)) {
-          return await get().replaceProjectFile(projectFile);
+          return await get().replaceProjectFile(fileInfo);
         }
         const {name} = splitFilePath(pathname);
         const tableName =
@@ -453,7 +468,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         // download which also adds the file
         set((state) =>
           produce(state, (draft) => {
-            draft.projectFiles.push(projectFile);
+            draft.projectFiles.push(fileInfo);
           }),
         );
         // TODO: pass rowCount to setTables?

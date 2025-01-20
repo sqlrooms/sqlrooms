@@ -16,7 +16,7 @@
     "build": "pnpm clean && turbo build",
     "test": "turbo test",
     "prepare": "husky",
-    "lint": "turbo lint",
+    "lint": "turbo lint --filter=@sqlrooms/* --",
     "typescript": "tsc --noEmit",
     "ladle": "ladle serve",
     "graph": "turbo run build --graph",

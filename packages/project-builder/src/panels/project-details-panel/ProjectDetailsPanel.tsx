@@ -1,12 +1,13 @@
-import {Flex, Text, Textarea, VStack} from '@chakra-ui/react';
 import {EditableText} from '@sqlrooms/components';
 import {
   DEFAULT_PROJECT_TITLE,
   ProjectPanelTypes,
 } from '@sqlrooms/project-config';
+import {Label, Textarea} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui/lib/utils';
 import {useCallback} from 'react';
-import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import {useBaseProjectStore} from '../../ProjectStateProvider';
+import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 
 export default function ProjectDetailsPanel() {
   const title = useBaseProjectStore((state) => state.projectConfig.title);
@@ -21,37 +22,22 @@ export default function ProjectDetailsPanel() {
     (title: string) => {
       const nextTitle = title.trim() || DEFAULT_PROJECT_TITLE;
       setProjectTitle(nextTitle);
-      return nextTitle; // Pass corrected title to EditableText
+      return nextTitle;
     },
     [setProjectTitle],
   );
 
   return (
-    <Flex flexDir="column" flexGrow={1} gap={3}>
+    <div className="flex flex-col flex-grow gap-3">
       <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.PROJECT_DETAILS} />
-      <VStack gap={3} alignItems="stretch" flexGrow="1">
-        <VStack alignItems="flex-start">
-          <Text
-            color="gray.400"
-            fontWeight="bold"
-            textTransform="uppercase"
-            fontSize="xs"
-          >
+      <div className="flex flex-col gap-3 flex-grow">
+        <div className="flex flex-col gap-1.5">
+          <Label className="text-xs text-muted-foreground font-bold uppercase">
             Title
-          </Text>
-          {/* <Input
-            value={title}
-            onChange={(e) => setProjectTitle(e.target.value)}
-            bg={'gray.800'}
-            color={'white'}
-            _placeholder={{color: 'gray.600'}}
-            placeholder="A descriptive title for the project"
-            maxLength={128}
-            size="sm"
-          /> */}
-          <Flex overflow="hidden" width="100%" fontSize="sm">
+          </Label>
+          <div className="w-full overflow-hidden text-sm">
             {isReadOnly ? (
-              title
+              <span>{title}</span>
             ) : (
               <EditableText
                 isDisabled={isReadOnly}
@@ -59,44 +45,32 @@ export default function ProjectDetailsPanel() {
                 width="100%"
                 placeholder={DEFAULT_PROJECT_TITLE}
                 onChange={handleSetProjectTitle}
-                bg={'gray.700'}
-                color={'white'}
+                className="w-full bg-secondary text-secondary-foreground"
               />
             )}
-          </Flex>
-        </VStack>
+          </div>
+        </div>
 
-        <VStack alignItems="flex-start" flexGrow="1">
-          <Text
-            color="gray.400"
-            fontWeight="bold"
-            textTransform="uppercase"
-            fontSize="xs"
-          >
+        <div className="flex flex-col gap-1.5 flex-grow">
+          <Label className="text-xs text-muted-foreground font-bold uppercase">
             Description
-          </Text>
+          </Label>
           {isReadOnly ? (
-            <Text fontSize="xs">{description}</Text>
+            <p className="text-xs">{description}</p>
           ) : (
             <Textarea
-              minHeight={0}
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              size="sm"
-              fontSize="xs"
-              // rows={10}
-              bg={'gray.700'}
-              color={'gray.200'}
-              border="none"
-              _placeholder={{color: 'gray.600'}}
+              className={cn(
+                'flex-grow text-xs bg-secondary text-secondary-foreground resize-none',
+                'placeholder:text-muted-foreground border-none min-h-0',
+              )}
               placeholder="A story behind this project, what it represents"
               maxLength={4096}
-              flexGrow="1"
-              resize="none"
             />
           )}
-        </VStack>
-      </VStack>
-    </Flex>
+        </div>
+      </div>
+    </div>
   );
 }

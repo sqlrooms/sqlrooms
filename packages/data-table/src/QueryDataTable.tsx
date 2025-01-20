@@ -1,4 +1,4 @@
-import {AppContext, SpinnerPane} from '@sqlrooms/components';
+import {SpinnerPane} from '@sqlrooms/components';
 import {
   escapeId,
   exportToCsv,
@@ -8,7 +8,7 @@ import {
 import {genRandomStr} from '@sqlrooms/utils';
 import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {PaginationState, SortingState} from '@tanstack/table-core';
-import {FC, Suspense, useContext, useEffect, useMemo, useState} from 'react';
+import {FC, Suspense, useEffect, useMemo, useState} from 'react';
 import DataTablePaginated from './DataTablePaginated';
 import useArrowDataTable from './useArrowDataTable';
 
@@ -59,7 +59,6 @@ const QueryDataTable: FC<Props> = ({query, queryKeyComponents = []}) => {
   const dataQuery = useQuery(
     dataQueryKey,
     async () => {
-     
       return await conn.query(
         // TODO: revisit timestamps conversion https://github.com/duckdb/duckdb-wasm/issues/393
         `SELECT * FROM (
@@ -107,18 +106,15 @@ const QueryDataTable: FC<Props> = ({query, queryKeyComponents = []}) => {
   );
 };
 
-const QueryDataTableWithErrorBoundary: FC<Props> = (props) => {
-  const {ErrorBoundary} = useContext(AppContext);
+const QueryDataTableWithSuspense: FC<Props> = (props) => {
   return (
     <Suspense fallback={<SpinnerPane w={'100%'} h={'100%'} />}>
-      <ErrorBoundary>
-        <QueryDataTable
-          {...props}
-          key={props.query} // reset state when query changes
-        />
-      </ErrorBoundary>
+      <QueryDataTable
+        {...props}
+        key={props.query} // reset state when query changes
+      />
     </Suspense>
   );
 };
 
-export default QueryDataTableWithErrorBoundary;
+export default QueryDataTableWithSuspense;

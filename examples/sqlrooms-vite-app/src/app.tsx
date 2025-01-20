@@ -1,6 +1,5 @@
 import {Flex, useDisclosure} from '@chakra-ui/react';
 import {
-  DataSourcesPanelAddDataModalContext,
   DocumentationPanel,
   ProjectBuilder,
   ProjectBuilderSidebarButtons,
@@ -8,7 +7,6 @@ import {
 } from '@sqlrooms/project-builder';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {TbDatabaseSearch} from 'react-icons/tb';
-import AddDataModal from './components/add-data/AddDataModal';
 import useProjectStore from './store/DemoProjectStore';
 
 export const App = () => {
@@ -60,9 +58,7 @@ export const App = () => {
           ) : null}
         </Flex>
         <Flex direction="column" alignItems="stretch" flexGrow={1} gap={0}>
-          <DataSourcesPanelAddDataModalContext.Provider value={AddDataModal}>
-            <ProjectBuilder />
-          </DataSourcesPanelAddDataModalContext.Provider>
+          <ProjectBuilder />
           {/* {initialized && !isReadOnly ? (
             <BeforeUnloadPrompt
               hasUnsavedChanges={hasUnsavedChanges}

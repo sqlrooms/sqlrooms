@@ -29,7 +29,7 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
       <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
         {showHeader && (
           <>
-            {Icon ? <Icon width="20px" /> : null}
+            {Icon ? <Icon className="w-4 h-4" /> : null}
             <Heading
               as="h2"
               fontSize={'xs'}

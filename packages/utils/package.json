@@ -10,7 +10,8 @@
     "dev": "tsc -w",
     "build": "tsc",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "eslint ."
   },
   "dependencies": {
     "d3-color": "^3.1.0",

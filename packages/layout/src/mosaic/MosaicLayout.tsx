@@ -2,6 +2,7 @@ import styled from '@emotion/styled';
 import React, {FC, useCallback} from 'react';
 import {Mosaic, MosaicNode, MosaicProps} from 'react-mosaic-component';
 import MosaicTile from './MosaicTile';
+import 'react-mosaic-component/react-mosaic-component.css';
 
 type Props = MosaicProps<string>;
 

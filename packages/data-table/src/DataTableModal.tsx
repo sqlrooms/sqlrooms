@@ -11,8 +11,7 @@ import {
   useDisclosure,
   useTheme,
 } from '@chakra-ui/react';
-import {AppContext} from '@sqlrooms/components';
-import {FC, useContext} from 'react';
+import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
 
 type Props = {
@@ -23,14 +22,12 @@ type Props = {
 
 const DataTableModal: FC<Props> = ({title, query, tableModal}) => {
   const theme = useTheme();
-  const appContext = useContext(AppContext);
 
   return (
     <Modal
       isOpen={tableModal.isOpen}
       onClose={tableModal.onClose}
       isCentered
-      preserveScrollBarGap={appContext.mode === 'sdk'} // to avoid layout jumping and CSS added to host document
       // portalProps={{containerRef}}
     >
       <ModalOverlay backdropFilter={theme.backdropFilter} />

@@ -17,6 +17,7 @@ import {
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {DemoProjectConfig} from './DemoProjectStore';
 import ViewConfigPanel from '../components/view-config/ViewConfigPanel';
+import AddDataModal from '../components/add-data/AddDataModal';
 
 export const PROJECT_BUILDER_PANELS: Partial<
   Record<ProjectPanelTypes, ProjectPanelInfo>
@@ -32,7 +33,7 @@ export const PROJECT_BUILDER_PANELS: Partial<
     title: 'Data Sources',
     // icon: FolderIcon,
     icon: CircleStackIcon,
-    component: () => <DataSourcesPanel />,
+    component: () => <DataSourcesPanel AddDataModal={AddDataModal} />,
     placement: 'sidebar',
   },
   [ProjectPanelTypes.VIEW_CONFIGURATION]: {
@@ -58,7 +59,7 @@ export const PROJECT_BUILDER_PANELS: Partial<
     title: 'Main view',
     icon: MapIcon,
     component: () => <div>Main view</div>,
-    placement: 'hidden',
+    placement: 'main',
   },
   [ProjectPanelTypes.DOCS]: {
     title: 'Documentation',
@@ -68,15 +69,13 @@ export const PROJECT_BUILDER_PANELS: Partial<
   },
 };
 
-export const INITIAL_PROJECT_CONFIG: DemoProjectConfig = {
-  ...INITIAL_BASE_PROJECT_CONFIG,
-  dataSources: [],
-};
-
 export const INITIAL_PROJECT_STATE: ProjectStateProps<DemoProjectConfig> = {
   ...INITIAL_BASE_PROJECT_STATE,
   initialized: true,
-  projectConfig: INITIAL_PROJECT_CONFIG,
+  projectConfig: {
+    ...INITIAL_BASE_PROJECT_CONFIG,
+    dataSources: [],
+  },
   lastSavedConfig: undefined,
   projectPanels: PROJECT_BUILDER_PANELS,
 };

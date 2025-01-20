@@ -15,6 +15,7 @@ export type ProjectFileInfo = {
   duckdbFileName?: string;
   file?: File;
   size?: number;
+  numRows?: number;
   // hasBeenUploaded?: boolean;
   // uploadState?: FileUploadState;
 };

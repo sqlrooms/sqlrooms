@@ -1,11 +1,10 @@
-import { Modal, ModalBody, ModalContent, ModalOverlay } from '@chakra-ui/react';
-import { AppContext, SpinnerPane } from '@sqlrooms/components';
-import React, { Suspense, useContext } from 'react';
-import SqlEditor, { Props } from './SqlEditor';
+import {Modal, ModalBody, ModalContent, ModalOverlay} from '@chakra-ui/react';
+import {SpinnerPane} from '@sqlrooms/components';
+import React, {Suspense} from 'react';
+import SqlEditor, {Props} from './SqlEditor';
 
 const SqlEditorModal: React.FC<Props> = (props) => {
-  const { isOpen, onClose } = props;
-  const appContext = useContext(AppContext);
+  const {isOpen, onClose} = props;
   return (
     <>
       <Modal
@@ -14,7 +13,6 @@ const SqlEditorModal: React.FC<Props> = (props) => {
         onClose={onClose}
         closeOnOverlayClick={false}
         size={'full'}
-        preserveScrollBarGap={appContext.mode === 'sdk'} // to avoid layout jumping and CSS added to host document
       >
         <ModalOverlay />
         <ModalContent>

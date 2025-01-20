@@ -1,7 +1,7 @@
 import {Flex} from '@chakra-ui/react';
-import {AppContext, ProgressModal} from '@sqlrooms/components';
+import {ProgressModal} from '@sqlrooms/components';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import React, {useCallback, useContext, useMemo} from 'react';
+import React, {useCallback, useMemo} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectStore} from './ProjectStateProvider';
 
@@ -11,6 +11,9 @@ const ProjectBuilder: React.FC = () => {
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const loadingProgress = useBaseProjectStore((state) =>
     state.getLoadingProgress(),
+  );
+  const ErrorBoundary = useBaseProjectStore(
+    (state) => state.CustomErrorBoundary,
   );
 
   const visibleProjectPanels = useMemo(
@@ -26,7 +29,6 @@ const ProjectBuilder: React.FC = () => {
     [setLayout, layout],
   );
 
-  const {ErrorBoundary} = useContext(AppContext);
   const renderedPanels: Map<string, React.ReactNode> = useMemo(() => {
     return Array.from(visibleProjectPanels).reduce((acc, id: string) => {
       const PanelComp = projectPanels[id]?.component;

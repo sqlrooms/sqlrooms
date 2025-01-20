@@ -8,7 +8,7 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react';
-import {AppContext, EditableText} from '@sqlrooms/components';
+import {EditableText} from '@sqlrooms/components';
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {escapeVal, getDuckTables} from '@sqlrooms/duckdb';
 import {useQuery} from '@tanstack/react-query';
@@ -17,7 +17,6 @@ import {
   FC,
   SetStateAction,
   useCallback,
-  useContext,
   useEffect,
   useState,
 } from 'react';
@@ -67,7 +66,7 @@ const UploadFilesPreview: FC<Props> = (props) => {
   const projectTitle = useProjectStore((state) => state.projectConfig.title);
   const setProjectFolder = useProjectStore((state) => state.setProjectFolder);
   const projectFolder = useProjectStore((state) => state.getProjectFolder());
-  const {ErrorBoundary} = useContext(AppContext);
+  const ErrorBoundary = useProjectStore((state) => state.CustomErrorBoundary);
 
   useEffect(() => {
     setSelectedFileIndex(0);

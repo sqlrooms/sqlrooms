@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src", "turbo"],
+  "include": ["src", "turbo", "../ui/src/components/DefaultErrorBoundary.tsx"],
   "exclude": ["node_modules", "dist"]
 }

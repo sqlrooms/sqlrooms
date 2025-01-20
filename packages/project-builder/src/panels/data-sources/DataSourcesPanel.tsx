@@ -1,36 +1,28 @@
-import {AddIcon} from '@chakra-ui/icons';
+import {DataSourceTypes, ProjectPanelTypes} from '@sqlrooms/project-config';
 import {
   Accordion,
-  AccordionButton,
+  AccordionContent,
   AccordionItem,
-  AccordionPanel,
+  AccordionTrigger,
   Button,
-  Flex,
-  Heading,
-  HStack,
-  useDisclosure,
-} from '@chakra-ui/react';
-import {FolderIcon} from '@heroicons/react/24/outline';
-import {TableCellsIcon} from '@heroicons/react/24/solid';
-import {CustomAccordionIcon} from '@sqlrooms/components';
-import {DataSourceTypes, ProjectPanelTypes} from '@sqlrooms/project-config';
-import {createContext, FC, useCallback, useContext, useMemo} from 'react';
-import {PiFileSql} from 'react-icons/pi';
+} from '@sqlrooms/ui';
+import {FileTextIcon, FolderIcon, PlusIcon, TableIcon} from 'lucide-react';
+import {FC, useCallback, useMemo, useState} from 'react';
 import {useBaseProjectStore} from '../../ProjectStateProvider';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 import FileDataSourcesPanel from './FileDataSourcesPanel';
 import SqlQueryDataSourcesPanel from './SqlQueryDataSourcesPanel';
 import TablesListPanel from './TablesListPanel';
 
-export const DataSourcesPanelAddDataModalContext = createContext<FC<{
-  isOpen: boolean;
-  onClose: () => void;
-}> | null>(null);
+export type DataSourcesPanelProps = {
+  AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;
+};
 
-const DataSourcesPanel: FC = () => {
+const DataSourcesPanel: FC<DataSourcesPanelProps> = ({
+  AddDataModal = () => null,
+}) => {
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
-  const AddDataModal = useContext(DataSourcesPanelAddDataModalContext);
-  const addDataModal = useDisclosure();
+  const [isOpen, setIsOpen] = useState(false);
   const projectFiles = useBaseProjectStore((state) => state.projectFiles);
   const dataSources = useBaseProjectStore(
     (state) => state.projectConfig.dataSources,
@@ -43,100 +35,80 @@ const DataSourcesPanel: FC = () => {
   const isProjectEmpty = !projectFiles?.length;
 
   const handleModalClose = useCallback(() => {
-    addDataModal.onClose();
-    // dbFilesQuery.refetch();
-  }, [
-    addDataModal,
-    // dbFilesQuery
-  ]);
-
-  const addButton = (
-    <Button
-      leftIcon={<AddIcon />}
-      variant="solid"
-      size="sm"
-      onClick={addDataModal.onToggle}
-      py={4}
-    >
-      Add
-    </Button>
-  );
+    setIsOpen(false);
+  }, []);
 
   return (
-    <Flex flexDir="column" flexGrow={1} gap={3} height="100%">
+    <div className="flex h-full flex-grow flex-col gap-3">
       <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DATA_SOURCES} />
-      {isReadOnly ? null : addButton}
+      {!isReadOnly && (
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => setIsOpen(true)}
+          className="py-4"
+        >
+          <PlusIcon className="mr-2 h-4 w-4" />
+          Add
+        </Button>
+      )}
       {isProjectEmpty ? (
         <></>
       ) : (
         <>
-          <Flex overflow="auto" flexDir="column" alignItems="stretch">
+          <div className="flex overflow-auto flex-col items-stretch">
             <Accordion
-              reduceMotion={true}
-              flexDir="column"
-              display="flex"
-              allowMultiple={true}
-              defaultIndex={[0, 1, 2]}
+              type="multiple"
+              defaultValue={['files', 'sql', 'tables']}
             >
-              <AccordionItem>
-                <AccordionButton px={0} gap={1}>
-                  <CustomAccordionIcon />
-                  <HStack color="gray.400">
-                    <FolderIcon width={16} height={16} />
-                    <Heading as="h3" fontSize="xs" textTransform="uppercase">
-                      Files
-                    </Heading>
-                  </HStack>
-                </AccordionButton>
-                <AccordionPanel pb={5} pt={1} paddingInline="5px">
+              <AccordionItem value="files">
+                <AccordionTrigger className="px-0 gap-1">
+                  <div className="flex items-center text-muted-foreground">
+                    <FolderIcon className="h-4 w-4" />
+                    <h3 className="ml-1 text-xs uppercase">Files</h3>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-5 pt-1 px-[5px]">
                   <FileDataSourcesPanel />
-                </AccordionPanel>
+                </AccordionContent>
               </AccordionItem>
 
               {!isReadOnly || queryDataSources.length > 0 ? (
-                <AccordionItem>
-                  <AccordionButton px={0} gap={1}>
-                    <CustomAccordionIcon />
-                    <HStack color="gray.400">
-                      <PiFileSql width={16} height={16} />
-                      <Heading as="h3" fontSize="xs" textTransform="uppercase">
-                        SQL QUERIES
-                      </Heading>
-                    </HStack>
-                  </AccordionButton>
-                  <AccordionPanel pb={5} pt={1} paddingInline="5px">
+                <AccordionItem value="sql">
+                  <AccordionTrigger className="px-0 gap-1">
+                    <div className="flex items-center text-muted-foreground">
+                      <FileTextIcon className="h-4 w-4" />
+                      <h3 className="ml-1 text-xs uppercase">SQL Queries</h3>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent className="pb-5 pt-1 px-[5px]">
                     <SqlQueryDataSourcesPanel
                       queryDataSources={queryDataSources}
                     />
-                  </AccordionPanel>
+                  </AccordionContent>
                 </AccordionItem>
               ) : null}
 
-              <AccordionItem>
-                <AccordionButton px={0} gap={1}>
-                  <CustomAccordionIcon />
-                  <HStack color="gray.400">
-                    <TableCellsIcon width={16} height={16} />
-                    <Heading as="h3" fontSize="xs" textTransform="uppercase">
-                      TABLES
-                    </Heading>
-                  </HStack>
-                </AccordionButton>
-                <AccordionPanel pb={5} pt={1} paddingInline="5px">
+              <AccordionItem value="tables">
+                <AccordionTrigger className="px-0 gap-1">
+                  <div className="flex items-center text-muted-foreground">
+                    <TableIcon className="h-4 w-4" />
+                    <h3 className="ml-1 text-xs uppercase">Tables</h3>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pb-5 pt-1 px-[5px]">
                   <TablesListPanel />
-                </AccordionPanel>
+                </AccordionContent>
               </AccordionItem>
             </Accordion>
-          </Flex>
+          </div>
         </>
       )}
 
-      {/* <FileDropzone onDrop={handleDrop} /> */}
-      {/* )} */}
       {AddDataModal ? (
-        <AddDataModal isOpen={addDataModal.isOpen} onClose={handleModalClose} />
+        <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
       ) : null}
-    </Flex>
+    </div>
   );
 };
 

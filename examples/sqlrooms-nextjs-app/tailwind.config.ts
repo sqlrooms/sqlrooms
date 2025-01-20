@@ -7,9 +7,8 @@ const preset = sqlroomsTailwindPreset({prefix: ''});
 const config = {
   ...preset,
   content: [
-    'app/**/*.{ts,tsx}',
-    'components/**/*.{ts,tsx}',
-    '../../packages/ui/src/components/**/*.{ts,tsx}',
+    '{app,components,hooks,store,lib}/**/*.{ts,tsx}',
+    '../../packages/*/src/**/*.{ts,tsx}',
   ],
   theme: {
     ...preset.theme,
