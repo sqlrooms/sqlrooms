@@ -1,5 +1,5 @@
 import {Component, ErrorInfo, ReactNode} from 'react';
-import {Alert, AlertDescription, AlertTitle} from './alert';
+import {Alert, AlertDescription} from './alert';
 import {Button} from './button';
 import {Card, CardContent, CardFooter, CardHeader, CardTitle} from './card';
 
@@ -37,23 +37,24 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <Card className="w-[450px] mx-auto mt-20">
+        <Card className="max-w-[450px] mx-auto mt-20 bg-gray-700">
           <CardHeader>
             <CardTitle>Oops! Something went wrong</CardTitle>
           </CardHeader>
           <CardContent>
-            <Alert variant="destructive">
-              <AlertTitle>Error</AlertTitle>
-              <AlertDescription>
+            <Alert>
+              <AlertDescription className="text-xs">
                 {this.state.error?.message || 'An unexpected error occurred'}
               </AlertDescription>
             </Alert>
           </CardContent>
-          <CardFooter>
-            <Button onClick={this.handleRetry} className="w-full">
-              Retry
-            </Button>
-          </CardFooter>
+          {this.props.onRetry && (
+            <CardFooter>
+              <Button onClick={this.handleRetry} className="w-full">
+                Retry
+              </Button>
+            </CardFooter>
+          )}
         </Card>
       );
     }
