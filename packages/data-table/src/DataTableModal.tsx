@@ -1,58 +1,43 @@
 import {
   Button,
-  Flex,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  useDisclosure,
-  useTheme,
-} from '@chakra-ui/react';
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@sqlrooms/ui';
 import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
 
 type Props = {
   title: string | undefined;
   query: string | undefined;
-  tableModal: ReturnType<typeof useDisclosure>;
+  tableModal: {
+    isOpen: boolean;
+    onClose: () => void;
+  };
 };
 
 const DataTableModal: FC<Props> = ({title, query, tableModal}) => {
-  const theme = useTheme();
-
   return (
-    <Modal
-      isOpen={tableModal.isOpen}
-      onClose={tableModal.onClose}
-      isCentered
-      // portalProps={{containerRef}}
+    <Dialog
+      open={tableModal.isOpen}
+      onOpenChange={(isOpen: boolean) => !isOpen && tableModal.onClose()}
     >
-      <ModalOverlay backdropFilter={theme.backdropFilter} />
-      <ModalContent height="80%" maxWidth={['90%', '85%', '80%', '75%']}>
-        <ModalHeader>{title ? `Table "${title}"` : ''}</ModalHeader>
-        <ModalCloseButton />
-        <ModalBody
-          bgColor="gray.700"
-          flexGrow={1}
-          display="flex"
-          flexDir="column"
-          overflow="hidden"
-          p={0}
-        >
+      <DialogContent className="h-[80vh] max-w-[75vw]">
+        <DialogHeader>
+          <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
+        </DialogHeader>
+        <div className="flex-1 bg-muted overflow-hidden">
           {tableModal.isOpen && query ? <QueryDataTable query={query} /> : null}
-        </ModalBody>
-        <ModalFooter>
-          <Flex gap={3}>
-            <Button variant="outline" onClick={tableModal.onClose}>
-              Close
-            </Button>
-          </Flex>
-        </ModalFooter>
-      </ModalContent>
-    </Modal>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={tableModal.onClose}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

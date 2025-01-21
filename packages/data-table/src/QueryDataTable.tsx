@@ -3,7 +3,7 @@ import {
   escapeId,
   exportToCsv,
   getColValAsNumber,
-  useDuckConn,
+  useDuckDb,
 } from '@sqlrooms/duckdb';
 import {genRandomStr} from '@sqlrooms/utils';
 import {PaginationState, SortingState} from '@tanstack/table-core';
@@ -17,7 +17,7 @@ type Props = {
 };
 
 const QueryDataTable: FC<Props> = ({query}) => {
-  const {conn} = useDuckConn();
+  const {conn} = useDuckDb();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,

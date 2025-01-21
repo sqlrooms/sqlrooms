@@ -1,30 +1,28 @@
-import {DownloadIcon, TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons';
 import {
-  Badge,
-  Box,
-  Button,
-  Flex,
-  Icon,
-  IconButton,
-  Input,
-  Select,
-  Spacer,
-  Spinner,
-  Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-  keyframes,
-} from '@chakra-ui/react';
-import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  ArrowDownIcon,
   ChevronDoubleLeftIcon,
   ChevronDoubleRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
 } from '@heroicons/react/24/solid';
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Badge,
+} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
@@ -45,20 +43,12 @@ export type DataTablePaginatedProps<Data extends object> = {
   numRows?: number | undefined;
   isFetching?: boolean;
   isExporting?: boolean;
-  // error?: any;
   pagination?: PaginationState;
   sorting?: SortingState;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
   onExport?: () => void;
 };
-
-const fetchingKeyframes = keyframes`
-  0% { opacity: 0; }
-  50% { opacity: 0.75; }
-  100% { opacity: 0; }
-`;
-const fetchingAnimation = `${fetchingKeyframes} 2s linear infinite`;
 
 export default function DataTablePaginated<Data extends object>({
   data,
@@ -72,8 +62,7 @@ export default function DataTablePaginated<Data extends object>({
   onExport,
   isExporting,
   isFetching,
-}: // error,
-DataTablePaginatedProps<Data>) {
+}: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
   const table = useReactTable({
     data: (data ?? defaultData) as any[],
@@ -92,8 +81,6 @@ DataTablePaginatedProps<Data>) {
     },
     getCoreRowModel: getCoreRowModel(),
     manualPagination: true,
-    // getPaginationRowModel: getPaginationRowModel(), // If only doing manual pagination, you don't need this
-    // debugTable: true,
     state: {
       pagination,
       sorting,
@@ -108,57 +95,31 @@ DataTablePaginatedProps<Data>) {
   }, [pagination?.pageIndex]);
 
   return (
-    <Flex width="100%" height="100%" position="relative">
-      <TableContainer
-        overflowY="auto"
-        width="100%"
-        height="100%"
-        display="flex"
-        flexDirection="column"
-        py={0}
-        fontFamily="mono"
-        border="1px solid"
-        borderColor="gray.900"
-      >
-        <Table size="sm">
-          <Thead>
+    <div className="relative w-full h-full flex flex-col">
+      <div className="flex-1 overflow-auto border border-border font-mono">
+        <Table>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <Tr key={headerGroup.id}>
-                <Th
-                  width="auto"
-                  bg="gray.800"
-                  borderRight="1px solid"
-                  borderColor="gray.900"
-                  position="sticky"
-                  textAlign="center"
-                  top={0}
-                  zIndex={2}
-                >
-                  {isFetching ? <Spinner size="sm" mt="1" /> : null}
-                </Th>
+              <TableRow key={headerGroup.id}>
+                <TableHead className="w-auto bg-muted sticky top-0 text-center border-r">
+                  {isFetching ? (
+                    <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                  ) : null}
+                </TableHead>
                 {headerGroup.headers.map((header) => {
-                  // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
                   const meta = header.column.columnDef.meta as ArrowColumnMeta;
                   return (
-                    <Th
-                      width="auto"
+                    <TableHead
                       key={header.id}
                       colSpan={header.colSpan}
-                      isNumeric={meta?.isNumeric}
-                      whiteSpace="nowrap"
-                      cursor="pointer"
-                      position="sticky"
-                      top={0}
-                      py={2}
-                      bg="gray.800"
-                      borderRight="1px solid"
-                      borderColor="gray.900"
-                      textTransform="unset"
-                      zIndex={2}
+                      className={`
+                        w-auto whitespace-nowrap cursor-pointer sticky top-0 py-2 
+                        bg-muted border-r hover:bg-muted/80
+                        ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                      `}
                       onClick={header.column.getToggleSortingHandler()}
-                      _hover={{bg: 'gray.600', color: 'white'}}
                     >
-                      <Flex gap={2} alignItems="center">
+                      <div className="flex gap-2 items-center">
                         {header.isPlaceholder ? null : (
                           <div>
                             {flexRender(
@@ -169,241 +130,159 @@ DataTablePaginatedProps<Data>) {
                         )}
                         {header.column.getIsSorted() ? (
                           header.column.getIsSorted() === 'desc' ? (
-                            <TriangleDownIcon aria-label="sorted descending" />
+                            <ChevronDownIcon className="h-4 w-4" />
                           ) : (
-                            <TriangleUpIcon aria-label="sorted ascending" />
+                            <ChevronUpIcon className="h-4 w-4" />
                           )
                         ) : null}
-                        <Spacer />
+                        <div className="flex-1" />
                         <Badge
-                          colorScheme="blue"
-                          opacity="0.3"
-                          fontSize={9}
                           variant="outline"
-                          maxWidth={'70px'}
-                          textOverflow="ellipsis"
-                          overflow="hidden"
-                        >{`${meta?.type}`}</Badge>
-                      </Flex>
-                    </Th>
+                          className="opacity-30 text-[9px] max-w-[70px] truncate"
+                        >
+                          {String(meta?.type)}
+                        </Badge>
+                      </div>
+                    </TableHead>
                   );
                 })}
-                <Th
-                  bg="gray.800"
-                  borderRight="1px solid"
-                  borderColor="gray.900"
-                  width="100%"
-                  position="sticky"
-                  top={0}
-                />
-              </Tr>
+                <TableHead className="bg-muted sticky top-0 border-r w-full" />
+              </TableRow>
             ))}
-          </Thead>
-          <Tbody>
-            {table.getRowModel().rows.map((row, i) => {
-              return (
-                <Tr key={row.id} bg={'gray.700'} _hover={{bg: 'gray.600'}}>
-                  <Td
-                    fontSize="xs"
-                    borderRight="1px solid"
-                    borderColor="gray.900"
-                    bg={'gray.800'}
-                    textAlign="center"
-                    color="gray.400"
-                    position="sticky"
-                    left={0}
-                  >
-                    {pagination
-                      ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
-                      : ''}
-                  </Td>
-                  {row.getVisibleCells().map((cell) => {
-                    // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                    const meta: any = cell.column.columnDef.meta;
-                    return (
-                      <Td
-                        key={cell.id}
-                        isNumeric={meta?.isNumeric}
-                        fontSize="11px"
-                        color="white"
-                        borderRight="1px solid"
-                        borderColor="gray.900"
-                        maxWidth="500px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
-                        px={7}
-                      >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </Td>
-                    );
-                  })}
-                  <Td borderRight="1px solid" borderColor="gray.900" left={0}>
-                    &nbsp;
-                  </Td>
-                </Tr>
-              );
-            })}
-          </Tbody>
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.map((row, i) => (
+              <TableRow key={row.id} className="hover:bg-muted/50">
+                <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
+                  {pagination
+                    ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
+                    : ''}
+                </TableCell>
+                {row.getVisibleCells().map((cell) => {
+                  const meta = cell.column.columnDef.meta as ArrowColumnMeta;
+                  return (
+                    <TableCell
+                      key={cell.id}
+                      className={`
+                        text-[11px] border-r max-w-[500px] overflow-hidden truncate px-7
+                        ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                      `}
+                    >
+                      {flexRender(
+                        cell.column.columnDef.cell,
+                        cell.getContext(),
+                      )}
+                    </TableCell>
+                  );
+                })}
+                <TableCell className="border-r">&nbsp;</TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
         </Table>
-        <Spacer />
-        <Flex
-          gap={2}
-          alignItems="center"
-          justifyItems="center"
-          position="sticky"
-          bottom={0}
-          left={0}
-          bg="gray.800"
-          py={2}
-          px={2}
-          flexWrap="wrap"
-          // justifyContent="flex-end"
+      </div>
+      <div className="sticky bottom-0 left-0 bg-background p-2 flex gap-2 items-center flex-wrap border border-t-0">
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => table.setPageIndex(0)}
+          disabled={!table.getCanPreviousPage()}
         >
-          {/*<Flex gap={1} alignItems="center">*/}
-          {/*  | Go to page:*/}
-          {/*  <input*/}
-          {/*    type="number"*/}
-          {/*    defaultValue={table.getState().pagination.pageIndex + 1}*/}
-          {/*    onChange={(e) => {*/}
-          {/*      const page = e.target.value ? Number(e.target.value) - 1 : 0;*/}
-          {/*      table.setPageIndex(page);*/}
-          {/*    }}*/}
-          {/*    className="border p-1 rounded w-16"*/}
-          {/*  />*/}
-          {/*</Flex>*/}
-          <IconButton
-            size="xs"
-            aria-label="First page"
-            icon={<ChevronDoubleLeftIcon height={16} />}
-            onClick={() => table.setPageIndex(0)}
-            isDisabled={!table.getCanPreviousPage()}
+          <ChevronDoubleLeftIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => table.previousPage()}
+          disabled={!table.getCanPreviousPage()}
+        >
+          <ChevronLeftIcon className="h-4 w-4" />
+        </Button>
+        <div className="flex items-center text-sm ml-1 gap-1">
+          <div>Page</div>
+          <Input
+            type="number"
+            min={1}
+            max={table.getPageCount()}
+            className="w-16 h-8"
+            value={internalPageIndex + 1}
+            onChange={(e) => {
+              const value = e.target.value;
+              if (value) {
+                const page = Math.max(
+                  0,
+                  Math.min(table.getPageCount() - 1, Number(value) - 1),
+                );
+                setInternalPageIndex(page);
+              }
+            }}
+            onBlur={() => {
+              if (internalPageIndex !== pagination?.pageIndex) {
+                table.setPageIndex(internalPageIndex);
+              }
+            }}
           />
-          <IconButton
-            aria-label="Previous page"
-            icon={<ChevronLeftIcon height={16} />}
-            size="xs"
-            onClick={() => table.previousPage()}
-            isDisabled={!table.getCanPreviousPage()}
-          />
-          <Flex alignItems="center" color="white" fontSize="xs" ml={1} gap={1}>
-            <Box>Page</Box>
-            <Box>
-              <Input
-                width="40px"
-                size="xs"
-                type="number"
-                value={internalPageIndex + 1}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value) {
-                    const page = Math.max(
-                      0,
-                      Math.min(table.getPageCount() - 1, Number(value) - 1),
-                    );
-                    setInternalPageIndex(page);
-                  }
-                }}
-                onBlur={() => {
-                  if (internalPageIndex !== pagination?.pageIndex) {
-                    table.setPageIndex(internalPageIndex);
-                  }
-                }}
-              />
-            </Box>
-            <Box>{`of ${formatCount(table.getPageCount())}`}</Box>
-          </Flex>
-          <IconButton
-            size="xs"
-            aria-label="Next page"
-            icon={<ChevronRightIcon height={16} />}
-            onClick={() => table.nextPage()}
-            isDisabled={!table.getCanNextPage()}
-          />
-          <IconButton
-            size="xs"
-            aria-label="Last page"
-            icon={<ChevronDoubleRightIcon height={16} />}
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            isDisabled={!table.getCanNextPage()}
-          />
-          <Box>
-            <Select
-              size="xs"
-              value={table.getState().pagination.pageSize}
-              onChange={(e) => {
-                table.setPageSize(Number(e.target.value));
-              }}
-            >
-              {[10, 50, 100, 500, 1000].map((pageSize) => (
-                <option key={pageSize} value={pageSize}>
-                  {`${pageSize} rows`}
-                </option>
-              ))}
-            </Select>
-          </Box>
-          {/* {isFetching ? <Spinner size="sm" mt={2} /> : null} */}
+          <div>{`of ${formatCount(table.getPageCount())}`}</div>
+        </div>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => table.nextPage()}
+          disabled={!table.getCanNextPage()}
+        >
+          <ChevronRightIcon className="h-4 w-4" />
+        </Button>
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+          disabled={!table.getCanNextPage()}
+        >
+          <ChevronDoubleRightIcon className="h-4 w-4" />
+        </Button>
+        <Select
+          value={String(table.getState().pagination.pageSize)}
+          onValueChange={(value) => table.setPageSize(Number(value))}
+        >
+          <SelectTrigger className="w-[110px] h-8">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {[10, 50, 100, 500, 1000].map((pageSize) => (
+              <SelectItem key={pageSize} value={String(pageSize)}>
+                {`${pageSize} rows`}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
-          <Spacer />
-          {numRows !== undefined && isFinite(numRows) ? (
-            <Box color="white" fontWeight="normal" fontSize="xs">
-              {`${formatCount(numRows)} rows`}
-            </Box>
-          ) : null}
+        <div className="flex-1" />
 
-          {onExport ? (
-            <Button
-              isLoading={isExporting}
-              size={'xs'}
-              leftIcon={<Icon as={DownloadIcon} h={5} w={5} />}
-              onClick={onExport}
-            >
-              Export CSV
-            </Button>
-          ) : null}
-        </Flex>
-      </TableContainer>
-      {/* {error ? (
-        <ErrorPane
-          zIndex={3}
-          width="100%"
-          height="100%"
-          bg="gray.700"
-          position="absolute"
-          top="0"
-          left="0"
-          // text={
-          //   error instanceof DuckQueryError
-          //     ? error.getMessageForUser()
-          //     : undefined
-          // }
-        />
-      ) : null} */}
+        {numRows !== undefined && isFinite(numRows) ? (
+          <div className="text-sm font-normal">
+            {`${formatCount(numRows)} rows`}
+          </div>
+        ) : null}
+
+        {onExport ? (
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExport}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+            ) : (
+              <ArrowDownIcon className="h-4 w-4 mr-2" />
+            )}
+            Export CSV
+          </Button>
+        ) : null}
+      </div>
       {isFetching ? (
-        <Box
-          bg="gray.800"
-          opacity="0.8"
-          zIndex="3"
-          position="absolute"
-          top={0}
-          left={0}
-          width="100%"
-          height="100%"
-          animation={fetchingAnimation}
-        />
-      ) : // <SpinnerPane
-      //   bg="gray.800"
-      //   opacity="0.5"
-      //   zIndex="3"
-      //   position="absolute"
-      //   top={0}
-      //   left={0}
-      //   width="100%"
-      //   height="100%"
-      // />
-      null}
-    </Flex>
+        <div className="absolute inset-0 bg-background/80 animate-pulse" />
+      ) : null}
+    </div>
   );
 }

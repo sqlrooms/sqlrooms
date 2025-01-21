@@ -10,14 +10,13 @@
     "@heroicons/react": "*",
     "@sqlrooms/components": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.10.7",
     "@tanstack/table-core": "^8.10.7",
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {
-    "@chakra-ui/icons": "*",
-    "@chakra-ui/react": "*",
     "apache-arrow": "*",
     "react": "*",
     "react-dom": "*"

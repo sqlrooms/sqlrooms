@@ -1,16 +1,13 @@
-import {TriangleDownIcon, TriangleUpIcon} from '@chakra-ui/icons';
+import {ChevronDownIcon, ChevronUpIcon} from '@heroicons/react/24/solid';
 import {
-  Badge,
-  Flex,
-  Spacer,
   Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Badge,
+} from '@sqlrooms/ui';
 import {ErrorPane, SpinnerPane} from '@sqlrooms/components';
 import {formatCount} from '@sqlrooms/utils';
 import {
@@ -69,206 +66,102 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
       : 0;
 
   return (
-    <Flex
-      overflowX="auto"
-      overflowY="auto"
-      display="flex"
-      flexDirection="column"
-      py={0}
-      alignItems="flex-start"
-    >
-      <TableContainer
+    <div className="flex flex-col overflow-auto">
+      <div
         ref={tableContainerRef}
-        overflowY="auto"
-        border="1px solid"
-        borderColor="gray.900"
+        className="overflow-auto border border-border"
       >
-        <Table
-          size="sm"
-          __css={{
-            borderCollapse: 'separate', // to keep header borders sticky
-            borderSpacing: 0,
-          }}
-          fontFamily="mono"
-        >
-          <Thead>
+        <Table>
+          <TableHeader>
             {table.getHeaderGroups().map((headerGroup) => (
-              <Tr key={headerGroup.id} position="sticky" top={0}>
-                <Th
-                  bg="gray.800"
-                  borderRight="1px solid"
-                  borderColor="gray.900"
-                />
-
+              <TableRow key={headerGroup.id} className="sticky top-0">
+                <TableHead className="bg-muted border-r" />
                 {headerGroup.headers.map((header) => {
-                  // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                  const meta: any = header.column.columnDef.meta;
+                  const meta = header.column.columnDef.meta as any;
                   return (
-                    <Th
+                    <TableHead
                       key={header.id}
-                      fontFamily="mono"
+                      className={`
+                        font-mono whitespace-nowrap cursor-pointer px-7 py-2
+                        border-r bg-muted hover:bg-muted/80
+                        ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                      `}
                       onClick={header.column.getToggleSortingHandler()}
-                      isNumeric={meta?.isNumeric}
-                      whiteSpace="nowrap"
-                      textTransform="unset"
-                      cursor="pointer"
-                      px={7}
-                      py={2}
-                      // borderBottom="1px solid"
-                      // color="gray.800"
-                      // bg="gray.100"
-                      // _hover={{
-                      //   color: 'white',
-                      //   bg: 'gray.600',
-                      // }}
-                      borderRight="1px solid"
-                      borderColor="gray.900"
-                      color="gray.400"
-                      bg="gray.800"
-                      _hover={{bg: 'gray.600'}}
-                      maxWidth="500px"
-                      overflow="hidden"
-                      textOverflow="ellipsis"
                     >
-                      <Flex
-                        alignItems="center"
-                        gap={1}
-                        justifyContent={
-                          meta?.isNumeric ? 'flex-end' : 'flex-start'
-                        }
+                      <div
+                        className={`flex items-center gap-1 ${meta?.isNumeric ? 'justify-end' : 'justify-start'}`}
                       >
                         {flexRender(
                           header.column.columnDef.header,
                           header.getContext(),
                         )}
-
                         {header.column.getIsSorted() ? (
                           header.column.getIsSorted() === 'desc' ? (
-                            <TriangleDownIcon aria-label="sorted descending" />
+                            <ChevronDownIcon className="h-4 w-4" />
                           ) : (
-                            <TriangleUpIcon aria-label="sorted ascending" />
+                            <ChevronUpIcon className="h-4 w-4" />
                           )
                         ) : null}
-                        <Spacer />
+                        <div className="flex-1" />
                         <Badge
-                          colorScheme="blue"
-                          opacity="0.3"
-                          fontSize={9}
                           variant="outline"
-                        >{`${meta?.type}`}</Badge>
-                      </Flex>
-                    </Th>
+                          className="opacity-30 text-[9px]"
+                        >
+                          {String(meta?.type)}
+                        </Badge>
+                      </div>
+                    </TableHead>
                   );
                 })}
-              </Tr>
+              </TableRow>
             ))}
-          </Thead>
-          <Tbody>
+          </TableHeader>
+          <TableBody>
             {paddingTop > 0 && (
-              <Tr>
-                <Td height={`${paddingTop}px`} />
-              </Tr>
+              <TableRow>
+                <TableCell style={{height: `${paddingTop}px`}} />
+              </TableRow>
             )}
             {virtualRows.map((virtualRow) => {
               const row = rows[virtualRow.index];
               if (!row) return null;
               return (
-                <Tr
-                  key={row.id}
-                  // bg={virtualRow.index % 2 ? 'gray.700' : 'gray.800'}
-                  bg={'gray.700'}
-                  _hover={{bg: 'gray.600'}}
-                >
-                  <Td
-                    fontSize="xs"
-                    borderRight="1px solid"
-                    borderColor="gray.900"
-                    bg={'gray.800'}
-                    textAlign="center"
-                    color="gray.400"
-                    position="sticky"
-                    left={0}
-                  >
+                <TableRow key={row.id} className="hover:bg-muted/50">
+                  <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
                     {virtualRow.index + 1}
-                  </Td>
+                  </TableCell>
                   {row.getVisibleCells().map((cell) => {
-                    // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                    const meta: any = cell.column.columnDef.meta;
+                    const meta = cell.column.columnDef.meta as any;
                     return (
-                      <Td
+                      <TableCell
                         key={cell.id}
-                        isNumeric={meta?.isNumeric}
-                        fontSize="xs"
-                        color="white"
-                        borderRight="1px solid"
-                        borderColor="gray.900"
-                        maxWidth="500px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
-                        px={7}
+                        className={`
+                          text-xs border-r max-w-[500px] overflow-hidden truncate px-7
+                          ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                        `}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
                           cell.getContext(),
                         )}
-                      </Td>
+                      </TableCell>
                     );
                   })}
-                </Tr>
+                </TableRow>
               );
             })}
             {paddingBottom > 0 && (
-              <Tr>
-                <Td height={`${paddingBottom}px`} />
-              </Tr>
+              <TableRow>
+                <TableCell style={{height: `${paddingBottom}px`}} />
+              </TableRow>
             )}
-          </Tbody>
-          {/* <Tfoot>
-            <Tr>
-              <Td
-                colSpan={columns.length}
-                borderTop="1px solid"
-                gap={2}
-                position="sticky"
-                bottom={0}
-                left={0}
-                bg="gray.700"
-                py={2}
-                px={4}
-                color="gray.400"
-                fontWeight="bold"
-                fontSize="sm"
-                justifyContent="flex-start"
-                borderBottom="1px solid"
-              >
-                {`${formatCount(data.length)} rows`}
-              </Td>
-            </Tr>
-          </Tfoot> */}
+          </TableBody>
         </Table>
-
-        <Spacer />
-        <Flex
-          gap={2}
-          fontFamily="mono"
-          alignItems="center"
-          position="sticky"
-          bottom={0}
-          left={0}
-          py={2}
-          px={4}
-          fontSize="xs"
-          justifyContent="flex-start"
-          color="white"
-          bg="gray.800"
-          fontWeight="bold"
-        >
-          {`${isPreview ? 'Preview of the first ' : ''}${formatCount(
-            data.length,
-          )} rows`}
-        </Flex>
-      </TableContainer>
-    </Flex>
+      </div>
+      <div className="sticky bottom-0 left-0 py-2 px-4 text-xs font-mono bg-background border border-t-0">
+        {`${isPreview ? 'Preview of the first ' : ''}${formatCount(data.length)} rows`}
+      </div>
+    </div>
   );
 });
 
