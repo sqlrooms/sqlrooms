@@ -66,97 +66,103 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
       : 0;
 
   return (
-    <div className="flex flex-col overflow-auto">
-      <div
-        ref={tableContainerRef}
-        className="overflow-auto border border-border"
-      >
-        <Table>
-          <TableHeader>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <TableRow key={headerGroup.id} className="sticky top-0">
-                <TableHead className="bg-muted border-r" />
-                {headerGroup.headers.map((header) => {
-                  const meta = header.column.columnDef.meta as any;
-                  return (
-                    <TableHead
-                      key={header.id}
-                      className={`
-                        font-mono whitespace-nowrap cursor-pointer px-7 py-2
-                        border-r bg-muted hover:bg-muted/80
-                        ${meta?.isNumeric ? 'text-right' : 'text-left'}
-                      `}
-                      onClick={header.column.getToggleSortingHandler()}
-                    >
-                      <div
-                        className={`flex items-center gap-1 ${meta?.isNumeric ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-                        {header.column.getIsSorted() ? (
-                          header.column.getIsSorted() === 'desc' ? (
-                            <ChevronDownIcon className="h-4 w-4" />
-                          ) : (
-                            <ChevronUpIcon className="h-4 w-4" />
-                          )
-                        ) : null}
-                        <div className="flex-1" />
-                        <Badge
-                          variant="outline"
-                          className="opacity-30 text-[9px]"
-                        >
-                          {String(meta?.type)}
-                        </Badge>
-                      </div>
-                    </TableHead>
-                  );
-                })}
-              </TableRow>
-            ))}
-          </TableHeader>
-          <TableBody>
-            {paddingTop > 0 && (
-              <TableRow>
-                <TableCell style={{height: `${paddingTop}px`}} />
-              </TableRow>
-            )}
-            {virtualRows.map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              if (!row) return null;
-              return (
-                <TableRow key={row.id} className="hover:bg-muted/50">
-                  <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
-                    {virtualRow.index + 1}
-                  </TableCell>
-                  {row.getVisibleCells().map((cell) => {
-                    const meta = cell.column.columnDef.meta as any;
+    <div className="flex flex-col overflow-hidden">
+      <div className="overflow-hidden border border-border">
+        <div ref={tableContainerRef} className="overflow-auto h-full">
+          <Table disableWrapper>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  <TableHead
+                    className={`
+                      sticky top-0 left-0 w-auto whitespace-nowrap py-2 
+                      bg-background border-r text-center z-20
+                    `}
+                  />
+                  {headerGroup.headers.map((header) => {
+                    const meta = header.column.columnDef.meta as any;
                     return (
-                      <TableCell
-                        key={cell.id}
+                      <TableHead
+                        key={header.id}
                         className={`
-                          text-xs border-r max-w-[500px] overflow-hidden truncate px-7
+                          sticky top-0 font-mono whitespace-nowrap cursor-pointer px-7 py-2
+                          bg-background border-r hover:bg-muted/80 z-10
                           ${meta?.isNumeric ? 'text-right' : 'text-left'}
                         `}
+                        onClick={header.column.getToggleSortingHandler()}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
+                        <div
+                          className={`flex items-center gap-1 ${
+                            meta?.isNumeric ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          {header.column.getIsSorted() ? (
+                            header.column.getIsSorted() === 'desc' ? (
+                              <ChevronDownIcon className="h-4 w-4" />
+                            ) : (
+                              <ChevronUpIcon className="h-4 w-4" />
+                            )
+                          ) : null}
+                          <div className="flex-1" />
+                          <Badge
+                            variant="outline"
+                            className="opacity-30 text-[9px]"
+                          >
+                            {String(meta?.type)}
+                          </Badge>
+                        </div>
+                      </TableHead>
                     );
                   })}
                 </TableRow>
-              );
-            })}
-            {paddingBottom > 0 && (
-              <TableRow>
-                <TableCell style={{height: `${paddingBottom}px`}} />
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {paddingTop > 0 && (
+                <TableRow>
+                  <TableCell style={{height: `${paddingTop}px`}} />
+                </TableRow>
+              )}
+              {virtualRows.map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                if (!row) return null;
+                return (
+                  <TableRow key={row.id} className="hover:bg-muted/50">
+                    <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
+                      {virtualRow.index + 1}
+                    </TableCell>
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta as any;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={`
+                            text-xs border-r max-w-[500px] overflow-hidden truncate px-7
+                            ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                          `}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+              {paddingBottom > 0 && (
+                <TableRow>
+                  <TableCell style={{height: `${paddingBottom}px`}} />
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
       </div>
       <div className="sticky bottom-0 left-0 py-2 px-4 text-xs font-mono bg-background border border-t-0">
         {`${isPreview ? 'Preview of the first ' : ''}${formatCount(data.length)} rows`}

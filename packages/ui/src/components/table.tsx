@@ -2,18 +2,34 @@ import * as React from 'react';
 
 import {cn} from '../lib/utils';
 
-const Table = React.forwardRef<
-  HTMLTableElement,
-  React.HTMLAttributes<HTMLTableElement>
->(({className, ...props}, ref) => (
-  <div className="relative w-full overflow-auto">
-    <table
-      ref={ref}
-      className={cn('w-full caption-bottom text-sm', className)}
-      {...props}
-    />
-  </div>
-));
+interface TableProps extends React.HTMLAttributes<HTMLTableElement> {
+  /**
+   * The overflow-auto in shadcn's Table component is there to handle tables that might be wider
+   * than their container - it's a common pattern to ensure wide tables can be scrolled horizontally
+   * without breaking the layout. This prop allows you to disable this behavior, because it might
+   * cause issues with sticky headers.
+   */
+  disableWrapper?: boolean;
+}
+
+const Table = React.forwardRef<HTMLTableElement, TableProps>(
+  ({className, disableWrapper, ...props}, ref) =>
+    disableWrapper ? (
+      <table
+        ref={ref}
+        className={cn('w-full caption-bottom text-sm', className)}
+        {...props}
+      />
+    ) : (
+      <div className="relative w-full overflow-auto">
+        <table
+          ref={ref}
+          className={cn('w-full caption-bottom text-sm', className)}
+          {...props}
+        />
+      </div>
+    ),
+);
 Table.displayName = 'Table';
 
 const TableHeader = React.forwardRef<
