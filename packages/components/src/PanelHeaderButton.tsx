@@ -1,23 +1,27 @@
-import {IconButton} from '@chakra-ui/react';
+import {Button} from '@sqlrooms/ui';
 import React, {FC} from 'react';
+
 type Props = {
   label: string;
   icon: React.ReactElement;
   isPinned?: boolean;
   onClick: () => void;
 };
+
 const PanelHeaderButton: FC<Props> = (props) => {
-  const {isPinned, icon, label: title, onClick} = props;
+  const {isPinned, icon, label, onClick} = props;
   return (
-    <IconButton
-      size="xs"
+    <Button
+      size="icon"
       onClick={onClick}
-      icon={icon}
-      color={isPinned ? 'whiteAlpha.800' : 'whiteAlpha.500'}
-      _hover={{color: 'white', bg: 'whiteAlpha.300'}}
       variant="ghost"
-      aria-label={title}
-    />
+      className={`h-6 w-6 ${
+        isPinned ? 'text-white' : 'text-muted-foreground'
+      } hover:text-white hover:bg-white/10`}
+      aria-label={label}
+    >
+      {icon}
+    </Button>
   );
 };
 

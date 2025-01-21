@@ -55,9 +55,11 @@ const RenameSqlQueryModal: React.FC<Props> = ({
         <DialogHeader>
           <DialogTitle>Rename Query</DialogTitle>
         </DialogHeader>
+        {/* @ts-ignore */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
+              // @ts-ignore
               control={form.control}
               name="queryName"
               render={({field}) => (

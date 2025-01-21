@@ -10,4 +10,3 @@ export * from './panels';
 export {default as ProjectBuilderPanelHeader} from './panels/ProjectBuilderPanelHeader';
 export {default as DocumentationPanel} from './panels/docs-panel/DocumentationPanel';
 export * from './types';
-export * from './SqlRoomsProvider';

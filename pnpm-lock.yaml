@@ -285,6 +285,9 @@ importers:
       '@heroicons/react':
         specifier: '*'
         version: 2.2.0(react@19.0.0)
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
@@ -423,12 +426,6 @@ importers:
 
   packages/project-builder:
     dependencies:
-      '@chakra-ui/icons':
-        specifier: '*'
-        version: 2.1.0(@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@chakra-ui/react':
-        specifier: 2.4.4
-        version: 2.4.4(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(framer-motion@10.18.0(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@heroicons/react':
         specifier: '*'
         version: 2.2.0(react@18.3.1)
@@ -457,7 +454,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       immer:
-        specifier: '*'
+        specifier: ^10.1.1
         version: 10.1.1
       lucide-react:
         specifier: ^0.473.0
@@ -470,9 +467,9 @@ importers:
         version: 5.4.0(react@18.3.1)
       react-mosaic-component:
         specifier: 5.3.0
-        version: 5.3.0(@types/node@22.10.5)(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+        version: 5.3.0(@types/node@22.10.5)(@types/react@18.3.18)(react-dom@19.0.0(react@18.3.1))(react@18.3.1)
       zustand:
-        specifier: '*'
+        specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1))
 
   packages/project-config:
@@ -547,7 +544,7 @@ importers:
         specifier: ^18.2.0
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.50.0
+        specifier: ^7.54.2
         version: 7.54.2(react@18.3.1)
       react-mosaic-component:
         specifier: ^6.1.0
@@ -8646,11 +8643,6 @@ snapshots:
       '@chakra-ui/react-use-safe-layout-effect': 2.0.3(react@19.0.0)
       react: 19.0.0
 
-  '@chakra-ui/color-mode@2.1.12(react@18.3.1)':
-    dependencies:
-      '@chakra-ui/react-use-safe-layout-effect': 2.0.5(react@18.3.1)
-      react: 18.3.1
-
   '@chakra-ui/color-mode@2.1.12(react@19.0.0)':
     dependencies:
       '@chakra-ui/react-use-safe-layout-effect': 2.0.5(react@19.0.0)
@@ -8800,12 +8792,6 @@ snapshots:
       '@chakra-ui/system': 2.3.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
       react: 18.3.1
 
-  '@chakra-ui/icon@3.1.0(@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@chakra-ui/shared-utils': 2.0.5
-      '@chakra-ui/system': 2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
-      react: 18.3.1
-
   '@chakra-ui/icon@3.2.0(@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@19.0.0))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@19.0.0))(@types/react@18.3.18)(react@19.0.0))(react@19.0.0))(react@19.0.0)':
     dependencies:
       '@chakra-ui/shared-utils': 2.0.5
@@ -8816,12 +8802,6 @@ snapshots:
     dependencies:
       '@chakra-ui/icon': 3.1.0(@chakra-ui/system@2.3.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@chakra-ui/system': 2.3.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
-      react: 18.3.1
-
-  '@chakra-ui/icons@2.1.0(@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@chakra-ui/icon': 3.1.0(@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)
-      '@chakra-ui/system': 2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
       react: 18.3.1
 
   '@chakra-ui/image@2.0.12(@chakra-ui/system@2.3.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1))(react@18.3.1)':
@@ -9347,10 +9327,6 @@ snapshots:
     dependencies:
       react: 19.0.0
 
-  '@chakra-ui/react-use-safe-layout-effect@2.0.5(react@18.3.1)':
-    dependencies:
-      react: 18.3.1
-
   '@chakra-ui/react-use-safe-layout-effect@2.0.5(react@19.0.0)':
     dependencies:
       react: 19.0.0
@@ -9382,11 +9358,6 @@ snapshots:
   '@chakra-ui/react-use-update-effect@2.0.5(react@19.0.0)':
     dependencies:
       react: 19.0.0
-
-  '@chakra-ui/react-utils@2.0.12(react@18.3.1)':
-    dependencies:
-      '@chakra-ui/utils': 2.0.15
-      react: 18.3.1
 
   '@chakra-ui/react-utils@2.0.12(react@19.0.0)':
     dependencies:
@@ -9655,19 +9626,6 @@ snapshots:
       '@emotion/styled': 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@19.0.0))(@types/react@18.3.18)(react@19.0.0)
       react: 19.0.0
       react-fast-compare: 3.2.0
-
-  '@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)':
-    dependencies:
-      '@chakra-ui/color-mode': 2.1.12(react@18.3.1)
-      '@chakra-ui/object-utils': 2.0.8
-      '@chakra-ui/react-utils': 2.0.12(react@18.3.1)
-      '@chakra-ui/styled-system': 2.8.0
-      '@chakra-ui/theme-utils': 2.0.15
-      '@chakra-ui/utils': 2.0.15
-      '@emotion/react': 11.14.0(@types/react@18.3.18)(react@18.3.1)
-      '@emotion/styled': 11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@18.3.1))(@types/react@18.3.18)(react@18.3.1)
-      react: 18.3.1
-      react-fast-compare: 3.2.1
 
   '@chakra-ui/system@2.5.5(@emotion/react@11.14.0(@types/react@18.3.18)(react@19.0.0))(@emotion/styled@11.14.0(@emotion/react@11.14.0(@types/react@18.3.18)(react@19.0.0))(@types/react@18.3.18)(react@19.0.0))(react@19.0.0)':
     dependencies:
@@ -15882,6 +15840,18 @@ snapshots:
     transitivePeerDependencies:
       - react-dnd
 
+  react-dnd-multi-backend@6.0.2(react-dnd-html5-backend@14.1.0)(react-dnd-touch-backend@14.1.1)(react-dnd@14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1))(react-dom@19.0.0(react@18.3.1))(react@18.3.1):
+    dependencies:
+      dnd-multi-backend: 6.0.0
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-dnd-html5-backend: 14.1.0
+      react-dnd-preview: 6.0.2(react-dnd@14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1))(react@18.3.1)
+      react-dnd-touch-backend: 14.1.1
+      react-dom: 19.0.0(react@18.3.1)
+    transitivePeerDependencies:
+      - react-dnd
+
   react-dnd-multi-backend@8.1.2(dnd-core@16.0.1)(react-dnd@16.0.1(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1):
     dependencies:
       dnd-core: 16.0.1
@@ -15941,6 +15911,11 @@ snapshots:
       loose-envify: 1.4.0
       react: 18.3.1
       scheduler: 0.23.2
+
+  react-dom@19.0.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+      scheduler: 0.25.0
 
   react-dom@19.0.0(react@19.0.0):
     dependencies:
@@ -16024,6 +15999,24 @@ snapshots:
       react-dnd: 14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1)
       react-dnd-html5-backend: 14.1.0
       react-dnd-multi-backend: 6.0.2(react-dnd-html5-backend@14.1.0)(react-dnd-touch-backend@14.1.1)(react-dnd@14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1))(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      react-dnd-touch-backend: 14.1.1
+      uuid: 3.4.0
+    transitivePeerDependencies:
+      - '@types/hoist-non-react-statics'
+      - '@types/node'
+      - '@types/react'
+      - react-dom
+
+  react-mosaic-component@5.3.0(@types/node@22.10.5)(@types/react@18.3.18)(react-dom@19.0.0(react@18.3.1))(react@18.3.1):
+    dependencies:
+      classnames: 2.5.1
+      immutability-helper: 3.1.1
+      lodash: 4.17.21
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-dnd: 14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1)
+      react-dnd-html5-backend: 14.1.0
+      react-dnd-multi-backend: 6.0.2(react-dnd-html5-backend@14.1.0)(react-dnd-touch-backend@14.1.1)(react-dnd@14.0.5(@types/node@22.10.5)(@types/react@18.3.18)(react@18.3.1))(react-dom@19.0.0(react@18.3.1))(react@18.3.1)
       react-dnd-touch-backend: 14.1.1
       uuid: 3.4.0
     transitivePeerDependencies:
