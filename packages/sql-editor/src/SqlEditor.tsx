@@ -1,34 +1,24 @@
-import {DownloadIcon} from '@chakra-ui/icons';
 import {
-  Box,
   Button,
-  Flex,
-  HStack,
-  Heading,
-  Icon,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  ModalCloseButton,
-  Spacer,
-  Tab,
-  TabList,
-  TabPanel,
-  TabPanels,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
   Tabs,
+  TabsList,
+  TabsTrigger,
+  TabsContent,
   Textarea,
-  useDisclosure,
-  useToast,
-} from '@chakra-ui/react';
+  SpinnerPane,
+} from '@sqlrooms/ui';
 import {
-  BookOpenIcon,
-  EllipsisVerticalIcon,
   PlayIcon,
   PlusIcon,
-} from '@heroicons/react/24/outline';
-import {SpinnerPane, TablesList} from '@sqlrooms/components';
+  BookOpenIcon,
+  MoreVerticalIcon,
+  DownloadIcon,
+} from 'lucide-react';
+import {TablesList} from '@sqlrooms/components';
 import {
   DataTableVirtualized,
   QueryDataTable,
@@ -105,16 +95,8 @@ const SqlEditor: React.FC<Props> = (props) => {
 
   const [results, setResults] = useState<Table>();
   const resultsTableData = useArrowDataTable(results);
-  const toast = useToast();
   const [loading, setLoading] = useState(false);
   const [selectedTable, setSelectedTable] = useState<string>();
-
-  useEffect(() => {
-    return () => {
-      // on unmount
-      toast.closeAll();
-    };
-  }, [toast]);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -129,15 +111,10 @@ const SqlEditor: React.FC<Props> = (props) => {
     } catch (e) {
       console.error(e);
       setTablesError(e as Error);
-      toast({
-        title: 'Error fetching tables',
-        status: 'error',
-        isClosable: true,
-      });
     } finally {
       setTablesLoading(false);
     }
-  }, [duckConn.conn, schema, toast]);
+  }, [duckConn.conn, schema]);
 
   useEffect(() => {
     void fetchTables();
@@ -146,7 +123,6 @@ const SqlEditor: React.FC<Props> = (props) => {
   const runQuery = async (q: string) => {
     const conn = duckConn.conn;
     try {
-      toast.closeAll();
       setError(null);
       setLoading(true);
       await conn.query(`SET search_path = ${schema}`);
@@ -196,10 +172,10 @@ const SqlEditor: React.FC<Props> = (props) => {
     return getQueryIndexById(sqlEditorConfig.selectedQueryId);
   };
 
-  const handleTabChange = (index: number) => {
+  const handleTabChange = (value: string) => {
     onChange({
       ...sqlEditorConfig,
-      selectedQueryId: sqlEditorConfig.queries[index]?.id ?? '',
+      selectedQueryId: value,
     });
   };
 
@@ -246,11 +222,11 @@ const SqlEditor: React.FC<Props> = (props) => {
     saveAs(blob, `export-${genRandomStr(5)}.csv`);
   };
 
-  const createTableModal = useDisclosure();
+  const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
 
   const handleCreateTable = useCallback(() => {
-    createTableModal.onOpen();
-  }, [createTableModal]);
+    setCreateTableModalOpen(true);
+  }, []);
 
   const handleMosaicChange = (node: MosaicNode<string> | null) => {
     if (node) {
@@ -348,9 +324,9 @@ const SqlEditor: React.FC<Props> = (props) => {
     [SqlEditorViews.TABLES_LIST]: tablesLoading ? (
       <SpinnerPane h="100%" />
     ) : tablesError ? (
-      <Box p={4} color="red.300">
+      <div className="p-4 text-red-500">
         Error loading tables: {tablesError.message}
-      </Box>
+      </div>
     ) : (
       <TablesList
         schema="information_schema"
@@ -360,113 +336,93 @@ const SqlEditor: React.FC<Props> = (props) => {
       />
     ),
     [SqlEditorViews.QUERY_PANE]: (
-      <>
-        <Flex flexDir="column" height="100%" gap="2">
-          <Tabs
-            onChange={handleTabChange}
-            index={getCurrentQueryIndex()}
-            size="sm"
-            display="flex"
-            flexDir="column"
-            flexGrow={1}
-            variant="enclosed-colored"
-            overflow="hidden"
-          >
-            <TabList flexWrap="wrap">
-              <Button
-                aria-label="Run query"
-                size="sm"
-                textTransform="uppercase"
-                colorScheme="blue"
-                leftIcon={<PlayIcon width="16px" height="16px" />}
-                onClick={() => void handleRunQuery()}
-                _hover={{bg: 'gray.600'}}
-                _active={{bg: 'gray.500'}}
-              >
-                Run
-              </Button>
-              <Spacer />
+      <div className="flex flex-col h-full gap-2">
+        <Tabs
+          value={sqlEditorConfig.selectedQueryId}
+          onValueChange={handleTabChange}
+          className="flex flex-col flex-grow overflow-hidden"
+        >
+          <div className="flex items-center gap-2 border-b border-border">
+            <Button
+              size="sm"
+              onClick={() => void handleRunQuery()}
+              className="uppercase"
+            >
+              <PlayIcon className="w-4 h-4 mr-2" />
+              Run
+            </Button>
+            <TabsList className="flex-1">
               {sqlEditorConfig.queries.map((q) => (
-                <Tab key={q.id} position="relative" minWidth="60px" px={6}>
+                <TabsTrigger
+                  key={q.id}
+                  value={q.id}
+                  className="relative min-w-[60px] px-6"
+                >
                   <span>{q.name}</span>
-                  <Menu>
-                    <MenuButton
-                      as={IconButton}
-                      aria-label="Query options"
-                      icon={<EllipsisVerticalIcon width="12px" height="12px" />}
-                      size="xs"
-                      variant="ghost"
-                      position="absolute"
-                      right={0}
-                      top="50%"
-                      transform="translateY(-50%)"
-                      onClick={(e) => e.stopPropagation()} // Prevent tab selection
-                      _hover={{bg: 'gray.600'}}
-                    />
-                    <MenuList minW="120px">
-                      <MenuItem
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <MoreVerticalIcon className="h-3 w-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuItem
                         onClick={(e) => {
                           e.stopPropagation();
                           handleStartRename(q.id, q.name, e);
                         }}
-                        fontSize="sm"
                       >
                         Rename
-                      </MenuItem>
+                      </DropdownMenuItem>
                       {sqlEditorConfig.queries.length > 1 && (
-                        <MenuItem
+                        <DropdownMenuItem
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteQuery(q.id, e);
                           }}
-                          color="red.300"
-                          fontSize="sm"
+                          className="text-red-500"
                         >
                           Delete
-                        </MenuItem>
+                        </DropdownMenuItem>
                       )}
-                    </MenuList>
-                  </Menu>
-                </Tab>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TabsTrigger>
               ))}
-              <IconButton
-                aria-label="New query"
-                size="sm"
-                icon={<PlusIcon width="16px" height="16px" />}
-                onClick={handleNewQuery}
-                ml={2}
+            </TabsList>
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={handleNewQuery}
+              className="ml-2"
+            >
+              <PlusIcon className="h-4 w-4" />
+            </Button>
+          </div>
+          {sqlEditorConfig.queries.map((q) => (
+            <TabsContent
+              key={q.id}
+              value={q.id}
+              className="flex-grow data-[state=active]:flex-grow"
+            >
+              <Textarea
+                id={q.id}
+                value={q.query}
+                onChange={handleUpdateQuery}
+                className="h-full font-mono text-sm resize-none bg-muted"
               />
-            </TabList>
-            <TabPanels flexGrow={1}>
-              {sqlEditorConfig.queries.map((q) => (
-                <TabPanel key={q.id} p={0} h="100%">
-                  <Textarea
-                    id={q.id}
-                    flexGrow="1"
-                    fontSize="xs"
-                    fontFamily="mono"
-                    value={q.query}
-                    onChange={handleUpdateQuery}
-                    bg={'gray.800'}
-                    color={'gray.100'}
-                    width="100%"
-                    height="100%"
-                    resize="none"
-                  />
-                </TabPanel>
-              ))}
-            </TabPanels>
-          </Tabs>
-        </Flex>
-      </>
+            </TabsContent>
+          ))}
+        </Tabs>
+      </div>
     ),
     resultsBox: (
-      <Flex
-        height={'100%'}
-        overflow="hidden"
-        background={'gray.800'}
-        fontSize="xs"
-      >
+      <div className="h-full overflow-hidden bg-muted text-sm">
         {loading ? (
           <SpinnerPane h="100%" />
         ) : selectedTable ? (
@@ -474,76 +430,60 @@ const SqlEditor: React.FC<Props> = (props) => {
             query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
           />
         ) : error ? (
-          <Flex w="100%" h="100%" p={5} overflow="auto">
-            <Box as="pre" fontSize={12} lineHeight={1.3} color="error">
-              {error}
-            </Box>
-          </Flex>
+          <div className="w-full h-full p-5 overflow-auto">
+            <pre className="text-xs leading-tight text-red-500">{error}</pre>
+          </div>
         ) : resultsTableData ? (
-          <Flex
-            flexGrow={1}
-            overflow="hidden"
-            flexDir="column"
-            position="relative"
-          >
+          <div className="flex-grow overflow-hidden flex flex-col relative">
             <DataTableVirtualized {...resultsTableData} />
-            <Flex position="absolute" bottom={0} right={0}>
+            <div className="absolute bottom-0 right-0 flex gap-2 p-2">
               <Button
-                aria-label="Create table"
                 size="sm"
-                isDisabled={!resultsTableData}
-                leftIcon={<PlusIcon width="16px" height="16px" />}
+                disabled={!resultsTableData}
                 onClick={handleCreateTable}
-                _hover={{bg: 'gray.600'}}
-                _active={{bg: 'gray.500'}}
               >
+                <PlusIcon className="w-4 h-4 mr-2" />
                 Create table
               </Button>
-              <Button
-                disabled={!results}
-                size={'sm'}
-                leftIcon={<Icon as={DownloadIcon} h={5} w={5} />}
-                onClick={handleExport}
-              >
+              <Button size="sm" disabled={!results} onClick={handleExport}>
+                <DownloadIcon className="w-4 h-4 mr-2" />
                 Export
               </Button>
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         ) : null}
-      </Flex>
+      </div>
     ),
   };
 
   return (
     <>
-      <Box position="absolute" right={50}>
+      <div className="absolute right-12">
         <Button
-          disabled={!results}
-          size={'sm'}
-          leftIcon={<Icon as={BookOpenIcon} h={5} w={5} />}
+          size="sm"
+          variant={showDocs ? 'secondary' : 'outline'}
           onClick={handleToggleDocs}
-          bg={showDocs ? 'gray.600' : 'gray.700'}
         >
+          <BookOpenIcon className="w-4 h-4 mr-2" />
           SQL reference
         </Button>
-      </Box>
-      <Flex alignItems="stretch" width="100%" flexDirection="column" gap={2}>
-        <ModalCloseButton />
-        <HStack ml={1} mr={10} mb={2}>
-          <Heading size="md">SQL Editor</Heading>
-        </HStack>
-        <Box flexGrow={1} height="100%" bg="gray.800">
+      </div>
+      <div className="flex flex-col w-full gap-2">
+        <div className="flex items-center gap-2 ml-1 mr-10 mb-2">
+          <h2 className="text-lg font-semibold">SQL Editor</h2>
+        </div>
+        <div className="flex-grow h-full bg-muted">
           <MosaicLayout
             renderTile={(id) => <>{views[id]}</>}
             value={mosaicState}
             onChange={handleMosaicChange}
             initialValue={MOSAIC_INITIAL_STATE}
           />
-        </Box>
+        </div>
         <CreateTableModal
           query={currentQuery}
-          isOpen={createTableModal.isOpen}
-          onClose={createTableModal.onClose}
+          isOpen={createTableModalOpen}
+          onClose={() => setCreateTableModalOpen(false)}
           onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
         />
         <DeleteSqlQueryModal
@@ -574,7 +514,7 @@ const SqlEditor: React.FC<Props> = (props) => {
           initialName={queryToRename?.name ?? ''}
           onRename={handleFinishRename}
         />
-      </Flex>
+      </div>
     </>
   );
 };

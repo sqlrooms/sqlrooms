@@ -1,38 +1,32 @@
 {
   "name": "@sqlrooms/sql-editor",
   "version": "0.0.0",
-  "main": "dist/index.js",
-  "types": "src/index.ts",
-  "module": "dist/index.js",
-  "type": "module",
   "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
   "dependencies": {
-    "@heroicons/react": "*",
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^3.3.4",
     "@sqlrooms/components": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
+    "apache-arrow": "^14.0.2",
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
-    "react-hook-form": "^7.54.2",
-    "zod": "^3.24.1"
-  },
-  "peerDependencies": {
-    "@chakra-ui/icon": "*",
-    "@chakra-ui/react": "*",
-    "react-mosaic-component": "*"
-  },
-  "scripts": {
-    "dev": "tsc -w",
-    "build": "tsc",
-    "lint": "eslint ."
+    "lucide-react": "^0.323.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hook-form": "^7.50.0",
+    "react-mosaic-component": "^6.1.0",
+    "zod": "^3.22.4"
   },
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",
-    "@types/file-saver": "^2.0.7"
+    "@types/file-saver": "^2.0.7",
+    "@types/react": "^18.2.48",
+    "@types/react-dom": "^18.2.18"
   }
 }

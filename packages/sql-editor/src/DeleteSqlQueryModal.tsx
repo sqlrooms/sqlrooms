@@ -1,13 +1,13 @@
 import {
-  AlertDialog,
-  AlertDialogBody,
-  AlertDialogContent,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogOverlay,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Button,
-} from '@chakra-ui/react';
-import React, {useRef} from 'react';
+} from '@sqlrooms/ui';
+import React from 'react';
 
 interface Props {
   isOpen: boolean;
@@ -16,36 +16,26 @@ interface Props {
 }
 
 const DeleteSqlQueryModal: React.FC<Props> = ({isOpen, onClose, onConfirm}) => {
-  const cancelRef = useRef<HTMLButtonElement | null>(null);
-
   return (
-    <AlertDialog
-      isOpen={isOpen}
-      leastDestructiveRef={cancelRef as React.RefObject<HTMLButtonElement>}
-      onClose={onClose}
-    >
-      <AlertDialogOverlay>
-        <AlertDialogContent>
-          <AlertDialogHeader fontSize="lg" fontWeight="bold">
-            Delete Query
-          </AlertDialogHeader>
-
-          <AlertDialogBody>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Delete Query</DialogTitle>
+          <DialogDescription>
             Are you sure you want to delete this query? This action cannot be
             undone.
-          </AlertDialogBody>
-
-          <AlertDialogFooter>
-            <Button ref={cancelRef} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button colorScheme="red" onClick={onConfirm} ml={3}>
-              Delete
-            </Button>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialogOverlay>
-    </AlertDialog>
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter>
+          <Button variant="outline" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button variant="destructive" onClick={onConfirm}>
+            Delete
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 
