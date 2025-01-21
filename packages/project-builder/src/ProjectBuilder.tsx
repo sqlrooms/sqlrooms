@@ -1,4 +1,3 @@
-import {Flex} from '@chakra-ui/react';
 import {ProgressModal} from '@sqlrooms/components';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import React, {useCallback, useMemo} from 'react';
@@ -46,15 +45,7 @@ const ProjectBuilder: React.FC = () => {
 
   return (
     <>
-      <Flex
-        alignItems="stretch"
-        px={0}
-        // pt="50px"
-        pb={0}
-        flexGrow={1}
-        width="100%"
-        height="100%"
-      >
+      <div className="flex flex-col items-stretch px-0 pb-0 flex-grow w-full h-full">
         {layout ? (
           <MosaicLayout
             renderTile={(id) => <>{renderedPanels.get(id)}</>}
@@ -62,7 +53,7 @@ const ProjectBuilder: React.FC = () => {
             onChange={handleLayoutChange}
           />
         ) : null}
-      </Flex>
+      </div>
 
       <ProgressModal
         isOpen={loadingProgress !== undefined}
