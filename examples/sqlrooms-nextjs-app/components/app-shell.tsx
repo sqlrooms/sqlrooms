@@ -21,7 +21,7 @@ export const AppShell = () => {
 
   return (
     <div className="flex w-full h-full">
-      <div className="flex flex-col h-full bg-gray-900">
+      <div className="flex flex-col h-full bg-gray-900 pb-2">
         <ProjectBuilderSidebarButtons />
         <SidebarButton
           title="SQL Editor"
@@ -35,7 +35,6 @@ export const AppShell = () => {
       </div>
       {sqlEditor.isOpen ? (
         <SqlEditorModal
-          schema={'main'}
           sqlEditorConfig={sqlEditorConfig}
           onChange={onChangeSqlEditorConfig}
           onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}

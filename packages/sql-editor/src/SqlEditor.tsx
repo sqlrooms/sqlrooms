@@ -353,22 +353,18 @@ const SqlEditor: React.FC<Props> = (props) => {
             </Button>
             <TabsList className="flex-1">
               {sqlEditorConfig.queries.map((q) => (
-                <TabsTrigger
-                  key={q.id}
-                  value={q.id}
-                  className="relative min-w-[60px] px-6"
-                >
-                  <span>{q.name}</span>
+                <div key={q.id} className="relative">
+                  <TabsTrigger value={q.id} className="min-w-[60px] px-6 pr-8">
+                    {q.name}
+                  </TabsTrigger>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6"
+                      <div
+                        className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
                         onClick={(e) => e.stopPropagation()}
                       >
                         <MoreVerticalIcon className="h-3 w-3" />
-                      </Button>
+                      </div>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent>
                       <DropdownMenuItem
@@ -392,7 +388,7 @@ const SqlEditor: React.FC<Props> = (props) => {
                       )}
                     </DropdownMenuContent>
                   </DropdownMenu>
-                </TabsTrigger>
+                </div>
               ))}
             </TabsList>
             <Button
