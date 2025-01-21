@@ -1,2 +1,1 @@
-pnpm run build
 pnpx lint-staged
