@@ -1,19 +1,7 @@
-import {
-  Badge,
-  Box,
-  Flex,
-  FlexProps,
-  HStack,
-  Table,
-  Tbody,
-  Td,
-  Text,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
-import { DataTable } from '@sqlrooms/duckdb';
-import { formatNumber } from '@sqlrooms/utils';
-import { FC } from 'react';
+import {Badge} from '@sqlrooms/ui';
+import {DataTable} from '@sqlrooms/duckdb';
+import {formatNumber} from '@sqlrooms/utils';
+import {FC} from 'react';
 
 export type Props = {
   isReadOnly?: boolean;
@@ -21,150 +9,68 @@ export type Props = {
   rowCount?: number;
   onReset?: () => void;
   onClick?: () => void;
-} & FlexProps;
+  className?: string;
+};
 
-const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, ...rest }) => {
+const TableCard: FC<Props> = ({
+  isReadOnly,
+  value,
+  rowCount,
+  onReset,
+  onClick,
+  className,
+}) => {
   if (!value) return null;
 
   return (
-    <Flex
-      border={`1px solid`}
-      borderColor="gray.600"
-      bg={'gray.800'}
-      alignSelf={`stretch`}
-      borderRadius="sm"
-      py={2}
-      px={2}
-      alignItems="center"
-      justifyContent="center"
-      position={`relative`}
-      cursor="pointer"
+    <div
+      className={`flex flex-col border border-border bg-card rounded-sm py-2 px-2 items-center justify-center relative cursor-pointer transition-colors hover:border-foreground ${className}`}
       onClick={onClick}
-      transition={'border-color 0.2s ease-in-out'}
-      _hover={{ borderColor: 'gray.100' }}
-      {...rest}
     >
-      {/* <Box position="absolute" top={1} right={2}>
-        <Menu placement={'bottom-end'}>
-          <MenuButton
-            mt={'6px'}
-            size="xs"
-            as={IconButton}
-            aria-label="Options"
-            icon={<EllipsisHorizontalIcon width="18px" />}
-            variant="ghost"
-            color={'gray.400'}
-          />
-          <Portal>
-            <MenuList>
-              <MenuItem
-                isDisabled={true}
-                fontSize={'sm'}
-                icon={<TableCellsIcon width="15px" />}
-              >
-                View data
-              </MenuItem>
-
-              {!isReadOnly ? (
-                <>
-                  <MenuItem
-                    isDisabled={true}
-                    fontSize={'sm'}
-                    icon={<PencilIcon width="15px" />}
-                  >
-                    Rename table
-                  </MenuItem>
-                  <MenuItem
-                    isDisabled={true}
-                    fontSize={'sm'}
-                    icon={<TrashIcon width="15px" />}
-                    // onClick={deleteDatasetModal.onOpen}
-                  >
-                    Delete table
-                  </MenuItem>
-                  <MenuItem
-                    fontSize={'sm'}
-                    icon={<ArrowDownTrayIcon width="15px" />}
-                    onClick={console.log}
-                    isDisabled
-                  >
-                    Download
-                  </MenuItem>
-                </>
-              ) : null}
-            </MenuList>
-          </Portal>
-        </Menu>
-      </Box> */}
-
-      <Flex gap={2} px={2} mt={0} direction={'column'} width={'100%'}>
-        <Box overflow={'auto'}>
-          <Table size="xs">
-            <Thead>
-              <Tr>
-                <Td pr={6}>
-                  <Box
-                    height={'30px'}
-                    overflow={'hidden'}
-                    position={'relative'}
-                  >
-                    <Box
-                      fontSize="sm"
-                      fontWeight={'bold'}
-                      position={'absolute'}
-                      width={'100%'}
-                      color={'gray.100'}
-                      mb={1}
-                      py={1}
-                      // fontFamily={"monospace"}
-                      // maxWidth="230px"
-                      whiteSpace={'nowrap'}
-                      textOverflow={'ellipsis'}
-                      overflow={'hidden'}
-                    // textTransform={'lowercase'}
-                    >
+      <div className="flex gap-2 px-2 mt-0 flex-col w-full">
+        <div className="overflow-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr>
+                <td className="pr-6">
+                  <div className="h-[30px] overflow-hidden relative">
+                    <div className="absolute w-full text-foreground mb-1 py-1 whitespace-nowrap text-ellipsis overflow-hidden font-bold">
                       {value.tableName}
-                    </Box>
-                  </Box>
-                </Td>
-              </Tr>
-            </Thead>
-            <Tbody>
+                    </div>
+                  </div>
+                </td>
+              </tr>
+            </thead>
+            <tbody>
               {value.columns?.map((row, i) => {
                 return (
-                  <Tr key={i}>
-                    <Td>
-                      <HStack>
-                        <Box width="60px">
+                  <tr key={i}>
+                    <td>
+                      <div className="flex items-center gap-2">
+                        <div className="w-[60px]">
                           <Badge
-                            colorScheme="blue"
-                            opacity="0.5"
-                            fontSize={'xx-small'}
                             variant="outline"
+                            className="opacity-50 text-[0.6rem]"
                           >
                             {row.type}
                           </Badge>
-                        </Box>
-                        <Flex
-                          color="gray.300"
-                          fontSize={'x-small'}
-                          maxWidth={'100px'}
-                        >
+                        </div>
+                        <div className="text-muted-foreground text-xs max-w-[100px]">
                           {row.name}
-                        </Flex>
-                      </HStack>
-                    </Td>
-                  </Tr>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
                 );
               })}
-            </Tbody>
-          </Table>
-          <Text fontSize="xs" textAlign={'right'} mt={1}>
+            </tbody>
+          </table>
+          <div className="text-xs text-right mt-1">
             {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
-          </Text>
-        </Box>
-      </Flex>
-    </Flex>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 };
 

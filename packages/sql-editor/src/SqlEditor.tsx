@@ -542,7 +542,8 @@ const SqlEditor: React.FC<Props> = (props) => {
         </Box>
         <CreateTableModal
           query={currentQuery}
-          disclosure={createTableModal}
+          isOpen={createTableModal.isOpen}
+          onClose={createTableModal.onClose}
           onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
         />
         <DeleteSqlQueryModal

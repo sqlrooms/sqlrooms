@@ -43,7 +43,7 @@ const DataSourcesPanel: FC<DataSourcesPanelProps> = ({
       <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DATA_SOURCES} />
       {!isReadOnly && (
         <Button
-          variant="outline"
+          variant="secondary"
           size="sm"
           onClick={() => setIsOpen(true)}
           className="py-4"

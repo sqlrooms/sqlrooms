@@ -1,29 +1,18 @@
 import {
-  Alert,
-  AlertIcon,
-  Flex,
-  Icon,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Portal,
-  Progress,
-  Spacer,
-  Text,
-  Tooltip,
-} from '@chakra-ui/react';
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@sqlrooms/ui';
 import {
   CloudArrowDownIcon,
   CloudArrowUpIcon,
   CloudIcon,
   DocumentTextIcon,
-} from '@heroicons/react/24/outline';
-import {
-  ArrowDownTrayIcon,
   EllipsisHorizontalIcon,
   XMarkIcon,
+  ArrowDownTrayIcon,
 } from '@heroicons/react/24/solid';
 import {formatBytes} from '@sqlrooms/utils';
 import {FC, useCallback} from 'react';
@@ -47,110 +36,66 @@ const FileDataSourceCard: FC<Props> = (props) => {
   }, [fileInfo.pathname, removeProjectFile]);
 
   return (
-    <Flex p={2} gap={1} flexDir="column">
-      <Flex
-        gap={1}
-        cursor="pointer"
-        // _hover={{
-        //   color: theme.colors.blue[300],
-        //   // textDecoration: 'underline',
-        // }}
-        flexDir="row"
-        alignItems="center"
-      >
-        <Flex flex="0 0 15px">
-          <DocumentTextIcon width="15px" />
-        </Flex>
-        <Flex flex="1 1 auto" overflow="hidden" textOverflow="ellipsis">
-          <Text
-            fontSize="xs"
-            wordBreak="break-word"
-            // fontFamily="mono"
-            // noOfLines={1}
-
-            //whiteSpace={'nowrap'}
-          >
-            {pathname}
-          </Text>
-        </Flex>
-        <Spacer />
-
-        {!isReadOnly ? (
-          <Menu placement={'bottom-start'}>
-            <MenuButton
-              size="xs"
-              as={IconButton}
-              aria-label="Options"
-              icon={<EllipsisHorizontalIcon width="20px" />}
-              variant="ghost"
-              color={'gray.400'}
-              // onClick={() => onSelect(tableName)}
-            />
-            <Portal>
-              <MenuList minWidth="120px">
-                {/* <MenuItem
-            fontSize={'sm'}
-            icon={<PencilIcon width="15px" />}
-          >
-            Rename
-          </MenuItem> */}
-                <MenuItem
-                  fontSize={'sm'}
-                  icon={<XMarkIcon width="15px" />}
-                  onClick={handleRemoveFromProject}
+    <div className="p-2 flex flex-col gap-1">
+      <div className="flex gap-1 cursor-pointer flex-row items-center">
+        <div className="flex-none w-[15px]">
+          <DocumentTextIcon className="w-[15px]" />
+        </div>
+        <div className="flex-1 overflow-hidden text-ellipsis">
+          <span className="text-xs break-words">{pathname}</span>
+        </div>
+        <div className="flex-none">
+          {!isReadOnly ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 text-muted-foreground"
                 >
+                  <EllipsisHorizontalIcon className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleRemoveFromProject}>
+                  <XMarkIcon className="mr-2 h-4 w-4" />
                   Remove from project
-                </MenuItem>
-                <MenuItem
-                  fontSize={'sm'}
-                  icon={<ArrowDownTrayIcon width="15px" />}
-                  onClick={console.log}
-                  isDisabled
-                >
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled>
+                  <ArrowDownTrayIcon className="mr-2 h-4 w-4" />
                   Download file
-                </MenuItem>
-              </MenuList>
-            </Portal>
-          </Menu>
-        ) : null}
-      </Flex>
-      <Flex flexDir="row" gap={1} alignItems="center">
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex flex-row gap-1 items-center">
         {fileState?.status === 'error' ? (
-          <Alert
-            status="error"
-            fontSize="xs"
-            flex="1 1 auto"
-            py="0"
-            px="1"
-            bg="red.900"
-          >
-            <AlertIcon />
+          <div className="flex-1 bg-destructive/15 text-destructive text-xs p-1 rounded">
             {fileState.message}
-          </Alert>
+          </div>
         ) : fileState?.status === 'download' ||
           fileState?.status === 'upload' ? (
-          <Progress
-            width="100%"
-            colorScheme="green"
-            size="xs"
-            value={(fileState.progress?.ratio ?? 0) * 100}
-            isIndeterminate={fileState.progress === undefined}
-          />
+          <div className="w-full bg-secondary h-1 rounded overflow-hidden">
+            <div
+              className="h-full bg-primary transition-all duration-300"
+              style={{
+                width: `${(fileState.progress?.ratio ?? 0) * 100}%`,
+              }}
+            />
+          </div>
         ) : null}
-        <Spacer />
-        {size !== undefined ? (
-          <Text
-            fontSize="xs"
-            color="gray.500"
-            minWidth="70px"
-            textAlign="right"
-          >
-            {formatBytes(size)}
-          </Text>
-        ) : null}
-        <Tooltip
-          fontSize="xs"
-          label={
+        <div className="flex-none">
+          {size !== undefined ? (
+            <span className="text-xs text-muted-foreground min-w-[70px] text-right">
+              {formatBytes(size)}
+            </span>
+          ) : null}
+        </div>
+        <div
+          className="cursor-pointer"
+          title={
             fileState?.status === 'done'
               ? 'File synced'
               : fileState?.status === 'download'
@@ -161,24 +106,21 @@ const FileDataSourceCard: FC<Props> = (props) => {
                     ? `Failed to sync file: ${fileState.message}`
                     : 'File not synced'
           }
-          hasArrow
         >
-          <Flex cursor="pointer">
-            {fileState?.status === 'done' ? (
-              <Icon as={CloudIcon} width="15px" color="green.400" />
-            ) : fileState?.status === 'download' ? (
-              <Icon as={CloudArrowDownIcon} width="15px" color="orange" />
-            ) : fileState?.status === 'upload' ? (
-              <Icon as={CloudArrowUpIcon} width="15px" color="orange" />
-            ) : fileState?.status === 'error' ? (
-              <Icon as={CloudIcon} width="15px" color="red" />
-            ) : (
-              <Icon as={CloudIcon} width="15px" color="orange" />
-            )}
-          </Flex>
-        </Tooltip>
-      </Flex>
-    </Flex>
+          {fileState?.status === 'done' ? (
+            <CloudIcon className="w-[15px] text-green-400" />
+          ) : fileState?.status === 'download' ? (
+            <CloudArrowDownIcon className="w-[15px] text-orange-400" />
+          ) : fileState?.status === 'upload' ? (
+            <CloudArrowUpIcon className="w-[15px] text-orange-400" />
+          ) : fileState?.status === 'error' ? (
+            <CloudIcon className="w-[15px] text-destructive" />
+          ) : (
+            <CloudIcon className="w-[15px] text-orange-400" />
+          )}
+        </div>
+      </div>
+    </div>
   );
 };
 

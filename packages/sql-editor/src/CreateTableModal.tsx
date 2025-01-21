@@ -1,34 +1,47 @@
 import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+  Input,
+  Textarea,
   Alert,
   AlertDescription,
-  AlertIcon,
-  Button,
-  FormControl,
-  FormErrorMessage,
-  FormLabel,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-  Text,
-  Textarea,
-  UseDisclosureReturn,
-  useTheme,
-} from '@chakra-ui/react';
+} from '@sqlrooms/ui';
 import {DuckQueryError} from '@sqlrooms/duckdb';
 import {
   SqlQueryDataSource,
   VALID_TABLE_OR_COLUMN_REGEX,
 } from '@sqlrooms/project-config';
-import {FC, FormEvent, useCallback} from 'react';
-import {FieldError, useForm} from 'react-hook-form';
+import {FC, useCallback} from 'react';
+import {useForm} from 'react-hook-form';
+import * as z from 'zod';
+import {zodResolver} from '@hookform/resolvers/zod';
+
+const formSchema = z.object({
+  tableName: z
+    .string()
+    .min(1, 'Table name is required')
+    .regex(
+      VALID_TABLE_OR_COLUMN_REGEX,
+      'Only letters, digits and underscores are allowed; should not start with a digit',
+    ),
+  query: z.string().min(1, 'Query is required'),
+});
 
 export type Props = {
   query: string;
-  disclosure: UseDisclosureReturn;
+  isOpen: boolean;
+  onClose: () => void;
   editDataSource?: SqlQueryDataSource;
   onAddOrUpdateSqlQuery: (
     tableName: string,
@@ -37,146 +50,108 @@ export type Props = {
   ) => Promise<void>;
 };
 
-type FormData = {
-  tableName: string;
-  query: string;
-  formError?: string;
-};
-
 const CreateTableModal: FC<Props> = (props) => {
-  const {editDataSource, disclosure, onAddOrUpdateSqlQuery} = props;
-  const theme = useTheme();
-  const {register, handleSubmit, formState, setError, clearErrors, reset} =
-    useForm<FormData>({
-      values: {
-        tableName: editDataSource?.tableName ?? '',
-        query: editDataSource?.sqlQuery ?? props.query.trim(),
-      },
-    });
-  const {errors, isSubmitting} = formState;
+  const {editDataSource, isOpen, onClose, onAddOrUpdateSqlQuery} = props;
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      tableName: editDataSource?.tableName ?? '',
+      query: editDataSource?.sqlQuery ?? props.query.trim(),
+    },
+  });
 
   const onSubmit = useCallback(
-    (ev: FormEvent<HTMLFormElement>) => {
-      clearErrors('formError');
-      handleSubmit(async (data: FormData) => {
-        try {
-          const {tableName, query} = data;
-          await onAddOrUpdateSqlQuery(
-            tableName,
-            query,
-            editDataSource?.tableName,
-          );
-          reset();
-          disclosure.onClose();
-        } catch (err) {
-          setError('formError', {
-            type: 'manual',
-            message:
-              err instanceof DuckQueryError
-                ? err.getMessageForUser()
-                : `${err}`,
-          });
-        }
-      })(ev);
+    async (values: z.infer<typeof formSchema>) => {
+      try {
+        const {tableName, query} = values;
+        await onAddOrUpdateSqlQuery(
+          tableName,
+          query,
+          editDataSource?.tableName,
+        );
+        form.reset();
+        onClose();
+      } catch (err) {
+        form.setError('root', {
+          type: 'manual',
+          message:
+            err instanceof DuckQueryError ? err.getMessageForUser() : `${err}`,
+        });
+      }
     },
-    [
-      onAddOrUpdateSqlQuery,
-      clearErrors,
-      disclosure,
-      handleSubmit,
-      reset,
-      setError,
-      editDataSource?.tableName,
-    ],
+    [onAddOrUpdateSqlQuery, editDataSource?.tableName, onClose, form],
   );
 
   return (
-    <Modal
-      // isCentered
-      size="2xl"
-      isOpen={disclosure.isOpen}
-      onClose={disclosure.onClose}
-      closeOnOverlayClick={false}
-    >
-      <ModalOverlay backdropFilter={theme.backdropFilter} />
-      <ModalContent>
-        <form onSubmit={onSubmit}>
-          <ModalHeader>
-            {editDataSource ? `Edit table query` : `Create table from query`}
-            {editDataSource ? null : (
-              <Text fontSize="xs" color="gray.300" fontWeight="normal">
-                Create a new table from the results of an SQL query.
-                {/* Add a new query to the project data sources */}
-                {/* The table will be recreated each time when the project is opened. */}
-              </Text>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-[800px]">
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <DialogHeader>
+              <DialogTitle>
+                {editDataSource
+                  ? 'Edit table query'
+                  : 'Create table from query'}
+              </DialogTitle>
+              {!editDataSource && (
+                <DialogDescription>
+                  Create a new table from the results of an SQL query.
+                </DialogDescription>
+              )}
+            </DialogHeader>
+
+            {form.formState.errors.root && (
+              <Alert variant="destructive">
+                <AlertDescription>
+                  {form.formState.errors.root.message}
+                </AlertDescription>
+              </Alert>
             )}
-          </ModalHeader>
-          <ModalBody display="flex" flexDir="column" gap="2">
-            <FormControl isInvalid={Boolean(errors.formError)}>
-              <FormErrorMessage>
-                <Alert status="error" borderRadius={4} mb={6}>
-                  <AlertIcon />
-                  <AlertDescription fontSize="sm">
-                    {(errors.formError as FieldError)?.message}
-                  </AlertDescription>
-                </Alert>
-              </FormErrorMessage>
-            </FormControl>
 
-            <FormControl id="tableName" isInvalid={Boolean(errors.tableName)}>
-              <FormLabel>Table name:</FormLabel>
-              <Input
-                size="sm"
-                fontSize="sm"
-                fontFamily="mono"
-                autoFocus
-                {...register('tableName', {
-                  required: 'Table name is required',
-                  pattern: {
-                    value: VALID_TABLE_OR_COLUMN_REGEX,
-                    message:
-                      'Only letters, digits and underscores are allowed; should not start with a digit',
-                  },
-                })}
-              />
-              <FormErrorMessage>{errors.tableName?.message}</FormErrorMessage>
-            </FormControl>
+            <FormField
+              control={form.control}
+              name="tableName"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>Table name:</FormLabel>
+                  <FormControl>
+                    <Input {...field} className="font-mono" autoFocus />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-            <FormControl id="query" isInvalid={Boolean(errors.query)}>
-              <FormLabel>SQL query:</FormLabel>
-              <Textarea
-                size="sm"
-                fontSize="xs"
-                fontFamily="mono"
-                color="gray.100"
-                bg="gray.800"
-                rows={10}
-                {...register('query', {required: 'Query is required'})}
-              />
-              <FormErrorMessage>{errors.query?.message}</FormErrorMessage>
-            </FormControl>
-          </ModalBody>
-          <ModalFooter>
-            <Button
-              mr={3}
-              onClick={disclosure.onClose}
-              // isDisabled={Boolean(loadingStatus)}
-            >
-              Cancel
-            </Button>
-            <Button
-              colorScheme="blue"
-              type="submit"
-              isLoading={isSubmitting}
-              // onClick={handleConfirm}
-              // isDisabled={Boolean(loadingStatus) || !canConfirm}
-            >
-              {editDataSource ? 'Update' : `Create`}
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+            <FormField
+              control={form.control}
+              name="query"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>SQL query:</FormLabel>
+                  <FormControl>
+                    <Textarea
+                      {...field}
+                      className="font-mono text-sm bg-secondary min-h-[200px]"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={form.formState.isSubmitting}>
+                {editDataSource ? 'Update' : 'Create'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
 

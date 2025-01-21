@@ -1,4 +1,3 @@
-import {Flex, useDisclosure, VStack} from '@chakra-ui/react';
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
 import {useBaseProjectStore} from '../../ProjectStateProvider';
@@ -22,25 +21,23 @@ const TablesListPanel: FC = () => {
   const [selectedTable, setSelectedTable] = useState<DataTable | undefined>(
     undefined,
   );
-  const tableModal = useDisclosure();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const handleClick = (table: DataTable) => {
-    tableModal.onOpen();
+    setIsModalOpen(true);
     setSelectedTable(table);
+  };
+
+  const handleClose = () => {
+    setIsModalOpen(false);
+    setSelectedTable(undefined);
   };
 
   return (
     // <Flex flexDir="column" flexGrow={1} gap={3}>
     // <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DATA_TABLES} />
     <>
-      <Flex
-        gap={2}
-        direction={'column'}
-        //height={'100%'}
-        flexGrow={1}
-        alignItems={'stretch'}
-        //overflow="auto"
-        position="relative"
-      >
+      <div className="flex gap-2 flex-col flex-grow items-stretch relative">
         {/* <Flex
           flexDir="column"
           position={'absolute'}
@@ -49,7 +46,7 @@ const TablesListPanel: FC = () => {
           overflow={'auto'}
         > */}
         {tables?.length ? (
-          <VStack gap={2}>
+          <div className="flex flex-col gap-2">
             {tables.map((table, i) => (
               <TableCard
                 key={i}
@@ -59,13 +56,16 @@ const TablesListPanel: FC = () => {
                 rowCount={tableRowCounts[table.tableName]}
               />
             ))}
-          </VStack>
+          </div>
         ) : null}
         {/* </Flex> */}
-      </Flex>
+      </div>
 
       <DataTableModal
-        tableModal={tableModal}
+        tableModal={{
+          isOpen: isModalOpen,
+          onClose: handleClose,
+        }}
         title={selectedTable?.tableName}
         query={`SELECT * FROM ${selectedTable?.tableName}`}
       />

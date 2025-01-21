@@ -1,19 +1,10 @@
 import {
-  Alert,
-  AlertIcon,
   Button,
-  Flex,
-  IconButton,
-  Menu,
-  MenuButton,
-  MenuItem,
-  MenuList,
-  Portal,
-  Progress,
-  Spacer,
-  Text,
-  useDisclosure,
-} from '@chakra-ui/react';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@sqlrooms/ui';
 import {
   EllipsisHorizontalIcon,
   PencilIcon,
@@ -31,13 +22,12 @@ import {DataSourceStatus} from '../../types';
 type Props = {
   queryDataSources: SqlQueryDataSource[];
 };
+
 const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
   const {queryDataSources} = props;
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();
-  const editModal = useDisclosure({
-    onClose: () => setSelectedDataSource(undefined),
-  });
+  const [isOpen, setIsOpen] = useState(false);
   const dataSourceStates = useBaseProjectStore(
     (state) => state.dataSourceStates,
   );
@@ -45,13 +35,15 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
     (state) => state.removeSqlQueryDataSource,
   );
 
-  const handleEdit = useCallback(
-    (dataSource: SqlQueryDataSource) => {
-      setSelectedDataSource(dataSource);
-      editModal.onOpen();
-    },
-    [removeSqlQueryDataSource, selectedDataSource],
-  );
+  const handleEdit = useCallback((dataSource: SqlQueryDataSource) => {
+    setSelectedDataSource(dataSource);
+    setIsOpen(true);
+  }, []);
+
+  const handleClose = useCallback(() => {
+    setIsOpen(false);
+    setSelectedDataSource(undefined);
+  }, []);
 
   const handleRemove = useCallback(
     (dataSource: SqlQueryDataSource) => {
@@ -66,107 +58,90 @@ const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
   );
 
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+
   return (
-    <Flex flexDir="column" overflow="auto" flexGrow="1">
-      <Flex flexDir="column" alignItems="stretch">
+    <div className="flex flex-col overflow-auto flex-grow">
+      <div className="flex flex-col items-stretch">
         <Button
+          variant="secondary"
           size="sm"
-          variant="solid"
-          color="white"
-          leftIcon={<PlusIcon width={15} height={15} />}
-          isDisabled={isReadOnly}
-          onClick={editModal.onOpen}
+          className="text-white"
+          onClick={() => setIsOpen(true)}
+          disabled={isReadOnly}
         >
+          <PlusIcon className="mr-2 h-4 w-4" />
           Add
         </Button>
-      </Flex>
+      </div>
       <CreateTableModal
-        disclosure={editModal}
+        isOpen={isOpen}
+        onClose={handleClose}
         editDataSource={selectedDataSource}
         query=""
         onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
       />
 
-      <Flex flexDir="column" overflow="auto" flexGrow="1">
+      <div className="flex flex-col overflow-auto flex-grow">
         {queryDataSources.map((dataSource) => (
-          <Flex key={dataSource.tableName} p={2} gap={1} flexDir="column">
-            <Flex gap={1} cursor="pointer" flexDir="row" alignItems="center">
-              <Flex flex="0 0 15px">
-                <PiFileSql width="15px" />
-              </Flex>
-              <Flex flex="1 1 auto" overflow="hidden" textOverflow="ellipsis">
-                <Text fontSize="xs" wordBreak="break-word">
+          <div key={dataSource.tableName} className="p-2 flex flex-col gap-1">
+            <div className="flex gap-1 cursor-pointer flex-row items-center">
+              <div className="flex-none w-[15px]">
+                <PiFileSql className="w-[15px]" />
+              </div>
+              <div className="flex-1 overflow-hidden text-ellipsis">
+                <span className="text-xs break-words">
                   {dataSource.tableName}
-                </Text>
-              </Flex>
-              <Spacer />
-
-              {!isReadOnly ? (
-                <Menu placement={'bottom-start'}>
-                  <MenuButton
-                    size="xs"
-                    as={IconButton}
-                    aria-label="Options"
-                    icon={<EllipsisHorizontalIcon width="20px" />}
-                    variant="ghost"
-                    color={'gray.400'}
-                  />
-                  <Portal>
-                    <MenuList minWidth="120px">
-                      <MenuItem
-                        fontSize={'sm'}
-                        icon={<PencilIcon width="15px" />}
-                        onClick={() => handleEdit(dataSource)}
+                </span>
+              </div>
+              <div className="flex-none">
+                {!isReadOnly ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-6 w-6 text-muted-foreground"
                       >
+                        <EllipsisHorizontalIcon className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => handleEdit(dataSource)}>
+                        <PencilIcon className="mr-2 h-4 w-4" />
                         Edit
-                      </MenuItem>
-                      <MenuItem
-                        fontSize={'sm'}
-                        icon={<FiRefreshCw width="15px" />}
-                        isDisabled
-                      >
+                      </DropdownMenuItem>
+                      <DropdownMenuItem disabled>
+                        <FiRefreshCw className="mr-2 h-4 w-4" />
                         Refresh
-                      </MenuItem>
-                      <MenuItem
-                        fontSize={'sm'}
-                        icon={<XMarkIcon width="15px" />}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         onClick={() => handleRemove(dataSource)}
                       >
+                        <XMarkIcon className="mr-2 h-4 w-4" />
                         Remove from project
-                      </MenuItem>
-                    </MenuList>
-                  </Portal>
-                </Menu>
-              ) : null}
-            </Flex>
-            <Flex flexDir="row" gap={1} alignItems="center">
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+              </div>
+            </div>
+            <div className="flex flex-row gap-1 items-center">
               {dataSourceStates[dataSource.tableName]?.status ===
               DataSourceStatus.ERROR ? (
-                <Alert
-                  status="error"
-                  fontSize="xs"
-                  flex="1 1 auto"
-                  py="0"
-                  px="1"
-                  bg="red.900"
-                >
-                  <AlertIcon />
+                <div className="flex-1 bg-destructive/15 text-destructive text-xs p-1 rounded">
                   {dataSourceStates[dataSource.tableName]?.message}
-                </Alert>
+                </div>
               ) : dataSourceStates[dataSource.tableName]?.status ===
                 DataSourceStatus.FETCHING ? (
-                <Progress
-                  width="100%"
-                  colorScheme="green"
-                  size="xs"
-                  isIndeterminate={true}
-                />
+                <div className="w-full bg-secondary h-1 rounded overflow-hidden">
+                  <div className="h-full bg-primary animate-pulse" />
+                </div>
               ) : null}
-            </Flex>
-          </Flex>
+            </div>
+          </div>
         ))}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   );
 };
 
