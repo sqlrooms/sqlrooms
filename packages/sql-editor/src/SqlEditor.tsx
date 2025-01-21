@@ -43,7 +43,6 @@ import {
 import {MosaicLayout} from '@sqlrooms/layout';
 import {SqlEditorConfig, isMosaicLayoutParent} from '@sqlrooms/project-config';
 import {genRandomStr, generateUniqueName} from '@sqlrooms/utils';
-import {useQuery} from '@tanstack/react-query';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
@@ -97,6 +96,9 @@ const SqlEditor: React.FC<Props> = (props) => {
   const duckConn = useDuckConn();
 
   const [showDocs, setShowDocs] = useState(false);
+  const [tables, setTables] = useState<string[]>([]);
+  const [tablesLoading, setTablesLoading] = useState(false);
+  const [tablesError, setTablesError] = useState<Error | null>(null);
 
   const [mosaicState, setMosaicState] =
     useState<MosaicNode<string>>(MOSAIC_INITIAL_STATE);
@@ -114,36 +116,32 @@ const SqlEditor: React.FC<Props> = (props) => {
     };
   }, [toast]);
 
-  // const tableNames = useBaseProjectStore((state) =>
-  //   state.tables.map((t) => t.tableName),
-  // );
-
   const [error, setError] = useState<string | null>(null);
 
-  const tablesQuery = useQuery(
-    ['sql-editor-tables', schema],
-    async () => {
-      try {
-        return await getDuckTables(schema);
-      } catch (e) {
-        console.error(e);
-        toast({
-          title: 'Error fetching tables',
-          status: 'error',
-          isClosable: true,
-        });
-        return [];
-      }
-    },
-    {
-      cacheTime: 0,
-      suspense: false,
-      keepPreviousData: true,
-      refetchOnWindowFocus: true,
-      enabled: !!duckConn.conn,
-      refetchOnMount: true,
-    },
-  );
+  const fetchTables = useCallback(async () => {
+    if (!duckConn.conn) return;
+
+    try {
+      setTablesLoading(true);
+      setTablesError(null);
+      const tablesList = await getDuckTables(schema);
+      setTables(tablesList);
+    } catch (e) {
+      console.error(e);
+      setTablesError(e as Error);
+      toast({
+        title: 'Error fetching tables',
+        status: 'error',
+        isClosable: true,
+      });
+    } finally {
+      setTablesLoading(false);
+    }
+  }, [duckConn.conn, schema, toast]);
+
+  useEffect(() => {
+    void fetchTables();
+  }, [fetchTables]);
 
   const runQuery = async (q: string) => {
     const conn = duckConn.conn;
@@ -167,10 +165,11 @@ const SqlEditor: React.FC<Props> = (props) => {
       setLoading(false);
     }
   };
+
   const handleSelectTable = (table: string) => {
     setSelectedTable(table);
-    //await runQuery(`SELECT * FROM ${table}`);
   };
+
   const handleRunQuery = async () => {
     setSelectedTable(undefined);
     const textarea = document.querySelector(
@@ -186,7 +185,7 @@ const SqlEditor: React.FC<Props> = (props) => {
 
     const queryToRun = selectedText || currentQuery;
     await runQuery(queryToRun);
-    void tablesQuery.refetch();
+    void fetchTables();
   };
 
   const getQueryIndexById = (id: string) => {
@@ -346,10 +345,16 @@ const SqlEditor: React.FC<Props> = (props) => {
 
   const views: {[viewId: string]: React.ReactNode | null} = {
     [SqlEditorViews.DOCS]: showDocs ? (documentationPanel ?? null) : null,
-    [SqlEditorViews.TABLES_LIST]: (
+    [SqlEditorViews.TABLES_LIST]: tablesLoading ? (
+      <SpinnerPane h="100%" />
+    ) : tablesError ? (
+      <Box p={4} color="red.300">
+        Error loading tables: {tablesError.message}
+      </Box>
+    ) : (
       <TablesList
         schema="information_schema"
-        tableNames={tablesQuery.data ?? []}
+        tableNames={tables}
         selectedTable={selectedTable}
         onSelect={handleSelectTable}
       />
@@ -532,6 +537,7 @@ const SqlEditor: React.FC<Props> = (props) => {
             renderTile={(id) => <>{views[id]}</>}
             value={mosaicState}
             onChange={handleMosaicChange}
+            initialValue={MOSAIC_INITIAL_STATE}
           />
         </Box>
         <CreateTableModal

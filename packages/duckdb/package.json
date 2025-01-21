@@ -8,7 +8,6 @@
   "private": true,
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
-    "@tanstack/react-query": "*",
     "apache-arrow": "*"
   },
   "scripts": {

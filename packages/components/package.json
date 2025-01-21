@@ -20,8 +20,7 @@
   "peerDependencies": {
     "tailwindcss": "^3.4.17",
     "@chakra-ui/icon": "*",
-    "@chakra-ui/react": "*",
-    "@tanstack/react-query": "*"
+    "@chakra-ui/react": "*"
   },
   "scripts": {
     "dev": "tsc -w",

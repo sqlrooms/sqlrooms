@@ -15,15 +15,21 @@ import {
   Text,
 } from '@chakra-ui/react';
 import React, {KeyboardEventHandler, useMemo, useState} from 'react';
-import type {UseQueryResult} from '@tanstack/react-query';
 import ErrorPane from '../ErrorPane';
 import SkeletonPane from '../SkeletonPane';
 import {splitIntoWords, matchesSearchWords} from './matchesSearchQuery';
 
+type QueryResult<T> = {
+  isFetching: boolean;
+  data: T | undefined;
+  error: Error | null;
+  refetch: () => void;
+};
+
 type Props<T> = {
   title: string;
   description: string;
-  query: UseQueryResult<T[] | undefined>;
+  query: QueryResult<T[] | undefined>;
   getSearchString: (item: T) => string;
   renderItem: (item: T, onChange: () => void) => React.ReactNode;
   actionButtons?: React.ReactNode;

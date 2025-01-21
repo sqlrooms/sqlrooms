@@ -8,10 +8,9 @@ import {
   Tabs,
   Text,
 } from '@chakra-ui/react';
-import {EditableText} from '@sqlrooms/components';
+import {EditableText, SpinnerPane} from '@sqlrooms/components';
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {escapeVal, getDuckTables} from '@sqlrooms/duckdb';
-import {useQuery} from '@tanstack/react-query';
 import {
   Dispatch,
   FC,
@@ -63,6 +62,8 @@ export type AddedFileInfo = {
 const UploadFilesPreview: FC<Props> = (props) => {
   const {addedFiles, tableNames, onSetAddedFiles, onSetTableNames} = props;
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
+  const [existingTables, setExistingTables] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const projectTitle = useProjectStore((state) => state.projectConfig.title);
   const setProjectFolder = useProjectStore((state) => state.setProjectFolder);
   const projectFolder = useProjectStore((state) => state.getProjectFolder());
@@ -72,11 +73,19 @@ const UploadFilesPreview: FC<Props> = (props) => {
     setSelectedFileIndex(0);
   }, []);
 
-  const duckdbTablesQuery = useQuery(
-    ['duckdbTables'],
-    async () => await getDuckTables(),
-  );
-  const existingTables = duckdbTablesQuery?.data;
+  useEffect(() => {
+    const fetchTables = async () => {
+      try {
+        const tables = await getDuckTables();
+        setExistingTables(tables);
+      } catch (error) {
+        console.error('Failed to fetch DuckDB tables:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchTables();
+  }, []);
 
   const handleSetTableName = useCallback(
     (i: number, name: string) => {
@@ -91,7 +100,7 @@ const UploadFilesPreview: FC<Props> = (props) => {
           return draft;
         }),
       );
-      return nextName; // Pass corrected value to editable text
+      return nextName;
     },
     [existingTables, onSetTableNames],
   );
@@ -127,7 +136,9 @@ const UploadFilesPreview: FC<Props> = (props) => {
     [onSetAddedFiles],
   );
 
-  return (
+  return isLoading ? (
+    <SpinnerPane />
+  ) : (
     <>
       <Flex flexDir="column" gap="3" height="100%" fontSize="sm">
         <Flex alignItems="center" gap="1">

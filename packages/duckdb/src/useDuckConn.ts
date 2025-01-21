@@ -1,9 +1,13 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {useQuery} from '@tanstack/react-query';
 import * as arrow from 'apache-arrow';
 import {DataTable} from './types';
 
-export type DuckConn = {
+/**
+ * @deprecated DuckConn is deprecated, use DuckDb instead
+ */
+export type DuckConn = DuckDb;
+
+export type DuckDb = {
   db: duckdb.AsyncDuckDB;
   conn: duckdb.AsyncDuckDBConnection;
   worker: Worker;
@@ -43,7 +47,12 @@ export class DuckQueryError extends Error {
   }
 }
 
-export async function getDuckConn(): Promise<DuckConn> {
+/**
+ * @deprecated getDuckConn is deprecated, use getDuckDb instead
+ */
+export const getDuckConn = getDuckDb;
+
+export async function getDuckDb(): Promise<DuckConn> {
   if (!globalThis.Worker) {
     return Promise.reject('No Worker support');
   }
@@ -134,15 +143,26 @@ export async function getDuckConn(): Promise<DuckConn> {
   return duckConn;
 }
 
-export function useDuckConn() {
-  const res = useQuery<DuckConn>(
-    ['duckConn'],
-    async () => {
-      return await getDuckConn();
-    },
-    {suspense: true},
-  );
-  return res.data!;
+// Cache the promise to avoid multiple initialization attempts
+let duckPromise: Promise<DuckConn> | null = null;
+
+/**
+ * @deprecated useDuckConn is deprecated, use useDuckDb instead
+ */
+export const useDuckConn = useDuckDb;
+
+export function useDuckDb(): DuckConn {
+  if (!duckPromise) {
+    duckPromise = getDuckConn();
+  }
+
+  // If we don't have a connection yet, throw the promise
+  // This will trigger Suspense
+  if (!duckConn) {
+    throw duckPromise;
+  }
+
+  return duckConn;
 }
 
 export const isNumericDuckType = (type: string) =>

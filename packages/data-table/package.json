@@ -18,7 +18,6 @@
   "peerDependencies": {
     "@chakra-ui/icons": "*",
     "@chakra-ui/react": "*",
-    "@tanstack/react-query": "*",
     "apache-arrow": "*",
     "react": "*",
     "react-dom": "*"
