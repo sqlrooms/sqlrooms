@@ -1,5 +1,5 @@
 import {Flex, useToast} from '@chakra-ui/react';
-import {getDuckTableSchemas, useDuckConn} from '@sqlrooms/duckdb';
+import {getDuckTableSchemas, useDuckDb} from '@sqlrooms/duckdb';
 import {FC, useCallback, useContext, useEffect, useState} from 'react';
 import {AddDataModalInternalContext} from '../AddDataModalContext';
 import FileDropzone from './FileDropzone';
@@ -21,7 +21,7 @@ const UploadFiles: FC = () => {
   } = useContext(AddDataModalInternalContext);
   const [tableNames, setTableNames] = useState<string[]>();
   const [addedFiles, setAddedFiles] = useState<AddedFileInfo[]>();
-  const {conn, db} = useDuckConn();
+  const {conn, db} = useDuckDb();
   const setTables = useProjectStore((state) => state.setTables);
   const addProjectFile = useProjectStore((state) => state.addProjectFile);
   const toast = useToast();

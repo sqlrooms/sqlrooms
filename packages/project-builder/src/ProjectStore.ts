@@ -8,7 +8,7 @@ import {
   dropAllTables,
   dropFile,
   dropTable,
-  getDuckConn,
+  getDuckDb,
   getDuckTableSchemas,
   getDuckTables,
 } from '@sqlrooms/duckdb';
@@ -263,7 +263,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           message: 'Initializing database…',
           progress: undefined,
         });
-        await getDuckConn();
+        await getDuckDb();
         setTaskProgress(INIT_DB_TASK, undefined);
         console.log('reinitialize', INIT_DB_TASK, 'end');
 

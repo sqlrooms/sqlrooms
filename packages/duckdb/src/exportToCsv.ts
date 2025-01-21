@@ -1,12 +1,12 @@
 import * as arrow from 'apache-arrow';
-import {getDuckConn} from '.';
+import {getDuckDb} from './useDuckDb';
 
 export async function exportToCsv(
   query: string,
   fileName: string,
   pageSize = 100000,
 ) {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
 
   let offset = 0;
   const blobs: Blob[] = [];

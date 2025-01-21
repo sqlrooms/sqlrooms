@@ -44,7 +44,7 @@ const TablesList: FC<Props> = (props) => {
     ),
   } = props;
   // const toast = useToast();
-  // const {conn} = useDuckConn();
+  // const {conn} = useDuckDb();
 
   // const onError = useCallback(
   //   (message: string) => {

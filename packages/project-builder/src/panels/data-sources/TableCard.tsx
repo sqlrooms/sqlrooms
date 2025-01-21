@@ -12,14 +12,7 @@ export type Props = {
   className?: string;
 };
 
-const TableCard: FC<Props> = ({
-  isReadOnly,
-  value,
-  rowCount,
-  onReset,
-  onClick,
-  className,
-}) => {
+const TableCard: FC<Props> = ({value, rowCount, onClick, className}) => {
   if (!value) return null;
 
   return (

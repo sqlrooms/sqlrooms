@@ -2,7 +2,7 @@ import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
   escapeVal,
   getColValAsNumber,
-  getDuckConn,
+  getDuckDb,
   getDuckTables,
 } from '@sqlrooms/duckdb';
 import {
@@ -19,7 +19,7 @@ export async function processDroppedFile({
   file: File;
   existingTables?: string[];
 }): Promise<{tableName: string; fileInfo: ProjectFileInfo}> {
-  const {db} = await getDuckConn();
+  const {db} = await getDuckDb();
   const tableName = convertToUniqueColumnOrTableName(
     file.name,
     existingTables ?? (await getDuckTables()),
@@ -32,7 +32,7 @@ export async function processDroppedFile({
     DuckDBDataProtocol.BROWSER_FILEREADER,
     true,
   );
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   let numRows = 0;
   try {
     numRows = getColValAsNumber(

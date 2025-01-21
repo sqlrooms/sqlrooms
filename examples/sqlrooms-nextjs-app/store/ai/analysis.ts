@@ -1,5 +1,5 @@
 import {createOpenAI} from '@ai-sdk/openai';
-import {getDuckConn} from '@sqlrooms/duckdb';
+import {getDuckDb} from '@sqlrooms/duckdb';
 import {generateText, StepResult, tool} from 'ai';
 import {z} from 'zod';
 import {ToolResultSchema, AnalysisAnswerSchema} from './schemas';
@@ -72,7 +72,7 @@ const TOOLS = {
     execute: async ({sqlQuery}): Promise<ToolResultSchema['result']> => {
       try {
         console.log('Executing SQL query:', sqlQuery);
-        const {conn} = await getDuckConn();
+        const {conn} = await getDuckDb();
         const result = await conn.query(sqlQuery);
         // Convert Arrow table to JSON
         const jsonResult = result

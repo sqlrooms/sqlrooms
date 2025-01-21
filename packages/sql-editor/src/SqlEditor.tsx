@@ -28,7 +28,7 @@ import {
   DuckQueryError,
   escapeId,
   getDuckTables,
-  useDuckConn,
+  useDuckDb,
 } from '@sqlrooms/duckdb';
 import {MosaicLayout} from '@sqlrooms/layout';
 import {SqlEditorConfig, isMosaicLayoutParent} from '@sqlrooms/project-config';
@@ -83,7 +83,7 @@ const SqlEditor: React.FC<Props> = (props) => {
     sqlEditorConfig,
     onChange,
   } = props;
-  const duckConn = useDuckConn();
+  const duckConn = useDuckDb();
 
   const [showDocs, setShowDocs] = useState(false);
   const [tables, setTables] = useState<string[]>([]);

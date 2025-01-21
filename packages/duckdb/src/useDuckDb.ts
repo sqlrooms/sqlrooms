@@ -23,8 +23,8 @@ const SilentLogger = {
 
 // TODO: shut DB down at some point
 
-let duckConn: DuckConn;
-let initialize: Promise<DuckConn> | undefined;
+let duckConn: DuckDb;
+let initialize: Promise<DuckDb> | undefined;
 
 export class DuckQueryError extends Error {
   readonly cause: unknown;
@@ -52,7 +52,7 @@ export class DuckQueryError extends Error {
  */
 export const getDuckConn = getDuckDb;
 
-export async function getDuckDb(): Promise<DuckConn> {
+export async function getDuckDb(): Promise<DuckDb> {
   if (!globalThis.Worker) {
     return Promise.reject('No Worker support');
   }
@@ -63,7 +63,7 @@ export async function getDuckDb(): Promise<DuckConn> {
     return initialize;
   }
 
-  let resolve: (value: DuckConn) => void;
+  let resolve: (value: DuckDb) => void;
   let reject: (reason?: any) => void;
   initialize = new Promise((_resolve, _reject) => {
     resolve = _resolve;
@@ -144,16 +144,16 @@ export async function getDuckDb(): Promise<DuckConn> {
 }
 
 // Cache the promise to avoid multiple initialization attempts
-let duckPromise: Promise<DuckConn> | null = null;
+let duckPromise: Promise<DuckDb> | null = null;
 
 /**
  * @deprecated useDuckConn is deprecated, use useDuckDb instead
  */
 export const useDuckConn = useDuckDb;
 
-export function useDuckDb(): DuckConn {
+export function useDuckDb(): DuckDb {
   if (!duckPromise) {
-    duckPromise = getDuckConn();
+    duckPromise = getDuckDb();
   }
 
   // If we don't have a connection yet, throw the promise
@@ -200,7 +200,7 @@ export const escapeId = (id: string) => {
 };
 
 export async function getDuckTables(schema = 'main'): Promise<string[]> {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   const tablesResults = await conn.query(
     `SELECT * FROM information_schema.tables 
      WHERE table_schema = '${schema}'
@@ -217,7 +217,7 @@ export async function getDuckTableSchema(
   tableName: string,
   schema = 'main',
 ): Promise<DataTable> {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   const describeResults = await conn.query(`DESCRIBE ${schema}.${tableName}`);
   const columnNames = describeResults.getChild('column_name');
   const columnTypes = describeResults.getChild('column_type');
@@ -252,7 +252,7 @@ export async function checkTableExists(
   tableName: string,
   schema = 'main',
 ): Promise<boolean> {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   const res = await conn.query(
     `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = '${tableName}'`,
   );
@@ -261,7 +261,7 @@ export async function checkTableExists(
 
 export async function dropAllTables(schema?: string): Promise<void> {
   try {
-    const {conn} = await getDuckConn();
+    const {conn} = await getDuckDb();
     if (schema && schema !== 'main') {
       await conn.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
     } else {
@@ -295,16 +295,16 @@ export async function dropAllTables(schema?: string): Promise<void> {
 }
 
 export async function dropTable(tableName: string): Promise<void> {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   await conn.query(`DROP TABLE IF EXISTS ${tableName};`);
 }
 
 export async function dropFile(fname: string): Promise<void> {
-  const {db} = await getDuckConn();
+  const {db} = await getDuckDb();
   db.dropFile(fname);
 }
 
 export async function dropAllFiles(): Promise<void> {
-  const {db} = await getDuckConn();
+  const {db} = await getDuckDb();
   db.dropFiles();
 }
