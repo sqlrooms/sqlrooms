@@ -12,7 +12,6 @@ import {DatabaseIcon} from 'lucide-react';
 
 export const AppShell = () => {
   const sqlEditor = useDisclosure();
-  // TODO: sql editor state should be a separate slice?
   const addOrUpdateSqlQuery = useProjectStore(
     (state) => state.addOrUpdateSqlQuery,
   );
