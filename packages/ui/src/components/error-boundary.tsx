@@ -42,8 +42,8 @@ export class ErrorBoundary extends Component<Props, State> {
             <CardTitle>Oops! Something went wrong</CardTitle>
           </CardHeader>
           <CardContent>
-            <Alert>
-              <AlertDescription className="text-xs">
+            <Alert className="bg-gray-800">
+              <AlertDescription className="text-xs text-gray-400 font-mono max-w-[350px] max-h-[200px] overflow-y-auto">
                 {this.state.error?.message || 'An unexpected error occurred'}
               </AlertDescription>
             </Alert>
