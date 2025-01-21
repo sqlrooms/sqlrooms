@@ -1,5 +1,7 @@
+'use client';
+
 import {Modal, ModalBody, ModalContent, ModalOverlay} from '@chakra-ui/react';
-import {SpinnerPane} from '@sqlrooms/components';
+import {SpinnerPane} from '@sqlrooms/ui';
 import React, {Suspense} from 'react';
 import SqlEditor, {Props} from './SqlEditor';
 

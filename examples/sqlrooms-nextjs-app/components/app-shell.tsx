@@ -1,32 +1,48 @@
 'use client';
 
-import {createDemoProjectStore} from '@/store/demo-project-store';
-import {ChakraProvider} from '@chakra-ui/react';
+import {useProjectStore} from '@/store/demo-project-store';
 import {
   ProjectBuilder,
   ProjectBuilderSidebarButtons,
-  ProjectStateProvider,
+  SidebarButton,
 } from '@sqlrooms/project-builder';
-import {TooltipProvider} from '@sqlrooms/ui';
-import theme from '../app/chakra-theme';
-
-const projectStore = createDemoProjectStore();
+import {SqlEditorModal} from '@sqlrooms/sql-editor';
+import {useDisclosure} from '@sqlrooms/ui';
+import {DatabaseIcon} from 'lucide-react';
 
 export const AppShell = () => {
+  const sqlEditor = useDisclosure();
+  // TODO: sql editor state should be a separate slice?
+  const addOrUpdateSqlQuery = useProjectStore(
+    (state) => state.addOrUpdateSqlQuery,
+  );
+  const sqlEditorConfig = useProjectStore((s) => s.projectConfig.sqlEditor);
+  const onChangeSqlEditorConfig = useProjectStore((s) => s.setSqlEditorConfig);
+
   return (
-    <ChakraProvider theme={theme}>
-      <ProjectStateProvider projectStore={projectStore}>
-        <TooltipProvider>
-          <div className="flex w-full h-full">
-            <div className="flex flex-col h-full bg-gray-900">
-              <ProjectBuilderSidebarButtons />
-            </div>
-            <div className="flex flex-col w-full h-full bg-gray-800">
-              <ProjectBuilder />
-            </div>
-          </div>
-        </TooltipProvider>
-      </ProjectStateProvider>
-    </ChakraProvider>
+    <div className="flex w-full h-full">
+      <div className="flex flex-col h-full bg-gray-900">
+        <ProjectBuilderSidebarButtons />
+        <SidebarButton
+          title="SQL Editor"
+          onClick={sqlEditor.onToggle}
+          isSelected={false}
+          icon={() => <DatabaseIcon size="19px" />}
+        />
+      </div>
+      <div className="flex flex-col w-full h-full bg-gray-800">
+        <ProjectBuilder />
+      </div>
+      {sqlEditor.isOpen ? (
+        <SqlEditorModal
+          schema={'main'}
+          sqlEditorConfig={sqlEditorConfig}
+          onChange={onChangeSqlEditorConfig}
+          onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
+          isOpen={sqlEditor.isOpen}
+          onClose={sqlEditor.onClose}
+        />
+      ) : null}
+    </div>
   );
 };

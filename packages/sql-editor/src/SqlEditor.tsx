@@ -61,7 +61,7 @@ enum SqlEditorViews {
 }
 
 export type Props = {
-  schema: string;
+  schema?: string;
   isOpen: boolean;
   documentationPanel?: React.ReactNode;
   sqlEditorConfig: SqlEditorConfig;
@@ -87,7 +87,7 @@ const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
 
 const SqlEditor: React.FC<Props> = (props) => {
   const {
-    schema,
+    schema = 'main',
     documentationPanel,
     onAddOrUpdateSqlQuery,
     sqlEditorConfig,
