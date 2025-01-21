@@ -19,3 +19,5 @@ export * from './components/table';
 export * from './components/switch';
 export * from './components/tabs';
 export * from './components/progress';
+export * from './components/dropdown-menu';
+export * from './components/skeleton';

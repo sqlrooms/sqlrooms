@@ -1,12 +1,8 @@
-import {cn} from '@sqlrooms/ui/lib/utils';
-import {Button} from '@sqlrooms/ui/components/button';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from '@sqlrooms/ui/components/tooltip';
 import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui/components/button';
+import {cn} from '@sqlrooms/ui/lib/utils';
 import React, {FC, useMemo} from 'react';
 import {useBaseProjectStore} from './ProjectStateProvider';
 
