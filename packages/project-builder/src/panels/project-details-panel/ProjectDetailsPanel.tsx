@@ -1,9 +1,8 @@
-import {EditableText} from '@sqlrooms/components';
 import {
   DEFAULT_PROJECT_TITLE,
   ProjectPanelTypes,
 } from '@sqlrooms/project-config';
-import {Label, Textarea} from '@sqlrooms/ui';
+import {EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {cn} from '@sqlrooms/ui/lib/utils';
 import {useCallback} from 'react';
 import {useBaseProjectStore} from '../../ProjectStateProvider';
@@ -40,12 +39,10 @@ export default function ProjectDetailsPanel() {
               <span>{title}</span>
             ) : (
               <EditableText
-                isDisabled={isReadOnly}
+                isReadOnly={isReadOnly}
                 value={title}
-                width="100%"
                 placeholder={DEFAULT_PROJECT_TITLE}
                 onChange={handleSetProjectTitle}
-                className="w-full bg-secondary text-secondary-foreground"
               />
             )}
           </div>

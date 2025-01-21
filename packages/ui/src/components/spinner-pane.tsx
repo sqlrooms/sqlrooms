@@ -2,7 +2,7 @@ import React from 'react';
 import {cn} from '../lib/utils';
 import {Spinner} from './spinner';
 
-export type Props = {
+export type SpinnerPaneProps = {
   h?: number | string;
   delayed?: boolean;
   className?: string;
@@ -11,7 +11,7 @@ export type Props = {
 
 const DELAY = 500;
 
-const SpinnerPane: React.FC<Props> = (props) => {
+const SpinnerPane: React.FC<SpinnerPaneProps> = (props) => {
   const {h, delayed, children, className, ...rest} = props;
   const [isPlaying, setPlaying] = React.useState(!delayed);
 

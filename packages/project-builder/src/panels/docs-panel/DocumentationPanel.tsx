@@ -1,7 +1,5 @@
-import {Flex} from '@chakra-ui/react';
-import styled from '@emotion/styled';
-import {SkeletonPane} from '@sqlrooms/components';
 import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {SkeletonPane, cn} from '@sqlrooms/ui';
 import React, {FC, useEffect} from 'react';
 import ProjectBuilderPanelHeader from '../ProjectBuilderPanelHeader';
 
@@ -10,28 +8,13 @@ export type DocumentationPanelProps = {
   pageUrl?: string;
 };
 
-const Container = styled.div`
-  display: flex;
-  width: 100%;
-  height: 100%;
-  & > iframe {
-    border: none;
-    flex: 1;
-    width: 100%;
-    height: 100%;
-  }
-  visibility: hidden;
-  &.loaded {
-    visibility: visible;
-  }
-`;
-
 const DocumentationPanel: FC<DocumentationPanelProps> = ({
   pageUrl = '/docs',
   showHeader = true,
 }) => {
   const containerRef = React.useRef<HTMLDivElement>(null);
   const [isLoaded, setLoaded] = React.useState(false);
+
   useEffect(() => {
     const container = containerRef.current;
     if (container) {
@@ -45,21 +28,24 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
   }, []);
 
   return (
-    <Flex flexDir="column" flexGrow={1} gap={3}>
+    <div className="flex flex-col flex-grow gap-3">
       {showHeader && (
         <ProjectBuilderPanelHeader panelKey={ProjectPanelTypes.DOCS} />
       )}
-      <Flex position="relative" flexGrow="1">
-        <Container ref={containerRef} className={isLoaded ? 'loaded' : ''}>
-          <iframe src={pageUrl} />
-        </Container>
+      <div className="relative flex-grow">
+        <div
+          ref={containerRef}
+          className={cn('flex w-full h-full invisible', isLoaded && 'visible')}
+        >
+          <iframe src={pageUrl} className="flex-1 w-full h-full border-none" />
+        </div>
         {!isLoaded && (
-          <Flex position="absolute" top="0" h="100%" w="100%" bg="gray.700">
-            <SkeletonPane px="4" n={6} />
-          </Flex>
+          <div className="absolute top-0 w-full h-full bg-gray-700">
+            <SkeletonPane className="px-4" n={6} />
+          </div>
         )}
-      </Flex>
-    </Flex>
+      </div>
+    </div>
   );
 };
 

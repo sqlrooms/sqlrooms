@@ -17,6 +17,7 @@ export * from './components/progress';
 export * from './components/resizable';
 export * from './components/select';
 export * from './components/skeleton';
+export * from './components/skeleton-pane';
 export * from './components/spinner-pane';
 export * from './components/spinner';
 export * from './components/switch';
