@@ -16,11 +16,7 @@ import {
 import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
 
-export type DataSourcesPanelProps = {
-  AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;
-};
-
-const DataSourcesPanel: FC<DataSourcesPanelProps> = () => {
+const DataSourcesPanel: FC = () => {
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
   const dataSources = useBaseProjectStore(
     (state) => state.projectConfig.dataSources,
