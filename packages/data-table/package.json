@@ -8,7 +8,6 @@
   "private": true,
   "dependencies": {
     "@heroicons/react": "*",
-    "@sqlrooms/components": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

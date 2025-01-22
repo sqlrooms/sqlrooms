@@ -1,11 +1,10 @@
-import {PanelHeaderButton} from '@sqlrooms/components';
-import {ProjectPanelTypes} from '@sqlrooms/project-config';
 import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
 import {useBaseProjectStore} from '../ProjectStateProvider';
+import {PanelHeaderButton} from './PanelHeaderButton';
 
 type Props = {
-  panelKey: ProjectPanelTypes | string;
+  panelKey: string;
   showHeader?: boolean;
   children?: React.ReactNode;
 };
@@ -60,4 +59,4 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   );
 };
 
-export default ProjectBuilderPanelHeader;
+export {ProjectBuilderPanelHeader};

@@ -31,11 +31,7 @@
     "prettier": "^3.2.5",
     "turbo": "^2.3.0",
     "typescript": "5.5.4",
-    "@chakra-ui/icons": "2.1.0",
-    "@chakra-ui/react": "2.4.4",
     "@duckdb/duckdb-wasm": "^1.29.0",
-    "@emotion/react": "^11.11.4",
-    "@emotion/styled": "^11.11.4",
     "@eslint/js": "^9.18.0",
     "@ladle/react": "^5.0.1",
     "@types/jest": "^29.5.14",
@@ -56,7 +52,6 @@
   "pnpm": {
     "overrides": {
       "apache-arrow": "18.1.0",
-      "@chakra-ui/react": "2.4.4",
       "@types/react": "18.3.18"
     }
   }

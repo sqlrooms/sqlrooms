@@ -1,25 +1,4 @@
 import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-  Tabs,
-  TabsList,
-  TabsTrigger,
-  TabsContent,
-  Textarea,
-  SpinnerPane,
-} from '@sqlrooms/ui';
-import {
-  PlayIcon,
-  PlusIcon,
-  BookOpenIcon,
-  MoreVerticalIcon,
-  DownloadIcon,
-} from 'lucide-react';
-import {TablesList} from '@sqlrooms/components';
-import {
   DataTableVirtualized,
   QueryDataTable,
   useArrowDataTable,
@@ -30,25 +9,43 @@ import {
   getDuckTables,
   useDuckDb,
 } from '@sqlrooms/duckdb';
-import {MosaicLayout} from '@sqlrooms/layout';
-import {SqlEditorConfig, isMosaicLayoutParent} from '@sqlrooms/project-config';
+import {SqlEditorConfig} from '@sqlrooms/project-config';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  SpinnerPane,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  Textarea,
+  ResizablePanelGroup,
+  ResizablePanel,
+  ResizableHandle,
+} from '@sqlrooms/ui';
 import {genRandomStr, generateUniqueName} from '@sqlrooms/utils';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
+import {
+  BookOpenIcon,
+  DownloadIcon,
+  MoreVerticalIcon,
+  PlayIcon,
+  PlusIcon,
+} from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import type {MosaicNode} from 'react-mosaic-component';
 import CreateTableModal, {
   Props as CreateTableModalProps,
 } from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
+import {TablesList} from './TablesList';
 
-enum SqlEditorViews {
-  DOCS = 'docs',
-  TABLES_LIST = 'tablesList',
-  QUERY_PANE = 'queryPane',
-}
+const DEFAULT_QUERY = '';
 
 export type Props = {
   schema?: string;
@@ -58,21 +55,6 @@ export type Props = {
   onChange: (config: SqlEditorConfig) => void;
   onClose: () => void;
   onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
-};
-
-const DOCS_PANE_SPLIT_PERCENTAGE = 30;
-const DEFAULT_QUERY = '';
-
-const MOSAIC_INITIAL_STATE: MosaicNode<string> = {
-  direction: 'column',
-  first: {
-    direction: 'row',
-    second: SqlEditorViews.TABLES_LIST,
-    first: SqlEditorViews.QUERY_PANE,
-    splitPercentage: 60,
-  },
-  second: 'resultsBox',
-  splitPercentage: 50,
 };
 
 const SqlEditor: React.FC<Props> = (props) => {
@@ -89,9 +71,6 @@ const SqlEditor: React.FC<Props> = (props) => {
   const [tables, setTables] = useState<string[]>([]);
   const [tablesLoading, setTablesLoading] = useState(false);
   const [tablesError, setTablesError] = useState<Error | null>(null);
-
-  const [mosaicState, setMosaicState] =
-    useState<MosaicNode<string>>(MOSAIC_INITIAL_STATE);
 
   const [results, setResults] = useState<Table>();
   const resultsTableData = useArrowDataTable(results);
@@ -228,28 +207,9 @@ const SqlEditor: React.FC<Props> = (props) => {
     setCreateTableModalOpen(true);
   }, []);
 
-  const handleMosaicChange = (node: MosaicNode<string> | null) => {
-    if (node) {
-      setMosaicState(node);
-    }
-  };
   const handleToggleDocs = useCallback(() => {
-    if (
-      isMosaicLayoutParent(mosaicState) &&
-      mosaicState.second === SqlEditorViews.DOCS
-    ) {
-      setMosaicState(mosaicState.first);
-      setShowDocs(false);
-    } else {
-      setMosaicState({
-        first: mosaicState,
-        second: 'docs',
-        direction: 'row',
-        splitPercentage: 100 - DOCS_PANE_SPLIT_PERCENTAGE,
-      });
-      setShowDocs(true);
-    }
-  }, [mosaicState]);
+    setShowDocs(!showDocs);
+  }, [showDocs]);
 
   const currentQuery =
     sqlEditorConfig.queries[getCurrentQueryIndex()]?.query ?? DEFAULT_QUERY;
@@ -319,139 +279,6 @@ const SqlEditor: React.FC<Props> = (props) => {
     });
   };
 
-  const views: {[viewId: string]: React.ReactNode | null} = {
-    [SqlEditorViews.DOCS]: showDocs ? (documentationPanel ?? null) : null,
-    [SqlEditorViews.TABLES_LIST]: tablesLoading ? (
-      <SpinnerPane h="100%" />
-    ) : tablesError ? (
-      <div className="p-4 text-red-500">
-        Error loading tables: {tablesError.message}
-      </div>
-    ) : (
-      <TablesList
-        schema="information_schema"
-        tableNames={tables}
-        selectedTable={selectedTable}
-        onSelect={handleSelectTable}
-      />
-    ),
-    [SqlEditorViews.QUERY_PANE]: (
-      <div className="flex flex-col h-full gap-2">
-        <Tabs
-          value={sqlEditorConfig.selectedQueryId}
-          onValueChange={handleTabChange}
-          className="flex flex-col flex-grow overflow-hidden"
-        >
-          <div className="flex items-center gap-2 border-b border-border">
-            <Button
-              size="sm"
-              onClick={() => void handleRunQuery()}
-              className="uppercase"
-            >
-              <PlayIcon className="w-4 h-4 mr-2" />
-              Run
-            </Button>
-            <TabsList className="flex-1">
-              {sqlEditorConfig.queries.map((q) => (
-                <div key={q.id} className="relative">
-                  <TabsTrigger value={q.id} className="min-w-[60px] px-6 pr-8">
-                    {q.name}
-                  </TabsTrigger>
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <div
-                        className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <MoreVerticalIcon className="h-3 w-3" />
-                      </div>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent>
-                      <DropdownMenuItem
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleStartRename(q.id, q.name, e);
-                        }}
-                      >
-                        Rename
-                      </DropdownMenuItem>
-                      {sqlEditorConfig.queries.length > 1 && (
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleDeleteQuery(q.id, e);
-                          }}
-                          className="text-red-500"
-                        >
-                          Delete
-                        </DropdownMenuItem>
-                      )}
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </div>
-              ))}
-            </TabsList>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={handleNewQuery}
-              className="ml-2"
-            >
-              <PlusIcon className="h-4 w-4" />
-            </Button>
-          </div>
-          {sqlEditorConfig.queries.map((q) => (
-            <TabsContent
-              key={q.id}
-              value={q.id}
-              className="flex-grow data-[state=active]:flex-grow"
-            >
-              <Textarea
-                id={q.id}
-                value={q.query}
-                onChange={handleUpdateQuery}
-                className="h-full font-mono text-sm resize-none bg-muted"
-              />
-            </TabsContent>
-          ))}
-        </Tabs>
-      </div>
-    ),
-    resultsBox: (
-      <div className="h-full overflow-hidden bg-muted text-sm">
-        {loading ? (
-          <SpinnerPane h="100%" />
-        ) : selectedTable ? (
-          <QueryDataTable
-            query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
-          />
-        ) : error ? (
-          <div className="w-full h-full p-5 overflow-auto">
-            <pre className="text-xs leading-tight text-red-500">{error}</pre>
-          </div>
-        ) : resultsTableData ? (
-          <div className="flex-grow overflow-hidden flex flex-col relative">
-            <DataTableVirtualized {...resultsTableData} />
-            <div className="absolute bottom-0 right-0 flex gap-2 p-2">
-              <Button
-                size="sm"
-                disabled={!resultsTableData}
-                onClick={handleCreateTable}
-              >
-                <PlusIcon className="w-4 h-4 mr-2" />
-                Create table
-              </Button>
-              <Button size="sm" disabled={!results} onClick={handleExport}>
-                <DownloadIcon className="w-4 h-4 mr-2" />
-                Export
-              </Button>
-            </div>
-          </div>
-        ) : null}
-      </div>
-    ),
-  };
-
   return (
     <>
       <div className="absolute right-12">
@@ -469,12 +296,162 @@ const SqlEditor: React.FC<Props> = (props) => {
           <h2 className="text-lg font-semibold">SQL Editor</h2>
         </div>
         <div className="flex-grow h-full bg-muted">
-          <MosaicLayout
-            renderTile={(id) => <>{views[id]}</>}
-            value={mosaicState}
-            onChange={handleMosaicChange}
-            initialValue={MOSAIC_INITIAL_STATE}
-          />
+          <ResizablePanelGroup direction="horizontal" className="h-full">
+            <ResizablePanel defaultSize={20}>
+              {tablesLoading ? (
+                <SpinnerPane h="100%" />
+              ) : tablesError ? (
+                <div className="p-4 text-red-500">
+                  Error loading tables: {tablesError.message}
+                </div>
+              ) : (
+                <TablesList
+                  schema="information_schema"
+                  tableNames={tables}
+                  selectedTable={selectedTable}
+                  onSelect={handleSelectTable}
+                />
+              )}
+            </ResizablePanel>
+            <ResizableHandle withHandle />
+            <ResizablePanel defaultSize={showDocs ? 50 : 80}>
+              <ResizablePanelGroup direction="vertical" className="h-full">
+                <ResizablePanel defaultSize={50}>
+                  <div className="flex flex-col h-full gap-2">
+                    <Tabs
+                      value={sqlEditorConfig.selectedQueryId}
+                      onValueChange={handleTabChange}
+                      className="flex flex-col flex-grow overflow-hidden"
+                    >
+                      <div className="flex items-center gap-2 border-b border-border">
+                        <Button
+                          size="sm"
+                          onClick={() => void handleRunQuery()}
+                          className="uppercase"
+                        >
+                          <PlayIcon className="w-4 h-4 mr-2" />
+                          Run
+                        </Button>
+                        <TabsList className="flex-1">
+                          {sqlEditorConfig.queries.map((q) => (
+                            <div key={q.id} className="relative">
+                              <TabsTrigger
+                                value={q.id}
+                                className="min-w-[60px] px-6 pr-8"
+                              >
+                                {q.name}
+                              </TabsTrigger>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <div
+                                    className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <MoreVerticalIcon className="h-3 w-3" />
+                                  </div>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent>
+                                  <DropdownMenuItem
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleStartRename(q.id, q.name, e);
+                                    }}
+                                  >
+                                    Rename
+                                  </DropdownMenuItem>
+                                  {sqlEditorConfig.queries.length > 1 && (
+                                    <DropdownMenuItem
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDeleteQuery(q.id, e);
+                                      }}
+                                      className="text-red-500"
+                                    >
+                                      Delete
+                                    </DropdownMenuItem>
+                                  )}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          ))}
+                        </TabsList>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          onClick={handleNewQuery}
+                          className="ml-2"
+                        >
+                          <PlusIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+                      {sqlEditorConfig.queries.map((q) => (
+                        <TabsContent
+                          key={q.id}
+                          value={q.id}
+                          className="flex-grow data-[state=active]:flex-grow"
+                        >
+                          <Textarea
+                            id={q.id}
+                            value={q.query}
+                            onChange={handleUpdateQuery}
+                            className="h-full font-mono text-sm resize-none bg-muted"
+                          />
+                        </TabsContent>
+                      ))}
+                    </Tabs>
+                  </div>
+                </ResizablePanel>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={50}>
+                  <div className="h-full overflow-hidden bg-muted text-sm">
+                    {loading ? (
+                      <SpinnerPane h="100%" />
+                    ) : selectedTable ? (
+                      <QueryDataTable
+                        query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
+                      />
+                    ) : error ? (
+                      <div className="w-full h-full p-5 overflow-auto">
+                        <pre className="text-xs leading-tight text-red-500">
+                          {error}
+                        </pre>
+                      </div>
+                    ) : resultsTableData ? (
+                      <div className="flex-grow overflow-hidden flex flex-col relative">
+                        <DataTableVirtualized {...resultsTableData} />
+                        <div className="absolute bottom-0 right-0 flex gap-2 p-2">
+                          <Button
+                            size="sm"
+                            disabled={!resultsTableData}
+                            onClick={handleCreateTable}
+                          >
+                            <PlusIcon className="w-4 h-4 mr-2" />
+                            Create table
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={!results}
+                            onClick={handleExport}
+                          >
+                            <DownloadIcon className="w-4 h-4 mr-2" />
+                            Export
+                          </Button>
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+            </ResizablePanel>
+            {showDocs && (
+              <>
+                <ResizableHandle withHandle />
+                <ResizablePanel defaultSize={30}>
+                  {documentationPanel}
+                </ResizablePanel>
+              </>
+            )}
+          </ResizablePanelGroup>
         </div>
         <CreateTableModal
           query={currentQuery}

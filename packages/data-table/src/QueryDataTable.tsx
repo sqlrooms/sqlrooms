@@ -1,4 +1,4 @@
-import {SpinnerPane} from '@sqlrooms/components';
+import {SpinnerPane} from '@sqlrooms/ui';
 import {
   escapeId,
   exportToCsv,
@@ -105,7 +105,7 @@ const QueryDataTable: FC<Props> = ({query}) => {
 
 const QueryDataTableWithSuspense: FC<Props> = (props) => {
   return (
-    <Suspense fallback={<SpinnerPane w={'100%'} h={'100%'} />}>
+    <Suspense fallback={<SpinnerPane className="w-full h-full" />}>
       <QueryDataTable
         {...props}
         key={props.query} // reset state when query changes

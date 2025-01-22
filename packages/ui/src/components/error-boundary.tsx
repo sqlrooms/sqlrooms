@@ -1,7 +1,5 @@
 import {Component, ErrorInfo, ReactNode} from 'react';
-import {Alert, AlertDescription} from './alert';
-import {Button} from './button';
-import {Card, CardContent, CardFooter, CardHeader, CardTitle} from './card';
+import {ErrorPane} from './error-pane';
 
 interface Props {
   children?: ReactNode;
@@ -37,25 +35,11 @@ export class ErrorBoundary extends Component<Props, State> {
   public render() {
     if (this.state.hasError) {
       return (
-        <Card className="max-w-[450px] mx-auto mt-20 bg-gray-700">
-          <CardHeader>
-            <CardTitle>Oops! Something went wrong</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <Alert className="bg-gray-800">
-              <AlertDescription className="text-xs text-gray-400 font-mono max-w-[350px] max-h-[200px] overflow-y-auto">
-                {this.state.error?.message || 'An unexpected error occurred'}
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-          {this.props.onRetry && (
-            <CardFooter>
-              <Button onClick={this.handleRetry} className="w-full">
-                Retry
-              </Button>
-            </CardFooter>
-          )}
-        </Card>
+        <ErrorPane
+          error={this.state.error}
+          onRetry={this.props.onRetry ? this.handleRetry : undefined}
+          actions={!!this.props.onRetry}
+        />
       );
     }
 

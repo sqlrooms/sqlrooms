@@ -8,7 +8,7 @@ import {
   TableRow,
   Badge,
 } from '@sqlrooms/ui';
-import {ErrorPane, SpinnerPane} from '@sqlrooms/components';
+import {ErrorPane, SpinnerPane} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,

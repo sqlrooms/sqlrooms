@@ -8,14 +8,15 @@ import {ProjectState, ProjectStore} from './ProjectStore';
 export const ProjectStateContext =
   createContext<ProjectStore<BaseProjectConfig> | null>(null);
 
-type Props<PC extends BaseProjectConfig> = React.PropsWithChildren<{
-  projectStore?: ProjectStore<PC>;
-}>;
+export type ProjectStateProviderProps<PC extends BaseProjectConfig> =
+  React.PropsWithChildren<{
+    projectStore?: ProjectStore<PC>;
+  }>;
 
 export function ProjectStateProvider<PC extends BaseProjectConfig>({
   children,
   projectStore,
-}: Props<PC>): ReactNode {
+}: ProjectStateProviderProps<PC>): ReactNode {
   return (
     <ProjectStateContext.Provider
       value={projectStore as unknown as ProjectStore<BaseProjectConfig>}

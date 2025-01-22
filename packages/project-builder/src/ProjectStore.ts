@@ -22,7 +22,7 @@ import {
   DataSourceTypes,
   FileDataSource,
   LayoutConfig,
-  ProjectPanelTypes,
+  MAIN_VIEW,
   SqlEditorConfig,
   SqlQueryDataSource,
   UrlDataSource,
@@ -114,7 +114,7 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   password: string | undefined; // Password for protected published projects (needs to be sent to get access to data)
   projectFolder: string | undefined; // will be derived from project title, if not explicitly set
   projectConfig: PC;
-  projectPanels: Record<ProjectPanelTypes | string, ProjectPanelInfo>;
+  projectPanels: Record<string, ProjectPanelInfo>;
   isPublic: boolean;
   isReadOnly: boolean;
   tables: DataTable[];
@@ -603,10 +603,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         );
         const isShown = result.success;
         if (isShown) {
-          if (
-            show ||
-            panel === ProjectPanelTypes.MAIN_VIEW /*&& areViewsReadyToRender()*/
-          ) {
+          if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
             return;
           }
           set((state) =>
@@ -635,7 +632,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
                 toReplace &&
                 isMosaicLayoutParent(root) &&
                 !isMosaicLayoutParent(toReplace) &&
-                toReplace !== ProjectPanelTypes.MAIN_VIEW &&
+                toReplace !== MAIN_VIEW &&
                 !layout.fixed?.includes(toReplace) &&
                 !layout.pinned?.includes(toReplace)
               ) {
@@ -820,8 +817,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
               status: 'error',
               message: 'Download failed',
             });
-            // Make sure the errors are shown
-            get().togglePanel(ProjectPanelTypes.DATA_SOURCES, true);
+            // TODO: Make sure the errors are shown
           } finally {
             setTaskProgress(DOWNLOAD_DATA_SOURCES_TASK, undefined);
           }
@@ -864,8 +860,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
               };
             }),
           );
-          // Make sure the errors are shown
-          get().togglePanel(ProjectPanelTypes.DATA_SOURCES, true);
+          // TODO: Make sure the errors are shown
         }
       }
       await get().setTables(await getDuckTableSchemas());

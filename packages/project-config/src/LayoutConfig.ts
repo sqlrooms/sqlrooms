@@ -1,15 +1,7 @@
 import {z} from 'zod';
 
-export enum ProjectPanelTypes {
-  PROJECT_DETAILS = 'project-details',
-  DATA_SOURCES = 'data-sources',
-  DATA_TABLES = 'data-tables',
-  FILTERS = 'filters',
-  VIEW_CONFIGURATION = 'view-configuration',
-  DOCS = 'docs',
-  CHARTS = 'charts',
-  MAIN_VIEW = 'main-view',
-}
+/** Main view project panel key */
+export const MAIN_VIEW = 'main-view';
 
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;
@@ -60,7 +52,7 @@ export const LayoutConfig = z.discriminatedUnion('type', [MosaicLayoutConfig]);
 
 export const DEFAULT_MOSAIC_LAYOUT: MosaicLayoutConfig = {
   type: LayoutTypes.enum.mosaic,
-  nodes: ProjectPanelTypes.MAIN_VIEW,
+  nodes: MAIN_VIEW,
 };
 
 export type LayoutConfig = z.infer<typeof LayoutConfig>;

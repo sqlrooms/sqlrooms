@@ -1,8 +1,0 @@
-{
-  "extends": "@sqlrooms/typescript-config/react-library.json",
-  "compilerOptions": {
-    "outDir": "dist"
-  },
-  "include": ["src", "turbo", "../ui/src/components/DefaultErrorBoundary.tsx"],
-  "exclude": ["node_modules", "dist"]
-}

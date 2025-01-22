@@ -1,7 +1,7 @@
-import {ProgressModal} from '@sqlrooms/components';
+import {ProgressModal, SpinnerPane} from '@sqlrooms/ui';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import React, {useCallback, useMemo} from 'react';
-import {MosaicNode} from 'react-mosaic-component';
+import React, {Suspense, useCallback, useMemo} from 'react';
+import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectStore} from './ProjectStateProvider';
 
 const ProjectBuilder: React.FC = () => {
@@ -44,25 +44,27 @@ const ProjectBuilder: React.FC = () => {
   }, [ErrorBoundary, projectPanels, visibleProjectPanels]);
 
   return (
-    <>
-      <div className="flex flex-col items-stretch px-0 pb-0 flex-grow w-full h-full">
-        {layout ? (
-          <MosaicLayout
-            renderTile={(id) => <>{renderedPanels.get(id)}</>}
-            value={layout.nodes}
-            onChange={handleLayoutChange}
-          />
-        ) : null}
-      </div>
+    <ErrorBoundary>
+      <Suspense fallback={<SpinnerPane h="100%" />}>
+        <div className="flex flex-col items-stretch px-0 pb-0 flex-grow w-full h-full">
+          {layout ? (
+            <MosaicLayout
+              renderTile={(id) => <>{renderedPanels.get(id)}</>}
+              value={layout.nodes}
+              onChange={handleLayoutChange}
+            />
+          ) : null}
+        </div>
 
-      <ProgressModal
-        isOpen={loadingProgress !== undefined}
-        title="Loading"
-        loadingStage={loadingProgress?.message}
-        progress={loadingProgress?.progress}
-      />
-    </>
+        <ProgressModal
+          isOpen={loadingProgress !== undefined}
+          title="Loading"
+          loadingStage={loadingProgress?.message}
+          progress={loadingProgress?.progress}
+        />
+      </Suspense>
+    </ErrorBoundary>
   );
 };
 
-export default ProjectBuilder;
+export {ProjectBuilder};
