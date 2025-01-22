@@ -64,7 +64,7 @@ export async function getDuckDb(): Promise<DuckDb> {
   }
 
   let resolve: (value: DuckDb) => void;
-  let reject: (reason?: any) => void;
+  let reject: (reason?: unknown) => void;
   initialize = new Promise((_resolve, _reject) => {
     resolve = _resolve;
     reject = _reject;
@@ -73,20 +73,6 @@ export async function getDuckDb(): Promise<DuckDb> {
   try {
     // TODO: Consider to load locally https://github.com/duckdb/duckdb-wasm/issues/1425#issuecomment-1742156605
     const allBundles = duckdb.getJsDelivrBundles();
-
-    // const allBundles: duckdb.DuckDBBundles = {
-    //   //mvp: {},
-    //   eh: {
-    //     mainModule: new URL(
-    //       '/duckdb/duckdb-eh.c9a601f6b3ff6fab0213.wasm',
-    //       globalThis.location.href,
-    //     ).toString(),
-    //     mainWorker: new URL(
-    //       '/duckdb/duckdb-browser-eh.worker.e3751c0855c66ca87c52.js',
-    //       globalThis.location.href,
-    //     ).toString(),
-    //   },
-    // };
     const bestBundle = await duckdb.selectBundle(allBundles);
     if (!bestBundle.mainWorker) {
       throw new Error('No best bundle found for DuckDB worker');
@@ -97,7 +83,7 @@ export async function getDuckDb(): Promise<DuckDb> {
       }),
     );
     // const worker = await duckdb.createWorker(bestBundle.mainWorker);
-    const worker = new Worker(workerUrl);
+    const worker = new window.Worker(workerUrl);
     const logger = ENABLE_DUCK_LOGGING
       ? new duckdb.ConsoleLogger()
       : SilentLogger;
@@ -128,7 +114,7 @@ export async function getDuckDb(): Promise<DuckDb> {
         //   `Query failed: ${err}\n\nFull query:\n\n${q}\n\nQuery call stack:\n\n${stack}\n\n`,
         // );
       }
-    }) as any;
+    }) as typeof conn.query;
     await conn.query(`
       SET max_expression_depth TO 100000;
       SET memory_limit = '10GB';
@@ -187,7 +173,7 @@ export function getColValAsNumber(
   return Number(v[0] ?? v);
 }
 
-export const escapeVal = (val: any) => {
+export const escapeVal = (val: unknown) => {
   return `'${String(val).replace(/'/g, "''")}'`;
 };
 
