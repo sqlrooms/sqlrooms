@@ -7,7 +7,7 @@ hero:
   text: 'Build powerful analytics apps with DuckDB in browser'
   tagline: Modern framework for creating interactive data analysis applications powered by DuckDB-WASM
   image:
-    src: /images/sqlrooms-ai.png
+    src: /images/sqlrooms-hero.png
     alt: SQLRooms AI
   actions:
     - theme: brand
