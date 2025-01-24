@@ -1,20 +1,18 @@
-import {Box, Flex, Heading, HStack} from '@chakra-ui/react';
-import {XMarkIcon} from '@heroicons/react/24/solid';
-import {PanelHeaderButton} from '@sqlrooms/components';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
-import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {BsFillPinAngleFill, BsFillPinFill} from 'react-icons/bs';
+import {useBaseProjectStore} from '../ProjectStateProvider';
+import {PanelHeaderButton} from './PanelHeaderButton';
 
 type Props = {
-  panelKey: ProjectPanelTypes | string;
+  panelKey: string;
   showHeader?: boolean;
   children?: React.ReactNode;
 };
+
 const ProjectBuilderPanelHeader: FC<Props> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
-  const {icon: Icon, title} = projectPanels[type];
+  const {icon: Icon, title} = projectPanels[type] ?? {};
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
   const togglePanelPin = useBaseProjectStore((state) => state.togglePanelPin);
   const pinnedPanels = useBaseProjectStore(
@@ -24,45 +22,41 @@ const ProjectBuilderPanelHeader: FC<Props> = (props) => {
     () => pinnedPanels?.includes(type),
     [pinnedPanels, type],
   );
+
   return (
-    <Flex>
-      <Flex flexDir="row" width="100%" alignItems="center" gap={2}>
+    <div className="flex">
+      <div className="flex flex-row w-full items-center gap-2">
         {showHeader && (
-           <>
-            <Icon width="20px" />
-            <Heading
-              as="h2"
-              fontSize={'xs'}
-              textTransform="uppercase"
-              color="gray.400"
-            >
+          <>
+            {Icon ? <Icon className="w-4 h-4" /> : null}
+            <h2 className="text-xs uppercase text-muted-foreground font-semibold">
               {title}
-              </Heading>
-            </>
-          )}
+            </h2>
+          </>
+        )}
         {children}
-      </Flex>
-      <HStack gap={0} bg={'gray.700'}>
+      </div>
+      <div className="flex gap-0 bg-secondary/50">
         <PanelHeaderButton
           isPinned={isPinned}
           icon={
             isPinned ? (
-              <BsFillPinFill width={18} />
+              <PinIcon className="w-[18px]" />
             ) : (
-              <BsFillPinAngleFill width={18} />
+              <PinOffIcon className="w-[18px]" />
             )
           }
           onClick={() => togglePanelPin(type)}
           label="Pin panel"
         />
         <PanelHeaderButton
-          icon={<XMarkIcon width={18} />}
+          icon={<XIcon className="w-[18px]" />}
           onClick={() => togglePanel(type)}
           label={`Close panel "${title}"`}
         />
-      </HStack>
-    </Flex>
+      </div>
+    </div>
   );
 };
 
-export default ProjectBuilderPanelHeader;
+export {ProjectBuilderPanelHeader};

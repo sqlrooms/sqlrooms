@@ -1,14 +1,13 @@
-import {AppContext, SpinnerPane} from '@sqlrooms/components';
+import {SpinnerPane} from '@sqlrooms/ui';
 import {
   escapeId,
   exportToCsv,
   getColValAsNumber,
-  useDuckConn,
+  useDuckDb,
 } from '@sqlrooms/duckdb';
 import {genRandomStr} from '@sqlrooms/utils';
-import {useMutation, useQuery, useQueryClient} from '@tanstack/react-query';
 import {PaginationState, SortingState} from '@tanstack/table-core';
-import {FC, Suspense, useContext, useEffect, useMemo, useState} from 'react';
+import {FC, Suspense, useEffect, useState} from 'react';
 import DataTablePaginated from './DataTablePaginated';
 import useArrowDataTable from './useArrowDataTable';
 
@@ -17,108 +16,102 @@ type Props = {
   queryKeyComponents?: any[];
 };
 
-const QueryDataTable: FC<Props> = ({query, queryKeyComponents = []}) => {
-  const {conn} = useDuckConn();
+const QueryDataTable: FC<Props> = ({query}) => {
+  const {conn} = useDuckDb();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
     pageSize: 100,
   });
 
-  const queryKeysPrefix: string[] = useMemo(
-    () => ['queryDataTable', query, ...queryKeyComponents],
-    [query],
-  );
+  const [count, setCount] = useState<number | undefined>(undefined);
+  const [data, setData] = useState<any>(null);
+  const [isFetching, setIsFetching] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const queryClient = useQueryClient();
+  // Fetch row count
   useEffect(() => {
-    return () => {
-      queryClient.removeQueries(queryKeysPrefix);
+    const fetchCount = async () => {
+      try {
+        setIsFetching(true);
+        const result = await conn.query(`SELECT COUNT(*)::int FROM (${query})`);
+        setCount(getColValAsNumber(result));
+      } catch (error) {
+        console.error('Error fetching count:', error);
+      } finally {
+        setIsFetching(false);
+      }
     };
-  }, [queryKeysPrefix, queryClient]);
 
-  const countQuery = useQuery(
-    [...queryKeysPrefix, 'count'],
-    async () => {
-      return getColValAsNumber(
-        await conn.query(`SELECT COUNT(*)::int FROM (
-        ${query}
-        )`),
-      );
-    },
-    {
-      staleTime: Infinity, // never refetch
-      suspense: false,
-      retry: false,
-      keepPreviousData: true,
-    },
-  );
+    fetchCount();
+  }, [query, conn]);
 
-  const dataQueryKey = [...queryKeysPrefix, 'data', pagination, sorting];
+  // Fetch data
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsFetching(true);
+        const result = await conn.query(
+          `SELECT * FROM (
+            ${query}
+          ) ${
+            sorting.length > 0
+              ? `ORDER BY ${sorting
+                  .map((d) => `${escapeId(d.id)}${d.desc ? ' DESC' : ''}`)
+                  .join(', ')}`
+              : ''
+          }
+          OFFSET ${pagination.pageIndex * pagination.pageSize}
+          LIMIT ${pagination.pageSize}`,
+        );
+        setData(result);
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setIsFetching(false);
+      }
+    };
 
-  const dataQuery = useQuery(
-    dataQueryKey,
-    async () => {
-     
-      return await conn.query(
-        // TODO: revisit timestamps conversion https://github.com/duckdb/duckdb-wasm/issues/393
-        `SELECT * FROM (
-          ${query}
-        ) ${
-          sorting.length > 0
-            ? `ORDER BY ${sorting
-                .map((d) => `${escapeId(d.id)}${d.desc ? ' DESC' : ''}`)
-                .join(', ')}`
-            : ''
-        }
-        OFFSET ${pagination.pageIndex * pagination.pageSize}
-        LIMIT ${pagination.pageSize}`,
-      );
-    },
-    {
-      staleTime: Infinity, // never refetch
-      suspense: false,
-      keepPreviousData: true,
-      retry: false,
-    },
-  );
+    fetchData();
+  }, [query, pagination, sorting, conn]);
 
-  const arrowTableData = useArrowDataTable(dataQuery.data);
+  const arrowTableData = useArrowDataTable(data);
 
-  const exportMutation = useMutation(async () => {
+  const handleExport = async () => {
     if (!query) return;
-    await exportToCsv(query, `export-${genRandomStr(5)}.csv`);
-  }, {});
+    try {
+      setIsExporting(true);
+      await exportToCsv(query, `export-${genRandomStr(5)}.csv`);
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   return (
     <DataTablePaginated
       {...arrowTableData}
-      pageCount={Math.ceil((countQuery.data ?? 0) / pagination.pageSize)}
-      numRows={countQuery.data}
-      isFetching={dataQuery.isFetching || countQuery.isFetching}
-      // error={countQuery.error ?? dataQuery.error}
+      pageCount={Math.ceil((count ?? 0) / pagination.pageSize)}
+      numRows={count}
+      isFetching={isFetching}
       pagination={pagination}
       onPaginationChange={setPagination}
       sorting={sorting}
       onSortingChange={setSorting}
-      onExport={exportMutation.mutate}
-      isExporting={exportMutation.isLoading}
+      onExport={handleExport}
+      isExporting={isExporting}
     />
   );
 };
 
-const QueryDataTableWithErrorBoundary: FC<Props> = (props) => {
-  const {ErrorBoundary} = useContext(AppContext);
+const QueryDataTableWithSuspense: FC<Props> = (props) => {
   return (
-    <Suspense fallback={<SpinnerPane w={'100%'} h={'100%'} />}>
-      <ErrorBoundary>
-        <QueryDataTable
-          {...props}
-          key={props.query} // reset state when query changes
-        />
-      </ErrorBoundary>
+    <Suspense fallback={<SpinnerPane className="w-full h-full" />}>
+      <QueryDataTable
+        {...props}
+        key={props.query} // reset state when query changes
+      />
     </Suspense>
   );
 };
 
-export default QueryDataTableWithErrorBoundary;
+export default QueryDataTableWithSuspense;

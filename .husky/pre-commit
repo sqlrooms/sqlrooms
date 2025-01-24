@@ -1,2 +1,1 @@
-npm run typescript
-npx lint-staged
+pnpx lint-staged

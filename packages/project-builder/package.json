@@ -1,26 +1,30 @@
 {
   "name": "@sqlrooms/project-builder",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": true,
-  "dependencies": {
-    "@sqlrooms/components": "*",
-    "@sqlrooms/duckdb": "*",
-    "@sqlrooms/sql-editor": "*",
-    "@sqlrooms/project-config": "*"
-  },
-  "peerDependencies": {
-    "@chakra-ui/icons": "*",
-    "@chakra-ui/react": "*",
-    "immer": "*",
-    "react": "*",
-    "zustand": "*"
-  },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "lucide-react": "^0.473.0",
+    "react-mosaic-component": "5.3.0",
+    "immer": "^10.1.1",
+    "zustand": "^5.0.3"
+  },
+  "peerDependencies": {
+    "react": "*"
   }
 }

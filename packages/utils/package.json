@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/utils",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
@@ -10,16 +10,23 @@
     "dev": "tsc -w",
     "build": "tsc",
     "test": "jest",
-    "test:watch": "jest --watch"
+    "test:watch": "jest --watch",
+    "lint": "eslint ."
   },
   "dependencies": {
-    "seedrandom": "^3.0.5",
-    "d3-color": "*"
+    "d3-color": "^3.1.0",
+    "d3-format": "^3.1.0",
+    "d3-time-format": "^4.1.0",
+    "seedrandom": "^3.0.5"
   },
   "peerDependencies": {
-    "d3-time-format": "*",
     "dayjs": "*",
-    "@aws-sdk/client-s3": "*",
     "zod": "*"
+  },
+  "devDependencies": {
+    "@types/d3-color": "^3.1.3",
+    "@types/d3-format": "^3.0.4",
+    "@types/d3-time-format": "^4.0.3",
+    "@types/seedrandom": "^3.0.8"
   }
 }

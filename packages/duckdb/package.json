@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/duckdb",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
@@ -8,11 +8,11 @@
   "private": true,
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
-    "@tanstack/react-query": "*",
     "apache-arrow": "*"
   },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint ."
   }
 }

@@ -1,19 +1,22 @@
 {
   "name": "@sqlrooms/layout",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": true,
+  "dependencies": {
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*"
+  },
   "peerDependencies": {
-    "@chakra-ui/react": "*",
-    "@sqlrooms/project-config": "*",
     "react": "*",
     "react-mosaic-component": "5.3.0"
   },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint ."
   }
 }

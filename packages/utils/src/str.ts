@@ -64,7 +64,7 @@ export function generateUniqueName(name: string, usedNames?: string[]) {
 
   // If tableName exists in the list
   if (usedNamesLower?.includes(name.toLowerCase())) {
-    let baseName = name;
+    let baseName: string | undefined = name;
     let i = 0;
 
     // If tableName ends with `_${i}` pattern, update the baseTableName and i
@@ -92,7 +92,7 @@ export function generateUniquePath(
     const {dir, name, ext} = splitFilePath(filePath);
 
     let i = 0;
-    let baseName = name;
+    let baseName: string | undefined = name;
     const matched = name.match(/^(.+)_(\d+)$/);
     if (matched) {
       baseName = matched[1];

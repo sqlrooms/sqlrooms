@@ -1,18 +1,15 @@
-import { TriangleDownIcon, TriangleUpIcon } from '@chakra-ui/icons';
+import {ChevronDownIcon, ChevronUpIcon} from '@heroicons/react/24/solid';
 import {
-  Badge,
-  Flex,
-  Spacer,
   Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
-import { ErrorPane, SpinnerPane } from '@sqlrooms/components';
-import { formatCount } from '@sqlrooms/utils';
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  Badge,
+} from '@sqlrooms/ui';
+import {ErrorPane, SpinnerPane} from '@sqlrooms/ui';
+import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   SortingState,
@@ -22,7 +19,7 @@ import {
   useReactTable,
 } from '@tanstack/react-table';
 import * as React from 'react';
-import { useVirtual } from 'react-virtual';
+import {useVirtual} from 'react-virtual';
 
 export type Props<Data extends object> = {
   data?: ArrayLike<Data>;
@@ -38,11 +35,9 @@ export type DataTableProps<Data extends object> = {
   isPreview?: boolean;
 };
 
-const DataTableVirtualized = React.memo(function DataTableVirtualized<Data extends object>({
-  data,
-  columns,
-  isPreview,
-}: DataTableProps<Data>) {
+const DataTableVirtualized = React.memo(function DataTableVirtualized<
+  Data extends object,
+>({data, columns, isPreview}: DataTableProps<Data>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const table = useReactTable({
     columns,
@@ -56,13 +51,13 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<Data exten
   });
   const tableContainerRef = React.useRef<HTMLDivElement>(null);
 
-  const { rows } = table.getRowModel();
+  const {rows} = table.getRowModel();
   const rowVirtualizer = useVirtual({
     parentRef: tableContainerRef,
     size: rows.length,
     overscan: 20,
   });
-  const { virtualItems: virtualRows, totalSize } = rowVirtualizer;
+  const {virtualItems: virtualRows, totalSize} = rowVirtualizer;
 
   const paddingTop = virtualRows.length > 0 ? virtualRows?.[0]?.start || 0 : 0;
   const paddingBottom =
@@ -71,218 +66,125 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<Data exten
       : 0;
 
   return (
-    <Flex
-      overflowX="auto"
-      overflowY="auto"
-      display="flex"
-      flexDirection="column"
-      py={0}
-      alignItems="flex-start"
-    >
-      <TableContainer
-        ref={tableContainerRef}
-        overflowY="auto"
-        border="1px solid"
-        borderColor="gray.900"
-      >
-        <Table
-          size="sm"
-          __css={{
-            borderCollapse: 'separate', // to keep header borders sticky
-            borderSpacing: 0,
-          }}
-          fontFamily="mono"
-        >
-          <Thead>
-            {table.getHeaderGroups().map((headerGroup) => (
-              <Tr key={headerGroup.id} position="sticky" top={0}>
-                <Th
-                  bg="gray.800"
-                  borderRight="1px solid"
-                  borderColor="gray.900"
-                />
-
-                {headerGroup.headers.map((header) => {
-                  // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                  const meta: any = header.column.columnDef.meta;
-                  return (
-                    <Th
-                      key={header.id}
-                      fontFamily="mono"
-                      onClick={header.column.getToggleSortingHandler()}
-                      isNumeric={meta?.isNumeric}
-                      whiteSpace="nowrap"
-                      textTransform="unset"
-                      cursor="pointer"
-                      px={7}
-                      py={2}
-                      // borderBottom="1px solid"
-                      // color="gray.800"
-                      // bg="gray.100"
-                      // _hover={{
-                      //   color: 'white',
-                      //   bg: 'gray.600',
-                      // }}
-                      borderRight="1px solid"
-                      borderColor="gray.900"
-                      color="gray.400"
-                      bg="gray.800"
-                      _hover={{ bg: 'gray.600' }}
-                      maxWidth="500px"
-                      overflow="hidden"
-                      textOverflow="ellipsis"
-                    >
-                      <Flex
-                        alignItems="center"
-                        gap={1}
-                        justifyContent={
-                          meta?.isNumeric ? 'flex-end' : 'flex-start'
-                        }
-                      >
-                        {flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )}
-
-                        {header.column.getIsSorted() ? (
-                          header.column.getIsSorted() === 'desc' ? (
-                            <TriangleDownIcon aria-label="sorted descending" />
-                          ) : (
-                            <TriangleUpIcon aria-label="sorted ascending" />
-                          )
-                        ) : null}
-                        <Spacer />
-                        <Badge
-                          colorScheme="blue"
-                          opacity="0.3"
-                          fontSize={9}
-                          variant="outline"
-                        >{`${meta?.type}`}</Badge>
-                      </Flex>
-                    </Th>
-                  );
-                })}
-              </Tr>
-            ))}
-          </Thead>
-          <Tbody>
-            {paddingTop > 0 && (
-              <Tr>
-                <Td height={`${paddingTop}px`} />
-              </Tr>
-            )}
-            {virtualRows.map((virtualRow) => {
-              const row = rows[virtualRow.index];
-              return (
-                <Tr
-                  key={row.id}
-                  // bg={virtualRow.index % 2 ? 'gray.700' : 'gray.800'}
-                  bg={'gray.700'}
-                  _hover={{ bg: 'gray.600' }}
-                >
-                  <Td
-                    fontSize="xs"
-                    borderRight="1px solid"
-                    borderColor="gray.900"
-                    bg={'gray.800'}
-                    textAlign="center"
-                    color="gray.400"
-                    position="sticky"
-                    left={0}
-                  >
-                    {virtualRow.index + 1}
-                  </Td>
-                  {row.getVisibleCells().map((cell) => {
-                    // see https://tanstack.com/table/v8/docs/api/core/column-def#meta to type this correctly
-                    const meta: any = cell.column.columnDef.meta;
+    <div className="flex flex-col overflow-hidden">
+      <div className="overflow-hidden border border-border">
+        <div ref={tableContainerRef} className="overflow-auto h-full">
+          <Table disableWrapper>
+            <TableHeader>
+              {table.getHeaderGroups().map((headerGroup) => (
+                <TableRow key={headerGroup.id}>
+                  <TableHead
+                    className={`
+                      sticky top-0 left-0 w-auto whitespace-nowrap py-2 
+                      bg-background border-r text-center z-20
+                    `}
+                  />
+                  {headerGroup.headers.map((header) => {
+                    const meta = header.column.columnDef.meta as any;
                     return (
-                      <Td
-                        key={cell.id}
-                        isNumeric={meta?.isNumeric}
-                        fontSize="xs"
-                        color="white"
-                        borderRight="1px solid"
-                        borderColor="gray.900"
-                        maxWidth="500px"
-                        overflow="hidden"
-                        textOverflow="ellipsis"
-                        px={7}
+                      <TableHead
+                        key={header.id}
+                        className={`
+                          sticky top-0 font-mono whitespace-nowrap cursor-pointer px-7 py-2
+                          bg-background border-r hover:bg-muted/80 z-10
+                          ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                        `}
+                        onClick={header.column.getToggleSortingHandler()}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </Td>
+                        <div
+                          className={`flex items-center gap-1 ${
+                            meta?.isNumeric ? 'justify-end' : 'justify-start'
+                          }`}
+                        >
+                          {flexRender(
+                            header.column.columnDef.header,
+                            header.getContext(),
+                          )}
+                          {header.column.getIsSorted() ? (
+                            header.column.getIsSorted() === 'desc' ? (
+                              <ChevronDownIcon className="h-4 w-4" />
+                            ) : (
+                              <ChevronUpIcon className="h-4 w-4" />
+                            )
+                          ) : null}
+                          <div className="flex-1" />
+                          <Badge
+                            variant="outline"
+                            className="opacity-30 text-[9px]"
+                          >
+                            {String(meta?.type)}
+                          </Badge>
+                        </div>
+                      </TableHead>
                     );
                   })}
-                </Tr>
-              );
-            })}
-            {paddingBottom > 0 && (
-              <Tr>
-                <Td height={`${paddingBottom}px`} />
-              </Tr>
-            )}
-          </Tbody>
-          {/* <Tfoot>
-            <Tr>
-              <Td
-                colSpan={columns.length}
-                borderTop="1px solid"
-                gap={2}
-                position="sticky"
-                bottom={0}
-                left={0}
-                bg="gray.700"
-                py={2}
-                px={4}
-                color="gray.400"
-                fontWeight="bold"
-                fontSize="sm"
-                justifyContent="flex-start"
-                borderBottom="1px solid"
-              >
-                {`${formatCount(data.length)} rows`}
-              </Td>
-            </Tr>
-          </Tfoot> */}
-        </Table>
-
-        <Spacer />
-        <Flex
-          gap={2}
-          fontFamily="mono"
-          alignItems="center"
-          position="sticky"
-          bottom={0}
-          left={0}
-          py={2}
-          px={4}
-          fontSize="xs"
-          justifyContent="flex-start"
-          color="white"
-          bg="gray.800"
-          fontWeight="bold"
-        >
-          {`${isPreview ? 'Preview of the first ' : ''}${formatCount(
-            data.length,
-          )} rows`}
-        </Flex>
-      </TableContainer>
-    </Flex>
+                </TableRow>
+              ))}
+            </TableHeader>
+            <TableBody>
+              {paddingTop > 0 && (
+                <TableRow>
+                  <TableCell style={{height: `${paddingTop}px`}} />
+                </TableRow>
+              )}
+              {virtualRows.map((virtualRow) => {
+                const row = rows[virtualRow.index];
+                if (!row) return null;
+                return (
+                  <TableRow key={row.id} className="hover:bg-muted/50">
+                    <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
+                      {virtualRow.index + 1}
+                    </TableCell>
+                    {row.getVisibleCells().map((cell) => {
+                      const meta = cell.column.columnDef.meta as any;
+                      return (
+                        <TableCell
+                          key={cell.id}
+                          className={`
+                            text-xs border-r max-w-[500px] overflow-hidden truncate px-7
+                            ${meta?.isNumeric ? 'text-right' : 'text-left'}
+                          `}
+                        >
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                );
+              })}
+              {paddingBottom > 0 && (
+                <TableRow>
+                  <TableCell style={{height: `${paddingBottom}px`}} />
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </div>
+      <div className="sticky bottom-0 left-0 py-2 px-4 text-xs font-mono bg-background border border-t-0">
+        {`${isPreview ? 'Preview of the first ' : ''}${formatCount(data.length)} rows`}
+      </div>
+    </div>
   );
 });
 
 export default function DataTableWithLoader<Data extends object>(
   props: Props<Data>,
 ) {
-  const { isPreview, isFetching, error, ...rest } = props;
-  const { data, columns } = rest;
+  const {isPreview, isFetching, error, ...rest} = props;
+  const {data, columns} = rest;
   return error ? (
     <ErrorPane error={error} />
   ) : isFetching ? (
     <SpinnerPane h="100%" />
   ) : data && columns ? (
-    <DataTableVirtualized data={data} columns={columns as any} isPreview={isPreview} />
+    <DataTableVirtualized
+      data={data}
+      columns={columns as any}
+      isPreview={isPreview}
+    />
   ) : null;
 }

@@ -1,0 +1,45 @@
+{
+  "name": "sqlrooms-nextjs-app",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "next dev --turbopack",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^1.1.0",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "ai": "^4.1.0",
+    "immer": "^10.1.1",
+    "lucide-react": "0.456.0",
+    "next": "^15.1.0",
+    "next-themes": "^0.4.3",
+    "plotly.js": "^2.35.3",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-plotly.js": "^2.6.0",
+    "superjson": "^2.2.2",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@sqlrooms/eslint-config": "workspace:^",
+    "@sqlrooms/typescript-config": "workspace:*",
+    "@types/node": "^20",
+    "@types/react": "18.3.0",
+    "@types/react-dom": "18.3.1",
+    "@types/react-plotly.js": "^2.6.3",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5"
+  }
+}

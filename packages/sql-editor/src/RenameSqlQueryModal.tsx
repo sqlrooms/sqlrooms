@@ -1,17 +1,28 @@
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Button,
+  Form,
   FormControl,
+  FormField,
+  FormItem,
   FormLabel,
+  FormMessage,
   Input,
-  Modal,
-  ModalBody,
-  ModalCloseButton,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
-  ModalOverlay,
-} from '@chakra-ui/react';
+} from '@sqlrooms/ui';
 import React from 'react';
+import {useForm} from 'react-hook-form';
+import * as z from 'zod';
+import {zodResolver} from '@hookform/resolvers/zod';
+
+const formSchema = z.object({
+  queryName: z.string().min(1, 'Query name is required'),
+});
+
+type FormData = z.infer<typeof formSchema>;
 
 interface Props {
   isOpen: boolean;
@@ -26,43 +37,56 @@ const RenameSqlQueryModal: React.FC<Props> = ({
   initialName,
   onRename,
 }) => {
-  return (
-    <Modal isOpen={isOpen} onClose={onClose} isCentered>
-      <ModalOverlay />
-      <ModalContent>
-        <ModalHeader>Rename Query</ModalHeader>
-        <ModalCloseButton />
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            const formData = new FormData(e.currentTarget);
-            onRename(formData.get('queryName') as string);
-          }}
-        >
-          <ModalBody>
-            <FormControl>
-              <FormLabel>Query Name</FormLabel>
-              <Input
-                name="queryName"
-                defaultValue={initialName}
-                autoFocus
-                placeholder="Enter query name"
-              />
-            </FormControl>
-          </ModalBody>
+  const form = useForm<FormData>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      queryName: initialName,
+    },
+  });
 
-          <ModalFooter>
-            <Button variant="ghost" mr={3} onClick={onClose}>
-              Cancel
-            </Button>
-            <Button type="submit" colorScheme="blue">
-              Save
-            </Button>
-          </ModalFooter>
-        </form>
-      </ModalContent>
-    </Modal>
+  function onSubmit(values: FormData) {
+    onRename(values.queryName);
+    onClose();
+  }
+
+  return (
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Rename Query</DialogTitle>
+        </DialogHeader>
+        {/* @ts-ignore */}
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <FormField
+              // @ts-ignore
+              control={form.control}
+              name="queryName"
+              render={({field}) => (
+                <FormItem>
+                  <FormLabel>Query Name</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      autoFocus
+                      placeholder="Enter query name"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={onClose}>
+                Cancel
+              </Button>
+              <Button type="submit">Save</Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
   );
 };
 
-export default RenameSqlQueryModal; 
+export default RenameSqlQueryModal;

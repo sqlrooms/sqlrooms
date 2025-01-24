@@ -1,26 +1,62 @@
 {
   "name": "sqlrooms",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "repository": "git@github.com:ilyabo/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
+  "packageManager": "pnpm@9.15.1",
   "workspaces": [
-    "packages/*"
+    "packages/*",
+    "examples/*"
   ],
+  "type": "module",
+  "scripts": {
+    "dev": "turbo dev --concurrency=12 --filter=@sqlrooms/* & pnpm run ladle",
+    "clean": "rimraf \"packages/*/dist\"",
+    "build": "pnpm clean && turbo build",
+    "test": "turbo test",
+    "prepare": "husky",
+    "lint": "turbo lint --filter=@sqlrooms/* --",
+    "typescript": "tsc --noEmit",
+    "ladle": "ladle serve",
+    "graph": "turbo run build --graph",
+    "format": "prettier --write \"**/*.{ts,tsx,md}\"",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs"
+  },
+  "engines": {
+    "node": ">=20"
+  },
   "devDependencies": {
-    "@typescript-eslint/eslint-plugin": "^7.8.0",
-    "eslint": "^8.57.0",
-    "eslint-config-prettier": "^9.1.0",
+    "@duckdb/duckdb-wasm": "^1.29.0",
+    "@eslint/js": "^9.18.0",
+    "@ladle/react": "^5.0.1",
+    "@sqlrooms/eslint-config": "workspace:*",
+    "@sqlrooms/typescript-config": "workspace:*",
+    "@types/jest": "^29.5.14",
+    "@types/mocha": "^10.0.10",
+    "@types/react": "18.3.18",
+    "@types/react-dom": "18.3.5",
+    "apache-arrow": "^18.1.0",
+    "eslint": "^9.18.0",
+    "framer-motion": "10.18.0",
     "husky": "^9.0.11",
+    "jest": "^29.7.0",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
-    "turbo": "^1.12.4"
+    "react": "^18.0.0",
+    "react-dom": "^18.0.0",
+    "remove": "^0.1.5",
+    "rimraf": "^5.0.5",
+    "turbo": "^2.3.0",
+    "typescript": "5.5.4",
+    "vitepress": "^1.6.3"
   },
-  "scripts": {
-    "dev": "turbo dev",
-    "build": "turbo build",
-    "prepare": "husky",
-    "lint": "eslint --fix \"**/*.{ts,tsx}\"",
-    "typescript": "tsc --noEmit"
+  "pnpm": {
+    "overrides": {
+      "apache-arrow": "18.1.0",
+      "@types/react": "18.3.18"
+    }
   }
 }

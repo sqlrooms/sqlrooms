@@ -9,18 +9,7 @@ export const DEFAULT_SQL_EDITOR_CONFIG = {
   selectedQueryId: 'default',
 } satisfies SqlEditorConfig;
 
-/*
-1. No database uuids should be used in the map config types
-only unique names
-2. It's probably ok to save optional fields as undefined
-*/
-
-export const DataSourceTypes = z.enum([
-  'file',
-  'url',
-  'sql',
-  /*, 'gsheets', */
-]);
+export const DataSourceTypes = z.enum(['file', 'url', 'sql']);
 export type DataSourceTypes = z.infer<typeof DataSourceTypes>;
 
 export const BaseDataSource = z.object({

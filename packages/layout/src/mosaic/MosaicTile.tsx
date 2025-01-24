@@ -1,6 +1,5 @@
-import {Flex} from '@chakra-ui/react';
-import {ProjectBuilderPanelHeader} from '@sqlrooms/project-builder';
-import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {MAIN_VIEW} from '@sqlrooms/project-config';
+import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
 
@@ -9,31 +8,23 @@ const ENABLE_LAYOUT_REARRANGE = false;
 type Props = {
   id: string;
   path: MosaicBranch[];
-  content: JSX.Element;
+  content: React.ReactNode;
   isDragging: boolean;
 };
 
 const MosaicTile: FC<Props> = (props) => {
   const {id, content, path, isDragging} = props;
   const body = (
-    <Flex
-      grow="1"
-      height="100%"
-      // gap={1}
-      p={2}
-      direction={'column'}
-      // border={"1px solid red"}
-      // width={"100%"}
-      // height={"100%"}
-      borderRadius="sm"
-      overflow="hidden"
-      bg={'gray.700'}
-      pointerEvents={isDragging ? 'none' : undefined}
+    <div
+      className={cn(
+        'flex-1 h-full p-2 flex-col bg-gray-700 rounded-md overflow-hidden',
+        isDragging ? 'pointer-events-none' : '',
+      )}
     >
       {content}
-    </Flex>
+    </div>
   );
-  if (!ENABLE_LAYOUT_REARRANGE || id === ProjectPanelTypes.MAIN_VIEW) {
+  if (!ENABLE_LAYOUT_REARRANGE || id === MAIN_VIEW) {
     return body;
   }
   return (
@@ -45,12 +36,12 @@ const MosaicTile: FC<Props> = (props) => {
       path={path}
       // onDragStart={() => console.log('MosaicWindow.onDragStart')}
       // onDragEnd={(type) => console.log('MosaicWindow.onDragEnd', type)}
-      renderToolbar={(props, draggable) =>
-        id === ProjectPanelTypes.MAIN_VIEW ? (
+      renderToolbar={() =>
+        id === MAIN_VIEW ? (
           <div />
         ) : (
           <div style={{display: 'flex', width: '100%', height: '100%'}}>
-            <ProjectBuilderPanelHeader panelKey={id as ProjectPanelTypes} />
+            {/* <ProjectBuilderPanelHeader panelKey={id as ProjectPanelTypes} /> */}
           </div>
         )
       }

@@ -2,23 +2,22 @@ import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
   Button,
   Checkbox,
-  Flex,
-  HStack,
   Table,
-  TableContainer,
-  Tbody,
-  Td,
-  Text,
-  Th,
-  Thead,
-  Tr,
-} from '@chakra-ui/react';
-import {ArrowUturnUpIcon, FolderIcon} from '@heroicons/react/24/outline';
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+  cn,
+} from '@sqlrooms/ui';
+import {Undo2Icon, FolderIcon} from 'lucide-react';
 import {formatBytes, formatTimeRelative} from '@sqlrooms/utils';
-import {S3FileOrDirectory} from '@sqlrooms/s3-browser';
 import {FC, useCallback, useEffect, useMemo} from 'react';
+import {S3FileOrDirectory} from './S3FileOrDirectory';
 
 type Props = {
   files?: S3FileOrDirectory[];
@@ -80,54 +79,34 @@ const S3FileBrowser: FC<Props> = (props) => {
   }, [selectedDirectory]);
 
   return (
-    <Flex position="relative" width="100%" height="100%" overflow="hidden">
-      <Flex
-        position="absolute"
-        width="100%"
-        height="100%"
-        overflowX="auto"
-        overflowY="auto"
-        display="flex"
-        flexDirection="column"
-        py={0}
-        alignItems="flex-start"
-      >
-        <TableContainer
-          width="100%"
-          borderRadius="lg"
-          border="1px solid"
-          borderColor="gray.600"
-          overflowY="auto"
-        >
-          <Table
-            size="sm"
-            __css={{
-              borderCollapse: 'separate', // to keep header borders sticky
-              borderSpacing: 0,
-            }}
-            width="100%"
-          >
-            <Thead>
+    <div className="relative w-full h-full overflow-hidden">
+      <div className="absolute w-full h-full overflow-x-auto overflow-y-auto flex flex-col py-0 items-start">
+        <div className="w-full rounded-lg border border-gray-600 overflow-y-auto">
+          <Table disableWrapper>
+            <TableHeader>
               {selectedDirectory ? (
-                <>
-                  <Tr>
-                    <Td colSpan={5} py={3} color="gray.100" bg="gray.800">
-                      <HStack gap="2">
-                        <Button
-                          size="xs"
-                          rightIcon={
-                            <ArrowUturnUpIcon width={12} height={12} />
-                          }
-                          onClick={() =>
-                            onChangeSelectedDirectory(parentDirectory)
-                          }
-                        >
-                          ..
-                        </Button>
-                        <Breadcrumb fontSize="xs" color="blue.400">
+                <TableRow>
+                  <TableCell
+                    colSpan={5}
+                    className="py-3 text-gray-100 bg-gray-800"
+                  >
+                    <div className="flex gap-2 items-center">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() =>
+                          onChangeSelectedDirectory(parentDirectory)
+                        }
+                      >
+                        <Undo2Icon className="w-3 h-3 mr-1" />
+                        ..
+                      </Button>
+                      <Breadcrumb>
+                        <BreadcrumbList>
                           <BreadcrumbItem>
                             <BreadcrumbLink
                               onClick={() => onChangeSelectedDirectory('')}
+                              className="text-xs text-blue-400"
                             >
                               Home
                             </BreadcrumbLink>
@@ -142,15 +121,14 @@ const S3FileBrowser: FC<Props> = (props) => {
                               .concat('/');
                             const isCurrent = path === selectedDirectory;
                             return (
-                              <BreadcrumbItem key={i} isCurrentPage={isCurrent}>
+                              <BreadcrumbItem key={i}>
+                                <BreadcrumbSeparator />
                                 <BreadcrumbLink
-                                  {...(isCurrent
-                                    ? {
-                                        cursor: 'default',
-                                        textDecoration: 'none',
-                                        _hover: {textDecoration: 'none'},
-                                      }
-                                    : null)}
+                                  className={cn(
+                                    'text-xs text-blue-400',
+                                    isCurrent &&
+                                      'cursor-default hover:no-underline',
+                                  )}
                                   onClick={() => {
                                     if (!isCurrent) {
                                       onChangeSelectedDirectory(path);
@@ -162,42 +140,34 @@ const S3FileBrowser: FC<Props> = (props) => {
                               </BreadcrumbItem>
                             );
                           })}
-                        </Breadcrumb>
-                      </HStack>
-                    </Td>
-                  </Tr>
-                </>
+                        </BreadcrumbList>
+                      </Breadcrumb>
+                    </div>
+                  </TableCell>
+                </TableRow>
               ) : null}
-              <Tr position="sticky" zIndex={2} top={0} bgColor="gray.600">
-                <Th width="1%">
+              <TableRow className="sticky top-0 z-[2] bg-gray-600">
+                <TableHead className="w-[1%]">
                   <Checkbox
-                    isChecked={selectedFiles.length === filesInDirectory.length}
-                    onChange={handleSelectAll}
+                    checked={selectedFiles.length === filesInDirectory.length}
+                    onCheckedChange={handleSelectAll}
                   />
-                </Th>
-                <Th py="2" color="white">
-                  Name
-                </Th>
-                <Th py="2" color="white">
-                  Type
-                </Th>
-                <Th color="white" isNumeric>
-                  Size
-                </Th>
-                <Th color="white" isNumeric>
+                </TableHead>
+                <TableHead className="py-2 text-white">Name</TableHead>
+                <TableHead className="py-2 text-white">Type</TableHead>
+                <TableHead className="text-white text-right">Size</TableHead>
+                <TableHead className="text-white text-right">
                   Modified
-                </Th>
-              </Tr>
-            </Thead>
-            <Tbody>
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
               {files?.map((object) => {
                 const {key, isDirectory} = object;
                 return (
-                  <Tr
+                  <TableRow
                     key={key}
-                    cursor="pointer"
-                    color="blue.300"
-                    _hover={{bgColor: 'blue.700', color: 'white'}}
+                    className="cursor-pointer text-blue-300 hover:bg-blue-700 hover:text-white"
                     onClick={(evt) => {
                       if (isDirectory) {
                         handleSelectDirectory(key);
@@ -207,43 +177,43 @@ const S3FileBrowser: FC<Props> = (props) => {
                       }
                     }}
                   >
-                    <Td>
+                    <TableCell>
                       <Checkbox
-                        isDisabled={isDirectory}
-                        isChecked={selectedFiles.includes(key)}
+                        disabled={isDirectory}
+                        checked={selectedFiles.includes(key)}
                       />
-                    </Td>
-                    <Td fontSize="xs">
+                    </TableCell>
+                    <TableCell className="text-xs">
                       {isDirectory ? (
-                        <HStack>
-                          <FolderIcon width={16} height={16} />
-                          <Text>{`${key}/`}</Text>
-                        </HStack>
+                        <div className="flex items-center gap-2">
+                          <FolderIcon className="w-4 h-4" />
+                          <span>{`${key}/`}</span>
+                        </div>
                       ) : (
                         key
                       )}
-                    </Td>
-                    <Td fontSize="xs">
+                    </TableCell>
+                    <TableCell className="text-xs">
                       {isDirectory ? 'Directory' : object.contentType}
-                    </Td>
-                    <Td fontSize="xs" isNumeric>
+                    </TableCell>
+                    <TableCell className="text-xs text-right">
                       {!isDirectory && object.size !== undefined
                         ? formatBytes(object.size)
                         : ''}
-                    </Td>
-                    <Td fontSize="xs" textAlign="right">
+                    </TableCell>
+                    <TableCell className="text-xs text-right">
                       {!isDirectory && object.lastModified
                         ? formatTimeRelative(object.lastModified)
                         : ''}
-                    </Td>
-                  </Tr>
+                    </TableCell>
+                  </TableRow>
                 );
               })}
-            </Tbody>
+            </TableBody>
           </Table>
-        </TableContainer>
-      </Flex>
-    </Flex>
+        </div>
+      </div>
+    </div>
   );
 };
 

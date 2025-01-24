@@ -1,41 +1,47 @@
-import {
-  Flex,
-  IconButton,
-  Spacer,
-  Tooltip,
-  VStack,
-} from '@chakra-ui/react';
 import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
-import {ProjectPanelTypes} from '@sqlrooms/project-config';
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
-type Props = {
-  // nothing yet
-};
+import {useBaseProjectStore} from './ProjectStateProvider';
 
-export const SidebarButton: FC<{
+const SidebarButton: FC<{
   title: string;
   isSelected: boolean;
   isDisabled?: boolean;
-  icon: React.ComponentType<any>;
+  icon: React.ComponentType<{className?: string}>;
   onClick: () => void;
 }> = ({title, isSelected, isDisabled = false, icon: Icon, onClick}) => {
   return (
-    <Tooltip label={title} placement="right" hasArrow>
-      <IconButton
-        icon={<Icon width="20px" />}
-        size="sm"
-        aria-label={title}
-        bg={isSelected ? 'gray.600' : 'gray.700'}
-        isDisabled={isDisabled}
-        onClick={onClick}
-      />
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            'h-10 w-10 rounded-none',
+            isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
+            // isDisabled && 'opacity-50 cursor-not-allowed',
+          )}
+          disabled={isDisabled}
+          onClick={onClick}
+        >
+          <Icon className="h-5 w-5" />
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="right">
+        <p>{title}</p>
+      </TooltipContent>
     </Tooltip>
   );
 };
 
-export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
-  type,
+const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
+  projectPanelType,
 }) => {
   const initialized = useBaseProjectStore((state) => state.initialized);
   const layout = useBaseProjectStore((state) => state.projectConfig.layout);
@@ -45,57 +51,46 @@ export const ProjectBuilderSidebarButton: FC<{type: ProjectPanelTypes}> = ({
     [layout],
   );
   const togglePanel = useBaseProjectStore((state) => state.togglePanel);
-  const {icon: Icon, title} = projectPanels[type as ProjectPanelTypes];
+  const {icon: Icon, title} = projectPanels[projectPanelType] ?? {};
 
   return (
     <SidebarButton
-      key={type}
-      title={title}
-      isSelected={visibleProjectPanels.includes(type)}
+      key={projectPanelType}
+      title={title ?? ''}
+      isSelected={visibleProjectPanels.includes(projectPanelType)}
       isDisabled={!initialized}
-      icon={Icon}
-      onClick={() => togglePanel(type)}
+      icon={Icon ?? (() => null)}
+      onClick={() => togglePanel(projectPanelType)}
     />
   );
 };
 
-const ProjectBuilderSidebarButtons: FC<Props> = () => {
+const ProjectBuilderSidebarButtons: FC = () => {
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
-  // const initialized = useBaseProjectStore((state) => state.initialized);
-  // if (!initialized) {
-  //   return null;
-  // }
 
   return (
-    <Flex flexDir="column" flexGrow={1} h="100%">
-      <VStack>
+    <div className="flex flex-col h-full grow">
+      <div className="flex flex-col gap-2">
         {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key].placement === 'sidebar')
-          .map((type) => {
-            return (
-              <ProjectBuilderSidebarButton
-                key={type}
-                type={type as ProjectPanelTypes}
-              />
-            );
-          })}
-      </VStack>
-      <Spacer />
-      <VStack>
+          .filter((key) => projectPanels[key]?.placement === 'sidebar')
+          .map((type) => (
+            <ProjectBuilderSidebarButton key={type} projectPanelType={type} />
+          ))}
+      </div>
+      <div className="flex-1" />
+      <div className="flex flex-col gap-2">
         {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key].placement === 'sidebar-bottom')
-          .map((type) => {
-            return (
-              <ProjectBuilderSidebarButton
-              key={type}
-              type={type as ProjectPanelTypes}
-              />
-            );
-          })}
-      </VStack>
-       
-    </Flex>
+          .filter((key) => projectPanels[key]?.placement === 'sidebar-bottom')
+          .map((type) => (
+            <ProjectBuilderSidebarButton key={type} projectPanelType={type} />
+          ))}
+      </div>
+    </div>
   );
 };
 
-export default ProjectBuilderSidebarButtons;
+export {
+  ProjectBuilderSidebarButton,
+  ProjectBuilderSidebarButtons,
+  SidebarButton,
+};

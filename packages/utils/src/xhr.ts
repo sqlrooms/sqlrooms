@@ -17,9 +17,10 @@ export const postData = async ({
     try {
       message = (await res.json()).error.message;
       console.error(message);
-    } finally {
-      throw new Error(message);
+    } catch {
+      // ignore
     }
+    throw new Error(message);
   }
 
   return res.json();
@@ -46,7 +47,9 @@ export async function downloadFile(
     xhr.open(method, url, true);
     xhr.responseType = 'arraybuffer';
     Object.keys(headers).map((key) => {
-      xhr.setRequestHeader(key, headers[key]);
+      if (headers[key]) {
+        xhr.setRequestHeader(key, headers[key]);
+      }
     });
 
     xhr.onload = () => resolve(new Uint8Array(xhr.response));
@@ -91,7 +94,9 @@ export async function uploadFile(
     const xhr = new XMLHttpRequest();
     xhr.open(method, url, true);
     Object.keys(headers).map((key) => {
-      xhr.setRequestHeader(key, headers[key]);
+      if (headers[key]) {
+        xhr.setRequestHeader(key, headers[key]);
+      }
     });
     xhr.onreadystatechange = () => {
       if (xhr.readyState === XMLHttpRequest.DONE) {

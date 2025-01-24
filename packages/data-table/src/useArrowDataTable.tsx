@@ -1,15 +1,4 @@
-import {
-  IconButton,
-  Popover,
-  PopoverArrow,
-  PopoverBody,
-  PopoverCloseButton,
-  PopoverContent,
-  PopoverHeader,
-  PopoverTrigger,
-  Portal,
-  Text,
-} from '@chakra-ui/react';
+import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ClipboardIcon} from '@heroicons/react/24/outline';
 import {shorten} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
@@ -72,44 +61,34 @@ export default function useArrowDataTable(
     const columns: ColumnDef<any, any>[] = [];
     for (const field of table.schema.fields) {
       columns.push(
-        columnHelper.accessor((row, i) => table.getChild(field.name)?.get(i), {
+        columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
           cell: (info) => {
             const value = info.getValue();
             const valueStr = valueToString(field.type, value);
 
             return valueStr.length > MAX_VALUE_LENGTH ? (
-              <Popover trigger="hover">
-                <PopoverTrigger>
-                  <Text>{shorten(`${valueStr}`, MAX_VALUE_LENGTH)}</Text>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <span className="cursor-pointer">
+                    {shorten(`${valueStr}`, MAX_VALUE_LENGTH)}
+                  </span>
                 </PopoverTrigger>
-                <Portal>
-                  <PopoverContent
-                    fontFamily="mono"
-                    bg={'gray.600'}
-                    fontSize="xs"
-                  >
-                    <PopoverArrow bg={'gray.600'} />
-                    <PopoverCloseButton />
-                    <PopoverHeader>{`"${field.name}" (${field.type})`}</PopoverHeader>
-                    <PopoverBody position="relative">
+                <PopoverContent className="font-mono text-xs w-auto max-w-[500px]">
+                  <div className="space-y-2">
+                    <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
+                    <div className="relative">
                       {valueStr}
-                      <IconButton
-                        position="absolute"
-                        top="1"
-                        right="1"
+                      <Button
                         variant="ghost"
-                        color="gray.100"
-                        aria-label={'Copy value'}
-                        size="xs"
-                        p="0"
-                        onClick={() => {
-                          navigator.clipboard.writeText(valueStr);
-                        }}
-                        icon={<ClipboardIcon width="13px" height="13px" />}
-                      />
-                    </PopoverBody>
-                  </PopoverContent>
-                </Portal>
+                        size="icon"
+                        className="absolute top-0 right-0 h-6 w-6"
+                        onClick={() => navigator.clipboard.writeText(valueStr)}
+                      >
+                        <ClipboardIcon className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
               </Popover>
             ) : (
               valueStr

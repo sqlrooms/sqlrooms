@@ -1,12 +1,12 @@
 import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
-import {escapeVal, getColValAsNumber, getDuckConn} from './useDuckConn';
+import {escapeVal, getColValAsNumber, getDuckDb} from './useDuckDb';
 
 // export function makeTableName(inputFileName: string): string {
 //   return inputFileName.replace(/\.[^\.]*$/, '').replace(/\W/g, '_');
 // }
 
 export async function createTableFromQuery(tableName: string, query: string) {
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   const rowCount = getColValAsNumber(
     await conn.query(
       `CREATE OR REPLACE TABLE main.${tableName} AS (
@@ -27,7 +27,7 @@ export async function createViewFromRegisteredFile(
   },
 ): Promise<{tableName: string; rowCount: number}> {
   const {mode = 'table'} = opts ?? {};
-  const {conn} = await getDuckConn();
+  const {conn} = await getDuckDb();
   const fileNameLower = filePath.toLowerCase();
   // let rowCount: number;
   // if (fileNameLower.endsWith('.json')) {
@@ -71,7 +71,7 @@ export async function createViewFromFile(
   tableName: string,
   file: File | Uint8Array,
 ): Promise<{tableName: string; rowCount: number}> {
-  const duckConn = await getDuckConn();
+  const duckConn = await getDuckDb();
 
   // const fileName = file.name;
   // await duckConn.db.dropFile(fileName);
@@ -127,7 +127,7 @@ export async function createViewFromFile(
 
 // async function createViewFromFile2(
 //   file: File,
-//   duckConn: DuckConn,
+//   duckConn: DuckDb,
 //   onTableCreated: (
 //     inputTableName: string,
 //     result: CreateTableDropzoneResult,
@@ -186,7 +186,7 @@ export async function createViewFromFile(
 
 // async function maybeDropTable(
 //   value: CreateTableDropzoneResult,
-//   duckConn: DuckConn,
+//   duckConn: DuckDb,
 // ) {
 //   const {inputFileName, inputTableName} = value || {};
 //   if (inputFileName) {

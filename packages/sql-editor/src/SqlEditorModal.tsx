@@ -1,31 +1,30 @@
-import { Modal, ModalBody, ModalContent, ModalOverlay } from '@chakra-ui/react';
-import { AppContext, SpinnerPane } from '@sqlrooms/components';
-import React, { Suspense, useContext } from 'react';
-import SqlEditor, { Props } from './SqlEditor';
+'use client';
+
+import {SpinnerPane} from '@sqlrooms/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogOverlay,
+  DialogTitle,
+} from '@sqlrooms/ui';
+import React, {Suspense} from 'react';
+import SqlEditor, {Props} from './SqlEditor';
 
 const SqlEditorModal: React.FC<Props> = (props) => {
-  const { isOpen, onClose } = props;
-  const appContext = useContext(AppContext);
+  const {isOpen, onClose} = props;
   return (
-    <>
-      <Modal
-        isCentered
-        isOpen={isOpen}
-        onClose={onClose}
-        closeOnOverlayClick={false}
-        size={'full'}
-        preserveScrollBarGap={appContext.mode === 'sdk'} // to avoid layout jumping and CSS added to host document
-      >
-        <ModalOverlay />
-        <ModalContent>
-          <ModalBody display="flex" alignItems="stretch" px={3} pt={3} pb={1}>
-            <Suspense fallback={<SpinnerPane h="100%" />}>
-              <SqlEditor {...props} />
-            </Suspense>
-          </ModalBody>
-        </ModalContent>
-      </Modal>
-    </>
+    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+      <DialogOverlay className="bg-background/80" />
+      <DialogContent className="max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] p-3">
+        <DialogHeader className="sr-only">
+          <DialogTitle>SQL Editor</DialogTitle>
+        </DialogHeader>
+        <Suspense fallback={<SpinnerPane h="100%" />}>
+          <SqlEditor {...props} />
+        </Suspense>
+      </DialogContent>
+    </Dialog>
   );
 };
 

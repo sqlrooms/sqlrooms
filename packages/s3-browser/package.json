@@ -1,22 +1,24 @@
 {
   "name": "@sqlrooms/s3-browser",
-  "version": "1.0.0",
+  "version": "0.0.0",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": true,
   "dependencies": {
-    "@sqlrooms/utils": "*"
+    "@aws-sdk/client-s3": "^3.726.1",
+    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "lucide-react": "^0.473.0",
+    "zod": "^3.24.1"
   },
   "peerDependencies": {
-    "react": "*",
-    "@chakra-ui/icon": "*",
-    "@chakra-ui/react": "*",
-    "@heroicons/react": "*"
+    "react": "*"
   },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc"
+    "build": "tsc",
+    "lint": "eslint ."
   }
 }

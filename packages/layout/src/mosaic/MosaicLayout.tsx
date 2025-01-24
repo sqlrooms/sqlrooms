@@ -1,23 +1,9 @@
-import styled from '@emotion/styled';
 import React, {FC, useCallback} from 'react';
 import {Mosaic, MosaicNode, MosaicProps} from 'react-mosaic-component';
+import 'react-mosaic-component/react-mosaic-component.css';
 import MosaicTile from './MosaicTile';
 
 type Props = MosaicProps<string>;
-
-const StyledMosaicLayout = styled.div`
-  position: relative;
-  width: 100%;
-  height: 100%;
-
-  .mosaic.mosaic-blueprint-theme {
-    background-color: unset !important;
-  }
-
-  .mosaic.mosaic-blueprint-theme .mosaic-zero-state {
-    background-color: unset !important;
-  }
-`;
 
 const MosaicLayout: FC<Props> = (props) => {
   const {onChange, onRelease, renderTile} = props;
@@ -38,9 +24,10 @@ const MosaicLayout: FC<Props> = (props) => {
   );
 
   return (
-    <StyledMosaicLayout className="MosaicLayout">
+    <div className="relative w-full h-full">
       <Mosaic<string>
         {...props}
+        className="" /* to avoid using blueprint theme */
         onChange={handleLayoutChange}
         onRelease={handleLayoutRelease}
         renderTile={(id, path) => (
@@ -52,7 +39,7 @@ const MosaicLayout: FC<Props> = (props) => {
           />
         )}
       />
-    </StyledMosaicLayout>
+    </div>
   );
 };
 
