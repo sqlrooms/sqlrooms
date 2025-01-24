@@ -217,8 +217,8 @@ function YourComponent() {
 
 Check out our example applications for more detailed implementations:
 
-- [Vite Example App](examples/vite-app)
-- [Next.js Example App](examples/nextjs-ai)
+- [Vite Example App](/examples/vite-app)
+- [Next.js Example App](/examples/nextjs-ai)
 
 ## Need Help?
 
