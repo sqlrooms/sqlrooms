@@ -5,13 +5,16 @@ import './index.css';
 
 import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
 import {createDemoProjectStore} from './store/DemoProjectStore.tsx';
+import {ThemeProvider} from './components/ThemeProvider.tsx';
 
 const projectStore = createDemoProjectStore();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ProjectBuilderProvider projectStore={projectStore}>
-      <App />
-    </ProjectBuilderProvider>
+    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+      <ProjectBuilderProvider projectStore={projectStore}>
+        <App />
+      </ProjectBuilderProvider>
+    </ThemeProvider>
   </StrictMode>,
 );

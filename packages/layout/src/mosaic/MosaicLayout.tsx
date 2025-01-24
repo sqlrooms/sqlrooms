@@ -27,6 +27,7 @@ const MosaicLayout: FC<Props> = (props) => {
     <div className="relative w-full h-full">
       <Mosaic<string>
         {...props}
+        className="" /* to avoid using blueprint theme */
         onChange={handleLayoutChange}
         onRelease={handleLayoutRelease}
         renderTile={(id, path) => (
