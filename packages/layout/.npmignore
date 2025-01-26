@@ -2,3 +2,4 @@
 .DS_Store
 tsconfig.json
 *.tsbuildinfo
+eslint.config.js
