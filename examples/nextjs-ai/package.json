@@ -32,14 +32,15 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@sqlrooms/eslint-config": "workspace:^",
-    "@sqlrooms/typescript-config": "workspace:*",
     "@types/node": "^20",
     "@types/react": "18.3.0",
     "@types/react-dom": "18.3.1",
     "@types/react-plotly.js": "^2.6.3",
     "postcss": "^8",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "typescript": "^5",
+    "eslint": "^9",
+    "eslint-config-next": "15.1.6",
+    "@eslint/eslintrc": "^3"
   }
 }
