@@ -81,6 +81,7 @@ export const MainView: React.FC = () => {
             <div className="flex flex-col gap-5 px-4">
               {result.toolCalls.map((toolCall) => (
                 <Suspense
+                  key={toolCall.toolCallId}
                   fallback={
                     <div className="w-full h-full flex items-center justify-center">
                       <Spinner className="w-4 h-4" />
