@@ -5,10 +5,6 @@
       "dependsOn": ["build", "test", "lint"],
       "outputs": ["packages/*/dist"]
     },
-    "publish-preview": {
-      "dependsOn": ["build", "test", "lint"],
-      "outputs": ["packages/*/dist"]
-    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["packages/*/dist"]

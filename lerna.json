@@ -1,5 +1,5 @@
 {
-  "version": "0.0.1",
+  "version": "0.0.0",
   "npmClient": "pnpm",
   "command": {
     "version": {
@@ -9,5 +9,7 @@
       "conventionalCommits": true,
       "message": "chore(release): publish %s"
     }
-  }
+  },
+  "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
+  "packages": ["packages/*"]
 }

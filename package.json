@@ -1,6 +1,6 @@
 {
   "name": "sqlrooms",
-  "version": "0.0.1",
+  "version": "0.0.0",
   "repository": "git@github.com:ilyabo/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
@@ -26,7 +26,8 @@
     "docs:preview": "vitepress preview docs",
     "version": "lerna version --yes --no-push --no-git-tag-version",
     "publish-packages": "turbo run publish && lerna publish from-package --yes",
-    "publish-preview": "turbo run publish-preview && lerna publish from-package --yes --dist-tag preview"
+    "preview:new-version": "turbo run publish && lerna version --dry-run",
+    "publish-preview": "turbo run publish && lerna publish from-package --yes --dist-tag preview"
   },
   "engines": {
     "node": ">=20"
@@ -35,6 +36,9 @@
     "@duckdb/duckdb-wasm": "^1.29.0",
     "@eslint/js": "^9.18.0",
     "@ladle/react": "^5.0.1",
+    "@lerna-lite/cli": "^3.11.0",
+    "@lerna-lite/publish": "^3.11.0",
+    "@lerna-lite/version": "^3.11.0",
     "@sqlrooms/eslint-config": "workspace:*",
     "@sqlrooms/typescript-config": "workspace:*",
     "@types/jest": "^29.5.14",
@@ -46,7 +50,6 @@
     "framer-motion": "10.18.0",
     "husky": "^9.0.11",
     "jest": "^29.7.0",
-    "lerna": "^8.1.9",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
     "react": "^18.0.0",
