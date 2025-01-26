@@ -6,6 +6,9 @@
   "module": "dist/index.js",
   "type": "module",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "zod": "^3.22.4"
   },

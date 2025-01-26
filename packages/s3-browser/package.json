@@ -6,6 +6,9 @@
   "module": "dist/index.js",
   "type": "module",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
     "@sqlrooms/ui": "workspace:*",

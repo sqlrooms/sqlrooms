@@ -2,6 +2,9 @@
   "name": "@sqlrooms/sql-editor",
   "version": "0.0.1",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
