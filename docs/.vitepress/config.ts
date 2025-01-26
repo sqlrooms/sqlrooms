@@ -5,6 +5,7 @@ export default defineConfig({
   title: 'SQLRooms',
   description: 'SQLRooms – Framework for DuckDB-backed analytics apps',
   base: '/sqlrooms/',
+  head: [['link', {rel: 'icon', href: '/sqlrooms/logo.png'}]],
   themeConfig: {
     logo: '/logo.png',
     // https://vitepress.dev/reference/default-theme-config
