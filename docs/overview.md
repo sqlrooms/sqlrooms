@@ -38,7 +38,7 @@ The browser-based DuckDB engine enables powerful AI-driven analytics workflows:
 - Interactive AI agents that can write and execute SQL queries
 - Automated data analysis and insights generation
 
-Check out our [Next.js AI example](/examples/nextjs-ai) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
+Check out our [Next.js AI example](/examples/#ai-powered-analytics-next-js) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
 
 ## Architecture
 

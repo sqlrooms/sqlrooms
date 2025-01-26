@@ -213,13 +213,6 @@ function YourComponent() {
 - Extensible project configuration with Zod schemas
 - Type-safe state management
 
-## Example Applications
-
-Check out our example applications for more detailed implementations:
-
-- [Vite Example App](/examples/vite-app)
-- [Next.js Example App](/examples/nextjs-ai)
-
 ## Need Help?
 
 - Check our [documentation](https://github.com/ilyabo/sqlrooms)

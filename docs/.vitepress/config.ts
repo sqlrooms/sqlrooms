@@ -41,16 +41,16 @@ export default defineConfig({
         text: 'Examples',
         items: [
           {
-            text: 'Overview',
+            text: 'Examples Overview',
             link: '/examples',
           },
           {
             text: 'Basic Example (Vite)',
-            link: '/examples/vite-app',
+            link: '/examples/#basic-example-vite',
           },
           {
             text: 'AI Analytics (Next.js)',
-            link: '/examples/nextjs-ai',
+            link: '/examples#ai-powered-analytics-next-js',
           },
         ],
       },

@@ -8,6 +8,8 @@ Here are some example applications demonstrating different use cases of SQLRooms
 
 ## [Basic Example (Vite)](/examples/vite-app)
 
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-app?embed=1&file=src/app.tsx)
+
 A minimal example showing how to set up SQLRooms with Vite and React. This example demonstrates:
 
 - Basic project setup
@@ -15,9 +17,11 @@ A minimal example showing how to set up SQLRooms with Vite and React. This examp
 - SQL query execution
 - Data table visualization
 
-[View the example →](/examples/vite-app)
+[View source on GitHub →](https://github.com/sqlrooms/examples/tree/main/vite-app)
 
 ## [AI-Powered Analytics (Next.js)](/examples/nextjs-ai)
+
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-app?embed=1&file=src/app.tsx)
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms and Next.js. Features include:
 
@@ -26,4 +30,4 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Project state persistence
 
-[View the example →](/examples/nextjs-ai)
+[View source on GitHub →](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
