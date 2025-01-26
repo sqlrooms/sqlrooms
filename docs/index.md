@@ -5,17 +5,21 @@ layout: home
 hero:
   name: 'SQLRooms'
   text: 'Build powerful analytics apps with DuckDB in browser'
-  tagline: Modern framework for creating interactive data analysis applications powered by DuckDB-WASM
-  image:
-    src: /images/sqlrooms-hero.png
-    alt: SQLRooms AI
+  tagline: Building blocks for creating interactive data analysis applications powered by DuckDB-WASM
   actions:
     - theme: brand
+      text: What is SQLRooms?
+      link: /overview
+    - theme: alt
       text: Get Started
       link: /getting-started
     - theme: alt
       text: View on GitHub
       link: https://github.com/ilyabo/sqlrooms
+  image:
+    # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
+    src: /hero.webp
+    alt: SQLRooms AI
 
 features:
   - title: DuckDB-WASM Integration

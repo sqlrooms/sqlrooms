@@ -4,7 +4,7 @@ outline: deep
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework for building DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
 
 ## Prerequisites
 

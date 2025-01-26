@@ -1,10 +1,10 @@
 # sqlrooms
 
-A React application framework for creating interactive data analysis applications powered by DuckDB-WASM
-
-<img width=600 src=https://github.com/user-attachments/assets/1897cb57-9602-493c-ad82-2723c9f4e0f7>
+Building blocks for creating interactive data analysis applications powered by DuckDB-WASM
 
 [Documentation](https://sqlrooms.github.io/sqlrooms/)
+
+<img width=600 src=https://github.com/user-attachments/assets/1897cb57-9602-493c-ad82-2723c9f4e0f7>
 
 ## Develop locally
 

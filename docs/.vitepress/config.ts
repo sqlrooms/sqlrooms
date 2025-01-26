@@ -9,7 +9,6 @@ export default defineConfig({
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {text: 'Home', link: '/'},
-      {text: 'Motivation', link: '/motivation'},
       {text: 'Overview', link: '/overview'},
       {text: 'Get started', link: '/getting-started'},
       {text: 'Examples', link: '/examples'},
@@ -19,10 +18,6 @@ export default defineConfig({
       {
         text: 'Introduction',
         items: [
-          {
-            text: 'Motivation',
-            link: '/motivation',
-          },
           {
             text: 'Overview',
             link: '/overview',

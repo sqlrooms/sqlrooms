@@ -2,65 +2,108 @@
 outline: deep
 ---
 
-# Overview
+# What is SQLRooms?
 
-SQLRooms is built around several core components that work together to provide a flexible and powerful analytics application framework. For details about the individual packages, see the [Package Structure](/packages) page.
+SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools without a backend.
 
-![SQLRooms Architecture](/images/architecture.svg)
+## Who is it for?
 
-## Core Components
+SQLRooms is designed for developers building:
 
-### ProjectStore
+- Interactive data analysis tools
+- Custom BI solutions
+- Data visualization applications
+- Internal analytics dashboards
 
-The central state management system that handles:
+## Motivation
 
-- Project configuration (for saving and loading)
+Modern data analytics applications face several challenges that SQLRooms addresses:
+
+### Privacy and Security
+
+By running DuckDB directly in the browser, all data processing happens locally. Sensitive data never leaves the client, simplifying compliance and security.
+
+### Performance and Scale
+
+DuckDB is purpose-built for analytics, providing fast query performance on large datasets through its columnar engine and optimized query processing. Running in the browser through WebAssembly, each user gets their own instance, enabling automatic scaling without infrastructure costs. Applications can even work offline, as there's no dependency on backend services.
+
+### Developer Experience
+
+Building analytics applications typically requires integrating multiple complex components. SQLRooms provides a complete foundation with state management, UI components, and extensible architecture out of the box.
+
+### AI-Powered Analytics
+
+The browser-based DuckDB engine enables powerful AI-driven analytics workflows:
+
+- Interactive AI agents that can write and execute SQL queries
+- Automated data analysis and insights generation
+
+Check out our [Next.js AI example](/examples/nextjs-ai) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
+
+## Architecture
+
+SQLRooms is built around several core components that work together seamlessly:
+
+![SQLRooms Architecture](/assets/architecture.svg)
+
+### Core Components
+
+#### ProjectStore
+
+The central state management system built on Zustand handles:
+
+- Project configuration and persistence
 - Data source management
-- Integration with DuckDB
+- DuckDB integration
+- Type-safe state management
 
-The ProjectStore is built on top of Zustand and provides a type-safe way to manage your application's state. It can be extended with custom configuration and functionality specific to your needs.
+The ProjectStore can be extended with custom configuration and functionality specific to your needs.
 
-### Project Builder
+#### Project Builder
 
-Provides the UI shell and panel layout system with:
+Provides the application shell with:
 
 - Configurable and pluggable views
-- Sidebar and main view layouts
-- Panel management
+- Flexible panel layouts
+- Sidebar and main view management
 
-The Project Builder is responsible for the overall layout and structure of your application. It uses a flexible panel system that allows you to add custom views and arrange them as needed.
+#### Built-in Views
 
-### Built-in Views
+Ready-to-use components accelerate development:
 
-SQLRooms comes with several built-in views to handle common analytics tasks:
+- DataTable View for displaying and interacting with query results
+- S3 Browser for managing data sources and importing data
+- SQL Query Editor with syntax highlighting
 
-- **DataTable View**: For displaying and interacting with query results
-- **S3 Browser**: For managing data sources and importing data
-- **SQL Query Editor**: For writing and executing SQL queries
+### Extension Points
 
-## Extension Points
+The framework is designed to be highly extensible through:
 
-The framework is designed to be highly extensible through several key points:
+1. **Extended ProjectStore**
 
-### 1. Extended ProjectStore
+   - Custom project configuration using Zod schemas
+   - Additional state management
+   - Integration with other services
 
-You can extend the base ProjectStore to add:
+2. **Custom Views and Panels**
+   - Create specialized views for specific use cases
+   - Configure panel layouts and behavior
+   - Integrate with existing panel management
 
-- Custom project configuration using Zod schemas
-- Additional state management
-- Custom methods and functionality
-- Integration with other services
+### Data Flow
 
-### 2. Custom Views and Panels
+1. Data sources (CSV, Parquet) are loaded through the S3 browser or custom import methods
+2. DuckDB processes queries locally in the browser
+3. Results are displayed in the DataTable view or custom visualizations
+4. Project state can be saved and loaded for persistence
 
-The panel system allows you to:
+## Framework Features
 
-- Create custom views for specific use cases
-- Add new panels to the sidebar or main area
-- Configure panel layouts and behavior
-- Integrate with the existing panel management system
+### UI Components
 
-## DuckDB Integration
+A professional set of components built with Tailwind CSS provides a consistent, responsive interface out of the box. The panel system allows flexible layouts while maintaining a cohesive look and feel.
+
+### DuckDB Integration
 
 SQLRooms provides deep integration with DuckDB through built-in utilities that:
 
@@ -68,10 +111,3 @@ SQLRooms provides deep integration with DuckDB through built-in utilities that:
 - Handle data source connections and imports
 - Execute SQL queries and manage results
 - Provide type-safe query results
-
-### Data Flow
-
-1. Data sources (CSV, Parquet, etc.) are loaded through the S3 browser or custom import methods
-2. DuckDB processes the data and executes queries
-3. Results are displayed in the DataTable view or custom visualizations
-4. Project state (including queries and configurations) can be saved and loaded
