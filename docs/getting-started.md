@@ -12,8 +12,8 @@ Your application should have the following dependencies:
 
 - React 18 or higher
 - Tailwind CSS
-- Zustand for state management
-- Zod for schema validation
+- [Zustand](https://zustand.docs.pmnd.rs) for state management
+- [Zod](https://zod.dev) for schema val idation
 - Node.js >= 20
 
 ## Installation
