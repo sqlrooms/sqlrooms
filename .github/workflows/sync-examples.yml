@@ -1,0 +1,59 @@
+name: Sync Examples
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'examples/**'
+      - '.github/workflows/sync-examples.yml'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          path: source
+
+      - name: Checkout target
+        uses: actions/checkout@v4
+        with:
+          repository: sqlrooms/examples
+          path: target
+          token: ${{ secrets.EXAMPLES_PAT }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install jq
+        run: sudo apt-get install -y jq
+
+      - name: Sync examples
+        run: |
+          # Copy examples directory
+          rm -rf target/*
+          cp -r source/examples/* target/
+
+          # Update package.json files
+          find target -name "package.json" -type f | while read -r file; do
+            # Replace all "@sqlrooms/*": "workspace:*" with "@sqlrooms/*": "latest"
+            jq '(.dependencies | with_entries(if .key | startswith("@sqlrooms/") then .value = "latest" else . end)) as $deps | .dependencies = $deps' "$file" > temp.json
+            mv temp.json "$file"
+          done
+
+          # Setup git config
+          cd target
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          # Commit and push changes
+          git add .
+          if git diff --staged --quiet; then
+            echo "No changes to commit"
+          else
+            git commit -m "Sync examples from main repo (${GITHUB_SHA})"
+            git push
+          fi
