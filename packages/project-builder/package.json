@@ -5,7 +5,7 @@
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": true,
+  "private": false,
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",

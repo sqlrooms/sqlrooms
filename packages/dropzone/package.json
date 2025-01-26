@@ -2,7 +2,7 @@
   "name": "@sqlrooms/dropzone",
   "version": "0.0.0",
   "type": "module",
-  "private": true,
+  "private": false,
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",

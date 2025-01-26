@@ -5,7 +5,7 @@
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": true,
+  "private": false,
   "peerDependencies": {
     "@duckdb/duckdb-wasm": "*",
     "apache-arrow": "*"

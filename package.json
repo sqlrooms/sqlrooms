@@ -23,12 +23,17 @@
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
-    "docs:preview": "vitepress preview docs"
+    "docs:preview": "vitepress preview docs",
+    "version-packages": "changeset version",
+    "bump-snapshot": "changeset version --snapshot next",
+    "publish-dry-run": "turbo run publish-dry-run && changeset publish --dry-run",
+    "publish-packages": "turbo run publish && changeset publish"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
+    "@changesets/cli": "^2.27.12",
     "@duckdb/duckdb-wasm": "^1.29.0",
     "@eslint/js": "^9.18.0",
     "@ladle/react": "^5.0.1",

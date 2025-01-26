@@ -5,7 +5,7 @@
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": true,
+  "private": false,
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
     "@sqlrooms/utils": "workspace:*",

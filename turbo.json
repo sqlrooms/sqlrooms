@@ -1,6 +1,14 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "publish": {
+      "dependsOn": ["build", "test", "lint"],
+      "outputs": ["packages/*/dist"]
+    },
+    "publish-dry-run": {
+      "dependsOn": ["build", "test", "lint"],
+      "outputs": ["packages/*/dist"]
+    },
     "build": {
       "dependsOn": ["^build"],
       "outputs": ["packages/*/dist"]
