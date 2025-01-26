@@ -14,9 +14,15 @@ Building blocks for creating interactive data analysis applications powered by D
 ## Running Next.js example app
 
     pnpm install
-    pnpm --filter sqlrooms-nextjs-app dev
+    pnpm --filter nextjs-ai dev
     open http://localhost:3000
+
+## Running vite example app
+
+    pnpm install
+    pnpm --filter vite-app dev
+    open http://localhost:5174
 
 ## Usage
 
-See example code in [examples/sqlrooms-nextjs-app](examples/sqlrooms-nextjs-app)
+See example code in [examples/nextjs-ai](examples/nextjs-ai)
