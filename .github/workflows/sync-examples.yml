@@ -16,12 +16,26 @@ jobs:
         with:
           path: source
 
-      - name: Checkout target
-        uses: actions/checkout@v4
-        with:
-          repository: sqlrooms/examples
-          path: target
-          token: ${{ secrets.EXAMPLES_PAT }}
+      - name: Clone or init target
+        run: |
+          # Try to clone the repository
+          if git clone --depth 1 https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git target; then
+            echo "Successfully cloned target repository"
+          else
+            # If clone fails, initialize a new repository
+            mkdir target
+            cd target
+            git init
+            git remote add origin https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git
+            echo "# SQLRooms Examples" > README.md
+            git add README.md
+            git config user.name "github-actions[bot]"
+            git config user.email "github-actions[bot]@users.noreply.github.com"
+            git commit -m "Initial commit"
+            git branch -M main
+            git push -u origin main
+            cd ..
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -34,7 +48,7 @@ jobs:
       - name: Sync examples
         run: |
           # Copy examples directory
-          rm -rf target/*
+          rm -rf target/* !target/.git
           cp -r source/examples/* target/
 
           # Update package.json files
