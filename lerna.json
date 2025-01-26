@@ -3,7 +3,7 @@
   "npmClient": "pnpm",
   "command": {
     "version": {
-      "exact": true
+      "exact": false
     },
     "publish": {
       "conventionalCommits": true,
