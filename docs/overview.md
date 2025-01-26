@@ -6,6 +6,8 @@ outline: deep
 
 SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools without a backend.
 
+![NextJS AI app](assets/nextjs-ai.webp)
+
 ## Who is it for?
 
 SQLRooms is designed for developers building:
