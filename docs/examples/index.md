@@ -19,7 +19,7 @@ A minimal example showing how to set up SQLRooms with Vite and React. This examp
 
 ## [AI-Powered Analytics (Next.js)](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs-ai?embed=1&file=src/components/app-shell.tsx)
+[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs-ai?embed=1&file=components/app-shell.tsx)
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms and Next.js. Features include:
 
