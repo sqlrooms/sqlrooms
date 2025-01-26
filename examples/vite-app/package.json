@@ -1,7 +1,7 @@
 {
   "name": "vite-app",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,10 +11,10 @@
   },
   "dependencies": {
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
-    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

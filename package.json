@@ -26,8 +26,7 @@
     "docs:preview": "vitepress preview docs",
     "version": "lerna version --yes --no-push --no-git-tag-version",
     "publish-packages": "turbo run publish && lerna publish from-package --yes",
-    "publish-preview": "turbo run publish-preview && lerna publish from-package --yes --dist-tag preview",
-    "publish-dry-run": "turbo run publish && lerna publish from-package --no-git-reset --dry-run"
+    "publish-preview": "turbo run publish-preview && lerna publish from-package --yes --dist-tag preview"
   },
   "engines": {
     "node": ">=20"

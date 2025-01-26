@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/s3-browser",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
@@ -8,8 +8,8 @@
   "private": false,
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
-    "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.473.0",
     "zod": "^3.24.1"
   },

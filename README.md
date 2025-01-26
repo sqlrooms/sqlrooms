@@ -26,3 +26,17 @@ Building blocks for creating interactive data analysis applications powered by D
 ## Usage
 
 See example code in [examples/nextjs-ai](examples/nextjs-ai)
+
+## Publishing
+
+Bump all versions:
+
+    pnpm version [major|minor|patch]
+
+Publish all packages:
+
+    pnpm publish-packages
+
+Publish preview versions:
+
+    pnpm publish-preview

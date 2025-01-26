@@ -1,14 +1,14 @@
 {
   "name": "@sqlrooms/layout",
-  "version": "0.0.0",
+  "version": "0.0.1",
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": false,
   "dependencies": {
-    "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*"
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "*",
