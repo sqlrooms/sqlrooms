@@ -9,8 +9,8 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "test": "jest",
-    "test:watch": "jest --watch",
+    "_test": "jest",
+    "_test:watch": "jest --watch",
     "lint": "eslint ."
   },
   "dependencies": {

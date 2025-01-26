@@ -5,6 +5,12 @@
   "main": "dist/index.js",
   "types": "src/index.ts",
   "module": "dist/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint ."
+  },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
     "@sqlrooms/data-table": "workspace:*",

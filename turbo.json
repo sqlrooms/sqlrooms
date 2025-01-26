@@ -5,7 +5,7 @@
       "dependsOn": ["build", "test", "lint"],
       "outputs": ["packages/*/dist"]
     },
-    "publish-dry-run": {
+    "publish-preview": {
       "dependsOn": ["build", "test", "lint"],
       "outputs": ["packages/*/dist"]
     },

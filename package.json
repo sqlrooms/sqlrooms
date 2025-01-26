@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=12 --filter=@sqlrooms/* & pnpm run ladle",
+    "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/* & pnpm run ladle",
     "clean": "rimraf \"packages/*/dist\"",
     "build": "pnpm clean && turbo build",
     "test": "turbo test",
@@ -24,16 +24,15 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
-    "version-packages": "changeset version",
-    "bump-snapshot": "changeset version --snapshot next",
-    "publish-dry-run": "turbo run publish-dry-run && changeset publish --dry-run",
-    "publish-packages": "turbo run publish && changeset publish"
+    "version": "lerna version --yes --no-push --no-git-tag-version",
+    "publish-packages": "turbo run publish && lerna publish from-package --yes",
+    "publish-preview": "turbo run publish-preview && lerna publish from-package --yes --dist-tag preview",
+    "publish-dry-run": "turbo run publish && lerna publish from-package --no-git-reset --dry-run"
   },
   "engines": {
     "node": ">=20"
   },
   "devDependencies": {
-    "@changesets/cli": "^2.27.12",
     "@duckdb/duckdb-wasm": "^1.29.0",
     "@eslint/js": "^9.18.0",
     "@ladle/react": "^5.0.1",
@@ -48,6 +47,7 @@
     "framer-motion": "10.18.0",
     "husky": "^9.0.11",
     "jest": "^29.7.0",
+    "lerna": "^8.1.9",
     "lint-staged": "^15.2.2",
     "prettier": "^3.2.5",
     "react": "^18.0.0",
