@@ -70,5 +70,12 @@ jobs:
           path: docs/.vitepress/dist
 
       - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
+          external_repository: sqlrooms/sqlrooms.github.io
+          publish_dir: docs/.vitepress/dist
+          publish_branch: main # or gh-pages, depending on your preference
+          force_orphan: true
+          user_name: 'github-actions[bot]'
+          user_email: 'github-actions[bot]@users.noreply.github.com'
