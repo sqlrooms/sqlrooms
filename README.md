@@ -2,7 +2,7 @@
 
 Building blocks for creating interactive data analysis applications powered by DuckDB-WASM
 
-[Documentation](https://sqlrooms.github.io/sqlrooms/)
+[Documentation](https://sqlrooms.github.io/)
 
 <img width=600 src=https://github.com/user-attachments/assets/1897cb57-9602-493c-ad82-2723c9f4e0f7>
 
