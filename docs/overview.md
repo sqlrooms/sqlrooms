@@ -21,13 +21,13 @@ SQLRooms is designed for developers building:
 
 Modern data analytics applications face several challenges that SQLRooms addresses:
 
-### Privacy and Security
-
-By running DuckDB directly in the browser, all data processing happens locally. Sensitive data never leaves the client, simplifying compliance and security.
-
 ### Performance and Scale
 
 DuckDB is purpose-built for analytics, providing fast query performance on large datasets through its columnar engine and optimized query processing. Running in the browser through WebAssembly, each user gets their own instance, enabling automatic scaling without infrastructure costs. Applications can even work offline, as there's no dependency on backend services.
+
+### Privacy and Security
+
+SQLRooms enables applications where sensitive data can remain completely client-side, as all data processing and analysis can be performed directly in the browser using DuckDB. This architecture allows for implementations where data never needs to leave the client, simplifying compliance and security requirements when needed.
 
 ### Developer Experience
 
