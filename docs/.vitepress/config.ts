@@ -3,7 +3,7 @@ import {defineConfig} from 'vitepress';
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'SQLRooms',
-  description: 'SQLRooms – Framework for DuckDB-backed analytics apps',
+  description: 'Build powerful analytics apps with DuckDB in browser',
   base: '/sqlrooms/',
   head: [['link', {rel: 'icon', href: '/sqlrooms/logo.png'}]],
   themeConfig: {
