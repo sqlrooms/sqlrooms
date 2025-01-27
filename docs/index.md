@@ -15,7 +15,7 @@ hero:
       link: /getting-started
     - theme: alt
       text: View on GitHub
-      link: https://github.com/ilyabo/sqlrooms
+      link: https://github.com/sqlrooms/sqlrooms
   image:
     # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
     src: /hero.webp

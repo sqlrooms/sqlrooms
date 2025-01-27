@@ -4,8 +4,8 @@ import {defineConfig} from 'vitepress';
 export default defineConfig({
   title: 'SQLRooms',
   description: 'Build powerful analytics apps with DuckDB in browser',
-  base: '/sqlrooms/',
-  head: [['link', {rel: 'icon', href: '/sqlrooms/logo.png'}]],
+  base: '/',
+  head: [['link', {rel: 'icon', href: '/logo.png'}]],
   themeConfig: {
     logo: '/logo.png',
     // https://vitepress.dev/reference/default-theme-config
@@ -58,6 +58,8 @@ export default defineConfig({
       },
     ],
 
-    socialLinks: [{icon: 'github', link: 'https://github.com/ilyabo/sqlrooms'}],
+    socialLinks: [
+      {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
+    ],
   },
 });

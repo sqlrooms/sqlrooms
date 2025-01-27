@@ -215,5 +215,5 @@ function YourComponent() {
 
 ## Need Help?
 
-- Check our [documentation](https://github.com/ilyabo/sqlrooms)
-- File an issue on [GitHub](https://github.com/ilyabo/sqlrooms/issues)
+- Check our [documentation](https://github.com/sqlrooms/sqlrooms)
+- File an issue on [GitHub](https://github.com/sqlrooms/sqlrooms/issues)
