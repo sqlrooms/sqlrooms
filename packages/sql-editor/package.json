@@ -22,7 +22,7 @@
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "apache-arrow": "^14.0.2",
+    "apache-arrow": "^18.1.0",
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
     "lucide-react": "^0.323.0",
