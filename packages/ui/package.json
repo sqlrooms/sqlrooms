@@ -47,12 +47,8 @@
     "react-resizable-panels": "^2.1.7",
     "tailwind-merge": "^2.6.0",
     "tailwindcss-animate": "^1.0.7",
-    "zod": "^3.24.1"
-  },
-  "devDependencies": {
-    "autoprefixer": "^10.4.20"
-  },
-  "peerDependencies": {
+    "zod": "^3.24.1",
+    "autoprefixer": "^10.4.20",
     "tailwindcss": "^3.4.17"
   }
 }
