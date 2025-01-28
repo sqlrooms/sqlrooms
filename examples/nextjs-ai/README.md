@@ -4,9 +4,7 @@
 
 # Running locally
 
-First, copy `.env.example` file to `.env` and specify the env variables.
-
-Then, the run the following:
+Run the following:
 
     npm install
     npm dev

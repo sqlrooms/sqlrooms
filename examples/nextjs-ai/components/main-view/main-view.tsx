@@ -1,8 +1,8 @@
 'use client';
 import {useScrollToBottom} from '@/hooks/use-scroll-to-bottom';
 import {useProjectStore} from '@/store/demo-project-store';
-import {Button, Spinner, Textarea} from '@sqlrooms/ui';
-import {SquareTerminalIcon} from 'lucide-react';
+import {Button, Input, Spinner, Textarea} from '@sqlrooms/ui';
+import {KeyIcon, SquareTerminalIcon} from 'lucide-react';
 import {EmptyMainView} from './empty-main-view';
 import {ToolCall} from './tool-call';
 import {Suspense} from 'react';
@@ -14,6 +14,8 @@ export const MainView: React.FC = () => {
   const cancelAnalysis = useProjectStore((s) => s.cancelAnalysis);
   const analysisPrompt = useProjectStore((s) => s.analysisPrompt);
   const setAnalysisPrompt = useProjectStore((s) => s.setAnalysisPrompt);
+  const openAiApiKey = useProjectStore((s) => s.openAiApiKey);
+  const setOpenAiApiKey = useProjectStore((s) => s.setOpenAiApiKey);
   const analysisResults = useProjectStore(
     (s) => s.projectConfig.analysisResults,
   );
@@ -33,6 +35,16 @@ export const MainView: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-2">
+            <div className="relative flex items-center">
+              <KeyIcon className="w-4 h-4 absolute left-2 text-gray-400" />
+              <Input
+                type="password"
+                placeholder="OpenAI API Key"
+                value={openAiApiKey || ''}
+                onChange={(e) => setOpenAiApiKey(e.target.value)}
+                className="pl-8 w-[260px] bg-gray-800"
+              />
+            </div>
             {isRunningAnalysis && (
               <Button variant="outline" onClick={() => cancelAnalysis()}>
                 Cancel
@@ -41,7 +53,7 @@ export const MainView: React.FC = () => {
             <Button
               variant="outline"
               onClick={runAnalysis}
-              disabled={isRunningAnalysis}
+              disabled={isRunningAnalysis || !openAiApiKey}
             >
               {isRunningAnalysis ? (
                 <div className="flex items-center gap-2">

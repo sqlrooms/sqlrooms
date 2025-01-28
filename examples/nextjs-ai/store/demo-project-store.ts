@@ -22,7 +22,9 @@ export type DemoProjectState = ProjectState<DemoProjectConfig> & {
   analysisPrompt: string;
   isRunningAnalysis: boolean;
   analysisAbortController?: AbortController;
+  openAiApiKey: string | null;
   setAnalysisPrompt: (prompt: string) => void;
+  setOpenAiApiKey: (key: string) => void;
   runAnalysis: () => Promise<void>;
   cancelAnalysis: () => void;
 };
@@ -41,12 +43,26 @@ export const createDemoProjectStore = () =>
       'Describe the data in the tables including the distribution of the values.',
     isRunningAnalysis: false,
     analysisResults: [],
+    openAiApiKey:
+      typeof window !== 'undefined'
+        ? localStorage.getItem('openai_api_key')
+        : null,
+    setOpenAiApiKey: (key: string) => {
+      localStorage.setItem('openai_api_key', key);
+      set({openAiApiKey: key});
+    },
     setAnalysisPrompt: (prompt: string) => {
       set({analysisPrompt: prompt});
     },
     runAnalysis: async () => {
       const resultId = createId();
       const abortController = new AbortController();
+      const apiKey = get().openAiApiKey;
+
+      if (!apiKey) {
+        throw new Error('OpenAI API key is required');
+      }
+
       set({
         analysisAbortController: abortController,
         isRunningAnalysis: true,
@@ -75,6 +91,7 @@ export const createDemoProjectStore = () =>
             );
           },
           abortSignal: abortController.signal,
+          apiKey,
         });
         console.log('final result', {toolResults, ...rest});
         // set(

@@ -4,10 +4,15 @@ import {generateText, StepResult, tool} from 'ai';
 import {z} from 'zod';
 import {ToolResultSchema, AnalysisAnswerSchema} from './schemas';
 
-const openai = createOpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY ?? '',
-});
-const MODEL = 'gpt-4o';
+let openai: ReturnType<typeof createOpenAI>;
+
+export function initOpenAI(apiKey: string) {
+  openai = createOpenAI({
+    apiKey,
+  });
+}
+
+const MODEL = 'gpt-4';
 
 /**
  * Run analysis on the project data
@@ -19,11 +24,16 @@ export async function runAnalysis({
   prompt,
   abortSignal,
   onStepFinish,
+  apiKey,
 }: {
   prompt: string;
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
+  apiKey: string;
 }) {
+  // Always reinitialize OpenAI with the current key
+  initOpenAI(apiKey);
+
   const result = await generateText({
     model: openai(MODEL, {
       structuredOutputs: true,

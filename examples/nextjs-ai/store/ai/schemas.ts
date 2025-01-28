@@ -33,10 +33,13 @@ export type AnalysisStepSchema = z.infer<typeof AnalysisStepSchema>;
 export const AnalysisAnswerSchema = z.object({
   steps: z.array(AnalysisStepSchema),
   answer: z.string(),
-  plotlyChartSpec: z.object({
-    data: z.string(),
-    layout: z.string(),
-  }),
+  plotlyChartSpec: z.union([
+    z.object({
+      data: z.string(),
+      layout: z.string(),
+    }),
+    z.null(),
+  ]),
 });
 export type AnalysisAnswerSchema = z.infer<typeof AnalysisAnswerSchema>;
 
