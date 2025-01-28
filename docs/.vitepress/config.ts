@@ -5,7 +5,10 @@ export default defineConfig({
   title: 'SQLRooms',
   description: 'Build powerful analytics apps with DuckDB in browser',
   base: '/',
-  head: [['link', {rel: 'icon', href: '/logo.png'}]],
+  head: [
+    ['link', {rel: 'icon', href: '/logo.png'}],
+    ['meta', {name: 'google-site-verification', content: 'x-FE_DDWM1BS8Eu4JOG0el7pL1gWJgIM-fwFl2EG4OU'}],
+  ],
   themeConfig: {
     logo: '/logo.png',
     // https://vitepress.dev/reference/default-theme-config
