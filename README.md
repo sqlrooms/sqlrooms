@@ -1,6 +1,6 @@
 # sqlrooms
 
-Building blocks for creating interactive data analysis applications powered by DuckDB-WASM
+Building blocks for React data analytics applications powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html)
 
 [Documentation](https://sqlrooms.github.io/)
 
