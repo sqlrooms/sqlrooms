@@ -58,6 +58,19 @@ jobs:
             mv temp.json "$file"
           done
 
+          # Update Tailwind config files
+          find target -name "tailwind.config.ts" -type f | while read -r file; do
+            # Replace content between template markers with node_modules path
+            sed -i.bak '
+              /\/\/ @sqlrooms-packages-content-start/,/\/\/ @sqlrooms-packages-content-end/{
+                /\/\/ @sqlrooms-packages-content-start/b
+                /\/\/ @sqlrooms-packages-content-end/b
+                c\    '"'"'./node_modules/@sqlrooms/**/dist/**/*.js'"'"',
+              }
+            ' "$file"
+            rm "${file}.bak"
+          done
+
           # Setup git config
           cd target
           git config user.name "github-actions[bot]"

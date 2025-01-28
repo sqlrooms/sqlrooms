@@ -8,7 +8,9 @@ const config = {
   ...preset,
   content: [
     '{app,components,hooks,store,lib}/**/*.{ts,tsx}',
+    // @sqlrooms-packages-content-start
     '../../packages/*/src/**/*.{ts,tsx}',
+    // @sqlrooms-packages-content-end
   ],
   theme: {
     ...preset.theme,

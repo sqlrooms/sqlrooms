@@ -4,7 +4,12 @@ import type {Config} from 'tailwindcss';
 const preset = sqlroomsTailwindPreset({prefix: ''});
 const config = {
   ...preset,
-  content: ['src/**/*.{ts,tsx}', '../../packages/*/src/**/*.{ts,tsx}'],
+  content: [
+    'src/**/*.{ts,tsx}',
+    // @sqlrooms-packages-content-start
+    '../../packages/*/src/**/*.{ts,tsx}',
+    // @sqlrooms-packages-content-end
+  ],
   theme: {
     ...preset.theme,
     extend: {
