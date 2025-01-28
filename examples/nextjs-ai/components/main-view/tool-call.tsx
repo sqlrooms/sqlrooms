@@ -36,7 +36,7 @@ export function ToolCall({toolCall}: ToolCallProps) {
       <Badge
         variant="secondary"
         className={cn(
-          'text-xs absolute top-[-12] left-2 text-gray-100',
+          'text-xs absolute top-[-12px] left-2 text-gray-100',
           toolCall.toolName === 'answer' && 'bg-blue-500',
         )}
       >
