@@ -24,6 +24,8 @@
     "docs:dev": "vitepress dev docs",
     "docs:build": "vitepress build docs",
     "docs:preview": "vitepress preview docs",
+    "version-prerelease": "lerna version prerelease",
+    "version-patch": "lerna version patch",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
     "publish-preview": "turbo run publish && lerna publish from-package --yes --dist-tag preview",
     "publish": "turbo run publish && lerna publish from-package --yes"
