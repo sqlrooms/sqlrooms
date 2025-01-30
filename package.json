@@ -28,7 +28,7 @@
     "version-patch": "lerna version patch",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
     "publish-preview": "turbo run publish && lerna publish from-package --yes --dist-tag preview",
-    "publish": "turbo run publish && lerna publish from-package --yes"
+    "publish-release": "turbo run publish && lerna publish from-package --yes"
   },
   "engines": {
     "node": ">=20"
