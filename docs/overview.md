@@ -21,17 +21,10 @@ SQLRooms is designed for developers building:
 
 Modern data analytics applications face several challenges that SQLRooms addresses:
 
+
 ### Performance and Scale
 
 DuckDB is purpose-built for analytics, providing fast query performance on large datasets through its columnar engine and optimized query processing. Running in the browser through WebAssembly, each user gets their own instance, enabling automatic scaling without infrastructure costs. Applications can even work offline, as there's no dependency on backend services.
-
-### Privacy and Security
-
-SQLRooms enables applications where sensitive data can remain completely client-side, as all data processing and analysis can be performed directly in the browser using DuckDB. This architecture allows for implementations where data never needs to leave the client, simplifying compliance and security requirements when needed.
-
-### Developer Experience
-
-Building analytics applications typically requires integrating multiple complex components. SQLRooms provides a complete foundation with state management, UI components, and extensible architecture out of the box.
 
 ### AI-Powered Analytics
 
@@ -41,6 +34,16 @@ The browser-based DuckDB engine enables powerful AI-driven analytics workflows:
 - Automated data analysis and insights generation
 
 Check out our [Next.js AI example](/examples/#ai-powered-analytics-next-js) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
+
+
+### Privacy and Security
+
+SQLRooms enables applications where sensitive data can remain completely client-side, as all data processing and analysis can be performed directly in the browser using DuckDB. This architecture allows for implementations where data never needs to leave the client, simplifying compliance and security requirements when needed.
+
+### Developer Experience
+
+Building analytics applications typically requires integrating multiple complex components. SQLRooms provides a complete foundation with state management, UI components, and extensible architecture out of the box.
+
 
 ## Architecture
 
