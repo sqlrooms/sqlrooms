@@ -7,18 +7,8 @@
     "access": "public"
   },
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "module": "dist/index.js",
-  "exports": {
-    ".": {
-      "types": "./src/index.ts",
-      "default": "./dist/index.js"
-    },
-    "./lib/*": "./src/lib/*.ts",
-    "./tailwind-preset.css": "./dist/tailwind-preset.css",
-    "./components/*": "./src/components/*.tsx",
-    "./hooks/*": "./src/hooks/*.ts"
-  },
   "scripts": {
     "dev": "npm run copy-tailwind-preset && tsc -w",
     "build": "tsc && npm run copy-tailwind-preset",
@@ -52,5 +42,6 @@
   "peerDependencies": {
     "autoprefixer": "^10.4.20",
     "tailwindcss": "^3.4.17"
-  }
+  },
+  "gitHead": "8f7dbedcfd24bad96b16f055613034538648e9b8"
 }

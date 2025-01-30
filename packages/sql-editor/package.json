@@ -6,7 +6,7 @@
     "access": "public"
   },
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "scripts": {
@@ -16,12 +16,12 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@sqlrooms/data-table": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*",
-    "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/data-table": "0.0.1",
+    "@sqlrooms/duckdb": "0.0.1",
+    "@sqlrooms/layout": "0.0.1",
+    "@sqlrooms/project-config": "0.0.1",
+    "@sqlrooms/ui": "0.0.1",
+    "@sqlrooms/utils": "0.0.1",
     "apache-arrow": "^18.1.0",
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
@@ -36,5 +36,6 @@
     "@types/file-saver": "^2.0.7",
     "@types/react": "^18.2.48",
     "@types/react-dom": "^18.2.18"
-  }
+  },
+  "gitHead": "8f7dbedcfd24bad96b16f055613034538648e9b8"
 }

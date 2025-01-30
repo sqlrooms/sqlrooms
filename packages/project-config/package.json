@@ -2,7 +2,7 @@
   "name": "@sqlrooms/project-config",
   "version": "0.0.1",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": false,
@@ -16,5 +16,6 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint ."
-  }
+  },
+  "gitHead": "8f7dbedcfd24bad96b16f055613034538648e9b8"
 }

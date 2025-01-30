@@ -2,7 +2,7 @@
   "name": "@sqlrooms/data-table",
   "version": "0.0.1",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "private": false,
@@ -11,9 +11,9 @@
   },
   "dependencies": {
     "@heroicons/react": "*",
-    "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/duckdb": "0.0.1",
+    "@sqlrooms/ui": "0.0.1",
+    "@sqlrooms/utils": "0.0.1",
     "@tanstack/react-table": "^8.10.7",
     "@tanstack/table-core": "^8.10.7",
     "react-virtual": "2.10.4"
@@ -27,5 +27,6 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint ."
-  }
+  },
+  "gitHead": "8f7dbedcfd24bad96b16f055613034538648e9b8"
 }
