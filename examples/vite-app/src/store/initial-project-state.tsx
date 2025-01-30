@@ -4,13 +4,18 @@ import {
   ProjectPanelInfo,
   ProjectStateProps,
 } from '@sqlrooms/project-builder';
-import {MAIN_VIEW} from '@sqlrooms/project-config';
+import {
+  LayoutTypes,
+  MAIN_VIEW,
+  MosaicLayoutDirection,
+} from '@sqlrooms/project-config';
 import {DatabaseIcon, InfoIcon, MapIcon, TableIcon} from 'lucide-react';
 import AddDataModal from '../components/add-data/AddDataModal';
 import ProjectDetailsPanel from '../components/ProjectDetailsPanel';
 import {DemoProjectConfig} from './DemoProjectStore';
 import {ProjectPanelTypes} from './schemas';
 import DataSourcesPanel from '../components/DataSourcesPanel';
+import {MainView} from '../components/MainView';
 
 export const PROJECT_BUILDER_PANELS: Partial<
   Record<ProjectPanelTypes, ProjectPanelInfo>
@@ -36,7 +41,7 @@ export const PROJECT_BUILDER_PANELS: Partial<
   [MAIN_VIEW]: {
     title: 'Main view',
     icon: MapIcon,
-    component: () => <div>Main view</div>,
+    component: MainView,
     placement: 'main',
   },
 };
@@ -46,6 +51,15 @@ export const INITIAL_PROJECT_STATE: ProjectStateProps<DemoProjectConfig> = {
   initialized: true,
   projectConfig: {
     ...INITIAL_BASE_PROJECT_CONFIG,
+    layout: {
+      type: LayoutTypes.enum.mosaic,
+      nodes: {
+        direction: MosaicLayoutDirection.enum.row,
+        first: ProjectPanelTypes.enum['data-sources'],
+        second: MAIN_VIEW,
+        splitPercentage: 30,
+      },
+    },
     dataSources: [],
   },
   lastSavedConfig: undefined,

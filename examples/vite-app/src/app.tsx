@@ -8,6 +8,7 @@ import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
 import {DatabaseIcon} from 'lucide-react';
 import useProjectStore from './store/DemoProjectStore';
+import {useEffect} from 'react';
 
 export const App = () => {
   const sqlEditor = useDisclosure();
@@ -17,6 +18,15 @@ export const App = () => {
 
   const sqlEditorConfig = useProjectStore((s) => s.projectConfig.sqlEditor);
   const onChangeSqlEditorConfig = useProjectStore((s) => s.setSqlEditorConfig);
+
+  const addDataSource = useProjectStore((s) => s.addDataSource);
+  useEffect(() => {
+    addDataSource({
+      type: 'url',
+      url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+      tableName: 'latency',
+    });
+  }, []);
 
   return (
     <div className="flex w-full h-screen">
