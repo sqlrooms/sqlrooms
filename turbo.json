@@ -3,11 +3,11 @@
   "tasks": {
     "publish": {
       "dependsOn": ["build", "test", "lint"],
-      "outputs": ["packages/*/dist"]
+      "outputs": ["dist/**", ".next/**"]
     },
     "build": {
       "dependsOn": ["^build"],
-      "outputs": ["packages/*/dist"]
+      "outputs": ["dist/**"]
     },
     "lint": {
       "dependsOn": ["^lint"]
