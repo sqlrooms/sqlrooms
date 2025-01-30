@@ -9,6 +9,7 @@ import {useDisclosure} from '@sqlrooms/ui';
 import {DatabaseIcon} from 'lucide-react';
 import useProjectStore from './store/DemoProjectStore';
 import {useEffect} from 'react';
+import {INITIAL_PROJECT_STATE} from './store/initial-project-state';
 
 export const App = () => {
   const sqlEditor = useDisclosure();
@@ -19,12 +20,22 @@ export const App = () => {
   const sqlEditorConfig = useProjectStore((s) => s.projectConfig.sqlEditor);
   const onChangeSqlEditorConfig = useProjectStore((s) => s.setSqlEditorConfig);
 
-  const addDataSource = useProjectStore((s) => s.addDataSource);
+  const reinitialize = useProjectStore((s) => s.reinitialize);
   useEffect(() => {
-    addDataSource({
-      type: 'url',
-      url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
-      tableName: 'latency',
+    reinitialize({
+      project: {
+        config: {
+          ...INITIAL_PROJECT_STATE.projectConfig,
+          title: 'Observable Website Latency',
+          dataSources: [
+            {
+              type: 'url',
+              url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+              tableName: 'latency',
+            },
+          ],
+        },
+      },
     });
   }, []);
 

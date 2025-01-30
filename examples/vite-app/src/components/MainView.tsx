@@ -2,12 +2,21 @@ import {useMosaic} from '../mosaic/use-mosaic';
 import {SpinnerPane} from '@sqlrooms/ui';
 import VgPlotChart from '../mosaic/VgPlotChart';
 import {Spec} from '@uwdata/mosaic-spec';
+import useProjectStore from '../store/DemoProjectStore';
 
 export const MainView = () => {
   const {isMosaicLoading} = useMosaic();
+  const isDataAvailable = useProjectStore((state) => state.isDataAvailable);
 
   if (isMosaicLoading) {
     return <SpinnerPane className="h-full w-full" />;
+  }
+  if (!isDataAvailable) {
+    return (
+      <div className="flex flex-col gap-4 p-4 justify-center items-center w-full h-full">
+        No data available
+      </div>
+    );
   }
 
   return (

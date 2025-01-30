@@ -136,6 +136,11 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
   reset: () => Promise<void>;
+  /**
+   * Reinitialize the project state. Called when the project is first loaded.
+   * @param opts - Optional parameters to override the default behavior.
+   * @returns A promise that resolves when the project state has been reinitialized.
+   */
   reinitialize: (opts?: {
     project?: {id?: string; config: PC};
     isReadOnly?: boolean;
