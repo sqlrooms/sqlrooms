@@ -1,6 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import * as arrow from 'apache-arrow';
-import {DataTable} from './types';
+import {DataTable, TableColumn} from './types';
 
 /**
  * @deprecated DuckConn is deprecated, use DuckDb instead
@@ -207,7 +207,7 @@ export async function getDuckTableSchema(
   const describeResults = await conn.query(`DESCRIBE ${schema}.${tableName}`);
   const columnNames = describeResults.getChild('column_name');
   const columnTypes = describeResults.getChild('column_type');
-  const columns = [];
+  const columns: TableColumn[] = [];
   for (let di = 0; di < describeResults.numRows; di++) {
     const columnName = columnNames?.get(di);
     const columnType = columnTypes?.get(di);
