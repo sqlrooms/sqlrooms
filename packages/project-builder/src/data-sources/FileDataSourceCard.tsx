@@ -16,7 +16,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {ProjectFileInfo, ProjectFileState, useBaseProjectStore} from '../..';
+import {useBaseProjectStore} from '../ProjectStateProvider';
+import {ProjectFileInfo, ProjectFileState} from '../types';
 
 type Props = {
   isReadOnly?: boolean;
