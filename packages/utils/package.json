@@ -32,5 +32,5 @@
     "@types/d3-time-format": "^4.0.3",
     "@types/seedrandom": "^3.0.8"
   },
-  "gitHead": "8f7dbedcfd24bad96b16f055613034538648e9b8"
+  "gitHead": "e73e3d33f9d1266995a6a50fece32a5e0c2ffa53"
 }
