@@ -3,3 +3,4 @@
 tsconfig.json
 *.tsbuildinfo
 eslint.config.js
+src/

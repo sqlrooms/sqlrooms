@@ -7,6 +7,6 @@
       "@/ui/*": ["./src/*"]
     }
   },
-  "include": ["src", "turbo"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
