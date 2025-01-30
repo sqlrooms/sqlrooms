@@ -8,7 +8,8 @@ All example applications are available in our [Examples Repository](https://gith
 
 ## [Basic Example (Vite)](https://github.com/sqlrooms/examples/tree/main/vite-app)
 
-[Github repo](https://github.com/sqlrooms/examples/tree/main/vite-app)
+[Try live](https://sqlrooms-mosaic-example.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/vite-app)
 
 [![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-app?embed=1&file=src/app.tsx)
 
