@@ -9,16 +9,44 @@ import {
 import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
 
-type Props = {
+/**
+ * A modal component for displaying a table with data from a SQL query.
+ *
+ * @component
+ * @param props - Component props
+ * @param props.title - The title of the table
+ * @param props.query - The SQL query to execute and display in the table
+ * @param props.tableModal - An object containing the modal's open state and close function
+ *
+ * @example
+ * ```tsx
+ * import { useState } from 'react';
+ * import { DataTableModal } from '@sqlrooms/data-table';
+ *
+ * const MyComponent = () => {
+ *   const [isOpen, setIsOpen] = useState(false);
+ *
+ *   return (
+ *     <DataTableModal
+ *       title="Users"
+ *       query="SELECT * FROM users LIMIT 10"
+ *       tableModal={{
+ *         isOpen,
+ *         onClose: () => setIsOpen(false)
+ *       }}
+ *     />
+ *   );
+ * };
+ * ```
+ */
+const DataTableModal: FC<{
   title: string | undefined;
   query: string | undefined;
   tableModal: {
     isOpen: boolean;
     onClose: () => void;
   };
-};
-
-const DataTableModal: FC<Props> = ({title, query, tableModal}) => {
+}> = ({title, query, tableModal}) => {
   return (
     <Dialog
       open={tableModal.isOpen}
