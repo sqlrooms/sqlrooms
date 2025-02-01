@@ -19,16 +19,59 @@ import {formatBytes, formatTimeRelative} from '@sqlrooms/utils';
 import {FC, useCallback, useEffect, useMemo} from 'react';
 import {S3FileOrDirectory} from './S3FileOrDirectory';
 
-type Props = {
+/**
+ * A file browser component for navigating and selecting files from an S3-like storage.
+ *
+ * This component provides a familiar file explorer interface with features like:
+ * - Directory navigation with breadcrumbs
+ * - File and directory listing
+ * - Multiple file selection
+ * - File metadata display (size, type, last modified)
+ *
+ * ![S3 File Browser Interface](https://github.com/user-attachments/assets/dd79fbb9-c487-4050-96ef-81cff39930d3)
+ *
+ * @example
+ * ```tsx
+ * const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+ * const [selectedDirectory, setSelectedDirectory] = useState('');
+ *
+ * return (
+ *   <S3FileBrowser
+ *     files={[
+ *       { key: 'documents', isDirectory: true },
+ *       {
+ *         key: 'example.txt',
+ *         isDirectory: false,
+ *         size: 1024,
+ *         contentType: 'text/plain',
+ *         lastModified: new Date()
+ *       }
+ *     ]}
+ *     selectedFiles={selectedFiles}
+ *     selectedDirectory={selectedDirectory}
+ *     onCanConfirmChange={(canConfirm) => console.log('Can confirm:', canConfirm)}
+ *     onChangeSelectedDirectory={setSelectedDirectory}
+ *     onChangeSelectedFiles={setSelectedFiles}
+ *   />
+ * );
+ * ```
+ *
+ * @param props - The component props
+ * @param props.files - Array of files and directories to display
+ * @param props.selectedFiles - Array of currently selected file keys
+ * @param props.selectedDirectory - Current directory path (empty string for root)
+ * @param props.onCanConfirmChange - Callback fired when selection state changes
+ * @param props.onChangeSelectedDirectory - Callback fired when directory navigation occurs
+ * @param props.onChangeSelectedFiles - Callback fired when file selection changes
+ */
+const S3FileBrowser: FC<{
   files?: S3FileOrDirectory[];
   selectedFiles: string[];
   selectedDirectory: string;
   onCanConfirmChange: (canConfirm: boolean) => void;
   onChangeSelectedDirectory: (directory: string) => void;
   onChangeSelectedFiles: (files: string[]) => void;
-};
-
-const S3FileBrowser: FC<Props> = (props) => {
+}> = (props) => {
   const {
     files,
     selectedDirectory,

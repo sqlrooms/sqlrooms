@@ -18,14 +18,13 @@ import {
   AlertDescription,
 } from '@sqlrooms/ui';
 import {DuckQueryError} from '@sqlrooms/duckdb';
-import {
-  SqlQueryDataSource,
-  VALID_TABLE_OR_COLUMN_REGEX,
-} from '@sqlrooms/project-config';
+import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
+
+const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
 const formSchema = z.object({
   tableName: z

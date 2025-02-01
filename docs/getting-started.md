@@ -51,7 +51,7 @@ const config = {
     // Your content paths...
     './src/**/*.{ts,tsx}',
     // Add SQLRooms packages to content paths
-    '../../packages/*/src/**/*.{ts,tsx}',
+    './node_modules/@sqlrooms/**/dist/**/*.js',
   ],
   theme: {
     ...preset.theme,
