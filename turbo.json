@@ -1,6 +1,11 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
+    "typedoc": {
+      "cache": false,
+      "persistent": false,
+      "outputs": ["docs/api/**"]
+    },
     "publish": {
       "dependsOn": ["build", "test", "lint"],
       "outputs": ["dist/**", ".next/**"]

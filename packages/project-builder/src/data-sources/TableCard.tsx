@@ -3,7 +3,7 @@ import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
 import {FC} from 'react';
 
-export type Props = {
+export type TableCardProps = {
   isReadOnly?: boolean;
   value?: DataTable;
   rowCount?: number;
@@ -12,7 +12,12 @@ export type Props = {
   className?: string;
 };
 
-const TableCard: FC<Props> = ({value, rowCount, onClick, className}) => {
+const TableCard: FC<TableCardProps> = ({
+  value,
+  rowCount,
+  onClick,
+  className,
+}) => {
   if (!value) return null;
 
   return (

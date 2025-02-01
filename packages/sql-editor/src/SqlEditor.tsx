@@ -39,7 +39,7 @@ import {
 } from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import CreateTableModal, {
-  Props as CreateTableModalProps,
+  CreateTableModalProps as CreateTableModalProps,
 } from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
@@ -47,7 +47,7 @@ import {TablesList} from './TablesList';
 
 const DEFAULT_QUERY = '';
 
-export type Props = {
+export type SqlEditorProps = {
   schema?: string;
   isOpen: boolean;
   documentationPanel?: React.ReactNode;
@@ -57,7 +57,7 @@ export type Props = {
   onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
 };
 
-const SqlEditor: React.FC<Props> = (props) => {
+const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   const {
     schema = 'main',
     documentationPanel,

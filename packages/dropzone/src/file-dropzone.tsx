@@ -3,7 +3,7 @@ import {useDropzone} from 'react-dropzone';
 import {Plus} from 'lucide-react';
 import {cn, Spinner} from '@sqlrooms/ui';
 
-export type Props = {
+export type FileDropzoneProps = {
   className?: string;
   isInvalid?: boolean;
   onDrop: (files: File[]) => Promise<void>;
@@ -12,7 +12,7 @@ export type Props = {
   children?: React.ReactNode;
 };
 
-export const FileDropzone: FC<Props> = (props) => {
+export const FileDropzone: FC<FileDropzoneProps> = (props) => {
   const {
     isInvalid,
     onDrop,

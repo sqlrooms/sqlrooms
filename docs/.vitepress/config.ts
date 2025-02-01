@@ -1,5 +1,7 @@
 import {defineConfig} from 'vitepress';
+import {apiSidebarConfig} from './gen-api-sidebar';
 
+const CORE_PACKAGES = ['project-builder', 'project-config'];
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'SQLRooms',
@@ -7,10 +9,19 @@ export default defineConfig({
   base: '/',
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
-    ['meta', {name: 'google-site-verification', content: 'x-FE_DDWM1BS8Eu4JOG0el7pL1gWJgIM-fwFl2EG4OU'}],
+    [
+      'meta',
+      {
+        name: 'google-site-verification',
+        content: 'x-FE_DDWM1BS8Eu4JOG0el7pL1gWJgIM-fwFl2EG4OU',
+      },
+    ],
   ],
   themeConfig: {
     logo: '/logo.png',
+    search: {
+      provider: 'local',
+    },
     // https://vitepress.dev/reference/default-theme-config
     nav: [
       {text: 'Home', link: '/'},
@@ -37,8 +48,18 @@ export default defineConfig({
         text: 'Reference',
         items: [
           {
-            text: 'Package Structure',
-            link: '/packages',
+            text: 'Core Packages',
+            link: '/packages#core-packages',
+            items: apiSidebarConfig.filter((item) =>
+              CORE_PACKAGES.includes(item.text),
+            ),
+          },
+          {
+            text: 'Feature Packages',
+            link: '/packages#feature-packages',
+            items: apiSidebarConfig.filter(
+              (item) => !CORE_PACKAGES.includes(item.text),
+            ),
           },
         ],
       },
@@ -48,14 +69,16 @@ export default defineConfig({
           {
             text: 'Examples Overview',
             link: '/examples',
-          },
-          {
-            text: 'Basic Example (Vite)',
-            link: '/examples/#basic-example-vite',
-          },
-          {
-            text: 'AI Analytics (Next.js)',
-            link: '/examples#ai-powered-analytics-next-js',
+            items: [
+              {
+                text: 'Basic Example (Vite)',
+                link: '/examples/#mosaic-example-vite',
+              },
+              {
+                text: 'AI Analytics (Next.js)',
+                link: '/examples#ai-powered-analytics-next-js',
+              },
+            ],
           },
         ],
       },

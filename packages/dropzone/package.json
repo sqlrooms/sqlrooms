@@ -3,6 +3,9 @@
   "version": "0.0.1",
   "type": "module",
   "private": false,
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -19,7 +22,8 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typedoc": "typedoc"
   },
   "dependencies": {
     "@sqlrooms/ui": "0.0.1",

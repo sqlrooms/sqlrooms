@@ -21,7 +21,7 @@ import {
 import * as React from 'react';
 import {useVirtual} from 'react-virtual';
 
-export type Props<Data extends object> = {
+export type DataTableVirtualizedProps<Data extends object> = {
   data?: ArrayLike<Data>;
   columns?: ColumnDef<Data, any>[];
   isFetching?: boolean;
@@ -172,7 +172,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
 });
 
 export default function DataTableWithLoader<Data extends object>(
-  props: Props<Data>,
+  props: DataTableVirtualizedProps<Data>,
 ) {
   const {isPreview, isFetching, error, ...rest} = props;
   const {data, columns} = rest;

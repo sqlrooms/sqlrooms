@@ -9,9 +9,9 @@ import {
   DialogTitle,
 } from '@sqlrooms/ui';
 import React, {Suspense} from 'react';
-import SqlEditor, {Props} from './SqlEditor';
+import SqlEditor, {SqlEditorProps} from './SqlEditor';
 
-const SqlEditorModal: React.FC<Props> = (props) => {
+const SqlEditorModal: React.FC<SqlEditorProps> = (props) => {
   const {isOpen, onClose} = props;
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>

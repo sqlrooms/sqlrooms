@@ -6,6 +6,9 @@
   "module": "dist/index.js",
   "type": "module",
   "private": false,
+  "files": [
+    "dist"
+  ],
   "publishConfig": {
     "access": "public"
   },
@@ -26,7 +29,8 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typedoc": "typedoc"
   },
   "gitHead": "e73e3d33f9d1266995a6a50fece32a5e0c2ffa53"
 }

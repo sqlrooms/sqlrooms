@@ -8,7 +8,7 @@ SQLRooms is organized into several packages that work together to provide a comp
 
 ## Core Packages
 
-### @sqlrooms/project-builder
+### [@sqlrooms/project-builder](/api/project-builder)
 
 Core framework package that provides the foundation for building analytics applications:
 
@@ -17,7 +17,7 @@ Core framework package that provides the foundation for building analytics appli
 - DuckDB integration
 - Built-in UI components
 
-### @sqlrooms/project-config
+### [@sqlrooms/project-config](/api/project-config)
 
 Configuration and type definitions:
 
@@ -26,7 +26,7 @@ Configuration and type definitions:
 - TypeScript types and interfaces
 - Constants and utilities
 
-### @sqlrooms/layout
+### [@sqlrooms/layout](/api/layout)
 
 Layout system and panel management:
 
@@ -35,7 +35,7 @@ Layout system and panel management:
 - Panel drag and drop
 - Layout persistence
 
-### @sqlrooms/ui
+### [@sqlrooms/ui](/api/ui)
 
 Shared UI components and styling:
 
@@ -46,7 +46,7 @@ Shared UI components and styling:
 
 ## Feature Packages
 
-### @sqlrooms/data-table
+### [@sqlrooms/data-table](/api/data-table)
 
 Interactive data grid component:
 
@@ -55,7 +55,7 @@ Interactive data grid component:
 - Row selection and pagination
 - Custom cell renderers
 
-### @sqlrooms/duckdb
+### [@sqlrooms/duckdb](/api/duckdb)
 
 DuckDB integration and utilities:
 
@@ -64,7 +64,7 @@ DuckDB integration and utilities:
 - Data source connections
 - Type-safe query results
 
-### @sqlrooms/dropzone
+### [@sqlrooms/dropzone](/api/dropzone)
 
 File upload and drag-and-drop functionality:
 
@@ -73,7 +73,7 @@ File upload and drag-and-drop functionality:
 - File type validation
 - Upload progress tracking
 
-### @sqlrooms/s3-browser
+### [@sqlrooms/s3-browser](/api/s3-browser)
 
 S3-compatible storage browser:
 
@@ -82,7 +82,7 @@ S3-compatible storage browser:
 - Directory management
 - S3 bucket integration
 
-### @sqlrooms/sql-editor
+### [@sqlrooms/sql-editor](/api/sql-editor)
 
 SQL query editor with advanced features:
 

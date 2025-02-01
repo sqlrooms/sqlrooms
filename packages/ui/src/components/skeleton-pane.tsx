@@ -2,14 +2,14 @@ import * as React from 'react';
 import {cn} from '../lib/utils';
 import {Skeleton} from './skeleton';
 
-export type Props = {
+export type SkeletonPaneProps = {
   n?: number;
   staggeringDelay?: number;
   rowHeight?: number | string;
   className?: string;
 };
 
-const SkeletonPane: React.FC<Props> = ({
+const SkeletonPane: React.FC<SkeletonPaneProps> = ({
   n = 3,
   staggeringDelay = 200,
   rowHeight = '20px',

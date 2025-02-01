@@ -38,7 +38,7 @@ const formSchema = z.object({
   query: z.string().min(1, 'Query is required'),
 });
 
-export type Props = {
+export type CreateTableModalProps = {
   query: string;
   isOpen: boolean;
   onClose: () => void;
@@ -50,7 +50,7 @@ export type Props = {
   ) => Promise<void>;
 };
 
-const CreateTableModal: FC<Props> = (props) => {
+const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   const {editDataSource, isOpen, onClose, onAddOrUpdateSqlQuery} = props;
 
   const form = useForm<z.infer<typeof formSchema>>({
