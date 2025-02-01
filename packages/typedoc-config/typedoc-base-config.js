@@ -5,7 +5,6 @@ const typedocOptions = {
   classPropertiesFormat: 'table',
   cleanOutputDir: true,
   disableSources: true,
-  disableSources: true,
   entryPoints: ['src/index.ts'],
   entryPointStrategy: 'resolve',
   enumMembersFormat: 'table',
