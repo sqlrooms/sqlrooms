@@ -57,10 +57,20 @@ jobs:
           sed -i.bak '1{/---/{:a N;/\n---/!ba};d}' target/README.md
           rm target/README.md.bak
 
+          # Get version from lerna.json
+          VERSION=$(jq -r '.version' source/lerna.json)
+
           # Update package.json files
           find target -name "package.json" -type f | while read -r file; do
-            # Replace all "@sqlrooms/*": "workspace:*" with "@sqlrooms/*": "latest"
-            jq '(.dependencies | with_entries(if .key | startswith("@sqlrooms/") then .value = "latest" else . end)) as $deps | .dependencies = $deps' "$file" > temp.json
+            # Replace all "@sqlrooms/*": "workspace:*" with "@sqlrooms/*": "$VERSION"
+            jq --arg version "$VERSION" \
+              '(.dependencies | with_entries(
+                if .key | startswith("@sqlrooms/")
+                then .value = $version
+                else .
+                end
+              )) as $deps
+              | .dependencies = $deps' "$file" > temp.json
             mv temp.json "$file"
           done
 

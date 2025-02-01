@@ -14,13 +14,13 @@ Building blocks for React data analytics applications powered by [DuckDB-WASM](h
 ## Running Next.js example app
 
     pnpm install
-    pnpm --filter nextjs-ai dev
+    pnpm --filter sqlrooms-nextjs-ai dev
     open http://localhost:3000
 
 ## Running vite example app
 
     pnpm install
-    pnpm --filter vite-app dev
+    pnpm --filter sqlrooms-vite-mosaic dev
     open http://localhost:5174
 
 ## Usage

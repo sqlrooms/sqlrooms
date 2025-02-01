@@ -1,8 +1,6 @@
 # SQLRooms Next JS demo app
 
-[Try live](https://sqlrooms-nextjs-ai.netlify.app/)
-
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-app?embed=1&file=src/app.tsx)
+[More about this example](https://sqlrooms.github.io/examples/)s
 
 # Running locally
 
