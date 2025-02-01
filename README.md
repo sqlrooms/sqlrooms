@@ -25,7 +25,7 @@ Building blocks for React data analytics applications powered by [DuckDB-WASM](h
 
 ## Usage
 
-See example code in [examples/nextjs-ai](examples/nextjs-ai)
+Check out the [examples repository](https://github.com/sqlrooms/examples).
 
 ## Publishing
 
