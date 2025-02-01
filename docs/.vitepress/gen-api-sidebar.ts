@@ -39,6 +39,36 @@ function loadSidebarContent(filePath: string): SidebarItem[] {
   return cleanupLinks(items);
 }
 
+function flattenAndAnnotateItems(
+  items: SidebarItem[],
+  packageName: string,
+): SidebarItem[] {
+  const result: SidebarItem[] = [];
+
+  for (const category of items) {
+    if (!category.items) continue;
+
+    for (const item of category.items) {
+      let suffix = '';
+      if (category.text === 'Type Aliases' || category.text === 'Interfaces') {
+        suffix = ' (type)';
+      } else if (category.text === 'Enumerations') {
+        suffix = ' (enum)';
+      }
+
+      result.push({
+        text: `${item.text}${suffix}`,
+        link: item.link,
+      });
+    }
+  }
+
+  // Sort alphabetically by text (ignoring the type/enum suffix)
+  return result.sort((a, b) => {
+    return a.text.localeCompare(b.text);
+  });
+}
+
 function generateApiSidebar(
   docsDir: string,
 ): NonNullable<SidebarItem['items']> {
@@ -56,7 +86,7 @@ function generateApiSidebar(
     packages.push({
       text: packageName,
       collapsed: true,
-      items: content,
+      items: flattenAndAnnotateItems(content, packageName),
     });
   }
 

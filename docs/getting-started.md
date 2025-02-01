@@ -10,11 +10,11 @@ SQLRooms is a powerful framework and a set of building blocks for creating DuckD
 
 Your application should have the following dependencies:
 
-- React 18 or higher
-- Tailwind CSS
+- [React 18](https://react.dev/) or higher
+- [Tailwind CSS](https://tailwindcss.com/)
 - [Zustand](https://zustand.docs.pmnd.rs) for state management
 - [Zod](https://zod.dev) for schema val idation
-- Node.js >= 20
+- [Node.js](https://nodejs.org/) >= 20
 
 ## Installation
 

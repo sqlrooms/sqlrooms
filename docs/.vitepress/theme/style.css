@@ -9,3 +9,7 @@
 }
 
 /* Add your custom styles here */
+.VPSidebarItem.level-3 .text {
+  font-size: 0.8em;
+  padding: 0;
+}

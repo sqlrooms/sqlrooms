@@ -1,8 +1,8 @@
 import {
-  convertToUniqueS3ObjectName,
   generateUniqueName,
   generateUniquePath,
-} from './str';
+  convertToUniqueS3ObjectName,
+} from './filepaths';
 
 test('generateUniqueName generates unique table names', () => {
   expect(generateUniqueName('foo', [])).toBe('foo');

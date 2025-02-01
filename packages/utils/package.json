@@ -17,17 +17,15 @@
     "build": "tsc",
     "_test": "jest",
     "_test:watch": "jest --watch",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typedoc": "typedoc"
   },
   "dependencies": {
     "d3-color": "^3.1.0",
     "d3-format": "^3.1.0",
     "d3-time-format": "^4.1.0",
-    "seedrandom": "^3.0.5"
-  },
-  "peerDependencies": {
-    "dayjs": "*",
-    "zod": "*"
+    "seedrandom": "^3.0.5",
+    "dayjs": "^1.11.13"
   },
   "devDependencies": {
     "@types/d3-color": "^3.1.3",

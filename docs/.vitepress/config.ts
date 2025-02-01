@@ -27,6 +27,7 @@ export default defineConfig({
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
       {text: 'Get started', link: '/getting-started'},
+      {text: 'Reference', link: '/packages'},
       {text: 'Examples', link: '/examples'},
     ],
 
