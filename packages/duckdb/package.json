@@ -12,9 +12,9 @@
   "publishConfig": {
     "access": "public"
   },
-  "peerDependencies": {
-    "@duckdb/duckdb-wasm": "*",
-    "apache-arrow": "*"
+  "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.0",
+    "apache-arrow": "^18.1.0"
   },
   "scripts": {
     "dev": "tsc -w",
