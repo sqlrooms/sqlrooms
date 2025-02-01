@@ -11,12 +11,12 @@ import {FC, Suspense, useEffect, useState} from 'react';
 import DataTablePaginated from './DataTablePaginated';
 import useArrowDataTable from './useArrowDataTable';
 
-type Props = {
+export type QueryDataTableProps = {
   query: string;
-  queryKeyComponents?: any[];
+  queryKeyComponents?: unknown[];
 };
 
-const QueryDataTable: FC<Props> = ({query}) => {
+const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
   const {conn} = useDuckDb();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -103,7 +103,7 @@ const QueryDataTable: FC<Props> = ({query}) => {
   );
 };
 
-const QueryDataTableWithSuspense: FC<Props> = (props) => {
+const QueryDataTableWithSuspense: FC<QueryDataTableProps> = (props) => {
   return (
     <Suspense fallback={<SpinnerPane className="w-full h-full" />}>
       <QueryDataTable

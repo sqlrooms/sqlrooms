@@ -3,13 +3,11 @@ import {FC, useMemo} from 'react';
 import {useBaseProjectStore} from '../ProjectStateProvider';
 import {PanelHeaderButton} from './PanelHeaderButton';
 
-type Props = {
+const ProjectBuilderPanelHeader: FC<{
   panelKey: string;
   showHeader?: boolean;
   children?: React.ReactNode;
-};
-
-const ProjectBuilderPanelHeader: FC<Props> = (props) => {
+}> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
   const projectPanels = useBaseProjectStore((state) => state.projectPanels);
   const {icon: Icon, title} = projectPanels[type] ?? {};

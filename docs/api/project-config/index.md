@@ -21,7 +21,6 @@
 ## Variables
 
 - [DEFAULT\_PROJECT\_TITLE](variables/DEFAULT_PROJECT_TITLE.md)
-- [VALID\_TABLE\_OR\_COLUMN\_REGEX](variables/VALID_TABLE_OR_COLUMN_REGEX.md)
 - [DEFAULT\_SQL\_EDITOR\_CONFIG](variables/DEFAULT_SQL_EDITOR_CONFIG.md)
 - [DataSourceTypes](variables/DataSourceTypes.md)
 - [BaseDataSource](variables/BaseDataSource.md)

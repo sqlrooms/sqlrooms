@@ -6,6 +6,12 @@
       "persistent": false,
       "outputs": ["docs/api/**"]
     },
+    "typedoc:watch": {
+      "cache": false,
+      "persistent": false,
+      "dependsOn": ["typedoc"],
+      "inputs": ["-watch"]
+    },
     "publish": {
       "dependsOn": ["build", "test", "lint"],
       "outputs": ["dist/**", ".next/**"]

@@ -3,21 +3,14 @@ import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
 import {FC} from 'react';
 
-export type TableCardProps = {
+const TableCard: FC<{
   isReadOnly?: boolean;
   value?: DataTable;
   rowCount?: number;
   onReset?: () => void;
   onClick?: () => void;
   className?: string;
-};
-
-const TableCard: FC<TableCardProps> = ({
-  value,
-  rowCount,
-  onClick,
-  className,
-}) => {
+}> = ({value, rowCount, onClick, className}) => {
   if (!value) return null;
 
   return (

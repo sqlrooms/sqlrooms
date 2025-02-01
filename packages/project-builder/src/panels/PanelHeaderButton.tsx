@@ -1,14 +1,12 @@
 import {Button} from '@sqlrooms/ui';
 import React, {FC} from 'react';
 
-type Props = {
+const PanelHeaderButton: FC<{
   label: string;
   icon: React.ReactElement;
   isPinned?: boolean;
   onClick: () => void;
-};
-
-const PanelHeaderButton: FC<Props> = (props) => {
+}> = (props) => {
   const {isPinned, icon, label, onClick} = props;
   return (
     <Button

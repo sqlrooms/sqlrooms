@@ -2,14 +2,12 @@ import {FC} from 'react';
 import {Dialog, DialogContent, DialogHeader, DialogTitle} from './dialog';
 import {Progress} from './progress';
 
-type Props = {
+const ProgressModal: FC<{
   isOpen: boolean;
   title?: string;
   loadingStage?: string;
   progress?: number;
-};
-
-const ProgressModal: FC<Props> = (props) => {
+}> = (props) => {
   const {isOpen, title, loadingStage, progress} = props;
 
   return (

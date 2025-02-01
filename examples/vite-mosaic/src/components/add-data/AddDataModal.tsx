@@ -16,12 +16,10 @@ import {FC, Suspense, useCallback, useRef, useState} from 'react';
 import {AddDataModalInternalContext} from './AddDataModalContext';
 import UploadFiles from './upload/UploadFiles';
 
-type Props = {
+const AddDataModal: FC<{
   isOpen: boolean;
   onClose: () => void;
-};
-
-const AddDataModal: FC<Props> = (props) => {
+}> = (props) => {
   const {isOpen, onClose} = props;
   const [loadingStatus, setLoadingStatus] = useState<string>();
   const [canConfirm, setCanConfirm] = useState(false);

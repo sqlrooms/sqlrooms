@@ -2,24 +2,24 @@ import {Button} from '@sqlrooms/ui';
 import {TableIcon} from 'lucide-react';
 import type {FC} from 'react';
 
-type Props = {
+type OnSelectCallback = (name: string) => void;
+
+const TablesList: FC<{
   schema: string;
   tableNames: string[];
   selectedTable?: string;
-  onSelect: (name: string) => void;
+  onSelect: OnSelectCallback;
   onChange?: () => void;
   renderTableButton?: (
     tableName: string,
-    onSelect: Props['onSelect'],
+    onSelect: OnSelectCallback,
   ) => React.ReactNode;
-};
-
-const TablesList: FC<Props> = (props) => {
+}> = (props) => {
   const {
     tableNames,
     selectedTable,
     onSelect,
-    renderTableButton = (tableName: string, onSelect: Props['onSelect']) => (
+    renderTableButton = (tableName: string, onSelect: OnSelectCallback) => (
       <Button
         className="w-full justify-start font-normal overflow-hidden whitespace-normal min-h-[25px] text-sm text-left break-words select-text"
         variant={selectedTable === tableName ? 'secondary' : 'ghost'}

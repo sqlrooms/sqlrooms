@@ -2,19 +2,12 @@ import * as React from 'react';
 import {cn} from '../lib/utils';
 import {Skeleton} from './skeleton';
 
-export type SkeletonPaneProps = {
+const SkeletonPane: React.FC<{
   n?: number;
   staggeringDelay?: number;
   rowHeight?: number | string;
   className?: string;
-};
-
-const SkeletonPane: React.FC<SkeletonPaneProps> = ({
-  n = 3,
-  staggeringDelay = 200,
-  rowHeight = '20px',
-  className,
-}) => {
+}> = ({n = 3, staggeringDelay = 200, rowHeight = '20px', className}) => {
   const [count, setCount] = React.useState(0);
 
   React.useEffect(() => {

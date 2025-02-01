@@ -5,14 +5,12 @@ import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
 
 const ENABLE_LAYOUT_REARRANGE = false;
 
-type Props = {
+const MosaicTile: FC<{
   id: string;
   path: MosaicBranch[];
   content: React.ReactNode;
   isDragging: boolean;
-};
-
-const MosaicTile: FC<Props> = (props) => {
+}> = (props) => {
   const {id, content, path, isDragging} = props;
   const body = (
     <div

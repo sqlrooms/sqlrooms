@@ -9,13 +9,11 @@ import {
 } from '@sqlrooms/ui';
 import React from 'react';
 
-interface Props {
+const DeleteSqlQueryModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onConfirm: () => void;
-}
-
-const DeleteSqlQueryModal: React.FC<Props> = ({isOpen, onClose, onConfirm}) => {
+}> = ({isOpen, onClose, onConfirm}) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>

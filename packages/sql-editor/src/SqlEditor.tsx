@@ -38,9 +38,7 @@ import {
   PlusIcon,
 } from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import CreateTableModal, {
-  CreateTableModalProps as CreateTableModalProps,
-} from './CreateTableModal';
+import CreateTableModal, {CreateTableModalProps} from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 import {TablesList} from './TablesList';
@@ -48,15 +46,41 @@ import {TablesList} from './TablesList';
 const DEFAULT_QUERY = '';
 
 export type SqlEditorProps = {
+  /** The database schema to use for queries. Defaults to 'main' */
   schema?: string;
+
+  /** Whether the SQL editor is currently visible */
   isOpen: boolean;
+
+  /** Optional component to render SQL documentation in the side panel */
   documentationPanel?: React.ReactNode;
+
+  /** Configuration object containing queries and selected query state */
   sqlEditorConfig: SqlEditorConfig;
+
+  /** Callback fired when the SQL editor configuration changes */
   onChange: (config: SqlEditorConfig) => void;
+
+  /** Callback fired when the SQL editor should be closed */
   onClose: () => void;
+
+  /** Callback fired when a new table should be created from query results */
   onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
 };
 
+/**
+ * A full-featured SQL editor component with query execution, table management, and results visualization.
+ *
+ * Features:
+ * - Multiple query tabs with save/rename/delete functionality
+ * - Query execution with results displayed in a data table
+ * - Table browser showing available tables in the schema
+ * - Export results to CSV
+ * - Create new tables from query results
+ * - Optional SQL documentation panel
+ * - Keyboard shortcuts (Cmd/Ctrl + Enter to run queries)
+ *
+ */
 const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   const {
     schema = 'main',

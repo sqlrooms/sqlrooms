@@ -17,8 +17,6 @@ Re-exports [toast](functions/useToast.md#toast)
 
 ## Type Aliases
 
-- [SkeletonPaneProps](type-aliases/SkeletonPaneProps.md)
-- [SpinnerPaneProps](type-aliases/SpinnerPaneProps.md)
 - [ToastProps](type-aliases/ToastProps.md)
 - [ToastActionElement](type-aliases/ToastActionElement.md)
 

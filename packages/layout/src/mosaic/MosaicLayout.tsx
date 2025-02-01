@@ -3,9 +3,7 @@ import {Mosaic, MosaicNode, MosaicProps} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
 import MosaicTile from './MosaicTile';
 
-type Props = MosaicProps<string>;
-
-const MosaicLayout: FC<Props> = (props) => {
+const MosaicLayout: FC<MosaicProps<string>> = (props) => {
   const {onChange, onRelease, renderTile} = props;
   const [isDragging, setDragging] = React.useState(false);
   const handleLayoutChange = useCallback(

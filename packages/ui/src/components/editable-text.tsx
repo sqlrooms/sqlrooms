@@ -34,7 +34,9 @@ import {cn} from '../lib/utils';
  * ```
  */
 
-type Props = {
+const EDITING_PAD = 12;
+
+export const EditableText: FC<{
   className?: string;
   isReadOnly?: boolean;
   value: string;
@@ -54,11 +56,7 @@ type Props = {
    **/
   isEditing?: boolean;
   onEditingChange?: (isEditing: boolean) => void;
-};
-
-const EDITING_PAD = 12;
-
-export const EditableText: FC<Props> = ({
+}> = ({
   className,
   isReadOnly = false,
   defaultEditing = false,

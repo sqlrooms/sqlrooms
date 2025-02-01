@@ -64,9 +64,6 @@ jobs:
       - name: Build
         run: pnpm run docs:build
 
-      - name: Generate typedoc
-        run: pnpm run typedoc
-
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

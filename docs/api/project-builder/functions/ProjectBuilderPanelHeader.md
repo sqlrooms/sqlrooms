@@ -8,7 +8,10 @@
 
 | Parameter | Type | Description |
 | ------ | ------ | ------ |
-| `props` | `Props` | - |
+| `props` | \{ `panelKey`: `string`; `showHeader`: `boolean`; `children`: `ReactNode`; \} | - |
+| `props.panelKey` | `string` | - |
+| `props.showHeader`? | `boolean` | - |
+| `props.children`? | `ReactNode` | - |
 | `deprecatedLegacyContext`? | `any` | **Deprecated** **See** [React Docs](https://legacy.reactjs.org/docs/legacy-context.html#referencing-context-in-lifecycle-methods) |
 
 ## Returns

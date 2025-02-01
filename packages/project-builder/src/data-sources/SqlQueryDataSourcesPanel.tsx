@@ -19,11 +19,9 @@ import {FC, useCallback, useState} from 'react';
 import {useBaseProjectStore} from '../ProjectStateProvider';
 import {DataSourceStatus} from '../types';
 
-type Props = {
+const SqlQueryDataSourcesPanel: FC<{
   queryDataSources: SqlQueryDataSource[];
-};
-
-const SqlQueryDataSourcesPanel: FC<Props> = (props) => {
+}> = (props) => {
   const {queryDataSources} = props;
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();

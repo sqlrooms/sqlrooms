@@ -24,19 +24,12 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-interface Props {
+const RenameSqlQueryModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   initialName: string;
   onRename: (newName: string) => void;
-}
-
-const RenameSqlQueryModal: React.FC<Props> = ({
-  isOpen,
-  onClose,
-  initialName,
-  onRename,
-}) => {
+}> = ({isOpen, onClose, initialName, onRename}) => {
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {

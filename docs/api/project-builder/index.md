@@ -14,7 +14,6 @@
 - [ProjectStateProps](type-aliases/ProjectStateProps.md)
 - [ProjectStateActions](type-aliases/ProjectStateActions.md)
 - [ProjectState](type-aliases/ProjectState.md)
-- [TableCardProps](type-aliases/TableCardProps.md)
 - [ProjectFileState](type-aliases/ProjectFileState.md)
 - [ProjectFileInfo](type-aliases/ProjectFileInfo.md)
 - [DataSourceState](type-aliases/DataSourceState.md)

@@ -19,13 +19,11 @@ import {FC, useCallback} from 'react';
 import {useBaseProjectStore} from '../ProjectStateProvider';
 import {ProjectFileInfo, ProjectFileState} from '../types';
 
-type Props = {
+const FileDataSourceCard: FC<{
   isReadOnly?: boolean;
   fileInfo: ProjectFileInfo;
   fileState?: ProjectFileState;
-};
-
-const FileDataSourceCard: FC<Props> = (props) => {
+}> = (props) => {
   const {isReadOnly, fileInfo, fileState} = props;
   const {pathname, size} = fileInfo;
   const removeProjectFile = useBaseProjectStore(
