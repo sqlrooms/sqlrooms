@@ -10,13 +10,11 @@ All example applications are available in our [Examples Repository](https://gith
 
 [Try live](https://sqlrooms-mosaic-example.netlify.app/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/vite-mosaic)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-mosaic?embed=1&file=src/app.tsx)
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-mosaic?embed=1&file=src/app.tsx)
+<img src="https://github.com/user-attachments/assets/93ec2d5c-c358-4827-aae7-efe992fae572" alt="SQLRooms Mosaic example Vite app" width=300>
 
-![SQLRooms Mosaic example Vite app](https://github.com/user-attachments/assets/ce6d0c59-25ba-47cb-ba8d-15021b947e2e)
-
-An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive
-visualization framework combined with DuckDB for high-performance data analysis and cross-filtering visualization.
+An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive visualization framework utilizing DuckDB and high-performance cross-filtering.
 
 Features include:
 
@@ -28,12 +26,11 @@ Features include:
 
 ## [AI-Powered Analytics (Next.js)](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
 
-[Try live](https://sqlrooms-nextjs-ai.netlify.app/) |
-[Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
+[Try live](https://sqlrooms-nextjs-ai.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs-ai?embed=1&file=components/app-shell.tsx)
 
-[![Open in StackBlitz](https://developer.stackblitz.com/img/open_in_stackblitz.svg)](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs-ai?embed=1&file=components/app-shell.tsx)
-
-![SQLRooms Next.js AI example app](https://github.com/user-attachments/assets/8b6aafe6-a95f-4142-b04e-e547897418d3)
+<img src="https://github.com/user-attachments/assets/8b6aafe6-a95f-4142-b04e-e547897418d3" alt="SQLRooms Next.js AI example app" width=300>
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms and Next.js. Features include:
 
