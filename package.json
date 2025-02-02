@@ -62,7 +62,7 @@
     "react-dom": "^18.0.0",
     "remove": "^0.1.5",
     "rimraf": "^5.0.5",
-    "turbo": "^2.3.0",
+    "turbo": "^2.4.0",
     "typedoc": "^0.27.6",
     "typescript": "5.7.3",
     "vitepress": "^1.6.3"
