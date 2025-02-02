@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../index.md) / ProjectBuilderSidebarButton
+[@sqlrooms/project-builder](../globals.md) / ProjectBuilderSidebarButton
 
 # Function: ProjectBuilderSidebarButton()
 

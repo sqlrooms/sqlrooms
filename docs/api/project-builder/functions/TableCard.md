@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../index.md) / TableCard
+[@sqlrooms/project-builder](../globals.md) / TableCard
 
 # Function: TableCard()
 

@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../globals.md) / useArrowDataTable
+[@sqlrooms/data-table](../index.md) / useArrowDataTable
 
 # Function: useArrowDataTable()
 

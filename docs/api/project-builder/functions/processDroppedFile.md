@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../index.md) / processDroppedFile
+[@sqlrooms/project-builder](../globals.md) / processDroppedFile
 
 # Function: processDroppedFile()
 

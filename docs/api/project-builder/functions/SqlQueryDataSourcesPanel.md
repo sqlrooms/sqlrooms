@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../index.md) / SqlQueryDataSourcesPanel
+[@sqlrooms/project-builder](../globals.md) / SqlQueryDataSourcesPanel
 
 # Function: SqlQueryDataSourcesPanel()
 

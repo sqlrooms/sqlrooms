@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../index.md) / FileDataSourceCard
+[@sqlrooms/project-builder](../globals.md) / FileDataSourceCard
 
 # Function: FileDataSourceCard()
 

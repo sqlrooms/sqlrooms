@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../globals.md) / QueryDataTable
+[@sqlrooms/data-table](../index.md) / QueryDataTable
 
 # Function: QueryDataTable()
 
