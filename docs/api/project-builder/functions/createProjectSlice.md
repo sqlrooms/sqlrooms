@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../globals.md) / createProjectSlice
+[@sqlrooms/project-builder](../index.md) / createProjectSlice
 
 # Function: createProjectSlice()
 

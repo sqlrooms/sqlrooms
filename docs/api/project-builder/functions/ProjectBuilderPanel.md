@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../globals.md) / ProjectBuilderPanel
+[@sqlrooms/project-builder](../index.md) / ProjectBuilderPanel
 
 # Function: ProjectBuilderPanel()
 

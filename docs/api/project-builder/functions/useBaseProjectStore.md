@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../globals.md) / useBaseProjectStore
+[@sqlrooms/project-builder](../index.md) / useBaseProjectStore
 
 # Function: useBaseProjectStore()
 

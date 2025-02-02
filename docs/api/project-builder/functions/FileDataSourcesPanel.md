@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../globals.md) / FileDataSourcesPanel
+[@sqlrooms/project-builder](../index.md) / FileDataSourcesPanel
 
 # Function: FileDataSourcesPanel()
 

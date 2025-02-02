@@ -1,4 +1,4 @@
-[@sqlrooms/project-builder](../globals.md) / PanelHeaderButton
+[@sqlrooms/project-builder](../index.md) / PanelHeaderButton
 
 # Function: PanelHeaderButton()
 
