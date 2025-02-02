@@ -145,7 +145,6 @@ const UploadFilesPreview: FC<Props> = (props) => {
                     File path:
                   </span>
                   <div className="flex items-center px-2">
-                    <span>{projectFolder}</span>
                     <EditableText
                       value={addedFiles[i]?.pathname ?? ''}
                       onChange={(name) => handleSetFileName(i, name)}
