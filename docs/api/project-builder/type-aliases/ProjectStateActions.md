@@ -20,8 +20,6 @@
 | <a id="reinitialize"></a> `reinitialize` | (`opts`?) => `Promise`\<`void`\> | Reinitialize the project state. Called when the project is first loaded. |
 | <a id="setprojectconfig"></a> `setProjectConfig` | (`config`) => `void` | - |
 | <a id="setprojectid"></a> `setProjectId` | (`projectId`) => `void` | - |
-| <a id="setprojectfolder"></a> `setProjectFolder` | (`projectFolder`) => `void` | - |
-| <a id="getprojectfolder"></a> `getProjectFolder` | () => `string` | - |
 | <a id="setlastsavedconfig"></a> `setLastSavedConfig` | (`config`) => `void` | - |
 | <a id="hasunsavedchanges"></a> `hasUnsavedChanges()` |  | - |
 | <a id="setlayout"></a> `setLayout()` |  | - |

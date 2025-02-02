@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../index.md) / DataTablePaginated
+[@sqlrooms/data-table](../globals.md) / DataTablePaginated
 
 # Function: DataTablePaginated()
 

@@ -35,7 +35,6 @@ import {
   convertToUniqueS3FolderPath,
   downloadFile,
   generateUniqueName,
-  getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -81,8 +80,6 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   schema: 'main',
   tasksProgress: {},
   projectId: undefined,
-  password: undefined,
-  projectFolder: undefined,
   initialized: false,
   isDataAvailable: false,
   isReadOnly: false,
@@ -111,8 +108,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
   tasksProgress: Record<string, TaskProgress>;
   projectId: string | undefined; // undefined if the project is new
-  password: string | undefined; // Password for protected published projects (needs to be sent to get access to data)
-  projectFolder: string | undefined; // will be derived from project title, if not explicitly set
   projectConfig: PC;
   projectPanels: Record<string, ProjectPanelInfo>;
   isPublic: boolean;
@@ -145,13 +140,10 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     project?: {id?: string; config: PC};
     isReadOnly?: boolean;
     isPublic?: boolean;
-    password?: string;
     captureException?: ProjectStateProps<PC>['captureException'];
   }) => Promise<void>;
   setProjectConfig: (config: PC) => void;
   setProjectId: (projectId: string | undefined) => void;
-  setProjectFolder: (projectFolder: string) => void;
-  getProjectFolder: () => string;
   setLastSavedConfig: (config: PC) => void;
   hasUnsavedChanges(): boolean; // since last save
   setLayout(layout: LayoutConfig): void;
@@ -240,7 +232,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           isPublic = false,
           isReadOnly = false,
           captureException,
-          password,
         } = opts ?? {};
         await get().reset();
 
@@ -256,7 +247,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           projectConfig,
           lastSavedConfig: projectConfig,
           captureException: captureException ?? console.error,
-          password,
           initialized: true,
           isDataAvailable: false,
         });
@@ -333,27 +323,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }),
         );
         await get().maybeDownloadDataSources();
-      },
-
-      setProjectFolder: (projectFolder) =>
-        set((state) =>
-          produce(state, (draft) => {
-            // let path = convertToValidS3FolderPath(projectFolder).trim();
-            // path = path.replace(/\/+/g, '/');
-            // if (path === '/') path = '';
-            draft.projectFolder = projectFolder;
-          }),
-        ),
-
-      getProjectFolder() {
-        const {
-          projectFolder,
-          projectConfig: {title},
-        } = get();
-        return (
-          projectFolder ??
-          convertToUniqueS3FolderPath(title || DEFAULT_PROJECT_TITLE)
-        );
       },
 
       addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
@@ -742,9 +711,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
     ) {
       if (!filesToDownload.length) return;
       const {
-        isPublic: isPublicProject,
-        projectId,
-        password,
         setProjectFileProgress,
         setTableRowCount,
         setTables,
@@ -783,19 +749,10 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           const fileName =
             ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
           try {
-            const url =
-              ds.type === DataSourceTypes.Enum.file
-                ? await getSignedFileUrl(
-                    isPublicProject
-                      ? {
-                          projectId,
-                          fname: fileName,
-                          upload: false,
-                          password,
-                        }
-                      : {fname: fileName, upload: false},
-                  )
-                : ds.url;
+            if (ds.type === DataSourceTypes.Enum.file) {
+              throw new Error('File data source is not supported');
+            }
+            const url = ds.url;
             setProjectFileProgress(fileName, {status: 'download'});
             const downloadedFile = await downloadFile(url, {
               onProgress: (progress: ProgressInfo) => {

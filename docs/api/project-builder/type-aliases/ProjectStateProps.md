@@ -17,8 +17,6 @@
 | <a id="schema"></a> `schema` | `string` |
 | <a id="tasksprogress"></a> `tasksProgress` | `Record`\<`string`, [`TaskProgress`](TaskProgress.md)\> |
 | <a id="projectid"></a> `projectId` | `string` \| `undefined` |
-| <a id="password"></a> `password` | `string` \| `undefined` |
-| <a id="projectfolder"></a> `projectFolder` | `string` \| `undefined` |
 | <a id="projectconfig"></a> `projectConfig` | `PC` |
 | <a id="projectpanels"></a> `projectPanels` | `Record`\<`string`, [`ProjectPanelInfo`](ProjectPanelInfo.md)\> |
 | <a id="ispublic"></a> `isPublic` | `boolean` |

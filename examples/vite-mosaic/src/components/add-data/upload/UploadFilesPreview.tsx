@@ -52,7 +52,6 @@ const UploadFilesPreview: FC<Props> = (props) => {
   const [isLoading, setIsLoading] = useState(true);
   const projectTitle = useProjectStore((state) => state.projectConfig.title);
   const setProjectFolder = useProjectStore((state) => state.setProjectFolder);
-  const projectFolder = useProjectStore((state) => state.getProjectFolder());
   const ErrorBoundary = useProjectStore((state) => state.CustomErrorBoundary);
 
   useEffect(() => {
@@ -126,12 +125,6 @@ const UploadFilesPreview: FC<Props> = (props) => {
     <SpinnerPane />
   ) : (
     <div className="flex flex-col gap-3 h-full text-sm">
-      <div className="flex items-center gap-1">
-        <span className="text-muted-foreground whitespace-nowrap">
-          Project folder:
-        </span>
-        <EditableText value={projectFolder} onChange={handleSetProjectFolder} />
-      </div>
       <Tabs
         value={selectedFileIndex.toString()}
         onValueChange={(value) => setSelectedFileIndex(parseInt(value))}

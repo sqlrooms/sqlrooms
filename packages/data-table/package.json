@@ -14,9 +14,9 @@
   },
   "dependencies": {
     "@heroicons/react": "*",
-    "@sqlrooms/duckdb": "0.0.1",
-    "@sqlrooms/ui": "0.0.1",
-    "@sqlrooms/utils": "0.0.1",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.10.7",
     "@tanstack/table-core": "^8.10.7",
     "react-virtual": "2.10.4"

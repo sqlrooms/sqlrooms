@@ -52,7 +52,10 @@ const DataTableModal: FC<{
       open={tableModal.isOpen}
       onOpenChange={(isOpen: boolean) => !isOpen && tableModal.onClose()}
     >
-      <DialogContent className="h-[80vh] max-w-[75vw]">
+      <DialogContent
+        className="h-[80vh] max-w-[75vw]"
+        aria-describedby="data-table-modal"
+      >
         <DialogHeader>
           <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
         </DialogHeader>

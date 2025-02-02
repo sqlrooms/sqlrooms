@@ -13,8 +13,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/project-config": "0.0.1",
-    "@sqlrooms/ui": "0.0.1"
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*"
   },
   "peerDependencies": {
     "react": "*",

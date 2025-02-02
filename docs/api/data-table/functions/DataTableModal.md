@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../index.md) / DataTableModal
+[@sqlrooms/data-table](../globals.md) / DataTableModal
 
 # Function: DataTableModal()
 

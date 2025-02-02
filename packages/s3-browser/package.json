@@ -14,8 +14,8 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.726.1",
-    "@sqlrooms/ui": "0.0.1",
-    "@sqlrooms/utils": "0.0.1",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.473.0",
     "zod": "^3.24.1"
   },

@@ -121,7 +121,7 @@ export default function DataTablePaginated<Data extends object>({
                         colSpan={header.colSpan}
                         className={`
                           sticky top-0 w-auto whitespace-nowrap cursor-pointer py-2 
-                          bg-background border-r hover:bg-muted/80 z-10
+                          bg-background border-r hover:bg-muted z-10
                           ${meta?.isNumeric ? 'text-right' : 'text-left'}
                         `}
                         onClick={header.column.getToggleSortingHandler()}
@@ -145,7 +145,7 @@ export default function DataTablePaginated<Data extends object>({
                           <div className="flex-1" />
                           <Badge
                             variant="outline"
-                            className="opacity-30 text-[9px] max-w-[70px] truncate"
+                            className="opacity-30 text-xs truncate max-w-[400px]"
                           >
                             {String(meta?.type)}
                           </Badge>
@@ -159,8 +159,8 @@ export default function DataTablePaginated<Data extends object>({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row, i) => (
-                <TableRow key={row.id} className="hover:bg-muted/50">
-                  <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
+                <TableRow key={row.id} className="hover:bg-muted bg-background">
+                  <TableCell className="text-xs border-r text-center text-muted-foreground sticky left-0">
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
                       : ''}
@@ -171,7 +171,7 @@ export default function DataTablePaginated<Data extends object>({
                       <TableCell
                         key={cell.id}
                         className={`
-                          text-[11px] border-r max-w-[500px] overflow-hidden truncate px-7
+                          text-xs border-r max-w-[500px] overflow-hidden truncate px-7
                           ${meta?.isNumeric ? 'text-right' : 'text-left'}
                         `}
                       >

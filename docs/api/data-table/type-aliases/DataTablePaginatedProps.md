@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../index.md) / DataTablePaginatedProps
+[@sqlrooms/data-table](../globals.md) / DataTablePaginatedProps
 
 # Type Alias: DataTablePaginatedProps\<Data\>
 

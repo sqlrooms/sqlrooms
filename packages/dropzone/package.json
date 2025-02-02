@@ -26,7 +26,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@sqlrooms/ui": "0.0.1",
+    "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.473.0",
     "react-dropzone": "^14.3.5"
   },

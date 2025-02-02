@@ -1,4 +1,4 @@
-import {Badge, cn} from '@sqlrooms/ui';
+import {Badge, cn, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
 import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
 import {FC} from 'react';
@@ -22,43 +22,41 @@ const TableCard: FC<{
       onClick={onClick}
     >
       <div className="flex gap-2 px-2 mt-0 flex-col w-full">
-        <div className="overflow-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr>
-                <td className="pr-6">
-                  <div className="h-[30px] overflow-hidden relative">
-                    <div className="absolute w-full text-foreground mb-1 py-1 whitespace-nowrap text-ellipsis overflow-hidden font-bold">
-                      {value.tableName}
+        <div className="overflow-auto w-full">
+          <div className="h-[30px] overflow-hidden relative mb-2">
+            <div className="absolute w-full text-foreground mb-1 py-1 whitespace-nowrap text-ellipsis overflow-hidden font-bold font-mono">
+              {value.tableName}
+            </div>
+          </div>
+          <div className="flex flex-col gap-1">
+            {value.columns?.map((row, i) => (
+              <Tooltip key={i}>
+                <TooltipTrigger asChild>
+                  <div className="flex items-center gap-3 hover:bg-foreground/10 rounded-sm font-mono">
+                    <Badge
+                      variant="secondary"
+                      className="text-xs overflow-hidden whitespace-nowrap py-0 px-1 w-[70px] text-muted-foreground"
+                    >
+                      {row.type}
+                    </Badge>
+                    <div className="text-xs max-w-[100px]">{row.name}</div>
+                  </div>
+                </TooltipTrigger>
+                <TooltipContent
+                  className="max-w-[250px]"
+                  side="right"
+                  align="center"
+                >
+                  <div className="flex flex-col gap-1 font-mono">
+                    <div className="text-sm font-bold">{row.name}</div>
+                    <div className="text-xs text-muted-foreground">
+                      {row.type}
                     </div>
                   </div>
-                </td>
-              </tr>
-            </thead>
-            <tbody>
-              {value.columns?.map((row, i) => {
-                return (
-                  <tr key={i}>
-                    <td>
-                      <div className="flex items-center gap-2">
-                        <div className="w-[60px]">
-                          <Badge
-                            variant="outline"
-                            className="opacity-50 text-[0.6rem]"
-                          >
-                            {row.type}
-                          </Badge>
-                        </div>
-                        <div className="text-muted-foreground text-xs max-w-[100px]">
-                          {row.name}
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
           <div className="text-xs text-right mt-1">
             {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
           </div>

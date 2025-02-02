@@ -30,15 +30,13 @@ const UploadFiles: FC = () => {
     setAddedFiles(undefined);
   }, [isOpen, conn, toast]);
 
-  const projectFolder = useProjectStore((state) => state.getProjectFolder());
-
   onConfirmRef.current = useCallback(async () => {
     if (!addedFiles) return;
     for (let i = 0; i < addedFiles.length; i++) {
       const addedFile = addedFiles[i];
       if (!addedFile) continue;
       const {duckdbFileName, file} = addedFile;
-      const filePath = `${projectFolder}${addedFile.pathname}`;
+      const filePath = addedFile.pathname;
       onLoadingStatusChange(`Creating table from file "${filePath}"...`);
       try {
         const desiredTableName = tableNames?.[i];
@@ -67,7 +65,6 @@ const UploadFiles: FC = () => {
   }, [
     addedFiles,
     onClose,
-    projectFolder,
     onLoadingStatusChange,
     tableNames,
     addProjectFile,

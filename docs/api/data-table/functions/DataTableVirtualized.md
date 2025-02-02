@@ -1,4 +1,4 @@
-[@sqlrooms/data-table](../index.md) / DataTableVirtualized
+[@sqlrooms/data-table](../globals.md) / DataTableVirtualized
 
 # Function: DataTableVirtualized()
 
