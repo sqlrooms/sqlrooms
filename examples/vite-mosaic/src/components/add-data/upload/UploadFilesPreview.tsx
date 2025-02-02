@@ -1,7 +1,13 @@
-import {Tabs, TabsContent, TabsList, TabsTrigger} from '@sqlrooms/ui';
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {escapeVal, getDuckTables} from '@sqlrooms/duckdb';
-import {EditableText, SpinnerPane} from '@sqlrooms/ui';
+import {
+  EditableText,
+  SpinnerPane,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '@sqlrooms/ui';
 import {
   Dispatch,
   FC,
@@ -11,16 +17,14 @@ import {
   useState,
 } from 'react';
 
-import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project-config';
+import {ProjectFileInfo} from '@sqlrooms/project-builder';
 import {
   convertToUniqueColumnOrTableName,
-  convertToUniqueS3FolderPath,
   convertToUniqueS3ObjectName,
   splitFilePath,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
 import useProjectStore from '../../../store/DemoProjectStore';
-import {ProjectFileInfo} from '@sqlrooms/project-builder';
 
 const DEFAULT_TABLE_NAME = 'unnamed_table';
 const DEFAULT_FILE_NAME = 'unnamed_file';
@@ -50,8 +54,6 @@ const UploadFilesPreview: FC<Props> = (props) => {
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [existingTables, setExistingTables] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const projectTitle = useProjectStore((state) => state.projectConfig.title);
-  const setProjectFolder = useProjectStore((state) => state.setProjectFolder);
   const ErrorBoundary = useProjectStore((state) => state.CustomErrorBoundary);
 
   useEffect(() => {
@@ -88,17 +90,6 @@ const UploadFilesPreview: FC<Props> = (props) => {
       return nextName;
     },
     [existingTables, onSetTableNames],
-  );
-
-  const handleSetProjectFolder = useCallback(
-    (name: string) => {
-      const nextName = convertToUniqueS3FolderPath(
-        name.trim() || projectTitle || DEFAULT_PROJECT_TITLE,
-      );
-      setProjectFolder(nextName);
-      return nextName;
-    },
-    [setProjectFolder, projectTitle],
   );
 
   const handleSetFileName = useCallback(
