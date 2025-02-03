@@ -2,13 +2,12 @@
   "$schema": "https://turbo.build/schema.json",
   "tasks": {
     "typedoc": {
-      "cache": false,
       "persistent": false,
       "outputs": ["docs/api/**"]
     },
     "typedoc:watch": {
       "cache": false,
-      "persistent": false,
+      "persistent": true,
       "dependsOn": ["typedoc"],
       "inputs": ["-watch"]
     },
