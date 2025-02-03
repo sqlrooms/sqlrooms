@@ -6,7 +6,7 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Mosaic Example (Vite)](https://github.com/sqlrooms/examples/tree/main/vite-mosaic)
+## [Mosaic Example (Vite)](https://sqlrooms-mosaic-example.netlify.app/)
 
 [Try live](https://sqlrooms-mosaic-example.netlify.app/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/vite-mosaic)
@@ -24,7 +24,7 @@ Features include:
 - Real-time cross-filtering capabilities across multiple views
 - Example dashboards with common visualization types
 
-## [AI-Powered Analytics (Next.js)](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
+## [AI-Powered Analytics (Next.js)](https://sqlrooms-nextjs-ai.netlify.app/)
 
 [Try live](https://sqlrooms-nextjs-ai.netlify.app/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
