@@ -437,6 +437,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      apache-arrow:
+        specifier: 18.1.0
+        version: 18.1.0
       immer:
         specifier: ^10.1.1
         version: 10.1.1

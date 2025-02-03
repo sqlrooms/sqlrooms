@@ -8,13 +8,3 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 ### Reverts
 
 * Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
-
-## [0.0.1](https://github.com/ilyabo/sqlrooms/compare/v0.0.1-alpha.0...v0.0.1) (2025-01-30)
-
-**Note:** Version bump only for package @sqlrooms/utils
-
-## 0.0.1-alpha.0 (2025-01-30)
-
-**Note:** Version bump only for package @sqlrooms/utils
-
-**Note:** Version bump only for package @sqlrooms/utils
