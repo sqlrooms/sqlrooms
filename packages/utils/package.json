@@ -6,6 +6,12 @@
   "module": "dist/index.js",
   "type": "module",
   "private": false,
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
   "files": [
     "dist"
   ],
