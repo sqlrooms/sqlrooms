@@ -26,8 +26,10 @@
     "docs:dev": "pnpm run typedoc:watch & vitepress dev docs",
     "docs:build": "pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs",
-    "version-prerelease": "lerna version prerelease",
-    "version-patch": "lerna version patch",
+    "version-prerelease": "lerna version prerelease --sync-workspace-lock",
+    "version-patch": "lerna version patch --sync-workspace-lock",
+    "version-minor": "lerna version minor --sync-workspace-lock",
+    "version-major": "lerna version major --sync-workspace-lock",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
     "publish-preview": "turbo run publish && lerna publish from-package --yes --dist-tag preview",
     "publish-release": "turbo run publish && lerna publish from-package --yes"
