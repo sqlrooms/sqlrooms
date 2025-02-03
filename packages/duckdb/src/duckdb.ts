@@ -1,10 +1,14 @@
 import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {escapeVal, getColValAsNumber, getDuckDb} from './useDuckDb';
+import * as arrow from 'apache-arrow';
+import {sqlFrom} from './sql-from';
 
-// export function makeTableName(inputFileName: string): string {
-//   return inputFileName.replace(/\.[^\.]*$/, '').replace(/\W/g, '_');
-// }
-
+/**
+ * Create a table from a query.
+ * @param tableName - The name of the table to create.
+ * @param query - The query to create the table from.
+ * @returns The table that was created.
+ */
 export async function createTableFromQuery(tableName: string, query: string) {
   const {conn} = await getDuckDb();
   const rowCount = getColValAsNumber(
@@ -17,6 +21,14 @@ export async function createTableFromQuery(tableName: string, query: string) {
   return {tableName, rowCount};
 }
 
+/**
+ * Create a view from a registered file.
+ * @param filePath - The path to the file to create the view from.
+ * @param schema - The schema to create the view in.
+ * @param tableName - The name of the table to create.
+ * @param opts - The options to create the view with.
+ * @returns The view that was created.
+ */
 export async function createViewFromRegisteredFile(
   filePath: string,
   schema: string,
@@ -29,16 +41,6 @@ export async function createViewFromRegisteredFile(
   const {mode = 'table'} = opts ?? {};
   const {conn} = await getDuckDb();
   const fileNameLower = filePath.toLowerCase();
-  // let rowCount: number;
-  // if (fileNameLower.endsWith('.json')) {
-  //   await conn.insertJSONFromPath(filePath, {schema, name: tableName});
-  //   // TODO: for JSON we can use insertJSONFromPath https://github.com/duckdb/duckdb-wasm/issues/1262
-  //   // fileNameLower.endsWith('.json') || fileNameLower.endsWith('.ndjson')
-  //   // ? `read_json_auto(${escapeVal(fileName)})`
-  //   rowCount = getColValAsNumber(
-  //     await conn.query(`SELECT COUNT(*) FROM ${schema}.${tableName}`),
-  //   );
-  // } else {
   const quotedFileName = escapeVal(filePath);
   const readFileQuery =
     fileNameLower.endsWith('.json') ||
@@ -50,10 +52,6 @@ export async function createViewFromRegisteredFile(
         : fileNameLower.endsWith('.csv') || fileNameLower.endsWith('.tsv')
           ? `read_csv(${quotedFileName}, SAMPLE_SIZE=-1, AUTO_DETECT=TRUE)`
           : quotedFileName;
-  // const readFileQuery = fileNameLower.endsWith('.csv')
-  //   ? `read_csv(${quotedFileName}, SAMPLE_SIZE=-1, AUTO_DETECT=TRUE)`
-  //   : quotedFileName;
-
   // TODO: tableName generate
   const rowCount = getColValAsNumber(
     await conn.query(
@@ -65,6 +63,13 @@ export async function createViewFromRegisteredFile(
   return {tableName, rowCount};
 }
 
+/**
+ * Create a view from a file.
+ * @param filePath - The path to the file to create the view from.
+ * @param schema - The schema to create the view in.
+ * @param tableName - The name of the table to create.
+ * @param file - The file to create the view from.
+ */
 export async function createViewFromFile(
   filePath: string,
   schema: string,
@@ -73,21 +78,6 @@ export async function createViewFromFile(
 ): Promise<{tableName: string; rowCount: number}> {
   const duckConn = await getDuckDb();
 
-  // const fileName = file.name;
-  // await duckConn.db.dropFile(fileName);
-  // await duckConn.db.registerFileHandle(
-  //   fileName,
-  //   file,
-  //   DuckDBDataProtocol.BROWSER_FILEREADER,
-  //   true,
-  // );
-
-  // const tableName = makeTableName(fileName);
-  // await duckConn.conn.query(`
-  //     CREATE OR REPLACE VIEW ${tableName} AS SELECT * FROM '${fileName}'
-  // `);
-
-  //const fileName = file.name;
   await duckConn.db.dropFile(filePath);
   if (file instanceof File) {
     await duckConn.db.registerFileHandle(
@@ -101,98 +91,31 @@ export async function createViewFromFile(
   }
 
   return createViewFromRegisteredFile(filePath, schema, tableName);
-
-  // const res = await duckConn.conn.query(
-  //   `SELECT count(*) FROM ${inputTableName}`,
-  // );
-  // const inputRowCount = getColValAsNumber(res, 0);
-  // const tableMeta = await duckConn.conn.query(
-  //   `DESCRIBE TABLE ${inputTableName}`,
-  // );
-  // const inputTableFields = Array.from(tableMeta).map((row) => ({
-  //   name: String(row?.column_name),
-  //   type: String(row?.column_type),
-  // }));
-
-  // const nextResult: DataTable = {
-  //   inputFileName,
-  //   tableName: inputTableName,
-  //   rowCount: inputRowCount,
-  //   // outputRowCount: undefined,
-  //   columns: inputTableFields,
-  // };
-  // // setResult(nextResult);
-  // return nextResult;
 }
 
-// async function createViewFromFile2(
-//   file: File,
-//   duckConn: DuckDb,
-//   onTableCreated: (
-//     inputTableName: string,
-//     result: CreateTableDropzoneResult,
-//   ) => void,
-//   onError: (status:'error', message: string) => void,
-// ) {
-//   try {
-//     const inputFileName = file.name;
-//     await duckConn.db.dropFile(inputFileName);
-//     await duckConn.db.registerFileHandle(
-//       inputFileName,
-//       file,
-//       DuckDBDataProtocol.BROWSER_FILEREADER,
-//       true,
-//     );
+/**
+ * Create a table from an Arrow table.
+ * @param tableName - The name of the table to create.
+ * @param arrowTable - The Arrow table to create the table from.
+ */
+export async function createTableFromArrowTable(
+  tableName: string,
+  data: arrow.Table,
+) {
+  const {conn} = await getDuckDb();
+  await conn.insertArrowTable(data, {name: tableName});
+}
 
-//     const inputTableName = genRandomStr(10, inputFileName).toLowerCase();
-//     await duckConn.conn.query(`DROP TABLE IF EXISTS ${inputTableName}`);
-//     const readFileQuery = inputFileName.endsWith('.parquet')
-//       ? `parquet_scan(${escapeVal(inputFileName)})`
-//       : `read_csv(${escapeVal(
-//           inputFileName,
-//         )}, SAMPLE_SIZE=-1, AUTO_DETECT=TRUE)`;
-//     await duckConn.conn.query(
-//       `CREATE TABLE ${inputTableName} AS
-//             SELECT * FROM ${readFileQuery}`,
-//     );
-
-//     const res = await duckConn.conn.query(
-//       `SELECT count(*) FROM ${inputTableName}`,
-//     );
-//     const inputRowCount = getColValAsNumber(res, 0);
-//     const tableMeta = await duckConn.conn.query(
-//       `DESCRIBE TABLE ${inputTableName}`,
-//     );
-//     const inputTableFields = Array.from(tableMeta).map((row) => ({
-//       name: String(row?.column_name),
-//       type: String(row?.column_type),
-//     }));
-
-//     const nextResult: CreateTableDropzoneResult = {
-//       inputFileName,
-//       inputTableName,
-//       inputRowCount,
-//       // outputRowCount: undefined,
-//       inputTableFields,
-//       columns: {},
-//     };
-//     // setResult(nextResult);
-//     onTableCreated(inputTableName, nextResult);
-//   } catch (e) {
-//     console.error(e);
-//     onError(e instanceof Error ? e.message : String(e));
-//   }
-// }
-
-// async function maybeDropTable(
-//   value: CreateTableDropzoneResult,
-//   duckConn: DuckDb,
-// ) {
-//   const {inputFileName, inputTableName} = value || {};
-//   if (inputFileName) {
-//     await duckConn.db.dropFile(inputFileName);
-//   }
-//   if (inputTableName) {
-//     await duckConn.conn.query(`DROP TABLE IF EXISTS ${inputTableName};`);
-//   }
-// }
+/**
+ * Create a table from an array of objects.
+ * @param tableName - The name of the table to create.
+ * @param data - The array of objects to create the table from.
+ */
+export async function createTableFromObjects(
+  tableName: string,
+  data: Record<string, unknown>[],
+) {
+  const {conn} = await getDuckDb();
+  const query = sqlFrom(data);
+  await conn.query(`CREATE OR REPLACE TABLE ${tableName} AS ${query}`);
+}

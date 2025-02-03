@@ -33,6 +33,7 @@
 | <a id="maybedownloaddatasources"></a> `maybeDownloadDataSources()` |  | - |
 | <a id="setprojectfiles"></a> `setProjectFiles()` |  | - |
 | <a id="setprojectfileprogress"></a> `setProjectFileProgress()` |  | - |
+| <a id="addtable"></a> `addTable()` |  | - |
 | <a id="adddatasource"></a> `addDataSource` | (`dataSource`, `status`?) => `Promise`\<`void`\> | - |
 | <a id="gettable"></a> `getTable()` |  | - |
 | <a id="settables"></a> `setTables()` |  | - |

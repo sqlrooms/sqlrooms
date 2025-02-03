@@ -16,6 +16,8 @@
 - [createTableFromQuery](functions/createTableFromQuery.md)
 - [createViewFromRegisteredFile](functions/createViewFromRegisteredFile.md)
 - [createViewFromFile](functions/createViewFromFile.md)
+- [createTableFromArrowTable](functions/createTableFromArrowTable.md)
+- [createTableFromObjects](functions/createTableFromObjects.md)
 - [exportToCsv](functions/exportToCsv.md)
 - [~~getDuckConn~~](functions/getDuckConn.md)
 - [getDuckDb](functions/getDuckDb.md)

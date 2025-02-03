@@ -4,19 +4,21 @@ import {
   createTableFromQuery,
   createViewFromFile,
   createViewFromRegisteredFile,
+  createTableFromArrowTable,
   dropAllFiles,
   dropAllTables,
   dropFile,
   dropTable,
   getDuckDb,
+  getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
+  createTableFromObjects,
 } from '@sqlrooms/duckdb';
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   BaseProjectConfig,
   DEFAULT_MOSAIC_LAYOUT,
-  DEFAULT_PROJECT_TITLE,
   DEFAULT_SQL_EDITOR_CONFIG,
   DataSource,
   DataSourceTypes,
@@ -32,11 +34,11 @@ import {ErrorBoundary} from '@sqlrooms/ui';
 import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
-  convertToUniqueS3FolderPath,
   downloadFile,
   generateUniqueName,
   splitFilePath,
 } from '@sqlrooms/utils';
+import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
@@ -166,6 +168,16 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
   setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
+  /**
+   * Add a table to the project.
+   * @param tableName - The name of the table to add.
+   * @param data - The data to add to the table: an arrow table or an array of records.
+   * @returns A promise that resolves to the table that was added.
+   */
+  addTable(
+    tableName: string,
+    data: arrow.Table | Record<string, unknown>[],
+  ): Promise<DataTable>;
   addDataSource: (
     dataSource: DataSource,
     status?: DataSourceStatus,
@@ -323,6 +335,30 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }),
         );
         await get().maybeDownloadDataSources();
+      },
+
+      async addTable(tableName, data) {
+        const {tables} = get();
+        const table = tables.find((t) => t.tableName === tableName);
+        if (table) {
+          return table;
+        }
+
+        if (data instanceof arrow.Table) {
+          await createTableFromArrowTable(tableName, data);
+        } else {
+          await createTableFromObjects(tableName, data);
+        }
+
+        const newTable = await getDuckTableSchema(tableName);
+
+        set((state) =>
+          produce(state, (draft) => {
+            draft.tables.push(newTable);
+          }),
+        );
+        await get().updateReadyDataSources();
+        return newTable;
       },
 
       addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
