@@ -62,8 +62,10 @@ jobs:
           npm install -g pnpm
           pnpm install --no-frozen-lockfile
 
-      - name: Build
+      - name: Build packages
         run: pnpm build
+
+      - name: Build docs
         run: pnpm run docs:build
 
       - name: Upload artifact
