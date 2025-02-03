@@ -130,9 +130,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
 };
 
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
-  setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
-  getLoadingProgress: () => TaskProgress | undefined;
-  reset: () => Promise<void>;
   /**
    * Reinitialize the project state. Called when the project is first loaded.
    * @param opts - Optional parameters to override the default behavior.
@@ -144,13 +141,49 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     isPublic?: boolean;
     captureException?: ProjectStateProps<PC>['captureException'];
   }) => Promise<void>;
+  /**
+   * Reset the project state.
+   * @returns A promise that resolves when the project state has been reset.
+   */
+  reset: () => Promise<void>;
+  setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
+  getLoadingProgress: () => TaskProgress | undefined;
+  /**
+   * Set the project config.
+   * @param config - The project config to set.
+   */
   setProjectConfig: (config: PC) => void;
   setProjectId: (projectId: string | undefined) => void;
+  /**
+   * Set the last saved project config. This can be used to check if the project has unsaved changes.
+   * @param config - The project config to set.
+   */
   setLastSavedConfig: (config: PC) => void;
+  /**
+   * Check if the project has unsaved changes.
+   * @returns True if the project has unsaved changes, false otherwise.
+   */
   hasUnsavedChanges(): boolean; // since last save
+  /**
+   * Set the layout of the project.
+   * @param layout - The layout to set.
+   */
   setLayout(layout: LayoutConfig): void;
+  /**
+   * Toggle a panel.
+   * @param panel - The panel to toggle.
+   * @param show - Whether to show the panel.
+   */
   togglePanel: (panel: string, show?: boolean) => void;
+  /**
+   * Toggle the pin state of a panel.
+   * @param panel - The panel to toggle the pin state of.
+   */
   togglePanelPin: (panel: string) => void;
+  /**
+   * Pin a panel.
+   * @param panel - The panel to pin.
+   */
   addOrUpdateSqlQuery(
     tableName: string,
     query: string,
@@ -667,6 +700,10 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         }
       },
 
+      /**
+       * Toggle the pin state of a panel.
+       * @param panel - The panel to toggle the pin state of.
+       */
       togglePanelPin: (panel) => {
         set((state) =>
           produce(state, (draft) => {
