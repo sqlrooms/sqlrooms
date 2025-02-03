@@ -21,7 +21,7 @@ Building blocks for React data analytics applications powered by [DuckDB-WASM](h
 
     pnpm install
     pnpm --filter sqlrooms-vite-mosaic dev
-    open http://localhost:5174
+    open http://localhost:5173
 
 ## Usage
 
