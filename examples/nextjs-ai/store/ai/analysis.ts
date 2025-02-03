@@ -3,6 +3,7 @@ import {getDuckDb} from '@sqlrooms/duckdb';
 import {generateText, StepResult, tool} from 'ai';
 import {z} from 'zod';
 import {ToolResultSchema, AnalysisAnswerSchema} from './schemas';
+import {safeJsonParse} from '@/lib/utils';
 
 let openai: ReturnType<typeof createOpenAI>;
 
@@ -25,11 +26,13 @@ export async function runAnalysis({
   abortSignal,
   onStepFinish,
   apiKey,
+  maxSteps = 100,
 }: {
   prompt: string;
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
   apiKey: string;
+  maxSteps?: number;
 }) {
   // Always reinitialize OpenAI with the current key
   initOpenAI(apiKey);
@@ -43,7 +46,7 @@ export async function runAnalysis({
     tools: TOOLS,
 
     toolChoice: 'required',
-    maxSteps: 20,
+    maxSteps,
     maxRetries: 1,
 
     system:
@@ -85,9 +88,10 @@ const TOOLS = {
         const {conn} = await getDuckDb();
         const result = await conn.query(sqlQuery);
         // Convert Arrow table to JSON
-        const jsonResult = result
-          .toArray()
-          .map((d) => JSON.parse(d.toString()));
+        const jsonResult = result.toArray().map((d) => {
+          const str = d.toString();
+          return safeJsonParse(str) ?? str;
+        });
         return {
           success: true,
           data: jsonResult,
