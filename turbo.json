@@ -3,7 +3,7 @@
   "tasks": {
     "typedoc": {
       "persistent": false,
-      "outputs": ["docs/api/**"]
+      "outputs": ["../../docs/api/**"]
     },
     "typedoc:watch": {
       "cache": false,

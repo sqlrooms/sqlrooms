@@ -19,8 +19,8 @@ const typedocOptions = {
   // out: './docs',
   parametersFormat: 'table',
   plugin: [
-    'typedoc-plugin-markdown',
     'typedoc-vitepress-theme',
+    'typedoc-plugin-markdown',
     'typedoc-plugin-zod',
   ],
   propertyMembersFormat: 'table',
