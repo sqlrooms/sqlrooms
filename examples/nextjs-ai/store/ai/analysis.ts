@@ -13,8 +13,6 @@ export function initOpenAI(apiKey: string) {
   });
 }
 
-const MODEL = 'gpt-4';
-
 /**
  * Run analysis on the project data
  * @param prompt - The prompt for the analysis
@@ -26,19 +24,21 @@ export async function runAnalysis({
   abortSignal,
   onStepFinish,
   apiKey,
+  model,
   maxSteps = 100,
 }: {
   prompt: string;
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
   apiKey: string;
+  model: string;
   maxSteps?: number;
 }) {
   // Always reinitialize OpenAI with the current key
   initOpenAI(apiKey);
 
   const result = await generateText({
-    model: openai(MODEL, {
+    model: openai(model, {
       structuredOutputs: true,
     }),
     abortSignal,

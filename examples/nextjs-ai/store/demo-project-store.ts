@@ -23,6 +23,7 @@ export type DemoProjectState = ProjectState<DemoProjectConfig> & {
   isRunningAnalysis: boolean;
   analysisAbortController?: AbortController;
   openAiApiKey: string | null;
+  setAiModel: (model: string) => void;
   setAnalysisPrompt: (prompt: string) => void;
   setOpenAiApiKey: (key: string) => void;
   runAnalysis: () => Promise<void>;
@@ -54,6 +55,9 @@ export const createDemoProjectStore = () =>
     setAnalysisPrompt: (prompt: string) => {
       set({analysisPrompt: prompt});
     },
+    setAiModel: (model: string) => {
+      set({projectConfig: {...get().projectConfig, aiModel: model}});
+    },
     runAnalysis: async () => {
       const resultId = createId();
       const abortController = new AbortController();
@@ -79,6 +83,7 @@ export const createDemoProjectStore = () =>
       );
       try {
         const {toolResults, ...rest} = await runAnalysis({
+          model: get().projectConfig.aiModel,
           prompt: get().analysisPrompt,
           onStepFinish: (event) => {
             console.log('onStepFinish', event);
