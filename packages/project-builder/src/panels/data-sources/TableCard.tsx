@@ -135,12 +135,15 @@ const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, .
                   <Tr key={i}>
                     <Td>
                       <HStack>
-                        <Box width="60px">
+                        <Box width="70px">
                           <Badge
                             colorScheme="blue"
                             opacity="0.5"
                             fontSize={'xx-small'}
                             variant="outline"
+                            overflow='hidden'
+                            width='100%'
+                            textAlign="center"
                           >
                             {row.type}
                           </Badge>
