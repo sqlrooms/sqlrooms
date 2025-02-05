@@ -15,6 +15,7 @@
     "clean": "rimraf \"packages/*/dist\"",
     "build": "pnpm clean && turbo build",
     "test": "turbo test",
+    "test:watch": "turbo test:watch",
     "prepare": "husky",
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "typedoc": "turbo typedoc",

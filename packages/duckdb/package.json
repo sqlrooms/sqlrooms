@@ -22,12 +22,20 @@
     "@duckdb/duckdb-wasm": "^1.29.0",
     "apache-arrow": "^18.1.0"
   },
+  "devDependencies": {
+    "@sqlrooms/jest-config": "workspace:*",
+    "@types/jest": "^29.5.12",
+    "jest": "^29.7.0",
+    "ts-jest": "^29.1.2"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc"
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "gitHead": "54d8166ab868e6602c30cc76038f8c8b49a90d36"
 }

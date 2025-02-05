@@ -22,7 +22,7 @@ export type ArrowColumnMeta = {
 
 const MAX_VALUE_LENGTH = 64;
 
-function valueToString(type: arrow.DataType, value: any): string {
+function valueToString(type: arrow.DataType, value: unknown): string {
   if (value === null || value === undefined) {
     return 'NULL';
   }

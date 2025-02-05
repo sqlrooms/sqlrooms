@@ -28,7 +28,10 @@
     },
     "test": {},
     "test:watch": {
-      "cache": false
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["test"],
+      "inputs": ["-watch"]
     }
   }
 }
