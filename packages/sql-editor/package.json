@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/sql-editor",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
