@@ -9,6 +9,8 @@ const config = {
   content: [
     '{app,components,hooks,store,lib}/**/*.{ts,tsx}',
     // @sqlrooms-packages-content-start
+    // !IMPORTANT! Replace the following by './node_modules/@sqlrooms/**/dist/**/*.js'
+    //             when not developing sqlrooms in the monorepo
     '../../packages/*/src/**/*.{ts,tsx}',
     // @sqlrooms-packages-content-end
   ],

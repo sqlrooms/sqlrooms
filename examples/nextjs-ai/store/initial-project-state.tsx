@@ -16,6 +16,16 @@ export const INITIAL_PROJECT_STATE: ProjectStateProps<DemoProjectConfig> = {
   initialized: true,
   projectConfig: {
     ...INITIAL_BASE_PROJECT_CONFIG,
+    layout: {
+      ...INITIAL_BASE_PROJECT_CONFIG.layout,
+      nodes: {
+        direction: 'row',
+        first: ProjectPanelTypes.enum['data-sources'],
+        second: MAIN_VIEW,
+        splitPercentage: 30,
+      },
+    },
+    aiModel: 'gpt-4o-mini',
     analysisResults: [],
     dataSources: [],
   },
@@ -28,16 +38,16 @@ export const INITIAL_PROJECT_STATE: ProjectStateProps<DemoProjectConfig> = {
       component: DataSourcesPanel,
       placement: 'sidebar',
     },
-    [ProjectPanelTypes.enum['view-configuration']]: {
-      title: 'View Config',
-      icon: Settings2Icon,
-      component: () => (
-        <ProjectBuilderPanel
-          type={ProjectPanelTypes.enum['view-configuration']}
-        />
-      ),
-      placement: 'sidebar',
-    },
+    // [ProjectPanelTypes.enum['view-configuration']]: {
+    //   title: 'View Config',
+    //   icon: Settings2Icon,
+    //   component: () => (
+    //     <ProjectBuilderPanel
+    //       type={ProjectPanelTypes.enum['view-configuration']}
+    //     />
+    //   ),
+    //   placement: 'sidebar',
+    // },
     [ProjectPanelTypes.enum[MAIN_VIEW]]: {
       title: 'Main view',
       icon: () => null,

@@ -1,9 +1,29 @@
 import {z} from 'zod';
 
+export const QueryToolParameters = z.object({
+  type: z.literal('query'),
+  sqlQuery: z.string(),
+  reasoning: z.string(),
+});
+export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
+
+export const AnswerToolParameters = z.object({
+  type: z.literal('answer'),
+  answer: z.string(),
+  chart: z.union([
+    z.object({
+      sqlQuery: z.string(),
+      vegaLiteSpec: z.string(),
+    }),
+    z.null(),
+  ]),
+});
+export type AnswerToolParameters = z.infer<typeof AnswerToolParameters>;
+
 export const ToolCallSchema = z.object({
   toolName: z.string(),
   toolCallId: z.string(),
-  args: z.record(z.any()),
+  args: z.union([QueryToolParameters, AnswerToolParameters]),
 });
 export type ToolCallSchema = z.infer<typeof ToolCallSchema>;
 
@@ -23,25 +43,6 @@ export const ToolResultSchema = z.object({
   ]),
 });
 export type ToolResultSchema = z.infer<typeof ToolResultSchema>;
-
-export const AnalysisStepSchema = z.object({
-  query: z.string(),
-  reasoning: z.string(),
-});
-export type AnalysisStepSchema = z.infer<typeof AnalysisStepSchema>;
-
-export const AnalysisAnswerSchema = z.object({
-  steps: z.array(AnalysisStepSchema),
-  answer: z.string(),
-  plotlyChartSpec: z.union([
-    z.object({
-      data: z.string(),
-      layout: z.string(),
-    }),
-    z.null(),
-  ]),
-});
-export type AnalysisAnswerSchema = z.infer<typeof AnalysisAnswerSchema>;
 
 export const AnalysisResultSchema = z.object({
   id: z.string().cuid2(),

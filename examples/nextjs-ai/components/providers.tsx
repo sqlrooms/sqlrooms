@@ -1,6 +1,6 @@
 'use client';
 
-import {createDemoProjectStore} from '@/store/demo-project-store';
+import {createDemoProjectStore} from '@/store/store';
 import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
 import {ThemeProvider as NextThemesProvider} from 'next-themes';
 import * as React from 'react';

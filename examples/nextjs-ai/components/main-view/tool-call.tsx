@@ -1,35 +1,33 @@
-import {safeJsonParse} from '@/lib/utils';
 import {ToolCallSchema} from '@/store/ai/schemas';
-import {Badge, cn} from '@sqlrooms/ui';
-import dynamic from 'next/dynamic';
-import {useMemo} from 'react';
-
-/** To avoid error during production Next.js build (ReferenceError: self is not defined) */
-const Plot = dynamic(() => import('react-plotly.js'), {ssr: false});
+import {
+  Badge,
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  Spinner,
+  cn,
+} from '@sqlrooms/ui';
+import {CodeIcon} from 'lucide-react';
+import {Suspense} from 'react';
+import Markdown from 'react-markdown';
+import {VegaLiteChart} from '../vega-lite-chart';
 
 interface ToolCallProps {
   toolCall: ToolCallSchema;
 }
 
 export function ToolCall({toolCall}: ToolCallProps) {
-  const plotlyChartSpec = toolCall.args.plotlyChartSpec;
-  const plotData = useMemo(
-    () => safeJsonParse(plotlyChartSpec?.data),
-    [plotlyChartSpec?.data],
-  );
-
-  const plotLayout = useMemo(
-    () => safeJsonParse(plotlyChartSpec?.layout),
-    [plotlyChartSpec?.layout],
-  );
+  const {args, toolName, toolCallId} = toolCall;
+  const {type} = args;
 
   return (
     <div
-      key={toolCall.toolCallId}
+      key={toolCallId}
       className={cn(
         'border-2 relative bg-gray-900 px-5 py-6 rounded-md text-gray-300 text-xs',
         {
-          ' border-blue-500': toolCall.toolName === 'answer',
+          ' border-blue-500': toolName === 'answer',
         },
       )}
     >
@@ -37,26 +35,62 @@ export function ToolCall({toolCall}: ToolCallProps) {
         variant="secondary"
         className={cn(
           'text-xs absolute top-[-12px] left-2 text-gray-100',
-          toolCall.toolName === 'answer' && 'bg-blue-500',
+          toolName === 'answer' && 'bg-blue-500',
         )}
       >
-        {toolCall.toolName}
+        {toolName}
       </Badge>
-      {toolCall.toolName === 'query' ? (
-        <div className="font-mono">{toolCall.args.sqlQuery}</div>
-      ) : toolCall.toolName === 'answer' ? (
+
+      <div className="absolute top-2 right-2">
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="icon" className="w-6 h-6">
+              <CodeIcon className="w-4 h-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="w-[400px] max-h-[400px] overflow-auto"
+            align="start"
+            side="right"
+          >
+            <pre className="text-xs">{JSON.stringify(toolCall, null, 2)}</pre>
+          </PopoverContent>
+        </Popover>
+      </div>
+      {type === 'query' ? (
         <div className="flex flex-col gap-5">
-          <div className="text-sm">{toolCall.args.answer}</div>
-          {toolCall.args.plotlyChartSpec && plotData && plotLayout && (
-            <div className="w-full flex">
-              {Array.isArray(plotData) && (
-                <Plot data={plotData} layout={plotLayout} />
-              )}
+          <div className="text-xs text-gray-400">{args.reasoning}</div>
+          <div className="font-mono">{args.sqlQuery}</div>
+        </div>
+      ) : type === 'answer' ? (
+        <div className="flex flex-col gap-5">
+          <div className="text-sm">
+            <Markdown>{args.answer}</Markdown>
+          </div>
+          {args.chart && (
+            <div className="flex flex-col gap-2">
+              <div className="text-xs text-muted-foreground font-mono">
+                {args.chart.sqlQuery}
+              </div>
+              <Suspense
+                fallback={
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Spinner className="w-4 h-4" />
+                  </div>
+                }
+              >
+                <VegaLiteChart
+                  width={400}
+                  height={250}
+                  sqlQuery={args.chart.sqlQuery}
+                  spec={args.chart.vegaLiteSpec}
+                />
+              </Suspense>
             </div>
           )}
         </div>
       ) : (
-        <pre>{JSON.stringify(toolCall.args, null, 2)}</pre>
+        <pre>{JSON.stringify(args, null, 2)}</pre>
       )}
     </div>
   );

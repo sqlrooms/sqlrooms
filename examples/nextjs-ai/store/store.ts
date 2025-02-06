@@ -14,6 +14,10 @@ import {
 } from './ai/schemas';
 import {DemoProjectConfig} from './demo-project-config';
 import {INITIAL_PROJECT_STATE} from './initial-project-state';
+import {CoreToolMessage} from 'ai';
+
+// TODO: use the correct type
+type Message = any;
 
 /**
  * Project state with custom fields and methods
@@ -28,6 +32,9 @@ export type DemoProjectState = ProjectState<DemoProjectConfig> & {
   setOpenAiApiKey: (key: string) => void;
   runAnalysis: () => Promise<void>;
   cancelAnalysis: () => void;
+  messagesById: Map<string, Message>;
+  addMessages: (messages: Message[]) => void;
+  getMessages: () => Message[];
 };
 
 /**
@@ -41,9 +48,10 @@ export const createDemoProjectStore = () =>
       store,
     ),
     analysisPrompt:
-      'Describe the data in the tables including the distribution of the values.',
+      'Describe the data in the table and make a chart providing an overview.',
     isRunningAnalysis: false,
     analysisResults: [],
+    messagesById: new Map(),
     openAiApiKey:
       typeof window !== 'undefined'
         ? localStorage.getItem('openai_api_key')
@@ -58,6 +66,32 @@ export const createDemoProjectStore = () =>
     setAiModel: (model: string) => {
       set({projectConfig: {...get().projectConfig, aiModel: model}});
     },
+
+    /**
+     * Add messages to the project store uniquely by id
+     * @param messages - The messages to add.
+     */
+    addMessages: (messages: Message[]) => {
+      set((state) => {
+        const newMessages = messages.filter(
+          (m) => !state.messagesById.has(m.id),
+        );
+        const newMessagesById = new Map(state.messagesById);
+        for (const m of newMessages) {
+          if (!m.id) {
+            console.warn('Message has no id', m);
+          }
+          newMessagesById.set(m.id, m);
+        }
+        console.log('newMessagesById', Array.from(newMessagesById.values()));
+        return {
+          messagesById: newMessagesById,
+        };
+      });
+    },
+    getMessages: () => {
+      return Array.from(get().messagesById.values());
+    },
     runAnalysis: async () => {
       const resultId = createId();
       const abortController = new AbortController();
@@ -67,12 +101,10 @@ export const createDemoProjectStore = () =>
         throw new Error('OpenAI API key is required');
       }
 
-      set({
-        analysisAbortController: abortController,
-        isRunningAnalysis: true,
-      });
       set((state) =>
         produce(state, (draft) => {
+          draft.analysisAbortController = abortController;
+          draft.isRunningAnalysis = true;
           draft.projectConfig.analysisResults.push({
             id: resultId,
             prompt: get().analysisPrompt,
@@ -81,14 +113,24 @@ export const createDemoProjectStore = () =>
           });
         }),
       );
+      get().addMessages([
+        {
+          id: createId(),
+          role: 'user',
+          content: get().analysisPrompt,
+        },
+      ]);
+      set({analysisPrompt: ''});
       try {
-        const {toolResults, ...rest} = await runAnalysis({
+        const {toolResults, toolCalls, ...rest} = await runAnalysis({
           model: get().projectConfig.aiModel,
-          prompt: get().analysisPrompt,
+          // prompt: get().analysisPrompt,
+          messages: get().getMessages(),
           onStepFinish: (event) => {
             console.log('onStepFinish', event);
+            get().addMessages(event.response.messages);
             set(
-              addToolResults({
+              makeResultsAppender({
                 resultId,
                 toolResults: event.toolResults,
                 toolCalls: event.toolCalls,
@@ -98,14 +140,41 @@ export const createDemoProjectStore = () =>
           abortSignal: abortController.signal,
           apiKey,
         });
-        console.log('final result', {toolResults, ...rest});
+        console.log('final result', {toolResults, toolCalls, ...rest});
+        get().addMessages([
+          {
+            // @ts-ignore
+            id: createId(),
+            role: 'tool',
+            content: [],
+            tool_call_id: toolCalls[toolCalls.length - 1].toolCallId,
+          } satisfies CoreToolMessage,
+        ]);
         // set(
-        //   addToolResults({
+        //   makeResultsAppender({
         //     resultId,
         //     toolResults,
         //     toolCalls: rest.toolCalls,
         //   }),
         // );
+      } catch (err) {
+        set(
+          makeResultsAppender({
+            resultId,
+            toolResults: [
+              {
+                toolName: 'answer',
+                toolCallId: createId(),
+                args: {},
+                result: {
+                  success: false,
+                  error: err instanceof Error ? err.message : String(err),
+                },
+              },
+            ],
+            toolCalls: [],
+          }),
+        );
       } finally {
         set({isRunningAnalysis: false});
       }
@@ -120,7 +189,15 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
   return analysisResults.find((r: AnalysisResultSchema) => r.id === id);
 }
 
-function addToolResults({
+/**
+ * Returns a function that will update the state by appending new results
+ * to the analysis results.
+ * @param resultId - The result id
+ * @param toolResults - The new tool results
+ * @param toolCalls - The new tool calls
+ * @returns The new state
+ */
+function makeResultsAppender({
   resultId,
   toolResults,
   toolCalls,

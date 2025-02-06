@@ -69,10 +69,6 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 
 ```css
 @import '@sqlrooms/ui/tailwind-preset.css';
-
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
 ```
 
 ## Setting Up the Project Store

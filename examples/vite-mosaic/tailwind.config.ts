@@ -7,6 +7,8 @@ const config = {
   content: [
     'src/**/*.{ts,tsx}',
     // @sqlrooms-packages-content-start
+    // !IMPORTANT! Replace the following by
+    //             when not developing sqlrooms in the monorepo
     '../../packages/*/src/**/*.{ts,tsx}',
     // @sqlrooms-packages-content-end
   ],

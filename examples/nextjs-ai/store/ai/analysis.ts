@@ -1,9 +1,17 @@
 import {createOpenAI} from '@ai-sdk/openai';
-import {getDuckDb} from '@sqlrooms/duckdb';
-import {generateText, StepResult, tool} from 'ai';
-import {z} from 'zod';
-import {ToolResultSchema, AnalysisAnswerSchema} from './schemas';
-import {safeJsonParse} from '@/lib/utils';
+import {arrowTableToJson, getDuckDb} from '@sqlrooms/duckdb';
+import {
+  CoreMessage,
+  generateText,
+  StepResult,
+  tool,
+  ToolExecutionOptions,
+} from 'ai';
+import {
+  QueryToolParameters,
+  AnswerToolParameters,
+  ToolResultSchema,
+} from './schemas';
 
 let openai: ReturnType<typeof createOpenAI>;
 
@@ -20,19 +28,21 @@ export function initOpenAI(apiKey: string) {
  * @returns The tool calls and the final answer
  */
 export async function runAnalysis({
-  prompt,
+  // prompt,
   abortSignal,
   onStepFinish,
   apiKey,
   model,
   maxSteps = 100,
+  messages,
 }: {
-  prompt: string;
+  // prompt: string;
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
   apiKey: string;
   model: string;
   maxSteps?: number;
+  messages?: any[];
 }) {
   // Always reinitialize OpenAI with the current key
   initOpenAI(apiKey);
@@ -42,6 +52,8 @@ export async function runAnalysis({
       structuredOutputs: true,
     }),
     abortSignal,
+    // prompt,
+    messages,
 
     tools: TOOLS,
 
@@ -54,8 +66,6 @@ export async function runAnalysis({
       'You can run SQL queries to perform analysis and answer questions. ' +
       'Reason step by step. ' +
       'When you give the final answer, provide an explanation for how you got it.',
-
-    prompt,
 
     onStepFinish,
   });
@@ -75,32 +85,41 @@ const TOOLS = {
     description:
       'A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm. ' +
       'You can obtain the structures of all tables and their column types by running `DESCRIBE`. ' +
-      'Query results are returned as a superjson object `{success: boolean, data: string(superjson), error?: string}`. ' +
+      'Query results are returned as a json object `{success: boolean, data: object[], error?: string}`. ' +
       'You should only analyze tables which are in the main schema. ' +
-      'Add LIMIT to each query to avoid returning too much data and crashing the browser. ' +
+      'Avoid queries returning too much data to prevent the browser from crashing. ' +
+      'Include VegaLite charts in your response if the data is suitable for it. ' +
+      'Omit the data from the chart.vegaLiteSpec in the response, provide an sql query in chart.sqlQuery instead. ' +
       'To obtain stats, use the `SUMMARIZE table_name` query. ' +
       "Don't execute queries that modify data unless explicitly asked. ",
-    parameters: z.object({sqlQuery: z.string()}),
+    parameters: QueryToolParameters,
 
-    execute: async ({sqlQuery}): Promise<ToolResultSchema['result']> => {
+    execute: async (
+      {sqlQuery},
+      options: ToolExecutionOptions,
+    ): Promise<ToolResultSchema['result']> => {
       try {
-        console.log('Executing SQL query:', sqlQuery);
         const {conn} = await getDuckDb();
+        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
         const result = await conn.query(sqlQuery);
-        // Convert Arrow table to JSON
-        const jsonResult = result.toArray().map((d) => {
-          const str = d.toString();
-          return safeJsonParse(str) ?? str;
-        });
+        // if (options.abortSignal?.aborted) {
+        //   throw new Error('Query aborted');
+        // }
         return {
           success: true,
-          data: jsonResult,
+          data: arrowTableToJson(result),
         };
       } catch (error) {
         console.error('SQL query error:', error);
+        const errorMessage =
+          error instanceof Error
+            ? error.cause instanceof Error
+              ? error.cause.message
+              : error.message
+            : String(error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : String(error),
+          error: errorMessage,
         };
       }
     },
@@ -110,6 +129,13 @@ const TOOLS = {
   // answer tool: the LLM will provide a structured answer
   answer: tool({
     description: 'A tool for providing the final answer.',
-    parameters: AnalysisAnswerSchema,
+    parameters: AnswerToolParameters,
+
+    // execute: async ({answer}): Promise<ToolResultSchema['result']> => {
+    //   return {
+    //     success: true,
+    //     data: answer,
+    //   };
+    // },
   }),
 };

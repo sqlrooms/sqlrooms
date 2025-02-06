@@ -1,33 +1,52 @@
 import {ProjectPanelTypes} from '@/store/demo-project-config';
+import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
   ProjectBuilderPanel,
-  SqlQueryDataSourcesPanel,
   TablesListPanel,
   useBaseProjectStore,
 } from '@sqlrooms/project-builder';
-import {DataSourceTypes} from '@sqlrooms/project-config';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '@sqlrooms/ui';
-import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
-import {FC, useMemo} from 'react';
+import {FolderIcon, TableIcon} from 'lucide-react';
+import {FC} from 'react';
 
 const DataSourcesPanel: FC = () => {
-  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
-  const dataSources = useBaseProjectStore(
-    (state) => state.projectConfig.dataSources,
-  );
-  const queryDataSources = useMemo(
-    () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
-    [dataSources],
-  );
+  // const dataSources = useBaseProjectStore(
+  //   (state) => state.projectConfig.dataSources,
+  // );
+  // const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+  // const queryDataSources = useMemo(
+  //   () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
+  //   [dataSources],
+  // );
+  const addProjectFile = useBaseProjectStore((state) => state.addProjectFile);
 
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>
+      <FileDropzone
+        className="h-[200px] p-5"
+        acceptedFormats={{
+          'text/csv': ['.csv'],
+          'text/tsv': ['.tsv'],
+          'text/parquet': ['.parquet'],
+          'text/json': ['.json'],
+        }}
+        onDrop={async (files) => {
+          for (const file of files) {
+            await addProjectFile(file);
+          }
+        }}
+      >
+        <div className="text-xs text-muted-foreground">
+          Files you add will stay local to your browser.
+        </div>
+      </FileDropzone>
+
       <Accordion type="multiple" defaultValue={['files', 'sql', 'tables']}>
         <AccordionItem value="files">
           <AccordionTrigger className="px-0 gap-1">
@@ -41,7 +60,7 @@ const DataSourcesPanel: FC = () => {
           </AccordionContent>
         </AccordionItem>
 
-        {!isReadOnly || queryDataSources.length > 0 ? (
+        {/* {!isReadOnly || queryDataSources.length > 0 ? (
           <AccordionItem value="sql">
             <AccordionTrigger className="px-0 gap-1">
               <div className="flex items-center text-muted-foreground">
@@ -53,7 +72,7 @@ const DataSourcesPanel: FC = () => {
               <SqlQueryDataSourcesPanel queryDataSources={queryDataSources} />
             </AccordionContent>
           </AccordionItem>
-        ) : null}
+        ) : null} */}
 
         <AccordionItem value="tables">
           <AccordionTrigger className="px-0 gap-1">
