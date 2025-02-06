@@ -4,6 +4,7 @@
 
 [build.environment]
   NEXT_TELEMETRY_DISABLED = "1"
+  NPM_FLAGS = "--force"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs" 
