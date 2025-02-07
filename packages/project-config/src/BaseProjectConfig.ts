@@ -1,12 +1,7 @@
 import {z} from 'zod';
 import LayoutConfig, {DEFAULT_MOSAIC_LAYOUT} from './LayoutConfig';
-import {SqlEditorConfig} from './SqlEditorConfig';
 
 export const DEFAULT_PROJECT_TITLE = 'Untitled project';
-export const DEFAULT_SQL_EDITOR_CONFIG = {
-  queries: [{id: 'default', name: 'Untitled', query: ''}],
-  selectedQueryId: 'default',
-} satisfies SqlEditorConfig;
 
 export const DataSourceTypes = z.enum(['file', 'url', 'sql']);
 export type DataSourceTypes = z.infer<typeof DataSourceTypes>;
@@ -64,9 +59,6 @@ export const BaseProjectConfig = z
       .describe('Data sources. Each data source must have a unique tableName.'),
     layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
       'Layout specifies how views are arranged on the screen.',
-    ),
-    sqlEditor: SqlEditorConfig.describe('SQL editor configuration.').default(
-      DEFAULT_SQL_EDITOR_CONFIG,
     ),
   })
   .describe('Project configuration.');

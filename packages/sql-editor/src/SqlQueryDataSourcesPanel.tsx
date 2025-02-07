@@ -1,5 +1,5 @@
+import {DataSourceStatus, useBaseProjectStore} from '@sqlrooms/project-builder';
 import {SqlQueryDataSource} from '@sqlrooms/project-config';
-import {CreateTableModal} from '@sqlrooms/sql-editor';
 import {
   Button,
   DropdownMenu,
@@ -16,8 +16,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback, useState} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
-import {DataSourceStatus} from '../types';
+import CreateTableModal from './CreateTableModal';
+import {useSqlEditorStore} from './SqlEditorSlice';
 
 const SqlQueryDataSourcesPanel: FC<{
   queryDataSources: SqlQueryDataSource[];
@@ -51,7 +51,7 @@ const SqlQueryDataSourcesPanel: FC<{
     [removeSqlQueryDataSource],
   );
 
-  const addOrUpdateSqlQuery = useBaseProjectStore(
+  const addOrUpdateSqlQuery = useSqlEditorStore(
     (state) => state.addOrUpdateSqlQuery,
   );
 

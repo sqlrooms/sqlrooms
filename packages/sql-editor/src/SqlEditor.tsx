@@ -9,7 +9,6 @@ import {
   getDuckTables,
   useDuckDb,
 } from '@sqlrooms/duckdb';
-import {SqlEditorConfig} from '@sqlrooms/project-config';
 import {
   Button,
   DropdownMenu,
@@ -42,6 +41,7 @@ import CreateTableModal, {CreateTableModalProps} from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 import {TablesList} from './TablesList';
+import {SqlEditorSliceConfig} from './SqlEditorSliceConfig';
 
 const DEFAULT_QUERY = '';
 
@@ -56,10 +56,10 @@ export type SqlEditorProps = {
   documentationPanel?: React.ReactNode;
 
   /** Configuration object containing queries and selected query state */
-  sqlEditorConfig: SqlEditorConfig;
+  sqlEditorConfig: SqlEditorSliceConfig['sqlEditor'];
 
   /** Callback fired when the SQL editor configuration changes */
-  onChange: (config: SqlEditorConfig) => void;
+  onChange: (config: SqlEditorSliceConfig['sqlEditor']) => void;
 
   /** Callback fired when the SQL editor should be closed */
   onClose: () => void;

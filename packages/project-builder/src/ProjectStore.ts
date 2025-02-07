@@ -1,10 +1,11 @@
 import {
   DataTable,
   DuckQueryError,
+  createTableFromArrowTable,
+  createTableFromObjects,
   createTableFromQuery,
   createViewFromFile,
   createViewFromRegisteredFile,
-  createTableFromArrowTable,
   dropAllFiles,
   dropAllTables,
   dropFile,
@@ -13,19 +14,16 @@ import {
   getDuckTableSchema,
   getDuckTableSchemas,
   getDuckTables,
-  createTableFromObjects,
 } from '@sqlrooms/duckdb';
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   BaseProjectConfig,
   DEFAULT_MOSAIC_LAYOUT,
-  DEFAULT_SQL_EDITOR_CONFIG,
   DataSource,
   DataSourceTypes,
   FileDataSource,
   LayoutConfig,
   MAIN_VIEW,
-  SqlEditorConfig,
   SqlQueryDataSource,
   UrlDataSource,
   isMosaicLayoutParent,
@@ -35,13 +33,13 @@ import {
   ProgressInfo,
   convertToUniqueColumnOrTableName,
   downloadFile,
-  generateUniqueName,
   splitFilePath,
 } from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {ReactNode} from 'react';
-import {StateCreator, StoreApi} from 'zustand';
+import {StateCreator, StoreApi, createStore} from 'zustand';
+import {useBaseProjectStore} from './ProjectStateProvider';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -62,11 +60,6 @@ const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
   ProjectState<PC>
 >;
-
-export type CreateProjectSliceProps<PC extends BaseProjectConfig> = Partial<
-  ProjectStateProps<PC>
-> &
-  Required<Pick<ProjectStateProps<PC>, 'projectConfig' | 'projectPanels'>>;
 
 export type ProjectPanelInfo = {
   title: string;
@@ -103,7 +96,6 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   description: '',
   dataSources: [],
   layout: DEFAULT_MOSAIC_LAYOUT,
-  sqlEditor: DEFAULT_SQL_EDITOR_CONFIG,
 };
 
 export type ProjectStateProps<PC extends BaseProjectConfig> = {
@@ -180,15 +172,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
    * @param panel - The panel to toggle the pin state of.
    */
   togglePanelPin: (panel: string) => void;
-  /**
-   * Pin a panel.
-   * @param panel - The panel to pin.
-   */
-  addOrUpdateSqlQuery(
-    tableName: string,
-    query: string,
-    oldTableName?: string,
-  ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): Promise<void>;
   replaceProjectFile(
     projectFile: ProjectFileInfo,
@@ -221,7 +204,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   setProjectTitle(title: string): void;
   setDescription(description: string): void;
   areDatasetsReady(): boolean;
-  setSqlEditorConfig: (config: SqlEditorConfig) => void;
   findTableByName(tableName: string): DataTable | undefined;
   /**
    * Update the status of all data sources based on the current tables.
@@ -234,8 +216,54 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
 export type ProjectState<PC extends BaseProjectConfig> = ProjectStateProps<PC> &
   ProjectStateActions<PC>;
 
-export function createProjectSlice<PC extends BaseProjectConfig>(
-  props: CreateProjectSliceProps<PC>,
+export function createProjectSlice<PC extends BaseProjectConfig, S>(
+  sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
+): StateCreator<S> {
+  return (set, get, store) =>
+    sliceCreator(
+      set,
+      get as () => S & ProjectState<PC>,
+      store as StoreApi<S & ProjectState<PC>>,
+    );
+}
+
+/**
+ * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
+ */
+type InitialState<PC extends BaseProjectConfig> = Partial<
+  Omit<ProjectStateProps<PC>, 'projectConfig' | 'projectPanels'>
+> & {
+  projectConfig: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
+  projectPanels: Partial<ProjectStateProps<PC>['projectPanels']>;
+};
+
+/**
+ * Create a project store with custom fields and methods
+ * @param initialState - The initial state and config for the project
+ * @param sliceCreators - The slices to add to the project store
+ * @returns The project store and a hook for accessing the project store
+ */
+export function createProjectStore<PC extends BaseProjectConfig>(
+  initialState: InitialState<PC>,
+  ...sliceCreators: ReturnType<typeof createProjectSlice<PC, any>>[]
+) {
+  const projectStore = createStore<ProjectState<PC>>((set, get, store) => {
+    return {
+      ...createBaseProjectSlice<PC>(initialState)(set, get, store),
+      ...sliceCreators.reduce(
+        (acc, slice) => ({...acc, ...slice(set, get, store)}),
+        {},
+      ),
+    };
+  });
+  function useProjectStore<T>(selector: (state: ProjectState<PC>) => T): T {
+    return useBaseProjectStore(selector as (state: ProjectState<PC>) => T);
+  }
+  return {projectStore, useProjectStore};
+}
+
+export function createBaseProjectSlice<PC extends BaseProjectConfig>(
+  props: InitialState<PC>,
 ) {
   const initialState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
@@ -244,7 +272,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
     projectConfig: {
       ...INITIAL_BASE_PROJECT_CONFIG,
       ...props.projectConfig,
-    },
+    } as PC,
     lastSavedConfig: undefined,
   };
 
@@ -392,40 +420,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         );
         await get().updateReadyDataSources();
         return newTable;
-      },
-
-      addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
-        const {schema} = get();
-        const newTableName =
-          tableName !== oldTableName
-            ? generateUniqueName(tableName, await getDuckTables(schema))
-            : tableName;
-        const {rowCount} = await createTableFromQuery(newTableName, query);
-        get().setTableRowCount(newTableName, rowCount);
-        set((state) =>
-          produce(state, (draft) => {
-            const newDataSource = {
-              type: DataSourceTypes.enum.sql,
-              sqlQuery: query,
-              tableName: newTableName,
-            };
-            if (oldTableName) {
-              draft.projectConfig.dataSources =
-                draft.projectConfig.dataSources.map((dataSource) =>
-                  dataSource.tableName === oldTableName
-                    ? newDataSource
-                    : dataSource,
-                );
-              delete draft.dataSourceStates[oldTableName];
-            } else {
-              draft.projectConfig.dataSources.push(newDataSource);
-            }
-            draft.dataSourceStates[newTableName] = {
-              status: DataSourceStatus.READY,
-            };
-          }),
-        );
-        await get().setTables(await getDuckTableSchemas());
       },
 
       removeSqlQueryDataSource: async (tableName) => {
@@ -714,14 +708,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             } else {
               layout.pinned = [...pinned, panel];
             }
-          }),
-        );
-      },
-
-      setSqlEditorConfig: (config: SqlEditorConfig) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.projectConfig.sqlEditor = config;
           }),
         );
       },

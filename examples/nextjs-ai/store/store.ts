@@ -1,233 +1,78 @@
-import {createId} from '@paralleldrive/cuid2';
+import {DataSourcesPanel} from '@/components/data-sources-panel';
+import {MainView} from '@/components/main-view/main-view';
+import {createProjectStore} from '@sqlrooms/project-builder';
 import {
-  createProjectSlice,
-  ProjectState,
-  useBaseProjectStore,
-} from '@sqlrooms/project-builder';
-import {produce} from 'immer';
-import {createStore} from 'zustand';
-import {runAnalysis} from './ai/analysis';
+  BaseProjectConfig,
+  LayoutTypes,
+  MAIN_VIEW,
+} from '@sqlrooms/project-config';
 import {
-  AnalysisResultSchema,
-  ToolCallSchema,
-  ToolResultSchema,
-} from './ai/schemas';
-import {DemoProjectConfig} from './demo-project-config';
-import {INITIAL_PROJECT_STATE} from './initial-project-state';
-import {CoreToolMessage} from 'ai';
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceConfig,
+} from '@sqlrooms/sql-editor';
+import {DatabaseIcon} from 'lucide-react';
+import {z} from 'zod';
+import {
+  AiSliceConfig,
+  createAiSlice,
+  createDefaultAiConfig,
+} from './ai/ai-slice';
 
-// TODO: use the correct type
-type Message = any;
+export const ProjectPanelTypes = z.enum([
+  'project-details',
+  'data-sources',
+  'view-configuration',
+  MAIN_VIEW,
+] as const);
+export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
 /**
- * Project state with custom fields and methods
+ * Project config for saving
  */
-export type DemoProjectState = ProjectState<DemoProjectConfig> & {
-  analysisPrompt: string;
-  isRunningAnalysis: boolean;
-  analysisAbortController?: AbortController;
-  openAiApiKey: string | null;
-  setAiModel: (model: string) => void;
-  setAnalysisPrompt: (prompt: string) => void;
-  setOpenAiApiKey: (key: string) => void;
-  runAnalysis: () => Promise<void>;
-  cancelAnalysis: () => void;
-  messagesById: Map<string, Message>;
-  addMessages: (messages: Message[]) => void;
-  getMessages: () => Message[];
-};
+export const DemoProjectConfig =
+  BaseProjectConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export type DemoProjectConfig = z.infer<typeof DemoProjectConfig>;
 
 /**
  * Create a customized project store
  */
-export const createDemoProjectStore = () =>
-  createStore<DemoProjectState>()((set, get, store) => ({
-    ...createProjectSlice<DemoProjectConfig>(INITIAL_PROJECT_STATE)(
-      set,
-      get,
-      store,
-    ),
-    analysisPrompt:
-      'Describe the data in the table and make a chart providing an overview.',
-    isRunningAnalysis: false,
-    analysisResults: [],
-    messagesById: new Map(),
-    openAiApiKey:
-      typeof window !== 'undefined'
-        ? localStorage.getItem('openai_api_key')
-        : null,
-    setOpenAiApiKey: (key: string) => {
-      localStorage.setItem('openai_api_key', key);
-      set({openAiApiKey: key});
-    },
-    setAnalysisPrompt: (prompt: string) => {
-      set({analysisPrompt: prompt});
-    },
-    setAiModel: (model: string) => {
-      set({projectConfig: {...get().projectConfig, aiModel: model}});
-    },
-
-    /**
-     * Add messages to the project store uniquely by id
-     * @param messages - The messages to add.
-     */
-    addMessages: (messages: Message[]) => {
-      set((state) => {
-        const newMessages = messages.filter(
-          (m) => !state.messagesById.has(m.id),
-        );
-        const newMessagesById = new Map(state.messagesById);
-        for (const m of newMessages) {
-          if (!m.id) {
-            console.warn('Message has no id', m);
-          }
-          newMessagesById.set(m.id, m);
-        }
-        console.log('newMessagesById', Array.from(newMessagesById.values()));
-        return {
-          messagesById: newMessagesById,
-        };
-      });
-    },
-    getMessages: () => {
-      return Array.from(get().messagesById.values());
-    },
-    runAnalysis: async () => {
-      const resultId = createId();
-      const abortController = new AbortController();
-      const apiKey = get().openAiApiKey;
-
-      if (!apiKey) {
-        throw new Error('OpenAI API key is required');
-      }
-
-      set((state) =>
-        produce(state, (draft) => {
-          draft.analysisAbortController = abortController;
-          draft.isRunningAnalysis = true;
-          draft.projectConfig.analysisResults.push({
-            id: resultId,
-            prompt: get().analysisPrompt,
-            toolResults: [],
-            toolCalls: [],
-          });
-        }),
-      );
-      get().addMessages([
-        {
-          id: createId(),
-          role: 'user',
-          content: get().analysisPrompt,
-        },
-      ]);
-      set({analysisPrompt: ''});
-      try {
-        const {toolResults, toolCalls, ...rest} = await runAnalysis({
-          model: get().projectConfig.aiModel,
-          // prompt: get().analysisPrompt,
-          messages: get().getMessages(),
-          onStepFinish: (event) => {
-            console.log('onStepFinish', event);
-            get().addMessages(event.response.messages);
-            set(
-              makeResultsAppender({
-                resultId,
-                toolResults: event.toolResults,
-                toolCalls: event.toolCalls,
-              }),
-            );
+export const {projectStore, useProjectStore} =
+  createProjectStore<DemoProjectConfig>(
+    {
+      initialized: true,
+      projectConfig: {
+        title: 'Demo Project',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: ProjectPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
           },
-          abortSignal: abortController.signal,
-          apiKey,
-        });
-        console.log('final result', {toolResults, toolCalls, ...rest});
-        get().addMessages([
-          {
-            // @ts-ignore
-            id: createId(),
-            role: 'tool',
-            content: [],
-            tool_call_id: toolCalls[toolCalls.length - 1].toolCallId,
-          } satisfies CoreToolMessage,
-        ]);
-        // set(
-        //   makeResultsAppender({
-        //     resultId,
-        //     toolResults,
-        //     toolCalls: rest.toolCalls,
-        //   }),
-        // );
-      } catch (err) {
-        set(
-          makeResultsAppender({
-            resultId,
-            toolResults: [
-              {
-                toolName: 'answer',
-                toolCallId: createId(),
-                args: {},
-                result: {
-                  success: false,
-                  error: err instanceof Error ? err.message : String(err),
-                },
-              },
-            ],
-            toolCalls: [],
-          }),
-        );
-      } finally {
-        set({isRunningAnalysis: false});
-      }
+        },
+        dataSources: [],
+        ...createDefaultAiConfig(),
+        ...createDefaultSqlEditorConfig(),
+      },
+      projectPanels: {
+        [ProjectPanelTypes.enum['data-sources']]: {
+          title: 'Data Sources',
+          // icon: FolderIcon,
+          icon: DatabaseIcon,
+          component: DataSourcesPanel,
+          placement: 'sidebar',
+        },
+        [ProjectPanelTypes.enum[MAIN_VIEW]]: {
+          title: 'Main view',
+          icon: () => null,
+          component: MainView,
+          placement: 'main',
+        },
+      },
     },
-    cancelAnalysis: () => {
-      set({isRunningAnalysis: false});
-      get().analysisAbortController?.abort('Analysis cancelled');
-    },
-  }));
 
-function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
-  return analysisResults.find((r: AnalysisResultSchema) => r.id === id);
-}
-
-/**
- * Returns a function that will update the state by appending new results
- * to the analysis results.
- * @param resultId - The result id
- * @param toolResults - The new tool results
- * @param toolCalls - The new tool calls
- * @returns The new state
- */
-function makeResultsAppender({
-  resultId,
-  toolResults,
-  toolCalls,
-}: {
-  resultId: string;
-  toolResults: ToolResultSchema[];
-  toolCalls: ToolCallSchema[];
-}) {
-  return (state: DemoProjectState) =>
-    produce(state, (draft) => {
-      const result = findResultById(
-        draft.projectConfig.analysisResults,
-        resultId,
-      );
-      if (result) {
-        result.toolResults = [...result.toolResults, ...toolResults];
-        result.toolCalls = [...result.toolCalls, ...toolCalls];
-      } else {
-        console.error('Result not found', resultId);
-      }
-    });
-}
-
-/**
- * Hook for accessing the project store with custom fields and methods
- */
-export function useProjectStore<T>(
-  selector: (state: DemoProjectState) => T,
-): T {
-  return useBaseProjectStore(
-    selector as (state: ProjectState<DemoProjectConfig>) => T,
+    createSqlEditorSlice(),
+    createAiSlice(),
   );
-}

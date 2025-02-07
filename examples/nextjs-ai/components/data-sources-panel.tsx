@@ -1,4 +1,4 @@
-import {ProjectPanelTypes} from '@/store/demo-project-config';
+import {ProjectPanelTypes} from '@/store/store';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
