@@ -1,7 +1,7 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {SkeletonPane, cn} from '@sqlrooms/ui';
 import React, {FC, useEffect} from 'react';
-import {ProjectPanelTypes} from '../store/schemas';
+import {ProjectPanelTypes} from '../store/store';
 
 export type DocumentationPanelProps = {
   pageUrl?: string;
