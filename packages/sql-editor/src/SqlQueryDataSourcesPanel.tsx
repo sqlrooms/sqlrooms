@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import {FC, useCallback, useState} from 'react';
 import CreateTableModal from './CreateTableModal';
-import {useSqlEditorStore} from './SqlEditorSlice';
+import {useStoreWithSqlEditor} from './SqlEditorSlice';
 
 const SqlQueryDataSourcesPanel: FC<{
   queryDataSources: SqlQueryDataSource[];
@@ -51,8 +51,8 @@ const SqlQueryDataSourcesPanel: FC<{
     [removeSqlQueryDataSource],
   );
 
-  const addOrUpdateSqlQuery = useSqlEditorStore(
-    (state) => state.addOrUpdateSqlQuery,
+  const addOrUpdateSqlQuery = useStoreWithSqlEditor(
+    (state) => state.sqlEditor.addOrUpdateSqlQuery,
   );
 
   const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);

@@ -6,6 +6,6 @@ export {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
 } from './SqlEditorSlice';
-export type {SqlEditorState} from './SqlEditorSlice';
+export type {SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './SqlQueryDataSourcesPanel';
 export {SqlEditorSliceConfig} from './SqlEditorSliceConfig';

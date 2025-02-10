@@ -15,15 +15,15 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
   SpinnerPane,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
   Textarea,
-  ResizablePanelGroup,
-  ResizablePanel,
-  ResizableHandle,
 } from '@sqlrooms/ui';
 import {genRandomStr, generateUniqueName} from '@sqlrooms/utils';
 import {Table} from 'apache-arrow';
@@ -37,11 +37,12 @@ import {
   PlusIcon,
 } from 'lucide-react';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import CreateTableModal, {CreateTableModalProps} from './CreateTableModal';
+import CreateTableModal from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
-import {TablesList} from './TablesList';
+import {useStoreWithSqlEditor} from './SqlEditorSlice';
 import {SqlEditorSliceConfig} from './SqlEditorSliceConfig';
+import {TablesList} from './TablesList';
 
 const DEFAULT_QUERY = '';
 
@@ -55,17 +56,8 @@ export type SqlEditorProps = {
   /** Optional component to render SQL documentation in the side panel */
   documentationPanel?: React.ReactNode;
 
-  /** Configuration object containing queries and selected query state */
-  sqlEditorConfig: SqlEditorSliceConfig['sqlEditor'];
-
-  /** Callback fired when the SQL editor configuration changes */
-  onChange: (config: SqlEditorSliceConfig['sqlEditor']) => void;
-
   /** Callback fired when the SQL editor should be closed */
   onClose: () => void;
-
-  /** Callback fired when a new table should be created from query results */
-  onAddOrUpdateSqlQuery: CreateTableModalProps['onAddOrUpdateSqlQuery'];
 };
 
 /**
@@ -82,14 +74,19 @@ export type SqlEditorProps = {
  *
  */
 const SqlEditor: React.FC<SqlEditorProps> = (props) => {
-  const {
-    schema = 'main',
-    documentationPanel,
-    onAddOrUpdateSqlQuery,
-    sqlEditorConfig,
-    onChange,
-  } = props;
+  const {schema = 'main', documentationPanel} = props;
   const duckConn = useDuckDb();
+
+  const addOrUpdateSqlQuery = useStoreWithSqlEditor(
+    (state) => state.sqlEditor.addOrUpdateSqlQuery,
+  );
+
+  const sqlEditorConfig = useStoreWithSqlEditor(
+    (s) => s.projectConfig.sqlEditor,
+  );
+  const onChangeSqlEditorConfig = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setSqlEditorConfig,
+  );
 
   const [showDocs, setShowDocs] = useState(false);
   const [tables, setTables] = useState<string[]>([]);
@@ -176,7 +173,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   };
 
   const handleTabChange = (value: string) => {
-    onChange({
+    onChangeSqlEditorConfig({
       ...sqlEditorConfig,
       selectedQueryId: value,
     });
@@ -193,7 +190,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
       query: e.target.value,
     };
 
-    onChange({
+    onChangeSqlEditorConfig({
       ...sqlEditorConfig,
       queries: newQueries,
     });
@@ -259,7 +256,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
       const newQueries = sqlEditorConfig.queries.map((q) =>
         q.id === queryToRename.id ? {...q, name: newName || q.name} : q,
       );
-      onChange({
+      onChangeSqlEditorConfig({
         ...sqlEditorConfig,
         queries: newQueries,
       });
@@ -276,7 +273,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
     if (queryId === sqlEditorConfig.selectedQueryId && currentIndex > 0) {
       const prevId = sqlEditorConfig.queries[currentIndex - 1]?.id;
       if (prevId) {
-        onChange({
+        onChangeSqlEditorConfig({
           ...sqlEditorConfig,
           selectedQueryId: prevId,
         });
@@ -296,7 +293,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
     };
     newQueries.push(newQuery);
 
-    onChange({
+    onChangeSqlEditorConfig({
       ...sqlEditorConfig,
       queries: newQueries,
       selectedQueryId: newQuery.id,
@@ -481,7 +478,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           query={currentQuery}
           isOpen={createTableModalOpen}
           onClose={() => setCreateTableModalOpen(false)}
-          onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
+          onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
         />
         <DeleteSqlQueryModal
           isOpen={queryToDelete !== null}
@@ -496,7 +493,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
               newQueries[Math.min(deletedIndex, newQueries.length - 1)]?.id ||
               newQueries[0]?.id;
             if (selectedQueryId) {
-              onChange({
+              onChangeSqlEditorConfig({
                 ...sqlEditorConfig,
                 queries: newQueries,
                 selectedQueryId,

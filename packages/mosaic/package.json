@@ -1,0 +1,39 @@
+{
+  "name": "@sqlrooms/mosaic",
+  "version": "0.0.3",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "private": false,
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@ai-sdk/provider": "^1.0.7",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@uwdata/mosaic-core": "^0.12.2",
+    "@uwdata/mosaic-spec": "^0.12.2",
+    "@uwdata/vgplot": "^0.12.2"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typedoc": "typedoc"
+  },
+  "gitHead": "54d8166ab868e6602c30cc76038f8c8b49a90d36"
+}

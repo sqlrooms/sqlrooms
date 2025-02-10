@@ -1,6 +1,6 @@
-import {AnalysisResultSchema} from '@/store/ai/schemas';
-import {ToolCall} from './tool-call';
-import {ToolResult} from './tool-result';
+import {AnalysisResultSchema} from './schemas';
+import {ToolCall} from './ToolCall';
+import {ToolResult} from './ToolResult';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 

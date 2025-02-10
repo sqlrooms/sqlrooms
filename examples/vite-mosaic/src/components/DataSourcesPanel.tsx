@@ -1,7 +1,6 @@
 import {
   FileDataSourcesPanel,
   ProjectBuilderPanel,
-  SqlQueryDataSourcesPanel,
   TablesListPanel,
   useBaseProjectStore,
 } from '@sqlrooms/project-builder';
@@ -15,7 +14,8 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, PlusIcon, TableIcon} from 'lucide-react';
 import {FC, useCallback, useMemo, useState} from 'react';
-import {ProjectPanelTypes} from '../store/schemas';
+import {ProjectPanelTypes} from '../store/store';
+import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 
 export type DataSourcesPanelProps = {
   AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;

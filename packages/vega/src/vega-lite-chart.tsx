@@ -1,9 +1,18 @@
-import {safeJsonParse} from '@/lib/utils';
+import {safeJsonParse} from '@sqlrooms/utils';
 import {arrowTableToJson, useDuckDb} from '@sqlrooms/duckdb';
 import {useEffect, useMemo, useState} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
 
 const DATA_NAME = 'queryResult';
+
+/**
+ * A component that renders a Vega-Lite chart.
+ * @see Vega Lite Chart - https://vega.github.io/vega-lite/
+ * @param props - The props for the component.
+ * @returns The component.
+ * @example
+ * <VegaLiteChart sqlQuery="SELECT * FROM my_table" spec={spec} />
+ */
 export const VegaLiteChart: React.FC<{
   width?: number;
   height?: number;
@@ -31,8 +40,6 @@ export const VegaLiteChart: React.FC<{
   if (!refinedSpec || !data) return null;
   return (
     <div className="w-full flex flex-col gap-2 overflow-hidden">
-      {/* <pre>{JSON.stringify(data, null, 2)}</pre>
-      <pre>{JSON.stringify(plotLayout, null, 2)}</pre> */}
       <VegaLite spec={refinedSpec} data={data} width={width} height={height} />
     </div>
   );

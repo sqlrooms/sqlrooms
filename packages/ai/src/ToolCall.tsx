@@ -1,4 +1,4 @@
-import {ToolCallSchema} from '@/store/ai/schemas';
+import {ToolCallSchema} from './schemas';
 import {
   Badge,
   Button,
@@ -11,7 +11,7 @@ import {
 import {CodeIcon} from 'lucide-react';
 import {Suspense} from 'react';
 import Markdown from 'react-markdown';
-import {VegaLiteChart} from '../vega-lite-chart';
+import {VegaLiteChart} from '@sqlrooms/vega';
 
 interface ToolCallProps {
   toolCall: ToolCallSchema;

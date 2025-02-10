@@ -1,0 +1,37 @@
+{
+  "name": "@sqlrooms/vega",
+  "version": "0.0.3",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "private": false,
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "react-vega": "^7.6.0"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typedoc": "typedoc"
+  },
+  "gitHead": "54d8166ab868e6602c30cc76038f8c8b49a90d36"
+}

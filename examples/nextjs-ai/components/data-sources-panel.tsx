@@ -1,3 +1,4 @@
+'use client';
 import {ProjectPanelTypes} from '@/store/store';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {

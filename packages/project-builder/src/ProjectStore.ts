@@ -234,7 +234,7 @@ type InitialState<PC extends BaseProjectConfig> = Partial<
   Omit<ProjectStateProps<PC>, 'projectConfig' | 'projectPanels'>
 > & {
   projectConfig: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
-  projectPanels: Partial<ProjectStateProps<PC>['projectPanels']>;
+  projectPanels: ProjectStateProps<PC>['projectPanels'];
 };
 
 /**
@@ -243,11 +243,15 @@ type InitialState<PC extends BaseProjectConfig> = Partial<
  * @param sliceCreators - The slices to add to the project store
  * @returns The project store and a hook for accessing the project store
  */
-export function createProjectStore<PC extends BaseProjectConfig>(
+export function createProjectStore<
+  PC extends BaseProjectConfig,
+  AppState extends ProjectState<PC>,
+>(
   initialState: InitialState<PC>,
   ...sliceCreators: ReturnType<typeof createProjectSlice<PC, any>>[]
 ) {
-  const projectStore = createStore<ProjectState<PC>>((set, get, store) => {
+  // @ts-ignore TODO fix typing
+  const projectStore = createStore<AppState>((set, get, store) => {
     return {
       ...createBaseProjectSlice<PC>(initialState)(set, get, store),
       ...sliceCreators.reduce(
@@ -256,11 +260,71 @@ export function createProjectStore<PC extends BaseProjectConfig>(
       ),
     };
   });
-  function useProjectStore<T>(selector: (state: ProjectState<PC>) => T): T {
-    return useBaseProjectStore(selector as (state: ProjectState<PC>) => T);
+  function useProjectStore<T>(selector: (state: AppState) => T): T {
+    // @ts-ignore TODO fix typing
+    return useBaseProjectStore(selector as (state: AppState) => T);
   }
   return {projectStore, useProjectStore};
 }
+
+// // If you have `StateCreator<S>` = (set, get, store) => S
+// // we want to extract that S:
+// type ExtractSliceState<SC> = SC extends (...args: any[]) => infer R ? R : never;
+
+// /**
+//  * Convert a union type A|B|C into an intersection A & B & C
+//  * e.g. UnionToIntersection<{ a: number } | { b: string }>
+//  *               -> { a: number, b: string }
+//  */
+// type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
+//   k: infer I,
+// ) => void
+//   ? I
+//   : never;
+
+// export function createProjectStore<
+//   PC extends BaseProjectConfig,
+//   // "Creators" is now an array of whatever `createProjectSlice<PC, S>` returns
+//   // which should be `StateCreator<S>`.
+//   Creators extends Array<
+//     ReturnType<typeof createProjectSlice<PC, any>>
+//   > = any[],
+// >(initialState: InitialState<PC>, ...sliceCreators: Creators) {
+//   //
+//   // 1) Figure out the intersection of all slice return types
+//   //
+//   type CombinedSlices = UnionToIntersection<
+//     ExtractSliceState<Creators[number]> // Each item is a StateCreator<S>, so we pull out S
+//   >;
+
+//   //
+//   // 2) The final store shape is the base ProjectState<PC> plus all slices
+//   //
+//   type StoreType = ProjectState<PC> & CombinedSlices;
+
+//   //
+//   // 3) Actually create the store with a properly typed object
+//   //
+//   const projectStore = createStore<StoreType>((set, get, store) => ({
+//     ...createBaseProjectSlice<PC>(initialState)(set, get, store),
+//     ...sliceCreators.reduce(
+//       (acc, slice) => {
+//         return {...acc, ...slice(set, get, store)};
+//       },
+//       {} as Record<string, unknown>,
+//     ),
+//   }));
+
+//
+// 4) Provide a typed selector hook
+//
+//   function useProjectStore<T>(selector: (state: StoreType) => T): T {
+//     // Cast if needed, or if your `useBaseProjectStore` is generic, pass the type parameter directly
+//     return useBaseProjectStore(selector as (state: StoreType) => T);
+//   }
+
+//   return {projectStore, useProjectStore};
+// }
 
 export function createBaseProjectSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,

@@ -4,7 +4,14 @@ import {FC, useEffect, useRef} from 'react';
 type VgPlotChartProps = {
   spec: Spec;
 };
-const VgPlotChart: FC<VgPlotChartProps> = ({spec}) => {
+/**
+ * Renders a Vega-Lite chart using the Mosaic library.
+ *
+ * @param {VgPlotChartProps} props - The component props.
+ * @param {Spec} props.spec - The Vega-Lite specification for the chart.
+ * @returns {React.ReactElement} The rendered chart component.
+ */
+export const VgPlotChart: FC<VgPlotChartProps> = ({spec}) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     (async () => {
@@ -20,5 +27,3 @@ const VgPlotChart: FC<VgPlotChartProps> = ({spec}) => {
 
   return <div ref={containerRef} />;
 };
-
-export default VgPlotChart;

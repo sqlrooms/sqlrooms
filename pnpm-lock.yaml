@@ -111,6 +111,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/ai':
+        specifier: workspace:*
+        version: link:../../packages/ai
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -150,12 +153,6 @@ importers:
       react-dom:
         specifier: ^19.0.0
         version: 19.0.0(react@19.0.0)
-      react-markdown:
-        specifier: ^9.0.3
-        version: 9.0.3(@types/react@18.3.18)(react@19.0.0)
-      react-vega:
-        specifier: ^7.6.0
-        version: 7.6.0(react@19.0.0)(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13))
       superjson:
         specifier: ^2.2.2
         version: 2.2.2
@@ -208,6 +205,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/mosaic':
+        specifier: workspace:*
+        version: link:../../packages/mosaic
       '@sqlrooms/project-builder':
         specifier: workspace:*
         version: link:../../packages/project-builder
@@ -223,15 +223,6 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../../packages/utils
-      '@uwdata/mosaic-core':
-        specifier: ^0.12.2
-        version: 0.12.2
-      '@uwdata/mosaic-spec':
-        specifier: ^0.12.2
-        version: 0.12.2
-      '@uwdata/vgplot':
-        specifier: ^0.12.2
-        version: 0.12.2
       immer:
         specifier: ^10.1.1
         version: 10.1.1
@@ -302,6 +293,54 @@ importers:
       vite:
         specifier: ^6.0.5
         version: 6.0.7(@types/node@22.10.5)(jiti@1.21.7)(terser@5.37.0)(yaml@2.7.0)
+
+  packages/ai:
+    dependencies:
+      '@ai-sdk/provider':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@paralleldrive/cuid2':
+        specifier: ^2.2.2
+        version: 2.2.2
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@sqlrooms/project-builder':
+        specifier: workspace:*
+        version: link:../project-builder
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../vega
+      ai:
+        specifier: ^4.1.28
+        version: 4.1.28(react@18.3.1)(zod@3.24.1)
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      lucide-react:
+        specifier: ^0.475.0
+        version: 0.475.0(react@18.3.1)
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+      react-markdown:
+        specifier: ^9.0.3
+        version: 9.0.3(@types/react@18.3.18)(react@18.3.1)
+      react-vega:
+        specifier: ^7.6.0
+        version: 7.6.0(react@18.3.1)(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13))
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.1
 
   packages/data-table:
     dependencies:
@@ -448,6 +487,30 @@ importers:
         specifier: 5.3.0
         version: 5.3.0(@types/node@22.10.5)(@types/react@18.3.18)(react-dom@19.0.0(react@18.3.1))(react@18.3.1)
 
+  packages/mosaic:
+    dependencies:
+      '@ai-sdk/provider':
+        specifier: ^1.0.7
+        version: 1.0.7
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@uwdata/mosaic-core':
+        specifier: ^0.12.2
+        version: 0.12.2
+      '@uwdata/mosaic-spec':
+        specifier: ^0.12.2
+        version: 0.12.2
+      '@uwdata/vgplot':
+        specifier: ^0.12.2
+        version: 0.12.2
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+
   packages/project-builder:
     dependencies:
       '@sqlrooms/data-table':
@@ -490,7 +553,7 @@ importers:
   packages/project-config:
     dependencies:
       zod:
-        specifier: ^3.22.4
+        specifier: ^3.24.1
         version: 3.24.1
 
   packages/s3-browser:
@@ -565,7 +628,7 @@ importers:
         specifier: ^7.54.2
         version: 7.54.2(react@18.3.1)
       zod:
-        specifier: ^3.22.4
+        specifier: ^3.24.1
         version: 3.24.1
       zustand:
         specifier: ^5.0.3
@@ -708,6 +771,24 @@ importers:
         specifier: ^3.0.8
         version: 3.0.8
 
+  packages/vega:
+    dependencies:
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+      react-vega:
+        specifier: ^7.6.0
+        version: 7.6.0(react@18.3.1)(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13))
+
 packages:
 
   '@adobe/css-tools@4.4.1':
@@ -757,8 +838,29 @@ packages:
       zod:
         optional: true
 
+  '@ai-sdk/react@1.1.11':
+    resolution: {integrity: sha512-vfjZ7w2M+Me83HTMMrnnrmXotz39UDCMd27YQSrvt2f1YCLPloVpLhP+Y9TLZeFE/QiiRCrPYLDQm6aQJYJ9PQ==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18 || ^19 || ^19.0.0-rc
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      zod:
+        optional: true
+
   '@ai-sdk/ui-utils@1.1.10':
     resolution: {integrity: sha512-x+A1Nfy8RTSatdCe+7nRpHAZVzPFB6H+r+2JKoapSvrwsu9mw2pAbmFgV8Zaj94TsmUdTlO0/j97e63f+yYuWg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
+
+  '@ai-sdk/ui-utils@1.1.11':
+    resolution: {integrity: sha512-1SC9W4VZLcJtxHRv4Y0aX20EFeaEP6gUvVqoKLBBtMLOgtcZrv/F/HQRjGavGugiwlS3dsVza4X+E78fiwtlTA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -3514,6 +3616,18 @@ packages:
       zod:
         optional: true
 
+  ai@4.1.28:
+    resolution: {integrity: sha512-DrYyVGK6HKx8TVzwuJOhemH9phdcyMfix5d7giyMYH9tu71Cvfs/Hi4zZPs9KPGDJnZYMLJna7CLs6l5CgRW7g==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      react: ^18 || ^19 || ^19.0.0-rc
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      react:
+        optional: true
+      zod:
+        optional: true
+
   ajv@6.12.6:
     resolution: {integrity: sha512-j3fVLgvTo527anyYyJOGTYJbG+vnnQYvE0m5mmkc1TK+nxAppkCLMIL0aZ4dblVCNoGShhm+kzE4ZUykBoMg4g==}
 
@@ -5918,6 +6032,11 @@ packages:
 
   lucide-react@0.474.0:
     resolution: {integrity: sha512-CmghgHkh0OJNmxGKWc0qfPJCYHASPMVSyGY8fj3xgk4v84ItqDg64JNKFZn5hC6E0vHi6gxnbCgwhyVB09wQtA==}
+    peerDependencies:
+      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  lucide-react@0.475.0:
+    resolution: {integrity: sha512-NJzvVu1HwFVeZ+Gwq2q00KygM1aBhy/ZrhY9FsAgJtpB+E4R7uxRk9M2iKvHa6/vNxZydIB59htha4c2vvwvVg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
@@ -8403,7 +8522,25 @@ snapshots:
       react: 19.0.0
       zod: 3.24.1
 
+  '@ai-sdk/react@1.1.11(react@18.3.1)(zod@3.24.1)':
+    dependencies:
+      '@ai-sdk/provider-utils': 2.1.6(zod@3.24.1)
+      '@ai-sdk/ui-utils': 1.1.11(zod@3.24.1)
+      swr: 2.3.0(react@18.3.1)
+      throttleit: 2.1.0
+    optionalDependencies:
+      react: 18.3.1
+      zod: 3.24.1
+
   '@ai-sdk/ui-utils@1.1.10(zod@3.24.1)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.7
+      '@ai-sdk/provider-utils': 2.1.6(zod@3.24.1)
+      zod-to-json-schema: 3.24.1(zod@3.24.1)
+    optionalDependencies:
+      zod: 3.24.1
+
+  '@ai-sdk/ui-utils@1.1.11(zod@3.24.1)':
     dependencies:
       '@ai-sdk/provider': 1.0.7
       '@ai-sdk/provider-utils': 2.1.6(zod@3.24.1)
@@ -11973,6 +12110,18 @@ snapshots:
       react: 19.0.0
       zod: 3.24.1
 
+  ai@4.1.28(react@18.3.1)(zod@3.24.1):
+    dependencies:
+      '@ai-sdk/provider': 1.0.7
+      '@ai-sdk/provider-utils': 2.1.6(zod@3.24.1)
+      '@ai-sdk/react': 1.1.11(react@18.3.1)(zod@3.24.1)
+      '@ai-sdk/ui-utils': 1.1.11(zod@3.24.1)
+      '@opentelemetry/api': 1.9.0
+      jsondiffpatch: 0.6.0
+    optionalDependencies:
+      react: 18.3.1
+      zod: 3.24.1
+
   ajv@6.12.6:
     dependencies:
       fast-deep-equal: 3.1.3
@@ -15070,6 +15219,10 @@ snapshots:
     dependencies:
       react: 19.0.0
 
+  lucide-react@0.475.0(react@18.3.1):
+    dependencies:
+      react: 18.3.1
+
   lunr@2.3.9: {}
 
   lz-string@1.5.0: {}
@@ -16338,7 +16491,7 @@ snapshots:
 
   react-is@18.3.1: {}
 
-  react-markdown@9.0.3(@types/react@18.3.18)(react@19.0.0):
+  react-markdown@9.0.3(@types/react@18.3.18)(react@18.3.1):
     dependencies:
       '@types/hast': 3.0.4
       '@types/react': 18.3.18
@@ -16346,7 +16499,7 @@ snapshots:
       hast-util-to-jsx-runtime: 2.3.2
       html-url-attributes: 3.0.1
       mdast-util-to-hast: 13.2.0
-      react: 19.0.0
+      react: 18.3.1
       remark-parse: 11.0.0
       remark-rehype: 11.1.1
       unified: 11.0.5
@@ -16425,12 +16578,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.18
 
-  react-vega@7.6.0(react@19.0.0)(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13)):
+  react-vega@7.6.0(react@18.3.1)(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13)):
     dependencies:
       '@types/react': 18.3.18
       fast-deep-equal: 3.1.3
       prop-types: 15.8.1
-      react: 19.0.0
+      react: 18.3.1
       vega: 5.31.0(encoding@0.1.13)
       vega-embed: 6.29.0(vega-lite@5.23.0(vega@5.31.0(encoding@0.1.13)))(vega@5.31.0(encoding@0.1.13))
       vega-lite: 5.23.0(vega@5.31.0(encoding@0.1.13))
@@ -17123,6 +17276,12 @@ snapshots:
 
   supports-preserve-symlinks-flag@1.0.0: {}
 
+  swr@2.3.0(react@18.3.1):
+    dependencies:
+      dequal: 2.0.3
+      react: 18.3.1
+      use-sync-external-store: 1.4.0(react@18.3.1)
+
   swr@2.3.0(react@19.0.0):
     dependencies:
       dequal: 2.0.3
@@ -17549,7 +17708,6 @@ snapshots:
   use-sync-external-store@1.4.0(react@18.3.1):
     dependencies:
       react: 18.3.1
-    optional: true
 
   use-sync-external-store@1.4.0(react@19.0.0):
     dependencies:

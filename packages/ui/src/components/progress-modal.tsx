@@ -1,5 +1,11 @@
 import {FC} from 'react';
-import {Dialog, DialogContent, DialogHeader, DialogTitle} from './dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from './dialog';
 import {Progress} from './progress';
 
 const ProgressModal: FC<{
@@ -12,6 +18,7 @@ const ProgressModal: FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
+      <DialogDescription>Progress modal</DialogDescription>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{title ?? ''}</DialogTitle>

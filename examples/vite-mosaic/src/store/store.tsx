@@ -1,12 +1,3 @@
-import {DataSourcesPanel} from '@/components/data-sources-panel';
-import {MainView} from '@/components/main-view';
-import {createOpenAI} from '@ai-sdk/openai';
-import {
-  AiSliceState,
-  AiSliceConfig,
-  createAiSlice,
-  createDefaultAiConfig,
-} from '@sqlrooms/ai';
 import {createProjectStore, ProjectState} from '@sqlrooms/project-builder';
 import {
   BaseProjectConfig,
@@ -19,30 +10,33 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {DatabaseIcon} from 'lucide-react';
+import {DatabaseIcon, InfoIcon, MapIcon, TableIcon} from 'lucide-react';
 import {z} from 'zod';
+import AddDataModal from '../components/add-data/AddDataModal';
+import DataSourcesPanel from '../components/DataSourcesPanel';
+import {MainView} from '../components/MainView';
+import ProjectDetailsPanel from '../components/ProjectDetailsPanel';
 
 export const ProjectPanelTypes = z.enum([
   'project-details',
   'data-sources',
-  'view-configuration',
+  'data-tables',
+  'docs',
   MAIN_VIEW,
 ] as const);
+
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
 /**
  * Project config for saving
  */
-export const AppConfig =
-  BaseProjectConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
  * Project state
  */
-export type AppState = ProjectState<AppConfig> &
-  AiSliceState &
-  SqlEditorSliceState;
+export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
 
 /**
  * Create a customized project store
@@ -65,20 +59,30 @@ export const {projectStore, useProjectStore} = createProjectStore<
         },
       },
       dataSources: [],
-      ...createDefaultAiConfig(),
       ...createDefaultSqlEditorConfig(),
     },
     projectPanels: {
+      [ProjectPanelTypes.enum['project-details']]: {
+        title: 'Project Details',
+        icon: InfoIcon,
+        component: () => <ProjectDetailsPanel />,
+        placement: 'sidebar',
+      },
       [ProjectPanelTypes.enum['data-sources']]: {
         title: 'Data Sources',
-        // icon: FolderIcon,
         icon: DatabaseIcon,
-        component: DataSourcesPanel,
+        component: () => <DataSourcesPanel AddDataModal={AddDataModal} />,
         placement: 'sidebar',
+      },
+      [ProjectPanelTypes.enum['data-tables']]: {
+        title: 'Prepared Data Tables',
+        icon: TableIcon,
+        component: () => <div>Data Tables</div>,
+        placement: 'sidebar-bottom',
       },
       main: {
         title: 'Main view',
-        icon: () => null,
+        icon: MapIcon,
         component: MainView,
         placement: 'main',
       },
@@ -86,19 +90,4 @@ export const {projectStore, useProjectStore} = createProjectStore<
   },
 
   createSqlEditorSlice(),
-  createAiSlice({
-    supportedModels: [
-      'gpt-4',
-      'gpt-4o',
-      'gpt-4o-mini',
-      'o3-mini',
-      'o3-mini-high',
-    ],
-    createModel: (model: string, apiKey: string) => {
-      const openai = createOpenAI({apiKey});
-      return openai(model, {
-        structuredOutputs: true,
-      });
-    },
-  }),
 );

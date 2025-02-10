@@ -3,9 +3,9 @@ import {FileDropzone} from '@sqlrooms/dropzone';
 import {getDuckTableSchemas, useDuckDb} from '@sqlrooms/duckdb';
 import {processDroppedFiles, ProjectFileInfo} from '@sqlrooms/project-builder';
 import {FC, useCallback, useContext, useEffect, useState} from 'react';
-import useProjectStore from '../../../store/DemoProjectStore';
 import {AddDataModalInternalContext} from '../AddDataModalContext';
 import UploadFilesPreview from './UploadFilesPreview';
+import {useProjectStore} from '../../../store/store';
 
 const UploadFiles: FC = () => {
   const {

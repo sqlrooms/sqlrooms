@@ -1,6 +1,6 @@
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import React, {createContext, ReactNode, useContext} from 'react';
-import {useStore} from 'zustand';
+import {StoreApi, useStore} from 'zustand';
 import {ProjectState, ProjectStore} from './ProjectStore';
 
 // See https://docs.pmnd.rs/zustand/guides/initialize-state-with-props
@@ -26,12 +26,14 @@ export function ProjectStateProvider<PC extends BaseProjectConfig>({
   );
 }
 
-export function useBaseProjectStore<PC extends BaseProjectConfig, T>(
-  selector: (state: ProjectState<PC>) => T,
-): T {
+export function useBaseProjectStore<
+  PC extends BaseProjectConfig,
+  PS extends ProjectState<PC>,
+  T,
+>(selector: (state: ProjectState<PC>) => T): T {
   const store = useContext(ProjectStateContext);
   if (!store) {
     throw new Error('Missing ProjectStateProvider in the tree');
   }
-  return useStore(store as unknown as ProjectStore<PC>, selector);
+  return useStore(store as unknown as StoreApi<PS>, selector);
 }

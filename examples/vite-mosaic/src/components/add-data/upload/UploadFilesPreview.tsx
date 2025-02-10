@@ -24,7 +24,7 @@ import {
   splitFilePath,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
-import useProjectStore from '../../../store/DemoProjectStore';
+import {useProjectStore} from '../../../store/store';
 
 const DEFAULT_TABLE_NAME = 'unnamed_table';
 const DEFAULT_FILE_NAME = 'unnamed_file';

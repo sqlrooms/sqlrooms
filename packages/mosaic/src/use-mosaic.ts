@@ -5,6 +5,11 @@ import {useEffect, useState} from 'react';
 type MosaicConnector = ReturnType<typeof coordinator>['databaseConnector'];
 let connector: MosaicConnector;
 
+/**
+ * Retrieves a Mosaic connector for the DuckDB database.
+ *
+ * @returns {Promise<MosaicConnector>} The Mosaic connector for the DuckDB database.
+ */
 export async function getMosaicConnector() {
   if (connector) {
     return connector;
@@ -19,6 +24,11 @@ export async function getMosaicConnector() {
   return connector;
 }
 
+/**
+ * Hook to manage the Mosaic connector.
+ *
+ * @returns {Object} An object containing the Mosaic connector and a loading state.
+ */
 export function useMosaic() {
   const [isLoading, setIsLoading] = useState(true);
   const [connector, setConnector] = useState<MosaicConnector>();

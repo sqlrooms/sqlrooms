@@ -1,7 +1,7 @@
 import {z} from 'zod';
 
 /** Main view project panel key */
-export const MAIN_VIEW = 'main-view';
+export const MAIN_VIEW = 'main';
 
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;

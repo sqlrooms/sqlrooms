@@ -1,17 +1,32 @@
-import {useMosaic} from '../mosaic/use-mosaic';
 import {SpinnerPane} from '@sqlrooms/ui';
-import VgPlotChart from '../mosaic/VgPlotChart';
-import {Spec} from '@uwdata/mosaic-spec';
-import useProjectStore from '../store/DemoProjectStore';
+import {ProjectPanelTypes, useProjectStore} from '../store/store';
+import {useEffect} from 'react';
+import {Spec, VgPlotChart, useMosaic} from '@sqlrooms/mosaic';
 
 export const MainView = () => {
   const {isMosaicLoading} = useMosaic();
-  const isDataAvailable = useProjectStore((state) => state.isDataAvailable);
+
+  const togglePanel = useProjectStore((state) => state.togglePanel);
+  const addDataSource = useProjectStore((s) => s.addDataSource);
+  const isTableReady = useProjectStore((state) =>
+    state.tables.find((t) => t.tableName === 'latency'),
+  );
+  useEffect(() => {
+    (async () => {
+      await addDataSource({
+        type: 'url',
+        url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+        tableName: 'latency',
+      });
+      togglePanel(ProjectPanelTypes.enum['data-sources'], true);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   if (isMosaicLoading) {
     return <SpinnerPane className="h-full w-full" />;
   }
-  if (!isDataAvailable) {
+  if (!isTableReady) {
     return (
       <div className="flex flex-col gap-4 p-4 justify-center items-center w-full h-full">
         No data available

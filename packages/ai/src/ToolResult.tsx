@@ -1,4 +1,4 @@
-import {ToolResultSchema} from '@/store/ai/schemas';
+import {ToolResultSchema} from './schemas';
 import {
   Badge,
   Button,

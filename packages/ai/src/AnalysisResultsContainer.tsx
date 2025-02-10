@@ -1,17 +1,17 @@
-import {AnalysisResult} from './analysis-result';
-import {SkeletonPane} from '@sqlrooms/ui';
-import {useProjectStore} from '@/store/store';
+'use client';
+import {cn, SkeletonPane} from '@sqlrooms/ui';
+import {ChevronDown} from 'lucide-react';
+import {useStoreWithAi} from './AiSlice';
+import {AnalysisResult} from './AnalysisResult';
 import {
   useScrollToBottom,
   useScrollToBottomButton,
-} from '@/hooks/use-scroll-to-bottom';
-import {ChevronDown} from 'lucide-react';
-import {cn} from '@sqlrooms/ui';
+} from './hooks/use-scroll-to-bottom';
 
 export const AnalysisResultsContainer: React.FC = () => {
-  const isRunningAnalysis = useProjectStore((s) => s.isRunningAnalysis);
-  const analysisResults = useProjectStore(
-    (s) => s.projectConfig.analysisResults,
+  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
+  const analysisResults = useStoreWithAi(
+    (s) => s.projectConfig.ai.analysisResults,
   );
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();

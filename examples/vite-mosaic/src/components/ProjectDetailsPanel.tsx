@@ -5,7 +5,7 @@ import {
 import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project-config';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
-import {ProjectPanelTypes} from '../store/schemas';
+import {ProjectPanelTypes} from '../store/store';
 
 export default function ProjectDetailsPanel() {
   const title = useBaseProjectStore((state) => state.projectConfig.title);

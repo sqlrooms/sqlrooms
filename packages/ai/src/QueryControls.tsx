@@ -11,31 +11,24 @@ import {
   Textarea,
 } from '@sqlrooms/ui';
 import {KeyIcon, OctagonXIcon} from 'lucide-react';
-import {useProjectStore} from '@/store/store';
 import {useCallback} from 'react';
-
-const MODEL_OPTIONS = [
-  'gpt-4',
-  'gpt-4o',
-  'gpt-4o-mini',
-  'o3-mini',
-  'o3-mini-high',
-] as const;
+import {useStoreWithAi} from './AiSlice';
 
 interface QueryControlsProps {
   className?: string;
 }
 
 export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
-  const isRunningAnalysis = useProjectStore((s) => s.isRunningAnalysis);
-  const runAnalysis = useProjectStore((s) => s.runAnalysis);
-  const cancelAnalysis = useProjectStore((s) => s.cancelAnalysis);
-  const analysisPrompt = useProjectStore((s) => s.analysisPrompt);
-  const setAnalysisPrompt = useProjectStore((s) => s.setAnalysisPrompt);
-  const openAiApiKey = useProjectStore((s) => s.openAiApiKey);
-  const setOpenAiApiKey = useProjectStore((s) => s.setOpenAiApiKey);
-  const aiModel = useProjectStore((s) => s.projectConfig.aiModel);
-  const setAiModel = useProjectStore((s) => s.setAiModel);
+  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
+  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
+  const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
+  const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
+  const apiKey = useStoreWithAi((s) => s.ai.apiKey);
+  const setApiKey = useStoreWithAi((s) => s.ai.setApiKey);
+  const model = useStoreWithAi((s) => s.projectConfig.ai.model);
+  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
+  const supportedModels = useStoreWithAi((s) => s.ai.supportedModels);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -49,15 +42,15 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
         e.preventDefault();
         if (
           !isRunningAnalysis &&
-          openAiApiKey &&
-          aiModel &&
+          apiKey &&
+          model &&
           analysisPrompt.trim().length
         ) {
           runAnalysis();
         }
       }
     },
-    [isRunningAnalysis, openAiApiKey, aiModel, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, apiKey, model, analysisPrompt, runAnalysis],
   );
 
   return (
@@ -79,17 +72,17 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
               <Input
                 type="password"
                 placeholder="OpenAI API Key"
-                value={openAiApiKey || ''}
-                onChange={(e) => setOpenAiApiKey(e.target.value)}
+                value={apiKey || ''}
+                onChange={(e) => setApiKey(e.target.value)}
                 className="pl-8 w-[150px] bg-gray-800"
               />
             </div>
-            <Select value={aiModel || ''} onValueChange={setAiModel}>
+            <Select value={model || ''} onValueChange={setAiModel}>
               <SelectTrigger className="w-[140px] bg-gray-800">
                 <SelectValue placeholder="Select model" />
               </SelectTrigger>
               <SelectContent>
-                {MODEL_OPTIONS.map((model) => (
+                {supportedModels.map((model) => (
                   <SelectItem key={model} value={model}>
                     {model}
                   </SelectItem>
@@ -120,8 +113,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
             onClick={runAnalysis}
             disabled={
               isRunningAnalysis ||
-              !openAiApiKey ||
-              !aiModel ||
+              !apiKey ||
+              !model ||
               !analysisPrompt.trim().length
             }
           >

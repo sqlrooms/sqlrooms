@@ -12,6 +12,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^1.1.0",
     "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
@@ -25,8 +26,6 @@
     "next-themes": "^0.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-markdown": "^9.0.3",
-    "react-vega": "^7.6.0",
     "superjson": "^2.2.2",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"

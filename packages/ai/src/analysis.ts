@@ -1,25 +1,11 @@
-import {createOpenAI} from '@ai-sdk/openai';
+import type {LanguageModelV1} from '@ai-sdk/provider';
 import {arrowTableToJson, getDuckDb} from '@sqlrooms/duckdb';
+import {generateText, StepResult, tool, ToolExecutionOptions} from 'ai';
 import {
-  CoreMessage,
-  generateText,
-  StepResult,
-  tool,
-  ToolExecutionOptions,
-} from 'ai';
-import {
-  QueryToolParameters,
   AnswerToolParameters,
+  QueryToolParameters,
   ToolResultSchema,
 } from './schemas';
-
-let openai: ReturnType<typeof createOpenAI>;
-
-export function initOpenAI(apiKey: string) {
-  openai = createOpenAI({
-    apiKey,
-  });
-}
 
 /**
  * Run analysis on the project data
@@ -28,11 +14,10 @@ export function initOpenAI(apiKey: string) {
  * @returns The tool calls and the final answer
  */
 export async function runAnalysis({
+  model,
   // prompt,
   abortSignal,
   onStepFinish,
-  apiKey,
-  model,
   maxSteps = 100,
   messages,
 }: {
@@ -40,17 +25,13 @@ export async function runAnalysis({
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
   apiKey: string;
-  model: string;
+  model: LanguageModelV1;
   maxSteps?: number;
   messages?: any[];
 }) {
-  // Always reinitialize OpenAI with the current key
-  initOpenAI(apiKey);
-
   const result = await generateText({
-    model: openai(model, {
-      structuredOutputs: true,
-    }),
+    model,
+
     abortSignal,
     // prompt,
     messages,
