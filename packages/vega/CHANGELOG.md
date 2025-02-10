@@ -5,8 +5,4 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 # [0.1.0](https://github.com/sqlrooms/sqlrooms/compare/v0.0.3...v0.1.0) (2025-02-10)
 
-**Note:** Version bump only for package @sqlrooms/jest-config
-
-## [0.0.3](https://github.com/sqlrooms/sqlrooms/compare/v0.0.2...v0.0.3) (2025-02-06)
-
-**Note:** Version bump only for package @sqlrooms/jest-config
+**Note:** Version bump only for package @sqlrooms/vega
