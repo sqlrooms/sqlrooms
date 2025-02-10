@@ -35,6 +35,5 @@
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0",
     "react-dropzone": "^14.3.5"
-  },
-  "gitHead": "54d8166ab868e6602c30cc76038f8c8b49a90d36"
+  }
 }

@@ -38,6 +38,5 @@
     "@types/d3-format": "^3.0.4",
     "@types/d3-time-format": "^4.0.3",
     "@types/seedrandom": "^3.0.8"
-  },
-  "gitHead": "54d8166ab868e6602c30cc76038f8c8b49a90d36"
+  }
 }
