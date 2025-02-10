@@ -13,7 +13,7 @@
   "scripts": {
     "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/* & pnpm run ladle",
     "clean": "shx rm -rf packages/**/dist",
-    "build": "pnpm clean && turbo build",
+    "build": "pnpm clean && turbo build --filter=@sqlrooms/*",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
@@ -39,7 +39,6 @@
     "node": ">=20"
   },
   "devDependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.0",
     "@eslint/js": "^9.18.0",
     "@ladle/react": "^5.0.1",
     "@lerna-lite/cli": "^3.11.0",
