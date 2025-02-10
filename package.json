@@ -12,7 +12,7 @@
   "type": "module",
   "scripts": {
     "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/* & pnpm run ladle",
-    "clean": "rimraf \"packages/*/dist\"",
+    "clean": "shx rm -rf packages/**/dist",
     "build": "pnpm clean && turbo build",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
@@ -64,7 +64,7 @@
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "remove": "^0.1.5",
-    "rimraf": "^5.0.5",
+    "shx": "^0.3.4",
     "turbo": "^2.4.0",
     "typedoc": "^0.27.6",
     "typescript": "5.7.3",

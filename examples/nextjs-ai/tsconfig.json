@@ -24,17 +24,6 @@
       "@sqlrooms/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": [
-    "next-env.d.ts",
-    "**/*.ts",
-    "**/*.tsx",
-    ".next/types/**/*.ts",
-    "../../packages/ai/src/AnalysisResult.tsx",
-    "../../packages/ai/src/AnalysisResultsContainer.tsx",
-    "../../packages/ai/src/QueryControls.tsx",
-    "../../packages/ai/src/ToolCall.tsx",
-    "../../packages/ai/src/ToolResult.tsx",
-    "../../packages/vega/src/vega-lite-chart.tsx"
-  ],
+  "include": ["next-env.d.ts", "**/*.ts", "**/*.tsx", ".next/types/**/*.ts"],
   "exclude": ["node_modules"]
 }
