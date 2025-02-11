@@ -35,38 +35,30 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.2.1
-          run_install: false
+      - name: Setup Yarn
+        run: npm install -g yarn
 
-      - name: Get pnpm store directory
-        shell: bash
-        run: |
-          echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
-
-      - name: Setup pnpm cache
+      - name: Setup Yarn cache
         uses: actions/cache@v3
         with:
-          path: ${{ env.STORE_PATH }}
-          key: ${{ runner.os }}-pnpm-store-v1-${{ hashFiles('**/pnpm-lock.yaml') }}
+          path: |
+            .yarn/cache
+            **/node_modules
+          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
           restore-keys: |
-            ${{ runner.os }}-pnpm-store-v1-
+            ${{ runner.os }}-yarn-
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
-        run: |
-          npm install -g pnpm
-          pnpm install --no-frozen-lockfile
+        run: yarn install
 
       - name: Build packages
-        run: pnpm build
+        run: yarn build
 
       - name: Build docs
-        run: pnpm run docs:build
+        run: yarn docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
@@ -79,7 +71,7 @@ jobs:
           deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
           external_repository: sqlrooms/sqlrooms.github.io
           publish_dir: docs/.vitepress/dist
-          publish_branch: main # or gh-pages, depending on your preference
+          publish_branch: main
           force_orphan: true
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
