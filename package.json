@@ -27,6 +27,7 @@
     "docs:dev": "pnpm run typedoc:watch & vitepress dev docs",
     "docs:build": "pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs",
+    "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
     "version-prerelease": "lerna version prerelease --sync-workspace-lock",
     "version-patch": "lerna version patch --no-push --sync-workspace-lock",
     "version-minor": "lerna version minor --no-push --sync-workspace-lock",
@@ -68,7 +69,8 @@
     "turbo": "^2.4.1",
     "typedoc": "^0.27.6",
     "typescript": "5.7.3",
-    "vitepress": "^1.6.3"
+    "vitepress": "^1.6.3",
+    "gh-pages": "^6.1.1"
   },
   "pnpm": {
     "overrides": {
