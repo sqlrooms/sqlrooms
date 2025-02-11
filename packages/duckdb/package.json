@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.0",
+    "@duckdb/duckdb-wasm": "^1.29.1-dev68.0",
     "apache-arrow": "^18.1.0"
   },
   "devDependencies": {
