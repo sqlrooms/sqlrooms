@@ -72,7 +72,8 @@
   "pnpm": {
     "overrides": {
       "apache-arrow": "18.1.0",
-      "@types/react": "18.3.18"
+      "@types/react": "18.3.18",
+      "@duckdb/duckdb-wasm": "1.28.0"
     }
   }
 }
