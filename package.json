@@ -64,7 +64,7 @@
     "react-dom": "^18.0.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
-    "turbo": "^2.4.0",
+    "turbo": "^2.4.1",
     "typedoc": "^0.27.6",
     "typescript": "5.7.3",
     "vitepress": "^1.6.3"
