@@ -41,9 +41,9 @@ export {
   type ProjectStore,
 } from './ProjectStore';
 
-export type {
-  DataSourceState,
+export {
   DataSourceStatus,
-  ProjectFileInfo,
-  ProjectFileState,
+  type DataSourceState,
+  type ProjectFileInfo,
+  type ProjectFileState,
 } from './types';
