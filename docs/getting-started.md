@@ -13,7 +13,7 @@ Your application should have the following dependencies:
 - [React 18](https://react.dev/) or higher
 - [Tailwind CSS](https://tailwindcss.com/)
 - [Zustand](https://zustand.docs.pmnd.rs) for state management
-- [Zod](https://zod.dev) for schema val idation
+- [Zod](https://zod.dev) for schema validation
 - [Node.js](https://nodejs.org/) >= 20
 
 ## Installation
@@ -73,103 +73,92 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 
 ## Setting Up the Project Store
 
-1. First, define your project configuration by extending the BaseProjectConfig schema:
+1. First, define your panel types and project configuration:
 
 ```typescript
-import {BaseProjectConfig, MAIN_VIEW} from '@sqlrooms/project-config';
+import {
+  BaseProjectConfig,
+  LayoutTypes,
+  MAIN_VIEW,
+} from '@sqlrooms/project-config';
 import {z} from 'zod';
 
 // Define panel types
 export const ProjectPanelTypes = z.enum([
-  // Your project panels
   'project-details',
   'data-sources',
-  // Main view should always be added
   MAIN_VIEW,
 ] as const);
+export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
-// Extend the base config with your custom fields
-export const YourProjectConfig = BaseProjectConfig.extend({
-  // Add more custom fields here
-});
-
-// Generate the TypeScript type from the Zod schema
-export type YourProjectConfig = z.infer<typeof YourProjectConfig>;
+// Define your project config by merging with base config
+export const AppConfig = BaseProjectConfig;
+export type AppConfig = z.infer<typeof AppConfig>;
 ```
 
-2. Create a project store that extends the base project store:
+2. Create your project store with the new approach:
 
 ```typescript
-import {
-  createProjectSlice,
-  ProjectState,
-  useBaseProjectStore,
-} from '@sqlrooms/project-builder';
-import {createStore} from 'zustand';
+import {createProjectStore, ProjectState} from '@sqlrooms/project-builder';
+import {DatabaseIcon} from 'lucide-react';
 
-export type YourProjectState = ProjectState<YourProjectConfig> & {
-  // Add your custom state properties and methods here
-};
+// Define your application state type
+export type AppState = ProjectState<AppConfig>;
 
-export const createProjectStore = () =>
-  createStore<YourProjectState>()((set, get, store) => {
-    const baseProjectStore = createProjectSlice<YourProjectConfig>(
-      INITIAL_PROJECT_STATE,
-    )(set, get, store);
-
-    return {
-      ...baseProjectStore,
-      // Add your custom methods here
-    };
-  });
-
-export function useProjectStore<T>(
-  selector: (state: YourProjectState) => T,
-): T {
-  return useBaseProjectStore(
-    selector as (state: ProjectState<YourProjectConfig>) => T,
-  );
-}
-```
-
-3. Define your initial project state:
-
-```typescript
-import { INITIAL_BASE_PROJECT_CONFIG, INITIAL_BASE_PROJECT_STATE, ProjectPanelInfo } from '@sqlrooms/project-builder';
-import { MAIN_VIEW } from '@sqlrooms/project-config';
-
-// Configure your panels
-export const PROJECT_PANELS: Partial<Record<z.infer<typeof ProjectPanelTypes>, ProjectPanelInfo>> = {
-  'project-details': {
-    title: 'Project Details',
-    icon: InfoIcon,
-    component: () => <YourProjectDetailsPanel />,
-    placement: 'sidebar',
-  },
-  'data-sources': {
-    title: 'Data Sources',
-    icon: DatabaseIcon,
-    component: () => <YourDataSourcesPanel />,
-    placement: 'sidebar',
-  },
-  [MAIN_VIEW]: {
-    title: 'Main View',
-    icon: MapIcon,
-    component: () => <YourMainView />,
-    placement: 'main',
-  },
-};
-
-export const INITIAL_PROJECT_STATE = {
-  ...INITIAL_BASE_PROJECT_STATE,
+// Create the store with initial configuration
+export const {projectStore, useProjectStore} = createProjectStore<
+  AppConfig,
+  AppState
+>({
   initialized: true,
   projectConfig: {
-    ...INITIAL_BASE_PROJECT_CONFIG,
+    title: 'My SQLRooms Project',
+    layout: {
+      type: LayoutTypes.enum.mosaic,
+      nodes: {
+        direction: 'row',
+        first: ProjectPanelTypes.enum['data-sources'],
+        second: MAIN_VIEW,
+        splitPercentage: 30,
+      },
+    },
     dataSources: [],
-    analysisResults: [], // Initialize your custom fields
   },
-  projectPanels: PROJECT_PANELS,
-};
+  projectPanels: {
+    'data-sources': {
+      title: 'Data Sources',
+      icon: DatabaseIcon,
+      component: DataSourcesPanel,
+      placement: 'sidebar',
+    },
+    [MAIN_VIEW]: {
+      title: 'Main View',
+      icon: () => null,
+      component: MainView,
+      placement: 'main',
+    },
+  },
+});
+```
+
+3. Optionally extend with additional slices:
+
+```typescript
+// Example of adding custom slices
+export const {projectStore, useProjectStore} = createProjectStore<
+  AppConfig,
+  AppState
+>(
+  // Initial state configuration
+  {
+    // ... initial state as shown above ...
+  },
+  // Add additional slices
+  createCustomSlice(),
+  createAnotherSlice({
+    // slice configuration
+  }),
+);
 ```
 
 ## Using the Project Store
@@ -177,11 +166,11 @@ export const INITIAL_PROJECT_STATE = {
 Wrap your application with the project store provider:
 
 ```typescript
-import { ProjectBuilderProvider } from '@sqlrooms/project-builder';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
 
 function App() {
   return (
-    <ProjectBuilderProvider createStore={createProjectStore}>
+    <ProjectBuilderProvider store={projectStore}>
       <YourApp />
     </ProjectBuilderProvider>
   );
@@ -193,7 +182,7 @@ Access the store in your components:
 ```typescript
 function YourComponent() {
   const projectConfig = useProjectStore((state) => state.projectConfig);
-  const analysisResults = useProjectStore((state) => state.projectConfig.analysisResults);
+  const dataSources = useProjectStore((state) => state.projectConfig.dataSources);
 
   return (
     // Your component JSX
