@@ -46,19 +46,19 @@ export function createSqlEditorSlice<
       setSqlEditorConfig: (config: SqlEditorSliceConfig['sqlEditor']) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.projectConfig.sqlEditor = config;
+            draft.project.projectConfig.sqlEditor = config;
           }),
         );
       },
 
       addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
-        const {schema} = get();
+        const {schema} = get().project;
         const newTableName =
           tableName !== oldTableName
             ? generateUniqueName(tableName, await getDuckTables(schema))
             : tableName;
         const {rowCount} = await createTableFromQuery(newTableName, query);
-        get().setTableRowCount(newTableName, rowCount);
+        get().project.setTableRowCount(newTableName, rowCount);
         set((state) =>
           produce(state, (draft) => {
             const newDataSource = {
@@ -67,22 +67,22 @@ export function createSqlEditorSlice<
               tableName: newTableName,
             };
             if (oldTableName) {
-              draft.projectConfig.dataSources =
-                draft.projectConfig.dataSources.map((dataSource) =>
+              draft.project.projectConfig.dataSources =
+                draft.project.projectConfig.dataSources.map((dataSource) =>
                   dataSource.tableName === oldTableName
                     ? newDataSource
                     : dataSource,
                 );
-              delete draft.dataSourceStates[oldTableName];
+              delete draft.project.dataSourceStates[oldTableName];
             } else {
-              draft.projectConfig.dataSources.push(newDataSource);
+              draft.project.projectConfig.dataSources.push(newDataSource);
             }
-            draft.dataSourceStates[newTableName] = {
+            draft.project.dataSourceStates[newTableName] = {
               status: DataSourceStatus.READY,
             };
           }),
         );
-        await get().setTables(await getDuckTableSchemas());
+        await get().project.setTables(await getDuckTableSchemas());
       },
     },
   }));

@@ -73,18 +73,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         'Describe the data in the table and make a chart providing an overview.',
       isRunningAnalysis: false,
       messagesById: new Map(),
-      apiKey:
-        typeof window !== 'undefined'
-          ? localStorage.getItem('ai_api_key')
-          : null,
-      setApiKey: (key: string) => {
-        localStorage.setItem('ai_api_key', key);
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.apiKey = key;
-          }),
-        );
-      },
+      apiKey: null,
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
           produce(state, (draft) => {
@@ -94,7 +83,11 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       },
 
       setAiModel: (model: string) => {
-        set({projectConfig: {...get().projectConfig, model: model}});
+        set((state) =>
+          produce(state, (draft) => {
+            draft.project.projectConfig.ai.model = model;
+          }),
+        );
       },
 
       /**
@@ -130,7 +123,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         const resultId = createId();
         const abortController = new AbortController();
         const {apiKey} = get().ai;
-        const model = get().projectConfig.ai.model;
+        const model = get().project.projectConfig.ai.model;
 
         if (!apiKey) {
           throw new Error('OpenAI API key is required');
@@ -140,7 +133,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           produce(state, (draft) => {
             draft.ai.analysisAbortController = abortController;
             draft.ai.isRunningAnalysis = true;
-            draft.projectConfig.ai.analysisResults.push({
+            draft.project.projectConfig.ai.analysisResults.push({
               id: resultId,
               prompt: get().ai.analysisPrompt,
               toolResults: [],
@@ -258,7 +251,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
       const result = findResultById(
-        draft.projectConfig.ai.analysisResults,
+        draft.project.projectConfig.ai.analysisResults,
         resultId,
       );
       if (result) {

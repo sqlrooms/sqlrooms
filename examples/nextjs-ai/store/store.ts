@@ -7,7 +7,11 @@ import {
   createAiSlice,
   createDefaultAiConfig,
 } from '@sqlrooms/ai';
-import {createProjectStore, ProjectState} from '@sqlrooms/project-builder';
+import {
+  createProjectSlice,
+  createProjectStore,
+  ProjectState,
+} from '@sqlrooms/project-builder';
 import {
   BaseProjectConfig,
   LayoutTypes,
@@ -40,9 +44,13 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Project state
  */
+export type RootState = {
+  setOpenAiApiKey: (key: string) => void;
+};
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
-  SqlEditorSliceState;
+  SqlEditorSliceState &
+  RootState;
 
 /**
  * Create a customized project store
@@ -52,39 +60,46 @@ export const {projectStore, useProjectStore} = createProjectStore<
   AppState
 >(
   {
-    initialized: true,
-    projectConfig: {
-      title: 'Demo App Project',
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
-          second: MAIN_VIEW,
-          splitPercentage: 30,
+    project: {
+      initialized: true,
+      projectConfig: {
+        title: 'Demo App Project',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: ProjectPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
         },
+        dataSources: [],
+        ...createDefaultAiConfig(),
+        ...createDefaultSqlEditorConfig(),
       },
-      dataSources: [],
-      ...createDefaultAiConfig(),
-      ...createDefaultSqlEditorConfig(),
-    },
-    projectPanels: {
-      [ProjectPanelTypes.enum['data-sources']]: {
-        title: 'Data Sources',
-        // icon: FolderIcon,
-        icon: DatabaseIcon,
-        component: DataSourcesPanel,
-        placement: 'sidebar',
-      },
-      main: {
-        title: 'Main view',
-        icon: () => null,
-        component: MainView,
-        placement: 'main',
+      projectPanels: {
+        [ProjectPanelTypes.enum['data-sources']]: {
+          title: 'Data Sources',
+          // icon: FolderIcon,
+          icon: DatabaseIcon,
+          component: DataSourcesPanel,
+          placement: 'sidebar',
+        },
+        main: {
+          title: 'Main view',
+          icon: () => null,
+          component: MainView,
+          placement: 'main',
+        },
       },
     },
   },
 
+  // createProjectSlice<AppConfig, RootState>({
+  //   setOpenAiApiKey: (key: string) => {
+  //     console.log('setOpenAiApiKey', key);
+  //   },
+  // }),
   createSqlEditorSlice(),
   createAiSlice({
     supportedModels: [
@@ -94,8 +109,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
       'o3-mini',
       'o3-mini-high',
     ],
-    createModel: (model: string, apiKey: string) => {
-      const openai = createOpenAI({apiKey});
+    createModel: (model: string) => {
+      const apiKey =
+        typeof window !== 'undefined'
+          ? localStorage.getItem('ai_api_key')
+          : null;
+      const openai = createOpenAI({apiKey: apiKey ?? undefined});
       return openai(model, {
         structuredOutputs: true,
       });

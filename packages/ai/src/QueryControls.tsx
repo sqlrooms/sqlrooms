@@ -53,6 +53,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
     [isRunningAnalysis, apiKey, model, analysisPrompt, runAnalysis],
   );
 
+  const canStart = Boolean(
+    !isRunningAnalysis && apiKey && model && analysisPrompt.trim().length,
+  );
   return (
     <div
       className={cn(
@@ -108,16 +111,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
               Stop
             </Button>
           )}
-          <Button
-            variant="outline"
-            onClick={runAnalysis}
-            disabled={
-              isRunningAnalysis ||
-              !apiKey ||
-              !model ||
-              !analysisPrompt.trim().length
-            }
-          >
+          <Button variant="outline" onClick={runAnalysis} disabled={!canStart}>
             {isRunningAnalysis ? (
               <div className="flex items-center gap-2">
                 <Spinner className="w-4 h-4" /> Running…
