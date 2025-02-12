@@ -1,13 +1,14 @@
 name: Deploy docs
 
-on:
-  push:
-    branches:
-      - main
-    paths:
-      - 'packages/**'
-      - 'docs/**'
-      - '.github/workflows/deploy-docs.yml'
+# Commenting out the trigger section to temporarily disable the workflow
+# on:
+#   push:
+#     branches:
+#       - main
+#     paths:
+#       - 'packages/**'
+#       - 'docs/**'
+#       - '.github/workflows/deploy-docs.yml'
 
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
