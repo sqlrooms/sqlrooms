@@ -13,6 +13,7 @@
   "scripts": {
     "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/* & pnpm run ladle",
     "clean": "shx rm -rf packages/**/dist",
+    "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "pnpm clean && turbo build --filter=@sqlrooms/*",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
@@ -25,7 +26,7 @@
     "graph": "turbo run build --graph",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "docs:dev": "pnpm run typedoc:watch & vitepress dev docs",
-    "docs:build": "pnpm run typedoc && vitepress build docs",
+    "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
     "version-prerelease": "lerna version prerelease --sync-workspace-lock",

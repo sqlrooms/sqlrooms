@@ -1,1 +1,5 @@
 api/**
+dist
+.vitepress/cache
+.vitepress/temp
+.vitepress/.temp

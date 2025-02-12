@@ -34,7 +34,6 @@ export async function createViewFromRegisteredFile(
   schema: string,
   tableName: string,
   opts?: {
-    // columnSpecs?: ColumnSpec[];
     mode: 'table' | 'view';
   },
 ): Promise<{tableName: string; rowCount: number}> {

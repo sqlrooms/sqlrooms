@@ -31,11 +31,3 @@ export type DataSourceState = {
   status: DataSourceStatus;
   message?: string;
 };
-
-export type ColumnSpec = {
-  name: string;
-  type: 'string' | 'number' | 'datetime';
-  comment?: string;
-  required?: boolean;
-  nameVariants?: string[];
-};
