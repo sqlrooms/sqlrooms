@@ -83,6 +83,24 @@ export default defineConfig({
           },
         ],
       },
+      {
+        text: 'Case Studies',
+        items: [
+          {
+            text: 'Data Visualization',
+            items: [
+              {
+                text: 'Flowmap City',
+                link: '/examples/#flowmap-city',
+              },
+              {
+                text: 'Cosmograph',
+                link: '/examples/#cosmograph',
+              },
+            ],
+          },
+        ],
+      },
     ],
 
     socialLinks: [
