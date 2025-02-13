@@ -6,7 +6,7 @@ outline: deep
 
 SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools without a backend.
 
-![AI integration app](assets/sqlrooms-ai.webp)
+<img src="https://github.com/user-attachments/assets/b99af56c-77fe-4db2-bc0d-3e5e31ec1ade" alt="SQLRooms AI example app">
 
 ## Who is it for?
 
@@ -32,7 +32,7 @@ The browser-based DuckDB engine enables powerful AI-driven analytics workflows:
 - Interactive AI agents that can write and execute SQL queries
 - Automated data analysis and insights generation
 
-Check out our [Next.js AI example](/examples/#ai-powered-analytics-next-js) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
+Check out our [AI example](/examples#ai-powered-analytics) that demonstrates how to build an AI agent that can analyze your data using natural language, execute SQL queries, and provide insights – all running directly in the browser.
 
 ### Privacy and Security
 
