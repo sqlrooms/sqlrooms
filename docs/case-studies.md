@@ -10,7 +10,7 @@ outline: deep
 
 [Flowmap City](https://www.flowmap.city/) is a powerful web-based platform for visualizing and analyzing mobility data and origin-destination flows. The application helps urban planners, transportation analysts, and researchers understand movement patterns in cities and regions.
 
-[<img src=https://github.com/user-attachments/assets/2acb106b-5e0c-4db7-aab7-1336f20cd96f width=400>](https://www.flowmap.city/)
+[<img src=https://github.com/user-attachments/assets/d80aeffe-cff4-402b-a299-da3911c6d951 width=400>](https://www.flowmap.city/)
 
 Key features include:
 

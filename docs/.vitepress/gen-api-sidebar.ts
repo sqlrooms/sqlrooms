@@ -90,7 +90,8 @@ function generateApiSidebar(
     });
   }
 
-  return packages;
+  // Sort packages alphabetically by text
+  return packages.sort((a, b) => a.text.localeCompare(b.text));
 }
 
 // Generate the combined sidebar
