@@ -6,9 +6,9 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Mosaic Example](https://sqlrooms-mosaic-example.netlify.app/)
+## [Mosaic Example](https://sqlrooms-mosaic.netlify.app/)
 
-[Try live](https://sqlrooms-mosaic-example.netlify.app/)
+[Try live](https://sqlrooms-mosaic.netlify.app/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/sqlrooms-mosaic)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/sqlrooms-mosaic?embed=1&file=src/app.tsx)
 
