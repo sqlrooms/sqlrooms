@@ -6,37 +6,17 @@ Building blocks for React data analytics applications powered by [DuckDB-WASM](h
 
 <img width=600 src=https://github.com/user-attachments/assets/1897cb57-9602-493c-ad82-2723c9f4e0f7>
 
+## Usage
+
+Check out the [Getting Started](https://sqlrooms.github.io/getting-started.html) guide.
+
 ## Develop locally
 
     pnpm install
     pnpm dev
 
-## Running Next.js example app
+## Running example apps
 
     pnpm install
     pnpm --filter sqlrooms-ai dev
-    open http://localhost:3000
-
-## Running vite example app
-
-    pnpm install
-    pnpm --filter sqlrooms-mosaic dev
     open http://localhost:5173
-
-## Usage
-
-Check out the [examples repository](https://github.com/sqlrooms/examples).
-
-## Publishing
-
-Bump all versions:
-
-    pnpm version [major|minor|patch]
-
-Publish all packages:
-
-    pnpm publish-packages
-
-Publish preview versions:
-
-    pnpm publish-preview
