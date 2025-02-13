@@ -1,7 +1,7 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = ['project-builder', 'project-config'];
+const CORE_PACKAGES = ['project-builder', 'project-config', 'ui'];
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   title: 'SQLRooms',
