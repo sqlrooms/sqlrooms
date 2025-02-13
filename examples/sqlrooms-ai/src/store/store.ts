@@ -140,8 +140,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
         set({selectedModel: model});
       },
     }),
+
+    // Persist settings
     {
+      // Local storage key
       name: 'app-state-storage',
+      // Subset of the state to persist
       partialize: (state): Partial<AppState> => ({
         openAiApiKey: state.openAiApiKey,
         selectedModel: state.selectedModel,
