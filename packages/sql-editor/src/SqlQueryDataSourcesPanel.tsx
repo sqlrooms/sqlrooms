@@ -27,10 +27,10 @@ const SqlQueryDataSourcesPanel: FC<{
     useState<SqlQueryDataSource>();
   const [isOpen, setIsOpen] = useState(false);
   const dataSourceStates = useBaseProjectStore(
-    (state) => state.dataSourceStates,
+    (state) => state.project.dataSourceStates,
   );
   const removeSqlQueryDataSource = useBaseProjectStore(
-    (state) => state.removeSqlQueryDataSource,
+    (state) => state.project.removeSqlQueryDataSource,
   );
 
   const handleEdit = useCallback((dataSource: SqlQueryDataSource) => {
@@ -55,7 +55,7 @@ const SqlQueryDataSourcesPanel: FC<{
     (state) => state.sqlEditor.addOrUpdateSqlQuery,
   );
 
-  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
 
   return (
     <div className="flex flex-col overflow-auto flex-grow">

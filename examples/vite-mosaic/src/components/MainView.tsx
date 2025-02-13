@@ -6,10 +6,10 @@ import {Spec, VgPlotChart, useMosaic} from '@sqlrooms/mosaic';
 export const MainView = () => {
   const {isMosaicLoading} = useMosaic();
 
-  const togglePanel = useProjectStore((state) => state.togglePanel);
-  const addDataSource = useProjectStore((s) => s.addDataSource);
+  const togglePanel = useProjectStore((state) => state.project.togglePanel);
+  const addDataSource = useProjectStore((state) => state.project.addDataSource);
   const isTableReady = useProjectStore((state) =>
-    state.tables.find((t) => t.tableName === 'latency'),
+    state.project.tables.find((t) => t.tableName === 'latency'),
   );
   useEffect(() => {
     (async () => {

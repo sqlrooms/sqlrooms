@@ -4,7 +4,7 @@ import {createRoot} from 'react-dom/client';
 import {App} from './app.tsx';
 import {ThemeProvider} from './components/ThemeProvider.tsx';
 import './index.css';
-import {projectStore} from './store/store.tsx';
+import {projectStore} from './store/store';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

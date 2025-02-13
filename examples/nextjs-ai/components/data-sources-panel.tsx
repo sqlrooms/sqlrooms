@@ -1,5 +1,5 @@
 'use client';
-import {ProjectPanelTypes} from '@/store/store';
+import {ProjectPanelTypes, useProjectStore} from '@/store/store';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
@@ -17,15 +17,9 @@ import {FolderIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
 
 const DataSourcesPanel: FC = () => {
-  // const dataSources = useBaseProjectStore(
-  //   (state) => state.projectConfig.dataSources,
-  // );
-  // const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
-  // const queryDataSources = useMemo(
-  //   () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
-  //   [dataSources],
-  // );
-  const addProjectFile = useBaseProjectStore((state) => state.addProjectFile);
+  const addProjectFile = useProjectStore(
+    (state) => state.project.addProjectFile,
+  );
 
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>

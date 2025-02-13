@@ -4,9 +4,10 @@ import {
   getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
 import {
-  createProjectSlice,
+  createSlice,
   DataSourceStatus,
   ProjectState,
+  StateCreator,
   useBaseProjectStore,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig, DataSourceTypes} from '@sqlrooms/project-config';
@@ -40,13 +41,13 @@ export type SqlEditorSliceState = {
 
 export function createSqlEditorSlice<
   PC extends BaseProjectConfig & SqlEditorSliceConfig,
->() {
-  return createProjectSlice<PC, SqlEditorSliceState>((set, get) => ({
+>(): StateCreator<SqlEditorSliceState> {
+  return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
       setSqlEditorConfig: (config: SqlEditorSliceConfig['sqlEditor']) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.sqlEditor = config;
+            draft.project.config.sqlEditor = config;
           }),
         );
       },
@@ -67,15 +68,15 @@ export function createSqlEditorSlice<
               tableName: newTableName,
             };
             if (oldTableName) {
-              draft.project.projectConfig.dataSources =
-                draft.project.projectConfig.dataSources.map((dataSource) =>
+              draft.project.config.dataSources =
+                draft.project.config.dataSources.map((dataSource) =>
                   dataSource.tableName === oldTableName
                     ? newDataSource
                     : dataSource,
                 );
               delete draft.project.dataSourceStates[oldTableName];
             } else {
-              draft.project.projectConfig.dataSources.push(newDataSource);
+              draft.project.config.dataSources.push(newDataSource);
             }
             draft.project.dataSourceStates[newTableName] = {
               status: DataSourceStatus.READY,

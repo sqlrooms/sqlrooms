@@ -9,12 +9,14 @@ const ProjectBuilderPanelHeader: FC<{
   children?: React.ReactNode;
 }> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
-  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
-  const {icon: Icon, title} = projectPanels[type] ?? {};
-  const togglePanel = useBaseProjectStore((state) => state.togglePanel);
-  const togglePanelPin = useBaseProjectStore((state) => state.togglePanelPin);
+  const panels = useBaseProjectStore((state) => state.project.panels);
+  const {icon: Icon, title} = panels[type] ?? {};
+  const togglePanel = useBaseProjectStore((state) => state.project.togglePanel);
+  const togglePanelPin = useBaseProjectStore(
+    (state) => state.project.togglePanelPin,
+  );
   const pinnedPanels = useBaseProjectStore(
-    (state) => state.projectConfig.layout.pinned,
+    (state) => state.project.config.layout.pinned,
   );
   const isPinned = useMemo(
     () => pinnedPanels?.includes(type),

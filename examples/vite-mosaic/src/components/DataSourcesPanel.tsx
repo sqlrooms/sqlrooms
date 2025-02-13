@@ -2,9 +2,9 @@ import {
   FileDataSourcesPanel,
   ProjectBuilderPanel,
   TablesListPanel,
-  useBaseProjectStore,
 } from '@sqlrooms/project-builder';
 import {DataSourceTypes} from '@sqlrooms/project-config';
+import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 import {
   Accordion,
   AccordionContent,
@@ -14,21 +14,22 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, PlusIcon, TableIcon} from 'lucide-react';
 import {FC, useCallback, useMemo, useState} from 'react';
-import {ProjectPanelTypes} from '../store/store';
-import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
+import {ProjectPanelTypes, useProjectStore} from '../store/store';
 
 export type DataSourcesPanelProps = {
-  AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;
+  // AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;
 };
 
-const DataSourcesPanel: FC<DataSourcesPanelProps> = ({
-  AddDataModal = () => null,
-}) => {
-  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+const DataSourcesPanel: FC<DataSourcesPanelProps> = (
+  {
+    // AddDataModal = () => null,
+  },
+) => {
+  const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
   const [isOpen, setIsOpen] = useState(false);
-  const projectFiles = useBaseProjectStore((state) => state.projectFiles);
-  const dataSources = useBaseProjectStore(
-    (state) => state.projectConfig.dataSources,
+  const projectFiles = useProjectStore((state) => state.project.projectFiles);
+  const dataSources = useProjectStore(
+    (state) => state.project.config.dataSources,
   );
   const queryDataSources = useMemo(
     () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
@@ -107,9 +108,9 @@ const DataSourcesPanel: FC<DataSourcesPanelProps> = ({
         </>
       )}
 
-      {AddDataModal ? (
+      {/* {AddDataModal ? (
         <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
-      ) : null}
+      ) : null} */}
     </ProjectBuilderPanel>
   );
 };

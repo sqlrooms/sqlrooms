@@ -54,7 +54,9 @@ const UploadFilesPreview: FC<Props> = (props) => {
   const [selectedFileIndex, setSelectedFileIndex] = useState(0);
   const [existingTables, setExistingTables] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const ErrorBoundary = useProjectStore((state) => state.CustomErrorBoundary);
+  const ErrorBoundary = useProjectStore(
+    (state) => state.project.CustomErrorBoundary,
+  );
 
   useEffect(() => {
     setSelectedFileIndex(0);

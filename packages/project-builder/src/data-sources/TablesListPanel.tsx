@@ -5,10 +5,12 @@ import {useBaseProjectStore} from '../ProjectStateProvider';
 import {TableCard} from './TableCard';
 
 const TablesListPanel: FC = () => {
-  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
+  const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
 
-  const tables = useBaseProjectStore((state) => state.tables);
-  const tableRowCounts = useBaseProjectStore((state) => state.tableRowCounts);
+  const tables = useBaseProjectStore((state) => state.project.tables);
+  const tableRowCounts = useBaseProjectStore(
+    (state) => state.project.tableRowCounts,
+  );
 
   const [selectedTable, setSelectedTable] = useState<DataTable | undefined>(
     undefined,

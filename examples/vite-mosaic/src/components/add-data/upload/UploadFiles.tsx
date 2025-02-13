@@ -22,8 +22,10 @@ const UploadFiles: FC = () => {
   const [tableNames, setTableNames] = useState<string[]>();
   const [addedFiles, setAddedFiles] = useState<ProjectFileInfo[]>();
   const {conn, db} = useDuckDb();
-  const setTables = useProjectStore((state) => state.setTables);
-  const addProjectFile = useProjectStore((state) => state.addProjectFile);
+  const setTables = useProjectStore((state) => state.project.setTables);
+  const addProjectFile = useProjectStore(
+    (state) => state.project.addProjectFile,
+  );
   const toast = useToast();
 
   useEffect(() => {

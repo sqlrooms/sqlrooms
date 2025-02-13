@@ -70,7 +70,7 @@ export type ProjectPanelInfo = {
 
 export const INITIAL_BASE_PROJECT_STATE: Omit<
   ProjectStateProps<BaseProjectConfig>,
-  'projectConfig' | 'lastSavedConfig' | 'projectPanels'
+  'config' | 'lastSavedConfig' | 'panels'
 > = {
   schema: 'main',
   tasksProgress: {},
@@ -102,8 +102,8 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
   tasksProgress: Record<string, TaskProgress>;
   projectId: string | undefined; // undefined if the project is new
-  projectConfig: PC;
-  projectPanels: Record<string, ProjectPanelInfo>;
+  config: PC;
+  panels: Record<string, ProjectPanelInfo>;
   isPublic: boolean;
   isReadOnly: boolean;
   tables: DataTable[];
@@ -217,7 +217,7 @@ export type ProjectState<PC extends BaseProjectConfig> = {
   project: ProjectStateProps<PC> & ProjectStateActions<PC>;
 };
 
-export function createProjectSlice<PC extends BaseProjectConfig, S>(
+export function createSlice<PC extends BaseProjectConfig, S>(
   sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
@@ -232,12 +232,9 @@ export function createProjectSlice<PC extends BaseProjectConfig, S>(
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
 type InitialState<PC extends BaseProjectConfig> = {
-  project: Partial<
-    Omit<ProjectStateProps<PC>, 'projectConfig' | 'projectPanels'>
-  > & {
-    projectConfig: Omit<PC, keyof BaseProjectConfig> &
-      Partial<BaseProjectConfig>;
-    projectPanels: ProjectStateProps<PC>['projectPanels'];
+  project: Partial<Omit<ProjectStateProps<PC>, 'config' | 'panels'>> & {
+    config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
+    panels: ProjectStateProps<PC>['panels'];
   };
 };
 
@@ -251,19 +248,21 @@ export function createProjectStore<
   PC extends BaseProjectConfig,
   AppState extends ProjectState<PC>,
 >(
-  initialState: InitialState<PC>,
-  ...sliceCreators: ReturnType<typeof createProjectSlice<PC, any>>[]
+  stateCreator: StateCreator<AppState>,
+  // initialState: InitialState<PC>,
+  // ...sliceCreators: ReturnType<typeof createSlice<PC, any>>[]
 ) {
   // @ts-ignore TODO fix typing
-  const projectStore = createStore<AppState>((set, get, store) => {
-    return {
-      ...createBaseProjectSlice<PC>(initialState)(set, get, store),
-      ...sliceCreators.reduce(
-        (acc, slice) => ({...acc, ...slice(set, get, store)}),
-        {},
-      ),
-    };
-  });
+  // const projectStore = createStore<AppState>((set, get, store) => {
+  //   return {
+  //     ...createProjectSlice<PC>(initialState)(set, get, store),
+  //     ...sliceCreators.reduce(
+  //       (acc, slice) => ({...acc, ...slice(set, get, store)}),
+  //       {},
+  //     ),
+  //   };
+  // });
+  const projectStore = createStore<AppState>(stateCreator);
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
     return useBaseProjectStore(selector as (state: AppState) => T);
@@ -288,10 +287,10 @@ export function createProjectStore<
 
 // export function createProjectStore<
 //   PC extends BaseProjectConfig,
-//   // "Creators" is now an array of whatever `createProjectSlice<PC, S>` returns
+//   // "Creators" is now an array of whatever `createSlice<PC, S>` returns
 //   // which should be `StateCreator<S>`.
 //   Creators extends Array<
-//     ReturnType<typeof createProjectSlice<PC, any>>
+//     ReturnType<typeof createSlice<PC, any>>
 //   > = any[],
 // >(initialState: InitialState<PC>, ...sliceCreators: Creators) {
 //   //
@@ -310,7 +309,7 @@ export function createProjectStore<
 //   // 3) Actually create the store with a properly typed object
 //   //
 //   const projectStore = createStore<StoreType>((set, get, store) => ({
-//     ...createBaseProjectSlice<PC>(initialState)(set, get, store),
+//     ...createSlice<PC>(initialState)(set, get, store),
 //     ...sliceCreators.reduce(
 //       (acc, slice) => {
 //         return {...acc, ...slice(set, get, store)};
@@ -330,18 +329,18 @@ export function createProjectStore<
 //   return {projectStore, useProjectStore};
 // }
 
-export function createBaseProjectSlice<PC extends BaseProjectConfig>(
+export function createProjectSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,
-) {
+): StateCreator<ProjectState<PC>> {
   const {project: projectStateProps, ...restState} = props;
 
   const initialProjectState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
     ...projectStateProps,
     schema: projectStateProps.schema ?? INITIAL_BASE_PROJECT_STATE.schema,
-    projectConfig: {
+    config: {
       ...INITIAL_BASE_PROJECT_CONFIG,
-      ...projectStateProps.projectConfig,
+      ...projectStateProps.config,
     } as PC,
     lastSavedConfig: undefined,
   };
@@ -385,16 +384,15 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
 
         // Remove and unsubscribe from all views
         // TODO: show some error message if the project config is invalid
-        const projectConfig =
-          project?.config ?? initialProjectState.projectConfig;
+        const config = project?.config ?? initialProjectState.config;
 
         set((state) =>
           produce(state, (draft) => {
             draft.project.projectId = project?.id ?? undefined;
             draft.project.isPublic = isPublic;
             draft.project.isReadOnly = isReadOnly;
-            draft.project.projectConfig = castDraft(projectConfig);
-            draft.project.lastSavedConfig = castDraft(projectConfig);
+            draft.project.config = castDraft(config);
+            draft.project.lastSavedConfig = castDraft(config);
             draft.project.captureException = captureException ?? console.error;
             draft.project.initialized = true;
             draft.project.isDataAvailable = false;
@@ -456,7 +454,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       setProjectConfig: (config) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig = castDraft(config);
+            draft.project.config = castDraft(config);
           }),
         ),
       setLastSavedConfig: (config) =>
@@ -466,14 +464,14 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
           }),
         ),
       hasUnsavedChanges: () => {
-        const {projectConfig, lastSavedConfig} = get().project;
-        return projectConfig !== lastSavedConfig;
+        const {config, lastSavedConfig} = get().project;
+        return config !== lastSavedConfig;
       },
 
       addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
         set((state) =>
           produce(state, (draft) => {
-            const dataSources = draft.project.projectConfig.dataSources;
+            const dataSources = draft.project.config.dataSources;
             const tableName = dataSource.tableName;
             const index = dataSources.findIndex(
               (d) => d.tableName === tableName,
@@ -517,8 +515,8 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
         await dropTable(tableName);
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.dataSources =
-              draft.project.projectConfig.dataSources.filter(
+            draft.project.config.dataSources =
+              draft.project.config.dataSources.filter(
                 (d) => d.tableName !== tableName,
               );
             delete draft.project.dataSourceStates[tableName];
@@ -542,7 +540,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
             );
           }),
         );
-        const dataSource = get().project.projectConfig.dataSources.find(
+        const dataSource = get().project.config.dataSources.find(
           (d) =>
             d.type === DataSourceTypes.enum.file &&
             d.fileName === projectFile.pathname,
@@ -627,8 +625,8 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
             draft.project.projectFiles = draft.project.projectFiles.filter(
               (f) => f.pathname !== pathname,
             );
-            draft.project.projectConfig.dataSources =
-              draft.project.projectConfig.dataSources.filter(
+            draft.project.config.dataSources =
+              draft.project.config.dataSources.filter(
                 (d) =>
                   d.type !== DataSourceTypes.Enum.file ||
                   d.fileName !== pathname,
@@ -656,9 +654,8 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async maybeDownloadDataSources() {
-        const {projectFilesProgress, dataSourceStates, projectConfig} =
-          get().project;
-        const {dataSources} = projectConfig;
+        const {projectFilesProgress, dataSourceStates, config} = get().project;
+        const {dataSources} = config;
         const pendingDataSources = dataSources.filter(
           (ds) =>
             !dataSourceStates[ds.tableName] ||
@@ -688,7 +685,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
           await runDataSourceQueries(queriesToRun);
         }
 
-        if (get().project.projectConfig.dataSources.length > 0) {
+        if (get().project.config.dataSources.length > 0) {
           set((state) =>
             produce(state, (draft) => {
               draft.project.isDataAvailable = true;
@@ -720,33 +717,30 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       setProjectTitle: (title) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.title = title;
+            draft.project.config.title = title;
           }),
         ),
 
       setDescription: (description) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.description = description;
+            draft.project.config.description = description;
           }),
         ),
       setLayout: (layout) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.layout = layout;
+            draft.project.config.layout = layout;
           }),
         ),
 
       togglePanel: (panel, show) => {
-        const {projectConfig} = get().project;
-        if (projectConfig.layout?.nodes === panel) {
+        const {config} = get().project;
+        if (config.layout?.nodes === panel) {
           // don't hide the view if it's the only one
           return;
         }
-        const result = removeMosaicNodeByKey(
-          projectConfig.layout?.nodes,
-          panel,
-        );
+        const result = removeMosaicNodeByKey(config.layout?.nodes, panel);
         const isShown = result.success;
         if (isShown) {
           if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
@@ -754,7 +748,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.project.projectConfig.layout;
+              const layout = draft.project.config.layout;
               layout.nodes = result.nextTree;
               if (layout.pinned?.includes(panel)) {
                 layout.pinned = layout.pinned.filter((p) => p !== panel);
@@ -767,9 +761,9 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.project.projectConfig.layout;
+              const layout = draft.project.config.layout;
               const root = layout.nodes;
-              const placement = draft.project.projectPanels[panel]?.placement;
+              const placement = draft.project.panels[panel]?.placement;
               const side = placement === 'sidebar' ? 'first' : 'second';
               const toReplace = isMosaicLayoutParent(root)
                 ? root[side]
@@ -787,7 +781,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
               } else {
                 const panelNode = {node: panel, weight: 1};
                 const restNode = {
-                  node: projectConfig.layout?.nodes,
+                  node: config.layout?.nodes,
                   weight: 3,
                 };
                 // add to to the left
@@ -810,7 +804,7 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       togglePanelPin: (panel: string) => {
         set((state) =>
           produce(state, (draft) => {
-            const layout = draft.project.projectConfig.layout;
+            const layout = draft.project.config.layout;
             const pinned = layout.pinned ?? [];
             if (pinned.includes(panel)) {
               layout.pinned = pinned.filter((p) => p !== panel);
@@ -822,8 +816,8 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       },
 
       areDatasetsReady: () => {
-        const {projectConfig, dataSourceStates} = get().project;
-        const dataSources = projectConfig.dataSources;
+        const {config, dataSourceStates} = get().project;
+        const dataSources = config.dataSources;
         return dataSources.every(
           (ds) =>
             dataSourceStates[ds.tableName]?.status === DataSourceStatus.READY,
@@ -835,8 +829,8 @@ export function createBaseProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async updateReadyDataSources() {
-        const {projectConfig, tables, dataSourceStates} = get().project;
-        const dataSources = projectConfig.dataSources;
+        const {config, tables, dataSourceStates} = get().project;
+        const dataSources = config.dataSources;
         set((state) =>
           produce(state, (draft) => {
             draft.project.dataSourceStates = dataSources.reduce(

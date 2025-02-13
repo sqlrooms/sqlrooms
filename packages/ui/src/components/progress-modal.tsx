@@ -18,17 +18,16 @@ const ProgressModal: FC<{
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogDescription>Progress modal</DialogDescription>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{title ?? ''}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <Progress value={progress} className="w-full" />
-          <div className="flex justify-between text-sm text-muted-foreground">
+          <DialogDescription className="flex justify-between text-sm text-muted-foreground">
             <span>{loadingStage ?? ''}</span>
             {progress ? <span>{progress}%</span> : null}
-          </div>
+          </DialogDescription>
         </div>
       </DialogContent>
     </Dialog>

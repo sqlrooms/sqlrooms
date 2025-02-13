@@ -30,7 +30,7 @@ export {
 export {ProjectBuilderProvider} from './ProjectBuilderProvider';
 
 export {
-  createBaseProjectSlice,
+  createSlice,
   createProjectSlice,
   createProjectStore,
   type TaskProgress,
@@ -47,3 +47,5 @@ export {
   type ProjectFileInfo,
   type ProjectFileState,
 } from './types';
+
+export type {StateCreator} from 'zustand';

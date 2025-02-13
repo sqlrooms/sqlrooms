@@ -2,8 +2,8 @@ import {DataSourcesPanel} from '@/components/data-sources-panel';
 import {MainView} from '@/components/main-view';
 import {createOpenAI} from '@ai-sdk/openai';
 import {
-  AiSliceState,
   AiSliceConfig,
+  AiSliceState,
   createAiSlice,
   createDefaultAiConfig,
 } from '@sqlrooms/ai';
@@ -25,6 +25,7 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
+import {persist} from 'zustand/middleware';
 
 export const ProjectPanelTypes = z.enum([
   'project-details',
@@ -44,13 +45,19 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Project state
  */
-export type RootState = {
+type PersistedCustomAppState = {
+  openAiApiKey: string | undefined;
   setOpenAiApiKey: (key: string) => void;
+  selectedModel: string;
+  setSelectedModel: (model: string) => void;
 };
+type CustomAppState = {
+  supportedModels: string[];
+} & PersistedCustomAppState;
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  RootState;
+  CustomAppState;
 
 /**
  * Create a customized project store
@@ -58,11 +65,12 @@ export type AppState = ProjectState<AppConfig> &
 export const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
->(
-  {
+>((set, get, store) => ({
+  // Base project slice
+  ...createProjectSlice<AppConfig>({
     project: {
       initialized: true,
-      projectConfig: {
+      config: {
         title: 'Demo App Project',
         layout: {
           type: LayoutTypes.enum.mosaic,
@@ -77,7 +85,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
         ...createDefaultAiConfig(),
         ...createDefaultSqlEditorConfig(),
       },
-      projectPanels: {
+      panels: {
         [ProjectPanelTypes.enum['data-sources']]: {
           title: 'Data Sources',
           // icon: FolderIcon,
@@ -93,31 +101,46 @@ export const {projectStore, useProjectStore} = createProjectStore<
         },
       },
     },
-  },
+  })(set, get, store),
 
-  // createProjectSlice<AppConfig, RootState>({
-  //   setOpenAiApiKey: (key: string) => {
-  //     console.log('setOpenAiApiKey', key);
-  //   },
-  // }),
-  createSqlEditorSlice(),
-  createAiSlice({
-    supportedModels: [
-      'gpt-4',
-      'gpt-4o',
-      'gpt-4o-mini',
-      'o3-mini',
-      'o3-mini-high',
-    ],
+  // Sql editor slice
+  ...createSqlEditorSlice()(set, get, store),
+
+  // Ai slice
+  ...createAiSlice({
     createModel: (model: string) => {
-      const apiKey =
-        typeof window !== 'undefined'
-          ? localStorage.getItem('ai_api_key')
-          : null;
-      const openai = createOpenAI({apiKey: apiKey ?? undefined});
+      if (!get().openAiApiKey) {
+        throw new Error('OpenAI API key is required');
+      }
+      const openai = createOpenAI({
+        apiKey: get().openAiApiKey,
+      });
       return openai(model, {
         structuredOutputs: true,
       });
     },
-  }),
-);
+  })(set, get, store),
+
+  // Custom app state
+  supportedModels: [
+    'gpt-4',
+    'gpt-4o',
+    'gpt-4o-mini',
+    'o3-mini',
+    'o3-mini-high',
+  ],
+  // Persisted custom app state (local storage is used by default)
+  ...persist<PersistedCustomAppState, any, any>(
+    (set) => ({
+      openAiApiKey: undefined,
+      selectedModel: 'gpt-4o-mini',
+      setOpenAiApiKey: (key: string | undefined) => {
+        set({openAiApiKey: key});
+      },
+      setSelectedModel: (model: string) => {
+        set({selectedModel: model});
+      },
+    }),
+    {name: 'app-state-storage'},
+  )(set, get, store),
+}));

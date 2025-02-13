@@ -1,8 +1,9 @@
 import {createId} from '@paralleldrive/cuid2';
 import {
-  createProjectSlice,
+  createSlice,
   ProjectState,
   useBaseProjectStore,
+  type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {
@@ -43,14 +44,10 @@ export function createDefaultAiConfig(): AiSliceConfig {
 
 export type AiSliceState = {
   ai: {
-    supportedModels: string[];
     analysisPrompt: string;
     isRunningAnalysis: boolean;
     analysisAbortController?: AbortController;
-    apiKey: string | null;
-    setAiModel: (model: string) => void;
     setAnalysisPrompt: (prompt: string) => void;
-    setApiKey: (key: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     messagesById: Map<string, AiMessage>;
@@ -60,20 +57,18 @@ export type AiSliceState = {
 };
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
-  supportedModels,
   createModel,
 }: {
-  supportedModels: string[];
-  createModel: (model: string, apiKey: string) => LanguageModelV1;
-}) {
-  return createProjectSlice<PC, AiSliceState>((set, get) => ({
+  createModel: (model: string) => LanguageModelV1;
+}): StateCreator<AiSliceState> {
+  return createSlice<PC, AiSliceState>((set, get) => ({
     ai: {
-      supportedModels,
       analysisPrompt:
         'Describe the data in the table and make a chart providing an overview.',
       isRunningAnalysis: false,
       messagesById: new Map(),
       apiKey: null,
+
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
           produce(state, (draft) => {
@@ -85,7 +80,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       setAiModel: (model: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.project.projectConfig.ai.model = model;
+            draft.project.config.ai.model = model;
           }),
         );
       },
@@ -122,18 +117,11 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       startAnalysis: async () => {
         const resultId = createId();
         const abortController = new AbortController();
-        const {apiKey} = get().ai;
-        const model = get().project.projectConfig.ai.model;
-
-        if (!apiKey) {
-          throw new Error('OpenAI API key is required');
-        }
-
         set((state) =>
           produce(state, (draft) => {
             draft.ai.analysisAbortController = abortController;
             draft.ai.isRunningAnalysis = true;
-            draft.project.projectConfig.ai.analysisResults.push({
+            draft.project.config.ai.analysisResults.push({
               id: resultId,
               prompt: get().ai.analysisPrompt,
               toolResults: [],
@@ -155,7 +143,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         );
         try {
           const {toolResults, toolCalls, ...rest} = await runAnalysis({
-            model: createModel(model, apiKey),
+            model: createModel(get().project.config.ai.model),
             // prompt: get().analysisPrompt,
             messages: get().ai.getMessages(),
             onStepFinish: (event) => {
@@ -170,7 +158,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               );
             },
             abortSignal: abortController.signal,
-            apiKey,
           });
           console.log('final result', {toolResults, toolCalls, ...rest});
           get().ai.addMessages([
@@ -251,7 +238,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
       const result = findResultById(
-        draft.project.projectConfig.ai.analysisResults,
+        draft.project.config.ai.analysisResults,
         resultId,
       );
       if (result) {

@@ -27,7 +27,7 @@ const FileDataSourceCard: FC<{
   const {isReadOnly, fileInfo, fileState} = props;
   const {pathname, size} = fileInfo;
   const removeProjectFile = useBaseProjectStore(
-    (state) => state.removeProjectFile,
+    (state) => state.project.removeProjectFile,
   );
   const handleRemoveFromProject = useCallback(() => {
     removeProjectFile(fileInfo.pathname);

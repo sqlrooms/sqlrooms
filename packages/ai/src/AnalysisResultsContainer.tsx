@@ -11,7 +11,7 @@ import {
 export const AnalysisResultsContainer: React.FC = () => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const analysisResults = useStoreWithAi(
-    (s) => s.projectConfig.ai.analysisResults,
+    (s) => s.project.config.ai.analysisResults,
   );
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();

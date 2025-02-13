@@ -24,7 +24,6 @@ export async function runAnalysis({
   // prompt: string;
   abortSignal?: AbortSignal;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
-  apiKey: string;
   model: LanguageModelV1;
   maxSteps?: number;
   messages?: any[];

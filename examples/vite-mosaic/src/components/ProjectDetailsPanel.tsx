@@ -1,20 +1,21 @@
-import {
-  ProjectBuilderPanel,
-  useBaseProjectStore,
-} from '@sqlrooms/project-builder';
+import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project-config';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
-import {ProjectPanelTypes} from '../store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store/store';
 
 export default function ProjectDetailsPanel() {
-  const title = useBaseProjectStore((state) => state.projectConfig.title);
-  const isReadOnly = useBaseProjectStore((state) => state.isReadOnly);
-  const setProjectTitle = useBaseProjectStore((state) => state.setProjectTitle);
-  const description = useBaseProjectStore(
-    (state) => state.projectConfig.description,
+  const title = useProjectStore((state) => state.project.config.title);
+  const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
+  const setProjectTitle = useProjectStore(
+    (state) => state.project.setProjectTitle,
   );
-  const setDescription = useBaseProjectStore((state) => state.setDescription);
+  const description = useProjectStore(
+    (state) => state.project.config.description,
+  );
+  const setDescription = useProjectStore(
+    (state) => state.project.setDescription,
+  );
 
   const handleSetProjectTitle = useCallback(
     (title: string) => {

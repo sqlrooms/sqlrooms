@@ -5,14 +5,14 @@ import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectStore} from './ProjectStateProvider';
 
 const ProjectBuilder: React.FC = () => {
-  const layout = useBaseProjectStore((state) => state.projectConfig.layout);
-  const setLayout = useBaseProjectStore((state) => state.setLayout);
-  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
+  const layout = useBaseProjectStore((state) => state.project.config.layout);
+  const setLayout = useBaseProjectStore((state) => state.project.setLayout);
+  const panels = useBaseProjectStore((state) => state.project.panels);
   const loadingProgress = useBaseProjectStore((state) =>
-    state.getLoadingProgress(),
+    state.project.getLoadingProgress(),
   );
   const ErrorBoundary = useBaseProjectStore(
-    (state) => state.CustomErrorBoundary,
+    (state) => state.project.CustomErrorBoundary,
   );
 
   const visibleProjectPanels = useMemo(
@@ -30,7 +30,7 @@ const ProjectBuilder: React.FC = () => {
 
   const renderedPanels: Map<string, React.ReactNode> = useMemo(() => {
     return Array.from(visibleProjectPanels).reduce((acc, id: string) => {
-      const PanelComp = projectPanels[id]?.component;
+      const PanelComp = panels[id]?.component;
       if (PanelComp) {
         acc.set(
           id,
@@ -41,7 +41,7 @@ const ProjectBuilder: React.FC = () => {
       }
       return acc;
     }, new Map<string, React.ReactNode>());
-  }, [ErrorBoundary, projectPanels, visibleProjectPanels]);
+  }, [ErrorBoundary, panels, visibleProjectPanels]);
 
   return (
     <ErrorBoundary>

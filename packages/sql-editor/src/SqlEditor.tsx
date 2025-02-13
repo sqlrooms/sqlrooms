@@ -41,7 +41,6 @@ import CreateTableModal from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
-import {SqlEditorSliceConfig} from './SqlEditorSliceConfig';
 import {TablesList} from './TablesList';
 
 const DEFAULT_QUERY = '';
@@ -82,7 +81,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   );
 
   const sqlEditorConfig = useStoreWithSqlEditor(
-    (s) => s.projectConfig.sqlEditor,
+    (s) => s.project.config.sqlEditor,
   );
   const onChangeSqlEditorConfig = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setSqlEditorConfig,

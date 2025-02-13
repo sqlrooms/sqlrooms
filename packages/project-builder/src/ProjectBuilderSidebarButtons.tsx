@@ -30,7 +30,7 @@ const SidebarButton: FC<{
           disabled={isDisabled}
           onClick={onClick}
         >
-          <Icon className="h-5 w-5" />
+          {Icon ? <Icon className="h-5 w-5" /> : title}
         </Button>
       </TooltipTrigger>
       <TooltipContent side="right">
@@ -43,15 +43,15 @@ const SidebarButton: FC<{
 const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
   projectPanelType,
 }) => {
-  const initialized = useBaseProjectStore((state) => state.initialized);
-  const layout = useBaseProjectStore((state) => state.projectConfig.layout);
-  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
+  const initialized = useBaseProjectStore((state) => state.project.initialized);
+  const layout = useBaseProjectStore((state) => state.project.config.layout);
+  const panels = useBaseProjectStore((state) => state.project.panels);
   const visibleProjectPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),
     [layout],
   );
-  const togglePanel = useBaseProjectStore((state) => state.togglePanel);
-  const {icon: Icon, title} = projectPanels[projectPanelType] ?? {};
+  const togglePanel = useBaseProjectStore((state) => state.project.togglePanel);
+  const {icon: Icon, title} = panels[projectPanelType] ?? {};
 
   return (
     <SidebarButton
@@ -66,21 +66,26 @@ const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
 };
 
 const ProjectBuilderSidebarButtons: FC = () => {
-  const projectPanels = useBaseProjectStore((state) => state.projectPanels);
+  const panels = useBaseProjectStore((state) => state.project.panels);
 
   return (
     <div className="flex flex-col h-full grow">
       <div className="flex flex-col gap-2">
-        {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key]?.placement === 'sidebar')
-          .map((type) => (
-            <ProjectBuilderSidebarButton key={type} projectPanelType={type} />
-          ))}
+        {panels
+          ? Object.keys(panels)
+              .filter((key) => panels[key]?.placement === 'sidebar')
+              .map((type) => (
+                <ProjectBuilderSidebarButton
+                  key={type}
+                  projectPanelType={type}
+                />
+              ))
+          : null}
       </div>
       <div className="flex-1" />
       <div className="flex flex-col gap-2">
-        {Object.keys(projectPanels)
-          .filter((key) => projectPanels[key]?.placement === 'sidebar-bottom')
+        {Object.keys(panels)
+          .filter((key) => panels[key]?.placement === 'sidebar-bottom')
           .map((type) => (
             <ProjectBuilderSidebarButton key={type} projectPanelType={type} />
           ))}
