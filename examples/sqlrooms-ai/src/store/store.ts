@@ -109,16 +109,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
       // Ai slice
       ...createAiSlice({
-        createModel: (model: string) => {
+        createModel: () => {
           if (!get().openAiApiKey) {
             throw new Error('OpenAI API key is required');
           }
-          const openai = createOpenAI({
-            apiKey: get().openAiApiKey,
-          });
-          return openai(model, {
-            structuredOutputs: true,
-          });
+          const openai = createOpenAI({apiKey: get().openAiApiKey});
+          return openai(get().selectedModel, {structuredOutputs: true});
         },
       })(set, get, store),
 
