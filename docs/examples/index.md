@@ -6,11 +6,11 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Mosaic Example (Vite)](https://sqlrooms-mosaic-example.netlify.app/)
+## [Mosaic Example](https://sqlrooms-mosaic-example.netlify.app/)
 
 [Try live](https://sqlrooms-mosaic-example.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/vite-mosaic)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/vite-mosaic?embed=1&file=src/app.tsx)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/sqlrooms-mosaic)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/sqlrooms-mosaic?embed=1&file=src/app.tsx)
 
 <img src="https://github.com/user-attachments/assets/93ec2d5c-c358-4827-aae7-efe992fae572" alt="SQLRooms Mosaic example Vite app" width=300>
 
@@ -24,11 +24,11 @@ Features include:
 - Real-time cross-filtering capabilities across multiple views
 - Example dashboards with common visualization types
 
-## [AI-Powered Analytics (Next.js)](https://sqlrooms-nextjs-ai.netlify.app/)
+## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
-[Try live](https://sqlrooms-nextjs-ai.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs-ai)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs-ai?embed=1&file=components/app-shell.tsx)
+[Try live](https://sqlrooms-ai.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/sqlrooms-ai)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/sqlrooms-ai?embed=1&file=components/app-shell.tsx)
 
 <img src="https://github.com/user-attachments/assets/8b6aafe6-a95f-4142-b04e-e547897418d3" alt="SQLRooms Next.js AI example app" width=300>
 

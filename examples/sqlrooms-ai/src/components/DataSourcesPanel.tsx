@@ -1,11 +1,9 @@
 'use client';
-import {ProjectPanelTypes, useProjectStore} from '@/store/store';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
   ProjectBuilderPanel,
   TablesListPanel,
-  useBaseProjectStore,
 } from '@sqlrooms/project-builder';
 import {
   Accordion,
@@ -15,6 +13,7 @@ import {
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
+import {ProjectPanelTypes, useProjectStore} from '../store/store';
 
 const DataSourcesPanel: FC = () => {
   const addProjectFile = useProjectStore(

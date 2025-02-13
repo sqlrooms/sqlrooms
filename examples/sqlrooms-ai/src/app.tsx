@@ -1,5 +1,3 @@
-'use client';
-
 import {
   ProjectBuilder,
   ProjectBuilderSidebarButtons,
@@ -13,7 +11,7 @@ export const AppShell = () => {
   const sqlEditor = useDisclosure();
   return (
     <div className="flex w-full h-full">
-      {/* <div className="flex flex-col h-full bg-gray-900 py-1">
+      <div className="flex flex-col h-full bg-gray-900 py-1">
         <ProjectBuilderSidebarButtons />
         <SidebarButton
           title="SQL Editor"
@@ -21,7 +19,7 @@ export const AppShell = () => {
           isSelected={false}
           icon={() => <SquareTerminalIcon />}
         />
-      </div> */}
+      </div>
       <div className="flex flex-col w-full h-full bg-gray-800">
         <ProjectBuilder />
       </div>

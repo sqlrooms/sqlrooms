@@ -1,13 +1,13 @@
 {
-  "name": "sqlrooms-nextjs-ai",
+  "name": "sqlrooms-ai",
   "version": "0.0.0",
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
-    "build": "next build",
-    "start": "next start",
-    "lint": "next lint"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "preview": "vite preview"
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.0",
@@ -22,8 +22,6 @@
     "ai": "^4.1.24",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
-    "next": "^15.1.0",
-    "next-themes": "^0.4.3",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "superjson": "^2.2.2",
@@ -31,16 +29,20 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
-    "@eslint/eslintrc": "^3",
-    "@types/node": "^20",
-    "@types/react": "18.3.0",
-    "@types/react-dom": "18.3.1",
+    "@eslint/js": "^9.17.0",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
-    "eslint": "^9",
-    "eslint-config-next": "15.1.6",
+    "eslint": "^9.17.0",
+    "eslint-plugin-react-hooks": "^5.0.0",
+    "eslint-plugin-react-refresh": "^0.4.16",
+    "globals": "^15.14.0",
     "postcss": "^8",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "tailwindcss": "^3.4.17",
+    "typescript": "~5.6.2",
+    "typescript-eslint": "^8.18.2",
+    "vite": "^6.0.5"
   },
   "overrides": {
     "apache-arrow": "18.1.0"

@@ -1,5 +1,4 @@
-'use client';
-import {ProjectPanelTypes, useProjectStore} from '@/store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store/store';
 import {useEffect} from 'react';
 import {QueryControls, AnalysisResultsContainer} from '@sqlrooms/ai';
 import {KeyIcon} from 'lucide-react';
@@ -47,7 +46,7 @@ export const MainView: React.FC = () => {
       {analysisResults.length > 0 && <AnalysisResultsContainer />}
       <div
         className={cn(
-          'w-full min-h-[200px] transition-all duration-300 ease-in-out',
+          'w-full min-h-[200px] transition-all duration-300 ease-in-out pb-12',
           analysisResults.length > 0 ? 'border-t' : 'flex-1 max-w-5xl mx-auto',
         )}
       >

@@ -10,23 +10,13 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  Button,
 } from '@sqlrooms/ui';
-import {FileTextIcon, FolderIcon, PlusIcon, TableIcon} from 'lucide-react';
-import {FC, useCallback, useMemo, useState} from 'react';
+import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
+import {FC, useMemo} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store/store';
 
-export type DataSourcesPanelProps = {
-  // AddDataModal: React.ComponentType<{isOpen: boolean; onClose: () => void}>;
-};
-
-const DataSourcesPanel: FC<DataSourcesPanelProps> = (
-  {
-    // AddDataModal = () => null,
-  },
-) => {
+const DataSourcesPanel: FC = () => {
   const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
-  const [isOpen, setIsOpen] = useState(false);
   const projectFiles = useProjectStore((state) => state.project.projectFiles);
   const dataSources = useProjectStore(
     (state) => state.project.config.dataSources,
@@ -38,23 +28,8 @@ const DataSourcesPanel: FC<DataSourcesPanelProps> = (
 
   const isProjectEmpty = !projectFiles?.length;
 
-  const handleModalClose = useCallback(() => {
-    setIsOpen(false);
-  }, []);
-
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>
-      {!isReadOnly && (
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setIsOpen(true)}
-          className="py-4"
-        >
-          <PlusIcon className="mr-2 h-4 w-4" />
-          Add
-        </Button>
-      )}
       {isProjectEmpty ? (
         <></>
       ) : (

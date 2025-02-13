@@ -91,73 +91,92 @@ export const ProjectPanelTypes = z.enum([
 ] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
-// Define your project config by merging with base config
+// Define your project config
+// You can merge additional slice configs if needed
 export const AppConfig = BaseProjectConfig;
+// If using additional slices like SQL Editor:
+// export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
-```
-
-2. Create your project store with the new approach:
-
-```typescript
-import {createProjectStore, ProjectState} from '@sqlrooms/project-builder';
-import {DatabaseIcon} from 'lucide-react';
 
 // Define your application state type
 export type AppState = ProjectState<AppConfig>;
+// If using additional slices:
+// export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+```
 
-// Create the store with initial configuration
+2. Create your project store:
+
+```typescript
+import {
+  createProjectSlice,
+  createProjectStore,
+} from '@sqlrooms/project-builder';
+import {DatabaseIcon} from 'lucide-react';
+
 export const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
->({
-  initialized: true,
-  projectConfig: {
-    title: 'My SQLRooms Project',
-    layout: {
-      type: LayoutTypes.enum.mosaic,
-      nodes: {
-        direction: 'row',
-        first: ProjectPanelTypes.enum['data-sources'],
-        second: MAIN_VIEW,
-        splitPercentage: 30,
+>((set, get, store) => ({
+  // Base project slice
+  ...createProjectSlice<AppConfig>({
+    project: {
+      initialized: true,
+      config: {
+        title: 'My SQLRooms Project',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: ProjectPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
+        dataSources: [],
+      },
+      panels: {
+        'data-sources': {
+          title: 'Data Sources',
+          icon: DatabaseIcon,
+          component: DataSourcesPanel,
+          placement: 'sidebar',
+        },
+        [MAIN_VIEW]: {
+          title: 'Main View',
+          icon: () => null,
+          component: MainView,
+          placement: 'main',
+        },
       },
     },
-    dataSources: [],
-  },
-  projectPanels: {
-    'data-sources': {
-      title: 'Data Sources',
-      icon: DatabaseIcon,
-      component: DataSourcesPanel,
-      placement: 'sidebar',
-    },
-    [MAIN_VIEW]: {
-      title: 'Main View',
-      icon: () => null,
-      component: MainView,
-      placement: 'main',
-    },
-  },
-});
+  })(set, get, store),
+
+  // Add additional slices if needed
+  // ...createSqlEditorSlice()(set, get, store),
+}));
 ```
 
-3. Optionally extend with additional slices:
+3. Optionally add persistence:
 
 ```typescript
-// Example of adding custom slices
+import {persist} from 'zustand/middleware';
+
 export const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
 >(
-  // Initial state configuration
-  {
-    // ... initial state as shown above ...
-  },
-  // Add additional slices
-  createCustomSlice(),
-  createAnotherSlice({
-    // slice configuration
-  }),
+  persist(
+    (set, get, store) => ({
+      // Store configuration as shown above
+    }),
+    {
+      name: 'app-state-storage',
+      // Optionally specify which parts of the state to persist
+      partialize: (state) => ({
+        // Add state properties you want to persist
+      }),
+    },
+  ),
 );
 ```
 
@@ -181,8 +200,8 @@ Access the store in your components:
 
 ```typescript
 function YourComponent() {
-  const projectConfig = useProjectStore((state) => state.projectConfig);
-  const dataSources = useProjectStore((state) => state.projectConfig.dataSources);
+  const projectConfig = useProjectStore((state) => state.project.config);
+  const dataSources = useProjectStore((state) => state.project.dataSources);
 
   return (
     // Your component JSX

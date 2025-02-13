@@ -1,4 +1,4 @@
-# SQLRooms Next JS demo app
+# SQLRooms AI demo app
 
 [More about this example](https://sqlrooms.github.io/examples/)s
 

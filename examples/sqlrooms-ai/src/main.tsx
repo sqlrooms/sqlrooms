@@ -1,16 +1,16 @@
 import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
-import {App} from './app.tsx';
-import {ThemeProvider} from './components/ThemeProvider.tsx';
+import {AppShell} from './app';
 import './index.css';
 import {projectStore} from './store/store';
+import {ThemeProvider} from './components/ThemeProvider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
       <ProjectBuilderProvider projectStore={projectStore}>
-        <App />
+        <AppShell />
       </ProjectBuilderProvider>
     </ThemeProvider>
   </StrictMode>,
