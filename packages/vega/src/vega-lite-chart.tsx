@@ -17,12 +17,12 @@ export const VegaLiteChart: React.FC<{
   width?: number;
   height?: number;
   sqlQuery: string;
-  spec: string;
+  spec: string | VisualizationSpec;
 }> = ({width, height, sqlQuery, spec}) => {
   const {conn} = useDuckDb();
   const [data, setData] = useState<Record<string, unknown>>();
   const refinedSpec = useMemo(() => {
-    const parsed = safeJsonParse(spec);
+    const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) return null;
     return {
       ...parsed,
