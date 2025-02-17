@@ -1,5 +1,5 @@
 import {SpinnerPane} from '@sqlrooms/ui';
-import {ProjectPanelTypes, useProjectStore} from '../store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store';
 import {useEffect} from 'react';
 import {Spec, VgPlotChart, useMosaic} from '@sqlrooms/mosaic';
 

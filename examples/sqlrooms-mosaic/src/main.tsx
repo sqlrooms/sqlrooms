@@ -4,7 +4,7 @@ import {createRoot} from 'react-dom/client';
 import {App} from './app.js';
 import {ThemeProvider} from './components/ThemeProvider.js';
 import './index.css';
-import {projectStore} from './store/store.js';
+import {projectStore} from './store.js';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

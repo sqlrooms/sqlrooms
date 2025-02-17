@@ -3,7 +3,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {AppShell} from './app';
 import './index.css';
-import {projectStore} from './store/store';
+import {projectStore} from './store';
 import {ThemeProvider} from './components/ThemeProvider';
 
 createRoot(document.getElementById('root')!).render(

@@ -25,8 +25,8 @@ import {
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import {DataSourcesPanel} from '../components/DataSourcesPanel';
-import {MainView} from '../components/MainView';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
 
 export const ProjectPanelTypes = z.enum([
   'project-details',
@@ -109,12 +109,16 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
       // Ai slice
       ...createAiSlice({
-        createModel: () => {
+        createModel: (model: string) => {
           if (!get().openAiApiKey) {
             throw new Error('OpenAI API key is required');
           }
-          const openai = createOpenAI({apiKey: get().openAiApiKey});
-          return openai(get().selectedModel, {structuredOutputs: true});
+          const openai = createOpenAI({
+            apiKey: get().openAiApiKey,
+          });
+          return openai(model, {
+            structuredOutputs: true,
+          });
         },
       })(set, get, store),
 

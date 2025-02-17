@@ -5,7 +5,7 @@ import {processDroppedFiles, ProjectFileInfo} from '@sqlrooms/project-builder';
 import {FC, useCallback, useContext, useEffect, useState} from 'react';
 import {AddDataModalInternalContext} from '../AddDataModalContext';
 import UploadFilesPreview from './UploadFilesPreview';
-import {useProjectStore} from '../../../store/store';
+import {useProjectStore} from '../../../store';
 
 const UploadFiles: FC = () => {
   const {

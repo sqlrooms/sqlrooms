@@ -13,7 +13,7 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
   const isReadOnly = useProjectStore((state) => state.project.isReadOnly);

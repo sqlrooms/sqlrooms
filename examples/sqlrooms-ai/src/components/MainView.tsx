@@ -1,4 +1,4 @@
-import {ProjectPanelTypes, useProjectStore} from '../store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store';
 import {useEffect} from 'react';
 import {QueryControls, AnalysisResultsContainer} from '@sqlrooms/ai';
 import {KeyIcon} from 'lucide-react';

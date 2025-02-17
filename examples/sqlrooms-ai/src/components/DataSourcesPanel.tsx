@@ -13,7 +13,7 @@ import {
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store/store';
+import {ProjectPanelTypes, useProjectStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
   const addProjectFile = useProjectStore(

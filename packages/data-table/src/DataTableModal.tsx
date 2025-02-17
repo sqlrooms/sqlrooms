@@ -2,6 +2,7 @@ import {
   Button,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -58,6 +59,7 @@ const DataTableModal: FC<{
       >
         <DialogHeader>
           <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
+          <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         <div className="flex-1 bg-muted overflow-hidden">
           {tableModal.isOpen && query ? <QueryDataTable query={query} /> : null}

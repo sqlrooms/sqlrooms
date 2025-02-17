@@ -16,9 +16,9 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
-import DataSourcesPanel from '../components/DataSourcesPanel';
-import {MainView} from '../components/MainView';
-import ProjectDetailsPanel from '../components/ProjectDetailsPanel';
+import DataSourcesPanel from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
+import ProjectDetailsPanel from './components/ProjectDetailsPanel';
 
 export const ProjectPanelTypes = z.enum([
   'project-details',

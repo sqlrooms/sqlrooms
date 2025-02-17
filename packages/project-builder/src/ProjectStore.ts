@@ -267,6 +267,24 @@ export function createProjectStore<
     // @ts-ignore TODO fix typing
     return useBaseProjectStore(selector as (state: AppState) => T);
   }
+
+  // if (import.meta.hot) {
+  //   console.log('yep');
+  //   projectStore.subscribe((state) => {
+  //     if (typeof window !== 'undefined') {
+  //       window.__store = state;
+  //     }
+  //   });
+  //   import.meta.hot!.accept((newModule) => {
+  //     console.log('yep update');
+  //     if (!newModule) return;
+  //     const newStore = newModule.useStore;
+  //     if (!newStore) return;
+  //     if (window.__store) {
+  //       newStore.setState(window.__store, true);
+  //     }
+  //   });
+  // }
   return {projectStore, useProjectStore};
 }
 
