@@ -301,15 +301,28 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
 
   return (
     <>
-      <div className="absolute right-12">
-        <Button
-          size="sm"
-          variant={showDocs ? 'secondary' : 'outline'}
-          onClick={handleToggleDocs}
-        >
-          <BookOpenIcon className="w-4 h-4 mr-2" />
-          SQL reference
-        </Button>
+      <div className="absolute right-12 top-2">
+        {documentationPanel ? (
+          <Button
+            size="sm"
+            variant={showDocs ? 'secondary' : 'outline'}
+            onClick={handleToggleDocs}
+          >
+            <BookOpenIcon className="w-4 h-4 mr-2" />
+            SQL reference
+          </Button>
+        ) : (
+          <a
+            href="https://duckdb.org/docs/sql/introduction"
+            target="_blank"
+            rel="noreferrer"
+          >
+            <Button size="sm" variant={'outline'}>
+              <BookOpenIcon className="w-4 h-4 mr-2" />
+              SQL reference
+            </Button>
+          </a>
+        )}
       </div>
       <div className="flex flex-col w-full gap-2">
         <div className="flex items-center gap-2 ml-1 mr-10 mb-2">
