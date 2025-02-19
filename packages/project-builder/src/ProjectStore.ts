@@ -285,6 +285,7 @@ export function createProjectStore<
   //     }
   //   });
   // }
+  projectStore.getState().project.reinitialize();
   return {projectStore, useProjectStore};
 }
 
