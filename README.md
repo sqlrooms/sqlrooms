@@ -13,10 +13,12 @@ Check out the [Getting Started](https://sqlrooms.github.io/getting-started.html)
 ## Develop locally
 
     pnpm install
+    pnpm build
     pnpm dev
 
 ## Running example apps
 
     pnpm install
+    pnpm build
     pnpm --filter sqlrooms-ai dev
     open http://localhost:5173
