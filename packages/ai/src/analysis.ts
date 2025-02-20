@@ -37,7 +37,7 @@ export async function runAnalysis({
 
     tools: TOOLS,
 
-    toolChoice: 'required',
+    toolChoice: 'auto',
     maxSteps,
     maxRetries: 1,
 
@@ -111,11 +111,11 @@ const TOOLS = {
     description: 'A tool for providing the final answer.',
     parameters: AnswerToolParameters,
 
-    // execute: async ({answer}): Promise<ToolResultSchema['result']> => {
-    //   return {
-    //     success: true,
-    //     data: answer,
-    //   };
-    // },
+    execute: async ({answer}): Promise<ToolResultSchema['result']> => {
+      return {
+        success: true,
+        data: [],
+      };
+    },
   }),
 };

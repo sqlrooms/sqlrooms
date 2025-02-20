@@ -160,15 +160,15 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             abortSignal: abortController.signal,
           });
           console.log('final result', {toolResults, toolCalls, ...rest});
-          get().ai.addMessages([
-            {
-              id: createId(),
-              role: 'tool',
-              content: [],
-              // @ts-ignore
-              tool_call_id: toolCalls[toolCalls.length - 1].toolCallId,
-            } satisfies AiMessage,
-          ]);
+          // get().ai.addMessages([
+          //   {
+          //     id: createId(),
+          //     role: 'tool',
+          //     content: [],
+          //     // @ts-ignore
+          //     tool_call_id: toolCalls[toolCalls.length - 1].toolCallId,
+          //   } satisfies AiMessage,
+          // ]);
           // set(
           //   makeResultsAppender({
           //     resultId,
