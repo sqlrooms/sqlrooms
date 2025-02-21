@@ -72,7 +72,7 @@ export function ToolCall({toolCall}: ToolCallProps) {
             <Markdown>{args.answer}</Markdown>
           </div>
           {args.chart && (
-            <div className="flex flex-col gap-2">
+            <div className="flex flex-col gap-2 w-full">
               <div className="text-xs text-muted-foreground font-mono">
                 {args.chart.sqlQuery}
               </div>
@@ -84,8 +84,8 @@ export function ToolCall({toolCall}: ToolCallProps) {
                 }
               >
                 <VegaLiteChart
-                  width={400}
-                  height={250}
+                  className="max-w-[600px]"
+                  aspectRatio={16 / 9}
                   sqlQuery={args.chart.sqlQuery}
                   spec={args.chart.vegaLiteSpec}
                 />

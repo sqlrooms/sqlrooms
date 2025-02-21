@@ -27,6 +27,7 @@ export const AnalysisResultsContainer: React.FC = () => {
         {analysisResults.map((result) => (
           <AnalysisResult key={result.id} result={result} />
         ))}
+        {isRunningAnalysis && <SkeletonPane className="p-4" />}
         <div className="h-20" />
         {messagesEndRef && (
           <div
@@ -34,7 +35,6 @@ export const AnalysisResultsContainer: React.FC = () => {
             className="shrink-0 min-w-[24px] min-h-[24px]"
           />
         )}
-        {isRunningAnalysis && <SkeletonPane className="p-4" />}
       </div>
       <div className="absolute inset-x-0 bottom-0 pointer-events-none flex justify-center">
         <button

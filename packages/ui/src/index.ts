@@ -32,6 +32,7 @@ export * from './components/toaster';
 export * from './components/tooltip';
 export * from './hooks/use-toast';
 export * from './hooks/useDisclosure';
+export * from './hooks/useAspectRatioDimensions';
 export * from './lib/utils';
 export * from './tailwind-preset';
 export * from './theme/theme-provider';

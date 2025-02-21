@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "react-vega": "^7.6.0",
     "vega": "^5.31.0",
