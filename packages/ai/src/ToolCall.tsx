@@ -25,7 +25,7 @@ export function ToolCall({toolCall}: ToolCallProps) {
     <div
       key={toolCallId}
       className={cn(
-        'border-2 relative bg-gray-900 px-5 py-6 rounded-md text-gray-300 text-xs',
+        'border-2 relative px-5 py-6 rounded-md dark:bg-gray-900 dark:text-gray-300 bg-gray-100 text-gray-700 text-xs',
         {
           ' border-blue-500': toolName === 'answer',
         },
@@ -34,8 +34,10 @@ export function ToolCall({toolCall}: ToolCallProps) {
       <Badge
         variant="secondary"
         className={cn(
-          'text-xs absolute top-[-12px] left-2 text-gray-100',
-          toolName === 'answer' && 'bg-blue-500',
+          'text-xs absolute top-[-12px] left-2 dark:text-gray-100 text-gray-700',
+          {
+            ' border-blue-500': toolName === 'answer',
+          },
         )}
       >
         {toolName}
@@ -59,7 +61,9 @@ export function ToolCall({toolCall}: ToolCallProps) {
       </div>
       {type === 'query' ? (
         <div className="flex flex-col gap-5">
-          <div className="text-xs text-gray-400">{args.reasoning}</div>
+          <div className="text-xs text-gray-700 dark:text-gray-400">
+            {args.reasoning}
+          </div>
           <div className="font-mono">{args.sqlQuery}</div>
         </div>
       ) : type === 'answer' ? (

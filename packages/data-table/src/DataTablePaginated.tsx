@@ -104,7 +104,7 @@ export default function DataTablePaginated<Data extends object>({
                 <TableRow key={headerGroup.id}>
                   <TableHead
                     className={`
-                      sticky top-0 left-0 w-auto whitespace-nowrap py-2 
+                      sticky top-[-1px] left-0 w-auto whitespace-nowrap py-2 
                       bg-background border-r text-center z-20
                     `}
                   >
@@ -120,7 +120,7 @@ export default function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={`
-                          sticky top-0 w-auto whitespace-nowrap cursor-pointer py-2 
+                          sticky top-[-1px] w-auto whitespace-nowrap cursor-pointer py-2 
                           bg-background border-r hover:bg-muted z-10
                           ${meta?.isNumeric ? 'text-right' : 'text-left'}
                         `}
@@ -160,7 +160,7 @@ export default function DataTablePaginated<Data extends object>({
             <TableBody>
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow key={row.id} className="hover:bg-muted bg-background">
-                  <TableCell className="text-xs border-r text-center text-muted-foreground sticky left-0">
+                  <TableCell className="text-xs bg-background border-r text-center text-muted-foreground sticky left-0">
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
                       : ''}

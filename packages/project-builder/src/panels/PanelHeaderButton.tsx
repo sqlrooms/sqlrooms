@@ -14,8 +14,8 @@ const PanelHeaderButton: FC<{
       onClick={onClick}
       variant="ghost"
       className={`h-6 w-6 ${
-        isPinned ? 'text-white' : 'text-muted-foreground'
-      } hover:text-white hover:bg-white/10`}
+        isPinned ? 'text-foreground' : 'text-muted-foreground'
+      } hover:text-foreground hover:bg-foreground/10`}
       aria-label={label}
     >
       {icon}

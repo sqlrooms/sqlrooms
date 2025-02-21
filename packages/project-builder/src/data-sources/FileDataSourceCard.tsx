@@ -4,8 +4,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
-import {formatBytes} from '@sqlrooms/utils';
+import {formatBytes, splitFilePath} from '@sqlrooms/utils';
 import {
   CloudDownloadIcon,
   CloudIcon,
@@ -26,6 +29,7 @@ const FileDataSourceCard: FC<{
 }> = (props) => {
   const {isReadOnly, fileInfo, fileState} = props;
   const {pathname, size} = fileInfo;
+  const {filename} = splitFilePath(pathname);
   const removeProjectFile = useBaseProjectStore(
     (state) => state.project.removeProjectFile,
   );
@@ -39,8 +43,17 @@ const FileDataSourceCard: FC<{
         <div className="flex-none w-[15px]">
           <FileTextIcon className="w-[15px]" />
         </div>
-        <div className="flex-1 overflow-hidden text-ellipsis">
-          <span className="text-xs break-words">{pathname}</span>
+        <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <span className="text-xs break-words">{filename}</span>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">
+              <pre className="text-xs break-words w-[300px] text-wrap">
+                {pathname}
+              </pre>
+            </TooltipContent>
+          </Tooltip>
         </div>
         <div className="flex-none">
           {!isReadOnly ? (

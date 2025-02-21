@@ -10,12 +10,14 @@ const MosaicTile: FC<{
   path: MosaicBranch[];
   content: React.ReactNode;
   isDragging: boolean;
+  className?: string;
 }> = (props) => {
-  const {id, content, path, isDragging} = props;
+  const {id, content, path, isDragging, className} = props;
   const body = (
     <div
       className={cn(
-        'flex-1 h-full p-2 flex-col bg-gray-700 rounded-md overflow-hidden',
+        'flex-1 h-full p-2 flex-col rounded-md overflow-hidden',
+        className,
         isDragging ? 'pointer-events-none' : '',
       )}
     >

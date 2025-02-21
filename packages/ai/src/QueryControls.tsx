@@ -52,7 +52,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
       <div className="relative w-full">
         <Textarea
           disabled={isRunningAnalysis}
-          className="h-[100px] bg-gray-800"
+          className="h-[100px]"
           value={analysisPrompt}
           onChange={(e) => setAnalysisPrompt(e.target.value)}
           onKeyDown={handleKeyDown}

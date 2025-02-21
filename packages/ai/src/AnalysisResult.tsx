@@ -11,7 +11,7 @@ interface AnalysisResultProps {
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
   return (
     <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
-      <div className="bg-gray-700 p-2 mb-2 rounded-md text-gray-100 flex items-center gap-2">
+      <div className="p-2 mb-2 rounded-md text-gray-700 dark:text-gray-100 flex items-center gap-2">
         <SquareTerminalIcon className="w-4 h-4" />
         <div className="text-sm flex-1">{result.prompt}</div>
         <Popover>

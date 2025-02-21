@@ -196,10 +196,12 @@ const S3FileBrowser: FC<{
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="py-2 text-white">Name</TableHead>
-                <TableHead className="py-2 text-white">Type</TableHead>
-                <TableHead className="text-white text-right">Size</TableHead>
-                <TableHead className="text-white text-right">
+                <TableHead className="py-2 text-foreground">Name</TableHead>
+                <TableHead className="py-2 text-foreground">Type</TableHead>
+                <TableHead className="text-foreground text-right">
+                  Size
+                </TableHead>
+                <TableHead className="text-foreground text-right">
                   Modified
                 </TableHead>
               </TableRow>
@@ -210,7 +212,7 @@ const S3FileBrowser: FC<{
                 return (
                   <TableRow
                     key={key}
-                    className="cursor-pointer text-blue-300 hover:bg-blue-700 hover:text-white"
+                    className="cursor-pointer text-blue-300 hover:bg-blue-700 hover:text-foreground"
                     onClick={(evt) => {
                       if (isDirectory) {
                         handleSelectDirectory(key);
