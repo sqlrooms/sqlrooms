@@ -8,12 +8,16 @@ interface AnalysisResultProps {
   result: AnalysisResultSchema;
 }
 
+/**
+ * Stringify the result of the analysis.
+ *
+ * @param result - The result of the analysis
+ * @returns The stringified result
+ */
 const stringifyResult = (result: AnalysisResultSchema) => {
-  return JSON.stringify(
-    result,
-    (key, value) => (typeof value === 'bigint' ? value.toString() : value),
-    2,
-  );
+  // remove toolCallMessages from the result
+  const {toolCallMessages, ...rest} = result;
+  return JSON.stringify(rest);
 };
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {

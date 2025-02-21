@@ -8,7 +8,11 @@ import {
   ToolCallMessage,
 } from '@openassistant/core';
 
-import {ChartToolParameters, QueryToolParameters} from './schemas';
+import {
+  AnswerToolParameters,
+  ChartToolParameters,
+  QueryToolParameters,
+} from './schemas';
 import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
@@ -20,6 +24,7 @@ You are analyzing tables in DuckDB database in the context of a project.
 You can run SQL queries to perform analysis and answer questions.
 Reason step by step.
 When you give the final answer, provide an explanation for how you got it.
+For each prompt, please alwasy provide the final answer.
 
 Please use the following schema for the tables:
 `;
@@ -158,20 +163,21 @@ Don't execute queries that modify data unless explicitly asked.`,
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
         const result = await conn.query(sqlQuery);
 
-        // get the schema of the result
-        const schema = result.schema;
-
         // Get summary using the new function
         const summaryData = await getQuerySummary(conn, sqlQuery);
+
+        // Get first 2 rows of the result as a json object
+        const subResult = result.slice(0, 2);
+        const firstTwoRows = subResult.toArray();
 
         // create result object sent back to LLM for tool call
         const llmResult = {
           type,
           success: true,
           data: {
-            // only schema and summary will be sent back to LLM as context
-            schema,
+            // only summary and first two rows will be sent back to LLM as context
             summary: summaryData,
+            firstTwoRows,
           },
         };
 
@@ -240,7 +246,7 @@ In the response:
   // answer tool: the LLM will provide a structured answer
   // answer: {
   //   description:
-  //     'A tool for providing the final answer. The argument type is `answer`.',
+  //     'A tool for providing the final answer.',
   //   parameters: AnswerToolParameters,
   //   executeWithContext: async (props: CallbackFunctionProps) => {
   //     const {answer} = props.functionArgs;
