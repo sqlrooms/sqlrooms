@@ -44,19 +44,20 @@ export async function runAnalysis({
   maxSteps?: number;
   onStreamResult: (message: string, isCompleted: boolean) => void;
 }) {
+  // TODO: get tables schema from the project store when loading the data
   const tablesSchema = await getTablesSchema();
 
   const assistant = await createAssistant({
     name: 'sqlrooms-ai',
     modelProvider: 'openai',
-    model: model.modelId,
+    model: model.modelId, // TODO: no need to pass model, it will be handled by openassistant/core
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${tablesSchema}`,
     // @ts-expect-error update the type in openassistant-core
     functions: TOOLS,
     temperature: 0,
-    toolChoice: 'auto',
+    toolChoice: 'auto', // this will enable streaming
     maxSteps,
     abortSignal,
   });

@@ -54,20 +54,16 @@ export type AiSliceState = {
     addMessages: (messages: AiMessage[]) => void;
     getMessages: () => AiMessage[];
     setAiModel: (model: string) => void;
-    updateLastMessage: (message: string) => void;
     tableSchema: string;
-    updateTablesSchema: () => Promise<void>;
   };
 };
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   createModel,
   getApiKey,
-  getTableSchema,
 }: {
   createModel: (model: string) => LanguageModelV1;
   getApiKey: () => string;
-  getTableSchema: () => Promise<string>;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => ({
     ai: {
@@ -76,15 +72,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       isRunningAnalysis: false,
       messagesById: new Map(),
       tableSchema: '',
-
-      updateTablesSchema: async () => {
-        const schema = await getTableSchema();
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.tableSchema = schema;
-          }),
-        );
-      },
 
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
@@ -125,40 +112,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               messagesById: newMessagesById,
             },
           };
-        });
-      },
-
-      updateLastMessage: (streamMessage: string) => {
-        set((state) => {
-          const allMessages = get().ai.getMessages();
-          const lastMessage = allMessages[allMessages.length - 1];
-          if (lastMessage && lastMessage.role === 'assistant') {
-            const newMessage = {...lastMessage};
-            // if content is string, replace streamMessage with it
-            if (typeof lastMessage.content === 'string') {
-              newMessage.content = streamMessage;
-            } else {
-              // if content is Array<TextPart>, replace the last text part
-              newMessage.content = [...lastMessage.content];
-              const lastTextPart = newMessage.content.find(
-                (part) => part.type === 'text',
-              );
-              if (lastTextPart) {
-                lastTextPart.text = streamMessage;
-              }
-            }
-
-            const newMessagesById = new Map(state.ai.messagesById);
-            newMessagesById.set(lastMessage.id, newMessage);
-
-            return {
-              ai: {
-                ...state.ai,
-                messagesById: newMessagesById,
-              },
-            };
-          }
-          return state;
         });
       },
 
