@@ -6,6 +6,7 @@ on:
     paths:
       - 'examples/**'
       - '.github/workflows/sync-examples.yml'
+      - 'lerna.json'
 
 jobs:
   sync:
