@@ -51,7 +51,6 @@ export const {projectStore, useProjectStore} = createProjectStore<
   // Base project slice
   ...createProjectSlice<AppConfig>({
     project: {
-      initialized: true,
       config: {
         title: 'Demo App Project',
         layout: {
@@ -63,7 +62,13 @@ export const {projectStore, useProjectStore} = createProjectStore<
             splitPercentage: 30,
           },
         },
-        dataSources: [],
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+            tableName: 'latency',
+          },
+        ],
         ...createDefaultSqlEditorConfig(),
       },
       panels: {
