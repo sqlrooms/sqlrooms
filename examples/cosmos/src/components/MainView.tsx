@@ -48,7 +48,7 @@ export const MainView: FC = () => {
       // simulationLinkDistance: 1,
       // simulationLinkSpring: 0.3,
       // simulationRepulsion: 0.4,
-      pointSizeScale: 0.2,
+      pointSizeScale: 5,
       onPointMouseOver: (point) => {
         console.log(point);
       },
