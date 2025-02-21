@@ -8,8 +8,15 @@ interface AnalysisResultProps {
   result: AnalysisResultSchema;
 }
 
+const stringifyResult = (result: AnalysisResultSchema) => {
+  return JSON.stringify(
+    result,
+    (key, value) => (typeof value === 'bigint' ? value.toString() : value),
+    2,
+  );
+};
+
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
-  console.log('result', result);
   return (
     <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
       <div className="bg-gray-700 p-2 mb-2 rounded-md text-gray-100 flex items-center gap-2">
@@ -26,16 +33,25 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
             align="end"
             side="right"
           >
-            <pre className="text-xs">{JSON.stringify(result, null, 2)}</pre>
+            <pre className="text-xs">{stringifyResult(result)}</pre>
           </PopoverContent>
         </Popover>
       </div>
       <div className="flex flex-col gap-5 px-4">
         {result.toolCalls
-          .filter((toolCall) => toolCall.toolName === 'query')
-          .map((toolCall) => (
-            <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
-          ))}
+          .filter((toolCall) => toolCall.toolName !== 'chart')
+          .map((toolCall) => {
+            const customMessage = result.toolCallMessages.find(
+              (message) => message.toolCallId === toolCall.toolCallId,
+            )?.element;
+            return (
+              <ToolCall
+                key={toolCall.toolCallId}
+                toolCall={toolCall}
+                customMessage={customMessage}
+              />
+            );
+          })}
       </div>
       <div className="flex flex-col gap-5 px-4">
         <div className="text-xs overflow-y-auto p-4">
@@ -47,7 +63,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
       <div className="flex flex-col gap-5 px-4">
         {result.isCompleted &&
           result.toolCalls
-            .filter((toolCall) => toolCall.toolName === 'answer')
+            .filter((toolCall) => toolCall.toolName === 'chart')
             .map((toolCall) => (
               <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
             ))}

@@ -11,6 +11,8 @@ import {
   CoreToolMessage,
   CoreUserMessage,
   LanguageModelV1,
+  StepResult,
+  ToolSet,
 } from 'ai';
 import {produce} from 'immer';
 import {z} from 'zod';
@@ -20,7 +22,7 @@ import {
   ToolCallSchema,
   ToolResultSchema,
 } from './schemas';
-
+import {ToolCallMessage} from '@openassistant/core';
 type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
   id: string;
 };
@@ -131,6 +133,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               prompt: get().ai.analysisPrompt,
               toolResults: [],
               toolCalls: [],
+              toolCallMessages: [],
               analysis: '',
               isCompleted: false,
             });
@@ -151,14 +154,17 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             tableSchema: get().ai.tableSchema,
             prompt: get().ai.analysisPrompt,
             abortSignal: abortController.signal,
-            onStepFinish: (event) => {
-              console.log('sqlrooms onStepFinish', event);
+            onStepFinish: (
+              event: StepResult<ToolSet>,
+              toolCallMessages: ToolCallMessage[],
+            ) => {
               get().ai.addMessages(event.response.messages);
               set(
                 makeResultsAppender({
                   resultId,
                   toolResults: event.toolResults,
                   toolCalls: event.toolCalls,
+                  toolCallMessages,
                 }),
               );
             },
@@ -219,9 +225,11 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
  * Returns a function that will update the state by appending new results
  * to the analysis results.
  * @param resultId - The result id
- * @param toolResults - The new tool results
- * @param toolCalls - The new tool calls
+ * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon)
+ * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. toolCallId is used to link the message to the tool call.
+ * @param toolResults - The new tool results. TODO: remove this, we don't need this since the tool results are the content sent back to LLM as a response, so there is no need to use them in analysis
  * @param analysis - The analysis is the content generated after all the tool calls have been executed
+ * @param isCompleted - Whether the analysis is completed
  * @returns The new state
  */
 function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
@@ -230,12 +238,14 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   toolCalls,
   analysis,
   isCompleted,
+  toolCallMessages,
 }: {
   resultId: string;
   toolResults?: ToolResultSchema[];
   toolCalls?: ToolCallSchema[];
   analysis?: string;
   isCompleted?: boolean;
+  toolCallMessages?: ToolCallMessage[];
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
@@ -249,6 +259,12 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
         }
         if (toolCalls) {
           result.toolCalls = [...result.toolCalls, ...toolCalls];
+        }
+        if (toolCallMessages) {
+          result.toolCallMessages = [
+            ...result.toolCallMessages,
+            ...toolCallMessages,
+          ];
         }
         if (analysis) {
           result.analysis = analysis;

@@ -310,11 +310,14 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7
       '@openassistant/core':
-        specifier: ^0.1.6
-        version: 0.1.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)
+        specifier: ^0.1.7
+        version: 0.1.7(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -2121,8 +2124,8 @@ packages:
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
 
-  '@openassistant/core@0.1.6':
-    resolution: {integrity: sha512-Euf/8iNrVpa/MDrz6A3aHfZQ/Fr3nxzxKq0mqB8Eu5jkwjdnFL7x9Mv7bkZtLsrnAzEMspeDlbdm+a1Woq2E7w==}
+  '@openassistant/core@0.1.7':
+    resolution: {integrity: sha512-3v3D3bUce7a+6F4RnHEEoTKIwVa9Kqn2dI8AOVDz9BYmH4T+Krb9QHNBRUp7MhUwN6pdhV9+rTcpReHXncsavw==}
     peerDependencies:
       react: '>=18.2'
 
@@ -10343,7 +10346,7 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@openassistant/core@0.1.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)':
+  '@openassistant/core@0.1.7(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)':
     dependencies:
       '@ai-sdk/deepseek': 0.1.11(zod@3.24.1)
       '@ai-sdk/google': 1.1.16(zod@3.24.1)
@@ -15732,8 +15735,8 @@ snapshots:
 
   ollama-ai-provider@1.2.0(zod@3.24.1):
     dependencies:
-      '@ai-sdk/provider': 1.0.8
-      '@ai-sdk/provider-utils': 2.1.9(zod@3.24.1)
+      '@ai-sdk/provider': 1.0.7
+      '@ai-sdk/provider-utils': 2.1.6(zod@3.24.1)
       partial-json: 0.1.7
     optionalDependencies:
       zod: 3.24.1
