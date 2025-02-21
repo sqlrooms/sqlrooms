@@ -39,3 +39,19 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Integration with [Vercel AI SDK](https://sdk.vercel.ai/docs/introduction)
 - Custom visualization components
 - Project state persistence
+
+## [Cosmos: Graph and Embedding Visualizations](http://sqlrooms-cosmos.netlify.app/)
+
+[Try live](http://sqlrooms-cosmos.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
+
+<img src="https://github.com/user-attachments/assets/f4365bfd-612d-40a4-bfae-99da886c0fb7" alt="SQLRooms Cosmos example showing graph visualization" width=450>
+
+An example showcasing high-performance graph and embedding visualizations powered by GPU acceleration. Features include:
+
+- GPU-accelerated graph layout engine for efficient rendering
+- Interactive network visualization capabilities
+- Embedding space exploration tools
+- Real-time graph manipulation
+- Seamless integration with large-scale graph datasets
