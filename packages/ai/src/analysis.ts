@@ -53,7 +53,7 @@ export async function runAnalysis({
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${tablesSchema}`,
-    // @ts-expect-error
+    // @ts-expect-error update the type in openassistant-core
     functions: TOOLS,
     temperature: 0,
     toolChoice: 'auto',
@@ -65,8 +65,7 @@ export async function runAnalysis({
     textMessage: prompt,
     streamMessageCallback: (message) => {
       // the final result (before the answer) can be streamed back here
-      console.log('streamMessageCallback', message.deltaMessage);
-      onStreamResult(message.deltaMessage, message.isCompleted);
+      onStreamResult(message.deltaMessage, message.isCompleted ?? false);
     },
     onStepFinish,
   });
