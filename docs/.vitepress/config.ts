@@ -80,12 +80,16 @@ export default defineConfig({
             link: '/examples',
             items: [
               {
-                text: 'Basic Example (Vite)',
-                link: '/examples/#mosaic-example-vite',
+                text: 'Mosaic Cross-filtering',
+                link: '/examples/#mosaic-example',
               },
               {
-                text: 'AI Analytics (Next.js)',
-                link: '/examples#ai-powered-analytics-next-js',
+                text: 'AI Analytics',
+                link: '/examples#ai-powered-analytics',
+              },
+              {
+                text: 'Cosmos Graph Visualization',
+                link: '/examples#cosmos-graph-visualization',
               },
             ],
           },
@@ -95,12 +99,18 @@ export default defineConfig({
         text: 'Case Studies',
         items: [
           {
-            text: 'Flowmap City',
-            link: '/case-studies#flowmap-city',
-          },
-          {
-            text: 'Cosmograph',
-            link: '/case-studies#cosmograph',
+            text: 'Case Studies Overview',
+            link: '/case-studies',
+            items: [
+              {
+                text: 'Flowmap City',
+                link: '/case-studies#flowmap-city',
+              },
+              {
+                text: 'Cosmograph',
+                link: '/case-studies#cosmograph',
+              },
+            ],
           },
         ],
       },

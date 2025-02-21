@@ -40,7 +40,7 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Project state persistence
 
-## [Cosmos: Graph and Embedding Visualizations](http://sqlrooms-cosmos.netlify.app/)
+## [Cosmos Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
 [Try live](http://sqlrooms-cosmos.netlify.app/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
@@ -48,7 +48,8 @@ An advanced example showing how to build an AI-powered analytics application wit
 
 <img src="https://github.com/user-attachments/assets/f4365bfd-612d-40a4-bfae-99da886c0fb7" alt="SQLRooms Cosmos example showing graph visualization" width=450>
 
-An example showcasing high-performance graph and embedding visualizations powered by GPU acceleration. Features include:
+An example showcasing integration with the powerful [Cosmos library](https://github.com/cosmograph-org/cosmos) for
+high-performance graph and embedding visualizations powered by GPU acceleration. Features include:
 
 - GPU-accelerated graph layout engine for efficient rendering
 - Interactive network visualization capabilities
