@@ -1,11 +1,24 @@
 import type {LanguageModelV1} from '@ai-sdk/provider';
 import {arrowTableToJson, getDuckDb} from '@sqlrooms/duckdb';
-import {generateText, StepResult, tool, ToolExecutionOptions} from 'ai';
-import {
-  AnswerToolParameters,
-  QueryToolParameters,
-  ToolResultSchema,
-} from './schemas';
+import {StepResult} from 'ai';
+import {CallbackFunctionProps, createAssistant} from '@openassistant/core';
+
+import {AnswerToolParameters, QueryToolParameters} from './schemas';
+
+const SYSTEM_PROMPT = `
+You are analyzing tables in DuckDB database in the context of a project.
+You can run SQL queries to perform analysis and answer questions.
+Reason step by step.
+When you give the final answer, provide an explanation for how you got it.
+
+Please use the following schema for the tables:
+`;
+
+async function getTablesSchema() {
+  const {conn} = await getDuckDb();
+  const result = await conn.query('DESCRIBE');
+  return JSON.stringify(arrowTableToJson(result));
+}
 
 /**
  * Run analysis on the project data
@@ -15,79 +28,84 @@ import {
  */
 export async function runAnalysis({
   model,
-  // prompt,
+  apiKey,
+  prompt,
   abortSignal,
   onStepFinish,
+  onStreamResult,
   maxSteps = 100,
-  messages,
 }: {
-  // prompt: string;
+  prompt: string;
+  tableSchema: string;
   abortSignal?: AbortSignal;
+  apiKey: string;
   onStepFinish?: (event: StepResult<typeof TOOLS>) => Promise<void> | void;
   model: LanguageModelV1;
   maxSteps?: number;
-  messages?: any[];
+  onStreamResult: (message: string, isCompleted: boolean) => void;
 }) {
-  const result = await generateText({
-    model,
+  const tablesSchema = await getTablesSchema();
 
-    abortSignal,
-    // prompt,
-    messages,
-
-    tools: TOOLS,
-
-    toolChoice: 'required',
+  const assistant = await createAssistant({
+    name: 'sqlrooms-ai',
+    modelProvider: 'openai',
+    model: model.modelId,
+    apiKey,
+    version: 'v1',
+    instructions: `${SYSTEM_PROMPT}\n${tablesSchema}`,
+    // @ts-expect-error
+    functions: TOOLS,
+    temperature: 0,
+    toolChoice: 'auto',
     maxSteps,
-    maxRetries: 1,
-
-    system:
-      'You are analyzing tables in DuckDB database in the context of a project. ' +
-      'You can run SQL queries to perform analysis and answer questions. ' +
-      'Reason step by step. ' +
-      'When you give the final answer, provide an explanation for how you got it.',
-
-    onStepFinish,
+    abortSignal,
   });
 
-  // const answer = result.toolCalls.find((t) => t.toolName === 'answer');
-  // if (!answer) {
-  //   console.error('No answer tool call found', {result});
-  //   throw new Error('No answer tool call found');
-  // }
-  // return answer.args;
+  const result = await assistant.processTextMessage({
+    textMessage: prompt,
+    streamMessageCallback: (message) => {
+      // the final result (before the answer) can be streamed back here
+      console.log('streamMessageCallback', message.deltaMessage);
+      onStreamResult(message.deltaMessage, message.isCompleted);
+    },
+    onStepFinish,
+  });
 
   return result;
 }
 
 const TOOLS = {
-  query: tool({
+  query: {
     description:
       'A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm. ' +
-      'You can obtain the structures of all tables and their column types by running `DESCRIBE`. ' +
       'Query results are returned as a json object `{success: boolean, data: object[], error?: string}`. ' +
       'You should only analyze tables which are in the main schema. ' +
       'Avoid queries returning too much data to prevent the browser from crashing. ' +
-      'Include VegaLite charts in your response if the data is suitable for it. ' +
+      'Include VegaLite charts in your response based on the SQL query. ' +
       'Omit the data from the chart.vegaLiteSpec in the response, provide an sql query in chart.sqlQuery instead. ' +
       'To obtain stats, use the `SUMMARIZE table_name` query. ' +
-      "Don't execute queries that modify data unless explicitly asked. ",
+      "Don't execute queries that modify data unless explicitly asked. " +
+      'The type of the query is `query`.',
     parameters: QueryToolParameters,
-
-    execute: async (
-      {sqlQuery},
-      options: ToolExecutionOptions,
-    ): Promise<ToolResultSchema['result']> => {
+    executeWithContext: async (props: CallbackFunctionProps) => {
+      const {type, sqlQuery, reasoning} = props.functionArgs;
+      console.log('query', {type, sqlQuery, reasoning});
       try {
         const {conn} = await getDuckDb();
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await conn.query(sqlQuery);
+        const result = await conn.query(sqlQuery as string);
         // if (options.abortSignal?.aborted) {
         //   throw new Error('Query aborted');
         // }
+        const data = arrowTableToJson(result);
+
         return {
-          success: true,
-          data: arrowTableToJson(result),
+          result: {
+            type,
+            success: true,
+            data,
+          },
+          data,
         };
       } catch (error) {
         console.error('SQL query error:', error);
@@ -98,24 +116,28 @@ const TOOLS = {
               : error.message
             : String(error);
         return {
-          success: false,
-          error: errorMessage,
+          result: {
+            success: false,
+            error: errorMessage,
+          },
         };
       }
     },
-    // TODO: consider experimental_toToolResultContent() for returning Arrow
-  }),
+  },
 
   // answer tool: the LLM will provide a structured answer
-  answer: tool({
-    description: 'A tool for providing the final answer.',
+  answer: {
+    description:
+      'A tool for providing the final answer. The argument type is `answer`.',
     parameters: AnswerToolParameters,
-
-    // execute: async ({answer}): Promise<ToolResultSchema['result']> => {
-    //   return {
-    //     success: true,
-    //     data: answer,
-    //   };
-    // },
-  }),
+    executeWithContext: async (props: CallbackFunctionProps) => {
+      const {answer} = props.functionArgs;
+      return {
+        result: {
+          success: true,
+          data: answer,
+        },
+      };
+    },
+  },
 };

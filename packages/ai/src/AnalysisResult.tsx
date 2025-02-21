@@ -1,14 +1,15 @@
 import {AnalysisResultSchema} from './schemas';
 import {ToolCall} from './ToolCall';
-import {ToolResult} from './ToolResult';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
+import Markdown from 'react-markdown';
 
 interface AnalysisResultProps {
   result: AnalysisResultSchema;
 }
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
+  console.log('result', result);
   return (
     <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
       <div className="bg-gray-700 p-2 mb-2 rounded-md text-gray-100 flex items-center gap-2">
@@ -30,16 +31,26 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
         </Popover>
       </div>
       <div className="flex flex-col gap-5 px-4">
-        {result.toolResults.map((toolResult) => (
-          <ToolResult key={toolResult.toolCallId} toolResult={toolResult} />
-        ))}
-      </div>
-      <div className="flex flex-col gap-5 px-4">
         {result.toolCalls
-          .filter((toolCall) => toolCall.toolName === 'answer')
+          .filter((toolCall) => toolCall.toolName === 'query')
           .map((toolCall) => (
             <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
           ))}
+      </div>
+      <div className="flex flex-col gap-5 px-4">
+        <div className="text-xs overflow-y-auto p-4">
+          <Markdown className="whitespace-pre-wrap break-words">
+            {result.analysis}
+          </Markdown>
+        </div>
+      </div>
+      <div className="flex flex-col gap-5 px-4">
+        {result.isCompleted &&
+          result.toolCalls
+            .filter((toolCall) => toolCall.toolName === 'answer')
+            .map((toolCall) => (
+              <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
+            ))}
       </div>
     </div>
   );

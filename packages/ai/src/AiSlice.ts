@@ -53,13 +53,21 @@ export type AiSliceState = {
     messagesById: Map<string, AiMessage>;
     addMessages: (messages: AiMessage[]) => void;
     getMessages: () => AiMessage[];
+    setAiModel: (model: string) => void;
+    updateLastMessage: (message: string) => void;
+    tableSchema: string;
+    updateTablesSchema: () => Promise<void>;
   };
 };
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   createModel,
+  getApiKey,
+  getTableSchema,
 }: {
   createModel: (model: string) => LanguageModelV1;
+  getApiKey: () => string;
+  getTableSchema: () => Promise<string>;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => ({
     ai: {
@@ -67,7 +75,16 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         'Describe the data in the table and make a chart providing an overview.',
       isRunningAnalysis: false,
       messagesById: new Map(),
-      apiKey: null,
+      tableSchema: '',
+
+      updateTablesSchema: async () => {
+        const schema = await getTableSchema();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.ai.tableSchema = schema;
+          }),
+        );
+      },
 
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
@@ -111,9 +128,44 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         });
       },
 
+      updateLastMessage: (streamMessage: string) => {
+        set((state) => {
+          const allMessages = get().ai.getMessages();
+          const lastMessage = allMessages[allMessages.length - 1];
+          if (lastMessage && lastMessage.role === 'assistant') {
+            const newMessage = {...lastMessage};
+            // if content is string, replace streamMessage with it
+            if (typeof lastMessage.content === 'string') {
+              newMessage.content = streamMessage;
+            } else {
+              // if content is Array<TextPart>, replace the last text part
+              newMessage.content = [...lastMessage.content];
+              const lastTextPart = newMessage.content.find(
+                (part) => part.type === 'text',
+              );
+              if (lastTextPart) {
+                lastTextPart.text = streamMessage;
+              }
+            }
+
+            const newMessagesById = new Map(state.ai.messagesById);
+            newMessagesById.set(lastMessage.id, newMessage);
+
+            return {
+              ai: {
+                ...state.ai,
+                messagesById: newMessagesById,
+              },
+            };
+          }
+          return state;
+        });
+      },
+
       getMessages: () => {
         return Array.from(get().ai.messagesById.values());
       },
+
       startAnalysis: async () => {
         const resultId = createId();
         const abortController = new AbortController();
@@ -126,6 +178,8 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               prompt: get().ai.analysisPrompt,
               toolResults: [],
               toolCalls: [],
+              analysis: '',
+              isCompleted: false,
             });
           }),
         );
@@ -136,18 +190,16 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             content: get().ai.analysisPrompt,
           },
         ]);
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.analysisPrompt = '';
-          }),
-        );
+
         try {
-          const {toolResults, toolCalls, ...rest} = await runAnalysis({
+          await runAnalysis({
             model: createModel(get().project.config.ai.model),
-            // prompt: get().analysisPrompt,
-            messages: get().ai.getMessages(),
+            apiKey: getApiKey(),
+            tableSchema: get().ai.tableSchema,
+            prompt: get().ai.analysisPrompt,
+            abortSignal: abortController.signal,
             onStepFinish: (event) => {
-              console.log('onStepFinish', event);
+              console.log('sqlrooms onStepFinish', event);
               get().ai.addMessages(event.response.messages);
               set(
                 makeResultsAppender({
@@ -157,25 +209,16 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
                 }),
               );
             },
-            abortSignal: abortController.signal,
+            onStreamResult: (message, isCompleted) => {
+              set(
+                makeResultsAppender({
+                  resultId,
+                  analysis: message,
+                  isCompleted,
+                }),
+              );
+            },
           });
-          console.log('final result', {toolResults, toolCalls, ...rest});
-          get().ai.addMessages([
-            {
-              id: createId(),
-              role: 'tool',
-              content: [],
-              // @ts-ignore
-              tool_call_id: toolCalls[toolCalls.length - 1].toolCallId,
-            } satisfies AiMessage,
-          ]);
-          // set(
-          //   makeResultsAppender({
-          //     resultId,
-          //     toolResults,
-          //     toolCalls: rest.toolCalls,
-          //   }),
-          // );
         } catch (err) {
           set(
             makeResultsAppender({
@@ -198,6 +241,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           set((state) =>
             produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisPrompt = '';
             }),
           );
         }
@@ -224,16 +268,21 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
  * @param resultId - The result id
  * @param toolResults - The new tool results
  * @param toolCalls - The new tool calls
+ * @param analysis - The analysis is the content generated after all the tool calls have been executed
  * @returns The new state
  */
 function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   resultId,
   toolResults,
   toolCalls,
+  analysis,
+  isCompleted,
 }: {
   resultId: string;
-  toolResults: ToolResultSchema[];
-  toolCalls: ToolCallSchema[];
+  toolResults?: ToolResultSchema[];
+  toolCalls?: ToolCallSchema[];
+  analysis?: string;
+  isCompleted?: boolean;
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
@@ -242,8 +291,18 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
         resultId,
       );
       if (result) {
-        result.toolResults = [...result.toolResults, ...toolResults];
-        result.toolCalls = [...result.toolCalls, ...toolCalls];
+        if (toolResults) {
+          result.toolResults = [...result.toolResults, ...toolResults];
+        }
+        if (toolCalls) {
+          result.toolCalls = [...result.toolCalls, ...toolCalls];
+        }
+        if (analysis) {
+          result.analysis = analysis;
+        }
+        if (isCompleted) {
+          result.isCompleted = isCompleted;
+        }
       } else {
         console.error('Result not found', resultId);
       }

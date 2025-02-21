@@ -20,6 +20,10 @@ export const AnswerToolParameters = z.object({
 });
 export type AnswerToolParameters = z.infer<typeof AnswerToolParameters>;
 
+export const AnalysisSchema = z.string();
+
+export type AnalysisSchema = z.infer<typeof AnalysisSchema>;
+
 export const ToolCallSchema = z.object({
   toolName: z.string(),
   toolCallId: z.string(),
@@ -49,5 +53,7 @@ export const AnalysisResultSchema = z.object({
   prompt: z.string(),
   toolResults: z.array(ToolResultSchema),
   toolCalls: z.array(ToolCallSchema),
+  analysis: z.string(),
+  isCompleted: z.boolean(),
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
