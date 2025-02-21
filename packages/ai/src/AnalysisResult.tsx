@@ -30,9 +30,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
         </Popover>
       </div>
       <div className="flex flex-col gap-5 px-4">
-        {result.toolResults.map((toolResult) => (
-          <ToolResult key={toolResult.toolCallId} toolResult={toolResult} />
-        ))}
+        {result.toolResults
+          .filter(
+            (toolResult) =>
+              toolResult.toolName !== 'answer' || !toolResult.result.success,
+          )
+          .map((toolResult) => (
+            <ToolResult key={toolResult.toolCallId} toolResult={toolResult} />
+          ))}
       </div>
       <div className="flex flex-col gap-5 px-4">
         {result.toolCalls

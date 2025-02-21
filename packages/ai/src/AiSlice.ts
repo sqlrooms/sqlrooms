@@ -58,13 +58,14 @@ export type AiSliceState = {
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   createModel,
+  initialAnalysisPrompt = 'Describe the data in the tables and make a chart providing an overview of the most important features.',
 }: {
   createModel: (model: string) => LanguageModelV1;
+  initialAnalysisPrompt?: string;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => ({
     ai: {
-      analysisPrompt:
-        'Describe the data in the table and make a chart providing an overview.',
+      analysisPrompt: initialAnalysisPrompt,
       isRunningAnalysis: false,
       messagesById: new Map(),
       apiKey: null,

@@ -21,21 +21,19 @@ export const AnalysisResultsContainer: React.FC = () => {
   return (
     <div className="flex relative h-full w-full overflow-hidden">
       <div
-        className="flex flex-grow flex-col w-full gap-4 p-4 overflow-auto"
+        className="flex flex-grow flex-col w-full gap-10 p-4 overflow-auto"
         ref={messagesContainerRef}
       >
-        <div className="flex flex-col gap-10 ">
-          {analysisResults.map((result) => (
-            <AnalysisResult key={result.id} result={result} />
-          ))}
-          <div className="h-20" />
-          {messagesEndRef && (
-            <div
-              ref={messagesEndRef}
-              className="shrink-0 min-w-[24px] min-h-[24px]"
-            />
-          )}
-        </div>
+        {analysisResults.map((result) => (
+          <AnalysisResult key={result.id} result={result} />
+        ))}
+        <div className="h-20" />
+        {messagesEndRef && (
+          <div
+            ref={messagesEndRef}
+            className="shrink-0 min-w-[24px] min-h-[24px]"
+          />
+        )}
         {isRunningAnalysis && <SkeletonPane className="p-4" />}
       </div>
       <div className="absolute inset-x-0 bottom-0 pointer-events-none flex justify-center">
