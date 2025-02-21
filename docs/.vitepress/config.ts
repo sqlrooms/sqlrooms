@@ -43,6 +43,14 @@ export default defineConfig({
             text: 'Getting started',
             link: '/getting-started',
           },
+          {
+            text: 'Package Structure',
+            link: '/packages',
+          },
+          {
+            text: 'Theming',
+            link: '/theming',
+          },
         ],
       },
       {

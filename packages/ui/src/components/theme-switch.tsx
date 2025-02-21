@@ -5,7 +5,43 @@ import {SunIcon, MoonIcon} from 'lucide-react';
 import {cn} from '../lib/utils';
 import {FC} from 'react';
 
-export const ThemeSwitch: FC<{className?: string}> = ({className}) => {
+/**
+ * A theme toggle switch component that allows users to switch between light and dark themes.
+ *
+ * This component provides a visually appealing switch with sun/moon icons that animate smoothly
+ * during theme transitions. It integrates with the theme context to manage theme state.
+ *
+ * Features:
+ * - Smooth icon animations
+ * - Accessible keyboard navigation
+ * - Focus and hover states
+ * - Customizable via className prop
+ *
+ * @component
+ * @example
+ * ```tsx
+ * // Basic usage
+ * <ThemeSwitch />
+ *
+ * // With custom styling
+ * <ThemeSwitch className="my-custom-class" />
+ *
+ * // Within a theme provider
+ * import { ThemeProvider } from '../theme/theme-provider';
+ *
+ * function App() {
+ *   return (
+ *     <ThemeProvider>
+ *       <ThemeSwitch />
+ *     </ThemeProvider>
+ *   );
+ * }
+ * ```
+ */
+export const ThemeSwitch: FC<{
+  /** Optional CSS class name for styling the switch container */
+  className?: string;
+}> = ({className}) => {
   const {theme, setTheme} = useTheme();
 
   return (
