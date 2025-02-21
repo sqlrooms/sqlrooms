@@ -263,6 +263,7 @@ export function createProjectStore<
   //   };
   // });
   const projectStore = createStore<AppState>(stateCreator);
+  projectStore.getState().project.reinitialize?.();
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
     return useBaseProjectStore(selector as (state: AppState) => T);
@@ -285,7 +286,6 @@ export function createProjectStore<
   //     }
   //   });
   // }
-  projectStore.getState().project.reinitialize();
   return {projectStore, useProjectStore};
 }
 
