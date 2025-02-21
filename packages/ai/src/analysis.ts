@@ -8,11 +8,7 @@ import {
   ToolCallMessage,
 } from '@openassistant/core';
 
-import {
-  AnswerToolParameters,
-  ChartToolParameters,
-  QueryToolParameters,
-} from './schemas';
+import {ChartToolParameters, QueryToolParameters} from './schemas';
 import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
@@ -21,10 +17,29 @@ import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
  */
 const SYSTEM_PROMPT = `
 You are analyzing tables in DuckDB database in the context of a project.
-You can run SQL queries to perform analysis and answer questions.
-Reason step by step.
-When you give the final answer, provide an explanation for how you got it.
-For each prompt, please alwasy provide the final answer.
+
+Instructions for analysis:
+- Follow DuckDB syntax
+- Use SQL queries to complete the user's request
+- Break down complex problems into smaller steps
+- Validate your results at each step
+- Use "SUMMARIZE table_name"for quick overview of the table
+- Prefer SELECT queries and don't modify data
+
+When creating visualizations:
+- Follow VegaLite syntax
+- Choose appropriate chart types based on the data and analysis goals
+- Use clear titles and axis labels
+- Consider color schemes for better readability
+- Add meaningful tooltips when relevant
+- Format numbers and dates appropriately
+- Use aggregations when dealing with large datasets
+
+For your final answer:
+- Provide an explanation for how you got it
+- Explain your reasoning step by step
+- Include relevant statistics or metrics
+- For each prompt, please alwasy provide the final answer.
 
 Please use the following schema for the tables:
 `;
@@ -163,12 +178,14 @@ Don't execute queries that modify data unless explicitly asked.`,
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
         const result = await conn.query(sqlQuery);
 
-        // Get summary using the new function
-        const summaryData = await getQuerySummary(conn, sqlQuery);
+        // Only get summary if the query isn't already a SUMMARIZE query
+        const summaryData = sqlQuery.toLowerCase().includes('summarize')
+          ? arrowTableToJson(result)
+          : await getQuerySummary(conn, sqlQuery);
 
         // Get first 2 rows of the result as a json object
         const subResult = result.slice(0, 2);
-        const firstTwoRows = subResult.toArray();
+        const firstTwoRows = arrowTableToJson(subResult);
 
         // create result object sent back to LLM for tool call
         const llmResult = {

@@ -43,7 +43,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
       </div>
       <div className="flex flex-col gap-5 px-4">
         {result.toolCalls
-          .filter((toolCall) => toolCall.toolName !== 'chart')
+          .slice(0, -1) // Exclude the last tool call, which is the answer
           .map((toolCall) => {
             const customMessage = result.toolCallMessages.find(
               (message) => message.toolCallId === toolCall.toolCallId,
@@ -66,11 +66,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
       </div>
       <div className="flex flex-col gap-5 px-4">
         {result.isCompleted &&
-          result.toolCalls
-            .filter((toolCall) => toolCall.toolName === 'chart')
-            .map((toolCall) => (
-              <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
-            ))}
+          result.toolCalls.slice(-1).map((toolCall) => {
+            const customMessage = result.toolCallMessages.find(
+              (message) => message.toolCallId === toolCall.toolCallId,
+            )?.element;
+            return (
+              <ToolCall
+                key={toolCall.toolCallId}
+                toolCall={toolCall}
+                customMessage={customMessage}
+              />
+            );
+          })}
       </div>
     </div>
   );
