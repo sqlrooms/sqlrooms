@@ -56,9 +56,89 @@ export type AiSliceState = {
     addMessages: (messages: AiMessage[]) => void;
     getMessages: () => AiMessage[];
     setAiModel: (model: string) => void;
-    tableSchema: string;
   };
 };
+
+/**
+ * Execute the analysis. It will be used by the action `startAnalysis`.
+ *
+ * @param resultId - The result id
+ * @param prompt - The prompt
+ * @param model - The model
+ * @param apiKey - The api key
+ * @param abortController - The abort controller
+ * @param addMessages - The add messages function
+ * @param set - The set function
+ */
+async function executeAnalysis({
+  resultId,
+  prompt,
+  model,
+  apiKey,
+  abortController,
+  addMessages,
+  set,
+}: {
+  resultId: string;
+  prompt: string;
+  model: LanguageModelV1;
+  apiKey: string;
+  abortController: AbortController;
+  addMessages: (messages: AiMessage[]) => void;
+  set: <T>(fn: (state: T) => T) => void;
+}) {
+  try {
+    await runAnalysis({
+      model,
+      apiKey,
+      prompt,
+      abortController,
+      onStepFinish: (
+        event: StepResult<ToolSet>,
+        toolCallMessages: ToolCallMessage[],
+      ) => {
+        addMessages(event.response.messages);
+        set(
+          makeResultsAppender({
+            resultId,
+            toolResults: event.toolResults,
+            toolCalls: event.toolCalls,
+            toolCallMessages,
+          }),
+        );
+      },
+      onStreamResult: (message, isCompleted) => {
+        set(
+          makeResultsAppender({
+            resultId,
+            analysis: message,
+            isCompleted,
+          }),
+        );
+      },
+    });
+  } catch (err) {
+    // TODO: since only Errors are stored in toolResults,
+    // we might get rid of toolResults in analysisResults, and add a new `ErrorResult` type
+    set(
+      makeResultsAppender({
+        resultId,
+        toolResults: [
+          {
+            toolName: 'answer',
+            toolCallId: createId(),
+            args: {},
+            result: {
+              success: false,
+              error: err instanceof Error ? err.message : String(err),
+            },
+          },
+        ],
+        toolCalls: [],
+      }),
+    );
+  }
+}
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   createModel,
@@ -73,7 +153,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         'Describe the data in the table and make a chart providing an overview.',
       isRunningAnalysis: false,
       messagesById: new Map(),
-      tableSchema: '',
 
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
@@ -83,6 +162,10 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         );
       },
 
+      /**
+       * Set the AI model
+       * @param model - The model to set
+       */
       setAiModel: (model: string) => {
         set((state) =>
           produce(state, (draft) => {
@@ -139,6 +222,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             });
           }),
         );
+
         get().ai.addMessages([
           {
             id: createId(),
@@ -148,54 +232,15 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         ]);
 
         try {
-          await runAnalysis({
+          await executeAnalysis({
+            resultId,
+            prompt: get().ai.analysisPrompt,
             model: createModel(get().project.config.ai.model),
             apiKey: getApiKey(),
-            tableSchema: get().ai.tableSchema,
-            prompt: get().ai.analysisPrompt,
-            abortSignal: abortController.signal,
-            onStepFinish: (
-              event: StepResult<ToolSet>,
-              toolCallMessages: ToolCallMessage[],
-            ) => {
-              get().ai.addMessages(event.response.messages);
-              set(
-                makeResultsAppender({
-                  resultId,
-                  toolResults: event.toolResults,
-                  toolCalls: event.toolCalls,
-                  toolCallMessages,
-                }),
-              );
-            },
-            onStreamResult: (message, isCompleted) => {
-              set(
-                makeResultsAppender({
-                  resultId,
-                  analysis: message,
-                  isCompleted,
-                }),
-              );
-            },
+            abortController,
+            addMessages: get().ai.addMessages,
+            set,
           });
-        } catch (err) {
-          set(
-            makeResultsAppender({
-              resultId,
-              toolResults: [
-                {
-                  toolName: 'answer',
-                  toolCallId: createId(),
-                  args: {},
-                  result: {
-                    success: false,
-                    error: err instanceof Error ? err.message : String(err),
-                  },
-                },
-              ],
-              toolCalls: [],
-            }),
-          );
         } finally {
           set((state) =>
             produce(state, (draft) => {

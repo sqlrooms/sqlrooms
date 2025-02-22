@@ -310,8 +310,8 @@ importers:
         specifier: ^1.0.7
         version: 1.0.7
       '@openassistant/core':
-        specifier: ^0.1.7
-        version: 0.1.7(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)
+        specifier: ^0.1.8
+        version: 0.1.8(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -2124,8 +2124,8 @@ packages:
   '@open-draft/until@2.1.0':
     resolution: {integrity: sha512-U69T3ItWHvLwGg5eJ0n3I62nWuE6ilHlmz7zM0npLBRvPRd7e6NYmg54vvRtP5mZG7kZqZCFVdsTWo7BPtBujg==}
 
-  '@openassistant/core@0.1.7':
-    resolution: {integrity: sha512-3v3D3bUce7a+6F4RnHEEoTKIwVa9Kqn2dI8AOVDz9BYmH4T+Krb9QHNBRUp7MhUwN6pdhV9+rTcpReHXncsavw==}
+  '@openassistant/core@0.1.8':
+    resolution: {integrity: sha512-+s9pwgbqTdFfA7a+lyQZ46YgfBu69lnWIc5eTUcpb8W153V0u6yBs+qImF46vLyp6T+W3zK5BT+eq28JqSZnRQ==}
     peerDependencies:
       react: '>=18.2'
 
@@ -10346,7 +10346,7 @@ snapshots:
 
   '@open-draft/until@2.1.0': {}
 
-  '@openassistant/core@0.1.7(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)':
+  '@openassistant/core@0.1.8(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)':
     dependencies:
       '@ai-sdk/deepseek': 0.1.11(zod@3.24.1)
       '@ai-sdk/google': 1.1.16(zod@3.24.1)

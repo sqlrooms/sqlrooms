@@ -1,11 +1,16 @@
 import type {LanguageModelV1} from '@ai-sdk/provider';
-import {arrowTableToJson, getDuckDb} from '@sqlrooms/duckdb';
+import {
+  arrowTableToJson,
+  getDuckDb,
+  getDuckTableSchemas,
+} from '@sqlrooms/duckdb';
 import {StepResult} from 'ai';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   CallbackFunctionProps,
   createAssistant,
   ToolCallMessage,
+  VercelToolSet,
 } from '@openassistant/core';
 
 import {ChartToolParameters, QueryToolParameters} from './schemas';
@@ -20,11 +25,10 @@ You are analyzing tables in DuckDB database in the context of a project.
 
 Instructions for analysis:
 - Follow DuckDB syntax
-- Use SQL queries to complete the user's request
+- Please always try to use SQL queries to answer users questions 
 - Break down complex problems into smaller steps
-- Validate your results at each step
 - Use "SUMMARIZE table_name"for quick overview of the table
-- Prefer SELECT queries and don't modify data
+- Please don't modify data
 
 When creating visualizations:
 - Follow VegaLite syntax
@@ -43,16 +47,6 @@ For your final answer:
 
 Please use the following schema for the tables:
 `;
-
-/**
- * Get the schema of the tables in the database
- * @returns The schema of the tables
- */
-async function getTablesSchema() {
-  const {conn} = await getDuckDb();
-  const result = await conn.query('DESCRIBE');
-  return JSON.stringify(arrowTableToJson(result));
-}
 
 /**
  * Get summary statistics for a SQL query result
@@ -91,14 +85,13 @@ export async function runAnalysis({
   model,
   apiKey,
   prompt,
-  abortSignal,
+  abortController,
   onStepFinish,
   onStreamResult,
   maxSteps = 100,
 }: {
   prompt: string;
-  tableSchema: string;
-  abortSignal?: AbortSignal;
+  abortController?: AbortController;
   apiKey: string;
   onStepFinish?: (
     event: StepResult<typeof TOOLS>,
@@ -108,8 +101,7 @@ export async function runAnalysis({
   maxSteps?: number;
   onStreamResult: (message: string, isCompleted: boolean) => void;
 }) {
-  // TODO: get tables schema from the project store when loading the data
-  const tablesSchema = await getTablesSchema();
+  const tablesSchema = await getDuckTableSchemas();
 
   const assistant = await createAssistant({
     name: 'sqlrooms-ai',
@@ -117,13 +109,12 @@ export async function runAnalysis({
     model: model.modelId, // TODO: no need to pass model, it will be handled by openassistant/core
     apiKey,
     version: 'v1',
-    instructions: `${SYSTEM_PROMPT}\n${tablesSchema}`,
-    // @ts-expect-error update the type in openassistant-core
-    functions: TOOLS,
+    instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
+    vercelFunctions: TOOLS,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
-    abortSignal,
+    ...(abortController ? {abortController} : {}),
   });
 
   const result = await assistant.processTextMessage({
@@ -153,7 +144,7 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
-const TOOLS = {
+const TOOLS: VercelToolSet = {
   query: {
     description: `A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm.
 Query results are returned as a json object "{success: boolean, data: object[], error?: string}"
@@ -215,6 +206,7 @@ Don't execute queries that modify data unless explicitly asked.`,
           name: 'query',
           result: {
             success: false,
+            description: 'Failed to execute the query.',
             error: getErrorMessage(error),
           },
         };

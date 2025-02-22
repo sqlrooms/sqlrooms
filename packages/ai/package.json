@@ -20,7 +20,7 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^1.0.7",
-    "@openassistant/core": "^0.1.7",
+    "@openassistant/core": "^0.1.8",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",

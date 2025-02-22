@@ -3,6 +3,7 @@ import {ToolCall} from './ToolCall';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import Markdown from 'react-markdown';
+import {ToolResult} from './ToolResult';
 
 interface AnalysisResultProps {
   result: AnalysisResultSchema;
@@ -78,6 +79,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
               />
             );
           })}
+      </div>
+      <div className="flex flex-col gap-5 px-4">
+        {result.toolResults.map((toolResult) => {
+          return (
+            <ToolResult key={toolResult.toolName} toolResult={toolResult} />
+          );
+        })}
       </div>
     </div>
   );
