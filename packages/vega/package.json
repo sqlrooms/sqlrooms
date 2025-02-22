@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/vega",
-  "version": "0.3.0",
+  "version": "0.4.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "react-vega": "^7.6.0",
     "vega": "^5.31.0",

@@ -63,7 +63,6 @@ const SqlQueryDataSourcesPanel: FC<{
         <Button
           variant="secondary"
           size="sm"
-          className="text-white"
           onClick={() => setIsOpen(true)}
           disabled={isReadOnly}
         >

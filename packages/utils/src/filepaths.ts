@@ -9,18 +9,19 @@ export function splitFilePath(filePath: string): {
   dir: string;
   name: string;
   ext: string;
+  filename: string;
 } {
   const pathParts = filePath.split('/');
   const file = pathParts.pop() || '';
 
   const dotIndex = file.lastIndexOf('.');
   if (dotIndex === -1 || dotIndex === 0)
-    return {dir: pathParts.join('/'), name: file, ext: ''};
+    return {dir: pathParts.join('/'), name: file, ext: '', filename: file};
 
   const name = file.substring(0, dotIndex);
   const ext = file.substring(dotIndex + 1);
 
-  return {dir: pathParts.join('/'), name, ext};
+  return {dir: pathParts.join('/'), name, ext, filename: `${name}.${ext}`};
 }
 
 /**

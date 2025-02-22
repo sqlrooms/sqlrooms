@@ -330,109 +330,111 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
         </div>
         <div className="flex-grow h-full bg-muted">
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={20}>
-              {tablesLoading ? (
-                <SpinnerPane h="100%" />
-              ) : tablesError ? (
-                <div className="p-4 text-red-500">
-                  Error loading tables: {tablesError.message}
-                </div>
-              ) : (
-                <TablesList
-                  schema="information_schema"
-                  tableNames={tables}
-                  selectedTable={selectedTable}
-                  onSelect={handleSelectTable}
-                />
-              )}
-            </ResizablePanel>
-            <ResizableHandle withHandle />
             <ResizablePanel defaultSize={showDocs ? 50 : 80}>
               <ResizablePanelGroup direction="vertical" className="h-full">
-                <ResizablePanel defaultSize={50}>
-                  <div className="flex flex-col h-full gap-2">
-                    <Tabs
-                      value={sqlEditorConfig.selectedQueryId}
-                      onValueChange={handleTabChange}
-                      className="flex flex-col flex-grow overflow-hidden"
-                    >
-                      <div className="flex items-center gap-2 border-b border-border">
-                        <Button
-                          size="sm"
-                          onClick={() => void handleRunQuery()}
-                          className="uppercase"
-                        >
-                          <PlayIcon className="w-4 h-4 mr-2" />
-                          Run
-                        </Button>
-                        <TabsList className="flex-1">
-                          {sqlEditorConfig.queries.map((q) => (
-                            <div key={q.id} className="relative">
-                              <TabsTrigger
-                                value={q.id}
-                                className="min-w-[60px] px-6 pr-8"
-                              >
-                                {q.name}
-                              </TabsTrigger>
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <div
-                                    className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
-                                    onClick={(e) => e.stopPropagation()}
-                                  >
-                                    <MoreVerticalIcon className="h-3 w-3" />
-                                  </div>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent>
-                                  <DropdownMenuItem
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleStartRename(q.id, q.name, e);
-                                    }}
-                                  >
-                                    Rename
-                                  </DropdownMenuItem>
-                                  {sqlEditorConfig.queries.length > 1 && (
+                <ResizablePanel defaultSize={50} className="flex flex-row">
+                  <ResizablePanelGroup direction="horizontal">
+                    <ResizablePanel defaultSize={20}>
+                      {tablesLoading ? (
+                        <SpinnerPane h="100%" />
+                      ) : tablesError ? (
+                        <div className="p-4 text-red-500">
+                          Error loading tables: {tablesError.message}
+                        </div>
+                      ) : (
+                        <TablesList
+                          schema="information_schema"
+                          tableNames={tables}
+                          selectedTable={selectedTable}
+                          onSelect={handleSelectTable}
+                        />
+                      )}
+                    </ResizablePanel>
+                    <ResizableHandle withHandle />
+                    <ResizablePanel defaultSize={80}>
+                      <Tabs
+                        value={sqlEditorConfig.selectedQueryId}
+                        onValueChange={handleTabChange}
+                        className="flex flex-col flex-grow overflow-hidden"
+                      >
+                        <div className="flex items-center gap-2 border-b border-border">
+                          <Button
+                            size="sm"
+                            onClick={() => void handleRunQuery()}
+                            className="uppercase"
+                          >
+                            <PlayIcon className="w-4 h-4 mr-2" />
+                            Run
+                          </Button>
+                          <TabsList className="flex-1">
+                            {sqlEditorConfig.queries.map((q) => (
+                              <div key={q.id} className="relative">
+                                <TabsTrigger
+                                  value={q.id}
+                                  className="min-w-[60px] px-6 pr-8"
+                                >
+                                  {q.name}
+                                </TabsTrigger>
+                                <DropdownMenu>
+                                  <DropdownMenuTrigger asChild>
+                                    <div
+                                      className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <MoreVerticalIcon className="h-3 w-3" />
+                                    </div>
+                                  </DropdownMenuTrigger>
+                                  <DropdownMenuContent>
                                     <DropdownMenuItem
                                       onClick={(e) => {
                                         e.stopPropagation();
-                                        handleDeleteQuery(q.id, e);
+                                        handleStartRename(q.id, q.name, e);
                                       }}
-                                      className="text-red-500"
                                     >
-                                      Delete
+                                      Rename
                                     </DropdownMenuItem>
-                                  )}
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </div>
-                          ))}
-                        </TabsList>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={handleNewQuery}
-                          className="ml-2"
-                        >
-                          <PlusIcon className="h-4 w-4" />
-                        </Button>
-                      </div>
-                      {sqlEditorConfig.queries.map((q) => (
-                        <TabsContent
-                          key={q.id}
-                          value={q.id}
-                          className="flex-grow data-[state=active]:flex-grow"
-                        >
-                          <Textarea
-                            id={q.id}
-                            value={q.query}
-                            onChange={handleUpdateQuery}
-                            className="h-full font-mono text-sm resize-none bg-muted"
-                          />
-                        </TabsContent>
-                      ))}
-                    </Tabs>
-                  </div>
+                                    {sqlEditorConfig.queries.length > 1 && (
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteQuery(q.id, e);
+                                        }}
+                                        className="text-red-500"
+                                      >
+                                        Delete
+                                      </DropdownMenuItem>
+                                    )}
+                                  </DropdownMenuContent>
+                                </DropdownMenu>
+                              </div>
+                            ))}
+                          </TabsList>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            onClick={handleNewQuery}
+                            className="ml-2"
+                          >
+                            <PlusIcon className="h-4 w-4" />
+                          </Button>
+                        </div>
+                        {sqlEditorConfig.queries.map((q) => (
+                          <TabsContent
+                            key={q.id}
+                            value={q.id}
+                            className="flex-grow data-[state=active]:flex-grow"
+                          >
+                            <Textarea
+                              id={q.id}
+                              value={q.query}
+                              onChange={handleUpdateQuery}
+                              className="h-full font-mono text-sm resize-none bg-muted"
+                            />
+                          </TabsContent>
+                        ))}
+                      </Tabs>
+                    </ResizablePanel>
+                  </ResizablePanelGroup>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
                 <ResizablePanel defaultSize={50}>

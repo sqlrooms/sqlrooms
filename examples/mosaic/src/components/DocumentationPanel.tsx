@@ -38,7 +38,7 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
           <iframe src={pageUrl} className="flex-1 w-full h-full border-none" />
         </div>
         {!isLoaded && (
-          <div className="absolute top-0 w-full h-full bg-gray-700">
+          <div className="absolute top-0 w-full h-full">
             <SkeletonPane className="px-4" n={6} />
           </div>
         )}

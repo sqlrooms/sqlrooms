@@ -1,14 +1,14 @@
 import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {ThemeProvider} from '@sqlrooms/ui';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import {AppShell} from './app';
 import './index.css';
 import {projectStore} from './store';
-import {ThemeProvider} from './components/ThemeProvider';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
+    <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ui-theme">
       <ProjectBuilderProvider projectStore={projectStore}>
         <AppShell />
       </ProjectBuilderProvider>

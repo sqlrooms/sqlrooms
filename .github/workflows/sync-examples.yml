@@ -6,6 +6,7 @@ on:
     paths:
       - 'examples/**'
       - '.github/workflows/sync-examples.yml'
+      - 'lerna.json'
 
 jobs:
   sync:
@@ -52,7 +53,7 @@ jobs:
           cp -r source/examples/* target/
 
           # Copy examples documentation as README.md
-          cp source/docs/examples/index.md target/README.md
+          cp source/docs/examples.md target/README.md
           # Remove only the frontmatter from README
           sed -i.bak '1{/---/{:a N;/\n---/!ba};d}' target/README.md
           rm target/README.md.bak

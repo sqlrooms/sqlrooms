@@ -20,14 +20,14 @@ export const ToolResult: React.FC<ToolResultProps> = ({toolResult}) => {
   return (
     <div
       className={cn(
-        'border-2 relative bg-gray-900 px-5 py-6 rounded-md text-gray-300 text-xs',
+        'border-2 relative bg-gray-100 dark:bg-gray-900 px-5 py-6 rounded-md text-gray-700 dark:text-gray-300 text-xs',
         isSuccess ? 'border-green-500' : 'border-red-500',
       )}
     >
       <Badge
         variant="secondary"
         className={cn(
-          'text-xs absolute top-[-12px] left-2 text-gray-100 flex items-center gap-1 border',
+          'text-xs absolute top-[-12px] left-2 dark:text-gray-100 text-gray-700 flex items-center gap-1 border',
           isSuccess ? 'border-green-500' : 'border-red-500',
         )}
       >

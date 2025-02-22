@@ -135,14 +135,14 @@ export function ToolCall({toolCall, customMessage}: ToolCallProps) {
     <div
       key={toolCallId}
       className={cn(
-        'border-2 relative bg-gray-900 px-5 py-6 rounded-md text-gray-300 text-xs',
+        'border-2 relative px-5 py-6 rounded-md dark:bg-gray-900 dark:text-gray-300 bg-gray-100 text-gray-700 text-xs',
         toolName === 'chart' ? 'border-blue-500' : 'border-green-500',
       )}
     >
       <Badge
         variant="secondary"
         className={cn(
-          'text-xs absolute top-[-12px] left-2 text-gray-100',
+          'text-xs absolute top-[-12px] left-2 dark:text-gray-100 text-gray-700',
           toolName === 'chart' ? 'bg-blue-500' : 'bg-green-500',
         )}
       >
