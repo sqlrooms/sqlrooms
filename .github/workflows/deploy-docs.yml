@@ -36,30 +36,32 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup Yarn
-        run: npm install -g yarn
+      - name: Install pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: 10.4.1
 
-      - name: Setup Yarn cache
+      - name: Setup pnpm cache
         uses: actions/cache@v3
         with:
           path: |
-            .yarn/cache
+            ~/.pnpm-store
             **/node_modules
-          key: ${{ runner.os }}-yarn-${{ hashFiles('**/yarn.lock') }}
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
-            ${{ runner.os }}-yarn-
+            ${{ runner.os }}-pnpm-
 
       - name: Setup Pages
         uses: actions/configure-pages@v4
 
       - name: Install dependencies
-        run: yarn install
+        run: pnpm install
 
       - name: Build packages
-        run: yarn build
+        run: pnpm build
 
       - name: Build docs
-        run: yarn docs:build
+        run: pnpm docs:build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
