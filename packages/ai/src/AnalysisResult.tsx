@@ -1,12 +1,25 @@
 import {AnalysisResultSchema} from './schemas';
 import {ToolCall} from './ToolCall';
-import {ToolResult} from './ToolResult';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
+import Markdown from 'react-markdown';
+import {ToolResult} from './ToolResult';
 
 interface AnalysisResultProps {
   result: AnalysisResultSchema;
 }
+
+/**
+ * Stringify the result of the analysis.
+ *
+ * @param result - The result of the analysis
+ * @returns The stringified result
+ */
+const stringifyResult = (result: AnalysisResultSchema) => {
+  // remove toolCallMessages from the result
+  const {toolCallMessages, ...rest} = result;
+  return JSON.stringify(rest);
+};
 
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
   return (
@@ -25,26 +38,54 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
             align="end"
             side="right"
           >
-            <pre className="text-xs">{JSON.stringify(result, null, 2)}</pre>
+            <pre className="text-xs">{stringifyResult(result)}</pre>
           </PopoverContent>
         </Popover>
       </div>
       <div className="flex flex-col gap-5 px-4">
-        {result.toolResults
-          .filter(
-            (toolResult) =>
-              toolResult.toolName !== 'answer' || !toolResult.result.success,
-          )
-          .map((toolResult) => (
-            <ToolResult key={toolResult.toolCallId} toolResult={toolResult} />
-          ))}
+        {result.toolCalls
+          .slice(0, -1) // Exclude the last tool call, which is the answer
+          .map((toolCall) => {
+            const customMessage = result.toolCallMessages.find(
+              (message) => message.toolCallId === toolCall.toolCallId,
+            )?.element;
+            return (
+              <ToolCall
+                key={toolCall.toolCallId}
+                toolCall={toolCall}
+                customMessage={customMessage}
+              />
+            );
+          })}
       </div>
       <div className="flex flex-col gap-5 px-4">
-        {result.toolCalls
-          .filter((toolCall) => toolCall.toolName === 'answer')
-          .map((toolCall) => (
-            <ToolCall key={toolCall.toolCallId} toolCall={toolCall} />
-          ))}
+        <div className="text-xs overflow-y-auto p-4">
+          <Markdown className="whitespace-pre-wrap break-words">
+            {result.analysis}
+          </Markdown>
+        </div>
+      </div>
+      <div className="flex flex-col gap-5 px-4">
+        {result.isCompleted &&
+          result.toolCalls.slice(-1).map((toolCall) => {
+            const customMessage = result.toolCallMessages.find(
+              (message) => message.toolCallId === toolCall.toolCallId,
+            )?.element;
+            return (
+              <ToolCall
+                key={toolCall.toolCallId}
+                toolCall={toolCall}
+                customMessage={customMessage}
+              />
+            );
+          })}
+      </div>
+      <div className="flex flex-col gap-5 px-4">
+        {result.toolResults.map((toolResult) => {
+          return (
+            <ToolResult key={toolResult.toolName} toolResult={toolResult} />
+          );
+        })}
       </div>
     </div>
   );
