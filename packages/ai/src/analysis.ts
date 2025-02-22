@@ -24,7 +24,12 @@ const SYSTEM_PROMPT = `
 You are analyzing tables in DuckDB database in the context of a project.
 
 Instructions for analysis:
-- Follow DuckDB syntax
+- Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
+- Some key DuckDB-specific functions to use:
+  * regexp_matches() for regex (not regexp_like)
+  * strftime() for date formatting (not to_char)
+  * list_aggregate() for array operations
+  * unnest() for array expansion
 - Please always try to use SQL queries to answer users questions 
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
