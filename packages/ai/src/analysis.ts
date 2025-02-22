@@ -95,14 +95,14 @@ export async function runAnalysis({
   onStreamResult,
   maxSteps = 100,
 }: {
+  model: string;
+  apiKey: string;
   prompt: string;
   abortController?: AbortController;
-  apiKey: string;
   onStepFinish?: (
     event: StepResult<typeof TOOLS>,
     toolCallMessages: ToolCallMessage[],
   ) => Promise<void> | void;
-  model: LanguageModelV1;
   maxSteps?: number;
   onStreamResult: (message: string, isCompleted: boolean) => void;
 }) {
@@ -111,7 +111,7 @@ export async function runAnalysis({
   const assistant = await createAssistant({
     name: 'sqlrooms-ai',
     modelProvider: 'openai',
-    model: model.modelId, // TODO: no need to pass model, it will be handled by openassistant/core
+    model,
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,

@@ -2,16 +2,25 @@ import {CustomFunctionCall} from '@openassistant/core';
 import {DataTablePaginated} from '@sqlrooms/data-table';
 import {useArrowDataTable} from '@sqlrooms/data-table';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
+  Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@sqlrooms/ui';
 import {Table as ArrowTable} from 'apache-arrow';
-import {TableIcon} from 'lucide-react';
+import {Expand, TableIcon} from 'lucide-react';
 import {useEffect, useState} from 'react';
 
-export function QueryResult({arrowTable}: {arrowTable: ArrowTable}) {
+/**
+ * A data table which is created using arrowTable.
+ *
+ * @param arrowTable The arrow table e.g. from a query result
+ * @returns A paginated data table component
+ */
+function QueryResultTable({arrowTable}: {arrowTable: ArrowTable}) {
   const count = arrowTable.numRows;
 
   const [pagination, setPagination] = useState({
@@ -48,24 +57,64 @@ export function QueryResult({arrowTable}: {arrowTable: ArrowTable}) {
   );
 }
 
+function QueryResultTableModal({
+  title,
+  arrowTable,
+}: {
+  title: string;
+  arrowTable: ArrowTable;
+}) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const handleClick = () => {
+    setIsModalOpen(true);
+  };
+
+  const onClose = () => {
+    setIsModalOpen(false);
+  };
+
+  return (
+    <>
+      <div
+        className="flex gap-2 flex-col items-center text-muted-foreground"
+        onClick={handleClick}
+      >
+        <TableIcon className="h-4 w-4" />
+        <h3 className="ml-1 text-xs uppercase">Query Result</h3>
+        <Expand className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+      </div>
+
+      <Dialog
+        open={isModalOpen}
+        onOpenChange={(isOpen: boolean) => !isOpen && onClose()}
+      >
+        <DialogContent
+          className="h-[80vh] max-w-[75vw]"
+          aria-describedby="data-table-modal"
+        >
+          <DialogHeader>
+            <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
+            <DialogDescription className="hidden">{title}</DialogDescription>
+          </DialogHeader>
+          <div className="flex-1 bg-muted overflow-hidden">
+            {isModalOpen && <QueryResultTable arrowTable={arrowTable} />}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={onClose}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
 export function queryMessage(props: CustomFunctionCall) {
   const {arrowTable} = props.output?.data as {arrowTable: ArrowTable};
   if (!arrowTable) {
     return null;
   }
-  return (
-    <Accordion type="multiple" defaultValue={[]}>
-      <AccordionItem value="tables">
-        <AccordionTrigger className="px-0 gap-1">
-          <div className="flex items-center text-muted-foreground">
-            <TableIcon className="h-4 w-4" />
-            <h3 className="ml-1 text-xs uppercase">Query Result</h3>
-          </div>
-        </AccordionTrigger>
-        <AccordionContent>
-          <QueryResult arrowTable={arrowTable} />
-        </AccordionContent>
-      </AccordionItem>
-    </Accordion>
-  );
+  return <QueryResultTableModal title="Query Result" arrowTable={arrowTable} />;
 }

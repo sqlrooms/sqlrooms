@@ -81,7 +81,7 @@ async function executeAnalysis({
 }: {
   resultId: string;
   prompt: string;
-  model: LanguageModelV1;
+  model: string;
   apiKey: string;
   abortController: AbortController;
   addMessages: (messages: AiMessage[]) => void;
@@ -141,11 +141,9 @@ async function executeAnalysis({
 }
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
-  createModel,
   getApiKey,
   initialAnalysisPrompt = 'Describe the data in the tables and make a chart providing an overview of the most important features.',
 }: {
-  createModel: (model: string) => LanguageModelV1;
   getApiKey: () => string;
   initialAnalysisPrompt?: string;
 }): StateCreator<AiSliceState> {
@@ -236,7 +234,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           await executeAnalysis({
             resultId,
             prompt: get().ai.analysisPrompt,
-            model: createModel(get().project.config.ai.model),
+            model: get().project.config.ai.model,
             apiKey: getApiKey(),
             abortController,
             addMessages: get().ai.addMessages,
