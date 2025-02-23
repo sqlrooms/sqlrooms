@@ -53,12 +53,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
         title: 'Demo App Project',
         layout: {
           type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: ProjectPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
+          nodes: MAIN_VIEW,
         },
         dataSources: [
           {

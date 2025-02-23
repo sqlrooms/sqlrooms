@@ -39,6 +39,7 @@ type CosmosGraphProps = {
   pointColors: Float32Array;
   linkIndexes?: Float32Array;
   linkColors?: Float32Array;
+  getPointTooltip?: (index: number) => React.ReactNode;
 };
 
 export const CosmosGraph: FC<CosmosGraphProps> = ({
@@ -48,6 +49,7 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   pointColors,
   linkIndexes,
   linkColors,
+  getPointTooltip,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const graphRef = useRef<Graph | null>(null);
@@ -158,21 +160,24 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="absolute w-full h-full" />
-      <div
-        className={cn(
-          'absolute bg-white/90 dark:bg-gray-800/90 rounded-md shadow-lg p-2',
-          'text-xs flex gap-2 items-center pointer-events-none transition-opacity duration-150',
-          hoveredPoint ? 'opacity-100' : 'opacity-0',
-        )}
-        style={{
-          transform: `translate(${hoveredPoint?.position?.[0] ?? 0}px, ${
-            hoveredPoint?.position?.[1] ?? 0
-          }px) translate(-50%, 5px)`,
-          visibility: hoveredPoint ? 'visible' : 'hidden',
-        }}
-      >
-        <div>Node {hoveredPoint?.index ?? ''}</div>
-      </div>
+      {getPointTooltip ? (
+        <div
+          className={cn(
+            'absolute z-50 max-w-xs',
+            'bg-white/90 dark:bg-gray-800/90 rounded-md shadow-lg p-2',
+            'text-xs flex gap-2 items-center pointer-events-none transition-opacity duration-150',
+            hoveredPoint ? 'opacity-100' : 'opacity-0',
+          )}
+          style={{
+            transform: `translate(${hoveredPoint?.position?.[0] ?? 0}px, ${
+              hoveredPoint?.position?.[1] ?? 0
+            }px) translate(-50%, 5px)`,
+            visibility: hoveredPoint ? 'visible' : 'hidden',
+          }}
+        >
+          <div>{getPointTooltip?.(hoveredPoint?.index ?? 0)}</div>
+        </div>
+      ) : null}
       <div className="absolute top-1 left-1 flex gap-2">
         {!config.disableSimulation && (
           <>

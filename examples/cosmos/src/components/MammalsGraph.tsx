@@ -9,7 +9,7 @@ export const MammalsGraph: FC = () => {
     Boolean(state.project.tables.find((t) => t.tableName === 'mammals')),
   );
 
-  const {data: queryResult} = useDuckDbQuery<{source: number; target: number}>({
+  const {data: queryResult} = useDuckDbQuery<{source: string; target: string}>({
     query: 'SELECT source, target FROM mammals',
     enabled: isTableReady,
   });
@@ -18,7 +18,7 @@ export const MammalsGraph: FC = () => {
     if (!queryResult) return null;
 
     // Create arrays for nodes and links
-    const uniqueNodes = new Set<number>();
+    const uniqueNodes = new Set<string>();
 
     // Process results to build graph data
     for (let i = 0; i < queryResult.length; i++) {
@@ -64,6 +64,7 @@ export const MammalsGraph: FC = () => {
       pointColors,
       linkIndexes,
       linkColors,
+      nodes: Array.from(uniqueNodes),
     };
   }, [queryResult]);
 
@@ -96,6 +97,7 @@ export const MammalsGraph: FC = () => {
       pointColors={graphData.pointColors}
       linkIndexes={graphData.linkIndexes}
       linkColors={graphData.linkColors}
+      getPointTooltip={(index) => String(graphData.nodes[index])}
     />
   ) : null;
 };

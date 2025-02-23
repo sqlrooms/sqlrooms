@@ -1,5 +1,5 @@
-import {useState, useEffect} from 'react';
 import * as arrow from 'apache-arrow';
+import {useEffect, useState} from 'react';
 import {getDuckDb} from './useDuckDb';
 
 /**
