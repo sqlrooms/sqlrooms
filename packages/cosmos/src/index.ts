@@ -31,6 +31,7 @@
 // Components
 export {CosmosGraph} from './CosmosGraph';
 export {CosmosGraphControls} from './CosmosGraphControls';
+export {CosmosSimulationControls} from './CosmosSimulationControls';
 export type {CosmosGraphProps} from './CosmosGraph';
 
 // Context and hooks
@@ -41,3 +42,9 @@ export type {HoverState} from './hooks/useHoverState';
 // Utilities
 export type {WithClientCoordinates} from './utils/coordinates';
 export {hasClientCoordinates} from './utils/coordinates';
+
+// Configuration
+export {
+  CosmosSimulationConfigSchema,
+  DEFAULT_COSMOS_CONFIG_SIMULATION,
+} from './config';
