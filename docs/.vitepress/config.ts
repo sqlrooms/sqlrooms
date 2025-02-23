@@ -54,25 +54,6 @@ export default defineConfig({
         ],
       },
       {
-        text: 'Reference',
-        items: [
-          {
-            text: 'Core Packages',
-            link: '/packages#core-packages',
-            items: apiSidebarConfig.filter((item) =>
-              CORE_PACKAGES.includes(item.text),
-            ),
-          },
-          {
-            text: 'Feature Packages',
-            link: '/packages#feature-packages',
-            items: apiSidebarConfig.filter(
-              (item) => !CORE_PACKAGES.includes(item.text),
-            ),
-          },
-        ],
-      },
-      {
         text: 'Examples',
         items: [
           {
@@ -111,6 +92,26 @@ export default defineConfig({
                 link: '/case-studies#cosmograph',
               },
             ],
+          },
+        ],
+      },
+
+      {
+        text: 'Reference',
+        items: [
+          {
+            text: 'Core Packages',
+            link: '/packages#core-packages',
+            items: apiSidebarConfig.filter((item) =>
+              CORE_PACKAGES.includes(item.text),
+            ),
+          },
+          {
+            text: 'Feature Packages',
+            link: '/packages#feature-packages',
+            items: apiSidebarConfig.filter(
+              (item) => !CORE_PACKAGES.includes(item.text),
+            ),
           },
         ],
       },

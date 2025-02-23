@@ -54,6 +54,10 @@ A feature-rich S3-compatible storage browser that provides an intuitive file bro
 
 A powerful SQL query editor that enhances the development experience with syntax highlighting and intelligent auto-completion. It maintains a query history for easy reference and provides integrated result visualization capabilities.
 
+### [@sqlrooms/cosmos](./api/cosmos/index.md)
+
+A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks. See [Cosmos integration example](/examples#cosmos-graph-visualization).
+
 ### [@sqlrooms/utils](./api/utils/index.md)
 
 A utility package providing shared helper functions for color manipulation, data formatting, random generation, and string operations used across the framework.

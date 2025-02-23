@@ -46,7 +46,7 @@ An advanced example showing how to build an AI-powered analytics application wit
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
-<img src="https://github.com/user-attachments/assets/f4365bfd-612d-40a4-bfae-99da886c0fb7" alt="SQLRooms Cosmos example showing graph visualization" width=450>
+<img src="https://github.com/user-attachments/assets/4061fc7e-797f-4eda-8d2d-f988f9dd3ab0" alt="SQLRooms Cosmos example showing graph visualization" width=450>
 
 An example showcasing integration with the powerful [Cosmos library](https://github.com/cosmograph-org/cosmos) for
 high-performance graph and embedding visualizations powered by GPU acceleration. Features include:
