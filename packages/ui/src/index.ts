@@ -37,3 +37,4 @@ export * from './hooks/useRelativeCoordinates';
 export * from './lib/utils';
 export * from './tailwind-preset';
 export * from './theme/theme-provider';
+export * from './components/slider';
