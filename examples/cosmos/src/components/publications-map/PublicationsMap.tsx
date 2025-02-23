@@ -63,10 +63,7 @@ export const PublicationsMap: FC = () => {
           );
         }}
       >
-        <CosmosGraphControls
-          disableSimulation={true}
-          className="absolute top-0 left-0"
-        />
+        <CosmosGraphControls className="absolute top-0 left-0" />
       </CosmosGraph>
       <Legend
         uniqueFields={uniqueFields}
