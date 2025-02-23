@@ -1,6 +1,6 @@
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {useDuckDbQuery} from '@sqlrooms/duckdb';
-import {FC, useMemo} from 'react';
+import {FC, useMemo, useState} from 'react';
 import {useProjectStore} from '../store';
 import {CosmosGraph} from './CosmosGraph';
 
@@ -68,6 +68,10 @@ export const MammalsGraph: FC = () => {
     };
   }, [queryResult]);
 
+  const [focusedPointIndex, setFocusedPointIndex] = useState<
+    number | undefined
+  >(undefined);
+
   const config = useMemo<GraphConfigInterface>(
     () => ({
       backgroundColor: 'transparent',
@@ -83,8 +87,17 @@ export const MammalsGraph: FC = () => {
       simulationRepulsion: 0.4,
       pointSizeScale: 1,
       scalePointsOnZoom: true,
-      onPointMouseOver: (point) => {
-        console.log(point);
+      renderHoveredPointRing: true,
+      hoveredPointRingColor: '#a33aef',
+      renderFocusedPointRing: true,
+      focusedPointRingColor: '#ee55ff',
+      onClick: (index) => {
+        console.log(index);
+        if (index === undefined) {
+          setFocusedPointIndex(undefined);
+        } else {
+          setFocusedPointIndex(index);
+        }
       },
     }),
     [],
@@ -93,6 +106,7 @@ export const MammalsGraph: FC = () => {
   return graphData ? (
     <CosmosGraph
       config={config}
+      focusedPointIndex={focusedPointIndex}
       pointPositions={graphData.pointPositions}
       pointSizes={graphData.pointSizes}
       pointColors={graphData.pointColors}

@@ -39,6 +39,7 @@ type CosmosGraphProps = {
   pointColors: Float32Array;
   linkIndexes?: Float32Array;
   linkColors?: Float32Array;
+  focusedPointIndex?: number | undefined;
   getPointTooltip?: (index: number) => React.ReactNode;
 };
 
@@ -49,6 +50,7 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   pointColors,
   linkIndexes,
   linkColors,
+  focusedPointIndex,
   getPointTooltip,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -60,46 +62,50 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   } | null>(null);
 
   const calcRelativeCoordinates = useRelativeCoordinates(containerRef);
-  const configWithCallbacks = useMemo(
-    () =>
-      ({
-        ...config,
-        onSimulationStart: () => {
-          setIsSimulationRunning(true);
-          config.onSimulationStart?.();
-        },
-        onSimulationPause: () => {
-          setIsSimulationRunning(false);
-          config.onSimulationPause?.();
-        },
-        onSimulationEnd: () => {
-          setIsSimulationRunning(false);
-          config.onSimulationEnd?.();
-        },
-        onSimulationRestart: () => {
-          setIsSimulationRunning(true);
-          config.onSimulationRestart?.();
-        },
-        onPointMouseOver: (index, _pointPosition, event) => {
-          if (hasClientCoordinates(event)) {
-            setHoveredPoint({
-              index,
-              position: calcRelativeCoordinates(event.clientX, event.clientY),
-            });
-          }
-        },
-        onPointMouseOut: () => {
-          setHoveredPoint(null);
-        },
-        onZoomStart: () => {
-          setHoveredPoint(null);
-        },
-        onDragStart: () => {
-          setHoveredPoint(null);
-        },
-      }) satisfies GraphConfigInterface,
-    [config, calcRelativeCoordinates],
-  );
+  const configWithCallbacks = useMemo(() => {
+    return {
+      ...config,
+      onSimulationStart: () => {
+        setIsSimulationRunning(true);
+        config.onSimulationStart?.();
+      },
+      onSimulationPause: () => {
+        setIsSimulationRunning(false);
+        config.onSimulationPause?.();
+      },
+      onSimulationEnd: () => {
+        setIsSimulationRunning(false);
+        config.onSimulationEnd?.();
+      },
+      onSimulationRestart: () => {
+        setIsSimulationRunning(true);
+        config.onSimulationRestart?.();
+      },
+      onPointMouseOver: (index, _pointPosition, event) => {
+        if (hasClientCoordinates(event)) {
+          setHoveredPoint({
+            index,
+            position: calcRelativeCoordinates(event.clientX, event.clientY),
+          });
+        }
+      },
+      onPointMouseOut: () => {
+        setHoveredPoint(null);
+      },
+      onZoomStart: () => {
+        setHoveredPoint(null);
+      },
+      onDragStart: () => {
+        setHoveredPoint(null);
+      },
+    } satisfies GraphConfigInterface;
+  }, [config, calcRelativeCoordinates]);
+
+  useEffect(() => {
+    if (!graphRef.current) return;
+    console.log({focusedPointIndex});
+    graphRef.current.setFocusedPointByIndex(focusedPointIndex);
+  }, [focusedPointIndex]);
 
   useEffect(() => {
     if (!containerRef.current) return;

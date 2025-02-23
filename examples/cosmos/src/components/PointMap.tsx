@@ -1,10 +1,10 @@
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {useDuckDbQuery} from '@sqlrooms/duckdb';
-import {FC, useMemo} from 'react';
+import {FC, useMemo, useState} from 'react';
 import {useProjectStore} from '../store';
 import {CosmosGraph} from './CosmosGraph';
 import {z} from 'zod';
-import {scaleOrdinal} from 'd3-scale';
+import {scaleOrdinal, scaleSqrt} from 'd3-scale';
 import {schemeTableau10} from 'd3-scale-chromatic';
 
 export const PointMap: FC = () => {
@@ -29,6 +29,22 @@ export const PointMap: FC = () => {
           pub_date AS publishedOn,
           n_cits AS numCitations,
           main_field AS mainField
+      `,
+      enabled: isTableReady,
+    },
+  );
+
+  const {data: citationStats} = useDuckDbQuery(
+    z.object({
+      minCitations: z.coerce.number(),
+      maxCitations: z.coerce.number(),
+    }),
+    {
+      query: `
+        FROM publications
+        SELECT 
+          MIN(n_cits) as minCitations,
+          MAX(n_cits) as maxCitations
       `,
       enabled: isTableReady,
     },
@@ -61,8 +77,17 @@ export const PointMap: FC = () => {
     ).sort();
   }, [queryResult]);
 
+  const sizeScale = useMemo(() => {
+    if (!citationStats) return null;
+    const stats = citationStats.getRow(0);
+    return scaleSqrt()
+      .domain([stats.minCitations, stats.maxCitations])
+      .range([1, 25]);
+  }, [citationStats]);
+
   const graphData = useMemo(() => {
-    if (!queryResult || !colorScale) return null;
+    if (!queryResult || !colorScale || !citationStats || !sizeScale)
+      return null;
 
     const pointPositions = new Float32Array(queryResult.length * 2);
     const pointSizes = new Float32Array(queryResult.length);
@@ -72,7 +97,7 @@ export const PointMap: FC = () => {
       const point = queryResult.getRow(i);
       pointPositions[i * 2] = point.x;
       pointPositions[i * 2 + 1] = point.y;
-      pointSizes[i] = 1;
+      pointSizes[i] = sizeScale(point.numCitations);
 
       // Convert hex color to RGB components
       const color = colorScale(point.mainField);
@@ -91,7 +116,9 @@ export const PointMap: FC = () => {
       pointSizes,
       pointColors,
     };
-  }, [queryResult, colorScale]);
+  }, [queryResult, colorScale, citationStats, sizeScale]);
+
+  const [focusedPointIndex, setFocusedPointIndex] = useState<number>();
 
   const config = useMemo<GraphConfigInterface>(
     () => ({
@@ -99,9 +126,20 @@ export const PointMap: FC = () => {
       fitViewOnInit: true,
       enableDrag: false,
       disableSimulation: true,
-      pointSizeScale: 5,
-      scalePointsOnZoom: true,
+      pointSizeScale: 1,
+      scalePointsOnZoom: false,
       hoveredPointCursor: 'pointer',
+      renderHoveredPointRing: true,
+      hoveredPointRingColor: '#a33aef',
+      renderFocusedPointRing: true,
+      focusedPointRingColor: '#ee55ff',
+      onClick: (index) => {
+        if (index === undefined) {
+          setFocusedPointIndex(undefined);
+        } else {
+          setFocusedPointIndex(index);
+        }
+      },
     }),
     [],
   );
@@ -110,6 +148,7 @@ export const PointMap: FC = () => {
     <div className="relative w-full h-full">
       <CosmosGraph
         config={config}
+        focusedPointIndex={focusedPointIndex}
         pointPositions={graphData.pointPositions}
         pointSizes={graphData.pointSizes}
         pointColors={graphData.pointColors}
@@ -118,6 +157,7 @@ export const PointMap: FC = () => {
           const row = queryResult.getRow(index);
           const fieldColor = colorScale(row.mainField);
           return (
+            // Tooltip
             <div className="flex flex-col gap-1 text-xs">
               <div className="text-xs font-medium text-gray-100 mb-1.5">
                 {row.title}
@@ -133,12 +173,14 @@ export const PointMap: FC = () => {
               <div className="text-gray-400">
                 Published: {row.publishedOn.getFullYear()}
               </div>
-              <div className="text-gray-400">Citations: {row.numCitations}</div>
+              <div className="text-gray-400">
+                Citations: {row.numCitations.toLocaleString()}
+              </div>
             </div>
           );
         }}
       />
-      {/* Legend */}
+      {/* Color Legend */}
       <div className="absolute top-4 right-4 bg-gray-900/80 rounded-lg p-3 backdrop-blur-sm">
         <div className="text-xs font-medium text-gray-300 mb-2">Fields</div>
         <div className="flex flex-col gap-1.5">
@@ -152,6 +194,39 @@ export const PointMap: FC = () => {
             </div>
           ))}
         </div>
+        {/* Size Legend */}
+        {citationStats && sizeScale && (
+          <>
+            <div className="text-xs font-medium text-gray-300 mb-2 mt-4">
+              Citations
+            </div>
+            <div className="flex flex-col gap-1.5">
+              {sizeScale.ticks(4).map((citations: number) => (
+                <div
+                  key={citations}
+                  className="flex items-center gap-1.5 text-xs"
+                >
+                  <span
+                    className="relative flex items-center justify-center"
+                    style={{width: '20px', height: '20px'}}
+                  >
+                    <span
+                      className="absolute bg-white rounded-full bg-opacity-50"
+                      style={{
+                        width: `${sizeScale(citations)}px`,
+                        height: `${sizeScale(citations)}px`,
+                        opacity: 0.8,
+                      }}
+                    />
+                  </span>
+                  <span className="text-gray-400">
+                    {citations.toLocaleString()} citations
+                  </span>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
       </div>
     </div>
   ) : null;
