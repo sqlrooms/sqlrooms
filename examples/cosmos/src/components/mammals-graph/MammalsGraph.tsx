@@ -1,6 +1,11 @@
 import {FC, useMemo, useState} from 'react';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
-import {CosmosGraph, CosmosGraphControls} from '@sqlrooms/cosmos';
+import {
+  CosmosGraph,
+  CosmosGraphControls,
+  CosmosSimulationControls,
+  DEFAULT_COSMOS_CONFIG_SIMULATION,
+} from '@sqlrooms/cosmos';
 import {useMammalsData} from './hooks/useMammalsData';
 import {DownloadButton} from './components/DownloadButton';
 
@@ -17,10 +22,7 @@ export const MammalsGraph: FC = () => {
       linkArrows: false,
       fitViewOnInit: true,
       fitViewDelay: 5000,
-      simulationGravity: 0.1,
-      simulationLinkDistance: 1,
-      simulationLinkSpring: 0.3,
-      simulationRepulsion: 0.4,
+      ...DEFAULT_COSMOS_CONFIG_SIMULATION,
       pointSizeScale: 1,
       scalePointsOnZoom: true,
       renderHoveredPointRing: true,
@@ -53,6 +55,7 @@ export const MammalsGraph: FC = () => {
       <CosmosGraphControls>
         <DownloadButton nodes={graphData.nodes} />
       </CosmosGraphControls>
+      <CosmosSimulationControls />
     </CosmosGraph>
   ) : null;
 };
