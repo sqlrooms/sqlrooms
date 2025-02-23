@@ -1,7 +1,6 @@
-import {getDuckDb} from '@sqlrooms/duckdb';
+import {useDuckDbQuery} from '@sqlrooms/duckdb';
 import {useProjectStore} from '../store';
 import {CosmosGraph} from './CosmosGraph';
-import {useQuery} from '@tanstack/react-query';
 import {FC, useMemo} from 'react';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 
@@ -10,34 +9,35 @@ export const PointMap: FC = () => {
     Boolean(state.project.tables.find((t) => t.tableName === 'publications')),
   );
 
-  const {data} = useQuery({
-    queryKey: ['publications'],
-    queryFn: async () => {
-      const duckDb = await getDuckDb();
-      const result = await duckDb.conn.query('SELECT x,y FROM publications');
-      const pointPositions = new Float32Array(result.numRows * 2);
-      const pointSizes = new Float32Array(result.numRows);
-      const pointColors = new Float32Array(result.numRows * 4);
-      for (let i = 0; i < result.numRows; i++) {
-        pointPositions[i * 2] = result.getChild('x')?.at(i);
-        pointPositions[i * 2 + 1] = result.getChild('y')?.at(i);
-        pointSizes[i] = 1;
-        pointColors[i * 4] = 1;
-        pointColors[i * 4 + 1] = 0.25;
-        pointColors[i * 4 + 2] = 0.75;
-        pointColors[i * 4 + 3] = 0.5;
-      }
-      return {
-        pointPositions,
-        pointSizes,
-        pointColors,
-      };
-    },
+  const {data: queryResult} = useDuckDbQuery<{x: number; y: number}>({
+    query: 'SELECT x,y FROM publications',
     enabled: isTableReady,
-    gcTime: Infinity,
-    refetchOnMount: false,
-    refetchOnWindowFocus: false,
   });
+
+  const graphData = useMemo(() => {
+    if (!queryResult) return null;
+
+    const pointPositions = new Float32Array(queryResult.length * 2);
+    const pointSizes = new Float32Array(queryResult.length);
+    const pointColors = new Float32Array(queryResult.length * 4);
+
+    for (let i = 0; i < queryResult.length; i++) {
+      const point = queryResult.getRow(i);
+      pointPositions[i * 2] = point.x;
+      pointPositions[i * 2 + 1] = point.y;
+      pointSizes[i] = 1;
+      pointColors[i * 4] = 1;
+      pointColors[i * 4 + 1] = 0.25;
+      pointColors[i * 4 + 2] = 0.75;
+      pointColors[i * 4 + 3] = 0.5;
+    }
+
+    return {
+      pointPositions,
+      pointSizes,
+      pointColors,
+    };
+  }, [queryResult]);
 
   const config = useMemo<GraphConfigInterface>(
     () => ({
@@ -46,6 +46,7 @@ export const PointMap: FC = () => {
       enableDrag: false,
       disableSimulation: true,
       pointSizeScale: 5,
+      scalePointsOnZoom: false,
       onPointMouseOver: (point) => {
         console.log(point);
       },
@@ -53,12 +54,12 @@ export const PointMap: FC = () => {
     [],
   );
 
-  return data ? (
+  return graphData ? (
     <CosmosGraph
       config={config}
-      pointPositions={data.pointPositions}
-      pointSizes={data.pointSizes}
-      pointColors={data.pointColors}
+      pointPositions={graphData.pointPositions}
+      pointSizes={graphData.pointSizes}
+      pointColors={graphData.pointColors}
     />
   ) : null;
 };
