@@ -10,101 +10,166 @@ import {FC, useState} from 'react';
 import {useCosmosGraph} from './CosmosGraphContext';
 import {Info} from 'lucide-react';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
-import {
-  CosmosSimulationConfigSchema,
-  DEFAULT_COSMOS_CONFIG_SIMULATION,
-} from './config';
+import {CosmosSimulationConfigSchema} from './config';
 
+/**
+ * Props for the CosmosSimulationControls component.
+ */
 interface CosmosSimulationControlsProps {
   /**
    * Optional className to override the default positioning and styling of the controls container.
    * By default, controls are positioned at the top-right corner.
+   *
+   * @example
+   * ```tsx
+   * // Position controls at the bottom-right
+   * <CosmosSimulationControls className="absolute bottom-4 right-4" />
+   * ```
    */
   className?: string;
 }
 
-interface SimulationParameter {
-  name: string;
-  configKey: keyof typeof DEFAULT_COSMOS_CONFIG_SIMULATION;
-  min: number;
-  max: number;
-  step: number;
-  tooltip: string;
-}
-
-const SIMULATION_PARAMETERS: SimulationParameter[] = [
+/**
+ * Configuration for each simulation parameter slider.
+ * These values define the range and step size for each parameter.
+ *
+ * @internal
+ */
+const simulationSliders = [
   {
-    name: 'Gravity',
-    configKey: 'simulationGravity',
+    key: 'simulationGravity',
+    label: 'Gravity',
     min: 0,
-    max: 1,
+    max: 0.5,
     step: 0.01,
-    tooltip: CosmosSimulationConfigSchema.shape.simulationGravity.description!,
+    default: 0.25,
   },
   {
-    name: 'Repulsion',
-    configKey: 'simulationRepulsion',
+    key: 'simulationRepulsion',
+    label: 'Repulsion',
     min: 0,
-    max: 5,
-    step: 0.1,
-    tooltip:
-      CosmosSimulationConfigSchema.shape.simulationRepulsion.description!,
-  },
-  {
-    name: 'Link Strength',
-    configKey: 'simulationLinkSpring',
-    min: 0,
-    max: 3,
+    max: 2,
     step: 0.01,
-    tooltip:
-      CosmosSimulationConfigSchema.shape.simulationLinkSpring.description!,
+    default: 1.0,
   },
   {
-    name: 'Link Distance',
-    configKey: 'simulationLinkDistance',
+    key: 'simulationLinkSpring',
+    label: 'Link Strength',
+    min: 0,
+    max: 2,
+    step: 0.01,
+    default: 1,
+  },
+  {
+    key: 'simulationLinkDistance',
+    label: 'Link Distance',
     min: 1,
-    max: 50,
+    max: 20,
     step: 1,
-    tooltip:
-      CosmosSimulationConfigSchema.shape.simulationLinkDistance.description!,
+    default: 10,
   },
   {
-    name: 'Friction',
-    configKey: 'simulationFriction',
+    key: 'simulationFriction',
+    label: 'Friction',
     min: 0,
     max: 1,
     step: 0.01,
-    tooltip: CosmosSimulationConfigSchema.shape.simulationFriction.description!,
+    default: 0.85,
   },
-];
+  {
+    key: 'simulationDecay',
+    label: 'Decay',
+    min: 100,
+    max: 10000,
+    step: 100,
+    default: 1000,
+  },
+] as const;
 
-type SimulationValues = Record<SimulationParameter['configKey'], number>;
+type SimulationKey = (typeof simulationSliders)[number]['key'];
+type SimulationValues = Record<SimulationKey, number>;
 
+/**
+ * A component that provides fine-grained controls for adjusting graph simulation parameters.
+ * Must be used within a CosmosGraph component as it relies on the CosmosGraphContext.
+ *
+ * Features:
+ * - Slider controls for all simulation parameters
+ * - Real-time parameter adjustment
+ * - Tooltips with parameter descriptions
+ * - Customizable positioning
+ * - Default values optimized for common use cases
+ *
+ * Available parameters:
+ * - Gravity (0-0.5): Controls how strongly nodes are pulled toward the center
+ * - Repulsion (0-2): Controls how strongly nodes push away from each other
+ * - Link Strength (0-2): Controls the spring force between connected nodes
+ * - Link Distance (1-20): Sets the natural length of links between nodes
+ * - Friction (0-1): Controls how quickly node movement decays
+ * - Decay (100-10000): Controls how quickly the simulation "cools down"
+ *
+ * @example Basic usage
+ * ```tsx
+ * import { CosmosGraph, CosmosSimulationControls } from '@sqlrooms/cosmos';
+ *
+ * const MyGraph = () => {
+ *   return (
+ *     <div style={{ width: '800px', height: '600px' }}>
+ *       <CosmosGraph {...graphProps}>
+ *         <CosmosSimulationControls />
+ *       </CosmosGraph>
+ *     </div>
+ *   );
+ * };
+ * ```
+ *
+ * @example Custom positioning with other controls
+ * ```tsx
+ * import { CosmosGraph, CosmosGraphControls, CosmosSimulationControls } from '@sqlrooms/cosmos';
+ *
+ * const MyGraph = () => {
+ *   return (
+ *     <div style={{ width: '800px', height: '600px' }}>
+ *       <CosmosGraph {...graphProps}>
+ *         <CosmosGraphControls className="absolute top-4 left-4" />
+ *         <CosmosSimulationControls className="absolute top-4 right-4" />
+ *       </CosmosGraph>
+ *     </div>
+ *   );
+ * };
+ * ```
+ *
+ * @example With custom styling
+ * ```tsx
+ * <CosmosGraph {...graphProps}>
+ *   <CosmosSimulationControls
+ *     className="absolute bottom-4 right-4 bg-opacity-75 backdrop-blur-sm"
+ *   />
+ * </CosmosGraph>
+ * ```
+ */
 export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
   className,
 }) => {
   const {graphRef} = useCosmosGraph();
-  const [values, setValues] = useState<SimulationValues>(() =>
-    SIMULATION_PARAMETERS.reduce(
-      (acc, param) => ({
-        ...acc,
-        [param.configKey]: DEFAULT_COSMOS_CONFIG_SIMULATION[param.configKey],
-      }),
-      {} as SimulationValues,
-    ),
+  const [values, setValues] = useState<SimulationValues>(
+    () =>
+      Object.fromEntries(
+        simulationSliders.map(({key, default: defaultValue}) => [
+          key,
+          defaultValue,
+        ]),
+      ) as SimulationValues,
   );
 
-  const handleParameterChange = (
-    param: SimulationParameter,
-    value: number[],
-  ) => {
+  const handleParameterChange = (paramKey: SimulationKey, value: number[]) => {
     if (!graphRef?.current) return;
 
-    const newValues = {...values, [param.configKey]: value[0]};
+    const newValues = {...values, [paramKey]: value[0]};
     setValues(newValues);
 
     const config: Partial<GraphConfigInterface> = {
-      [param.configKey]: value[0],
+      [paramKey]: value[0],
     };
     graphRef.current.setConfig(config);
   };
@@ -116,34 +181,34 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
         className,
       )}
     >
-      {SIMULATION_PARAMETERS.map((param) => (
-        <div key={param.configKey} className="space-y-2">
+      {simulationSliders.map(({key, label, min, max, step}) => (
+        <div key={key} className="space-y-2">
           <div className="flex items-center justify-between">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Label
-                  htmlFor={param.configKey}
+                  htmlFor={key}
                   className="text-xs font-medium flex items-center gap-1 cursor-help"
                 >
-                  {param.name}
+                  {label}
                   <Info className="w-3 h-3 text-muted-foreground" />
                 </Label>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[200px]">
-                {param.tooltip}
+                {CosmosSimulationConfigSchema.shape[key].description}
               </TooltipContent>
             </Tooltip>
             <span className="text-xs tabular-nums text-muted-foreground">
-              {values[param.configKey].toFixed(2)}
+              {values[key].toFixed(2)}
             </span>
           </div>
           <Slider
-            id={param.configKey}
-            min={param.min}
-            max={param.max}
-            step={param.step}
-            value={[values[param.configKey]]}
-            onValueChange={(value) => handleParameterChange(param, value)}
+            id={key}
+            min={min}
+            max={max}
+            step={step}
+            value={[values[key]]}
+            onValueChange={(value) => handleParameterChange(key, value)}
             className="w-full"
           />
         </div>

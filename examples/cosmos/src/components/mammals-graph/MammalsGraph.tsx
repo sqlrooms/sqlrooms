@@ -4,7 +4,6 @@ import {
   CosmosGraph,
   CosmosGraphControls,
   CosmosSimulationControls,
-  DEFAULT_COSMOS_CONFIG_SIMULATION,
 } from '@sqlrooms/cosmos';
 import {useMammalsData} from './hooks/useMammalsData';
 import {DownloadButton} from './components/DownloadButton';
@@ -22,7 +21,12 @@ export const MammalsGraph: FC = () => {
       linkArrows: false,
       fitViewOnInit: true,
       fitViewDelay: 5000,
-      ...DEFAULT_COSMOS_CONFIG_SIMULATION,
+      simulationGravity: 0.25,
+      simulationRepulsion: 1.0,
+      simulationLinkSpring: 1,
+      simulationLinkDistance: 10,
+      simulationFriction: 0.85,
+      simulationDecay: 1000,
       pointSizeScale: 1,
       scalePointsOnZoom: true,
       renderHoveredPointRing: true,
@@ -30,7 +34,6 @@ export const MammalsGraph: FC = () => {
       renderFocusedPointRing: true,
       focusedPointRingColor: '#ee55ff',
       onClick: (index: number | undefined) => {
-        console.log(index);
         if (index === undefined) {
           setFocusedPointIndex(undefined);
         } else {

@@ -1,5 +1,5 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
-import {useState} from 'react';
+import {useState, useCallback} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 
@@ -54,20 +54,24 @@ export const useHoverState = (
 ) => {
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
 
-  const onPointMouseOver: GraphConfigInterface['onPointMouseOver'] = (
-    index,
-    _pointPosition,
-    event,
-  ) => {
-    if (hasClientCoordinates(event)) {
-      setHoveredPoint({
-        index,
-        position: calcRelativeCoordinates(event.clientX, event.clientY),
-      });
-    }
-  };
+  const onPointMouseOver: GraphConfigInterface['onPointMouseOver'] =
+    useCallback(
+      (
+        index: number,
+        _pointPosition: [number, number],
+        event: MouseEvent | TouchEvent,
+      ) => {
+        if (hasClientCoordinates(event)) {
+          setHoveredPoint({
+            index,
+            position: calcRelativeCoordinates(event.clientX, event.clientY),
+          });
+        }
+      },
+      [calcRelativeCoordinates],
+    );
 
-  const clearHoverState = () => setHoveredPoint(null);
+  const clearHoverState = useCallback(() => setHoveredPoint(null), []);
 
   return {
     /** The current hover state, containing the index and position of the hovered point, or null if no point is hovered */
