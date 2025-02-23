@@ -71,6 +71,7 @@ export const MammalsGraph: FC = () => {
   const config = useMemo<GraphConfigInterface>(
     () => ({
       backgroundColor: 'transparent',
+      enableDrag: true, // allow dragging the nodes
       linkWidth: 1,
       linkColor: '#5F74C2',
       linkArrows: false,

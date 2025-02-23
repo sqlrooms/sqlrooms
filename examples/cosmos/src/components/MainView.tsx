@@ -6,24 +6,24 @@ import {MammalsGraph} from './MammalsGraph';
 export const MainView: FC = () => {
   return (
     <div className="w-full h-full p-4">
-      <Tabs defaultValue="graph" className="w-full h-full">
+      <Tabs defaultValue="point-map" className="w-full h-full">
         <TabsList>
-          <TabsTrigger value="graph">Mammals Graph</TabsTrigger>
           <TabsTrigger value="point-map">Publications Point Map</TabsTrigger>
+          <TabsTrigger value="graph">Mammals Graph</TabsTrigger>
         </TabsList>
-        <TabsContent
-          value="graph"
-          className="w-full h-[calc(100%-40px)] data-[state=inactive]:hidden"
-          forceMount
-        >
-          <MammalsGraph />
-        </TabsContent>
         <TabsContent
           value="point-map"
           className="w-full h-[calc(100%-40px)] data-[state=inactive]:hidden"
           forceMount
         >
           <PointMap />
+        </TabsContent>
+        <TabsContent
+          value="graph"
+          className="w-full h-[calc(100%-40px)] data-[state=inactive]:hidden"
+          forceMount
+        >
+          <MammalsGraph />
         </TabsContent>
       </Tabs>
     </div>
