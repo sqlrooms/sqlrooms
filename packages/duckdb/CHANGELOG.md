@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.4.2](https://github.com/sqlrooms/sqlrooms/compare/v0.4.0...v0.4.2) (2025-02-23)
+
+### Features
+
+* Adding useDuckDbQuery ([68668bb](https://github.com/sqlrooms/sqlrooms/commit/68668bb1c96e102ee8f706e5067f8eb889423b56))
+
 # [0.4.0](https://github.com/sqlrooms/sqlrooms/compare/v0.3.0...v0.4.0) (2025-02-21)
 
 **Note:** Version bump only for package @sqlrooms/duckdb
