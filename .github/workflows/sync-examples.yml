@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -59,7 +59,8 @@ jobs:
           rm target/README.md.bak
 
           # Get version from lerna.json
-          VERSION=$(jq -r '.version' source/lerna.json)
+          #VERSION=$(jq -r '.version' source/lerna.json)
+          VERSION='latest'
 
           # Update package.json files
           find target -name "package.json" -type f | while read -r file; do
