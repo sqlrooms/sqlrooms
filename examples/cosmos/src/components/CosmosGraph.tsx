@@ -1,7 +1,7 @@
 import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
 import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {Button} from '@sqlrooms/ui';
-import {Maximize2, Play, Pause} from 'lucide-react';
+import {Maximize2, Play, Pause, RotateCw} from 'lucide-react';
 
 type CosmosGraphProps = {
   config: GraphConfigInterface;
@@ -104,18 +104,36 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
     }
   }, []);
 
+  const handleRestartSimulation = useCallback(() => {
+    if (!graphRef.current) return;
+    graphRef.current.restart();
+  }, []);
+
   return (
     <div className="relative w-full h-full">
       <div ref={containerRef} className="w-full h-full" />
       <div className="absolute top-1 left-1 flex gap-2">
         {!config.disableSimulation && (
-          <Button onClick={handleToggleSimulation} variant="outline" size="sm">
-            {isSimulationRunning ? (
-              <Pause className="h-4 w-4" />
-            ) : (
-              <Play className="h-4 w-4" />
-            )}
-          </Button>
+          <>
+            <Button
+              onClick={handleToggleSimulation}
+              variant="outline"
+              size="sm"
+            >
+              {isSimulationRunning ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+            </Button>
+            <Button
+              onClick={handleRestartSimulation}
+              variant="outline"
+              size="sm"
+            >
+              <RotateCw className="h-4 w-4" />
+            </Button>
+          </>
         )}
         <Button onClick={handleFitView} variant="outline" size="sm">
           <Maximize2 className="h-4 w-4" />

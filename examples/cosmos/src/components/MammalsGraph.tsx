@@ -43,7 +43,7 @@ export const MammalsGraph: FC = () => {
       const linkColors = new Float32Array(edges.length * 4);
 
       // Set node properties
-      nodes.forEach((node, i) => {
+      nodes.forEach((_node, i) => {
         pointPositions[i * 2] = 0; // x
         pointPositions[i * 2 + 1] = 0; // y
         pointSizes[i] = 2;
