@@ -5,10 +5,11 @@ import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
+  Button,
 } from '@sqlrooms/ui';
 import {FC, useState} from 'react';
 import {useCosmosGraph} from './CosmosGraphContext';
-import {Info} from 'lucide-react';
+import {Info, Pause, Play, Wind} from 'lucide-react';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {CosmosSimulationConfigSchema} from './config';
 
@@ -151,7 +152,12 @@ type SimulationValues = Record<SimulationKey, number>;
 export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
   className,
 }) => {
-  const {graphRef} = useCosmosGraph();
+  const {
+    graphRef,
+    isSimulationRunning,
+    handleToggleSimulation,
+    handleStartWithEnergy,
+  } = useCosmosGraph();
   const [values, setValues] = useState<SimulationValues>(
     () =>
       Object.fromEntries(
@@ -181,6 +187,42 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
         className,
       )}
     >
+      <div className="flex gap-2">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleToggleSimulation}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              {isSimulationRunning ? (
+                <Pause className="h-4 w-4" />
+              ) : (
+                <Play className="h-4 w-4" />
+              )}
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            {isSimulationRunning ? 'Pause simulation' : 'Start simulation'}
+          </TooltipContent>
+        </Tooltip>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              onClick={handleStartWithEnergy}
+              variant="outline"
+              size="sm"
+              className="flex-1"
+            >
+              <Wind className="h-4 w-4" />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent side="bottom">
+            Push energy into simulation
+          </TooltipContent>
+        </Tooltip>
+      </div>
       {simulationSliders.map(({key, label, min, max, step}) => (
         <div key={key} className="space-y-2">
           <div className="flex items-center justify-between">

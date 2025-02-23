@@ -13,6 +13,8 @@ interface CosmosGraphContextValue {
   handleToggleSimulation: () => void;
   /** Function to fit the graph view to show all nodes */
   handleFitView: () => void;
+  /** Function to start simulation with an energy push */
+  handleStartWithEnergy: () => void;
 }
 
 /**
@@ -92,13 +94,19 @@ export const CosmosGraphProvider: React.FC<CosmosGraphProviderProps> = ({
 }) => {
   const [isSimulationRunning, setIsSimulationRunning] = useState(true);
 
+  const handleStartWithEnergy = useCallback(() => {
+    if (!graphRef.current) return;
+    graphRef.current.start(1);
+    setIsSimulationRunning(true);
+  }, [graphRef]);
+
   const handleToggleSimulation = useCallback(() => {
     if (!graphRef.current) return;
     if (graphRef.current.isSimulationRunning) {
       graphRef.current.pause();
       setIsSimulationRunning(false);
     } else {
-      graphRef.current.start();
+      graphRef.current.restart();
       setIsSimulationRunning(true);
     }
   }, [graphRef]);
@@ -115,6 +123,7 @@ export const CosmosGraphProvider: React.FC<CosmosGraphProviderProps> = ({
         graphRef,
         handleToggleSimulation,
         handleFitView,
+        handleStartWithEnergy,
       }}
     >
       {children}

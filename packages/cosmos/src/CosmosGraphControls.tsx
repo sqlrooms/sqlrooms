@@ -1,16 +1,9 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {Maximize2, Pause, Play} from 'lucide-react';
+import {Maximize2} from 'lucide-react';
 import {FC, PropsWithChildren} from 'react';
 import {useCosmosGraph} from './CosmosGraphContext';
 
 interface CosmosGraphControlsProps {
-  /**
-   * Whether to disable simulation controls. This should match the `disableSimulation`
-   * config option in the parent CosmosGraph component.
-   * @default false
-   */
-  disableSimulation?: boolean;
-
   /**
    * Optional className to override the default positioning and styling of the controls container.
    * By default, controls are positioned at the top-left corner.
@@ -24,11 +17,11 @@ interface CosmosGraphControlsProps {
 }
 
 /**
- * A flexible control panel component for CosmosGraph that provides simulation and view controls.
+ * A flexible control panel component for CosmosGraph that provides view controls.
  * Must be used within a CosmosGraph component as it relies on the CosmosGraphContext.
  *
- * The component always shows the default controls (simulation toggle and/or fit view)
- * and allows adding custom controls as children.
+ * The component shows the default fit view control and allows adding custom controls as children.
+ * For simulation controls, use the CosmosSimulationControls component.
  *
  * @example Default usage
  * ```tsx
@@ -54,31 +47,14 @@ interface CosmosGraphControlsProps {
  *   </CosmosGraphControls>
  * </CosmosGraph>
  * ```
- *
- * @example Static visualization (no simulation)
- * ```tsx
- * <CosmosGraph {...graphProps}>
- *   <CosmosGraphControls disableSimulation={true} />
- * </CosmosGraph>
- * ```
  */
 export const CosmosGraphControls: FC<
   PropsWithChildren<CosmosGraphControlsProps>
-> = ({disableSimulation, className, children}) => {
-  const {isSimulationRunning, handleToggleSimulation, handleFitView} =
-    useCosmosGraph();
+> = ({className, children}) => {
+  const {handleFitView} = useCosmosGraph();
 
   return (
     <div className={cn('absolute top-1 left-1 flex gap-2', className)}>
-      {!disableSimulation && (
-        <Button onClick={handleToggleSimulation} variant="outline" size="sm">
-          {isSimulationRunning ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
-      )}
       <Button onClick={handleFitView} variant="outline" size="sm">
         <Maximize2 className="h-4 w-4" />
       </Button>
