@@ -1,15 +1,18 @@
-import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {useDuckDbQuery} from '@sqlrooms/duckdb';
-import {FC, useMemo, useState} from 'react';
-import {useProjectStore} from '../store';
-import {CosmosGraph} from './CosmosGraph';
+import {useProjectStore} from '../../../store';
+import {useMemo} from 'react';
 
-export const MammalsGraph: FC = () => {
+interface Edge {
+  source: string;
+  target: string;
+}
+
+export const useMammalsData = () => {
   const isTableReady = useProjectStore((state) =>
     Boolean(state.project.tables.find((t) => t.tableName === 'mammals')),
   );
 
-  const {data: queryResult} = useDuckDbQuery<{source: string; target: string}>({
+  const {data: queryResult} = useDuckDbQuery<Edge>({
     query: 'SELECT source, target FROM mammals',
     enabled: isTableReady,
   });
@@ -68,51 +71,7 @@ export const MammalsGraph: FC = () => {
     };
   }, [queryResult]);
 
-  const [focusedPointIndex, setFocusedPointIndex] = useState<
-    number | undefined
-  >(undefined);
-
-  const config = useMemo<GraphConfigInterface>(
-    () => ({
-      backgroundColor: 'transparent',
-      enableDrag: true, // allow dragging the nodes
-      linkWidth: 1,
-      linkColor: '#5F74C2',
-      linkArrows: false,
-      fitViewOnInit: true,
-      fitViewDelay: 5000,
-      simulationGravity: 0.1,
-      simulationLinkDistance: 1,
-      simulationLinkSpring: 0.3,
-      simulationRepulsion: 0.4,
-      pointSizeScale: 1,
-      scalePointsOnZoom: true,
-      renderHoveredPointRing: true,
-      hoveredPointRingColor: '#a33aef',
-      renderFocusedPointRing: true,
-      focusedPointRingColor: '#ee55ff',
-      onClick: (index) => {
-        console.log(index);
-        if (index === undefined) {
-          setFocusedPointIndex(undefined);
-        } else {
-          setFocusedPointIndex(index);
-        }
-      },
-    }),
-    [],
-  );
-
-  return graphData ? (
-    <CosmosGraph
-      config={config}
-      focusedPointIndex={focusedPointIndex}
-      pointPositions={graphData.pointPositions}
-      pointSizes={graphData.pointSizes}
-      pointColors={graphData.pointColors}
-      linkIndexes={graphData.linkIndexes}
-      linkColors={graphData.linkColors}
-      getPointTooltip={(index) => String(graphData.nodes[index])}
-    />
-  ) : null;
+  return {
+    graphData,
+  };
 };

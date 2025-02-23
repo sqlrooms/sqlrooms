@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@cosmograph/cosmos": "2.0.0-beta.22",
+    "@sqlrooms/cosmos": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
