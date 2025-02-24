@@ -76,12 +76,29 @@ jobs:
           mkdir -p node_modules/@types/duckdb__duckdb-wasm
           echo 'declare module "@duckdb/duckdb-wasm" {
             export const DuckDBDataProtocol: any;
-            export const AsyncDuckDB: any;
-            export const AsyncDuckDBConnection: any;
-            export const duckdb: any;
+            export class AsyncDuckDB {
+              constructor(logger?: any, worker?: Worker);
+              instantiate(mainModule: any, pthreadWorker: any): Promise<void>;
+              open(options: any): Promise<void>;
+              connect(): Promise<AsyncDuckDBConnection>;
+              onError(event: ErrorEvent): void;
+              dropFile(fname: string): void;
+              dropFiles(): void;
+            }
+            export class AsyncDuckDBConnection {
+              query(query: string): Promise<any>;
+              close(): Promise<void>;
+            }
+            export class ConsoleLogger {
+              log(...args: any[]): void;
+            }
+            export function getJsDelivrBundles(): any;
+            export function selectBundle(bundles: any): Promise<any>;
+            export function createWorker(mainWorker: string): Promise<Worker>;
             
-            const defaultExport: any;
-            export default defaultExport;
+            export namespace duckdb {
+              export { AsyncDuckDB, AsyncDuckDBConnection };
+            }
           }' > node_modules/@types/duckdb__duckdb-wasm/index.d.ts
 
       - name: Lint
