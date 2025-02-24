@@ -84,10 +84,13 @@ jobs:
               onError(event: ErrorEvent): void;
               dropFile(fname: string): void;
               dropFiles(): void;
+              registerFileHandle(path: string, file: File, protocol: any, direct: boolean): Promise<void>;
+              registerFileBuffer(path: string, buffer: Uint8Array): Promise<void>;
             }
             export class AsyncDuckDBConnection {
               query(query: string): Promise<any>;
               close(): Promise<void>;
+              insertArrowTable(table: any, options: { name: string }): Promise<void>;
             }
             export class ConsoleLogger {
               log(...args: any[]): void;
