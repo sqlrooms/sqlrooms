@@ -11,6 +11,7 @@ import {FC} from 'react';
 import {Info, Pause, Play, Wind} from 'lucide-react';
 import {CosmosSimulationConfigSchema} from './config';
 import {useStoreWithCosmos} from './CosmosSlice';
+import type {CosmosSliceConfig} from './CosmosSliceConfig';
 
 /**
  * Props for the CosmosSimulationControls component.
@@ -144,9 +145,12 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
     isSimulationRunning,
     toggleSimulation,
     startWithEnergy,
-    simulationConfig,
     updateSimulationConfig,
   } = useStoreWithCosmos((s) => s.cosmos);
+
+  const config = useStoreWithCosmos(
+    (s) => s.project.config.cosmos,
+  ) as CosmosSliceConfig['cosmos'];
 
   const handleParameterChange = (paramKey: SimulationKey, value: number[]) => {
     updateSimulationConfig({[paramKey]: value[0]});
@@ -213,7 +217,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
               </TooltipContent>
             </Tooltip>
             <span className="text-xs tabular-nums text-muted-foreground">
-              {simulationConfig[key].toFixed(2)}
+              {config[key].toFixed(2)}
             </span>
           </div>
           <Slider
@@ -221,7 +225,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
             min={min}
             max={max}
             step={step}
-            value={[simulationConfig[key]]}
+            value={[config[key]]}
             onValueChange={(value) => handleParameterChange(key, value)}
             className="w-full"
           />

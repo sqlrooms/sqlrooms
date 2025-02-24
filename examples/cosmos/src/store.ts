@@ -25,12 +25,7 @@ import {
   createDefaultCosmosConfig,
 } from '@sqlrooms/cosmos';
 
-export const ProjectPanelTypes = z.enum([
-  'data-sources',
-  'data-tables',
-  'docs',
-  MAIN_VIEW,
-] as const);
+export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
@@ -60,7 +55,6 @@ export const {projectStore, useProjectStore} = createProjectStore<
   ...createProjectSlice<AppConfig>({
     project: {
       config: {
-        title: 'Demo App Project',
         layout: {
           type: LayoutTypes.enum.mosaic,
           nodes: MAIN_VIEW,

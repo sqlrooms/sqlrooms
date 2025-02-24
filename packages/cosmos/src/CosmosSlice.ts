@@ -7,22 +7,19 @@ import {
 import type {BaseProjectConfig} from '@sqlrooms/project-config';
 import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
-import type {z} from 'zod';
-import {CosmosSimulationConfigSchema} from './config';
+import {produce} from 'immer';
 
 export type CosmosSliceState = {
   cosmos: {
     graph: Graph | null;
     isSimulationRunning: boolean;
-    simulationConfig: z.infer<typeof CosmosSimulationConfigSchema>;
-    graphConfig: GraphConfigInterface;
     createGraph: (container: HTMLDivElement) => void;
     toggleSimulation: () => void;
     fitView: () => void;
     startWithEnergy: () => void;
     destroyGraph: () => void;
     updateSimulationConfig: (
-      config: Partial<z.infer<typeof CosmosSimulationConfigSchema>>,
+      config: Partial<CosmosSliceConfig['cosmos']>,
     ) => void;
     updateGraphConfig: (config: Partial<GraphConfigInterface>) => void;
     updateGraphData: (data: {
@@ -48,23 +45,6 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       cosmos: {
         graph: null,
         isSimulationRunning: true,
-        simulationConfig: {
-          simulationGravity: 0.25,
-          simulationRepulsion: 1.0,
-          simulationLinkSpring: 1.0,
-          simulationLinkDistance: 10,
-          simulationFriction: 0.85,
-          simulationDecay: 1000,
-        },
-        graphConfig: {
-          backgroundColor: '#ffffff',
-          simulationGravity: 0.25,
-          simulationRepulsion: 1.0,
-          simulationLinkSpring: 1.0,
-          simulationLinkDistance: 10,
-          simulationFriction: 0.85,
-          simulationDecay: 1000,
-        },
 
         createGraph: (container: HTMLDivElement) => {
           // Clean up old graph if it exists
@@ -76,16 +56,15 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
           // Create and configure new graph
           const graph = new Graph(container);
-          const {graphConfig} = get().cosmos;
-          graph.setConfig(graphConfig);
+          const config = get().project.config.cosmos;
+          graph.setConfig(config);
           graph.start();
 
-          set((state: CosmosSliceState) => ({
-            cosmos: {
-              ...state.cosmos,
-              graph,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cosmos.graph = graph;
+            }),
+          );
         },
 
         toggleSimulation: () => {
@@ -94,20 +73,18 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
           if (graph.isSimulationRunning) {
             graph.pause();
-            set((state: CosmosSliceState) => ({
-              cosmos: {
-                ...state.cosmos,
-                isSimulationRunning: false,
-              },
-            }));
+            set((state) =>
+              produce(state, (draft) => {
+                draft.cosmos.isSimulationRunning = false;
+              }),
+            );
           } else {
             graph.restart();
-            set((state: CosmosSliceState) => ({
-              cosmos: {
-                ...state.cosmos,
-                isSimulationRunning: true,
-              },
-            }));
+            set((state) =>
+              produce(state, (draft) => {
+                draft.cosmos.isSimulationRunning = true;
+              }),
+            );
           }
         },
 
@@ -121,59 +98,39 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
           const {graph} = get().cosmos;
           if (!graph) return;
           graph.start(1);
-          set((state: CosmosSliceState) => ({
-            cosmos: {
-              ...state.cosmos,
-              isSimulationRunning: true,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cosmos.isSimulationRunning = true;
+            }),
+          );
         },
 
         updateSimulationConfig: (
-          config: Partial<z.infer<typeof CosmosSimulationConfigSchema>>,
+          config: Partial<CosmosSliceConfig['cosmos']>,
         ) => {
-          const {graph, graphConfig} = get().cosmos;
-          const newSimConfig = {
-            ...get().cosmos.simulationConfig,
-            ...config,
-          };
+          const {graph} = get().cosmos;
 
-          const newGraphConfig = {
-            ...graphConfig,
-            ...newSimConfig,
-          };
-
-          if (graph) {
-            graph.setConfig(newGraphConfig);
-          }
-
-          set((state: CosmosSliceState) => ({
-            cosmos: {
-              ...state.cosmos,
-              simulationConfig: newSimConfig,
-              graphConfig: newGraphConfig,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              Object.assign(draft.project.config.cosmos, config);
+              if (graph) {
+                graph.setConfig(draft.project.config.cosmos);
+              }
+            }),
+          );
         },
 
         updateGraphConfig: (config: Partial<GraphConfigInterface>) => {
-          const {graph, simulationConfig} = get().cosmos;
-          const newConfig = {
-            ...get().cosmos.graphConfig,
-            ...config,
-            ...simulationConfig,
-          };
+          const {graph} = get().cosmos;
 
-          if (graph) {
-            graph.setConfig(newConfig);
-          }
-
-          set((state: CosmosSliceState) => ({
-            cosmos: {
-              ...state.cosmos,
-              graphConfig: newConfig,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              Object.assign(draft.project.config.cosmos, config);
+              if (graph) {
+                graph.setConfig(draft.project.config.cosmos);
+              }
+            }),
+          );
         },
 
         updateGraphData: (data) => {
@@ -220,13 +177,12 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
           }
           graph.pause();
           graph.destroy();
-          set((state: CosmosSliceState) => ({
-            cosmos: {
-              ...state.cosmos,
-              graph: null,
-              isSimulationRunning: false,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cosmos.graph = null;
+              draft.cosmos.isSimulationRunning = false;
+            }),
+          );
         },
       },
     }),
