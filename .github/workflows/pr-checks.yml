@@ -68,19 +68,13 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pnpm install --frozen-lockfile --shamefully-hoist -w
-          echo "=== Listing contents of node_modules ==="
-          ls -la node_modules/@duckdb node_modules/@radix-ui node_modules/@types || true
-          echo "=== Listing specific type definitions ==="
-          find node_modules/@types -name "*.d.ts" || true
-          echo "=== Package locations ==="
-          pnpm ls --json | grep -i "duckdb\|radix"
-
-      - name: Lint
-        run: pnpm lint
+          pnpm install
 
       - name: Build all packages
         run: pnpm build:all
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Test
         run: pnpm test
