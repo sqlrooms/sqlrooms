@@ -70,6 +70,12 @@ jobs:
         run: |
           rm -rf node_modules **/node_modules
           pnpm install
+          echo "=== Checking @duckdb/duckdb-wasm installation ==="
+          ls -la node_modules/@duckdb/duckdb-wasm/dist/types/src/ || true
+          echo "=== Checking package.json ==="
+          cat node_modules/@duckdb/duckdb-wasm/package.json || true
+          echo "=== Checking node_modules structure ==="
+          find node_modules/@duckdb -type f -name "*.d.ts" || true
 
       - name: Build all packages
         run: pnpm build:all
