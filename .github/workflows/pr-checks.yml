@@ -68,10 +68,11 @@ jobs:
 
       - name: Install dependencies
         run: |
+          rm -rf node_modules **/node_modules
           pnpm install
 
       - name: Build all packages
-        run: pnpm build:all
+        run: pnpm build
 
       - name: Lint
         run: pnpm lint
