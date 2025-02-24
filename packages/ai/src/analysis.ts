@@ -8,7 +8,6 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   CallbackFunctionProps,
   createAssistant,
-  OpenAIFunctionTool,
   ToolCallMessage,
   VercelToolSet,
 } from '@openassistant/core';
@@ -151,7 +150,6 @@ export async function runAnalysis({
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
     vercelFunctions: TOOLS,
-    functions: OTHER_TOOLS,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -233,6 +231,7 @@ Don't execute queries that modify data unless explicitly asked.`,
         // data object of the raw query result, which is NOT sent back to LLM
         // we can use it to visualize the arrow table in the callback function `message()` below
         const data = {
+          sqlQuery,
           arrowTable: result,
         };
 
@@ -309,16 +308,3 @@ In the response:
   //   },
   // },
 };
-
-const OTHER_TOOLS: OpenAIFunctionTool[] = [
-  // createMapFunctionDefinition({
-  //   getDataset: ({datasetName}: GetDatasetForCreateMapFunctionArgs) => {
-  //     // use datasetName as table name, check if the table exists
-  //     if (!myDatasets[datasetName]) {
-  //       throw new Error('The dataset does not exist.');
-  //     }
-  //     // return the arrow table
-  //     return myDatasets[datasetName];
-  //   },
-  // }),
-];

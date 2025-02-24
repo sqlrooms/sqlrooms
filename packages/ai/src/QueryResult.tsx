@@ -122,6 +122,19 @@ function QueryResultTableModal({
   );
 }
 
+type QueryToolOutputData = {
+  sqlQuery: string;
+  arrowTable: ArrowTable;
+};
+
+function isQueryToolOutputData(data: unknown): data is QueryToolOutputData {
+  return (
+    typeof data === 'object' &&
+    data !== null &&
+    'sqlQuery' in data &&
+    'arrowTable' in data
+  );
+}
 /**
  * Creates a query result message component based on a custom function call.
  *
@@ -129,9 +142,15 @@ function QueryResultTableModal({
  * @returns {JSX.Element | null} A query result table modal component or null if no data is available
  */
 export function queryMessage(props: CustomFunctionCall) {
-  const {arrowTable} = props.output?.data as {arrowTable: ArrowTable};
-  if (!arrowTable) {
+  const data = props.output?.data;
+
+  if (!isQueryToolOutputData(data)) {
+    throw new Error('Invalid query tool output data');
+  }
+  if (!data.arrowTable) {
     return null;
   }
-  return <QueryResultTableModal title="Query Result" arrowTable={arrowTable} />;
+  return (
+    <QueryResultTableModal title={data.sqlQuery} arrowTable={data.arrowTable} />
+  );
 }
