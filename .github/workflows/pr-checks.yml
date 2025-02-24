@@ -61,7 +61,7 @@ jobs:
       - name: Setup pnpm cache
         uses: actions/cache@v3
         with:
-          path: ~/.pnpm-store
+          path: ${{ env.STORE_PATH }}
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
@@ -72,7 +72,7 @@ jobs:
           pnpm install
 
       - name: Build all packages
-        run: pnpm build:all
+        run: pnpm build
 
       - name: Lint
         run: pnpm lint
