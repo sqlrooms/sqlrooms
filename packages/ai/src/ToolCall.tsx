@@ -135,6 +135,29 @@ const ChartToolCall = React.memo(function ChartToolCall({
   );
 });
 
+type MapToolParameters = {
+  mapType: string;
+  customMessage?: ReactNode;
+};
+
+function isMapToolParameters(args: unknown): args is MapToolParameters {
+  return typeof args === 'object' && args !== null && 'mapType' in args;
+}
+
+const MapToolCall = React.memo(function MapToolCall({
+  mapType,
+  customMessage,
+}: MapToolParameters) {
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="text-sm">
+        <Markdown>{mapType}</Markdown>
+      </div>
+      {customMessage}
+    </div>
+  );
+});
+
 /**
  * Renders an answer tool call with optional chart visualization
  * Note: with the new design, this component is only used by displaying error messages
@@ -225,6 +248,8 @@ export function ToolCall({toolCall, customMessage}: ToolCallProps) {
         <QueryToolCall {...args} customMessage={customMessage} />
       ) : toolName === 'chart' && isChartToolParameters(args) ? (
         <ChartToolCall {...args} />
+      ) : toolName === 'createMap' && isMapToolParameters(args) ? (
+        <MapToolCall {...args} customMessage={customMessage} />
       ) : toolName === 'answer' && isAnswerToolParameters(args) ? (
         <AnswerToolCall {...args} />
       ) : (

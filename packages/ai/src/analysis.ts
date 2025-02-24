@@ -8,10 +8,15 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   CallbackFunctionProps,
   createAssistant,
+  OpenAIFunctionTool,
   ToolCallMessage,
   VercelToolSet,
 } from '@openassistant/core';
-
+import {
+  createMapFunctionDefinition,
+  GetDatasetForCreateMapFunctionArgs,
+} from '@openassistant/keplergl';
+import * as arrow from 'apache-arrow';
 import {ChartToolParameters, QueryToolParameters} from './schemas';
 import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
@@ -150,6 +155,7 @@ export async function runAnalysis({
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
     vercelFunctions: TOOLS,
+    functions: OTHER_TOOLS,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -308,3 +314,21 @@ In the response:
   //   },
   // },
 };
+
+function isArrowTable(data: unknown): data is arrow.Table {
+  return data instanceof arrow.Table;
+}
+
+const OTHER_TOOLS: OpenAIFunctionTool[] = [
+  createMapFunctionDefinition({
+    getDataset: async ({datasetName}: GetDatasetForCreateMapFunctionArgs) => {
+      // use datasetName as table name, check if the table exists
+      const {conn} = await getDuckDb();
+      const result = await conn.query(`SELECT * FROM ${datasetName}`);
+      if (isArrowTable(result)) {
+        console.log('result is an arrow table');
+      }
+      return result;
+    },
+  }),
+];
