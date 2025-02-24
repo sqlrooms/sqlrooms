@@ -40,11 +40,11 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Project state persistence
 
-## [Cosmos – Graph Visualization](http://sqlrooms-graph.netlify.app/)
+## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
-[Try live](http://sqlrooms-graph.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/graph)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/graph?embed=1&file=src/app.tsx)
+[Try live](http://sqlrooms-cosmos.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
 <img src="https://github.com/user-attachments/assets/4061fc7e-797f-4eda-8d2d-f988f9dd3ab0" alt="SQLRooms Graph example showing network visualization" width=450>
 
