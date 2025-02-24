@@ -59,8 +59,7 @@ jobs:
           rm target/README.md.bak
 
           # Get version from lerna.json
-          #VERSION=$(jq -r '.version' source/lerna.json)
-          VERSION='latest'
+          VERSION=$(jq -r '.version' source/lerna.json)
 
           # Update package.json files
           find target -name "package.json" -type f | while read -r file; do
