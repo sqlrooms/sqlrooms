@@ -71,8 +71,8 @@ jobs:
       - name: Lint
         run: pnpm lint
 
-      - name: Build
-        run: pnpm build
+      - name: Build all packages
+        run: pnpm build:all
 
       - name: Test
         run: pnpm test

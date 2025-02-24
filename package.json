@@ -16,6 +16,7 @@
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
+    "build:examples": "turbo build --filter=./examples/*",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
