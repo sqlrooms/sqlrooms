@@ -1,5 +1,5 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
-import {useState, useCallback} from 'react';
+import {useState, useCallback, useMemo} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 
@@ -22,18 +22,18 @@ export type HoverState = {
  * - Track which point is currently being hovered
  * - Store the hover position coordinates
  * - Clear the hover state
+ * - Provide event handlers for hover-related graph interactions
  *
  * @example
  * ```tsx
  * const Graph = () => {
  *   const calcRelativeCoords = useRelativeCoordinates(containerRef);
- *   const { hoveredPoint, onPointMouseOver, clearHoverState } = useHoverState(calcRelativeCoords);
+ *   const { hoveredPoint, eventHandlers } = useHoverState(calcRelativeCoords);
  *
  *   return (
  *     <div ref={containerRef}>
  *       <CosmosGraph
- *         onPointMouseOver={onPointMouseOver}
- *         onPointMouseOut={clearHoverState}
+ *         config={eventHandlers}
  *       />
  *       {hoveredPoint && (
  *         <Tooltip
@@ -47,7 +47,7 @@ export type HoverState = {
  * ```
  *
  * @param calcRelativeCoordinates - A function that converts client coordinates to container-relative coordinates
- * @returns An object containing the hover state and handlers
+ * @returns An object containing the hover state and event handlers for the graph
  */
 export const useHoverState = (
   calcRelativeCoordinates: ReturnType<typeof useRelativeCoordinates>,
@@ -73,12 +73,20 @@ export const useHoverState = (
 
   const clearHoverState = useCallback(() => setHoveredPoint(null), []);
 
+  const eventHandlers = useMemo(
+    () => ({
+      onPointMouseOver,
+      onPointMouseOut: clearHoverState,
+      onZoomStart: clearHoverState,
+      onDragStart: clearHoverState,
+    }),
+    [onPointMouseOver, clearHoverState],
+  );
+
   return {
     /** The current hover state, containing the index and position of the hovered point, or null if no point is hovered */
     hoveredPoint,
-    /** Handler to be called when a point is hovered. Updates the hover state with the point's index and position */
-    onPointMouseOver,
-    /** Handler to clear the hover state, typically called when the mouse leaves a point */
-    clearHoverState,
+    /** Event handlers for hover-related graph interactions */
+    eventHandlers,
   };
 };

@@ -18,6 +18,12 @@ import {DatabaseIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
+import {
+  CosmosSliceConfig,
+  createCosmosSlice,
+  CosmosSliceState,
+  createDefaultCosmosConfig,
+} from '@sqlrooms/cosmos';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
@@ -31,13 +37,17 @@ export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 /**
  * Project config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig =
+  BaseProjectConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
+
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
  * Project state
  */
-export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+export type AppState = ProjectState<AppConfig> &
+  SqlEditorSliceState &
+  CosmosSliceState;
 
 /**
  * Create a customized project store
@@ -63,6 +73,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
           },
         ],
         ...createDefaultSqlEditorConfig(),
+        ...createDefaultCosmosConfig(),
       },
       panels: {
         [ProjectPanelTypes.enum['data-sources']]: {
@@ -83,4 +94,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
   // Sql editor slice
   ...createSqlEditorSlice()(set, get, store),
+
+  // Cosmos slice
+  ...createCosmosSlice()(set, get, store),
 }));

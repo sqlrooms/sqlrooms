@@ -1,7 +1,7 @@
 import {Button, cn} from '@sqlrooms/ui';
 import {Maximize2} from 'lucide-react';
 import {FC, PropsWithChildren} from 'react';
-import {useCosmosGraph} from './CosmosGraphContext';
+import {useStoreWithCosmos} from './CosmosSlice';
 
 interface CosmosGraphControlsProps {
   /**
@@ -18,7 +18,7 @@ interface CosmosGraphControlsProps {
 
 /**
  * A flexible control panel component for CosmosGraph that provides view controls.
- * Must be used within a CosmosGraph component as it relies on the CosmosGraphContext.
+ * Must be used within a CosmosGraph component as it relies on the graph state from the store.
  *
  * The component shows the default fit view control and allows adding custom controls as children.
  * For simulation controls, use the CosmosSimulationControls component.
@@ -51,11 +51,11 @@ interface CosmosGraphControlsProps {
 export const CosmosGraphControls: FC<
   PropsWithChildren<CosmosGraphControlsProps>
 > = ({className, children}) => {
-  const {handleFitView} = useCosmosGraph();
+  const {fitView} = useStoreWithCosmos((s) => s.cosmos);
 
   return (
     <div className={cn('absolute top-1 left-1 flex gap-2', className)}>
-      <Button onClick={handleFitView} variant="outline" size="sm">
+      <Button onClick={fitView} variant="outline" size="sm">
         <Maximize2 className="h-4 w-4" />
       </Button>
       {children}

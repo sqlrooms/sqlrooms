@@ -3,7 +3,7 @@
  *
  * This package provides React components and hooks for creating interactive graph visualizations
  * using the Cosmograph WebGL-based graph visualization library. It includes components for
- * rendering graphs, managing graph state, and controlling graph interactions.
+ * rendering graphs, managing graph state through zustand, and controlling graph interactions.
  *
  * @example Basic usage
  * ```tsx
@@ -34,7 +34,7 @@ export {CosmosGraphControls} from './CosmosGraphControls';
 
 /**
  * A component that provides fine-grained controls for the graph simulation parameters.
- * Must be used within a CosmosGraph component as it relies on the CosmosGraphContext.
+ * Uses the zustand store to access and control the graph state.
  *
  * Features:
  * - Slider controls for gravity, repulsion, link strength, link distance, friction, and decay
@@ -59,10 +59,19 @@ export {CosmosGraphControls} from './CosmosGraphControls';
 export {CosmosSimulationControls} from './CosmosSimulationControls';
 export type {CosmosGraphProps} from './CosmosGraph';
 
-// Context and hooks
-export {useCosmosGraph} from './CosmosGraphContext';
-export {useGraph, useHoverState, useGraphConfig} from './hooks';
-export type {HoverState} from './hooks/useHoverState';
+// State management
+export {useHoverState} from './hooks/useHoverState';
+export {
+  createCosmosSlice,
+  useStoreWithCosmos,
+  type CosmosSliceState,
+  type ProjectStateWithCosmos,
+} from './CosmosSlice';
+export {
+  CosmosSliceConfig,
+  createDefaultCosmosConfig,
+  type CosmosSliceConfig as CosmosSliceConfigType,
+} from './CosmosSliceConfig';
 
 // Utilities
 export type {WithClientCoordinates} from './utils/coordinates';

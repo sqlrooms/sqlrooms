@@ -1,4 +1,4 @@
-import {FC, useMemo, useState} from 'react';
+import {FC, useMemo, useState, useEffect} from 'react';
 import {GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   CosmosGraph,
@@ -7,10 +7,13 @@ import {
 } from '@sqlrooms/cosmos';
 import {useMammalsData} from './hooks/useMammalsData';
 import {DownloadButton} from './components/DownloadButton';
+import {useProjectStore} from '../../store';
 
 export const MammalsGraph: FC = () => {
   const {graphData} = useMammalsData();
   const [focusedPointIndex, setFocusedPointIndex] = useState<number>();
+
+  const updateGraphConfig = useProjectStore((s) => s.cosmos.updateGraphConfig);
 
   const config = useMemo<GraphConfigInterface>(
     () => ({
@@ -44,6 +47,11 @@ export const MammalsGraph: FC = () => {
     [],
   );
 
+  // Update graph config when it changes
+  useEffect(() => {
+    updateGraphConfig(config);
+  }, [config, updateGraphConfig]);
+
   return graphData ? (
     <CosmosGraph
       config={config}
@@ -53,12 +61,12 @@ export const MammalsGraph: FC = () => {
       pointColors={graphData.pointColors}
       linkIndexes={graphData.linkIndexes}
       linkColors={graphData.linkColors}
-      getPointTooltip={(index) => String(graphData.nodes[index])}
+      renderPointTooltip={(index) => String(graphData.nodes[index])}
     >
       <CosmosGraphControls>
         <DownloadButton nodes={graphData.nodes} />
       </CosmosGraphControls>
-      <CosmosSimulationControls />
+      <CosmosSimulationControls className="absolute top-1 right-1" />
     </CosmosGraph>
   ) : null;
 };
