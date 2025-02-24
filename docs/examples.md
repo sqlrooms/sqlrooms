@@ -40,19 +40,34 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Project state persistence
 
-## [Cosmos Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
+## [Cosmos – Graph Visualization](http://sqlrooms-graph.netlify.app/)
 
-[Try live](http://sqlrooms-cosmos.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
+[Try live](http://sqlrooms-graph.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/graph)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/graph?embed=1&file=src/app.tsx)
 
-<img src="https://github.com/user-attachments/assets/4061fc7e-797f-4eda-8d2d-f988f9dd3ab0" alt="SQLRooms Cosmos example showing graph visualization" width=450>
+<img src="https://github.com/user-attachments/assets/4061fc7e-797f-4eda-8d2d-f988f9dd3ab0" alt="SQLRooms Graph example showing network visualization" width=450>
 
-An example showcasing integration with the powerful [Cosmos library](https://github.com/cosmograph-org/cosmos) for
-high-performance graph and embedding visualizations powered by GPU acceleration. Features include:
+An example demonstrating integration with the [Cosmos](https://github.com/cosmograph-org/cosmos) GPU-accelerated graph visualization library. Features include:
 
-- GPU-accelerated graph layout engine for efficient rendering
-- Interactive network visualization capabilities
-- Embedding space exploration tools
-- Real-time graph manipulation
-- Seamless integration with large-scale graph datasets
+- WebGL-based force-directed layout computation
+- High-performance rendering of large networks
+- Real-time interaction and filtering capabilities
+- Customizable visual attributes and physics parameters
+- Event handling for node/edge interactions
+
+## [Cosmos – 2D Embedding Visualization](http://sqlrooms-cosmos-embedding.netlify.app/)
+
+[Try live](http://sqlrooms-cosmos-embedding.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos-embedding)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos-embedding?embed=1&file=src/app.tsx)
+
+<img src="https://github.com/user-attachments/assets/776300be-6f00-4ea4-83c5-46415cc9154e" alt="SQLRooms 2D Embedding visualization using Cosmos" width=450>
+
+An example showcasing integration with Cosmos for visualizing high-dimensional data in 2D space. Features include:
+
+- WebGL-powered rendering of 2D embeddings
+- GPU-accelerated positioning and transitions
+- Dynamic mapping of data attributes to visual properties
+- Efficient handling of large-scale embedding datasets
+- Interactive exploration with pan, zoom, and filtering

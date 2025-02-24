@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NETLIFY_USE_PNPM = "true"
+  CI = "false"  # This will prevent treating warnings as errors
+

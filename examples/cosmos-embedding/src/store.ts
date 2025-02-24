@@ -58,8 +58,8 @@ export const {projectStore, useProjectStore} = createProjectStore<
         dataSources: [
           {
             type: 'url',
-            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
-            tableName: 'mammals',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/publications/publications-sample-1pct.parquet',
+            tableName: 'publications',
           },
         ],
         ...createDefaultSqlEditorConfig(),
