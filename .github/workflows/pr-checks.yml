@@ -67,42 +67,14 @@ jobs:
             ${{ runner.os }}-pnpm-store-
 
       - name: Install dependencies
-        run: pnpm install --frozen-lockfile
-
-      # Temporary workaround for missing types in CI
-      # TODO: Remove once @duckdb/duckdb-wasm publishes updated type definitions
-      - name: Create temporary type declarations
         run: |
-          mkdir -p node_modules/@types/duckdb__duckdb-wasm
-          echo 'declare module "@duckdb/duckdb-wasm" {
-            export const DuckDBDataProtocol: any;
-            export class AsyncDuckDB {
-              constructor(logger?: any, worker?: Worker);
-              instantiate(mainModule: any, pthreadWorker: any): Promise<void>;
-              open(options: any): Promise<void>;
-              connect(): Promise<AsyncDuckDBConnection>;
-              onError(event: ErrorEvent): void;
-              dropFile(fname: string): void;
-              dropFiles(): void;
-              registerFileHandle(path: string, file: File, protocol: any, direct: boolean): Promise<void>;
-              registerFileBuffer(path: string, buffer: Uint8Array): Promise<void>;
-            }
-            export class AsyncDuckDBConnection {
-              query(query: string): Promise<any>;
-              close(): Promise<void>;
-              insertArrowTable(table: any, options: { name: string }): Promise<void>;
-            }
-            export class ConsoleLogger {
-              log(...args: any[]): void;
-            }
-            export function getJsDelivrBundles(): any;
-            export function selectBundle(bundles: any): Promise<any>;
-            export function createWorker(mainWorker: string): Promise<Worker>;
-            
-            export namespace duckdb {
-              export { AsyncDuckDB, AsyncDuckDBConnection };
-            }
-          }' > node_modules/@types/duckdb__duckdb-wasm/index.d.ts
+          pnpm install --frozen-lockfile --shamefully-hoist -w
+          echo "=== Listing contents of node_modules ==="
+          ls -la node_modules/@duckdb node_modules/@radix-ui node_modules/@types || true
+          echo "=== Listing specific type definitions ==="
+          find node_modules/@types -name "*.d.ts" || true
+          echo "=== Package locations ==="
+          pnpm ls --json | grep -i "duckdb\|radix"
 
       - name: Lint
         run: pnpm lint
