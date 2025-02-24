@@ -1,3 +1,8 @@
+/**
+ * @fileoverview Cosmos graph visualization state management using Zustand.
+ * This module provides state management and control functions for the Cosmos graph visualization.
+ */
+
 import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   createSlice,
@@ -9,19 +14,33 @@ import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';
 
+/**
+ * Core state interface for the Cosmos graph visualization.
+ * Contains the graph instance, simulation state, and all control functions.
+ */
 export type CosmosSliceState = {
   cosmos: {
+    /** The current graph instance */
     graph: Graph | null;
+    /** Whether the physics simulation is currently running */
     isSimulationRunning: boolean;
+    /** Creates a new graph instance in the specified container */
     createGraph: (container: HTMLDivElement) => void;
+    /** Toggles the physics simulation on/off */
     toggleSimulation: () => void;
+    /** Adjusts the view to fit all nodes */
     fitView: () => void;
+    /** Starts the simulation with initial energy */
     startWithEnergy: () => void;
+    /** Cleans up and removes the current graph */
     destroyGraph: () => void;
+    /** Updates the simulation configuration parameters */
     updateSimulationConfig: (
       config: Partial<CosmosSliceConfig['cosmos']>,
     ) => void;
+    /** Updates the graph's visual configuration */
     updateGraphConfig: (config: Partial<GraphConfigInterface>) => void;
+    /** Updates the graph's data (points, links, colors, etc.) */
     updateGraphData: (data: {
       pointPositions?: Float32Array;
       pointColors?: Float32Array;
@@ -29,16 +48,28 @@ export type CosmosSliceState = {
       linkIndexes?: Float32Array;
       linkColors?: Float32Array;
     }) => void;
+    /** Sets the currently focused point by its index */
     setFocusedPoint: (index: number | undefined) => void;
+    /** Sets the zoom level of the graph view */
     setZoomLevel: (level: number) => void;
   };
 };
 
+/**
+ * Combined type representing the full project state including Cosmos functionality.
+ * Merges the base project state with Cosmos-specific state and configuration.
+ */
 export type ProjectStateWithCosmos = ProjectState<
   BaseProjectConfig & CosmosSliceConfig
 > &
   CosmosSliceState;
 
+/**
+ * Creates a Zustand slice for managing Cosmos graph state.
+ * This slice handles graph creation, destruction, configuration, and data updates.
+ *
+ * @returns A state creator function for the Cosmos slice
+ */
 export function createCosmosSlice(): StateCreator<CosmosSliceState> {
   return createSlice<BaseProjectConfig & CosmosSliceConfig, CosmosSliceState>(
     (set, get) => ({
@@ -189,6 +220,20 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
   );
 }
 
+/**
+ * Hook to access the Cosmos store with proper typing.
+ * Provides type-safe access to the combined project and Cosmos state.
+ *
+ * @template T The type of the selected state slice
+ * @param selector A function that selects a portion of the state
+ * @returns The selected state portion
+ *
+ * @example
+ * ```typescript
+ * const graph = useStoreWithCosmos(state => state.cosmos.graph);
+ * const isRunning = useStoreWithCosmos(state => state.cosmos.isSimulationRunning);
+ * ```
+ */
 export function useStoreWithCosmos<T>(
   selector: (state: ProjectStateWithCosmos) => T,
 ): T {

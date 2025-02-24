@@ -9,9 +9,8 @@ import {
 } from '@sqlrooms/ui';
 import {FC} from 'react';
 import {Info, Pause, Play, Wind} from 'lucide-react';
-import {CosmosSimulationConfigSchema} from './config';
 import {useStoreWithCosmos} from './CosmosSlice';
-import type {CosmosSliceConfig} from './CosmosSliceConfig';
+import {CosmosSliceConfig} from './CosmosSliceConfig';
 
 /**
  * Props for the CosmosSimulationControls component.
@@ -208,12 +207,12 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
                   htmlFor={key}
                   className="text-xs font-medium flex items-center gap-1 cursor-help"
                 >
+                  <Info className="w-3 h-3 text-muted-foreground/50" />
                   {label}
-                  <Info className="w-3 h-3 text-muted-foreground" />
                 </Label>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[200px]">
-                {CosmosSimulationConfigSchema.shape[key].description}
+                {CosmosSliceConfig.shape.cosmos.shape[key].description}
               </TooltipContent>
             </Tooltip>
             <span className="text-xs tabular-nums text-muted-foreground">
