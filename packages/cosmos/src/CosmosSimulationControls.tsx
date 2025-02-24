@@ -7,11 +7,10 @@ import {
   TooltipTrigger,
   Button,
 } from '@sqlrooms/ui';
-import {FC, useState} from 'react';
-import {useCosmosGraph} from './CosmosGraphContext';
+import {FC} from 'react';
 import {Info, Pause, Play, Wind} from 'lucide-react';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
-import {CosmosSimulationConfigSchema} from './config';
+import {useStoreWithCosmos} from './CosmosSlice';
+import {CosmosSliceConfig} from './CosmosSliceConfig';
 
 /**
  * Props for the CosmosSimulationControls component.
@@ -43,7 +42,6 @@ const simulationSliders = [
     min: 0,
     max: 0.5,
     step: 0.01,
-    default: 0.25,
   },
   {
     key: 'simulationRepulsion',
@@ -51,7 +49,6 @@ const simulationSliders = [
     min: 0,
     max: 2,
     step: 0.01,
-    default: 1.0,
   },
   {
     key: 'simulationLinkSpring',
@@ -59,7 +56,6 @@ const simulationSliders = [
     min: 0,
     max: 2,
     step: 0.01,
-    default: 1,
   },
   {
     key: 'simulationLinkDistance',
@@ -67,7 +63,6 @@ const simulationSliders = [
     min: 1,
     max: 20,
     step: 1,
-    default: 10,
   },
   {
     key: 'simulationFriction',
@@ -75,7 +70,6 @@ const simulationSliders = [
     min: 0,
     max: 1,
     step: 0.01,
-    default: 0.85,
   },
   {
     key: 'simulationDecay',
@@ -83,16 +77,14 @@ const simulationSliders = [
     min: 100,
     max: 10000,
     step: 100,
-    default: 1000,
   },
 ] as const;
 
 type SimulationKey = (typeof simulationSliders)[number]['key'];
-type SimulationValues = Record<SimulationKey, number>;
 
 /**
  * A component that provides fine-grained controls for adjusting graph simulation parameters.
- * Must be used within a CosmosGraph component as it relies on the CosmosGraphContext.
+ * Uses the zustand store to access and control the graph state.
  *
  * Features:
  * - Slider controls for all simulation parameters
@@ -115,11 +107,9 @@ type SimulationValues = Record<SimulationKey, number>;
  *
  * const MyGraph = () => {
  *   return (
- *     <div style={{ width: '800px', height: '600px' }}>
  *       <CosmosGraph {...graphProps}>
  *         <CosmosSimulationControls />
  *       </CosmosGraph>
- *     </div>
  *   );
  * };
  * ```
@@ -130,12 +120,10 @@ type SimulationValues = Record<SimulationKey, number>;
  *
  * const MyGraph = () => {
  *   return (
- *     <div style={{ width: '800px', height: '600px' }}>
  *       <CosmosGraph {...graphProps}>
  *         <CosmosGraphControls className="absolute top-4 left-4" />
  *         <CosmosSimulationControls className="absolute top-4 right-4" />
  *       </CosmosGraph>
- *     </div>
  *   );
  * };
  * ```
@@ -153,37 +141,24 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
   className,
 }) => {
   const {
-    graphRef,
     isSimulationRunning,
-    handleToggleSimulation,
-    handleStartWithEnergy,
-  } = useCosmosGraph();
-  const [values, setValues] = useState<SimulationValues>(
-    () =>
-      Object.fromEntries(
-        simulationSliders.map(({key, default: defaultValue}) => [
-          key,
-          defaultValue,
-        ]),
-      ) as SimulationValues,
-  );
+    toggleSimulation,
+    startWithEnergy,
+    updateSimulationConfig,
+  } = useStoreWithCosmos((s) => s.cosmos);
+
+  const config = useStoreWithCosmos(
+    (s) => s.project.config.cosmos,
+  ) as CosmosSliceConfig['cosmos'];
 
   const handleParameterChange = (paramKey: SimulationKey, value: number[]) => {
-    if (!graphRef?.current) return;
-
-    const newValues = {...values, [paramKey]: value[0]};
-    setValues(newValues);
-
-    const config: Partial<GraphConfigInterface> = {
-      [paramKey]: value[0],
-    };
-    graphRef.current.setConfig(config);
+    updateSimulationConfig({[paramKey]: value[0]});
   };
 
   return (
     <div
       className={cn(
-        'absolute top-1 right-1 w-48 bg-card/90 dark:bg-card/90 rounded-lg shadow-lg p-3 space-y-4',
+        'w-48 bg-card/90 dark:bg-card/90 rounded-lg shadow-lg p-3 space-y-4',
         className,
       )}
     >
@@ -191,7 +166,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              onClick={handleToggleSimulation}
+              onClick={toggleSimulation}
               variant="outline"
               size="sm"
               className="flex-1"
@@ -210,7 +185,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
-              onClick={handleStartWithEnergy}
+              onClick={startWithEnergy}
               variant="outline"
               size="sm"
               className="flex-1"
@@ -232,16 +207,16 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
                   htmlFor={key}
                   className="text-xs font-medium flex items-center gap-1 cursor-help"
                 >
+                  <Info className="w-3 h-3 text-muted-foreground/50" />
                   {label}
-                  <Info className="w-3 h-3 text-muted-foreground" />
                 </Label>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[200px]">
-                {CosmosSimulationConfigSchema.shape[key].description}
+                {CosmosSliceConfig.shape.cosmos.shape[key].description}
               </TooltipContent>
             </Tooltip>
             <span className="text-xs tabular-nums text-muted-foreground">
-              {values[key].toFixed(2)}
+              {config[key].toFixed(2)}
             </span>
           </div>
           <Slider
@@ -249,7 +224,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
             min={min}
             max={max}
             step={step}
-            value={[values[key]]}
+            value={[config[key]]}
             onValueChange={(value) => handleParameterChange(key, value)}
             className="w-full"
           />

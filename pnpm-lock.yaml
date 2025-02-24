@@ -557,21 +557,33 @@ importers:
       '@cosmograph/cosmos':
         specifier: 2.0.0-beta.22
         version: 2.0.0-beta.22
+      '@sqlrooms/project-builder':
+        specifier: workspace:*
+        version: link:../project-builder
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       lucide-react:
         specifier: ^0.474.0
-        version: 0.474.0(react@18.3.1)
+        version: 0.474.0(react@19.0.0)
       react:
         specifier: '*'
-        version: 18.3.1
+        version: 19.0.0
       react-dom:
         specifier: '*'
         version: 18.3.1(react@18.3.1)
       zod:
         specifier: ^3.24.1
         version: 3.24.1
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
 
   packages/data-table:
     dependencies:
