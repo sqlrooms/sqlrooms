@@ -10,7 +10,6 @@ import {
   CoreAssistantMessage,
   CoreToolMessage,
   CoreUserMessage,
-  LanguageModelV1,
   StepResult,
   ToolSet,
 } from 'ai';
@@ -29,6 +28,7 @@ type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
 
 export const AiSliceConfig = z.object({
   ai: z.object({
+    modelProvider: z.string(),
     model: z.string(),
     analysisResults: z.array(AnalysisResultSchema),
   }),
@@ -38,6 +38,7 @@ export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 export function createDefaultAiConfig(): AiSliceConfig {
   return {
     ai: {
+      modelProvider: 'openai',
       model: 'gpt-4o-mini',
       analysisResults: [],
     },
@@ -73,6 +74,7 @@ export type AiSliceState = {
 async function executeAnalysis({
   resultId,
   prompt,
+  modelProvider,
   model,
   apiKey,
   abortController,
@@ -81,6 +83,7 @@ async function executeAnalysis({
 }: {
   resultId: string;
   prompt: string;
+  modelProvider: string;
   model: string;
   apiKey: string;
   abortController: AbortController;
@@ -89,6 +92,7 @@ async function executeAnalysis({
 }) {
   try {
     await runAnalysis({
+      modelProvider,
       model,
       apiKey,
       prompt,
@@ -189,7 +193,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             }
             newMessagesById.set(m.id, m);
           }
-          console.log('newMessagesById', Array.from(newMessagesById.values()));
           return {
             ai: {
               ...state.ai,
@@ -234,6 +237,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           await executeAnalysis({
             resultId,
             prompt: get().ai.analysisPrompt,
+            modelProvider: get().project.config.ai.modelProvider,
             model: get().project.config.ai.model,
             apiKey: getApiKey(),
             abortController,
@@ -271,7 +275,7 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
  * @param resultId - The result id
  * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon)
  * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. toolCallId is used to link the message to the tool call.
- * @param toolResults - The new tool results. TODO: remove this, we don't need this since the tool results are the content sent back to LLM as a response, so there is no need to use them in analysis
+ * @param toolResults - The new tool results.  NOTE: only error will be saved as toolResult
  * @param analysis - The analysis is the content generated after all the tool calls have been executed
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state

@@ -17,16 +17,34 @@ import {CodeIcon} from 'lucide-react';
 import {Suspense, ReactNode} from 'react';
 import Markdown from 'react-markdown';
 import {VegaLiteChart} from '@sqlrooms/vega';
+import React from 'react';
 
+/**
+ * Props for the ToolCall component
+ * @interface ToolCallProps
+ * @property {ToolCallSchema} toolCall - The tool call data containing arguments and metadata
+ * @property {ReactNode} [customMessage] - Optional custom message to display with the tool call
+ */
 type ToolCallProps = {
   toolCall: ToolCallSchema;
   customMessage?: ReactNode;
 };
 
+/**
+ * Props for the QueryToolCall component
+ * @interface QueryToolCallProps
+ * @extends {QueryToolParameters}
+ * @property {ReactNode} [customMessage] - Optional custom message to display with the query
+ */
 type QueryToolCallProps = QueryToolParameters & {
   customMessage?: ReactNode;
 };
 
+/**
+ * Type guard to check if an argument object matches QueryToolParameters
+ * @param {unknown} args - The arguments to check
+ * @returns {boolean} True if args matches QueryToolParameters structure
+ */
 export function isQueryToolParameters(
   args: unknown,
 ): args is QueryToolParameters {
@@ -38,17 +56,32 @@ export function isQueryToolParameters(
   );
 }
 
+/**
+ * Type guard to check if an argument object matches AnswerToolParameters
+ * @param {unknown} args - The arguments to check
+ * @returns {boolean} True if args matches AnswerToolParameters structure
+ */
 function isAnswerToolParameters(args: unknown): args is AnswerToolParameters {
   return typeof args === 'object' && args !== null && 'answer' in args;
 }
 
+/**
+ * Type guard to check if an argument object matches ChartToolParameters
+ * @param {unknown} args - The arguments to check
+ * @returns {boolean} True if args matches ChartToolParameters structure
+ */
 export function isChartToolParameters(
   args: unknown,
 ): args is ChartToolParameters {
   return typeof args === 'object' && args !== null && 'vegaLiteSpec' in args;
 }
 
-function QueryToolCall({
+/**
+ * Renders a SQL query tool call with reasoning and query text
+ * @param {QueryToolCallProps} props - The component props
+ * @returns {JSX.Element} The rendered query tool call
+ */
+const QueryToolCall = React.memo(function QueryToolCall({
   reasoning,
   sqlQuery,
   customMessage,
@@ -60,11 +93,18 @@ function QueryToolCall({
       {customMessage}
     </div>
   );
-}
+});
 
-function ChartToolCall(args: ChartToolParameters) {
-  const {reasoning, sqlQuery, vegaLiteSpec} = args;
-
+/**
+ * Renders a chart tool call with visualization using Vega-Lite
+ * @param {ChartToolParameters} props - The component props
+ * @returns {JSX.Element} The rendered chart tool call
+ */
+const ChartToolCall = React.memo(function ChartToolCall({
+  reasoning,
+  sqlQuery,
+  vegaLiteSpec,
+}: ChartToolParameters) {
   return (
     <div className="flex flex-col gap-5">
       <div className="text-sm">
@@ -93,18 +133,28 @@ function ChartToolCall(args: ChartToolParameters) {
       )}
     </div>
   );
-}
+});
 
-function AnswerToolCall(args: AnswerToolParameters) {
+/**
+ * Renders an answer tool call with optional chart visualization
+ * Note: with the new design, this component is only used by displaying error messages
+ *
+ * @param {AnswerToolParameters} props - The component props
+ * @returns {JSX.Element} The rendered answer tool call
+ */
+const AnswerToolCall = React.memo(function AnswerToolCall({
+  answer,
+  chart,
+}: AnswerToolParameters) {
   return (
     <div className="flex flex-col gap-5">
       <div className="text-sm">
-        <Markdown>{args.answer}</Markdown>
+        <Markdown>{answer}</Markdown>
       </div>
-      {args.chart && (
+      {chart && (
         <div className="flex flex-col gap-2">
           <div className="text-xs text-muted-foreground font-mono">
-            {args.chart.sqlQuery}
+            {chart.sqlQuery}
           </div>
           <Suspense
             fallback={
@@ -116,16 +166,22 @@ function AnswerToolCall(args: AnswerToolParameters) {
             <VegaLiteChart
               width={400}
               height={250}
-              sqlQuery={args.chart.sqlQuery}
-              spec={args.chart.vegaLiteSpec}
+              sqlQuery={chart.sqlQuery}
+              spec={chart.vegaLiteSpec}
             />
           </Suspense>
         </div>
       )}
     </div>
   );
-}
+});
 
+/**
+ * Main component that renders different types of tool calls based on the tool name
+ *
+ * @param {ToolCallProps} props - The component props
+ * @returns {JSX.Element} The rendered tool call
+ */
 export function ToolCall({toolCall, customMessage}: ToolCallProps) {
   const {args, toolName, toolCallId} = toolCall;
   // the 'type' returns from LLM is not expected sometimes, so we need to use toolName

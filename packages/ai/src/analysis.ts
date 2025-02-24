@@ -1,4 +1,3 @@
-import type {LanguageModelV1} from '@ai-sdk/provider';
 import {
   arrowTableToJson,
   getDuckDb,
@@ -9,6 +8,7 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   CallbackFunctionProps,
   createAssistant,
+  OpenAIFunctionTool,
   ToolCallMessage,
   VercelToolSet,
 } from '@openassistant/core';
@@ -81,12 +81,58 @@ async function getQuerySummary(
 }
 
 /**
+ * Configuration options for running an AI analysis
+ * @interface AnalysisConfig
+ */
+export type AnalysisConfig = {
+  /** Name identifier for the assistant instance. Defaults to 'sqlrooms-ai' */
+  name?: string;
+
+  /** The AI model provider (e.g., 'openai', 'anthropic') */
+  modelProvider: string;
+
+  /** The specific model to use (e.g., 'gpt-4', 'claude-3') */
+  model: string;
+
+  /** API key for authenticating with the model provider */
+  apiKey: string;
+
+  /** The analysis prompt/question to send to the AI */
+  prompt: string;
+
+  /** Optional controller to abort the analysis operation */
+  abortController?: AbortController;
+
+  /**
+   * Optional callback fired after each step of the analysis
+   * @param event - The result of the current step
+   * @param toolCallMessages - Messages generated from tool calls
+   */
+  onStepFinish?: (
+    event: StepResult<typeof TOOLS>,
+    toolCallMessages: ToolCallMessage[],
+  ) => Promise<void> | void;
+
+  /** Maximum number of steps allowed in the analysis. Defaults to 100 */
+  maxSteps?: number;
+
+  /**
+   * Callback for handling streaming results after execution of all tool calls
+   * @param message - The current message content
+   * @param isCompleted - Whether this is the final message
+   */
+  onStreamResult: (message: string, isCompleted: boolean) => void;
+};
+
+/**
  * Run analysis on the project data
  * @param prompt - The prompt for the analysis
  * @param abortSignal - An optional abort signal to cancel the analysis
  * @returns The tool calls and the final answer
  */
 export async function runAnalysis({
+  name = 'sqlrooms-ai',
+  modelProvider,
   model,
   apiKey,
   prompt,
@@ -94,28 +140,18 @@ export async function runAnalysis({
   onStepFinish,
   onStreamResult,
   maxSteps = 100,
-}: {
-  model: string;
-  apiKey: string;
-  prompt: string;
-  abortController?: AbortController;
-  onStepFinish?: (
-    event: StepResult<typeof TOOLS>,
-    toolCallMessages: ToolCallMessage[],
-  ) => Promise<void> | void;
-  maxSteps?: number;
-  onStreamResult: (message: string, isCompleted: boolean) => void;
-}) {
+}: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
 
   const assistant = await createAssistant({
-    name: 'sqlrooms-ai',
-    modelProvider: 'openai',
+    name,
+    modelProvider,
     model,
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
     vercelFunctions: TOOLS,
+    functions: OTHER_TOOLS,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -273,3 +309,16 @@ In the response:
   //   },
   // },
 };
+
+const OTHER_TOOLS: OpenAIFunctionTool[] = [
+  // createMapFunctionDefinition({
+  //   getDataset: ({datasetName}: GetDatasetForCreateMapFunctionArgs) => {
+  //     // use datasetName as table name, check if the table exists
+  //     if (!myDatasets[datasetName]) {
+  //       throw new Error('The dataset does not exist.');
+  //     }
+  //     // return the arrow table
+  //     return myDatasets[datasetName];
+  //   },
+  // }),
+];

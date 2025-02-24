@@ -15,17 +15,19 @@ import {Expand, TableIcon} from 'lucide-react';
 import {useEffect, useState} from 'react';
 
 /**
- * A data table which is created using arrowTable.
+ * A component that displays a paginated data table using Apache Arrow data.
  *
- * @param arrowTable The arrow table e.g. from a query result
- * @returns A paginated data table component
+ * @component
+ * @param {Object} props - The component props
+ * @param {ArrowTable} props.arrowTable - The Apache Arrow table containing the data to display
+ * @returns {JSX.Element} A paginated data table component
  */
 function QueryResultTable({arrowTable}: {arrowTable: ArrowTable}) {
   const count = arrowTable.numRows;
 
   const [pagination, setPagination] = useState({
     pageIndex: 0,
-    pageSize: 5,
+    pageSize: 100,
   });
 
   const [slicedTable, setSlicedTable] = useState(
@@ -57,6 +59,15 @@ function QueryResultTable({arrowTable}: {arrowTable: ArrowTable}) {
   );
 }
 
+/**
+ * A modal component that displays a data table with a title.
+ *
+ * @component
+ * @param {Object} props - The component props
+ * @param {string} props.title - The title to display in the modal header
+ * @param {ArrowTable} props.arrowTable - The Apache Arrow table containing the data to display
+ * @returns {JSX.Element} A modal component containing a data table
+ */
 function QueryResultTableModal({
   title,
   arrowTable,
@@ -77,12 +88,12 @@ function QueryResultTableModal({
   return (
     <>
       <div
-        className="flex gap-2 flex-col items-center text-muted-foreground"
+        className="flex gap-2 flex-row items-center text-muted-foreground"
         onClick={handleClick}
       >
         <TableIcon className="h-4 w-4" />
         <h3 className="ml-1 text-xs uppercase">Query Result</h3>
-        <Expand className="h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-200" />
+        <Expand className="h-3 w-3 shrink-0 text-muted-foreground transition-transform duration-200" />
       </div>
 
       <Dialog
@@ -111,6 +122,12 @@ function QueryResultTableModal({
   );
 }
 
+/**
+ * Creates a query result message component based on a custom function call.
+ *
+ * @param {CustomFunctionCall} props - The custom function call properties
+ * @returns {JSX.Element | null} A query result table modal component or null if no data is available
+ */
 export function queryMessage(props: CustomFunctionCall) {
   const {arrowTable} = props.output?.data as {arrowTable: ArrowTable};
   if (!arrowTable) {
