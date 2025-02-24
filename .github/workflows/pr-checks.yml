@@ -55,6 +55,7 @@ jobs:
       - name: Get pnpm store directory
         shell: bash
         run: |
+          pnpm store path --silent || exit 1
           echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
 
       - name: Setup pnpm cache
