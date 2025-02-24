@@ -74,7 +74,11 @@ jobs:
       - name: Create temporary type declarations
         run: |
           mkdir -p node_modules/@types/duckdb__duckdb-wasm
-          echo "declare module '@duckdb/duckdb-wasm';" > node_modules/@types/duckdb__duckdb-wasm/index.d.ts
+          echo 'declare module "@duckdb/duckdb-wasm" {
+            const _: any;
+            export = _;
+            export as namespace DuckDB;
+          }' > node_modules/@types/duckdb__duckdb-wasm/index.d.ts
 
       - name: Lint
         run: pnpm lint
