@@ -75,8 +75,13 @@ jobs:
         run: |
           mkdir -p node_modules/@types/duckdb__duckdb-wasm
           echo 'declare module "@duckdb/duckdb-wasm" {
-            export = any;
-            export as namespace duckdb;
+            export const DuckDBDataProtocol: any;
+            export const AsyncDuckDB: any;
+            export const AsyncDuckDBConnection: any;
+            export const duckdb: any;
+            
+            const defaultExport: any;
+            export default defaultExport;
           }' > node_modules/@types/duckdb__duckdb-wasm/index.d.ts
 
       - name: Lint
