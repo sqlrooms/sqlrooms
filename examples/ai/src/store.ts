@@ -1,4 +1,3 @@
-import {createOpenAI} from '@ai-sdk/openai';
 import {
   AiSliceConfig,
   AiSliceState,
@@ -115,16 +114,8 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
       // Ai slice
       ...createAiSlice({
-        createModel: (model: string) => {
-          if (!get().openAiApiKey) {
-            throw new Error('OpenAI API key is required');
-          }
-          const openai = createOpenAI({
-            apiKey: get().openAiApiKey,
-          });
-          return openai(model, {
-            structuredOutputs: true,
-          });
+        getApiKey: () => {
+          return get()?.openAiApiKey || '';
         },
       })(set, get, store),
 
