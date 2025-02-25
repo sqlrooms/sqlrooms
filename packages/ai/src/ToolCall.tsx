@@ -144,37 +144,29 @@ const ChartToolCall = React.memo(function ChartToolCall({
  */
 const AnswerToolCall = React.memo(function AnswerToolCall({
   answer,
-  chart,
 }: AnswerToolParameters) {
   return (
     <div className="flex flex-col gap-5">
       <div className="text-sm">
         <Markdown>{answer}</Markdown>
       </div>
-      {chart && (
-        <div className="flex flex-col gap-2">
-          <div className="text-xs text-muted-foreground font-mono">
-            {chart.sqlQuery}
-          </div>
-          <Suspense
-            fallback={
-              <div className="w-full h-full flex items-center justify-center">
-                <Spinner className="w-4 h-4" />
-              </div>
-            }
-          >
-            <VegaLiteChart
-              width={400}
-              height={250}
-              sqlQuery={chart.sqlQuery}
-              spec={chart.vegaLiteSpec}
-            />
-          </Suspense>
-        </div>
-      )}
     </div>
   );
 });
+
+// function getToolCallColor(toolCall: ToolCallSchema) {
+//   const {toolName} = toolCall;
+//   switch (toolName) {
+//     case 'chart':
+//       return 'bg-blue-500';
+//     case 'query':
+//       return 'bg-green-500';
+//     case 'answer':
+//       return toolCall.args.success ? 'bg-green-500' : 'bg-red-500';
+//     default:
+//       return 'bg-gray-500';
+//   }
+// }
 
 /**
  * Main component that renders different types of tool calls based on the tool name
