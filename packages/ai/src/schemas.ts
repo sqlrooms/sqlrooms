@@ -10,13 +10,6 @@ export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 export const AnswerToolParameters = z.object({
   type: z.literal('answer'),
   answer: z.string(),
-  chart: z.union([
-    z.object({
-      sqlQuery: z.string(),
-      vegaLiteSpec: z.string(),
-    }),
-    z.null(),
-  ]),
 });
 export type AnswerToolParameters = z.infer<typeof AnswerToolParameters>;
 

@@ -12,7 +12,11 @@ import {
   VercelToolSet,
 } from '@openassistant/core';
 
-import {ChartToolParameters, QueryToolParameters} from './schemas';
+import {
+  ChartToolParameters,
+  QueryToolParameters,
+  AnswerToolParameters,
+} from './schemas';
 import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
@@ -29,10 +33,23 @@ Instructions for analysis:
   * strftime() for date formatting (not to_char)
   * list_aggregate() for array operations
   * unnest() for array expansion
-- Please always try to use SQL queries to answer users questions 
+  * regr_sxy()
+  * corr()
+  * skewness()
+- Please always try to use SQL queries to answer users questions
+- Please run tool calls sequentially, don't run multiple tool calls in parallel
+- IMPORTANT: Do not list out raw query results in your response. Instead:
+  * Describe the results in natural language
+  * Provide summary statistics
+  * Use comparisons and relative terms
+  * Include only the most relevant values if necessary
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
 - Please don't modify data
+- IMPORTANT: When you receive an error response from a tool call (where success: false):
+  * Stop making any further tool calls immediately
+  * Return a final answer that includes the error message
+  * Explain what went wrong and suggest possible fixes if applicable
 
 When creating visualizations:
 - Follow VegaLite syntax
@@ -207,7 +224,7 @@ Don't execute queries that modify data unless explicitly asked.`,
         const {conn} = await getDuckDb();
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
         const result = await conn.query(sqlQuery);
-
+        throw new Error('sql execution failed.');
         // Only get summary if the query isn't already a SUMMARIZE query
         const summaryData = sqlQuery.toLowerCase().includes('summarize')
           ? arrowTableToJson(result)
@@ -230,10 +247,7 @@ Don't execute queries that modify data unless explicitly asked.`,
 
         // data object of the raw query result, which is NOT sent back to LLM
         // we can use it to visualize the arrow table in the callback function `message()` below
-        const data = {
-          sqlQuery,
-          arrowTable: result,
-        };
+        const data = {sqlQuery};
 
         return {
           name: 'query',
@@ -246,7 +260,8 @@ Don't execute queries that modify data unless explicitly asked.`,
           name: 'query',
           result: {
             success: false,
-            description: 'Failed to execute the query.',
+            description:
+              'Failed to execute the query. Please stop tool call and return error message.',
             error: getErrorMessage(error),
           },
         };
@@ -293,18 +308,18 @@ In the response:
   },
 
   // answer tool: the LLM will provide a structured answer
-  // answer: {
-  //   description:
-  //     'A tool for providing the final answer.',
-  //   parameters: AnswerToolParameters,
-  //   executeWithContext: async (props: CallbackFunctionProps) => {
-  //     const {answer} = props.functionArgs;
-  //     return {
-  //       result: {
-  //         success: true,
-  //         data: answer,
-  //       },
-  //     };
-  //   },
-  // },
+  answer: {
+    description: 'A tool for providing the final answer.',
+    parameters: AnswerToolParameters,
+    executeWithContext: async (props: CallbackFunctionProps) => {
+      const {answer} = props.functionArgs;
+      return {
+        name: 'answer',
+        result: {
+          success: true,
+          data: answer,
+        },
+      };
+    },
+  },
 };
