@@ -78,7 +78,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
         <div className="flex flex-col gap-5 px-4">
           {analysisToolResults.map((toolResult) => (
             <ToolResult
-              key={toolResult.toolName}
+              key={toolResult.toolCallId}
               toolResult={toolResult}
               customMessage={findCustomMessage(
                 result.toolCallMessages,
