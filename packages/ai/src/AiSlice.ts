@@ -66,9 +66,6 @@ export type AiSliceState = {
  * Each analysis contains an array of toolCalls and the results of the tool calls (toolResults).
  * After all the tool calls have been executed, the LLM will stream the results as text stored in `analysis`.
  *
- * onStepFinish() is the callback function that will be called when a tool call has been executed.
- * onStreamResult() is the callback function that will be called when the LLM has streamed the results as text.
- *
  * @param resultId - The result id
  * @param prompt - The prompt
  * @param model - The model
