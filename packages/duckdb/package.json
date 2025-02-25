@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/duckdb",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "^1.29.1-dev68.0",
-    "apache-arrow": "^18.1.0"
+    "apache-arrow": "^18.1.0",
+    "zod": "^3.24.1"
   },
   "devDependencies": {
     "@sqlrooms/jest-config": "workspace:*",

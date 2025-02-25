@@ -18,26 +18,31 @@ import {DatabaseIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
+import {
+  CosmosSliceConfig,
+  createCosmosSlice,
+  CosmosSliceState,
+  createDefaultCosmosConfig,
+} from '@sqlrooms/cosmos';
 
-export const ProjectPanelTypes = z.enum([
-  'data-sources',
-  'data-tables',
-  'docs',
-  MAIN_VIEW,
-] as const);
+export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
 /**
  * Project config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig =
+  BaseProjectConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
+
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
  * Project state
  */
-export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+export type AppState = ProjectState<AppConfig> &
+  SqlEditorSliceState &
+  CosmosSliceState;
 
 /**
  * Create a customized project store
@@ -50,24 +55,19 @@ export const {projectStore, useProjectStore} = createProjectStore<
   ...createProjectSlice<AppConfig>({
     project: {
       config: {
-        title: 'Demo App Project',
         layout: {
           type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: ProjectPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
+          nodes: MAIN_VIEW,
         },
         dataSources: [
           {
             type: 'url',
-            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/publications/publications-sample-1pct.parquet',
-            tableName: 'publications',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
+            tableName: 'mammals',
           },
         ],
         ...createDefaultSqlEditorConfig(),
+        ...createDefaultCosmosConfig(),
       },
       panels: {
         [ProjectPanelTypes.enum['data-sources']]: {
@@ -88,4 +88,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
   // Sql editor slice
   ...createSqlEditorSlice()(set, get, store),
+
+  // Cosmos slice
+  ...createCosmosSlice()(set, get, store),
 }));

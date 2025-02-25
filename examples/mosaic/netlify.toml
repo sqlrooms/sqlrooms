@@ -3,5 +3,6 @@
   publish = "dist"
 
 [build.environment]
-  NPM_FLAGS = "--force"
+  NETLIFY_USE_PNPM = "true"
+  CI = "false"  # This will prevent treating warnings as errors
 

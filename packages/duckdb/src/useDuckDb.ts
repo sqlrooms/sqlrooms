@@ -1,6 +1,7 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import * as arrow from 'apache-arrow';
 import {DataTable, TableColumn} from './types';
+import {useState, useEffect} from 'react';
 
 /**
  * @deprecated DuckConn is deprecated, use DuckDb instead

@@ -17,6 +17,11 @@ export function arrowTableToJson(
   );
 }
 
+/**
+ * Converts an Arrow table value to a JSON-compatible value
+ * @param value
+ * @returns
+ */
 function convertValue(value: unknown) {
   if (typeof value === 'bigint') {
     if (value >= Number.MIN_SAFE_INTEGER && value <= Number.MAX_SAFE_INTEGER) {

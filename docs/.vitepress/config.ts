@@ -54,6 +54,20 @@ export default defineConfig({
         ],
       },
       {
+        text: 'Examples',
+        items: [
+          {
+            text: 'Example Projects',
+            link: '/examples',
+          },
+          {
+            text: 'Case Studies',
+            link: '/case-studies',
+          },
+        ],
+      },
+
+      {
         text: 'Reference',
         items: [
           {
@@ -69,48 +83,6 @@ export default defineConfig({
             items: apiSidebarConfig.filter(
               (item) => !CORE_PACKAGES.includes(item.text),
             ),
-          },
-        ],
-      },
-      {
-        text: 'Examples',
-        items: [
-          {
-            text: 'Examples Overview',
-            link: '/examples',
-            items: [
-              {
-                text: 'Mosaic Cross-filtering',
-                link: '/examples/#mosaic-example',
-              },
-              {
-                text: 'AI Analytics',
-                link: '/examples#ai-powered-analytics',
-              },
-              {
-                text: 'Cosmos Graph Visualization',
-                link: '/examples#cosmos-graph-visualization',
-              },
-            ],
-          },
-        ],
-      },
-      {
-        text: 'Case Studies',
-        items: [
-          {
-            text: 'Case Studies Overview',
-            link: '/case-studies',
-            items: [
-              {
-                text: 'Flowmap City',
-                link: '/case-studies#flowmap-city',
-              },
-              {
-                text: 'Cosmograph',
-                link: '/case-studies#cosmograph',
-              },
-            ],
           },
         ],
       },

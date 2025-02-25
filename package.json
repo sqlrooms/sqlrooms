@@ -11,11 +11,12 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/* & pnpm run ladle",
+    "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
+    "build:examples": "turbo build --filter=./examples/*",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
@@ -69,7 +70,7 @@
     "react-dom": "^18.0.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
-    "turbo": "^2.4.1",
+    "turbo": "^2.4.2",
     "typedoc": "^0.27.6",
     "typescript": "5.7.3",
     "vitepress": "^1.6.3"
@@ -79,6 +80,11 @@
       "apache-arrow": "18.1.0",
       "@types/react": "18.3.18",
       "@duckdb/duckdb-wasm": "1.29.1-dev68.0"
-    }
+    },
+    "onlyBuiltDependencies": [
+      "@swc/core",
+      "esbuild",
+      "msw"
+    ]
   }
 }
