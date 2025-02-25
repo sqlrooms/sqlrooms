@@ -63,6 +63,12 @@ export type AiSliceState = {
 /**
  * Execute the analysis. It will be used by the action `startAnalysis`.
  *
+ * Each analysis contains an array of toolCalls and the results of the tool calls (toolResults).
+ * After all the tool calls have been executed, the LLM will stream the results as text stored in `analysis`.
+ *
+ * onStepFinish() is the callback function that will be called when a tool call has been executed.
+ * onStreamResult() is the callback function that will be called when the LLM has streamed the results as text.
+ *
  * @param resultId - The result id
  * @param prompt - The prompt
  * @param model - The model
@@ -269,12 +275,12 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
 }
 
 /**
- * Returns a function that will update the state by appending new results
- * to the analysis results.
+ * Returns a function that will update the state by appending new results to the analysis results.
+ *
  * @param resultId - The result id
- * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon)
- * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. toolCallId is used to link the message to the tool call.
- * @param toolResults - The new tool results.  NOTE: only error will be saved as toolResult
+ * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon). See {@link ToolCallSchema} for more details.
+ * @param toolResults - The results of the tool calls that were executed by the LLM. See {@link ToolResultSchema} for more details.
+ * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. It is linked to the tool call by the toolCallId.
  * @param analysis - The analysis is the content generated after all the tool calls have been executed
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state

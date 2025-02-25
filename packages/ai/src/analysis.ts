@@ -17,7 +17,11 @@ import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
 /**
- * System prompt for the AI assistant
+ * System prompt template for the AI assistant that provides instructions for:
+ * - Using DuckDB-specific SQL syntax and functions
+ * - Handling query results and error cases
+ * - Creating visualizations with VegaLite
+ * - Formatting final answers
  */
 const SYSTEM_PROMPT = `
 You are analyzing tables in DuckDB database in the context of a project.
@@ -66,10 +70,10 @@ Please use the following schema for the tables:
 `;
 
 /**
- * Get summary statistics for a SQL query result
- * @param conn - DuckDB connection
- * @param sqlQuery - The original SQL query
- * @returns Summary statistics as JSON, or null if summary cannot be generated
+ * Generates summary statistics for a SQL query result
+ * @param conn - DuckDB connection instance
+ * @param sqlQuery - SQL SELECT query to analyze
+ * @returns Summary statistics as JSON object, or null if the query is not a SELECT statement or if summary generation fails
  */
 async function getQuerySummary(
   conn: duckdb.AsyncDuckDBConnection,
@@ -93,54 +97,54 @@ async function getQuerySummary(
 }
 
 /**
- * Configuration options for running an AI analysis
- * @interface AnalysisConfig
+ * Configuration options for running an AI analysis session
  */
 export type AnalysisConfig = {
-  /** Name identifier for the assistant instance. Defaults to 'sqlrooms-ai' */
+  /** Assistant instance identifier (default: 'sqlrooms-ai') */
   name?: string;
 
-  /** The AI model provider (e.g., 'openai', 'anthropic') */
+  /** AI model provider (e.g., 'openai', 'anthropic') */
   modelProvider: string;
 
-  /** The specific model to use (e.g., 'gpt-4', 'claude-3') */
+  /** Model identifier (e.g., 'gpt-4', 'claude-3') */
   model: string;
 
-  /** API key for authenticating with the model provider */
+  /** Authentication key for the model provider's API */
   apiKey: string;
 
-  /** The analysis prompt/question to send to the AI */
+  /** Analysis prompt or question to be processed */
   prompt: string;
 
-  /** Optional controller to abort the analysis operation */
+  /** Optional controller for canceling the analysis operation */
   abortController?: AbortController;
 
   /**
-   * Optional callback fired after each step of the analysis
-   * @param event - The result of the current step
-   * @param toolCallMessages - Messages generated from tool calls
+   * Callback fired after each analysis step completion
+   * @param event - Current step result containing tool execution details. See Vercel AI SDK documentation for more details.
+   * Specifically, it contains the array of tool calls and the results of the tool calls (toolResults).
+   * @param toolCallMessages - Collection of messages generated during tool calls. They are linked to the tool call by the toolCallId.
    */
   onStepFinish?: (
     event: StepResult<typeof TOOLS>,
     toolCallMessages: ToolCallMessage[],
   ) => Promise<void> | void;
 
-  /** Maximum number of steps allowed in the analysis. Defaults to 100 */
+  /** Maximum number of analysis steps allowed (default: 100) */
   maxSteps?: number;
 
   /**
-   * Callback for handling streaming results after execution of all tool calls
-   * @param message - The current message content
-   * @param isCompleted - Whether this is the final message
+   * Callback for handling streaming results
+   * @param message - Current message content being streamed
+   * @param isCompleted - Indicates if this is the final message in the stream
    */
   onStreamResult: (message: string, isCompleted: boolean) => void;
 };
 
 /**
- * Run analysis on the project data
- * @param prompt - The prompt for the analysis
- * @param abortSignal - An optional abort signal to cancel the analysis
- * @returns The tool calls and the final answer
+ * Executes an AI analysis session on the project data
+ *
+ * @param config - Analysis configuration options. See {@link AnalysisConfig} for more details.
+ * @returns Object containing tool calls executed and the final analysis result
  */
 export async function runAnalysis({
   name = 'sqlrooms-ai',
@@ -151,10 +155,11 @@ export async function runAnalysis({
   abortController,
   onStepFinish,
   onStreamResult,
-  maxSteps = 100,
+  maxSteps = 5,
 }: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
 
+  // get the singlton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
@@ -169,6 +174,7 @@ export async function runAnalysis({
     ...(abortController ? {abortController} : {}),
   });
 
+  // process the prompt
   const result = await assistant.processTextMessage({
     textMessage: prompt,
     streamMessageCallback: (message) => {
@@ -182,9 +188,9 @@ export async function runAnalysis({
 }
 
 /**
- * Get the error message from the error object when function call fails
- * @param error - The error object
- * @returns The error message
+ * Extracts a readable error message from an error object
+ * @param error - Error object or unknown value
+ * @returns Formatted error message string
  */
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -196,6 +202,12 @@ function getErrorMessage(error: unknown): string {
   return String(error);
 }
 
+/**
+ * Collection of tools available to the AI assistant for data analysis
+ * Includes:
+ * - query: Executes SQL queries against DuckDB
+ * - chart: Creates VegaLite visualizations
+ */
 const TOOLS: VercelToolSet = {
   query: {
     description: `A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm.
