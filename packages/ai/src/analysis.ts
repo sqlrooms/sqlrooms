@@ -12,11 +12,7 @@ import {
   VercelToolSet,
 } from '@openassistant/core';
 
-import {
-  ChartToolParameters,
-  QueryToolParameters,
-  AnswerToolParameters,
-} from './schemas';
+import {ChartToolParameters, QueryToolParameters} from './schemas';
 import {queryMessage} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
@@ -224,7 +220,6 @@ Don't execute queries that modify data unless explicitly asked.`,
         const {conn} = await getDuckDb();
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
         const result = await conn.query(sqlQuery);
-        throw new Error('sql execution failed.');
         // Only get summary if the query isn't already a SUMMARIZE query
         const summaryData = sqlQuery.toLowerCase().includes('summarize')
           ? arrowTableToJson(result)
@@ -255,7 +250,6 @@ Don't execute queries that modify data unless explicitly asked.`,
           data,
         };
       } catch (error) {
-        console.error('SQL query error:', error);
         return {
           name: 'query',
           result: {
@@ -308,18 +302,18 @@ In the response:
   },
 
   // answer tool: the LLM will provide a structured answer
-  answer: {
-    description: 'A tool for providing the final answer.',
-    parameters: AnswerToolParameters,
-    executeWithContext: async (props: CallbackFunctionProps) => {
-      const {answer} = props.functionArgs;
-      return {
-        name: 'answer',
-        result: {
-          success: true,
-          data: answer,
-        },
-      };
-    },
-  },
+  // answer: {
+  //   description: 'A tool for providing the final answer.',
+  //   parameters: AnswerToolParameters,
+  //   executeWithContext: async (props: CallbackFunctionProps) => {
+  //     const {answer} = props.functionArgs;
+  //     return {
+  //       name: 'answer',
+  //       result: {
+  //         success: true,
+  //         data: answer,
+  //       },
+  //     };
+  //   },
+  // },
 };

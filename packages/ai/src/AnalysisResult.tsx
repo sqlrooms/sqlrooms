@@ -1,8 +1,6 @@
 import {AnalysisResultSchema} from './schemas';
-import {ToolCall} from './ToolCall';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
-import Markdown from 'react-markdown';
 import {ToolResult} from './ToolResult';
 
 /**
@@ -28,6 +26,20 @@ const stringifyResult = (result: AnalysisResultSchema) => {
 };
 
 /**
+ * Find a custom message element for a given tool call ID
+ * @param toolCallMessages - Array of tool call messages
+ * @param toolCallId - The ID of the tool call to find a message for
+ * @returns The custom message element if found, undefined otherwise
+ */
+const findCustomMessage = (
+  toolCallMessages: AnalysisResultSchema['toolCallMessages'],
+  toolCallId: string,
+) => {
+  return toolCallMessages.find((message) => message.toolCallId === toolCallId)
+    ?.element;
+};
+
+/**
  * Component that displays the results of an AI analysis.
  * Shows the original prompt, intermediate tool calls, final analysis text,
  * and any tool results.
@@ -38,11 +50,9 @@ const stringifyResult = (result: AnalysisResultSchema) => {
  * @returns A React component displaying the analysis results
  */
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
-  // the toolCalls are reasoning steps that the LLM took to achieve the final result
-  // therefore, the last toolCall should be the last toolCall that produced the final result
-  // the rest of the toolCalls are intermediate 'analysis' steps
-  const analysisToolCalls = result.toolCalls.slice(0, -1);
-  const finalToolCall = result.toolCalls.slice(-1)[0];
+  // the toolResults are reasoning steps that the LLM took to achieve the final result
+  // by calling function tools to answer the prompt
+  const analysisToolResults = result.toolResults;
 
   return (
     <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
@@ -64,47 +74,33 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex flex-col gap-5 px-4">
-        {analysisToolCalls.map((toolCall) => {
-          const customMessage = result.toolCallMessages.find(
-            (message) => message.toolCallId === toolCall.toolCallId,
-          )?.element;
-          return (
-            <ToolCall
-              key={toolCall.toolCallId}
-              toolCall={toolCall}
-              customMessage={customMessage}
+      {analysisToolResults.length > 0 && (
+        <div className="flex flex-col gap-5 px-4">
+          {analysisToolResults.map((toolResult) => (
+            <ToolResult
+              key={toolResult.toolName}
+              toolResult={toolResult}
+              customMessage={findCustomMessage(
+                result.toolCallMessages,
+                toolResult.toolCallId,
+              )}
             />
-          );
-        })}
-      </div>
-      <div className="flex flex-col gap-5 px-4">
-        <div className="text-xs overflow-y-auto p-4">
-          <Markdown className="whitespace-pre-wrap break-words">
-            {result.analysis}
-          </Markdown>
+          ))}
         </div>
-      </div>
-      <div className="flex flex-col gap-5 px-4">
-        {result.isCompleted && finalToolCall && (
-          <ToolCall
-            key={finalToolCall.toolCallId}
-            toolCall={finalToolCall}
-            customMessage={
-              result.toolCallMessages.find(
-                (message) => message.toolCallId === finalToolCall.toolCallId,
-              )?.element
-            }
+      )}
+      {result.analysis.length > 0 && (
+        <div className="flex flex-col gap-5 px-4">
+          <ToolResult
+            key={result.id + '-streaming-result'}
+            toolResult={{
+              toolName: 'answer',
+              toolCallId: result.id,
+              args: {},
+              result: {success: true, data: {analysis: result.analysis}},
+            }}
           />
-        )}
-      </div>
-      <div className="flex flex-col gap-5 px-4">
-        {result.toolResults.map((toolResult) => {
-          return (
-            <ToolResult key={toolResult.toolName} toolResult={toolResult} />
-          );
-        })}
-      </div>
+        </div>
+      )}
     </div>
   );
 };

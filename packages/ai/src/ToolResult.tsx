@@ -8,12 +8,41 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import {CheckCircle2Icon, CodeIcon, XCircleIcon} from 'lucide-react';
+import {ReactNode} from 'react';
+import {
+  AnalysisAnswer,
+  ChartToolCall,
+  isAnalysisAnswer,
+  isChartToolParameters,
+} from './ToolCall';
+import {isQueryToolParameters, QueryToolCall} from './ToolCall';
+import React from 'react';
 
 interface ToolResultProps {
   toolResult: ToolResultSchema;
+  customMessage?: ReactNode;
 }
 
-export const ToolResult: React.FC<ToolResultProps> = ({toolResult}) => {
+function getBorderColor(isSuccess: boolean, toolName: string) {
+  if (!isSuccess) {
+    return 'border-red-500';
+  }
+  switch (toolName) {
+    case 'query':
+      return 'border-green-500';
+    case 'chart':
+      return 'border-blue-500';
+    case 'answer':
+      return 'border-gray-500';
+    default:
+      return 'border-gray-500';
+  }
+}
+
+export const ToolResult: React.FC<ToolResultProps> = ({
+  toolResult,
+  customMessage,
+}) => {
   const {toolName, args, result} = toolResult;
   const isSuccess = result.success;
 
@@ -21,14 +50,14 @@ export const ToolResult: React.FC<ToolResultProps> = ({toolResult}) => {
     <div
       className={cn(
         'border-2 relative bg-gray-100 dark:bg-gray-900 px-5 py-6 rounded-md text-gray-700 dark:text-gray-300 text-xs',
-        isSuccess ? 'border-green-500' : 'border-red-500',
+        getBorderColor(isSuccess, toolName),
       )}
     >
       <Badge
         variant="secondary"
         className={cn(
           'text-xs absolute top-[-12px] left-2 dark:text-gray-100 text-gray-700 flex items-center gap-1 border',
-          isSuccess ? 'border-green-500' : 'border-red-500',
+          getBorderColor(isSuccess, toolName),
         )}
       >
         {isSuccess ? (
@@ -59,10 +88,17 @@ export const ToolResult: React.FC<ToolResultProps> = ({toolResult}) => {
       </div>
 
       <div className="flex flex-col gap-5">
-        {args.reasoning && (
-          <div className="text-xs text-gray-400">{args.reasoning}</div>
+        {toolName === 'query' && isQueryToolParameters(args) ? (
+          <QueryToolCall {...args} customMessage={customMessage} />
+        ) : toolName === 'chart' && isChartToolParameters(args) ? (
+          <ChartToolCall {...args} />
+        ) : toolName === 'answer' && isAnalysisAnswer(result) ? (
+          <AnalysisAnswer {...result} />
+        ) : (
+          Object.keys(args).length > 0 && (
+            <pre>{JSON.stringify(args, null, 2)}</pre>
+          )
         )}
-        {args.sqlQuery && <div className="font-mono">{args.sqlQuery}</div>}
         {!result.success && (
           <div className="text-red-500 gap-2 flex flex-col">
             <p className="text-sm font-bold">Oops! Something went wrong...</p>

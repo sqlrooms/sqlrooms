@@ -122,14 +122,13 @@ async function executeAnalysis({
       },
     });
   } catch (err) {
-    // TODO: since only Errors are stored in toolResults,
-    // we might get rid of toolResults in analysisResults, and add a new `ErrorResult` type
     set(
       makeResultsAppender({
         resultId,
+        isCompleted: true,
         toolResults: [
           {
-            toolName: 'answer',
+            toolName: 'error',
             toolCallId: createId(),
             args: {},
             result: {

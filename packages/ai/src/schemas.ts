@@ -7,12 +7,6 @@ export const QueryToolParameters = z.object({
 });
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 
-export const AnswerToolParameters = z.object({
-  type: z.literal('answer'),
-  answer: z.string(),
-});
-export type AnswerToolParameters = z.infer<typeof AnswerToolParameters>;
-
 export const AnalysisSchema = z.string();
 export type AnalysisSchema = z.infer<typeof AnalysisSchema>;
 
@@ -26,11 +20,7 @@ export type ChartToolParameters = z.infer<typeof ChartToolParameters>;
 export const ToolCallSchema = z.object({
   toolName: z.string(),
   toolCallId: z.string(),
-  args: z.union([
-    QueryToolParameters,
-    AnswerToolParameters,
-    ChartToolParameters,
-  ]),
+  args: z.union([QueryToolParameters, ChartToolParameters]),
 });
 export type ToolCallSchema = z.infer<typeof ToolCallSchema>;
 
