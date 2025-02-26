@@ -6,24 +6,6 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Mosaic Example](https://sqlrooms-mosaic.netlify.app/)
-
-[Try live](https://sqlrooms-mosaic.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/mosaic)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/mosaic?embed=1&file=src/app.tsx)
-
-<img src="https://github.com/user-attachments/assets/93ec2d5c-c358-4827-aae7-efe992fae572" alt="SQLRooms Mosaic example Vite app" width=400>
-
-An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive visualization framework utilizing DuckDB and high-performance cross-filtering.
-
-Features include:
-
-- Complete project setup using Vite and TypeScript
-- Comprehensive data source management and configuration
-- Seamless integration with Mosaic for interactive visualizations
-- Real-time cross-filtering capabilities across multiple views
-- Example dashboards with common visualization types
-
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
 [Try live](https://sqlrooms-ai.netlify.app/)
@@ -71,3 +53,21 @@ An example showcasing integration with Cosmos for visualizing high-dimensional d
 - Dynamic mapping of data attributes to visual properties
 - Efficient handling of large-scale embedding datasets
 - Interactive exploration with pan, zoom, and filtering
+
+## [Mosaic Example](https://sqlrooms-mosaic.netlify.app/)
+
+[Try live](https://sqlrooms-mosaic.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/mosaic)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/mosaic?embed=1&file=src/app.tsx)
+
+<img src="https://github.com/user-attachments/assets/93ec2d5c-c358-4827-aae7-efe992fae572" alt="SQLRooms Mosaic example Vite app" width=400>
+
+An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive visualization framework utilizing DuckDB and high-performance cross-filtering.
+
+Features include:
+
+- Complete project setup using Vite and TypeScript
+- Comprehensive data source management and configuration
+- Seamless integration with Mosaic for interactive visualizations
+- Real-time cross-filtering capabilities across multiple views
+- Example dashboards with common visualization types
