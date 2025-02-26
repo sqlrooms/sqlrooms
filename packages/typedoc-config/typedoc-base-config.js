@@ -17,6 +17,9 @@ const typedocOptions = {
   // hideBreadcrumbs: true,
   // hidePageHeader: true,
   // out: './docs',
+  headings: {
+    readme: false,
+  },
   parametersFormat: 'table',
   plugin: [
     'typedoc-vitepress-theme',

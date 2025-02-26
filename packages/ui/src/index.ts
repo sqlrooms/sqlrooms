@@ -1,3 +1,8 @@
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
 export * from './components/accordion';
 export * from './components/alert';
 export * from './components/badge';

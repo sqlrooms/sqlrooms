@@ -16,6 +16,10 @@ Core framework package that provides the foundation for building analytics appli
 
 A central configuration and type definitions package that maintains base project configuration schemas and [Zod](https://zod.dev/) schema definitions. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
 
+### [@sqlrooms/duckdb](./api/duckdb/index.md)
+
+A powerful DuckDB integration package that manages DuckDB-WASM instances and handles query execution. It provides robust data source connection capabilities and ensures type-safe query results for reliable data operations.
+
 ### [@sqlrooms/ui](./api/ui/index.md)
 
 A comprehensive UI toolkit based on [shadcn/ui](https://ui.shadcn.com/) that provides shared components and styling utilities. It includes a carefully crafted Tailwind preset configuration, a library of common UI components, robust theme management capabilities, and a collection of icons and assets.
@@ -33,10 +37,6 @@ An advanced interactive data grid component designed for SQL query result visual
 ### [@sqlrooms/dropzone](./api/dropzone/index.md)
 
 A comprehensive file upload solution that implements drag-and-drop functionality. It provides sophisticated file upload handling with built-in file type validation and upload progress tracking to enhance the user experience.
-
-### [@sqlrooms/duckdb](./api/duckdb/index.md)
-
-A powerful DuckDB integration package that manages DuckDB-WASM instances and handles query execution. It provides robust data source connection capabilities and ensures type-safe query results for reliable data operations.
 
 ### [@sqlrooms/layout](./api/layout/index.md)
 

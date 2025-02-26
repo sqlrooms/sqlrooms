@@ -1,3 +1,8 @@
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
 export {default as DataTableModal} from './DataTableModal';
 export * from './DataTablePaginated';
 export {default as DataTablePaginated} from './DataTablePaginated';

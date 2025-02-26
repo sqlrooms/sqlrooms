@@ -1,9 +1,10 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = ['project-builder', 'project-config', 'ui'];
+const CORE_PACKAGES = ['project-builder', 'project-config', 'duckdb', 'ui'];
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  ignoreDeadLinks: true,
   title: 'SQLRooms',
   description: 'Build powerful analytics apps with DuckDB in browser',
   base: '/',

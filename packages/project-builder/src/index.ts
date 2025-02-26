@@ -1,3 +1,8 @@
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
 export {TableCard} from './data-sources/TableCard';

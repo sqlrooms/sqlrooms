@@ -39,64 +39,79 @@ function loadSidebarContent(filePath: string): SidebarItem[] {
   return cleanupLinks(items);
 }
 
-function flattenAndAnnotateItems(
-  items: SidebarItem[],
-  packageName: string,
-): SidebarItem[] {
-  const result: SidebarItem[] = [];
+/**
+ * Ensures that each package has a README.md file
+ * @param docsDir The docs directory path
+ * @param packageNames Array of package names
+ */
+function ensureReadmeContent(docsDir: string, packageNames: string[]): void {
+  const rootDir = path.resolve(docsDir, '..');
 
-  for (const category of items) {
-    if (!category.items) continue;
+  for (const packageName of packageNames) {
+    const packageReadmePath = path.join(
+      rootDir,
+      'packages',
+      packageName,
+      'README.md',
+    );
 
-    for (const item of category.items) {
-      let suffix = '';
-      if (category.text === 'Type Aliases' || category.text === 'Interfaces') {
-        suffix = ' (type)';
-      } else if (category.text === 'Enumerations') {
-        suffix = ' (enum)';
+    // Check if README.md exists for the package
+    if (!fs.existsSync(packageReadmePath)) {
+      console.log(`README.md not found for package: ${packageName}`);
+
+      // Create a minimal README if it doesn't exist
+      const minimalReadme = `# @sqlrooms/${packageName}\n\nThis package is part of the SQLRooms framework.\n`;
+
+      // Create the package README
+      console.log(`Creating minimal README for ${packageName}`);
+
+      // Ensure the package directory exists
+      const packageDir = path.dirname(packageReadmePath);
+      if (!fs.existsSync(packageDir)) {
+        console.log(`Package directory not found: ${packageDir}`);
+        continue;
       }
 
-      result.push({
-        text: `${item.text}${suffix}`,
-        link: item.link,
-      });
+      fs.writeFileSync(packageReadmePath, minimalReadme);
     }
   }
-
-  // Sort alphabetically by text (ignoring the type/enum suffix)
-  return result.sort((a, b) => {
-    return a.text.localeCompare(b.text);
-  });
 }
 
-function generateApiSidebar(
-  docsDir: string,
-): NonNullable<SidebarItem['items']> {
+/**
+ * Generates the API sidebar and ensures README content is included in each package's API page
+ * @param docsDir The docs directory path
+ * @returns The sidebar configuration
+ */
+function generateApiDocs(docsDir: string): NonNullable<SidebarItem['items']> {
   const apiDir = path.join(docsDir, 'api');
   const sidebarFiles = findTypeDocSidebars(apiDir);
 
-  const packages: SidebarItem[] = [];
-
+  // Get unique package names from sidebar files
+  const packageNames = new Set<string>();
   for (const sidebarFile of sidebarFiles) {
-    console.log(`Generating sidebar for ${sidebarFile}`);
     const packageName = path.dirname(sidebarFile);
-    const fullPath = path.join(apiDir, sidebarFile);
-    const content = loadSidebarContent(fullPath);
-
-    packages.push({
-      text: packageName,
-      collapsed: true,
-      items: flattenAndAnnotateItems(content, packageName),
-    });
+    packageNames.add(packageName);
   }
+
+  // Convert to array for use in ensureReadmeContent
+  const packageNamesArray = Array.from(packageNames);
+
+  // Ensure README content is included in each package's API index
+  ensureReadmeContent(docsDir, packageNamesArray);
+
+  // Create a simple list of packages with links to their main pages
+  const packages: SidebarItem[] = packageNamesArray.map((packageName) => ({
+    text: packageName,
+    link: `/api/${packageName}/`,
+  }));
 
   // Sort packages alphabetically by text
   return packages.sort((a, b) => a.text.localeCompare(b.text));
 }
 
-// Generate the combined sidebar
+// Generate the API docs and sidebar
 const docsDir = path.resolve(__dirname, '..');
-const apiSidebar = generateApiSidebar(docsDir);
+const apiSidebar = generateApiDocs(docsDir);
 
 // Export the sidebar for use in config.ts
 export const apiSidebarConfig = apiSidebar;
