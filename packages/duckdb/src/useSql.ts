@@ -7,7 +7,7 @@ import {z} from 'zod';
  * A wrapper interface that exposes the underlying Arrow table,
  * a typed row accessor, and the number of rows.
  */
-export interface DuckDbQueryResult<T> {
+export interface UseSqlQueryResult<T> {
   /** The underlying Arrow table */
   arrowTable: arrow.Table;
   /** Returns a typed row at the specified index by converting on demand */
@@ -21,6 +21,11 @@ export interface DuckDbQueryResult<T> {
 }
 
 /**
+ * @deprecated Use UseSqlQueryResult instead
+ */
+export type DuckDbQueryResult<T> = UseSqlQueryResult<T>;
+
+/**
  * Creates a row accessor wrapper around an Arrow table that provides typed row access.
  */
 function createTypedRowAccessor<T>({
@@ -29,7 +34,7 @@ function createTypedRowAccessor<T>({
 }: {
   arrowTable: arrow.Table;
   validate?: (row: unknown) => T;
-}): DuckDbQueryResult<T> {
+}): UseSqlQueryResult<T> {
   return {
     arrowTable,
     get length() {
@@ -66,7 +71,7 @@ function createTypedRowAccessor<T>({
 }
 
 /**
- * A React hook for executing DuckDB queries with automatic state management.
+ * A React hook for executing SQL queries with automatic state management.
  * Provides two ways to ensure type safety:
  * 1. Using TypeScript types (compile-time safety only)
  * 2. Using Zod schemas (both compile-time and runtime validation)
@@ -80,7 +85,7 @@ function createTypedRowAccessor<T>({
  *   email: string;
  * }
  *
- * const {data, isLoading, error} = useDuckDbQuery<User>({
+ * const {data, isLoading, error} = useSql<User>({
  *   query: 'SELECT id, name, email FROM users'
  * });
  *
@@ -92,7 +97,7 @@ function createTypedRowAccessor<T>({
  *   createdAt: z.string().transform(str => new Date(str)) // Transform string to Date
  * });
  *
- * const {data: validatedData, isLoading, error} = useDuckDbQuery(
+ * const {data: validatedData, isLoading, error} = useSql(
  *   userSchema,
  *   {query: 'SELECT id, name, email, created_at as createdAt FROM users'}
  * );
@@ -109,17 +114,21 @@ function createTypedRowAccessor<T>({
  * if (!data) return null;
  *
  * // Accessing data works the same way for both approaches
- * // Individual row access
- * const user = data.getRow(0);
- * console.log(user.name);
- *
- * // With Zod schema, transformed fields are available
- * // console.log(validatedData.getRow(0).createdAt.toISOString()); // createdAt is a Date object
- *
- * // Iterate through rows using the rows() iterator
+ * // Iterate through rows using the rows() iterator (recommended)
  * for (const user of data.rows()) {
  *   console.log(user.name, user.email);
  * }
+ *
+ * // Traditional for loop with index access
+ * for (let i = 0; i < data.length; i++) {
+ *   const user = data.getRow(i);
+ *   console.log(`User ${i}: ${user.name} (${user.email})`);
+ * }
+ *
+ * // With Zod schema, transformed fields are available
+ * // for (const user of validatedData.rows()) {
+ * //   console.log(`Created: ${user.createdAt.toISOString()}`); // createdAt is a Date object
+ * // }
  *
  * // Get all rows as an array
  * const allUsers = data.toArray();
@@ -136,12 +145,15 @@ function createTypedRowAccessor<T>({
  * - Zod validation adds additional overhead but ensures data correctness
  *
  * ```typescript
- * // Access individual rows with type safety
- * const firstRow = data.getRow(0);
- *
- * // Iterate through all rows with the iterator
+ * // Iterate through all rows with the iterator (recommended)
  * for (const row of data.rows()) {
  *   console.log(row.name);
+ * }
+ *
+ * // Access rows with a traditional for loop
+ * for (let i = 0; i < data.length; i++) {
+ *   const row = data.getRow(i);
+ *   console.log(`Row ${i}: ${row.name}`);
  * }
  *
  * // Get all rows as an array
@@ -164,7 +176,7 @@ function createTypedRowAccessor<T>({
  * }
  *
  * // Note: For filtering data, it's most efficient to use SQL in your query
- * // const { data } = useDuckDbQuery<User>({
+ * // const { data } = useSql<User>({
  * //   query: "SELECT * FROM users WHERE age > 30"
  * // });
  * ```
@@ -175,7 +187,7 @@ function createTypedRowAccessor<T>({
  * a faster and lighter alternative to the standard Arrow JS implementation.
  *
  * ```typescript
- * // Example using Flechette with DuckDB query results
+ * // Example using Flechette with SQL query results
  * import { tableFromIPC } from '@uwdata/flechette';
  *
  * // Convert Arrow table to Flechette table
@@ -215,7 +227,28 @@ function createTypedRowAccessor<T>({
  * @param options Configuration object containing the query and execution control
  * @returns Object containing the validated query result, loading state, and any error
  */
-export function useDuckDbQuery<Row, Schema extends z.ZodType = z.ZodType>(
+export function useSql<Row>(options: {query: string; enabled?: boolean}): {
+  data: UseSqlQueryResult<Row> | undefined;
+  error: Error | null;
+  isLoading: boolean;
+};
+
+export function useSql<Schema extends z.ZodType>(
+  schema: Schema,
+  options: {
+    query: string;
+    enabled?: boolean;
+  },
+): {
+  data: UseSqlQueryResult<z.infer<Schema>> | undefined;
+  error: Error | null;
+  isLoading: boolean;
+};
+
+/**
+ * Implementation of useSql that handles both overloads
+ */
+export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
   schemaOrOptions: Schema | {query: string; enabled?: boolean},
   maybeOptions?: {query: string; enabled?: boolean},
 ) {
@@ -226,7 +259,7 @@ export function useDuckDbQuery<Row, Schema extends z.ZodType = z.ZodType>(
     : (schemaOrOptions as {query: string; enabled?: boolean});
   const schema = hasSchema ? (schemaOrOptions as Schema) : undefined;
 
-  const [data, setData] = useState<DuckDbQueryResult<Row> | undefined>(
+  const [data, setData] = useState<UseSqlQueryResult<Row> | undefined>(
     undefined,
   );
   const [error, setError] = useState<Error | null>(null);
@@ -280,3 +313,8 @@ export function useDuckDbQuery<Row, Schema extends z.ZodType = z.ZodType>(
     isLoading,
   };
 }
+
+/**
+ * @deprecated Use useSql instead
+ */
+export const useDuckDbQuery = useSql;

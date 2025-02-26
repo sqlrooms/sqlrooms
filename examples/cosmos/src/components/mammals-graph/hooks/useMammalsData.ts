@@ -1,4 +1,4 @@
-import {useDuckDbQuery} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {useProjectStore} from '../../../store';
 import {useMemo} from 'react';
 
@@ -12,7 +12,7 @@ export const useMammalsData = () => {
     Boolean(state.project.tables.find((t) => t.tableName === 'mammals')),
   );
 
-  const {data: queryResult} = useDuckDbQuery<Edge>({
+  const {data: queryResult} = useSql<Edge>({
     query: 'SELECT source, target FROM mammals',
     enabled: isTableReady,
   });
@@ -23,9 +23,7 @@ export const useMammalsData = () => {
     // Create arrays for nodes and links
     const uniqueNodes = new Set<string>();
 
-    // Process results to build graph data
-    for (let i = 0; i < queryResult.length; i++) {
-      const edge = queryResult.getRow(i);
+    for (const edge of queryResult.rows()) {
       uniqueNodes.add(edge.source);
       uniqueNodes.add(edge.target);
     }
