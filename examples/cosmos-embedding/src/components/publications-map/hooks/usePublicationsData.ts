@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {useDuckDbQuery} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {useProjectStore} from '../../../store';
 import {useMemo} from 'react';
 import {scaleOrdinal, scaleSqrt} from 'd3-scale';
@@ -24,7 +24,7 @@ export const usePublicationsData = () => {
     Boolean(state.project.tables.find((t) => t.tableName === 'publications')),
   );
 
-  const {data: queryResult} = useDuckDbQuery(publicationSchema, {
+  const {data: queryResult} = useSql(publicationSchema, {
     query: `
       FROM publications
       SELECT
@@ -36,7 +36,7 @@ export const usePublicationsData = () => {
     enabled: isTableReady,
   });
 
-  const {data: citationStats} = useDuckDbQuery(citationStatsSchema, {
+  const {data: citationStats} = useSql(citationStatsSchema, {
     query: `
       FROM publications
       SELECT 
@@ -46,32 +46,19 @@ export const usePublicationsData = () => {
     enabled: isTableReady,
   });
 
-  const colorScale = useMemo(() => {
-    if (!queryResult) return null;
-    const uniqueFields = Array.from(
-      new Set(
-        Array.from(
-          {length: queryResult.length},
-          (_, i) => queryResult.getRow(i).mainField,
-        ),
-      ),
-    ).sort();
-    const scale = scaleOrdinal<string>(schemeTableau10);
-    scale.domain(uniqueFields);
-    return scale;
-  }, [queryResult]);
-
   const uniqueFields = useMemo(() => {
     if (!queryResult) return [];
     return Array.from(
-      new Set(
-        Array.from(
-          {length: queryResult.length},
-          (_, i) => queryResult.getRow(i).mainField,
-        ),
-      ),
+      new Set(Array.from(queryResult.rows(), (row) => row.mainField)),
     ).sort();
   }, [queryResult]);
+
+  const colorScale = useMemo(() => {
+    if (!queryResult) return null;
+    const scale = scaleOrdinal<string>(schemeTableau10);
+    scale.domain(uniqueFields);
+    return scale;
+  }, [queryResult, uniqueFields]);
 
   const sizeScale = useMemo(() => {
     if (!citationStats) return null;
