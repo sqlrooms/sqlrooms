@@ -58,7 +58,8 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        # See https://github.com/pnpm/pnpm/issues/8840
+        run: pnpm install --shamefully-hoist
 
       - name: Build packages
         run: pnpm build
