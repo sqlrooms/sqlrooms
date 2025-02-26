@@ -50,10 +50,11 @@ jobs:
         with:
           node-version: 22
 
-      - name: Install pnpm
-        uses: pnpm/action-setup@v2
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
         with:
           version: 10.5.0
+          run_install: false
 
       - name: Install dependencies
         run: pnpm install
