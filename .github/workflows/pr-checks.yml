@@ -55,26 +55,12 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: 'pnpm'
+          #cache: 'pnpm'
 
       - name: Add node-linker=hoisted to .npmrc for CI
         run: echo "node-linker=hoisted" >> .npmrc
 
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
-
-      - name: Ensure DuckDB WASM is installed
-        run: pnpm add @duckdb/duckdb-wasm@1.29.0 -w
-
-      - name: Install UI dependencies
-        run: |
-          pnpm add -w @radix-ui/react-accordion @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-progress @radix-ui/react-select @radix-ui/react-slider @radix-ui/react-slot @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-toast @radix-ui/react-tooltip
-          pnpm add -w class-variance-authority lucide-react react-hook-form react-resizable-panels tailwind-merge usehooks-ts
-
-      - name: Ensure TypeScript is available
-        run: pnpm add -w typescript@5.7.3
-
-      - name: Reinstall dependencies
         run: pnpm install --no-frozen-lockfile
 
       - name: Build all packages
