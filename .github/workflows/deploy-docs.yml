@@ -39,7 +39,7 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v2
         with:
-          version: 10.4.1
+          version: 10.5.0
 
       - name: Setup pnpm cache
         uses: actions/cache@v3

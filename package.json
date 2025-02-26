@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.5.0",
   "workspaces": [
     "packages/*",
     "examples/*"
