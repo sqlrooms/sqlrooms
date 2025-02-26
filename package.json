@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.4.1",
+  "packageManager": "pnpm@10.5.0",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -43,12 +43,11 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.1-dev68.0",
-    "@eslint/js": "^9.18.0",
+    "@eslint/js": "^9.21.0",
     "@ladle/react": "^5.0.1",
-    "@lerna-lite/cli": "^3.11.0",
-    "@lerna-lite/publish": "^3.11.0",
-    "@lerna-lite/version": "^3.11.0",
+    "@lerna-lite/cli": "^3.12.1",
+    "@lerna-lite/publish": "^3.12.1",
+    "@lerna-lite/version": "^3.12.1",
     "@sqlrooms/eslint-config": "workspace:*",
     "@sqlrooms/typedoc-config": "workspace:*",
     "@sqlrooms/typescript-config": "workspace:*",
@@ -58,20 +57,20 @@
     "@types/react": "18.3.18",
     "@types/react-dom": "18.3.5",
     "apache-arrow": "^18.1.0",
-    "eslint": "^9.18.0",
+    "eslint": "^9.21.0",
     "framer-motion": "10.18.0",
     "gh-pages": "^6.1.1",
     "glob": "^11.0.1",
     "husky": "^9.0.11",
     "jest": "^29.7.0",
-    "lint-staged": "^15.2.2",
-    "prettier": "^3.2.5",
+    "lint-staged": "^15.4.3",
+    "prettier": "^3.5.2",
     "react": "^18.0.0",
     "react-dom": "^18.0.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
-    "turbo": "^2.4.2",
-    "typedoc": "^0.27.6",
+    "turbo": "^2.4.4",
+    "typedoc": "^0.27.9",
     "typescript": "5.7.3",
     "vitepress": "^1.6.3"
   },
@@ -79,7 +78,7 @@
     "overrides": {
       "apache-arrow": "18.1.0",
       "@types/react": "18.3.18",
-      "@duckdb/duckdb-wasm": "1.29.1-dev68.0"
+      "@duckdb/duckdb-wasm": "1.29.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
