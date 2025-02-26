@@ -63,6 +63,38 @@ jobs:
       - name: Ensure DuckDB WASM is installed
         run: pnpm add @duckdb/duckdb-wasm@1.29.0 -w
 
+      - name: Install UI dependencies
+        run: pnpm add -w \
+          @radix-ui/react-accordion \
+          @radix-ui/react-checkbox \
+          @radix-ui/react-dialog \
+          @radix-ui/react-dropdown-menu \
+          @radix-ui/react-label \
+          @radix-ui/react-popover \
+          @radix-ui/react-progress \
+          @radix-ui/react-select \
+          @radix-ui/react-slider \
+          @radix-ui/react-slot \
+          @radix-ui/react-switch \
+          @radix-ui/react-tabs \
+          @radix-ui/react-toast \
+          @radix-ui/react-tooltip \
+          class-variance-authority \
+          lucide-react \
+          react-hook-form \
+          react-resizable-panels \
+          tailwind-merge \
+          usehooks-ts
+
+      - name: Clean and reinstall dependencies
+        run: |
+          rm -rf node_modules
+          rm -rf packages/*/node_modules
+          pnpm install --no-frozen-lockfile
+
+      - name: Ensure TypeScript is available
+        run: pnpm add -w typescript@5.7.3
+
       - name: Build all packages
         run: pnpm build:all
 

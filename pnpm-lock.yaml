@@ -7,15 +7,11 @@ settings:
 overrides:
   apache-arrow: 18.1.0
   '@types/react': 18.3.18
-  '@duckdb/duckdb-wasm': 1.29.1-dev68.0
+  '@duckdb/duckdb-wasm': 1.29.0
 
 importers:
 
   .:
-    dependencies:
-      why:
-        specifier: ^0.6.2
-        version: 0.6.2
     devDependencies:
       '@eslint/js':
         specifier: ^9.18.0
@@ -441,10 +437,10 @@ importers:
         specifier: ^0.474.0
         version: 0.474.0(react@18.3.1)
       react:
-        specifier: ^18.3.1
+        specifier: '*'
         version: 18.3.1
       react-dom:
-        specifier: ^18.3.1
+        specifier: '*'
         version: 18.3.1(react@18.3.1)
       react-dropzone:
         specifier: ^14.3.5
@@ -767,8 +763,8 @@ importers:
   packages/project-builder:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.1-dev68.0
-        version: 1.29.1-dev68.0
+        specifier: 1.29.0
+        version: 1.29.0
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -875,10 +871,10 @@ importers:
         specifier: ^0.474.0
         version: 0.474.0(react@18.3.1)
       react:
-        specifier: ^18.2.0
+        specifier: '*'
         version: 18.3.1
       react-dom:
-        specifier: ^18.2.0
+        specifier: '*'
         version: 18.3.1(react@18.3.1)
       react-hook-form:
         specifier: ^7.54.2
@@ -1622,9 +1618,6 @@ packages:
 
   '@duckdb/duckdb-wasm@1.29.0':
     resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==}
-
-  '@duckdb/duckdb-wasm@1.29.1-dev68.0':
-    resolution: {integrity: sha512-UttGAEDiCjSrn3anOlBwwrc+rDBY4jwyg+m9ZbNqazVWlanInQ8p6gZE1ZGDYp3Z0GG7fGSrkXs+bdT/mXSHEQ==}
 
   '@emotion/is-prop-valid@0.8.8':
     resolution: {integrity: sha512-u5WtneEAr5IDG2Wv65yhunPSMLIpuKsbuOktRojfrEiEvRyC85LgPMZI63cr7NUqT8ZIGdSVg8ZKGxIug4lXcA==}
@@ -8516,10 +8509,6 @@ packages:
     engines: {node: ^16.13.0 || >=18.0.0}
     hasBin: true
 
-  why@0.6.2:
-    resolution: {integrity: sha512-7M43dnp3p+5HRMYS5ImUftNAQQSIZmwnAd8yyjEj3cpK+6nbBfikwTvxXRUFvydaPJmgu+EofRnJKNDMbIuzXg==}
-    hasBin: true
-
   wide-align@1.1.5:
     resolution: {integrity: sha512-eDMORYaPNZ4sQIuuYPDHdQvf4gyCF9rEEV/yPxGfwPkRodwEgiMUUXTx/dex+Me0wxx53S+NgUHaP7y3MGlDmg==}
 
@@ -9646,10 +9635,6 @@ snapshots:
       - '@algolia/client-search'
 
   '@duckdb/duckdb-wasm@1.29.0':
-    dependencies:
-      apache-arrow: 18.1.0
-
-  '@duckdb/duckdb-wasm@1.29.1-dev68.0':
     dependencies:
       apache-arrow: 18.1.0
 
@@ -12109,7 +12094,7 @@ snapshots:
 
   '@uwdata/mosaic-core@0.12.2':
     dependencies:
-      '@duckdb/duckdb-wasm': 1.29.1-dev68.0
+      '@duckdb/duckdb-wasm': 1.29.0
       '@uwdata/flechette': 1.1.2
       '@uwdata/mosaic-sql': 0.12.2
 
@@ -18382,8 +18367,6 @@ snapshots:
   which@4.0.0:
     dependencies:
       isexe: 3.1.1
-
-  why@0.6.2: {}
 
   wide-align@1.1.5:
     dependencies:

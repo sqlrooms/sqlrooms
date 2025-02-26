@@ -78,15 +78,12 @@
     "overrides": {
       "apache-arrow": "18.1.0",
       "@types/react": "18.3.18",
-      "@duckdb/duckdb-wasm": "1.29.1-dev68.0"
+      "@duckdb/duckdb-wasm": "1.29.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
       "esbuild",
       "msw"
     ]
-  },
-  "dependencies": {
-    "why": "^0.6.2"
   }
 }
