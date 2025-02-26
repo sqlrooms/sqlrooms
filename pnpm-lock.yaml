@@ -12,6 +12,10 @@ overrides:
 importers:
 
   .:
+    dependencies:
+      why:
+        specifier: ^0.6.2
+        version: 0.6.2
     devDependencies:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.1-dev68.0
@@ -8510,6 +8514,10 @@ packages:
   which@4.0.0:
     resolution: {integrity: sha512-GlaYyEb07DPxYCKhKzplCWBJtvxZcZMrL+4UkrTSJHHPyZU4mYYTv3qaOe77H7EODLSSopAUFAc6W8U4yqvscg==}
     engines: {node: ^16.13.0 || >=18.0.0}
+    hasBin: true
+
+  why@0.6.2:
+    resolution: {integrity: sha512-7M43dnp3p+5HRMYS5ImUftNAQQSIZmwnAd8yyjEj3cpK+6nbBfikwTvxXRUFvydaPJmgu+EofRnJKNDMbIuzXg==}
     hasBin: true
 
   wide-align@1.1.5:
@@ -18374,6 +18382,8 @@ snapshots:
   which@4.0.0:
     dependencies:
       isexe: 3.1.1
+
+  why@0.6.2: {}
 
   wide-align@1.1.5:
     dependencies:

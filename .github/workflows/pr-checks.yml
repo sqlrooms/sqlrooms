@@ -58,7 +58,10 @@ jobs:
           cache: 'pnpm'
 
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --no-frozen-lockfile
+
+      - name: Ensure DuckDB WASM is installed
+        run: pnpm add @duckdb/duckdb-wasm@1.29.0 -w
 
       - name: Build all packages
         run: pnpm build:all
