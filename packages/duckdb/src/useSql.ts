@@ -101,8 +101,10 @@ function createTypedRowAccessor<T>({
  *   userSchema,
  *   {query: 'SELECT id, name, email, created_at as createdAt FROM users'}
  * );
+ * ```
  *
- * // Error handling is the same for both approaches
+ * ## Error Handling
+ * ```typescript
  * if (isLoading) return <div>Loading...</div>;
  * if (error) {
  *   // With Zod, you can catch validation errors specifically
@@ -112,8 +114,18 @@ function createTypedRowAccessor<T>({
  *   return <div>Error: {error.message}</div>;
  * }
  * if (!data) return null;
+ * ```
  *
- * // Accessing data works the same way for both approaches
+ * ## Data Access Methods
+ *
+ * There are several ways to access data with different performance characteristics:
+ *
+ * ### 1. Typed Row Access (getRow, rows(), toArray())
+ * - Provides type safety and validation
+ * - Converts data to JavaScript objects
+ * - Slower for large datasets due to object creation and validation
+ *
+ * ```typescript
  * // Iterate through rows using the rows() iterator (recommended)
  * for (const user of data.rows()) {
  *   console.log(user.name, user.email);
@@ -125,39 +137,13 @@ function createTypedRowAccessor<T>({
  *   console.log(`User ${i}: ${user.name} (${user.email})`);
  * }
  *
- * // With Zod schema, transformed fields are available
- * // for (const user of validatedData.rows()) {
- * //   console.log(`Created: ${user.createdAt.toISOString()}`); // createdAt is a Date object
- * // }
- *
  * // Get all rows as an array
  * const allUsers = data.toArray();
- * ```
  *
- * ## Performance and Advanced Operations
- *
- * There are several ways to access data with different performance characteristics:
- *
- * ### 1. Typed Row Access (getRow, rows(), toArray())
- * - Provides type safety and validation
- * - Converts data to JavaScript objects
- * - Slower for large datasets due to object creation and validation
- * - Zod validation adds additional overhead but ensures data correctness
- *
- * ```typescript
- * // Iterate through all rows with the iterator (recommended)
- * for (const row of data.rows()) {
- *   console.log(row.name);
+ * // With Zod schema, transformed fields are available
+ * for (const user of validatedData.rows()) {
+ *   console.log(`Created: ${user.createdAt.toISOString()}`); // createdAt is a Date object
  * }
- *
- * // Access rows with a traditional for loop
- * for (let i = 0; i < data.length; i++) {
- *   const row = data.getRow(i);
- *   console.log(`Row ${i}: ${row.name}`);
- * }
- *
- * // Get all rows as an array
- * const allRows = data.toArray();
  * ```
  *
  * ### 2. Direct Arrow Table Access
@@ -176,9 +162,9 @@ function createTypedRowAccessor<T>({
  * }
  *
  * // Note: For filtering data, it's most efficient to use SQL in your query
- * // const { data } = useSql<User>({
- * //   query: "SELECT * FROM users WHERE age > 30"
- * // });
+ * const { data } = useSql<User>({
+ *   query: "SELECT * FROM users WHERE age > 30"
+ * });
  * ```
  *
  * ### 3. Using Flechette for Advanced Operations
@@ -191,7 +177,6 @@ function createTypedRowAccessor<T>({
  * import { tableFromIPC } from '@uwdata/flechette';
  *
  * // Convert Arrow table to Flechette table
- * // Note: This serialization step creates a copy of the data
  * const serializedData = data.arrowTable.serialize();
  * const flechetteTable = tableFromIPC(serializedData);
  *
@@ -208,7 +193,6 @@ function createTypedRowAccessor<T>({
  * });
  *
  * // For large datasets, consider memory management
- * // Once you're done with the Arrow data, you can free the memory
  * serializedData = null; // Allow garbage collection of the serialized data
  * ```
  *

@@ -56,6 +56,9 @@ jobs:
       - name: Build docs
         run: pnpm docs:build
 
+      - name: Create CNAME file
+        run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
+
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:

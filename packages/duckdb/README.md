@@ -21,7 +21,7 @@ yarn add @sqlrooms/duckdb
 
 ### Using the SQL Hook
 
-```tsx
+````tsx
 import {useSql} from '@sqlrooms/duckdb';
 
 function UserList() {
@@ -42,7 +42,8 @@ function UserList() {
     </ul>
   );
 }
-```
+
+For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
 
 ### Using Zod for Runtime Validation
 
@@ -82,7 +83,7 @@ function ValidatedUserList() {
     </ul>
   );
 }
-```
+````
 
 ### Creating Tables from Different Sources
 
