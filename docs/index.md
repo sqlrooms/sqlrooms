@@ -5,7 +5,7 @@ layout: home
 hero:
   name: 'SQLRooms'
   text: 'Build powerful analytics apps with DuckDB in browser'
-  tagline: Building blocks for creating interactive data analytics applications powered by DuckDB-WASM
+  tagline: React app framework for small to mid-sized data analytics powered by DuckDB-WASM
   actions:
     - theme: brand
       text: What is SQLRooms?
