@@ -6,7 +6,9 @@ outline: deep
 
 SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools without a backend.
 
-<img src="https://github.com/user-attachments/assets/b99af56c-77fe-4db2-bc0d-3e5e31ec1ade" alt="SQLRooms AI example app">
+<a href="/examples#ai-powered-analytics">
+  <img src="/media/examples/sqlrooms-ai-example.webp" alt="SQLRooms AI example app">
+</a>
 
 ## Who is it for?
 
@@ -46,7 +48,7 @@ Building analytics applications typically requires integrating multiple complex 
 
 SQLRooms is built around several core components that work together seamlessly:
 
-![SQLRooms Architecture](/assets/architecture.svg)
+![SQLRooms Architecture](/media/architecture.svg)
 
 ### Core Components
 

@@ -12,7 +12,9 @@ All example applications are available in our [Examples Repository](https://gith
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/ai)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/ai?embed=1&file=components/app-shell.tsx)
 
-<img src="/media/examples/ai-example.png" alt="SQLRooms AI example app" width=450>
+<a href="https://sqlrooms-ai.netlify.app/" target="_blank">
+  <video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" autoplay loop muted></video>
+</a>
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms. Features include:
 
@@ -28,7 +30,9 @@ An advanced example showing how to build an AI-powered analytics application wit
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
-<img src="/media/examples/cosmos-graph.png" alt="SQLRooms Graph example showing network visualization" width=450>
+<a href="http://sqlrooms-cosmos.netlify.app/" target="_blank">
+  <img src="/media/examples/cosmos-graph.webp" alt="SQLRooms Graph example showing network visualization" width=450>
+</a>
 
 An example demonstrating integration with the [Cosmos](https://github.com/cosmograph-org/cosmos) GPU-accelerated graph visualization library. Features include:
 
@@ -44,7 +48,9 @@ An example demonstrating integration with the [Cosmos](https://github.com/cosmog
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos-embedding)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos-embedding?embed=1&file=src/app.tsx)
 
-<img src="/media/examples/cosmos-embedding.png" alt="SQLRooms 2D Embedding visualization using Cosmos" width=450>
+<a href="http://sqlrooms-cosmos-embedding.netlify.app/" target="_blank">
+  <img src="/media/examples/cosmos-embedding.webp" alt="SQLRooms 2D Embedding visualization using Cosmos" width=450>
+</a>
 
 An example showcasing integration with Cosmos for visualizing high-dimensional data in 2D space. Features include:
 
@@ -60,7 +66,9 @@ An example showcasing integration with Cosmos for visualizing high-dimensional d
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/mosaic)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/mosaic?embed=1&file=src/app.tsx)
 
-<img src="/media/examples/mosaic.png" alt="SQLRooms Mosaic example Vite app" width=400>
+<a href="https://sqlrooms-mosaic.netlify.app/" target="_blank">
+  <img src="/media/examples/mosaic.webp" alt="SQLRooms Mosaic example Vite app" width=400>
+</a>
 
 An example demonstrating integration with [Mosaic](https://idl.uw.edu/mosaic/), a powerful interactive visualization framework utilizing DuckDB and high-performance cross-filtering.
 

@@ -10,7 +10,7 @@ outline: deep
 
 [Flowmap City](https://www.flowmap.city/) is a powerful web-based platform for visualizing and analyzing mobility data and origin-destination flows. The application helps urban planners, transportation analysts, and researchers understand movement patterns in cities and regions.
 
-[<img src=https://github.com/user-attachments/assets/d80aeffe-cff4-402b-a299-da3911c6d951 width=400>](https://www.flowmap.city/)
+[<img src=/media/case-studies/flowmap-city.webp width=400>](https://www.flowmap.city/)
 
 Key features include:
 
@@ -27,7 +27,7 @@ The platform enables users to upload their own mobility datasets and create inte
 
 [Cosmograph](https://cosmograph.app/) is a powerful web-based application for visualizing and analyzing large graph datasets and machine learning embeddings. The application runs entirely in the browser, leveraging your GPU for all computations while keeping your data private and secure. The upcoming version of Cosmograph is being built using SQLRooms to enhance its data processing capabilities and analytical features.
 
-[<img src=https://github.com/user-attachments/assets/2219257b-0097-42e4-a22e-14f69bf4a72e width=400>](https://cosmograph.fly.dev/)
+[<img src=/media/case-studies/cosmograph.webp width=400>](https://cosmograph.fly.dev/)
 
 Key features include:
 

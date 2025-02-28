@@ -18,7 +18,7 @@ hero:
       link: https://github.com/sqlrooms/sqlrooms
   image:
     # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
-    src: /hero.webp
+    src: /media/sqlrooms-ai.webp
     alt: SQLRooms AI
 
 features:
