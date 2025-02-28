@@ -118,7 +118,6 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     tablesLoading,
     tablesError,
     tableSchemas,
-    tableSamples,
     selectedTable,
     fetchTables,
     handleSelectTable,
@@ -385,7 +384,6 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                                   );
                                 }}
                                 tableSchemas={tableSchemas}
-                                tableSamples={tableSamples}
                                 getLatestSchemas={() => {
                                   // If tableSchemas is empty, try to fetch tables
                                   if (Object.keys(tableSchemas).length === 0) {
@@ -393,7 +391,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                                     // This will update the state for next time
                                     void fetchTables();
                                   }
-                                  return {tableSchemas, tableSamples};
+                                  return {tableSchemas};
                                 }}
                               />
                             </div>
