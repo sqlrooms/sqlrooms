@@ -6,7 +6,7 @@ import {
   OnChange,
   loader,
 } from '@monaco-editor/react';
-import {Spinner, cn} from '@sqlrooms/ui';
+import {Spinner, cn, useTheme} from '@sqlrooms/ui';
 
 // Configure the Monaco loader
 loader.config({
@@ -36,6 +36,7 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   language?: string;
   /**
    * The theme of the editor
+   * Can be explicitly set or will automatically use the app theme if not provided
    * @default 'vs-dark'
    */
   theme?: 'vs-dark' | 'light';
@@ -60,7 +61,7 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
 export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   className,
   language = 'javascript',
-  theme = 'vs-dark',
+  theme: explicitTheme,
   value = '',
   readOnly = false,
   onMount,
@@ -68,6 +69,18 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   options = {},
   ...props
 }) => {
+  // Get the app theme from the ThemeProvider
+  const {theme: appTheme} = useTheme();
+
+  // If a theme is explicitly provided, use it. Otherwise, determine from the app theme
+  const theme =
+    explicitTheme ||
+    (appTheme === 'dark' ||
+    (appTheme === 'system' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches)
+      ? 'vs-dark'
+      : 'light');
+
   const editorRef = useRef<any>(null);
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
@@ -83,6 +96,51 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       editorRef.current.updateOptions({readOnly});
     }
   }, [readOnly]);
+
+  // Update the editor theme when app theme changes
+  useEffect(() => {
+    if (editorRef.current && !explicitTheme) {
+      const newTheme =
+        appTheme === 'dark' ||
+        (appTheme === 'system' &&
+          window.matchMedia('(prefers-color-scheme: dark)').matches)
+          ? 'vs-dark'
+          : 'light';
+
+      // Only update if the theme has changed
+      if (newTheme !== theme) {
+        // The Monaco editor requires us to set the theme via the monaco instance
+        // We can access it through the editor's _themeService but this is not ideal
+        // A better approach would be to get the monaco instance and use monaco.editor.setTheme
+        // However, we'll use this approach as it should work for now
+        if (editorRef.current._themeService) {
+          editorRef.current._themeService.setTheme(newTheme);
+        }
+      }
+    }
+  }, [appTheme, explicitTheme, theme]);
+
+  // Listen for system theme changes if using system theme
+  useEffect(() => {
+    if (appTheme === 'system' && !explicitTheme) {
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      const handleChange = () => {
+        if (editorRef.current && editorRef.current._themeService) {
+          editorRef.current._themeService.setTheme(
+            mediaQuery.matches ? 'vs-dark' : 'light',
+          );
+        }
+      };
+
+      // Add listener for theme changes
+      mediaQuery.addEventListener('change', handleChange);
+
+      // Clean up
+      return () => {
+        mediaQuery.removeEventListener('change', handleChange);
+      };
+    }
+  }, [appTheme, explicitTheme]);
 
   const defaultOptions = {
     minimap: {enabled: false},
