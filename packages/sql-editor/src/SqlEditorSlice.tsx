@@ -1,6 +1,7 @@
 import {
   createTableFromQuery,
   DuckQueryError,
+  getDuckDb,
   getDuckTables,
   getDuckTableSchemas,
   useDuckDb,
@@ -48,7 +49,6 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
 
 export type SqlEditorSliceState = {
   sqlEditor: {
-    setSqlEditorConfig: (config: SqlEditorSliceConfig['sqlEditor']) => void;
     /**
      * Add or update a SQL query data source.
      * @param tableName - The name of the table to create or update.
@@ -115,6 +115,18 @@ export type SqlEditorSliceState = {
      * @param queryText - The new SQL text.
      */
     updateQueryText(queryId: string, queryText: string): void;
+
+    /**
+     * Set the selected query tab.
+     * @param queryId - The ID of the query to select.
+     */
+    setSelectedQueryId(queryId: string): void;
+
+    /**
+     * Get the currently selected query's SQL text.
+     * @param defaultQuery - Optional default query text to return if no query is found.
+     */
+    getCurrentQuery(defaultQuery?: string): string;
   };
 };
 
@@ -123,14 +135,6 @@ export function createSqlEditorSlice<
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
-      setSqlEditorConfig: (config: SqlEditorSliceConfig['sqlEditor']) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.project.config.sqlEditor = config;
-          }),
-        );
-      },
-
       addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
         const {schema} = get().project;
         const newTableName =
@@ -166,7 +170,7 @@ export function createSqlEditorSlice<
       },
 
       executeQuery: async (query, schema = 'main') => {
-        const duckDb = useDuckDb();
+        const duckDb = await getDuckDb();
         if (!duckDb.conn) {
           return {error: 'No DuckDB connection available'};
         }
@@ -283,6 +287,23 @@ export function createSqlEditorSlice<
             }
           }),
         );
+      },
+
+      setSelectedQueryId: (queryId) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.project.config.sqlEditor.selectedQueryId = queryId;
+          }),
+        );
+      },
+
+      getCurrentQuery: (defaultQuery = '') => {
+        const sqlEditorConfig = get().project.config.sqlEditor;
+        const selectedId = sqlEditorConfig.selectedQueryId;
+        // Find query by ID
+        const query = sqlEditorConfig.queries.find((q) => q.id === selectedId);
+        // If found, return its query text, otherwise default
+        return query?.query || defaultQuery;
       },
     },
   }));

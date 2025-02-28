@@ -9,3 +9,4 @@ export {
 } from './SqlEditorSlice';
 export type {SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './SqlQueryDataSourcesPanel';
+export {SqlMonacoEditor} from './SqlMonacoEditor';

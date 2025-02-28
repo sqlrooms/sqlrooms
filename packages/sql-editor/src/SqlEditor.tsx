@@ -28,13 +28,13 @@ import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
 import {TablesList} from './TablesList';
-import {SqlMonacoEditor} from './components/internal/SqlMonacoEditor';
-import {
-  useTableManagement,
-  useQueryExecution,
-  useQueryTabManagement,
-  useMonacoEditor,
-} from './hooks';
+import {SqlMonacoEditor} from './SqlMonacoEditor';
+import type * as Monaco from 'monaco-editor';
+import {useTableManagement, useQueryExecution, useMonacoEditor} from './hooks';
+
+// Define the types for Monaco Editor
+type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
+type MonacoInstance = typeof Monaco;
 
 const DEFAULT_QUERY = '';
 
@@ -73,9 +73,42 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     (state) => state.sqlEditor.addOrUpdateSqlQuery,
   );
 
+  // Get query data and methods directly from the store
+  const queries = useStoreWithSqlEditor(
+    (s) => s.project.config.sqlEditor.queries,
+  );
+  const selectedQueryId = useStoreWithSqlEditor(
+    (s) => s.project.config.sqlEditor.selectedQueryId,
+  );
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
+  const setSelectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setSelectedQueryId,
+  );
+  const updateQueryText = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.updateQueryText,
+  );
+  const createQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.createQueryTab,
+  );
+  const deleteQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.deleteQueryTab,
+  );
+  const renameQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.renameQueryTab,
+  );
+
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
+
+  // Local state for modals
+  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
+  const [queryToRename, setQueryToRename] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   // Custom hooks
   const {
@@ -92,28 +125,64 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {results, resultsTableData, loading, error, runQuery, exportResults} =
     useQueryExecution(schema);
 
-  const {
-    queries,
-    selectedQueryId,
-    queryToDelete,
-    queryToRename,
-    getCurrentQuery,
-    handleTabChange,
-    handleUpdateQuery,
-    handleNewQuery,
-    handleStartRename,
-    handleFinishRename,
-    handleDeleteQuery,
-    handleConfirmDeleteQuery,
-    setQueryToDelete,
-    setQueryToRename,
-  } = useQueryTabManagement(DEFAULT_QUERY);
-
-  const {editorInstances, handleEditorMount, getQueryText, setRunQueryHandler} =
+  const {handleEditorMount, getQueryText, setRunQueryHandler} =
     useMonacoEditor();
 
   // Get the current query text
-  const currentQuery = getCurrentQuery();
+  const currentQuery = getCurrentQuery(DEFAULT_QUERY);
+
+  // Handler functions for query tab management
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setSelectedQueryId(value);
+    },
+    [setSelectedQueryId],
+  );
+
+  const handleUpdateQuery = useCallback(
+    (value: string | undefined) => {
+      if (!value) return;
+      updateQueryText(selectedQueryId, value);
+    },
+    [selectedQueryId, updateQueryText],
+  );
+
+  const handleNewQuery = useCallback(() => {
+    return createQueryTab(DEFAULT_QUERY);
+  }, [createQueryTab]);
+
+  const handleStartRename = useCallback(
+    (queryId: string, currentName: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      setQueryToRename({id: queryId, name: currentName});
+    },
+    [],
+  );
+
+  const handleFinishRename = useCallback(
+    (newName: string) => {
+      if (queryToRename) {
+        renameQueryTab(queryToRename.id, newName);
+      }
+      setQueryToRename(null);
+    },
+    [queryToRename, renameQueryTab],
+  );
+
+  const handleDeleteQuery = useCallback(
+    (queryId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setQueryToDelete(queryId);
+    },
+    [],
+  );
+
+  const handleConfirmDeleteQuery = useCallback(() => {
+    if (queryToDelete) {
+      deleteQueryTab(queryToDelete);
+      setQueryToDelete(null);
+    }
+  }, [queryToDelete, deleteQueryTab]);
 
   // Handle run query logic
   const handleRunQuery = useCallback(async () => {
@@ -298,7 +367,10 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                                   quickSuggestions: true,
                                   suggestOnTriggerCharacters: true,
                                 }}
-                                onMount={(editor, monaco) => {
+                                onMount={(
+                                  editor: EditorInstance,
+                                  monaco: MonacoInstance,
+                                ) => {
                                   handleEditorMount(
                                     editor,
                                     monaco,

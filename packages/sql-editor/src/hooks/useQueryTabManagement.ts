@@ -9,6 +9,8 @@ export type SqlQuery = {
 
 /**
  * Hook for managing query tabs (adding, renaming, deleting)
+ *
+ * @deprecated Use the methods directly from SqlEditorSlice instead
  */
 export function useQueryTabManagement(defaultQuery: string = '') {
   // Get SQL editor config and functions from the store
@@ -27,8 +29,11 @@ export function useQueryTabManagement(defaultQuery: string = '') {
   const updateQueryText = useStoreWithSqlEditor(
     (s) => s.sqlEditor.updateQueryText,
   );
-  const setSqlEditorConfig = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.setSqlEditorConfig,
+  const setSelectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setSelectedQueryId,
+  );
+  const getCurrentQueryFn = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
   );
 
   // Local state for modals
@@ -42,26 +47,17 @@ export function useQueryTabManagement(defaultQuery: string = '') {
    * Get the currently selected query's SQL text
    */
   const getCurrentQuery = useCallback(() => {
-    const selectedId = sqlEditorConfig.selectedQueryId;
-    // First try to find by ID
-    const query = sqlEditorConfig.queries.find(
-      (q: SqlQuery) => q.id === selectedId,
-    );
-    // If found, return its query text, otherwise default
-    return query?.query || defaultQuery;
-  }, [sqlEditorConfig.selectedQueryId, sqlEditorConfig.queries, defaultQuery]);
+    return getCurrentQueryFn(defaultQuery);
+  }, [getCurrentQueryFn, defaultQuery]);
 
   /**
    * Change the selected tab
    */
   const handleTabChange = useCallback(
     (value: string) => {
-      setSqlEditorConfig({
-        ...sqlEditorConfig,
-        selectedQueryId: value,
-      });
+      setSelectedQueryId(value);
     },
-    [sqlEditorConfig, setSqlEditorConfig],
+    [setSelectedQueryId],
   );
 
   /**

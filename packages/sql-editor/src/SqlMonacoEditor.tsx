@@ -7,7 +7,7 @@ import {
   DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
-} from '../../constants/duckdb-dialect';
+} from './constants/duckdb-dialect';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
