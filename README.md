@@ -4,7 +4,7 @@ Building blocks for React data analytics applications powered by [DuckDB-WASM](h
 
 [Documentation](https://sqlrooms.github.io/) | [Examples](https://sqlrooms.org/examples.html)
 
-<img width=600 src=https://github.com/user-attachments/assets/1897cb57-9602-493c-ad82-2723c9f4e0f7>
+<img width=600 src=/docs/media/overview/collage.webp>
 
 ## Overview
 
@@ -61,13 +61,24 @@ See our [example projects](https://sqlrooms.org/examples.html) for real-world im
 
 Check out the [Getting Started](https://sqlrooms.github.io/getting-started.html) guide.
 
+
+## Running example apps
+
+    pnpm install
+    pnpm build
+    cd examples/ai
+    pnpm dev
+    open http://localhost:5173
+    
+
 ## Develop locally
 
     pnpm install
     pnpm build
     pnpm dev
+    
 
-## Developing documentation locally
+## Devel documentation locally
 
 The documentation is built using [VitePress](https://vitepress.dev/) and [TypeDoc](https://typedoc.org/). To develop the documentation locally:
 
@@ -107,9 +118,6 @@ This project uses Git Large File Storage (LFS) for managing media files in the d
 
    # Ubuntu/Debian
    sudo apt install git-lfs
-
-   # Windows (using Chocolatey)
-   choco install git-lfs
    ```
 
 2. Initialize Git LFS in your local repository:
@@ -126,9 +134,3 @@ This project uses Git Large File Storage (LFS) for managing media files in the d
 
 4. When adding new media files to the `docs/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.
 
-## Running example apps
-
-    pnpm install
-    pnpm build
-    pnpm --filter sqlrooms-ai dev
-    open http://localhost:5173
