@@ -1,4 +1,9 @@
+import {zodResolver} from '@hookform/resolvers/zod';
+import {DuckQueryError} from '@sqlrooms/duckdb';
+import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {
+  Alert,
+  AlertDescription,
   Button,
   Dialog,
   DialogContent,
@@ -13,16 +18,11 @@ import {
   FormLabel,
   FormMessage,
   Input,
-  Textarea,
-  Alert,
-  AlertDescription,
 } from '@sqlrooms/ui';
-import {DuckQueryError} from '@sqlrooms/duckdb';
-import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
-import {zodResolver} from '@hookform/resolvers/zod';
+import {SqlMonacoEditor} from './SqlMonacoEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -54,7 +54,7 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
+    values: {
       tableName: editDataSource?.tableName ?? '',
       query: editDataSource?.sqlQuery ?? props.query.trim(),
     },
@@ -132,9 +132,16 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                 <FormItem>
                   <FormLabel>SQL query:</FormLabel>
                   <FormControl>
-                    <Textarea
-                      {...field}
-                      className="font-mono text-sm bg-secondary min-h-[200px]"
+                    <SqlMonacoEditor
+                      value={field.value}
+                      onChange={field.onChange}
+                      className="min-h-[200px]"
+                      options={{
+                        scrollBeyondLastLine: false,
+                        automaticLayout: true,
+                        minimap: {enabled: false},
+                        wordWrap: 'on',
+                      }}
                     />
                   </FormControl>
                   <FormMessage />

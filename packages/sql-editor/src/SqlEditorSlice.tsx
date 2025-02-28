@@ -1,19 +1,11 @@
-import {
-  createTableFromQuery,
-  DuckQueryError,
-  getDuckDb,
-  getDuckTables,
-  getDuckTableSchemas,
-  useDuckDb,
-} from '@sqlrooms/duckdb';
+import {DuckQueryError, getDuckDb, getDuckTableSchemas} from '@sqlrooms/duckdb';
 import {
   createSlice,
-  DataSourceStatus,
   ProjectState,
   StateCreator,
   useBaseProjectStore,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig, DataSourceTypes} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
@@ -68,11 +60,6 @@ export type SqlEditorSliceState = {
      * @param filename - Optional filename (default is generated).
      */
     exportResultsToCsv(results: Table, filename?: string): void;
-
-    /**
-     * Refresh table schemas after a query execution.
-     */
-    refreshTableSchemas(): Promise<void>;
 
     /**
      * Create a new query tab.
@@ -135,7 +122,7 @@ export function createSqlEditorSlice<
           await duckDb.conn.query(`SET search_path = main`);
 
           // Refresh table schemas after query execution
-          await get().sqlEditor.refreshTableSchemas();
+          await get().project.refreshTableSchemas();
 
           return {results};
         } catch (e) {
@@ -155,12 +142,6 @@ export function createSqlEditorSlice<
           type: 'text/plain;charset=utf-8',
         });
         saveAs(blob, filename || `export-${genRandomStr(5)}.csv`);
-      },
-
-      refreshTableSchemas: async () => {
-        console.log('refreshTableSchemas');
-        const tables = await getDuckTableSchemas();
-        await get().project.setTables(tables);
       },
 
       createQueryTab: (initialQuery = '') => {

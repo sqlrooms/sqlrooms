@@ -13,7 +13,7 @@ export function useTableManagement() {
     [rawTables],
   );
   const refreshTableSchemas = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.refreshTableSchemas,
+    (s) => s.project.refreshTableSchemas,
   );
 
   // Then memoize the transformation of that data

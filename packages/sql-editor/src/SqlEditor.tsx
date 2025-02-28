@@ -103,6 +103,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
+  const [lastExecutedQuery, setLastExecutedQuery] = useState<string>('');
 
   // Local state for modals
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
@@ -193,6 +194,9 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     // Get the query text (either selected text or the entire query)
     const queryToRun = getQueryText(selectedQueryId, currentQuery);
 
+    // Store the query that's being executed
+    setLastExecutedQuery(queryToRun);
+
     // Run the query and refresh tables list
     await runQuery(queryToRun);
   }, [
@@ -201,6 +205,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     selectedQueryId,
     currentQuery,
     runQuery,
+    setLastExecutedQuery,
   ]);
 
   // Set up the run query handler reference for keyboard shortcuts
@@ -227,7 +232,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
 
   return (
     <div className="relative flex flex-col h-full w-full overflow-hidden">
-      <div className="absolute right-12 top-2">
+      <div className="absolute right-12 top-0">
         {documentationPanel ? (
           <Button
             size="sm"
@@ -453,7 +458,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
           </ResizablePanelGroup>
         </div>
         <CreateTableModal
-          query={currentQuery}
+          query={lastExecutedQuery || currentQuery}
           isOpen={createTableModalOpen}
           onClose={() => setCreateTableModalOpen(false)}
           onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}

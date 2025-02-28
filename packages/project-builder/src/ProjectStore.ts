@@ -214,6 +214,11 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   updateReadyDataSources(): Promise<void>;
   onDataUpdated: () => Promise<void>;
   areViewsReadyToRender(): boolean;
+  /**
+   * Refresh table schemas from the database.
+   * @returns A promise that resolves to the updated tables.
+   */
+  refreshTableSchemas(): Promise<DataTable[]>;
 };
 
 export type ProjectState<PC extends BaseProjectConfig> = {
@@ -373,7 +378,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       ...initialProjectState,
 
       async initialize() {
-        console.log('initialize');
         const {setTaskProgress} = get().project;
         setTaskProgress(INIT_DB_TASK, {
           message: 'Initializing database…',
@@ -883,6 +887,12 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             );
           }),
         );
+      },
+
+      async refreshTableSchemas(): Promise<DataTable[]> {
+        const tables = await getDuckTableSchemas();
+        await get().project.setTables(tables);
+        return tables;
       },
     };
 
