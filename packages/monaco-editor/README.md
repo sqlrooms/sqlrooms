@@ -1,6 +1,6 @@
 # @sqlrooms/monaco-editor
 
-Monaco Editor components for SQLRooms, including specialized editors for JSON and SQL (DuckDB).
+Monaco Editor components for SQLRooms, including specialized editors for JSON.
 
 ## Installation
 
@@ -57,40 +57,6 @@ function MyJsonEditor() {
 }
 ```
 
-### SqlMonacoEditor
-
-A specialized Monaco Editor for editing SQL with DuckDB syntax highlighting and autocompletion.
-
-```tsx
-import {SqlMonacoEditor} from '@sqlrooms/monaco-editor';
-
-function MySqlEditor() {
-  const tableSchemas = {
-    users: {
-      id: 'INTEGER',
-      name: 'VARCHAR',
-      email: 'VARCHAR',
-      created_at: 'TIMESTAMP',
-    },
-    orders: {
-      id: 'INTEGER',
-      user_id: 'INTEGER',
-      amount: 'DECIMAL',
-      created_at: 'TIMESTAMP',
-    },
-  };
-
-  return (
-    <SqlMonacoEditor
-      className="h-[400px]"
-      value="SELECT * FROM users JOIN orders ON users.id = orders.user_id"
-      tableSchemas={tableSchemas}
-      onChange={(value) => console.log(value)}
-    />
-  );
-}
-```
-
 ## Props
 
 ### MonacoEditor Props
@@ -114,16 +80,6 @@ Extends `MonacoEditorProps` with:
 | ------ | ---------------- | ------- | ----------------------------------- |
 | schema | object           | -       | The JSON schema to validate against |
 | value  | string \| object | ''      | The JSON value to edit              |
-
-### SqlMonacoEditor Props
-
-Extends `MonacoEditorProps` with:
-
-| Prop            | Type     | Default | Description                                            |
-| --------------- | -------- | ------- | ------------------------------------------------------ |
-| customKeywords  | string[] | []      | Custom SQL keywords to add to the completion provider  |
-| customFunctions | string[] | []      | Custom SQL functions to add to the completion provider |
-| tableSchemas    | object   | {}      | Table schemas for autocompletion                       |
 
 ## License
 
