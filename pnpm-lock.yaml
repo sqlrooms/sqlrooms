@@ -515,6 +515,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../monaco-editor
       '@sqlrooms/project-builder':
         specifier: workspace:*
         version: link:../project-builder

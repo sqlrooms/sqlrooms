@@ -2,6 +2,7 @@ import {AnalysisResultSchema} from './schemas';
 import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ToolResult} from './ToolResult';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 
 /**
  * Props for the AnalysisResult component
@@ -22,7 +23,7 @@ const stringifyResult = (result: AnalysisResultSchema) => {
   // remove toolCallMessages from the result
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const {toolCallMessages, ...rest} = result;
-  return JSON.stringify(rest);
+  return JSON.stringify(rest, null, 2);
 };
 
 /**
@@ -70,7 +71,18 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
             align="end"
             side="right"
           >
-            <pre className="text-xs">{stringifyResult(result)}</pre>
+            <JsonMonacoEditor
+              value={stringifyResult(result)}
+              readOnly={true}
+              className="h-[300px]"
+              options={{
+                minimap: {enabled: false},
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                folding: true,
+                lineNumbers: false,
+              }}
+            />
           </PopoverContent>
         </Popover>
       </div>
