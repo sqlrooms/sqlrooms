@@ -50,7 +50,7 @@ html:not(.dark) .video.dark {
 
 @media (min-width: 960px) {
   .video {
-    max-height: 420px;
+    max-height: 400px;
   }
 }
 </style>
