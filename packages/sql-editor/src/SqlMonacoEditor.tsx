@@ -8,6 +8,7 @@ import {
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
+import type {DataTable} from '@sqlrooms/duckdb';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
@@ -21,21 +22,14 @@ export interface SqlMonacoEditorProps
   customFunctions?: string[];
   /**
    * Table schemas for autocompletion
-   * Format: { tableName: { columnName: columnType, ... }, ... }
    */
-  tableSchemas?: Record<string, Record<string, string>>;
+  tableSchemas?: DataTable[];
   /**
-   * Sample data for tables to enhance autocompletion
-   * Format: { tableName: [sampleDescription1, sampleDescription2, ...], ... }
-   */
-  tableSamples?: Record<string, string[]>;
-  /**
-   * Callback to get the latest table schemas and samples
+   * Callback to get the latest table schemas
    * This is called from within provideCompletionItems to ensure we have the latest data
    */
   getLatestSchemas?: () => {
-    tableSchemas: Record<string, Record<string, string>>;
-    tableSamples: Record<string, string[]>;
+    tableSchemas: DataTable[];
   };
 }
 
@@ -46,8 +40,7 @@ export interface SqlMonacoEditorProps
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   customKeywords = [],
   customFunctions = [],
-  tableSchemas = {},
-  tableSamples = {},
+  tableSchemas = [],
   getLatestSchemas,
   onMount,
   className,
@@ -74,14 +67,12 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       triggerCharacters: [' ', '.', ',', '(', '='],
       provideCompletionItems: (model: any, position: any) => {
         try {
-          // Get the latest schemas and samples if the callback is provided
+          // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
-          let currentSamples = tableSamples;
 
           if (getLatestSchemas) {
             const latest = getLatestSchemas();
             currentSchemas = latest.tableSchemas;
-            currentSamples = latest.tableSamples;
           }
 
           const suggestions: Monaco.languages.CompletionItem[] = [];
@@ -141,11 +132,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           }
 
           // Add table and column suggestions from schemas
-          Object.entries(currentSchemas).forEach(([tableName, columns]) => {
-            // Get sample data for this table if available
-            const samples = currentSamples[tableName] || [];
-            const sampleText =
-              samples.length > 0 ? `\nSample data:\n${samples.join('\n')}` : '';
+          currentSchemas.forEach((table) => {
+            const tableName = table.tableName;
 
             // Add table suggestion
             suggestions.push({
@@ -155,7 +143,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
               range: range,
               detail: 'Table',
               documentation: {
-                value: `Table: ${tableName}${sampleText}`,
+                value: `Table: ${tableName}`,
                 isTrusted: true,
               },
               sortText: isTableContext ? 'a' + tableName : 'c' + tableName, // Higher priority in table context
@@ -173,14 +161,9 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
             // Only add columns for the current table if we're in a column context
             if (!isColumnContext || contextTableName === tableName) {
               // Add column suggestions
-              Object.entries(columns).forEach(([columnName, columnType]) => {
-                // Find sample values for this column if available
-                const columnSample = samples.find((s) =>
-                  s.startsWith(`${columnName}:`),
-                );
-                const sampleInfo = columnSample
-                  ? `\nSample: ${columnSample.split(':')[1]?.trim() || ''}`
-                  : '';
+              table.columns.forEach((column) => {
+                const columnName = column.name;
+                const columnType = column.type;
 
                 suggestions.push({
                   label: columnName,
@@ -189,7 +172,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                   range: range,
                   detail: `Column (${columnType})`,
                   documentation: {
-                    value: `Column from table ${tableName}${sampleInfo}`,
+                    value: `Column from table ${tableName}`,
                     isTrusted: true,
                   },
                   sortText:
@@ -207,7 +190,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                     range: range,
                     detail: `Column (${columnType})`,
                     documentation: {
-                      value: `Column from table ${tableName}${sampleInfo}`,
+                      value: `Column from table ${tableName}`,
                       isTrusted: true,
                     },
                     sortText: 'e' + tableName + columnName,
@@ -229,20 +212,14 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
     // Store the disposable to clean up later
     disposableRef.current = disposable;
-  }, [
-    customKeywords,
-    customFunctions,
-    tableSchemas,
-    tableSamples,
-    getLatestSchemas,
-  ]);
+  }, [customKeywords, customFunctions, tableSchemas, getLatestSchemas]);
 
-  // Re-register completion provider when tableSchemas or tableSamples change
+  // Re-register completion provider when tableSchemas change
   useEffect(() => {
     if (editorRef.current && monacoRef.current) {
       registerCompletionProvider();
     }
-  }, [tableSchemas, tableSamples, registerCompletionProvider]);
+  }, [tableSchemas, registerCompletionProvider]);
 
   // Handle editor mounting to configure SQL language features
   const handleEditorDidMount = useCallback<OnMount>(
@@ -288,7 +265,6 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       customKeywords,
       customFunctions,
       tableSchemas,
-      tableSamples,
       onMount,
       registerCompletionProvider,
     ],
