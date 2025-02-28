@@ -30,6 +30,13 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          lfs: true # Enable Git LFS for this checkout
+
+      - name: Setup Git LFS
+        run: |
+          git lfs install
+          git lfs pull
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
