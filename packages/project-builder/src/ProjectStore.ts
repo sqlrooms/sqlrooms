@@ -164,6 +164,17 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
    * @param panel - The panel to toggle the pin state of.
    */
   togglePanelPin: (panel: string) => void;
+  /**
+   * Add or update a SQL query data source.
+   * @param tableName - The name of the table to create or update.
+   * @param query - The SQL query to execute.
+   * @param oldTableName - The name of the table to replace (optional).
+   */
+  addOrUpdateSqlQueryDataSource(
+    tableName: string,
+    query: string,
+    oldTableName?: string,
+  ): Promise<void>;
   removeSqlQueryDataSource(tableName: string): Promise<void>;
   replaceProjectFile(
     projectFile: ProjectFileInfo,
@@ -494,6 +505,43 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         );
         await get().project.updateReadyDataSources();
         return newTable;
+      },
+
+      async addOrUpdateSqlQueryDataSource(tableName, query, oldTableName) {
+        const {schema} = get().project;
+        const newTableName =
+          tableName !== oldTableName
+            ? convertToUniqueColumnOrTableName(
+                tableName,
+                await getDuckTables(schema),
+              )
+            : tableName;
+        const {rowCount} = await createTableFromQuery(newTableName, query);
+        get().project.setTableRowCount(newTableName, rowCount);
+        set((state) =>
+          produce(state, (draft) => {
+            const newDataSource = {
+              type: DataSourceTypes.enum.sql,
+              sqlQuery: query,
+              tableName: newTableName,
+            };
+            if (oldTableName) {
+              draft.project.config.dataSources =
+                draft.project.config.dataSources.map((dataSource) =>
+                  dataSource.tableName === oldTableName
+                    ? newDataSource
+                    : dataSource,
+                );
+              delete draft.project.dataSourceStates[oldTableName];
+            } else {
+              draft.project.config.dataSources.push(newDataSource);
+            }
+            draft.project.dataSourceStates[newTableName] = {
+              status: DataSourceStatus.READY,
+            };
+          }),
+        );
+        await get().project.setTables(await getDuckTableSchemas());
       },
 
       removeSqlQueryDataSource: async (tableName) => {

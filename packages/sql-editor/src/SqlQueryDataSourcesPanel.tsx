@@ -51,8 +51,8 @@ const SqlQueryDataSourcesPanel: FC<{
     [removeSqlQueryDataSource],
   );
 
-  const addOrUpdateSqlQuery = useStoreWithSqlEditor(
-    (state) => state.sqlEditor.addOrUpdateSqlQuery,
+  const addOrUpdateSqlQueryDataSource = useBaseProjectStore(
+    (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
 
   const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
@@ -75,7 +75,7 @@ const SqlQueryDataSourcesPanel: FC<{
         onClose={handleClose}
         editDataSource={selectedDataSource}
         query=""
-        onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
+        onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
       />
 
       <div className="flex flex-col overflow-auto flex-grow">

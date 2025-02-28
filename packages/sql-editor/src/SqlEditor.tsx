@@ -31,6 +31,7 @@ import {TablesList} from './TablesList';
 import {SqlMonacoEditor} from './SqlMonacoEditor';
 import type * as Monaco from 'monaco-editor';
 import {useTableManagement, useQueryExecution, useMonacoEditor} from './hooks';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
 
 // Define the types for Monaco Editor
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
@@ -69,8 +70,8 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = 'main', documentationPanel} = props;
 
   // Store access - directly use the selector
-  const addOrUpdateSqlQuery = useStoreWithSqlEditor(
-    (state) => state.sqlEditor.addOrUpdateSqlQuery,
+  const addOrUpdateSqlQueryDataSource = useBaseProjectStore(
+    (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
 
   // Get query data and methods directly from the store
@@ -455,7 +456,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
           query={currentQuery}
           isOpen={createTableModalOpen}
           onClose={() => setCreateTableModalOpen(false)}
-          onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
+          onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
         />
         <DeleteSqlQueryModal
           isOpen={queryToDelete !== null}

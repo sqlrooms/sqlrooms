@@ -50,18 +50,6 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
 export type SqlEditorSliceState = {
   sqlEditor: {
     /**
-     * Add or update a SQL query data source.
-     * @param tableName - The name of the table to create or update.
-     * @param query - The SQL query to execute.
-     * @param oldTableName - The name of the table to replace (optional).
-     */
-    addOrUpdateSqlQuery(
-      tableName: string,
-      query: string,
-      oldTableName?: string,
-    ): Promise<void>;
-
-    /**
      * Execute a SQL query and return the results.
      * @param query - The SQL query to execute.
      * @param schema - The schema to use (default: main).
@@ -135,40 +123,6 @@ export function createSqlEditorSlice<
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
-      addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
-        const {schema} = get().project;
-        const newTableName =
-          tableName !== oldTableName
-            ? generateUniqueName(tableName, await getDuckTables(schema))
-            : tableName;
-        const {rowCount} = await createTableFromQuery(newTableName, query);
-        get().project.setTableRowCount(newTableName, rowCount);
-        set((state) =>
-          produce(state, (draft) => {
-            const newDataSource = {
-              type: DataSourceTypes.enum.sql,
-              sqlQuery: query,
-              tableName: newTableName,
-            };
-            if (oldTableName) {
-              draft.project.config.dataSources =
-                draft.project.config.dataSources.map((dataSource) =>
-                  dataSource.tableName === oldTableName
-                    ? newDataSource
-                    : dataSource,
-                );
-              delete draft.project.dataSourceStates[oldTableName];
-            } else {
-              draft.project.config.dataSources.push(newDataSource);
-            }
-            draft.project.dataSourceStates[newTableName] = {
-              status: DataSourceStatus.READY,
-            };
-          }),
-        );
-        await get().project.setTables(await getDuckTableSchemas());
-      },
-
       executeQuery: async (query, schema = 'main') => {
         const duckDb = await getDuckDb();
         if (!duckDb.conn) {
