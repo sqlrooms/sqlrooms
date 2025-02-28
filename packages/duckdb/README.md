@@ -13,8 +13,6 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ```bash
 npm install @sqlrooms/duckdb
-# or
-yarn add @sqlrooms/duckdb
 ```
 
 ## Basic Usage
@@ -42,6 +40,7 @@ function UserList() {
     </ul>
   );
 }
+```
 
 For more information and examples on using the `useSql` hook, see the [useSql API documentation](/api/duckdb/functions/useSql).
 
@@ -83,7 +82,7 @@ function ValidatedUserList() {
     </ul>
   );
 }
-````
+```
 
 ### Creating Tables from Different Sources
 
@@ -167,3 +166,4 @@ async function executeCustomQuery() {
 - **File Management**: Register and manage files in the DuckDB instance
 
 For more information, visit the SQLRooms documentation.
+````
