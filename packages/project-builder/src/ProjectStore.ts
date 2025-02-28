@@ -78,7 +78,6 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   initialized: false,
   isDataAvailable: false,
   isReadOnly: false,
-  isPublic: false,
   projectFiles: [],
   projectFilesProgress: {},
   // userId: undefined,
@@ -104,7 +103,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   projectId: string | undefined; // undefined if the project is new
   config: PC;
   panels: Record<string, ProjectPanelInfo>;
-  isPublic: boolean;
   isReadOnly: boolean;
   tables: DataTable[];
   projectFiles: ProjectFileInfo[];
@@ -123,16 +121,10 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
 
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
   /**
-   * Reinitialize the project state. Called when the project is first loaded.
-   * @param opts - Optional parameters to override the default behavior.
-   * @returns A promise that resolves when the project state has been reinitialized.
+   * Initialize the project state.
+   * @returns A promise that resolves when the project state has been initialized.
    */
-  reinitialize: (opts?: {
-    project?: {id?: string; config: PC};
-    isReadOnly?: boolean;
-    isPublic?: boolean;
-    captureException?: ProjectStateProps<PC>['captureException'];
-  }) => Promise<void>;
+  initialize: () => Promise<void>;
   /**
    * Reset the project state.
    * @returns A promise that resolves when the project state has been reset.
@@ -263,7 +255,8 @@ export function createProjectStore<
   //   };
   // });
   const projectStore = createStore<AppState>(stateCreator);
-  projectStore.getState().project.reinitialize?.();
+  projectStore.getState().project.initialize();
+
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
     return useBaseProjectStore(selector as (state: AppState) => T);
@@ -368,6 +361,27 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
     const projectState: ProjectState<PC>['project'] = {
       ...initialProjectState,
 
+      async initialize() {
+        console.log('initialize');
+        const {setTaskProgress} = get().project;
+        setTaskProgress(INIT_DB_TASK, {
+          message: 'Initializing database…',
+          progress: undefined,
+        });
+        await getDuckDb();
+        setTaskProgress(INIT_DB_TASK, undefined);
+
+        setTaskProgress(INIT_PROJECT_TASK, {
+          message: 'Loading data sources…',
+          progress: undefined,
+        });
+        await get().project.updateReadyDataSources();
+        await get().project.maybeDownloadDataSources();
+        setTaskProgress(INIT_PROJECT_TASK, undefined);
+
+        await get().project.onDataUpdated();
+      },
+
       onDataUpdated: async () => {
         // Do nothing: to be overridden by the view store
       },
@@ -390,54 +404,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         } catch (err) {
           console.error(err);
         }
-      },
-
-      reinitialize: async (opts) => {
-        const {
-          project,
-          isPublic = false,
-          isReadOnly = false,
-          captureException,
-        } = opts ?? {};
-        await get().project.reset();
-
-        // Remove and unsubscribe from all views
-        // TODO: show some error message if the project config is invalid
-        const config = project?.config ?? initialProjectState.config;
-
-        set((state) =>
-          produce(state, (draft) => {
-            draft.project.projectId = project?.id ?? undefined;
-            draft.project.isPublic = isPublic;
-            draft.project.isReadOnly = isReadOnly;
-            draft.project.config = castDraft(config);
-            draft.project.lastSavedConfig = castDraft(config);
-            draft.project.captureException = captureException ?? console.error;
-            draft.project.initialized = true;
-            draft.project.isDataAvailable = false;
-          }),
-        );
-
-        const {setTaskProgress} = get().project;
-
-        console.log('reinitialize', INIT_DB_TASK);
-        setTaskProgress(INIT_DB_TASK, {
-          message: 'Initializing database…',
-          progress: undefined,
-        });
-        await getDuckDb();
-        setTaskProgress(INIT_DB_TASK, undefined);
-        console.log('reinitialize', INIT_DB_TASK, 'end');
-
-        setTaskProgress(INIT_PROJECT_TASK, {
-          message: 'Loading data sources…',
-          progress: undefined,
-        });
-        await get().project.updateReadyDataSources();
-        await get().project.maybeDownloadDataSources();
-        setTaskProgress(INIT_PROJECT_TASK, undefined);
-
-        await get().project.onDataUpdated();
       },
 
       setTaskProgress(id, taskProgress) {
@@ -871,6 +837,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         );
       },
     };
+
     return {project: projectState, ...restState};
 
     function updateTotalFileDownloadProgress() {

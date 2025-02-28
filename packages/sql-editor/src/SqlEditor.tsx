@@ -65,13 +65,14 @@ export type SqlEditorProps = {
  * - Keyboard shortcuts (Cmd/Ctrl + Enter to run queries)
  *
  */
-const SqlEditor: React.FC<SqlEditorProps> = (props) => {
+const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = 'main', documentationPanel} = props;
 
-  // Store access
+  // Store access - directly use the selector
   const addOrUpdateSqlQuery = useStoreWithSqlEditor(
     (state) => state.sqlEditor.addOrUpdateSqlQuery,
   );
+
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
@@ -86,7 +87,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
     selectedTable,
     fetchTables,
     handleSelectTable,
-  } = useTableManagement(schema);
+  } = useTableManagement();
 
   const {results, resultsTableData, loading, error, runQuery, exportResults} =
     useQueryExecution(schema);
@@ -115,17 +116,22 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   const currentQuery = getCurrentQuery();
 
   // Handle run query logic
-  const handleRunQuery = async () => {
+  const handleRunQuery = useCallback(async () => {
     // Clear selected table when running a query
-    handleSelectTable('');
+    handleSelectTable(undefined);
 
     // Get the query text (either selected text or the entire query)
     const queryToRun = getQueryText(selectedQueryId, currentQuery);
 
     // Run the query and refresh tables list
     await runQuery(queryToRun);
-    void fetchTables();
-  };
+  }, [
+    handleSelectTable,
+    getQueryText,
+    selectedQueryId,
+    currentQuery,
+    runQuery,
+  ]);
 
   // Set up the run query handler reference for keyboard shortcuts
   useEffect(() => {
@@ -150,7 +156,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
   }, []);
 
   return (
-    <>
+    <div className="relative flex flex-col h-full w-full overflow-hidden">
       <div className="absolute right-12 top-2">
         {documentationPanel ? (
           <Button
@@ -174,13 +180,14 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           </a>
         )}
       </div>
-      <div className="flex flex-col w-full gap-2">
+      <div className="flex flex-col w-full gap-2 h-full">
         <div className="flex items-center gap-2 ml-1 mr-10 mb-2">
           <h2 className="text-lg font-semibold">SQL Editor</h2>
         </div>
         <div className="flex-grow h-full bg-muted">
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={showDocs ? 50 : 80}>
+            {/* Main panel - takes full width when docs not shown, or 70% when docs shown */}
+            <ResizablePanel defaultSize={showDocs ? 70 : 100}>
               <ResizablePanelGroup direction="vertical" className="h-full">
                 <ResizablePanel defaultSize={50} className="flex flex-row">
                   <ResizablePanelGroup direction="horizontal">
@@ -220,7 +227,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                             Run
                           </Button>
                           <TabsList className="flex-1">
-                            {queries.map((q) => (
+                            {queries.map((q: any) => (
                               <div key={q.id} className="relative">
                                 <TabsTrigger
                                   value={q.id}
@@ -271,7 +278,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                             <PlusIcon className="h-4 w-4" />
                           </Button>
                         </div>
-                        {queries.map((q) => (
+                        {queries.map((q: any) => (
                           <TabsContent
                             key={q.id}
                             value={q.id}
@@ -319,50 +326,52 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                   </ResizablePanelGroup>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={50}>
-                  <div className="h-full overflow-hidden bg-muted text-sm">
-                    {loading ? (
-                      <SpinnerPane h="100%" />
-                    ) : selectedTable ? (
-                      <QueryDataTable
-                        query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
-                      />
-                    ) : error ? (
-                      <div className="w-full h-full p-5 overflow-auto">
-                        <pre className="text-xs leading-tight text-red-500">
-                          {error}
-                        </pre>
+                <ResizablePanel
+                  defaultSize={50}
+                  className="overflow-hidden bg-muted text-sm"
+                >
+                  {loading ? (
+                    <SpinnerPane h="100%" />
+                  ) : selectedTable ? (
+                    <QueryDataTable
+                      query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
+                    />
+                  ) : error ? (
+                    <div className="w-full h-full p-5 overflow-auto">
+                      <pre className="text-xs leading-tight text-red-500">
+                        {error}
+                      </pre>
+                    </div>
+                  ) : resultsTableData ? (
+                    <div className="flex-grow overflow-hidden flex flex-col relative w-full h-full">
+                      <DataTableVirtualized {...resultsTableData} />
+                      <div className="absolute bottom-0 right-0 flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={!resultsTableData}
+                          onClick={handleCreateTable}
+                        >
+                          <PlusIcon className="w-4 h-4 mr-2" />
+                          Create table
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={!results}
+                          onClick={exportResults}
+                        >
+                          <DownloadIcon className="w-4 h-4 mr-2" />
+                          Export
+                        </Button>
                       </div>
-                    ) : resultsTableData ? (
-                      <div className="flex-grow overflow-hidden flex flex-col relative">
-                        <DataTableVirtualized {...resultsTableData} />
-                        <div className="absolute bottom-0 right-0 flex gap-2 p-2">
-                          <Button
-                            size="sm"
-                            disabled={!resultsTableData}
-                            onClick={handleCreateTable}
-                          >
-                            <PlusIcon className="w-4 h-4 mr-2" />
-                            Create table
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={!results}
-                            onClick={exportResults}
-                          >
-                            <DownloadIcon className="w-4 h-4 mr-2" />
-                            Export
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
                 </ResizablePanel>
               </ResizablePanelGroup>
             </ResizablePanel>
             {showDocs && (
               <>
                 <ResizableHandle withHandle />
+                {/* Documentation panel - 30% width */}
                 <ResizablePanel defaultSize={30}>
                   {documentationPanel}
                 </ResizablePanel>
@@ -388,8 +397,11 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           onRename={handleFinishRename}
         />
       </div>
-    </>
+    </div>
   );
 };
+
+// Wrap with React.memo to prevent unnecessary re-renders
+const SqlEditor = React.memo(SqlEditorBase);
 
 export default SqlEditor;

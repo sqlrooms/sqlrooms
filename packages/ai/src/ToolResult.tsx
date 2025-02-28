@@ -89,7 +89,7 @@ export const ToolResult: React.FC<ToolResultProps> = ({
 
       <div className="flex flex-col gap-5">
         {toolName === 'query' && isQueryToolParameters(args) ? (
-          <QueryToolCall {...args} customMessage={customMessage} />
+          <QueryToolCall {...args} customMessage={String(customMessage)} />
         ) : toolName === 'chart' && isChartToolParameters(args) ? (
           <ChartToolCall {...args} />
         ) : toolName === 'answer' && isAnalysisAnswer(result) ? (

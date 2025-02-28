@@ -1,154 +1,89 @@
-import {
-  escapeId,
-  getDuckTables,
-  getDuckTableSchemas,
-  useDuckDb,
-} from '@sqlrooms/duckdb';
-import {useCallback, useState, useEffect} from 'react';
+import {DataTable, TableColumn} from '@sqlrooms/duckdb';
+import {useCallback, useMemo, useState} from 'react';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 /**
  * Hook to manage SQL tables, their schemas, and sample data
  */
-export function useTableManagement(schema: string = 'main') {
-  const duckConn = useDuckDb();
-  const [tables, setTables] = useState<string[]>([]);
+export function useTableManagement() {
+  // Get data from the store without refs
+  const rawTables = useStoreWithSqlEditor((s) => s.project.tables);
+  const tables = useMemo(
+    () => rawTables.map((t: DataTable) => t.tableName),
+    [rawTables],
+  );
+  const refreshTableSchemas = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.refreshTableSchemas,
+  );
+
+  // Then memoize the transformation of that data
+  const tableSchemas = useMemo(() => {
+    if (!rawTables) return {};
+
+    // Convert DataTable[] to the format needed by SqlMonacoEditor
+    return rawTables.reduce(
+      (acc: Record<string, Record<string, string>>, table: DataTable) => {
+        // Correctly access column data from the DataTable structure
+        // Each DataTable has a 'columns' array of TableColumn objects with 'name' and 'type'
+        const columns = table.columns || [];
+
+        // Create a map of column name to column type
+        acc[table.tableName] = columns.reduce(
+          (cols: Record<string, string>, column: TableColumn) => {
+            cols[column.name] = column.type;
+            return cols;
+          },
+          {},
+        );
+
+        return acc;
+      },
+      {} as Record<string, Record<string, string>>,
+    );
+  }, [rawTables]); // Depend only on the raw tables data
+
   const [tablesLoading, setTablesLoading] = useState(false);
   const [tablesError, setTablesError] = useState<Error | null>(null);
-  const [tableSchemas, setTableSchemas] = useState<
-    Record<string, Record<string, string>>
-  >({});
   const [tableSamples, setTableSamples] = useState<Record<string, string[]>>(
     {},
   );
-  const [selectedTable, setSelectedTable] = useState<string>();
+  const [selectedTable, setSelectedTable] = useState<string | undefined>();
 
+  // Function to fetch table samples for autocompletion
+  const fetchTableSamples = useCallback(
+    async (tableName: string) => {
+      // If we already have samples for this table, don't fetch again
+      if (tableSamples[tableName]) return tableSamples[tableName];
+
+      // Skip if we don't have schema information
+      const tableSchema = tableSchemas[tableName];
+      if (!tableSchema) return [];
+
+      // This would require DuckDB access, but we'll delegate this to the original implementation
+      // For now, we return an empty array
+      return [];
+    },
+    [tableSamples, tableSchemas],
+  );
+
+  // Handler for selecting a table
+  const handleSelectTable = useCallback((table: string | undefined) => {
+    setSelectedTable(table);
+  }, []);
+
+  // The fetchTables method now just refreshes the schemas from ProjectStore
   const fetchTables = useCallback(async () => {
-    if (!duckConn.conn) return;
-
     try {
       setTablesLoading(true);
       setTablesError(null);
-
-      // Get all tables and their schemas using the utility functions
-      const tablesList = await getDuckTables(schema);
-      setTables(tablesList);
-
-      // Get detailed table schemas
-      const tablesData = await getDuckTableSchemas(schema);
-
-      // Convert to the format expected by SqlMonacoEditor
-      const schemas: Record<string, Record<string, string>> = {};
-      const samples: Record<string, string[]> = {};
-
-      // Process each table's schema
-      for (const tableData of tablesData) {
-        const {tableName, columns} = tableData;
-        const columnMap: Record<string, string> = {};
-
-        // Add each column to the map
-        for (const column of columns) {
-          columnMap[column.name] = column.type;
-        }
-
-        schemas[tableName] = columnMap;
-
-        // Skip tables with too many columns to avoid performance issues
-        if (columns.length > 20) {
-          samples[tableName] = [
-            `Table has ${columns.length} columns - samples omitted for performance`,
-          ];
-          continue;
-        }
-
-        try {
-          // Set a timeout to prevent hanging
-          const samplePromise = new Promise<any[]>(async (resolve, reject) => {
-            const timeoutId = setTimeout(() => {
-              reject(new Error(`Timeout fetching samples for ${tableName}`));
-            }, 1000); // 1 second timeout
-
-            try {
-              // Limit to 3 rows for samples
-              const result = await duckConn.conn.query(
-                `SELECT * FROM ${schema}.${escapeId(tableName)} LIMIT 3`,
-              );
-              clearTimeout(timeoutId);
-              resolve(result.toArray());
-            } catch (error) {
-              clearTimeout(timeoutId);
-              reject(error);
-            }
-          });
-
-          const result = await samplePromise;
-
-          if (result && result.length > 0) {
-            const columnNames = Object.keys(columnMap);
-            const tableSamples: string[] = [];
-
-            // Create sample strings for each row
-            for (const row of result) {
-              for (const colName of columnNames) {
-                let value = row[colName];
-
-                // Format the value based on its type
-                if (value === null || value === undefined) {
-                  value = 'NULL';
-                } else if (typeof value === 'string') {
-                  // Truncate long strings
-                  value =
-                    value.length > 50 ? value.substring(0, 47) + '...' : value;
-                  value = `'${value}'`;
-                } else if (typeof value === 'object') {
-                  value = JSON.stringify(value);
-                  // Truncate long JSON
-                  value =
-                    value.length > 50 ? value.substring(0, 47) + '...' : value;
-                }
-
-                tableSamples.push(`${colName}: ${value}`);
-              }
-
-              // Add a separator between rows if we have more than one
-              if (
-                result.length > 1 &&
-                tableSamples.length < columnNames.length * result.length
-              ) {
-                tableSamples.push('---');
-              }
-            }
-
-            samples[tableName] = tableSamples;
-          }
-        } catch (error) {
-          console.error(`Error fetching samples for ${tableName}:`, error);
-          samples[tableName] = [
-            `Error fetching samples: ${(error as Error).message}`,
-          ];
-        }
-      }
-
-      setTableSchemas(schemas);
-      setTableSamples(samples);
+      if (refreshTableSchemas) await refreshTableSchemas();
     } catch (error) {
-      console.error('Error fetching tables:', error);
+      console.error('Error refreshing tables:', error);
       setTablesError(error as Error);
     } finally {
       setTablesLoading(false);
     }
-  }, [duckConn.conn, schema]);
-
-  const handleSelectTable = (table: string) => {
-    setSelectedTable(table);
-  };
-
-  useEffect(() => {
-    if (duckConn.conn) {
-      void fetchTables();
-    } else {
-      console.error('No DuckDB connection available');
-    }
-  }, [fetchTables, duckConn.conn]);
+  }, [refreshTableSchemas]);
 
   return {
     tables,
@@ -158,6 +93,7 @@ export function useTableManagement(schema: string = 'main') {
     tableSamples,
     selectedTable,
     fetchTables,
+    fetchTableSamples,
     handleSelectTable,
   };
 }

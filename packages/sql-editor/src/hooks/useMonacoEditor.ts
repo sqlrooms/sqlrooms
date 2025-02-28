@@ -1,4 +1,4 @@
-import {useRef, useState, useEffect} from 'react';
+import {useRef, useState, useEffect, useCallback} from 'react';
 
 type EditorInstance = any;
 type MonacoInstance = any;
@@ -7,49 +7,69 @@ type MonacoInstance = any;
  * Hook for managing Monaco editor instances and keyboard shortcuts
  */
 export function useMonacoEditor() {
+  // Store editor instances for each query tab
   const [editorInstances, setEditorInstances] = useState<
     Record<string, EditorInstance>
   >({});
+
+  // Use a ref for the run query function to avoid dependency issues
+  // This ref is NOT for Zustand selectors, it's for function reference stability
   const handleRunQueryRef = useRef<() => Promise<void>>(async () => {});
+
+  /**
+   * Set the run query handler reference
+   */
+  const setRunQueryHandler = useCallback((handler: () => Promise<void>) => {
+    handleRunQueryRef.current = handler;
+  }, []);
 
   /**
    * Handle editor mounting and setup keyboard shortcuts
    */
-  const handleEditorMount = (
-    editor: EditorInstance,
-    monaco: MonacoInstance,
-    queryId: string,
-    onRunQuery: () => Promise<void>,
-  ) => {
-    // Store the editor instance
-    setEditorInstances((prev) => ({
-      ...prev,
-      [queryId]: editor,
-    }));
+  const handleEditorMount = useCallback(
+    (
+      editor: EditorInstance,
+      monaco: MonacoInstance,
+      queryId: string,
+      onRunQuery: () => Promise<void>,
+    ) => {
+      // Store the editor instance
+      setEditorInstances((prev) => ({
+        ...prev,
+        [queryId]: editor,
+      }));
 
-    // Add Cmd/Ctrl+Enter keyboard shortcut to run query
-    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-      void handleRunQueryRef.current();
-    });
-  };
+      // Add Cmd/Ctrl+Enter keyboard shortcut to run query
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        void handleRunQueryRef.current();
+      });
+    },
+    [],
+  );
 
   /**
    * Get selected text or entire query from the editor
    */
-  const getQueryText = (queryId: string, defaultQuery: string): string => {
-    const editor = editorInstances[queryId];
-    if (!editor) return defaultQuery;
+  const getQueryText = useCallback(
+    (queryId: string, defaultQuery: string): string => {
+      const editor = editorInstances[queryId];
+      if (!editor) return defaultQuery;
 
-    const selection = editor.getSelection();
-    if (selection && !selection.isEmpty()) {
-      const selectedText = editor.getModel().getValueInRange(selection);
-      if (selectedText) {
-        return selectedText;
+      const selection = editor.getSelection();
+      if (
+        selection &&
+        !selection.isEmpty() &&
+        typeof editor.getModel().getValueInRange === 'function'
+      ) {
+        // Return selected text
+        return editor.getModel().getValueInRange(selection);
       }
-    }
 
-    return defaultQuery;
-  };
+      // Return the entire query if no selection
+      return defaultQuery;
+    },
+    [editorInstances],
+  );
 
   /**
    * Setup global keyboard shortcuts for running queries
@@ -84,8 +104,6 @@ export function useMonacoEditor() {
     editorInstances,
     handleEditorMount,
     getQueryText,
-    setRunQueryHandler: (handler: () => Promise<void>) => {
-      handleRunQueryRef.current = handler;
-    },
+    setRunQueryHandler,
   };
 }

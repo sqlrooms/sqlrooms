@@ -143,10 +143,31 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Local storage key
       name: 'app-state-storage',
       // Subset of the state to persist
-      partialize: (state): Partial<AppState> => ({
-        openAiApiKey: state.openAiApiKey,
-        selectedModel: state.selectedModel,
-      }),
+      partialize: (state) =>
+        ({
+          openAiApiKey: state.openAiApiKey,
+          selectedModel: state.selectedModel,
+          // projectConfig: state.project.config,
+        }) satisfies PersistedState,
+
+      //   merge: (persistedState, currentState: AppState): AppState => {
+      //     const {projectConfig, ...rest} = persistedState as PersistedState;
+      //     const mergedState = {
+      //       ...currentState,
+      //       ...rest,
+      //       project: {
+      //         ...currentState.project,
+      //         config: projectConfig,
+      //       },
+      //     };
+      //     return mergedState;
+      //   },
     },
   ) as StateCreator<AppState>,
 );
+
+type PersistedState = {
+  openAiApiKey: string | undefined;
+  selectedModel: string;
+  // projectConfig: AppConfig;
+};

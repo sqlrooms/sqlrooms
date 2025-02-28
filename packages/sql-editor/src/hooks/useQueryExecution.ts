@@ -1,70 +1,67 @@
-import {useState} from 'react';
+import {useState, useCallback} from 'react';
 import {Table} from 'apache-arrow';
-import {DuckQueryError, useDuckDb} from '@sqlrooms/duckdb';
 import {useArrowDataTable} from '@sqlrooms/data-table';
-import {saveAs} from 'file-saver';
-import {csvFormat} from 'd3-dsv';
-import {genRandomStr} from '@sqlrooms/utils';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 /**
  * Hook for executing SQL queries and managing results
  */
 export function useQueryExecution(schema: string = 'main') {
-  const duckConn = useDuckDb();
   const [results, setResults] = useState<Table>();
   const resultsTableData = useArrowDataTable(results);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Get functions from SqlEditorSlice directly
+  const executeQueryFromSlice = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.executeQuery,
+  );
+  const exportResultsToCsv = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.exportResultsToCsv,
+  );
+
   /**
    * Execute a SQL query
    */
-  const runQuery = async (q: string) => {
-    const conn = duckConn.conn;
-    if (!conn) {
-      setError('No DuckDB connection available');
-      return;
-    }
+  const runQuery = useCallback(
+    async (q: string) => {
+      try {
+        setLoading(true);
+        setError(null);
 
-    try {
-      setError(null);
-      setLoading(true);
-      await conn.query(`SET search_path = ${schema}`);
-      const results = await conn.query(q);
-      await conn.query(`SET search_path = main`);
-      setResults(results);
-      return results;
-    } catch (e) {
-      setResults(undefined);
-      setError(
-        (e instanceof DuckQueryError
-          ? e.getMessageForUser()
-          : 'Query failed') || String(e),
-      );
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
+        const {results: queryResults, error: queryError} =
+          await executeQueryFromSlice(q, schema);
+
+        if (queryError) {
+          setError(queryError);
+          setResults(undefined);
+        } else if (queryResults) {
+          setResults(queryResults);
+        }
+
+        return queryResults;
+      } finally {
+        setLoading(false);
+      }
+    },
+    [executeQueryFromSlice, schema],
+  );
 
   /**
    * Export query results to CSV
    */
-  const exportResults = () => {
+  const exportResults = useCallback(() => {
     if (!results) return;
-    const blob = new Blob([csvFormat(results.toArray())], {
-      type: 'text/plain;charset=utf-8',
-    });
-    saveAs(blob, `export-${genRandomStr(5)}.csv`);
-  };
+    exportResultsToCsv(results);
+  }, [exportResultsToCsv, results]);
 
   /**
    * Clear current query results
    */
-  const clearResults = () => {
+  const clearResults = useCallback(() => {
     setResults(undefined);
     setError(null);
-  };
+  }, []);
 
   return {
     results,
