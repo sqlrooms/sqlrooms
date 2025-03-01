@@ -33,6 +33,8 @@ jobs:
           git remote add origin https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
+          # Create an initial empty commit and check out main branch
+          git checkout -b main
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
