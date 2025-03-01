@@ -5,7 +5,7 @@ on:
     branches: [main]
     paths:
       - 'examples/**'
-      - 'media/examples/**'
+      - 'docs/media/examples/**'
       - '.github/workflows/sync-examples.yml'
       - 'lerna.json'
 
@@ -52,9 +52,9 @@ jobs:
           # Copy examples directory
           cp -r source/examples/* target/
 
-          # Copy only media/examples directory if it exists
-          if [ -d "source/media/examples" ]; then
-            cp -r source/media/examples/* target/media/examples/
+          # Copy images from docs/media/examples if it exists
+          if [ -d "source/docs/media/examples" ]; then
+            cp -r source/docs/media/examples/* target/media/examples/
           fi
 
           # Copy examples documentation as README.md
