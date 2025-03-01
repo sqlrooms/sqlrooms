@@ -1,14 +1,5 @@
-import {
-  DataTableVirtualized,
-  QueryDataTable,
-  useArrowDataTable,
-} from '@sqlrooms/data-table';
-import {
-  DuckQueryError,
-  escapeId,
-  getDuckTables,
-  useDuckDb,
-} from '@sqlrooms/duckdb';
+import {DataTableVirtualized, QueryDataTable} from '@sqlrooms/data-table';
+import {escapeId} from '@sqlrooms/duckdb';
 import {
   Button,
   DropdownMenu,
@@ -23,12 +14,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-  Textarea,
 } from '@sqlrooms/ui';
-import {genRandomStr, generateUniqueName} from '@sqlrooms/utils';
-import {Table} from 'apache-arrow';
-import {csvFormat} from 'd3-dsv';
-import {saveAs} from 'file-saver';
 import {
   BookOpenIcon,
   DownloadIcon,
@@ -36,12 +22,20 @@ import {
   PlayIcon,
   PlusIcon,
 } from 'lucide-react';
-import React, {useCallback, useEffect, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useState} from 'react';
 import CreateTableModal from './CreateTableModal';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
 import {TablesList} from './TablesList';
+import {SqlMonacoEditor} from './SqlMonacoEditor';
+import type * as Monaco from 'monaco-editor';
+import {useTableManagement, useQueryExecution, useMonacoEditor} from './hooks';
+import {useBaseProjectStore} from '@sqlrooms/project-builder';
+
+// Define the types for Monaco Editor
+type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
+type MonacoInstance = typeof Monaco;
 
 const DEFAULT_QUERY = '';
 
@@ -72,236 +66,172 @@ export type SqlEditorProps = {
  * - Keyboard shortcuts (Cmd/Ctrl + Enter to run queries)
  *
  */
-const SqlEditor: React.FC<SqlEditorProps> = (props) => {
+const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = 'main', documentationPanel} = props;
-  const duckConn = useDuckDb();
 
-  const addOrUpdateSqlQuery = useStoreWithSqlEditor(
-    (state) => state.sqlEditor.addOrUpdateSqlQuery,
+  // Store access - directly use the selector
+  const addOrUpdateSqlQueryDataSource = useBaseProjectStore(
+    (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
 
-  const sqlEditorConfig = useStoreWithSqlEditor(
-    (s) => s.project.config.sqlEditor,
+  // Get query data and methods directly from the store
+  const queries = useStoreWithSqlEditor(
+    (s) => s.project.config.sqlEditor.queries,
   );
-  const onChangeSqlEditorConfig = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.setSqlEditorConfig,
+  const selectedQueryId = useStoreWithSqlEditor(
+    (s) => s.project.config.sqlEditor.selectedQueryId,
+  );
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
+  const setSelectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setSelectedQueryId,
+  );
+  const updateQueryText = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.updateQueryText,
+  );
+  const createQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.createQueryTab,
+  );
+  const deleteQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.deleteQueryTab,
+  );
+  const renameQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.renameQueryTab,
   );
 
+  // UI state
   const [showDocs, setShowDocs] = useState(false);
-  const [tables, setTables] = useState<string[]>([]);
-  const [tablesLoading, setTablesLoading] = useState(false);
-  const [tablesError, setTablesError] = useState<Error | null>(null);
-
-  const [results, setResults] = useState<Table>();
-  const resultsTableData = useArrowDataTable(results);
-  const [loading, setLoading] = useState(false);
-  const [selectedTable, setSelectedTable] = useState<string>();
-
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchTables = useCallback(async () => {
-    if (!duckConn.conn) return;
-
-    try {
-      setTablesLoading(true);
-      setTablesError(null);
-      const tablesList = await getDuckTables(schema);
-      setTables(tablesList);
-    } catch (e) {
-      console.error(e);
-      setTablesError(e as Error);
-    } finally {
-      setTablesLoading(false);
-    }
-  }, [duckConn.conn, schema]);
-
-  useEffect(() => {
-    void fetchTables();
-  }, [fetchTables]);
-
-  const runQuery = async (q: string) => {
-    const conn = duckConn.conn;
-    try {
-      setError(null);
-      setLoading(true);
-      await conn.query(`SET search_path = ${schema}`);
-      const results = await conn.query(q);
-      await conn.query(`SET search_path = main`);
-      setResults(results);
-    } catch (e) {
-      setResults(undefined);
-      setError(
-        (e instanceof DuckQueryError
-          ? e.getMessageForUser()
-          : 'Query failed') ?? e,
-      );
-      console.error(e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleSelectTable = (table: string) => {
-    setSelectedTable(table);
-  };
-
-  const handleRunQuery = async () => {
-    setSelectedTable(undefined);
-    const textarea = document.querySelector(
-      `textarea[id="${sqlEditorConfig.selectedQueryId}"]`,
-    );
-    const selectedText =
-      textarea instanceof HTMLTextAreaElement
-        ? textarea?.value.substring(
-            textarea.selectionStart,
-            textarea.selectionEnd,
-          )
-        : undefined;
-
-    const queryToRun = selectedText || currentQuery;
-    await runQuery(queryToRun);
-    void fetchTables();
-  };
-
-  const getQueryIndexById = (id: string) => {
-    return sqlEditorConfig.queries.findIndex((q) => q.id === id);
-  };
-
-  const getCurrentQueryIndex = () => {
-    return getQueryIndexById(sqlEditorConfig.selectedQueryId);
-  };
-
-  const handleTabChange = (value: string) => {
-    onChangeSqlEditorConfig({
-      ...sqlEditorConfig,
-      selectedQueryId: value,
-    });
-  };
-
-  const handleUpdateQuery = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    if (!sqlEditorConfig) return;
-
-    const currentIndex = getCurrentQueryIndex();
-    const newQueries = [...sqlEditorConfig.queries];
-    if (!newQueries[currentIndex]) return;
-    newQueries[currentIndex] = {
-      ...newQueries[currentIndex],
-      query: e.target.value,
-    };
-
-    onChangeSqlEditorConfig({
-      ...sqlEditorConfig,
-      queries: newQueries,
-    });
-  };
-  const handleRunQueryRef = useRef(handleRunQuery);
-  handleRunQueryRef.current = handleRunQuery;
-
-  useEffect(() => {
-    const handleKeyDown = (evt: Event) => {
-      if (
-        evt instanceof KeyboardEvent &&
-        evt.key === 'Enter' &&
-        (evt.metaKey || evt.ctrlKey || evt.shiftKey)
-      ) {
-        void handleRunQueryRef.current();
-      }
-    };
-    globalThis.addEventListener('keydown', handleKeyDown);
-    return () => {
-      globalThis.removeEventListener('keydown', handleKeyDown);
-    };
-  }, []);
-
-  const handleExport = () => {
-    if (!results) return;
-    const blob = new Blob([csvFormat(results.toArray())], {
-      type: 'text/plain;charset=utf-8',
-    });
-    saveAs(blob, `export-${genRandomStr(5)}.csv`);
-  };
-
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
+  const [lastExecutedQuery, setLastExecutedQuery] = useState<string>('');
 
-  const handleCreateTable = useCallback(() => {
-    setCreateTableModalOpen(true);
-  }, []);
-
-  const handleToggleDocs = useCallback(() => {
-    setShowDocs(!showDocs);
-  }, [showDocs]);
-
-  const currentQuery =
-    sqlEditorConfig.queries[getCurrentQueryIndex()]?.query ?? DEFAULT_QUERY;
-
+  // Local state for modals
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
-
   const [queryToRename, setQueryToRename] = useState<{
     id: string;
     name: string;
   } | null>(null);
 
-  const handleStartRename = (
-    queryId: string,
-    currentName: string,
-    event: React.MouseEvent,
-  ) => {
-    event.preventDefault();
-    setQueryToRename({id: queryId, name: currentName});
-  };
+  // Custom hooks
+  const {
+    tables,
+    tablesLoading,
+    tablesError,
+    tableSchemas,
+    selectedTable,
+    fetchTables,
+    handleSelectTable,
+  } = useTableManagement();
 
-  const handleFinishRename = (newName: string) => {
-    if (queryToRename) {
-      const newQueries = sqlEditorConfig.queries.map((q) =>
-        q.id === queryToRename.id ? {...q, name: newName || q.name} : q,
-      );
-      onChangeSqlEditorConfig({
-        ...sqlEditorConfig,
-        queries: newQueries,
-      });
-    }
-    setQueryToRename(null);
-  };
+  const {results, resultsTableData, loading, error, runQuery, exportResults} =
+    useQueryExecution(schema);
 
-  const handleDeleteQuery = (queryId: string, event: React.MouseEvent) => {
-    event.stopPropagation();
-    const currentIndex = getQueryIndexById(queryId);
-    setQueryToDelete(queryId);
+  const {handleEditorMount, getQueryText, setRunQueryHandler} =
+    useMonacoEditor();
 
-    // Pre-select the previous query if we're deleting the current one
-    if (queryId === sqlEditorConfig.selectedQueryId && currentIndex > 0) {
-      const prevId = sqlEditorConfig.queries[currentIndex - 1]?.id;
-      if (prevId) {
-        onChangeSqlEditorConfig({
-          ...sqlEditorConfig,
-          selectedQueryId: prevId,
-        });
+  // Get the current query text
+  const currentQuery = getCurrentQuery(DEFAULT_QUERY);
+
+  // Handler functions for query tab management
+  const handleTabChange = useCallback(
+    (value: string) => {
+      setSelectedQueryId(value);
+    },
+    [setSelectedQueryId],
+  );
+
+  const handleUpdateQuery = useCallback(
+    (value: string | undefined) => {
+      if (!value) return;
+      updateQueryText(selectedQueryId, value);
+    },
+    [selectedQueryId, updateQueryText],
+  );
+
+  const handleNewQuery = useCallback(() => {
+    return createQueryTab(DEFAULT_QUERY);
+  }, [createQueryTab]);
+
+  const handleStartRename = useCallback(
+    (queryId: string, currentName: string, event: React.MouseEvent) => {
+      event.preventDefault();
+      setQueryToRename({id: queryId, name: currentName});
+    },
+    [],
+  );
+
+  const handleFinishRename = useCallback(
+    (newName: string) => {
+      if (queryToRename) {
+        renameQueryTab(queryToRename.id, newName);
       }
+      setQueryToRename(null);
+    },
+    [queryToRename, renameQueryTab],
+  );
+
+  const handleDeleteQuery = useCallback(
+    (queryId: string, event: React.MouseEvent) => {
+      event.stopPropagation();
+      setQueryToDelete(queryId);
+    },
+    [],
+  );
+
+  const handleConfirmDeleteQuery = useCallback(() => {
+    if (queryToDelete) {
+      deleteQueryTab(queryToDelete);
+      setQueryToDelete(null);
     }
-  };
+  }, [queryToDelete, deleteQueryTab]);
 
-  const handleNewQuery = () => {
-    const newQueries = [...sqlEditorConfig.queries];
-    const newQuery = {
-      id: genRandomStr(8),
-      name: generateUniqueName(
-        'Untitled',
-        newQueries.map((q) => q.name),
-      ),
-      query: DEFAULT_QUERY,
-    };
-    newQueries.push(newQuery);
+  // Handle run query logic
+  const handleRunQuery = useCallback(async () => {
+    // Clear selected table when running a query
+    handleSelectTable(undefined);
 
-    onChangeSqlEditorConfig({
-      ...sqlEditorConfig,
-      queries: newQueries,
-      selectedQueryId: newQuery.id,
-    });
-  };
+    // Get the query text (either selected text or the entire query)
+    const queryToRun = getQueryText(selectedQueryId, currentQuery);
+
+    // Store the query that's being executed
+    setLastExecutedQuery(queryToRun);
+
+    // Run the query and refresh tables list
+    await runQuery(queryToRun);
+  }, [
+    handleSelectTable,
+    getQueryText,
+    selectedQueryId,
+    currentQuery,
+    runQuery,
+    setLastExecutedQuery,
+  ]);
+
+  // Set up the run query handler reference for keyboard shortcuts
+  useEffect(() => {
+    setRunQueryHandler(handleRunQuery);
+  }, [handleRunQuery, setRunQueryHandler]);
+
+  // Check if table schemas are empty and refetch if needed
+  useEffect(() => {
+    if (Object.keys(tableSchemas).length === 0) {
+      void fetchTables();
+    }
+  }, [fetchTables, tableSchemas]);
+
+  // Handle toggle documentation panel
+  const handleToggleDocs = useCallback(() => {
+    setShowDocs(!showDocs);
+  }, [showDocs]);
+
+  // Handle create table from query results
+  const handleCreateTable = useCallback(() => {
+    setCreateTableModalOpen(true);
+  }, []);
 
   return (
-    <>
-      <div className="absolute right-12 top-2">
+    <div className="relative flex flex-col h-full w-full overflow-hidden">
+      <div className="absolute right-12 top-0">
         {documentationPanel ? (
           <Button
             size="sm"
@@ -324,13 +254,14 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           </a>
         )}
       </div>
-      <div className="flex flex-col w-full gap-2">
+      <div className="flex flex-col w-full gap-2 h-full">
         <div className="flex items-center gap-2 ml-1 mr-10 mb-2">
           <h2 className="text-lg font-semibold">SQL Editor</h2>
         </div>
         <div className="flex-grow h-full bg-muted">
           <ResizablePanelGroup direction="horizontal" className="h-full">
-            <ResizablePanel defaultSize={showDocs ? 50 : 80}>
+            {/* Main panel - takes full width when docs not shown, or 70% when docs shown */}
+            <ResizablePanel defaultSize={showDocs ? 70 : 100}>
               <ResizablePanelGroup direction="vertical" className="h-full">
                 <ResizablePanel defaultSize={50} className="flex flex-row">
                   <ResizablePanelGroup direction="horizontal">
@@ -351,11 +282,14 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                       )}
                     </ResizablePanel>
                     <ResizableHandle withHandle />
-                    <ResizablePanel defaultSize={80}>
+                    <ResizablePanel
+                      defaultSize={80}
+                      className="flex flex-col overflow-hidden"
+                    >
                       <Tabs
-                        value={sqlEditorConfig.selectedQueryId}
+                        value={selectedQueryId}
                         onValueChange={handleTabChange}
-                        className="flex flex-col flex-grow overflow-hidden"
+                        className="flex flex-col h-full overflow-hidden"
                       >
                         <div className="flex items-center gap-2 border-b border-border">
                           <Button
@@ -367,7 +301,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                             Run
                           </Button>
                           <TabsList className="flex-1">
-                            {sqlEditorConfig.queries.map((q) => (
+                            {queries.map((q: any) => (
                               <div key={q.id} className="relative">
                                 <TabsTrigger
                                   value={q.id}
@@ -393,7 +327,7 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                                     >
                                       Rename
                                     </DropdownMenuItem>
-                                    {sqlEditorConfig.queries.length > 1 && (
+                                    {queries.length > 1 && (
                                       <DropdownMenuItem
                                         onClick={(e) => {
                                           e.stopPropagation();
@@ -418,18 +352,49 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                             <PlusIcon className="h-4 w-4" />
                           </Button>
                         </div>
-                        {sqlEditorConfig.queries.map((q) => (
+                        {queries.map((q: any) => (
                           <TabsContent
                             key={q.id}
                             value={q.id}
-                            className="flex-grow data-[state=active]:flex-grow"
+                            className="relative flex-grow data-[state=active]:flex flex-col h-full"
                           >
-                            <Textarea
-                              id={q.id}
-                              value={q.query}
-                              onChange={handleUpdateQuery}
-                              className="h-full font-mono text-sm resize-none bg-muted"
-                            />
+                            <div className="flex-grow h-full w-full absolute inset-0">
+                              <SqlMonacoEditor
+                                value={q.query}
+                                onChange={handleUpdateQuery}
+                                className="h-full w-full flex-grow"
+                                options={{
+                                  scrollBeyondLastLine: false,
+                                  automaticLayout: true,
+                                  minimap: {enabled: false},
+                                  wordWrap: 'on',
+                                  // Enable keyboard shortcuts
+                                  quickSuggestions: true,
+                                  suggestOnTriggerCharacters: true,
+                                }}
+                                onMount={(
+                                  editor: EditorInstance,
+                                  monaco: MonacoInstance,
+                                ) => {
+                                  handleEditorMount(
+                                    editor,
+                                    monaco,
+                                    q.id,
+                                    handleRunQuery,
+                                  );
+                                }}
+                                tableSchemas={tableSchemas}
+                                getLatestSchemas={() => {
+                                  // If tableSchemas is empty, try to fetch tables
+                                  if (Object.keys(tableSchemas).length === 0) {
+                                    // We can't await here, but we can trigger the fetch
+                                    // This will update the state for next time
+                                    void fetchTables();
+                                  }
+                                  return {tableSchemas};
+                                }}
+                              />
+                            </div>
                           </TabsContent>
                         ))}
                       </Tabs>
@@ -437,50 +402,52 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
                   </ResizablePanelGroup>
                 </ResizablePanel>
                 <ResizableHandle withHandle />
-                <ResizablePanel defaultSize={50}>
-                  <div className="h-full overflow-hidden bg-muted text-sm">
-                    {loading ? (
-                      <SpinnerPane h="100%" />
-                    ) : selectedTable ? (
-                      <QueryDataTable
-                        query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
-                      />
-                    ) : error ? (
-                      <div className="w-full h-full p-5 overflow-auto">
-                        <pre className="text-xs leading-tight text-red-500">
-                          {error}
-                        </pre>
+                <ResizablePanel
+                  defaultSize={50}
+                  className="overflow-hidden bg-muted text-sm"
+                >
+                  {loading ? (
+                    <SpinnerPane h="100%" />
+                  ) : selectedTable ? (
+                    <QueryDataTable
+                      query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
+                    />
+                  ) : error ? (
+                    <div className="w-full h-full p-5 overflow-auto">
+                      <pre className="text-xs leading-tight text-red-500">
+                        {error}
+                      </pre>
+                    </div>
+                  ) : resultsTableData ? (
+                    <div className="flex-grow overflow-hidden flex flex-col relative w-full h-full">
+                      <DataTableVirtualized {...resultsTableData} />
+                      <div className="absolute bottom-0 right-0 flex gap-2">
+                        <Button
+                          size="sm"
+                          disabled={!resultsTableData}
+                          onClick={handleCreateTable}
+                        >
+                          <PlusIcon className="w-4 h-4 mr-2" />
+                          Create table
+                        </Button>
+                        <Button
+                          size="sm"
+                          disabled={!results}
+                          onClick={exportResults}
+                        >
+                          <DownloadIcon className="w-4 h-4 mr-2" />
+                          Export
+                        </Button>
                       </div>
-                    ) : resultsTableData ? (
-                      <div className="flex-grow overflow-hidden flex flex-col relative">
-                        <DataTableVirtualized {...resultsTableData} />
-                        <div className="absolute bottom-0 right-0 flex gap-2 p-2">
-                          <Button
-                            size="sm"
-                            disabled={!resultsTableData}
-                            onClick={handleCreateTable}
-                          >
-                            <PlusIcon className="w-4 h-4 mr-2" />
-                            Create table
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={!results}
-                            onClick={handleExport}
-                          >
-                            <DownloadIcon className="w-4 h-4 mr-2" />
-                            Export
-                          </Button>
-                        </div>
-                      </div>
-                    ) : null}
-                  </div>
+                    </div>
+                  ) : null}
                 </ResizablePanel>
               </ResizablePanelGroup>
             </ResizablePanel>
             {showDocs && (
               <>
                 <ResizableHandle withHandle />
+                {/* Documentation panel - 30% width */}
                 <ResizablePanel defaultSize={30}>
                   {documentationPanel}
                 </ResizablePanel>
@@ -489,32 +456,15 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           </ResizablePanelGroup>
         </div>
         <CreateTableModal
-          query={currentQuery}
+          query={lastExecutedQuery || currentQuery}
           isOpen={createTableModalOpen}
           onClose={() => setCreateTableModalOpen(false)}
-          onAddOrUpdateSqlQuery={addOrUpdateSqlQuery}
+          onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
         />
         <DeleteSqlQueryModal
           isOpen={queryToDelete !== null}
           onClose={() => setQueryToDelete(null)}
-          onConfirm={() => {
-            const newQueries = sqlEditorConfig.queries.filter(
-              (q) => q.id !== queryToDelete,
-            );
-            const deletedIndex = getQueryIndexById(queryToDelete!);
-
-            const selectedQueryId =
-              newQueries[Math.min(deletedIndex, newQueries.length - 1)]?.id ||
-              newQueries[0]?.id;
-            if (selectedQueryId) {
-              onChangeSqlEditorConfig({
-                ...sqlEditorConfig,
-                queries: newQueries,
-                selectedQueryId,
-              });
-            }
-            setQueryToDelete(null);
-          }}
+          onConfirm={handleConfirmDeleteQuery}
         />
         <RenameSqlQueryModal
           isOpen={queryToRename !== null}
@@ -523,8 +473,11 @@ const SqlEditor: React.FC<SqlEditorProps> = (props) => {
           onRename={handleFinishRename}
         />
       </div>
-    </>
+    </div>
   );
 };
+
+// Wrap with React.memo to prevent unnecessary re-renders
+const SqlEditor = React.memo(SqlEditorBase);
 
 export default SqlEditor;

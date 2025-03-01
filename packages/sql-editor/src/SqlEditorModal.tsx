@@ -1,14 +1,15 @@
 'use client';
 
-import {SpinnerPane} from '@sqlrooms/ui';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogOverlay,
   DialogTitle,
+  SpinnerPane,
 } from '@sqlrooms/ui';
-import React, {Suspense} from 'react';
+import React, {Suspense, useCallback} from 'react';
 import SqlEditor, {SqlEditorProps} from './SqlEditor';
 
 /**
@@ -42,12 +43,24 @@ import SqlEditor, {SqlEditorProps} from './SqlEditor';
  */
 const SqlEditorModal: React.FC<SqlEditorProps> = (props) => {
   const {isOpen, onClose} = props;
+
+  // Memoize the handler to prevent re-renders
+  const handleOpenChange = useCallback(
+    (open: boolean) => {
+      if (!open) onClose();
+    },
+    [onClose],
+  );
+
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogOverlay className="bg-background/80" />
       <DialogContent className="max-w-[100vw] max-h-[100vh] w-[100vw] h-[100vh] p-3">
         <DialogHeader className="sr-only">
           <DialogTitle>SQL Editor</DialogTitle>
+          <DialogDescription>
+            SQL editor for querying and managing database tables
+          </DialogDescription>
         </DialogHeader>
         <Suspense fallback={<SpinnerPane h="100%" />}>
           <SqlEditor {...props} />

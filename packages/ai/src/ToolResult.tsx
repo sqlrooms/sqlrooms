@@ -17,6 +17,7 @@ import {
 } from './ToolCall';
 import {isQueryToolParameters, QueryToolCall} from './ToolCall';
 import React from 'react';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 
 interface ToolResultProps {
   toolResult: ToolResultSchema;
@@ -80,9 +81,18 @@ export const ToolResult: React.FC<ToolResultProps> = ({
             side="right"
             align="start"
           >
-            <pre className="whitespace-no-wrap text-xs">
-              {JSON.stringify(toolResult, null, 2)}
-            </pre>
+            <JsonMonacoEditor
+              value={JSON.stringify(toolResult, null, 2)}
+              readOnly={true}
+              className="h-[250px]"
+              options={{
+                minimap: {enabled: false},
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                folding: true,
+                lineNumbers: false,
+              }}
+            />
           </PopoverContent>
         </Popover>
       </div>
@@ -96,7 +106,18 @@ export const ToolResult: React.FC<ToolResultProps> = ({
           <AnalysisAnswer {...result} />
         ) : (
           Object.keys(args).length > 0 && (
-            <pre>{JSON.stringify(args, null, 2)}</pre>
+            <JsonMonacoEditor
+              value={JSON.stringify(args, null, 2)}
+              readOnly={true}
+              className="h-[150px]"
+              options={{
+                minimap: {enabled: false},
+                scrollBeyondLastLine: false,
+                automaticLayout: true,
+                folding: true,
+                lineNumbers: false,
+              }}
+            />
           )
         )}
         {!result.success && (

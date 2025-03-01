@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/ai",
+  "name": "@sqlrooms/monaco-editor",
   "version": "0.6.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,22 +19,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^1.0.7",
-    "@openassistant/core": "^0.1.9",
-    "@paralleldrive/cuid2": "^2.2.2",
-    "@sqlrooms/data-table": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/monaco-editor": "workspace:*",
-    "@sqlrooms/project-builder": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*",
+    "@monaco-editor/react": "^4.7.0",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
-    "ai": "^4.1.28",
-    "immer": "^10.1.1",
-    "lucide-react": "^0.475.0",
-    "react-markdown": "^9.0.3",
-    "react-vega": "^7.6.0",
-    "zod": "^3.24.1"
+    "monaco-editor": "^0.52.2"
   },
   "peerDependencies": {
     "react": "*",
