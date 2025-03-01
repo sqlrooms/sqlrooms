@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'examples/**'
+      - 'media/examples/**'
       - '.github/workflows/sync-examples.yml'
       - 'lerna.json'
 
@@ -16,27 +17,22 @@ jobs:
         uses: actions/checkout@v4
         with:
           path: source
+          lfs: true # Enable LFS for the checkout
 
-      - name: Clone or init target
+      - name: Install Git LFS for source
         run: |
-          # Try to clone the repository
-          if git clone --depth 1 https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git target; then
-            echo "Successfully cloned target repository"
-          else
-            # If clone fails, initialize a new repository
-            mkdir target
-            cd target
-            git init
-            git remote add origin https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git
-            echo "# SQLRooms Examples" > README.md
-            git add README.md
-            git config user.name "github-actions[bot]"
-            git config user.email "github-actions[bot]@users.noreply.github.com"
-            git commit -m "Initial commit"
-            git branch -M main
-            git push -u origin main
-            cd ..
-          fi
+          sudo apt-get install -y git-lfs
+          git lfs install
+
+      - name: Setup target repository
+        run: |
+          # Initialize a new repository
+          mkdir -p target
+          cd target
+          git init
+          git remote add origin https://${{ secrets.EXAMPLES_PAT }}@github.com/sqlrooms/examples.git
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -46,11 +42,18 @@ jobs:
       - name: Install jq
         run: sudo apt-get install -y jq
 
-      - name: Sync examples
+      - name: Sync examples and media
         run: |
+          # Create target directories
+          mkdir -p target/media/examples
+
           # Copy examples directory
-          rm -rf target/* !target/.git
           cp -r source/examples/* target/
+
+          # Copy only media/examples directory if it exists
+          if [ -d "source/media/examples" ]; then
+            cp -r source/media/examples/* target/media/examples/
+          fi
 
           # Copy examples documentation as README.md
           cp source/docs/examples.md target/README.md
@@ -88,16 +91,14 @@ jobs:
             rm "${file}.bak"
           done
 
-          # Setup git config
+          # Setup git config and commit changes
           cd target
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
 
-          # Commit and push changes
+          # Add all changes
           git add .
-          if git diff --staged --quiet; then
-            echo "No changes to commit"
-          else
-            git commit -m "Sync examples from main repo (${GITHUB_SHA})"
-            git push
-          fi
+
+          # Commit changes
+          git commit -m "Sync examples from main repo (${GITHUB_SHA})"
+
+          # Force push to overwrite git history
+          git push -f origin main
