@@ -77,7 +77,7 @@ export const ChartToolCall = React.memo(function ChartToolCall({
 }: ChartToolParameters) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="text-sm">
+      <div className="text-sm prose dark:prose-invert max-w-none">
         <Markdown>{reasoning}</Markdown>
       </div>
       {vegaLiteSpec && (
@@ -139,11 +139,9 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   return (
     <div className="flex flex-col gap-5">
-      <div className="text-xs">
-        <Markdown className="whitespace-pre-wrap break-words">
-          {props.data.analysis}
-        </Markdown>
-      </div>
+      <Markdown className="text-xs prose dark:prose-invert max-w-none">
+        {props.data.analysis}
+      </Markdown>
     </div>
   );
 });

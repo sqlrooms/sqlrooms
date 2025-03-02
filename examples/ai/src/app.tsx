@@ -24,13 +24,7 @@ export const AppShell = () => {
       <div className="flex flex-col w-full h-full">
         <ProjectBuilder />
       </div>
-      <SqlEditorModal
-        isOpen={
-          // true
-          sqlEditor.isOpen
-        }
-        onClose={sqlEditor.onClose}
-      />
+      <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
     </div>
   );
 };

@@ -49,11 +49,11 @@ function getBorderColor(isSuccess: boolean, toolName: string) {
   }
   switch (toolName) {
     case 'query':
-      return 'border-green-500';
+      return 'border-gray-500';
     case 'chart':
       return 'border-blue-500';
     case 'answer':
-      return 'border-gray-500';
+      return 'border-green-500';
     default:
       return 'border-gray-500';
   }
@@ -79,7 +79,7 @@ function renderCustomMessage(
   }
 
   // Default case: return as is if it's already a valid ReactNode
-  return customMessage;
+  return String(customMessage);
 }
 
 export const ToolResult: React.FC<ToolResultProps> = ({

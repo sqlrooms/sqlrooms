@@ -1,7 +1,7 @@
 import {CustomFunctionCall} from '@openassistant/core';
 import {DataTableModal} from '@sqlrooms/data-table';
 import {Expand, TableIcon} from 'lucide-react';
-import {useState} from 'react';
+import React, {useState} from 'react';
 import {QueryResultElementSchema} from './schemas';
 
 /**
@@ -77,7 +77,8 @@ export function queryMessage(
   const data = props.output?.data;
 
   if (!isQueryToolOutputData(data)) {
-    throw new Error('Invalid query tool output data');
+    console.error('Invalid query tool output data');
+    return null;
   }
   if (!data.sqlQuery) {
     return null;
@@ -89,17 +90,6 @@ export function queryMessage(
     title: data.sqlQuery,
     sqlQuery: data.sqlQuery,
   };
-}
-
-// Export the component separately for use in the UI
-export function QueryResultComponent({
-  title,
-  sqlQuery,
-}: {
-  title: string;
-  sqlQuery: string;
-}) {
-  return <QueryResultTableModal title={title} sqlQuery={sqlQuery} />;
 }
 
 /**
@@ -125,4 +115,15 @@ export function renderQueryMessageComponent(
   return (
     <QueryResultComponent title={data.sqlQuery} sqlQuery={data.sqlQuery} />
   );
+}
+
+// Export the component separately for use in the UI
+export function QueryResultComponent({
+  title,
+  sqlQuery,
+}: {
+  title: string;
+  sqlQuery: string;
+}) {
+  return <QueryResultTableModal title={title} sqlQuery={sqlQuery} />;
 }

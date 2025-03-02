@@ -20,7 +20,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
   const isDataAvailable = useStoreWithAi((s) => s.project.isDataAvailable);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
-  const model = useStoreWithAi((s) => s.config.ai.model);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const model = currentSession?.model;
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -97,7 +98,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
               >
                 {isRunningAnalysis ? (
                   <div className="flex items-center gap-2">
-                    <Spinner className="w-4 h-4" /> Running…
+                    <Spinner className="w-4 h-4" />
                   </div>
                 ) : (
                   <ArrowUpIcon />

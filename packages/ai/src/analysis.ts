@@ -1,9 +1,3 @@
-import {
-  arrowTableToJson,
-  getDuckDb,
-  getDuckTableSchemas,
-} from '@sqlrooms/duckdb';
-import {StepResult} from 'ai';
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   CallbackFunctionProps,
@@ -11,9 +5,15 @@ import {
   ToolCallMessage,
   VercelToolSet,
 } from '@openassistant/core';
+import {
+  arrowTableToJson,
+  getDuckDb,
+  getDuckTableSchemas,
+} from '@sqlrooms/duckdb';
+import {StepResult} from 'ai';
 
+import {renderQueryMessageComponent} from './QueryResult';
 import {ChartToolParameters, QueryToolParameters} from './schemas';
-import {queryMessage, renderQueryMessageComponent} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
 /**
@@ -210,11 +210,9 @@ function getErrorMessage(error: unknown): string {
  */
 const TOOLS: VercelToolSet = {
   query: {
-    description: `A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm.
-Query results are returned as a json object "{success: boolean, data: object[], error?: string}"
-Please only analyze tables which are in the main schema.
-To obtain stats, use the "SUMMARIZE table_name" query.
-Don't execute queries that modify data unless explicitly asked.`,
+    description: `A tool for running SQL queries on the tables in the database.
+Please only run one query at a time.
+If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
     executeWithContext: async (props: CallbackFunctionProps) => {
       if (!isQueryToolParameters(props.functionArgs)) {
@@ -312,20 +310,4 @@ In the response:
       };
     },
   },
-
-  // answer tool: the LLM will provide a structured answer
-  // answer: {
-  //   description: 'A tool for providing the final answer.',
-  //   parameters: AnswerToolParameters,
-  //   executeWithContext: async (props: CallbackFunctionProps) => {
-  //     const {answer} = props.functionArgs;
-  //     return {
-  //       name: 'answer',
-  //       result: {
-  //         success: true,
-  //         data: answer,
-  //       },
-  //     };
-  //   },
-  // },
 };

@@ -18,3 +18,7 @@ export {
   useScrollToBottom,
   useScrollToBottomButton,
 } from './hooks/use-scroll-to-bottom';
+
+export * from './ModelSelector';
+export * from './SessionControls';
+export * from './QueryControls';

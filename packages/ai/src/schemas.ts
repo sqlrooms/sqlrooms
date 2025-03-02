@@ -74,3 +74,13 @@ export const AnalysisResultSchema = z.object({
   isCompleted: z.boolean(),
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
+
+export const AnalysisSessionSchema = z.object({
+  id: z.string().cuid2(),
+  name: z.string(),
+  modelProvider: z.string(),
+  model: z.string(),
+  analysisResults: z.array(AnalysisResultSchema),
+  createdAt: z.date().optional(),
+});
+export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;
