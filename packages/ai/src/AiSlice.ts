@@ -161,7 +161,7 @@ async function executeAnalysis({
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
-  initialAnalysisPrompt = 'Describe the data in the tables and make a chart providing an overview of the most important features.',
+  initialAnalysisPrompt = '',
 }: {
   getApiKey: () => string;
   initialAnalysisPrompt?: string;

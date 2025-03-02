@@ -13,7 +13,7 @@ import {
 } from '@openassistant/core';
 
 import {ChartToolParameters, QueryToolParameters} from './schemas';
-import {queryMessage} from './QueryResult';
+import {queryMessage, renderQueryMessageComponent} from './QueryResult';
 import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
 /**
@@ -273,7 +273,7 @@ Don't execute queries that modify data unless explicitly asked.`,
         };
       }
     },
-    message: queryMessage,
+    message: renderQueryMessageComponent,
   },
 
   chart: {

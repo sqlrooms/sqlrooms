@@ -101,3 +101,28 @@ export function QueryResultComponent({
 }) {
   return <QueryResultTableModal title={title} sqlQuery={sqlQuery} />;
 }
+
+/**
+ * Creates a React component for a query result based on a custom function call.
+ *
+ * @param {CustomFunctionCall} props - The custom function call properties
+ * @returns {React.ReactNode | null} A React component to display the query results or null if no data is available
+ */
+export function renderQueryMessageComponent(
+  props: CustomFunctionCall,
+): React.ReactNode | null {
+  const data = props.output?.data;
+
+  if (!isQueryToolOutputData(data)) {
+    console.error('Invalid query tool output data');
+    return null;
+  }
+  if (!data.sqlQuery) {
+    return null;
+  }
+
+  // Return a React component to render the query result
+  return (
+    <QueryResultComponent title={data.sqlQuery} sqlQuery={data.sqlQuery} />
+  );
+}

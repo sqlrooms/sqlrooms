@@ -387,6 +387,11 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         setTaskProgress(INIT_PROJECT_TASK, undefined);
 
         await get().project.onDataUpdated();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.project.initialized = true;
+          }),
+        );
       },
 
       onDataUpdated: async () => {

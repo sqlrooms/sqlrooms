@@ -10,7 +10,7 @@ export default function ProjectDetailsPanel() {
   const setProjectTitle = useProjectStore(
     (state) => state.project.setProjectTitle,
   );
-  const description = useProjectStore((state) => state.configtion);
+  const description = useProjectStore((state) => state.config.description);
   const setDescription = useProjectStore(
     (state) => state.project.setDescription,
   );
