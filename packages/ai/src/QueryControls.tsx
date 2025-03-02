@@ -13,7 +13,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({className}) => {
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
-  const model = useStoreWithAi((s) => s.project.config.ai.model);
+  const model = useStoreWithAi((s) => s.config.ai.model);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

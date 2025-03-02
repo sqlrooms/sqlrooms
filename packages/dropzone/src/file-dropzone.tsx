@@ -78,7 +78,7 @@ export const FileDropzone: FC<{
   return (
     <div
       className={cn(
-        'relative flex h-full cursor-pointer flex-col overflow-hidden rounded-lg border-2 border-dashed p-2 transition-colors',
+        'relative flex h-full min-h-[180px] cursor-pointer flex-col overflow-hidden rounded-lg border-2 border-dashed p-2 transition-colors',
         isDragActive ? 'border-muted bg-muted/50' : 'border-muted',
         isInvalid && 'border-destructive',
         !isAddingDropped && 'hover:border-muted',

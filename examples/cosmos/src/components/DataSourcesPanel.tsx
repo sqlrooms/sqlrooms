@@ -18,9 +18,7 @@ import {ProjectPanelTypes, useProjectStore} from '../store';
 const DataSourcesPanel: FC = () => {
   const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
   const projectFiles = useProjectStore((state) => state.project.projectFiles);
-  const dataSources = useProjectStore(
-    (state) => state.project.config.dataSources,
-  );
+  const dataSources = useProjectStore((state) => state.config.dataSources);
   const queryDataSources = useMemo(
     () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
     [dataSources],

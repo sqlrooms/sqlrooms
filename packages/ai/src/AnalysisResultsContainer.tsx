@@ -10,9 +10,7 @@ import {
 
 export const AnalysisResultsContainer: React.FC = () => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const analysisResults = useStoreWithAi(
-    (s) => s.project.config.ai.analysisResults,
-  );
+  const analysisResults = useStoreWithAi((s) => s.config.ai.analysisResults);
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
   const {showButton, scrollToBottom} =

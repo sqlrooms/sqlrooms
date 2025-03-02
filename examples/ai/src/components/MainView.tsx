@@ -12,9 +12,7 @@ import {KeyIcon} from 'lucide-react';
 import {useProjectStore} from '../store';
 
 export const MainView: React.FC = () => {
-  const analysisResults = useProjectStore(
-    (s) => s.project.config.ai.analysisResults,
-  );
+  const analysisResults = useProjectStore((s) => s.config.ai.analysisResults);
   const apiKey = useProjectStore((s) => s.openAiApiKey);
   const setApiKey = useProjectStore((s) => s.setOpenAiApiKey);
   const selectedModel = useProjectStore((s) => s.selectedModel);

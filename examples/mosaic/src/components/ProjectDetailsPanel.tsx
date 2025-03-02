@@ -5,14 +5,12 @@ import {useCallback} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store';
 
 export default function ProjectDetailsPanel() {
-  const title = useProjectStore((state) => state.project.config.title);
+  const title = useProjectStore((state) => state.config.title);
   const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
   const setProjectTitle = useProjectStore(
     (state) => state.project.setProjectTitle,
   );
-  const description = useProjectStore(
-    (state) => state.project.config.description,
-  );
+  const description = useProjectStore((state) => state.configtion);
   const setDescription = useProjectStore(
     (state) => state.project.setDescription,
   );

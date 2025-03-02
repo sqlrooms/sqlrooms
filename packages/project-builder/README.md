@@ -79,6 +79,49 @@ function MyComponent() {
 }
 ```
 
+### Persisting Project Configuration
+
+The project configuration is designed to be persisted between sessions. You can use Zustand's persist middleware to save the configuration to localStorage or any other storage:
+
+```tsx
+import {persist} from 'zustand/middleware';
+import {
+  createProjectSlice,
+  createProjectStore,
+} from '@sqlrooms/project-builder';
+
+// Create a store with persistence
+export const {projectStore, useProjectStore} = createProjectStore(
+  persist(
+    (set, get, store) => ({
+      ...createProjectSlice({
+        // Configuration at root level - holds all state needed for persistence
+        config: {
+          title: 'My Project',
+          layout: {
+            /* layout configuration */
+          },
+          dataSources: [],
+        },
+        // Project state with panels inside - for runtime state
+        project: {
+          panels: {
+            /* panel definitions */
+          },
+        },
+      })(set, get, store),
+    }),
+    {
+      name: 'my-project-storage',
+      partialize: (state) => ({
+        // Persist only the config part of the state
+        config: state.config,
+      }),
+    },
+  ),
+);
+```
+
 ### Managing Data Sources
 
 ```tsx
@@ -129,3 +172,7 @@ function CustomPanel({title, children}) {
 - **File Processing**: Process and transform data files
 
 For more information, visit the SQLRooms documentation.
+
+```
+
+```

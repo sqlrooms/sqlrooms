@@ -174,7 +174,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       setAiModel: (model: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.ai.model = model;
+            draft.config.ai.model = model;
           }),
         );
       },
@@ -215,7 +215,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           produce(state, (draft) => {
             draft.ai.analysisAbortController = abortController;
             draft.ai.isRunningAnalysis = true;
-            draft.project.config.ai.analysisResults.push({
+            draft.config.ai.analysisResults.push({
               id: resultId,
               prompt: get().ai.analysisPrompt,
               toolResults: [],
@@ -239,8 +239,8 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           await executeAnalysis({
             resultId,
             prompt: get().ai.analysisPrompt,
-            modelProvider: get().project.config.ai.modelProvider,
-            model: get().project.config.ai.model,
+            modelProvider: get().config.ai.modelProvider,
+            model: get().config.ai.model,
             apiKey: getApiKey(),
             abortController,
             addMessages: get().ai.addMessages,
@@ -299,10 +299,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
-      const result = findResultById(
-        draft.project.config.ai.analysisResults,
-        resultId,
-      );
+      const result = findResultById(draft.config.ai.analysisResults, resultId);
       if (result) {
         if (toolResults) {
           result.toolResults = [...result.toolResults, ...toolResults];
