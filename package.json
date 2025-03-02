@@ -26,7 +26,7 @@
     "typescript": "tsc --noEmit",
     "graph": "turbo run build --graph",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "docs:dev": "pnpm run typedoc:watch & vitepress dev docs",
+    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs\"",
     "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs && echo 'open http://localhost:4173'",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
@@ -55,6 +55,7 @@
     "@types/react": "18.3.18",
     "@types/react-dom": "18.3.5",
     "apache-arrow": "^18.1.0",
+    "concurrently": "^9.1.2",
     "eslint": "^9.21.0",
     "framer-motion": "10.18.0",
     "gh-pages": "^6.1.1",
@@ -75,8 +76,7 @@
   "pnpm": {
     "overrides": {
       "apache-arrow": "18.1.0",
-      "@types/react": "18.3.18",
-      "@duckdb/duckdb-wasm": "1.29.0"
+      "@types/react": "18.3.18"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
