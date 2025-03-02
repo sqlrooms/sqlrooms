@@ -40,6 +40,7 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 - **[@sqlrooms/cosmos](https://sqlrooms.github.io/api/cosmos/)**: Graph visualization capabilities
 - **[@sqlrooms/dropzone](https://sqlrooms.github.io/api/dropzone/)**: Drag-and-drop file upload functionality
 - **[@sqlrooms/mosaic](https://sqlrooms.github.io/api/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
+- **[@sqlrooms/monaco-editor](https://sqlrooms.github.io/api/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
 - **[@sqlrooms/utils](https://sqlrooms.github.io/api/utils/)**: Shared helper functions for various operations
 
 ### Use Cases
@@ -61,7 +62,6 @@ See our [example projects](https://sqlrooms.org/examples.html) for real-world im
 
 Check out the [Getting Started](https://sqlrooms.github.io/getting-started.html) guide.
 
-
 ## Running example apps
 
     pnpm install
@@ -69,14 +69,12 @@ Check out the [Getting Started](https://sqlrooms.github.io/getting-started.html)
     cd examples/ai
     pnpm dev
     open http://localhost:5173
-    
 
 ## Develop locally
 
     pnpm install
     pnpm build
     pnpm dev
-    
 
 ## Devel documentation locally
 
@@ -133,4 +131,3 @@ This project uses Git Large File Storage (LFS) for managing media files in the d
    ```
 
 4. When adding new media files to the `docs/media/` directory, they will be automatically tracked by Git LFS as specified in the `.gitattributes` file.
-

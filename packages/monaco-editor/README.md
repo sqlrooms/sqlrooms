@@ -1,4 +1,6 @@
-# @sqlrooms/monaco-editor
+This package is part of the SQLRooms framework.
+
+# Monaco Editor
 
 Monaco Editor components for SQLRooms, including specialized editors for JSON.
 

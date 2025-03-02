@@ -58,6 +58,10 @@ A powerful SQL query editor that enhances the development experience with syntax
 
 A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks. See [Cosmos integration example](/examples#cosmos-graph-visualization).
 
+### [@sqlrooms/monaco-editor](./api/monaco-editor/index.md)
+
+A powerful code editing package that integrates [Monaco Editor](https://microsoft.github.io/monaco-editor/) (the editor that powers VS Code). It provides customizable text editing components with features like syntax highlighting, code completion, and theming. The package includes specialized editors for JSON with schema validation support.
+
 ### [@sqlrooms/utils](./api/utils/index.md)
 
 A utility package providing shared helper functions for color manipulation, data formatting, random generation, and string operations used across the framework.

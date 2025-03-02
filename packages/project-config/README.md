@@ -37,6 +37,55 @@ const projectConfig: BaseProjectConfig = {
 console.log(projectConfig.name); // 'My SQL Project'
 ```
 
+### Persisting Project Configuration
+
+Project configuration is designed to be saved and restored between sessions. Here's how to use it with Zustand's persist middleware:
+
+```tsx
+import {persist} from 'zustand/middleware';
+import {
+  createProjectStore,
+  createProjectSlice,
+} from '@sqlrooms/project-builder';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
+
+// Create a store with persistence for configuration
+const {useProjectStore} = createProjectStore(
+  persist(
+    (set, get, store) => ({
+      ...createProjectSlice({
+        // Config is stored at the root level of state for persisting the app state
+        config: {
+          title: 'My Project',
+          // Other configuration properties
+        },
+        // Project object contains panels and runtime-only state
+        project: {
+          panels: {
+            // Panel definitions
+          },
+        },
+      })(set, get, store),
+    }),
+    {
+      name: 'project-config-storage',
+      // Only persist the configuration part of the state
+      partialize: (state) => ({
+        config: state.config,
+      }),
+    },
+  ),
+);
+
+// Access the config in components
+function ConfigComponent() {
+  // Config is accessed directly from state, not from state.project.config
+  const config = useProjectStore((state) => state.config);
+
+  return <div>{config.title}</div>;
+}
+```
+
 ### Using Layout Configuration
 
 ```tsx
@@ -72,3 +121,7 @@ function renderLayout(config: LayoutConfig) {
 - **Serialization**: Convert configurations to/from JSON for storage
 
 For more information, visit the SQLRooms documentation.
+
+```
+
+```

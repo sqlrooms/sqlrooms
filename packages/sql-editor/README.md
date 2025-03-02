@@ -1,3 +1,5 @@
+This package is part of the SQLRooms framework.
+
 # SQL Editor
 
 A powerful SQL editor component for SQLRooms applications. This package provides React components and hooks for creating interactive SQL query interfaces with Monaco editor integration, table management, and results visualization.
@@ -22,23 +24,70 @@ npm install @sqlrooms/sql-editor
 
 ### Simple SQL Editor
 
+The most basic way to use the SQL Editor with show/hide functionality:
+
 ```tsx
 import {SqlEditor} from '@sqlrooms/sql-editor';
+import {useDisclosure} from '@sqlrooms/ui';
 
-function MySqlEditor() {
-  const [isOpen, setIsOpen] = useState(true);
+function MyApp() {
+  const {isOpen, onOpen, onClose} = useDisclosure({defaultIsOpen: true});
 
-  return <SqlEditor isOpen={isOpen} onClose={() => setIsOpen(false)} />;
+  return (
+    <div className="my-app">
+      <button onClick={isOpen ? onClose : onOpen}>
+        {isOpen ? 'Hide' : 'Show'} SQL Editor
+      </button>
+
+      {isOpen && <SqlEditor isOpen={true} onClose={onClose} />}
+    </div>
+  );
 }
 ```
 
-### With Custom Schema and Documentation
+### SQL Editor with Custom Configuration
+
+Using the SQL Editor with project store integration for advanced functionality:
 
 ```tsx
 import {SqlEditor} from '@sqlrooms/sql-editor';
+import {useProjectStore} from './store';
+
+function AdvancedEditor() {
+  // Use the store to access SQL editor state and actions
+  const executeQuery = useProjectStore((state) => state.executeQuery);
+  const currentQuery = useProjectStore((state) => state.getCurrentQuery());
+
+  return (
+    <div className="sql-workspace">
+      <h2>SQL Workspace</h2>
+
+      <div className="tools">
+        <button onClick={() => executeQuery(currentQuery)}>Run Query</button>
+        <button onClick={() => exportResultsToCsv()}>Export Results</button>
+      </div>
+
+      <SqlEditor
+        isOpen={true}
+        onClose={() => {}}
+        schema="analytics"
+        initialQuery="SELECT * FROM users LIMIT 10;"
+      />
+    </div>
+  );
+}
+```
+
+### With Custom Documentation Panel
+
+Adding a custom documentation panel to provide SQL reference materials:
+
+```tsx
+import {SqlEditor} from '@sqlrooms/sql-editor';
+import {useDisclosure} from '@sqlrooms/ui';
 
 function AdvancedSqlEditor() {
-  const [isOpen, setIsOpen] = useState(true);
+  const {isOpen, onClose} = useDisclosure({defaultIsOpen: true});
 
   // Custom documentation component
   const Documentation = () => (
@@ -60,7 +109,7 @@ function AdvancedSqlEditor() {
   return (
     <SqlEditor
       isOpen={isOpen}
-      onClose={() => setIsOpen(false)}
+      onClose={onClose}
       schema="analytics"
       documentationPanel={<Documentation />}
     />
@@ -68,74 +117,33 @@ function AdvancedSqlEditor() {
 }
 ```
 
-## Available Components
+### Using SQL Monaco Editor Standalone
 
-### SqlEditor
-
-The main component providing a full-featured SQL editor interface.
-
-```tsx
-import {SqlEditor} from '@sqlrooms/sql-editor';
-
-<SqlEditor
-  isOpen={boolean}
-  onClose={() => void}
-  schema="main"
-  documentationPanel={ReactNode}
-/>
-```
-
-### SqlMonacoEditor
-
-A standalone SQL-specific Monaco editor component.
+For cases where you only need the editor component without the full interface:
 
 ```tsx
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 
-<SqlMonacoEditor
-  value="SELECT * FROM users"
-  onChange={(value) => console.log(value)}
-  onExecuteQuery={() => executeQuery()}
-/>;
-```
+function SimpleSqlEditor() {
+  const [query, setQuery] = useState('SELECT * FROM products');
 
-### SqlEditorModal
+  const handleExecute = () => {
+    // Execute the query using your own logic
+    console.log('Executing query:', query);
+  };
 
-A modal wrapper around the SQL editor.
-
-```tsx
-import {SqlEditorModal} from '@sqlrooms/sql-editor';
-
-<SqlEditorModal isOpen={isOpen} onClose={() => setIsOpen(false)} />;
-```
-
-### CreateTableModal
-
-A modal for creating new tables from SQL queries.
-
-```tsx
-import {CreateTableModal} from '@sqlrooms/sql-editor';
-
-<CreateTableModal
-  isOpen={isOpen}
-  onClose={() => setIsOpen(false)}
-  onCreateTable={(tableName) => console.log(`Created table: ${tableName}`)}
-  tableData={queryResults}
-/>;
-```
-
-### SqlQueryDataSourcesPanel
-
-A panel showing available data sources for SQL queries.
-
-```tsx
-import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
-
-<SqlQueryDataSourcesPanel
-  onSelectTable={(tableName) => {
-    console.log(`Selected table: ${tableName}`);
-  }}
-/>;
+  return (
+    <>
+      <SqlMonacoEditor
+        value={query}
+        onChange={setQuery}
+        onExecuteQuery={handleExecute}
+        height="400px"
+      />
+      <button onClick={handleExecute}>Execute</button>
+    </>
+  );
+}
 ```
 
 ## State Management
@@ -250,6 +258,139 @@ const {executeQuery, getCurrentQuery} = useStoreWithSqlEditor(useStore);
 - `setSelectedQueryId(queryId: string)`: Set the selected query tab
 - `getCurrentQuery(defaultQuery?: string)`: Get current query text
 
+## Available Components
+
+### SqlEditor
+
+The main component providing a full-featured SQL editor interface.
+
+```tsx
+import {SqlEditor} from '@sqlrooms/sql-editor';
+
+<SqlEditor
+  isOpen={boolean}
+  onClose={() => void}
+  schema="main"
+  documentationPanel={ReactNode}
+/>
+```
+
+### SqlMonacoEditor
+
+A standalone SQL-specific Monaco editor component.
+
+```tsx
+import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+
+<SqlMonacoEditor
+  value="SELECT * FROM users"
+  onChange={(value) => console.log(value)}
+  onExecuteQuery={() => executeQuery()}
+/>;
+```
+
+### SqlEditorModal
+
+A modal wrapper around the SQL editor.
+
+```tsx
+import {SqlEditorModal} from '@sqlrooms/sql-editor';
+import {useDisclosure} from '@sqlrooms/ui';
+
+function EditorWithModal() {
+  const {isOpen, onOpen, onClose} = useDisclosure();
+
+  return (
+    <>
+      <button onClick={onOpen}>Open SQL Editor</button>
+      <SqlEditorModal isOpen={isOpen} onClose={onClose} />
+    </>
+  );
+}
+```
+
+### CreateTableModal
+
+A modal for creating new tables from SQL queries.
+
+```tsx
+import {CreateTableModal} from '@sqlrooms/sql-editor';
+import {useDisclosure} from '@sqlrooms/ui';
+
+function TableCreator() {
+  const {isOpen, onOpen, onClose} = useDisclosure();
+
+  return (
+    <>
+      <button onClick={onOpen}>Create Table from Results</button>
+      <CreateTableModal
+        isOpen={isOpen}
+        onClose={onClose}
+        onCreateTable={(tableName) =>
+          console.log(`Created table: ${tableName}`)
+        }
+        tableData={queryResults}
+      />
+    </>
+  );
+}
+```
+
+### SqlQueryDataSourcesPanel
+
+A panel showing available data sources for SQL queries.
+
+```tsx
+import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
+
+<SqlQueryDataSourcesPanel
+  onSelectTable={(tableName) => {
+    console.log(`Selected table: ${tableName}`);
+  }}
+/>;
+```
+
+## Props
+
+### SqlEditor Props
+
+| Prop               | Type        | Default   | Description                            |
+| ------------------ | ----------- | --------- | -------------------------------------- |
+| isOpen             | boolean     | -         | Whether the editor is open             |
+| onClose            | function    | -         | Callback when the editor is closed     |
+| schema             | string      | 'main'    | Default schema to use for queries      |
+| documentationPanel | ReactNode   | undefined | Custom documentation panel to display  |
+| initialQuery       | string      | ''        | Initial query to display in the editor |
+| store              | StoreObject | undefined | Custom Zustand store to use (optional) |
+
+### SqlMonacoEditor Props
+
+| Prop           | Type     | Default | Description                                  |
+| -------------- | -------- | ------- | -------------------------------------------- |
+| value          | string   | ''      | The SQL query text                           |
+| onChange       | function | -       | Callback when the query text changes         |
+| onExecuteQuery | function | -       | Callback when the execute command is invoked |
+| height         | string   | '300px' | Height of the editor                         |
+| readOnly       | boolean  | false   | Whether the editor is read-only              |
+| theme          | string   | 'dark'  | Editor theme ('dark' or 'light')             |
+
+### SqlEditorModal Props
+
+| Prop    | Type     | Default | Description                       |
+| ------- | -------- | ------- | --------------------------------- |
+| isOpen  | boolean  | -       | Whether the modal is open         |
+| onClose | function | -       | Callback when the modal is closed |
+| schema  | string   | 'main'  | Default schema to use for queries |
+
+### CreateTableModal Props
+
+| Prop          | Type     | Default | Description                               |
+| ------------- | -------- | ------- | ----------------------------------------- |
+| isOpen        | boolean  | -       | Whether the modal is open                 |
+| onClose       | function | -       | Callback when the modal is closed         |
+| onCreateTable | function | -       | Callback when a table is created          |
+| tableData     | Table    | -       | Apache Arrow Table data for the new table |
+
 ## Configuration
 
 The SQL editor can be configured through the Zustand store.
@@ -264,28 +405,5 @@ const config = {
   },
 };
 ```
-
-## Integration with DuckDB
-
-This package integrates with `@sqlrooms/duckdb` for query execution and table management.
-
-```tsx
-import {getDuckDb} from '@sqlrooms/duckdb';
-import {Table} from 'apache-arrow';
-
-// Execute a query directly
-async function runQuery(query: string): Promise<Table> {
-  const db = await getDuckDb();
-  return db.query(query);
-}
-```
-
-## Advanced Features
-
-- **Custom Monaco Configuration**: Customize editor settings and SQL language support
-- **Tab Management**: Create, rename, and delete query tabs
-- **Table Creation**: Create new tables from query results
-- **Table Schema Inspection**: View table schemas and column types
-- **Export Functionality**: Export query results to various formats
 
 For more information, visit the SQLRooms documentation.

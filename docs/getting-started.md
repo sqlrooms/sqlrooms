@@ -92,7 +92,7 @@ export const ProjectPanelTypes = z.enum([
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
 // Define your project config
-// You can merge additional slice configs if needed
+// This holds all state necessary for persisting/saving the state of the app
 export const AppConfig = BaseProjectConfig;
 // If using additional slices like SQL Editor:
 // export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
@@ -119,21 +119,21 @@ export const {projectStore, useProjectStore} = createProjectStore<
 >((set, get, store) => ({
   // Base project slice
   ...createProjectSlice<AppConfig>({
-    project: {
-      initialized: true,
-      config: {
-        title: 'My SQLRooms Project',
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: ProjectPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
+    // config holds all state that should be persisted between sessions
+    config: {
+      title: 'My SQLRooms Project',
+      layout: {
+        type: LayoutTypes.enum.mosaic,
+        nodes: {
+          direction: 'row',
+          first: ProjectPanelTypes.enum['data-sources'],
+          second: MAIN_VIEW,
+          splitPercentage: 30,
         },
-        dataSources: [],
       },
+      dataSources: [],
+    },
+    project: {
       panels: {
         'data-sources': {
           title: 'Data Sources',
@@ -161,6 +161,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
 ```typescript
 import {persist} from 'zustand/middleware';
 
+// The config is meant to be saved for persistence between sessions
 export const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
@@ -168,12 +169,25 @@ export const {projectStore, useProjectStore} = createProjectStore<
   persist(
     (set, get, store) => ({
       // Store configuration as shown above
+      ...createProjectSlice<AppConfig>({
+        config: {
+          title: 'My SQLRooms Project',
+          // ...other configuration
+        },
+        project: {
+          panels: {
+            // Panel definitions
+          },
+        },
+      })(set, get, store),
     }),
     {
       name: 'app-state-storage',
-      // Optionally specify which parts of the state to persist
+      // Specify which parts of the state to persist
       partialize: (state) => ({
-        // Add state properties you want to persist
+        // Persist configuration between sessions
+        config: state.config,
+        // Add other state properties you want to persist
       }),
     },
   ),
@@ -200,7 +214,9 @@ Access the store in your components:
 
 ```typescript
 function YourComponent() {
-  const projectConfig = useProjectStore((state) => state.project.config);
+  // Config is now accessed directly from state, not from state.project.config
+  const projectConfig = useProjectStore((state) => state.config);
+  // Other state properties remain in the project object
   const dataSources = useProjectStore((state) => state.project.dataSources);
 
   return (
