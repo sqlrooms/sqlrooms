@@ -18,10 +18,21 @@ import {z} from 'zod';
 import {runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
+  ElementSchema,
   ToolCallSchema,
   ToolResultSchema,
 } from './schemas';
 import {ToolCallMessage} from '@openassistant/core';
+import React from 'react';
+
+// Define a serializable version of ToolCallMessage for our local use
+// This ensures compatibility with the external ToolCallMessage type
+// while allowing us to use serializable data
+type SerializableToolCallMessage = {
+  toolCallId: string;
+  element: ElementSchema;
+};
+
 type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
   id: string;
 };
@@ -105,6 +116,8 @@ async function executeAnalysis({
         toolCallMessages: ToolCallMessage[],
       ) => {
         addMessages(event.response.messages);
+
+        // No need for custom serialization logic since queryMessage now returns serializable data
         set(
           makeResultsAppender({
             resultId,
@@ -272,12 +285,12 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
 }
 
 /**
- * Returns a function that will update the state by appending new results to the analysis results.
+ * Appends the tool results, tool calls, and analysis to the state
  *
- * @param resultId - The result id
+ * @param resultId - The id of the result to append to
  * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon). See {@link ToolCallSchema} for more details.
  * @param toolResults - The results of the tool calls that were executed by the LLM. See {@link ToolResultSchema} for more details.
- * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. It is linked to the tool call by the toolCallId.
+ * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. These should now be serializable objects linked to tool calls by toolCallId.
  * @param analysis - The analysis is the content generated after all the tool calls have been executed
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
@@ -308,9 +321,12 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
           result.toolCalls = [...result.toolCalls, ...toolCalls];
         }
         if (toolCallMessages) {
+          // Cast to the correct type for schema compatibility
+          const serializableMessages =
+            toolCallMessages as unknown as SerializableToolCallMessage[];
           result.toolCallMessages = [
             ...result.toolCallMessages,
-            ...toolCallMessages,
+            ...serializableMessages,
           ];
         }
         if (analysis) {

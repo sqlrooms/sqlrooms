@@ -24,9 +24,26 @@ export const ToolCallSchema = z.object({
 });
 export type ToolCallSchema = z.infer<typeof ToolCallSchema>;
 
+// Define specific schemas for message elements
+export const QueryResultElementSchema = z.object({
+  type: z.literal('query-result'),
+  title: z.string(),
+  sqlQuery: z.string(),
+});
+export type QueryResultElementSchema = z.infer<typeof QueryResultElementSchema>;
+
+// Define a union of all possible element types
+// Add more element types here as needed
+export const ElementSchema = z.union([
+  QueryResultElementSchema,
+  z.string(), // For simple string messages
+  // Add more element types here as they are created
+]);
+export type ElementSchema = z.infer<typeof ElementSchema>;
+
 export const ToolCallMessageSchema = z.object({
   toolCallId: z.string(),
-  element: z.any(),
+  element: ElementSchema,
 });
 export type ToolCallMessageSchema = z.infer<typeof ToolCallMessageSchema>;
 

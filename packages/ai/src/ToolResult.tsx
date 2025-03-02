@@ -1,4 +1,8 @@
-import {ToolResultSchema} from './schemas';
+import {
+  QueryResultElementSchema,
+  ElementSchema,
+  ToolResultSchema,
+} from './schemas';
 import {
   Badge,
   Button,
@@ -18,10 +22,25 @@ import {
 import {isQueryToolParameters, QueryToolCall} from './ToolCall';
 import React from 'react';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {QueryResultComponent} from './QueryResult';
+
+// Using the schema-defined type
+type QueryResultData = QueryResultElementSchema;
+
+// Type guard for QueryResultData
+function isQueryResultData(data: any): data is QueryResultData {
+  return (
+    data &&
+    typeof data === 'object' &&
+    data.type === 'query-result' &&
+    typeof data.title === 'string' &&
+    typeof data.sqlQuery === 'string'
+  );
+}
 
 interface ToolResultProps {
   toolResult: ToolResultSchema;
-  customMessage?: ReactNode;
+  customMessage?: ReactNode | ElementSchema;
 }
 
 function getBorderColor(isSuccess: boolean, toolName: string) {
@@ -38,6 +57,29 @@ function getBorderColor(isSuccess: boolean, toolName: string) {
     default:
       return 'border-gray-500';
   }
+}
+
+// Helper function to render the custom message based on its type
+function renderCustomMessage(
+  customMessage: ReactNode | ElementSchema,
+): ReactNode {
+  if (React.isValidElement(customMessage)) {
+    // If it's already a React element, return as is
+    return customMessage;
+  }
+
+  if (isQueryResultData(customMessage)) {
+    // If it's a serialized query result
+    return (
+      <QueryResultComponent
+        title={customMessage.title}
+        sqlQuery={customMessage.sqlQuery}
+      />
+    );
+  }
+
+  // Default case: return as is if it's already a valid ReactNode
+  return customMessage;
 }
 
 export const ToolResult: React.FC<ToolResultProps> = ({
@@ -99,7 +141,12 @@ export const ToolResult: React.FC<ToolResultProps> = ({
 
       <div className="flex flex-col gap-5">
         {toolName === 'query' && isQueryToolParameters(args) ? (
-          <QueryToolCall {...args} customMessage={customMessage} />
+          <QueryToolCall
+            {...args}
+            customMessage={
+              customMessage ? renderCustomMessage(customMessage) : undefined
+            }
+          />
         ) : toolName === 'chart' && isChartToolParameters(args) ? (
           <ChartToolCall {...args} />
         ) : toolName === 'answer' && isAnalysisAnswer(result) ? (
