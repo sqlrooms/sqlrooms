@@ -7,7 +7,6 @@ settings:
 overrides:
   apache-arrow: 18.1.0
   '@types/react': 18.3.18
-  '@duckdb/duckdb-wasm': 1.29.0
 
 importers:
 
@@ -784,8 +783,8 @@ importers:
   packages/project-builder:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.0
-        version: 1.29.0
+        specifier: ^1.29.1-dev68.0
+        version: 1.29.1-dev9.0
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -996,7 +995,7 @@ importers:
         version: 1.1.6(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       autoprefixer:
         specifier: ^10.4.20
-        version: 10.4.20(postcss@8.4.49)
+        version: 10.4.20(postcss@8.5.3)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -1643,6 +1642,9 @@ packages:
 
   '@duckdb/duckdb-wasm@1.29.0':
     resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==}
+
+  '@duckdb/duckdb-wasm@1.29.1-dev9.0':
+    resolution: {integrity: sha512-OguW37uPSVDfWY13RQPiBt1fZaX2Qn1iCXL9YGhl1/+e1gcOlzT4HFMsvODjv2sXC0GgGClU/e1iYnmn1C74EQ==}
 
   '@emotion/is-prop-valid@0.8.8':
     resolution: {integrity: sha512-u5WtneEAr5IDG2Wv65yhunPSMLIpuKsbuOktRojfrEiEvRyC85LgPMZI63cr7NUqT8ZIGdSVg8ZKGxIug4lXcA==}
@@ -9119,6 +9121,10 @@ snapshots:
     dependencies:
       apache-arrow: 18.1.0
 
+  '@duckdb/duckdb-wasm@1.29.1-dev9.0':
+    dependencies:
+      apache-arrow: 18.1.0
+
   '@emotion/is-prop-valid@0.8.8':
     dependencies:
       '@emotion/memoize': 0.7.4
@@ -11791,6 +11797,16 @@ snapshots:
       normalize-range: 0.1.2
       picocolors: 1.1.1
       postcss: 8.4.49
+      postcss-value-parser: 4.2.0
+
+  autoprefixer@10.4.20(postcss@8.5.3):
+    dependencies:
+      browserslist: 4.24.4
+      caniuse-lite: 1.0.30001692
+      fraction.js: 4.3.7
+      normalize-range: 0.1.2
+      picocolors: 1.1.1
+      postcss: 8.5.3
       postcss-value-parser: 4.2.0
 
   available-typed-arrays@1.0.7:
