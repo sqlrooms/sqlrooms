@@ -13,34 +13,54 @@ import {
   StepResult,
   ToolSet,
 } from 'ai';
-import {produce} from 'immer';
+import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
 import {runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
+  AnalysisSessionSchema,
+  ElementSchema,
   ToolCallSchema,
   ToolResultSchema,
 } from './schemas';
 import {ToolCallMessage} from '@openassistant/core';
+import React from 'react';
+
+// Define a serializable version of ToolCallMessage for our local use
+// This ensures compatibility with the external ToolCallMessage type
+// while allowing us to use serializable data
+type SerializableToolCallMessage = {
+  toolCallId: string;
+  element: ElementSchema;
+};
+
 type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
   id: string;
 };
 
 export const AiSliceConfig = z.object({
   ai: z.object({
-    modelProvider: z.string(),
-    model: z.string(),
-    analysisResults: z.array(AnalysisResultSchema),
+    sessions: z.array(AnalysisSessionSchema),
+    currentSessionId: z.string().optional(),
   }),
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
 export function createDefaultAiConfig(): AiSliceConfig {
+  const defaultSessionId = createId();
   return {
     ai: {
-      modelProvider: 'openai',
-      model: 'gpt-4o-mini',
-      analysisResults: [],
+      sessions: [
+        {
+          id: defaultSessionId,
+          name: 'Default Session',
+          modelProvider: 'openai',
+          model: 'gpt-4o-mini',
+          analysisResults: [],
+          createdAt: new Date(),
+        },
+      ],
+      currentSessionId: defaultSessionId,
     },
   };
 }
@@ -57,6 +77,15 @@ export type AiSliceState = {
     addMessages: (messages: AiMessage[]) => void;
     getMessages: () => AiMessage[];
     setAiModel: (model: string) => void;
+    createSession: (
+      name: string,
+      modelProvider?: string,
+      model?: string,
+    ) => void;
+    switchSession: (sessionId: string) => void;
+    renameSession: (sessionId: string, name: string) => void;
+    deleteSession: (sessionId: string) => void;
+    getCurrentSession: () => AnalysisSessionSchema | undefined;
   };
 };
 
@@ -105,6 +134,8 @@ async function executeAnalysis({
         toolCallMessages: ToolCallMessage[],
       ) => {
         addMessages(event.response.messages);
+
+        // queryMessage now returns a React component for rendering
         set(
           makeResultsAppender({
             resultId,
@@ -148,7 +179,7 @@ async function executeAnalysis({
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
-  initialAnalysisPrompt = 'Describe the data in the tables and make a chart providing an overview of the most important features.',
+  initialAnalysisPrompt = '',
 }: {
   getApiKey: () => string;
   initialAnalysisPrompt?: string;
@@ -168,13 +199,16 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       },
 
       /**
-       * Set the AI model
+       * Set the AI model for the current session
        * @param model - The model to set
        */
       setAiModel: (model: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.ai.model = model;
+            const currentSession = getCurrentSessionFromState(draft);
+            if (currentSession) {
+              currentSession.model = model;
+            }
           }),
         );
       },
@@ -208,22 +242,124 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         return Array.from(get().ai.messagesById.values());
       },
 
+      /**
+       * Get the current active session
+       */
+      getCurrentSession: () => {
+        const state = get();
+        const {currentSessionId, sessions} = state.config.ai;
+        return sessions.find((session) => session.id === currentSessionId);
+      },
+
+      /**
+       * Create a new session with the given name and model settings
+       */
+      createSession: (name: string, modelProvider?: string, model?: string) => {
+        const currentSession = get().ai.getCurrentSession();
+        const newSessionId = createId();
+
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.ai.sessions.push({
+              id: newSessionId,
+              name: name,
+              modelProvider:
+                modelProvider || currentSession?.modelProvider || 'openai',
+              model: model || currentSession?.model || 'gpt-4o-mini',
+              analysisResults: [],
+              createdAt: new Date(),
+            });
+            draft.config.ai.currentSessionId = newSessionId;
+          }),
+        );
+      },
+
+      /**
+       * Switch to a different session
+       */
+      switchSession: (sessionId: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.ai.currentSessionId = sessionId;
+          }),
+        );
+      },
+
+      /**
+       * Rename an existing session
+       */
+      renameSession: (sessionId: string, name: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const session = draft.config.ai.sessions.find(
+              (s) => s.id === sessionId,
+            );
+            if (session) {
+              session.name = name;
+            }
+          }),
+        );
+      },
+
+      /**
+       * Delete a session
+       */
+      deleteSession: (sessionId: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const sessionIndex = draft.config.ai.sessions.findIndex(
+              (s) => s.id === sessionId,
+            );
+            if (sessionIndex !== -1) {
+              // Don't delete the last session
+              if (draft.config.ai.sessions.length > 1) {
+                draft.config.ai.sessions.splice(sessionIndex, 1);
+                // If we deleted the current session, switch to another one
+                if (draft.config.ai.currentSessionId === sessionId) {
+                  // Make sure there's at least one session before accessing its id
+                  if (draft.config.ai.sessions.length > 0) {
+                    const firstSession = draft.config.ai.sessions[0];
+                    if (firstSession) {
+                      draft.config.ai.currentSessionId = firstSession.id;
+                    }
+                  }
+                }
+              }
+            }
+          }),
+        );
+      },
+
       startAnalysis: async () => {
         const resultId = createId();
         const abortController = new AbortController();
+        const currentSession = get().ai.getCurrentSession();
+
+        if (!currentSession) {
+          console.error('No current session found');
+          return;
+        }
+
         set((state) =>
           produce(state, (draft) => {
             draft.ai.analysisAbortController = abortController;
             draft.ai.isRunningAnalysis = true;
-            draft.project.config.ai.analysisResults.push({
-              id: resultId,
-              prompt: get().ai.analysisPrompt,
-              toolResults: [],
-              toolCalls: [],
-              toolCallMessages: [],
-              analysis: '',
-              isCompleted: false,
-            });
+
+            const session = draft.config.ai.sessions.find(
+              (s) => s.id === draft.config.ai.currentSessionId,
+            );
+
+            if (session) {
+              session.analysisResults.push({
+                id: resultId,
+                prompt: get().ai.analysisPrompt,
+                toolResults: [],
+                toolCalls: [],
+                toolCallMessages: [],
+                analysis: '',
+                isCompleted: false,
+              });
+            }
           }),
         );
 
@@ -239,8 +375,8 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           await executeAnalysis({
             resultId,
             prompt: get().ai.analysisPrompt,
-            modelProvider: get().project.config.ai.modelProvider,
-            model: get().project.config.ai.model,
+            modelProvider: currentSession.modelProvider || 'openai',
+            model: currentSession.model || 'gpt-4o-mini',
             apiKey: getApiKey(),
             abortController,
             addMessages: get().ai.addMessages,
@@ -255,6 +391,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           );
         }
       },
+
       cancelAnalysis: () => {
         set((state) =>
           produce(state, (draft) => {
@@ -267,17 +404,31 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   }));
 }
 
+/**
+ * Helper function to get the current session from state
+ */
+function getCurrentSessionFromState<
+  PC extends BaseProjectConfig & AiSliceConfig,
+>(
+  state: ProjectState<PC> | WritableDraft<ProjectState<PC>>,
+): AnalysisSessionSchema | undefined {
+  const {currentSessionId, sessions} = state.config.ai;
+  return sessions.find(
+    (session: AnalysisSessionSchema) => session.id === currentSessionId,
+  );
+}
+
 function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
   return analysisResults.find((r: AnalysisResultSchema) => r.id === id);
 }
 
 /**
- * Returns a function that will update the state by appending new results to the analysis results.
+ * Appends the tool results, tool calls, and analysis to the state
  *
- * @param resultId - The result id
+ * @param resultId - The id of the result to append to
  * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon). See {@link ToolCallSchema} for more details.
  * @param toolResults - The results of the tool calls that were executed by the LLM. See {@link ToolResultSchema} for more details.
- * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. It is linked to the tool call by the toolCallId.
+ * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. These should now be serializable objects linked to tool calls by toolCallId.
  * @param analysis - The analysis is the content generated after all the tool calls have been executed
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
@@ -299,10 +450,13 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
-      const result = findResultById(
-        draft.project.config.ai.analysisResults,
-        resultId,
-      );
+      const currentSession = getCurrentSessionFromState(draft);
+      if (!currentSession) {
+        console.error('No current session found');
+        return;
+      }
+
+      const result = findResultById(currentSession.analysisResults, resultId);
       if (result) {
         if (toolResults) {
           result.toolResults = [...result.toolResults, ...toolResults];
@@ -311,9 +465,12 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
           result.toolCalls = [...result.toolCalls, ...toolCalls];
         }
         if (toolCallMessages) {
+          // Cast to the correct type for schema compatibility
+          const serializableMessages =
+            toolCallMessages as unknown as SerializableToolCallMessage[];
           result.toolCallMessages = [
             ...result.toolCallMessages,
-            ...toolCallMessages,
+            ...serializableMessages,
           ];
         }
         if (analysis) {

@@ -68,29 +68,29 @@ export const {projectStore, useProjectStore} = createProjectStore<
     (set, get, store) => ({
       // Base project slice
       ...createProjectSlice<AppConfig>({
-        project: {
-          config: {
-            title: 'Demo App Project',
-            layout: {
-              type: LayoutTypes.enum.mosaic,
-              nodes: {
-                direction: 'row',
-                first: ProjectPanelTypes.enum['data-sources'],
-                second: MAIN_VIEW,
-                splitPercentage: 30,
-              },
+        config: {
+          title: 'Demo App Project',
+          layout: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              first: ProjectPanelTypes.enum['data-sources'],
+              second: MAIN_VIEW,
+              splitPercentage: 30,
             },
-            dataSources: [
-              {
-                tableName: 'earthquakes',
-                type: 'url',
-                // url: 'https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv',
-                url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-              },
-            ],
-            ...createDefaultAiConfig(),
-            ...createDefaultSqlEditorConfig(),
           },
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              // url: 'https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
+          ],
+          ...createDefaultAiConfig(),
+          ...createDefaultSqlEditorConfig(),
+        },
+        project: {
           panels: {
             [ProjectPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
@@ -143,31 +143,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Local storage key
       name: 'app-state-storage',
       // Subset of the state to persist
-      partialize: (state) =>
-        ({
-          openAiApiKey: state.openAiApiKey,
-          selectedModel: state.selectedModel,
-          // projectConfig: state.project.config,
-        }) satisfies PersistedState,
-
-      //   merge: (persistedState, currentState: AppState): AppState => {
-      //     const {projectConfig, ...rest} = persistedState as PersistedState;
-      //     const mergedState = {
-      //       ...currentState,
-      //       ...rest,
-      //       project: {
-      //         ...currentState.project,
-      //         config: projectConfig,
-      //       },
-      //     };
-      //     return mergedState;
-      //   },
+      partialize: (state) => ({
+        config: state.config,
+        openAiApiKey: state.openAiApiKey,
+        selectedModel: state.selectedModel,
+        // projectConfig: state.config,
+      }),
     },
   ) as StateCreator<AppState>,
 );
-
-type PersistedState = {
-  openAiApiKey: string | undefined;
-  selectedModel: string;
-  // projectConfig: AppConfig;
-};

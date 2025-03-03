@@ -75,11 +75,9 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   );
 
   // Get query data and methods directly from the store
-  const queries = useStoreWithSqlEditor(
-    (s) => s.project.config.sqlEditor.queries,
-  );
+  const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
   const selectedQueryId = useStoreWithSqlEditor(
-    (s) => s.project.config.sqlEditor.selectedQueryId,
+    (s) => s.config.sqlEditor.selectedQueryId,
   );
   const getCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.getCurrentQuery,

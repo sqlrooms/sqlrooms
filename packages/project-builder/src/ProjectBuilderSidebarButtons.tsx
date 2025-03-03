@@ -44,7 +44,7 @@ const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
   projectPanelType,
 }) => {
   const initialized = useBaseProjectStore((state) => state.project.initialized);
-  const layout = useBaseProjectStore((state) => state.project.config.layout);
+  const layout = useBaseProjectStore((state) => state.config.layout);
   const panels = useBaseProjectStore((state) => state.project.panels);
   const visibleProjectPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),

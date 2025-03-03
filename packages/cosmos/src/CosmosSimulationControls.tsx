@@ -148,7 +148,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
   } = useStoreWithCosmos((s) => s.cosmos);
 
   const config = useStoreWithCosmos(
-    (s) => s.project.config.cosmos,
+    (s) => s.config.cosmos,
   ) as CosmosSliceConfig['cosmos'];
 
   const handleParameterChange = (paramKey: SimulationKey, value: number[]) => {

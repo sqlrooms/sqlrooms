@@ -50,27 +50,27 @@ export const {projectStore, useProjectStore} = createProjectStore<
 >((set, get, store) => ({
   // Base project slice
   ...createProjectSlice<AppConfig>({
-    project: {
-      config: {
-        title: 'Demo App Project',
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: ProjectPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
+    config: {
+      title: 'Demo App Project',
+      layout: {
+        type: LayoutTypes.enum.mosaic,
+        nodes: {
+          direction: 'row',
+          first: ProjectPanelTypes.enum['data-sources'],
+          second: MAIN_VIEW,
+          splitPercentage: 30,
         },
-        dataSources: [
-          {
-            type: 'url',
-            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
-            tableName: 'latency',
-          },
-        ],
-        ...createDefaultSqlEditorConfig(),
       },
+      dataSources: [
+        {
+          type: 'url',
+          url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+          tableName: 'latency',
+        },
+      ],
+      ...createDefaultSqlEditorConfig(),
+    },
+    project: {
       panels: {
         [ProjectPanelTypes.enum['project-details']]: {
           title: 'Project Details',

@@ -14,9 +14,7 @@ export type SqlQuery = {
  */
 export function useQueryTabManagement(defaultQuery: string = '') {
   // Get SQL editor config and functions from the store
-  const sqlEditorConfig = useStoreWithSqlEditor(
-    (s) => s.project.config.sqlEditor,
-  );
+  const sqlEditorConfig = useStoreWithSqlEditor((s) => s.config.sqlEditor);
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
   );

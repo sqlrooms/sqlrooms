@@ -6,8 +6,6 @@ import {
   createTableFromQuery,
   createViewFromFile,
   createViewFromRegisteredFile,
-  dropAllFiles,
-  dropAllTables,
   dropFile,
   dropTable,
   getDuckDb,
@@ -101,7 +99,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
   tasksProgress: Record<string, TaskProgress>;
   projectId: string | undefined; // undefined if the project is new
-  config: PC;
   panels: Record<string, ProjectPanelInfo>;
   isReadOnly: boolean;
   tables: DataTable[];
@@ -125,11 +122,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
    * @returns A promise that resolves when the project state has been initialized.
    */
   initialize: () => Promise<void>;
-  /**
-   * Reset the project state.
-   * @returns A promise that resolves when the project state has been reset.
-   */
-  reset: () => Promise<void>;
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
   /**
@@ -222,6 +214,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
 };
 
 export type ProjectState<PC extends BaseProjectConfig> = {
+  config: PC;
   project: ProjectStateProps<PC> & ProjectStateActions<PC>;
 };
 
@@ -240,8 +233,8 @@ export function createSlice<PC extends BaseProjectConfig, S>(
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
 type InitialState<PC extends BaseProjectConfig> = {
+  config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
   project: Partial<Omit<ProjectStateProps<PC>, 'config' | 'panels'>> & {
-    config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
     panels: ProjectStateProps<PC>['panels'];
   };
 };
@@ -360,16 +353,15 @@ export function createProjectStore<
 export function createProjectSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,
 ): StateCreator<ProjectState<PC>> {
-  const {project: projectStateProps, ...restState} = props;
-
+  const {config: configProps, project: projectStateProps, ...restState} = props;
+  const initialConfig: PC = {
+    ...INITIAL_BASE_PROJECT_CONFIG,
+    ...configProps,
+  } as PC;
   const initialProjectState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
     ...projectStateProps,
     schema: projectStateProps.schema ?? INITIAL_BASE_PROJECT_STATE.schema,
-    config: {
-      ...INITIAL_BASE_PROJECT_CONFIG,
-      ...projectStateProps.config,
-    } as PC,
     lastSavedConfig: undefined,
   };
 
@@ -395,6 +387,11 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         setTaskProgress(INIT_PROJECT_TASK, undefined);
 
         await get().project.onDataUpdated();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.project.initialized = true;
+          }),
+        );
       },
 
       onDataUpdated: async () => {
@@ -404,21 +401,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       areViewsReadyToRender: () => {
         // Can be overridden by the view store
         return true;
-      },
-
-      reset: async () => {
-        set({
-          project: {
-            ...get().project,
-            ...initialProjectState,
-          },
-        });
-        try {
-          // Clean up DuckDB
-          await Promise.all([dropAllFiles(), dropAllTables()]);
-        } catch (err) {
-          console.error(err);
-        }
       },
 
       setTaskProgress(id, taskProgress) {
@@ -454,7 +436,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       setProjectConfig: (config) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config = castDraft(config);
+            draft.config = castDraft(config);
           }),
         ),
       setLastSavedConfig: (config) =>
@@ -464,14 +446,15 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }),
         ),
       hasUnsavedChanges: () => {
-        const {config, lastSavedConfig} = get().project;
+        const {lastSavedConfig} = get().project;
+        const {config} = get();
         return config !== lastSavedConfig;
       },
 
       addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
         set((state) =>
           produce(state, (draft) => {
-            const dataSources = draft.project.config.dataSources;
+            const dataSources = draft.config.dataSources;
             const tableName = dataSource.tableName;
             const index = dataSources.findIndex(
               (d) => d.tableName === tableName,
@@ -530,15 +513,15 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
               tableName: newTableName,
             };
             if (oldTableName) {
-              draft.project.config.dataSources =
-                draft.project.config.dataSources.map((dataSource) =>
+              draft.config.dataSources = draft.config.dataSources.map(
+                (dataSource) =>
                   dataSource.tableName === oldTableName
                     ? newDataSource
                     : dataSource,
-                );
+              );
               delete draft.project.dataSourceStates[oldTableName];
             } else {
-              draft.project.config.dataSources.push(newDataSource);
+              draft.config.dataSources.push(newDataSource);
             }
             draft.project.dataSourceStates[newTableName] = {
               status: DataSourceStatus.READY,
@@ -552,10 +535,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         await dropTable(tableName);
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.dataSources =
-              draft.project.config.dataSources.filter(
-                (d) => d.tableName !== tableName,
-              );
+            draft.config.dataSources = draft.config.dataSources.filter(
+              (d) => d.tableName !== tableName,
+            );
             delete draft.project.dataSourceStates[tableName];
           }),
         );
@@ -577,7 +559,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             );
           }),
         );
-        const dataSource = get().project.config.dataSources.find(
+        const dataSource = get().config.dataSources.find(
           (d) =>
             d.type === DataSourceTypes.enum.file &&
             d.fileName === projectFile.pathname,
@@ -662,12 +644,10 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             draft.project.projectFiles = draft.project.projectFiles.filter(
               (f) => f.pathname !== pathname,
             );
-            draft.project.config.dataSources =
-              draft.project.config.dataSources.filter(
-                (d) =>
-                  d.type !== DataSourceTypes.Enum.file ||
-                  d.fileName !== pathname,
-              );
+            draft.config.dataSources = draft.config.dataSources.filter(
+              (d) =>
+                d.type !== DataSourceTypes.Enum.file || d.fileName !== pathname,
+            );
           }),
         );
         dropFile(pathname);
@@ -691,8 +671,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async maybeDownloadDataSources() {
-        const {projectFilesProgress, dataSourceStates, config} = get().project;
-        const {dataSources} = config;
+        const {projectFilesProgress, dataSourceStates} = get().project;
+        const {dataSources} = get().config;
         const pendingDataSources = dataSources.filter(
           (ds) =>
             !dataSourceStates[ds.tableName] ||
@@ -722,7 +702,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           await runDataSourceQueries(queriesToRun);
         }
 
-        if (get().project.config.dataSources.length > 0) {
+        if (get().config.dataSources.length > 0) {
           set((state) =>
             produce(state, (draft) => {
               draft.project.isDataAvailable = true;
@@ -754,25 +734,25 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       setProjectTitle: (title) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.title = title;
+            draft.config.title = title;
           }),
         ),
 
       setDescription: (description) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.description = description;
+            draft.config.description = description;
           }),
         ),
       setLayout: (layout) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.project.config.layout = layout;
+            draft.config.layout = layout;
           }),
         ),
 
       togglePanel: (panel, show) => {
-        const {config} = get().project;
+        const {config} = get();
         if (config.layout?.nodes === panel) {
           // don't hide the view if it's the only one
           return;
@@ -785,7 +765,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.project.config.layout;
+              const layout = draft.config.layout;
               layout.nodes = result.nextTree;
               if (layout.pinned?.includes(panel)) {
                 layout.pinned = layout.pinned.filter((p) => p !== panel);
@@ -798,7 +778,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.project.config.layout;
+              const layout = draft.config.layout;
               const root = layout.nodes;
               const placement = draft.project.panels[panel]?.placement;
               const side = placement === 'sidebar' ? 'first' : 'second';
@@ -841,7 +821,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       togglePanelPin: (panel: string) => {
         set((state) =>
           produce(state, (draft) => {
-            const layout = draft.project.config.layout;
+            const layout = draft.config.layout;
             const pinned = layout.pinned ?? [];
             if (pinned.includes(panel)) {
               layout.pinned = pinned.filter((p) => p !== panel);
@@ -853,7 +833,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       areDatasetsReady: () => {
-        const {config, dataSourceStates} = get().project;
+        const {dataSourceStates} = get().project;
+        const {config} = get();
         const dataSources = config.dataSources;
         return dataSources.every(
           (ds) =>
@@ -866,7 +847,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async updateReadyDataSources() {
-        const {config, tables, dataSourceStates} = get().project;
+        const {tables, dataSourceStates} = get().project;
+        const {config} = get();
         const dataSources = config.dataSources;
         set((state) =>
           produce(state, (draft) => {
@@ -896,7 +878,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
     };
 
-    return {project: projectState, ...restState};
+    return {config: initialConfig, project: projectState, ...restState};
 
     function updateTotalFileDownloadProgress() {
       const {projectFilesProgress, setTaskProgress} = get().project;

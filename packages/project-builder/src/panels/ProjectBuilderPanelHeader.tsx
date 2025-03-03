@@ -16,7 +16,7 @@ const ProjectBuilderPanelHeader: FC<{
     (state) => state.project.togglePanelPin,
   );
   const pinnedPanels = useBaseProjectStore(
-    (state) => state.project.config.layout.pinned,
+    (state) => state.config.layout.pinned,
   );
   const isPinned = useMemo(
     () => pinnedPanels?.includes(type),

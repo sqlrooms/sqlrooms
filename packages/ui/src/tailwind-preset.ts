@@ -1,5 +1,7 @@
 import {Config} from 'tailwindcss';
 import tailwindAnimate from 'tailwindcss-animate';
+import typography from '@tailwindcss/typography';
+
 export const sqlroomsTailwindPreset = ({
   prefix = '',
 }: {
@@ -49,7 +51,96 @@ export const sqlroomsTailwindPreset = ({
         md: `calc(var(--radius) - 2px)`,
         sm: 'calc(var(--radius) - 4px)',
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            // Improve spacing and styling for lists
+            'ul, ol': {
+              paddingLeft: '1.5em',
+              marginTop: '0.75em',
+              marginBottom: '0.75em',
+            },
+            'ul > li, ol > li': {
+              marginTop: '0.25em',
+              marginBottom: '0.25em',
+            },
+            // Better styling for code blocks
+            pre: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+              borderRadius: 'var(--radius)',
+              padding: '1em',
+              overflowX: 'auto',
+            },
+            code: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+              borderRadius: '0.25em',
+              padding: '0.2em 0.4em',
+              fontSize: '0.875em',
+            },
+            // Better styling for blockquotes
+            blockquote: {
+              borderLeftColor: 'hsl(var(--border))',
+              fontStyle: 'normal',
+              color: 'hsl(var(--muted-foreground))',
+            },
+            // Harmonize heading styles
+            'h1, h2, h3, h4, h5, h6': {
+              color: 'hsl(var(--foreground))',
+              fontWeight: '600',
+            },
+            // Better link styling
+            a: {
+              color: 'hsl(var(--primary))',
+              textDecoration: 'none',
+              '&:hover': {
+                textDecoration: 'underline',
+              },
+            },
+            // Better table styling
+            table: {
+              width: '100%',
+              tableLayout: 'auto',
+              textAlign: 'left',
+              borderCollapse: 'collapse',
+            },
+            th: {
+              fontWeight: '600',
+              borderBottomWidth: '2px',
+              borderColor: 'hsl(var(--border))',
+              padding: '0.5em',
+            },
+            td: {
+              borderBottomWidth: '1px',
+              borderColor: 'hsl(var(--border))',
+              padding: '0.5em',
+            },
+          },
+        },
+        // Adjust typography for dark mode
+        invert: {
+          css: {
+            color: 'hsl(var(--foreground))',
+            pre: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+            },
+            code: {
+              backgroundColor: 'hsl(var(--muted))',
+              color: 'hsl(var(--muted-foreground))',
+            },
+            'h1, h2, h3, h4, h5, h6': {
+              color: 'hsl(var(--foreground))',
+            },
+            blockquote: {
+              borderLeftColor: 'hsl(var(--border))',
+              color: 'hsl(var(--muted-foreground))',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [tailwindAnimate],
+  plugins: [tailwindAnimate, typography],
 });
