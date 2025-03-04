@@ -508,6 +508,9 @@ importers:
       '@ai-sdk/provider':
         specifier: ^1.0.7
         version: 1.0.7
+      '@duckdb/duckdb-wasm':
+        specifier: 1.29.0
+        version: 1.29.0
       '@openassistant/core':
         specifier: ^0.1.9
         version: 0.1.9(encoding@0.1.13)(react@19.0.0)(ws@8.18.0)
@@ -998,7 +1001,7 @@ importers:
         version: 1.1.6(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       autoprefixer:
         specifier: ^10.4.20
-        version: 10.4.20(postcss@8.4.49)
+        version: 10.4.20(postcss@8.5.3)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -11822,6 +11825,16 @@ snapshots:
       normalize-range: 0.1.2
       picocolors: 1.1.1
       postcss: 8.4.49
+      postcss-value-parser: 4.2.0
+
+  autoprefixer@10.4.20(postcss@8.5.3):
+    dependencies:
+      browserslist: 4.24.4
+      caniuse-lite: 1.0.30001692
+      fraction.js: 4.3.7
+      normalize-range: 0.1.2
+      picocolors: 1.1.1
+      postcss: 8.5.3
       postcss-value-parser: 4.2.0
 
   available-typed-arrays@1.0.7:
