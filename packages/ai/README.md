@@ -111,4 +111,69 @@ function AiStatusIndicator() {
 - **Conversation Context**: Maintain context across multiple queries
 - **Feedback Loop**: Collect user feedback to improve AI responses
 
+## Design
+
+### Data Structure
+
+The basic data structure of the AI package is:
+
+```ts
+    ai: {
+      sessions: [
+        {
+          id: defaultSessionId,
+          name: 'Default Session',
+          modelProvider: 'openai',
+          model: 'gpt-4o-mini',
+          analysisResults: [],
+          createdAt: new Date(),
+        },
+      ],
+      currentSessionId: defaultSessionId,
+    },
+```
+
+Each session has a list of `analysisResults` which is an array of `AnalysisResult`.Each `AnalysisResult` contains the following properties:
+
+- `id`: The unique identifier for the analysis result
+- `prompt`: The user prompt that was used to generate the analysis result
+- `streamMessage`: The stream message from the LLM
+- `errorMessage`: The error message from the LLM
+- `isCompleted`: Whether the analysis result has been completed
+
+For each user prompt, the LLM will run multiple tools (e.g. `query`, `chart`) and return the result as the `streamMessage`.
+
+### Rendering
+
+```
+|--------------------------------|
+| AnalysisResultsContainer       |
+|--------------------------------|
+|  |--------------------------|  |
+|  | AnalysisResult           |  |
+|  | |---------------------|  |  |
+|  | | ToolResult          |  |  |
+|  | |---------------------|  |  |
+|  |      ...                 |  |
+|  | |---------------------|  |  |
+|  | | ToolResult          |  |  |
+|  | |---------------------|  |  |
+|  |      ...                 |  |
+|  | |---------------------|  |  |
+|  | | Result              |  |  |
+|  | |---------------------|  |  |
+|  |--------------------------|  |
+|--------------------------------|
+```
+
+
+
+
+
+
+
+
+
+
+
 For more information, visit the SQLRooms documentation.

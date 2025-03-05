@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^1.0.7",
+    "@ai-sdk/provider": "^1.0.10",
     "@sqlrooms/duckdb": "workspace:*",
     "@uwdata/mosaic-core": "^0.12.2",
     "@uwdata/mosaic-spec": "^0.12.2",

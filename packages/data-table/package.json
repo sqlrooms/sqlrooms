@@ -19,12 +19,12 @@
     "access": "public"
   },
   "dependencies": {
-    "@heroicons/react": "*",
+    "@heroicons/react": "^2.2.0",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "@tanstack/react-table": "^8.10.7",
-    "@tanstack/table-core": "^8.10.7",
+    "@tanstack/react-table": "^8.21.2",
+    "@tanstack/table-core": "^8.21.2",
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {

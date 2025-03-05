@@ -23,7 +23,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "react-vega": "^7.6.0",
-    "vega": "^5.31.0",
+    "vega": "^5.32.0",
     "vega-lite": "^5.23.0"
   },
   "peerDependencies": {

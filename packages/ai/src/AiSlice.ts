@@ -6,37 +6,15 @@ import {
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
-import {
-  CoreAssistantMessage,
-  CoreToolMessage,
-  CoreUserMessage,
-  StepResult,
-  ToolSet,
-} from 'ai';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
 import {runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
-  ElementSchema,
-  ToolCallSchema,
-  ToolResultSchema,
+  ErrorMessageSchema,
 } from './schemas';
-import {ToolCallMessage} from '@openassistant/core';
-import React from 'react';
-
-// Define a serializable version of ToolCallMessage for our local use
-// This ensures compatibility with the external ToolCallMessage type
-// while allowing us to use serializable data
-type SerializableToolCallMessage = {
-  toolCallId: string;
-  element: ElementSchema;
-};
-
-type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
-  id: string;
-};
+import {StreamMessage} from '@openassistant/core';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -73,9 +51,6 @@ export type AiSliceState = {
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
-    messagesById: Map<string, AiMessage>;
-    addMessages: (messages: AiMessage[]) => void;
-    getMessages: () => AiMessage[];
     setAiModel: (model: string) => void;
     createSession: (
       name: string,
@@ -110,7 +85,6 @@ async function executeAnalysis({
   model,
   apiKey,
   abortController,
-  addMessages,
   set,
 }: {
   resultId: string;
@@ -119,7 +93,6 @@ async function executeAnalysis({
   model: string;
   apiKey: string;
   abortController: AbortController;
-  addMessages: (messages: AiMessage[]) => void;
   set: <T>(fn: (state: T) => T) => void;
 }) {
   try {
@@ -129,27 +102,11 @@ async function executeAnalysis({
       apiKey,
       prompt,
       abortController,
-      onStepFinish: (
-        event: StepResult<ToolSet>,
-        toolCallMessages: ToolCallMessage[],
-      ) => {
-        addMessages(event.response.messages);
-
-        // queryMessage now returns a React component for rendering
+      onStreamResult: (isCompleted, streamMessage) => {
         set(
           makeResultsAppender({
             resultId,
-            toolResults: event.toolResults,
-            toolCalls: event.toolCalls,
-            toolCallMessages,
-          }),
-        );
-      },
-      onStreamResult: (message, isCompleted) => {
-        set(
-          makeResultsAppender({
-            resultId,
-            analysis: message,
+            streamMessage,
             isCompleted,
           }),
         );
@@ -160,18 +117,9 @@ async function executeAnalysis({
       makeResultsAppender({
         resultId,
         isCompleted: true,
-        toolResults: [
-          {
-            toolName: 'error',
-            toolCallId: createId(),
-            args: {},
-            result: {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            },
-          },
-        ],
-        toolCalls: [],
+        errorMessage: {
+          error: err instanceof Error ? err.message : String(err),
+        },
       }),
     );
   }
@@ -188,7 +136,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
     ai: {
       analysisPrompt: initialAnalysisPrompt,
       isRunningAnalysis: false,
-      messagesById: new Map(),
 
       setAnalysisPrompt: (prompt: string) => {
         set((state) =>
@@ -211,35 +158,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             }
           }),
         );
-      },
-
-      /**
-       * Add messages to the project store uniquely by id
-       * @param messages - The messages to add.
-       */
-      addMessages: (messages: AiMessage[]) => {
-        set((state) => {
-          const newMessages = messages.filter(
-            (m) => !state.ai.messagesById.has(m.id),
-          );
-          const newMessagesById = new Map(state.ai.messagesById);
-          for (const m of newMessages) {
-            if (!m.id) {
-              console.warn('Message has no id', m);
-            }
-            newMessagesById.set(m.id, m);
-          }
-          return {
-            ai: {
-              ...state.ai,
-              messagesById: newMessagesById,
-            },
-          };
-        });
-      },
-
-      getMessages: () => {
-        return Array.from(get().ai.messagesById.values());
       },
 
       /**
@@ -353,23 +271,16 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               session.analysisResults.push({
                 id: resultId,
                 prompt: get().ai.analysisPrompt,
-                toolResults: [],
-                toolCalls: [],
-                toolCallMessages: [],
-                analysis: '',
+                streamMessage: {
+                  toolCallMessages: [],
+                  reasoning: '',
+                  text: '',
+                },
                 isCompleted: false,
               });
             }
           }),
         );
-
-        get().ai.addMessages([
-          {
-            id: createId(),
-            role: 'user',
-            content: get().ai.analysisPrompt,
-          },
-        ]);
 
         try {
           await executeAnalysis({
@@ -379,7 +290,6 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             model: currentSession.model || 'gpt-4o-mini',
             apiKey: getApiKey(),
             abortController,
-            addMessages: get().ai.addMessages,
             set,
           });
         } finally {
@@ -426,27 +336,23 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
  * Appends the tool results, tool calls, and analysis to the state
  *
  * @param resultId - The id of the result to append to
- * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon). See {@link ToolCallSchema} for more details.
- * @param toolResults - The results of the tool calls that were executed by the LLM. See {@link ToolResultSchema} for more details.
- * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. These should now be serializable objects linked to tool calls by toolCallId.
- * @param analysis - The analysis is the content generated after all the tool calls have been executed
+ * @param message - The message to append to the state. The structure of the message is defined as:
+ * - reasoning: string The reasoning of the assistant
+ * - toolCallMessages: ToolCallMessage[] The tool call messages
+ * - text: string The final text message
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
  */
 function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   resultId,
-  toolResults,
-  toolCalls,
-  analysis,
+  streamMessage,
+  errorMessage,
   isCompleted,
-  toolCallMessages,
 }: {
   resultId: string;
-  toolResults?: ToolResultSchema[];
-  toolCalls?: ToolCallSchema[];
-  analysis?: string;
+  streamMessage?: StreamMessage;
+  errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
-  toolCallMessages?: ToolCallMessage[];
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
@@ -458,23 +364,25 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
 
       const result = findResultById(currentSession.analysisResults, resultId);
       if (result) {
-        if (toolResults) {
-          result.toolResults = [...result.toolResults, ...toolResults];
+        if (streamMessage) {
+          result.streamMessage = {
+            toolCallMessages: (streamMessage.toolCallMessages || []).map(
+              (toolCall) => ({
+                args: {...toolCall.args},
+                isCompleted: toolCall.isCompleted,
+                llmResult: toolCall.llmResult,
+                additionalData: toolCall.additionalData,
+                text: toolCall.text,
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+              }),
+            ),
+            reasoning: streamMessage.reasoning,
+            text: streamMessage.text,
+          };
         }
-        if (toolCalls) {
-          result.toolCalls = [...result.toolCalls, ...toolCalls];
-        }
-        if (toolCallMessages) {
-          // Cast to the correct type for schema compatibility
-          const serializableMessages =
-            toolCallMessages as unknown as SerializableToolCallMessage[];
-          result.toolCallMessages = [
-            ...result.toolCallMessages,
-            ...serializableMessages,
-          ];
-        }
-        if (analysis) {
-          result.analysis = analysis;
+        if (errorMessage) {
+          result.errorMessage = errorMessage;
         }
         if (isCompleted) {
           result.isCompleted = isCompleted;

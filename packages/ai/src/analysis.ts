@@ -1,20 +1,14 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {
-  CallbackFunctionProps,
-  createAssistant,
-  ToolCallMessage,
-  VercelToolSet,
-} from '@openassistant/core';
+import {createAssistant, tool, StreamMessage} from '@openassistant/core';
 import {
   arrowTableToJson,
   getDuckDb,
   getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
-import {StepResult} from 'ai';
 
-import {renderQueryMessageComponent} from './QueryResult';
+import {ToolQuery} from './components/ToolQuery';
+import {ToolChart} from './components/ToolChart';
 import {ChartToolParameters, QueryToolParameters} from './schemas';
-import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -118,26 +112,15 @@ export type AnalysisConfig = {
   /** Optional controller for canceling the analysis operation */
   abortController?: AbortController;
 
-  /**
-   * Callback fired after each analysis step completion
-   * @param event - Current step result containing tool execution details. See Vercel AI SDK documentation for more details.
-   * Specifically, it contains the array of tool calls and the results of the tool calls (toolResults).
-   * @param toolCallMessages - Collection of messages generated during tool calls. They are linked to the tool call by the toolCallId.
-   */
-  onStepFinish?: (
-    event: StepResult<typeof TOOLS>,
-    toolCallMessages: ToolCallMessage[],
-  ) => Promise<void> | void;
-
   /** Maximum number of analysis steps allowed (default: 100) */
   maxSteps?: number;
 
   /**
    * Callback for handling streaming results
-   * @param message - Current message content being streamed
    * @param isCompleted - Indicates if this is the final message in the stream
+   * @param streamMessage - Current message content being streamed
    */
-  onStreamResult: (message: string, isCompleted: boolean) => void;
+  onStreamResult: (isCompleted: boolean, streamMessage?: StreamMessage) => void;
 };
 
 /**
@@ -153,7 +136,6 @@ export async function runAnalysis({
   apiKey,
   prompt,
   abortController,
-  onStepFinish,
   onStreamResult,
   maxSteps = 5,
 }: AnalysisConfig) {
@@ -167,7 +149,7 @@ export async function runAnalysis({
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
-    vercelFunctions: TOOLS,
+    functions: TOOLS,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -175,31 +157,14 @@ export async function runAnalysis({
   });
 
   // process the prompt
-  const result = await assistant.processTextMessage({
+  const newMessages = await assistant.processTextMessage({
     textMessage: prompt,
-    streamMessageCallback: (message) => {
-      // the final result (before the answer) can be streamed back here
-      onStreamResult(message.deltaMessage, message.isCompleted ?? false);
+    streamMessageCallback: ({isCompleted, message}) => {
+      onStreamResult(isCompleted ?? false, message);
     },
-    onStepFinish,
   });
 
-  return result;
-}
-
-/**
- * Extracts a readable error message from an error object
- * @param error - Error object or unknown value
- * @returns Formatted error message string
- */
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    if (error.cause instanceof Error) {
-      return error.cause.message;
-    }
-    return error.message;
-  }
-  return String(error);
+  return newMessages;
 }
 
 /**
@@ -208,106 +173,63 @@ function getErrorMessage(error: unknown): string {
  * - query: Executes SQL queries against DuckDB
  * - chart: Creates VegaLite visualizations
  */
-const TOOLS: VercelToolSet = {
-  query: {
+export const TOOLS = {
+  query: tool({
     description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    executeWithContext: async (props: CallbackFunctionProps) => {
-      if (!isQueryToolParameters(props.functionArgs)) {
-        return {
-          name: 'query',
-          result: {
-            success: false,
-            error: 'Invalid query parameters',
-          },
-        };
-      }
+    execute: async ({type, sqlQuery}) => {
+      const {conn} = await getDuckDb();
+      // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+      const result = await conn.query(sqlQuery);
+      // Only get summary if the query isn't already a SUMMARIZE query
+      const summaryData = sqlQuery.toLowerCase().includes('summarize')
+        ? arrowTableToJson(result)
+        : await getQuerySummary(conn, sqlQuery);
 
-      const {type, sqlQuery} = props.functionArgs;
-      try {
-        const {conn} = await getDuckDb();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await conn.query(sqlQuery);
-        // Only get summary if the query isn't already a SUMMARIZE query
-        const summaryData = sqlQuery.toLowerCase().includes('summarize')
-          ? arrowTableToJson(result)
-          : await getQuerySummary(conn, sqlQuery);
+      // Get first 2 rows of the result as a json object
+      const subResult = result.slice(0, 2);
+      const firstTwoRows = arrowTableToJson(subResult);
 
-        // Get first 2 rows of the result as a json object
-        const subResult = result.slice(0, 2);
-        const firstTwoRows = arrowTableToJson(subResult);
-
-        // create result object sent back to LLM for tool call
-        const llmResult = {
-          type,
+      return {
+        llmResult: {
           success: true,
           data: {
-            // only summary and first two rows will be sent back to LLM as context
+            type,
             summary: summaryData,
             firstTwoRows,
           },
-        };
-
-        // data object of the raw query result, which is NOT sent back to LLM
-        // we can use it to visualize the arrow table in the callback function `message()` below
-        const data = {sqlQuery};
-
-        return {
-          name: 'query',
-          result: llmResult,
-          data,
-        };
-      } catch (error) {
-        return {
-          name: 'query',
-          result: {
-            success: false,
-            description:
-              'Failed to execute the query. Please stop tool call and return error message.',
-            error: getErrorMessage(error),
-          },
-        };
-      }
+        },
+        output: {
+          title: 'Query Result',
+          sqlQuery,
+        },
+      };
     },
-    message: renderQueryMessageComponent,
-  },
+    component: ToolQuery,
+  }),
 
-  chart: {
+  chart: tool({
     description: `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
 In the response:
 - omit the data from the vegaLiteSpec
 - provide an sql query in sqlQuery instead.`,
     parameters: ChartToolParameters,
-    executeWithContext: async (props: CallbackFunctionProps) => {
-      if (!isChartToolParameters(props.functionArgs)) {
-        return {
-          name: 'chart',
-          result: {
-            success: false,
-            error: 'Invalid chart parameters',
-          },
-        };
-      }
-      const {sqlQuery, vegaLiteSpec} = props.functionArgs;
-      const llmResult = {
-        success: true,
-        details: 'Chart created successfully.',
-      };
-
+    execute: async ({sqlQuery, vegaLiteSpec}) => {
       // data object of the vegaLiteSpec and sqlQuery
       // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
-      const data = {
-        sqlQuery,
-        vegaLiteSpec,
-      };
-
       return {
-        name: 'chart',
-        result: llmResult,
-        data,
+        llmResult: {
+          success: true,
+          details: 'Chart created successfully.',
+        },
+        output: {
+          sqlQuery,
+          vegaLiteSpec,
+        },
       };
     },
-  },
+    component: ToolChart,
+  }),
 };
