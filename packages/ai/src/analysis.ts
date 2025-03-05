@@ -1,5 +1,10 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {createAssistant, tool, StreamMessage} from '@openassistant/core';
+import {
+  createAssistant,
+  tool,
+  StreamMessage,
+  rebuildMessages,
+} from '@openassistant/core';
 import {
   arrowTableToJson,
   getDuckDb,
@@ -8,7 +13,11 @@ import {
 
 import {ToolQuery} from './components/ToolQuery';
 import {ToolChart} from './components/ToolChart';
-import {ChartToolParameters, QueryToolParameters} from './schemas';
+import {
+  AnalysisResultSchema,
+  ChartToolParameters,
+  QueryToolParameters,
+} from './schemas';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -115,6 +124,9 @@ export type AnalysisConfig = {
   /** Maximum number of analysis steps allowed (default: 100) */
   maxSteps?: number;
 
+  /** */
+  historyAnalysis?: AnalysisResultSchema[];
+
   /**
    * Callback for handling streaming results
    * @param isCompleted - Indicates if this is the final message in the stream
@@ -136,6 +148,7 @@ export async function runAnalysis({
   apiKey,
   prompt,
   abortController,
+  historyAnalysis,
   onStreamResult,
   maxSteps = 5,
 }: AnalysisConfig) {
@@ -155,6 +168,16 @@ export async function runAnalysis({
     maxSteps,
     ...(abortController ? {abortController} : {}),
   });
+
+  // restore ai messages from historyAnalysis
+  if (historyAnalysis) {
+    const historyMessages = historyAnalysis.map((analysis) => ({
+      prompt: analysis.prompt,
+      response: analysis.streamMessage,
+    }));
+    const initalMessages = rebuildMessages(historyMessages);
+    assistant.setMessages(initalMessages);
+  }
 
   // process the prompt
   const newMessages = await assistant.processTextMessage({

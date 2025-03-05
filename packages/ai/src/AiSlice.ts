@@ -248,6 +248,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         );
       },
 
+      // TODO: how to pass the history analysisResults?
       startAnalysis: async () => {
         const resultId = createId();
         const abortController = new AbortController();
