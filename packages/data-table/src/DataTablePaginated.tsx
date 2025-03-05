@@ -16,8 +16,7 @@ import {
   Td,
   Th,
   Thead,
-  Tr,
-  keyframes,
+  Tr
 } from '@chakra-ui/react';
 import {
   ChevronDoubleLeftIcon,
@@ -37,6 +36,7 @@ import {
 } from '@tanstack/react-table';
 import {useEffect, useMemo, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
+import {keyframes} from '@emotion/react';
 
 export type DataTablePaginatedProps<Data extends object> = {
   data?: ArrayLike<Data> | undefined;

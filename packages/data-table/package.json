@@ -19,6 +19,7 @@
     "@tanstack/react-query": "*",
     "@chakra-ui/icons": "*",
     "@chakra-ui/react": "*",
+    "@emotion/react": "*",
     "react": "*",
     "react-dom": "*"
   },
