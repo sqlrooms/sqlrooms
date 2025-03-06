@@ -3,6 +3,9 @@ import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ToolResult} from './ToolResult';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {ToolCallComponents, ToolCallMessage} from '@openassistant/core';
+import {AnalysisAnswer} from './components/AnalysisAnswer';
+import {ErrorMessage} from './components/ErrorMessage';
 
 /**
  * Props for the AnalysisResult component
@@ -10,6 +13,7 @@ import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
  */
 type AnalysisResultProps = {
   result: AnalysisResultSchema;
+  toolComponents: ToolCallComponents;
 };
 
 /**
@@ -20,24 +24,7 @@ type AnalysisResultProps = {
  * @returns A JSON string representation of the result without toolCallMessages
  */
 const stringifyResult = (result: AnalysisResultSchema) => {
-  // remove toolCallMessages from the result
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const {toolCallMessages, ...rest} = result;
-  return JSON.stringify(rest, null, 2);
-};
-
-/**
- * Find a custom message element for a given tool call ID
- * @param toolCallMessages - Array of tool call messages
- * @param toolCallId - The ID of the tool call to find a message for
- * @returns The custom message element if found, undefined otherwise
- */
-const findCustomMessage = (
-  toolCallMessages: AnalysisResultSchema['toolCallMessages'],
-  toolCallId: string,
-) => {
-  return toolCallMessages.find((message) => message.toolCallId === toolCallId)
-    ?.element;
+  return JSON.stringify(result, null, 2);
 };
 
 /**
@@ -50,16 +37,21 @@ const findCustomMessage = (
  * @param props.result - The analysis result data to display
  * @returns A React component displaying the analysis results
  */
-export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
+export const AnalysisResult: React.FC<AnalysisResultProps> = ({
+  result,
+  toolComponents,
+}) => {
   // the toolResults are reasoning steps that the LLM took to achieve the final result
   // by calling function tools to answer the prompt
-  const analysisToolResults = result.toolResults;
+  const {prompt, errorMessage, streamMessage, isCompleted} = result;
+  const toolCallMessages = streamMessage.toolCallMessages || [];
 
   return (
     <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
       <div className="p-2 mb-2 rounded-md text-gray-700 dark:text-gray-100 flex items-center gap-2">
         <SquareTerminalIcon className="w-4 h-4" />
-        <div className="text-sm flex-1">{result.prompt}</div>
+        {/** render prompt */}
+        <div className="text-sm flex-1">{prompt}</div>
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="w-6 h-6">
@@ -86,33 +78,22 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
           </PopoverContent>
         </Popover>
       </div>
-      {analysisToolResults.length > 0 && (
+      {/** render tools */}
+      {toolCallMessages.length > 0 && (
         <div className="flex flex-col gap-5 px-4">
-          {analysisToolResults.map((toolResult) => (
+          {toolCallMessages.map((toolCallMessage: ToolCallMessage) => (
             <ToolResult
-              key={toolResult.toolCallId}
-              toolResult={toolResult}
-              customMessage={findCustomMessage(
-                result.toolCallMessages,
-                toolResult.toolCallId,
-              )}
+              key={toolCallMessage.toolCallId}
+              toolCallMessage={toolCallMessage}
+              toolComponents={toolComponents}
             />
           ))}
         </div>
       )}
-      {result.analysis.length > 0 && (
-        <div className="flex flex-col gap-5 px-4">
-          <ToolResult
-            key={result.id + '-streaming-result'}
-            toolResult={{
-              toolName: 'answer',
-              toolCallId: result.id,
-              args: {},
-              result: {success: true, data: {analysis: result.analysis}},
-            }}
-          />
-        </div>
-      )}
+      {/** render result */}
+      {streamMessage.text && <AnalysisAnswer answer={streamMessage.text} />}
+      {/** render error message */}
+      {errorMessage && <ErrorMessage errorMessage={errorMessage.error} />}
     </div>
   );
 };

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {StreamMessageSchema} from '@openassistant/core';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -64,13 +65,16 @@ export const ToolResultSchema = z.object({
 });
 export type ToolResultSchema = z.infer<typeof ToolResultSchema>;
 
+export const ErrorMessageSchema = z.object({
+  error: z.string(),
+});
+export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
+
 export const AnalysisResultSchema = z.object({
   id: z.string().cuid2(),
   prompt: z.string(),
-  toolResults: z.array(ToolResultSchema),
-  toolCalls: z.array(ToolCallSchema),
-  toolCallMessages: z.array(ToolCallMessageSchema),
-  analysis: z.string(),
+  streamMessage: StreamMessageSchema,
+  errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
