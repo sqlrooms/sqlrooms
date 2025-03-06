@@ -124,7 +124,7 @@ export type AnalysisConfig = {
   /** Maximum number of analysis steps allowed (default: 100) */
   maxSteps?: number;
 
-  /** */
+  /** The history of analysis results (e.g. saved in localStorage) */
   historyAnalysis?: AnalysisResultSchema[];
 
   /**
@@ -169,7 +169,7 @@ export async function runAnalysis({
     ...(abortController ? {abortController} : {}),
   });
 
-  // restore ai messages from historyAnalysis
+  // restore ai messages from historyAnalysis?
   if (historyAnalysis) {
     const historyMessages = historyAnalysis.map((analysis) => ({
       prompt: analysis.prompt,
@@ -206,6 +206,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
       const {conn} = await getDuckDb();
       // TODO use options.abortSignal: maybe call db.cancelPendingQuery
       const result = await conn.query(sqlQuery);
+      throw new Error('SQL query error.');
       // Only get summary if the query isn't already a SUMMARIZE query
       const summaryData = sqlQuery.toLowerCase().includes('summarize')
         ? arrowTableToJson(result)

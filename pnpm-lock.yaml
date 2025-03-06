@@ -512,8 +512,8 @@ importers:
         specifier: 1.29.0
         version: 1.29.0
       '@openassistant/core':
-        specifier: ^0.2.1
-        version: 0.2.1(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)
+        specifier: ^0.2.3
+        version: 0.2.3(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -2348,8 +2348,8 @@ packages:
   '@octokit/types@13.8.0':
     resolution: {integrity: sha512-x7DjTIbEpEWXK99DMd01QfWy0hd5h4EN+Q7shkdKds3otGQP+oWE/y0A76i1OvH9fygo4ddvNf7ZvF0t78P98A==}
 
-  '@openassistant/core@0.2.1':
-    resolution: {integrity: sha512-FPhdFkVGZkW9Jt3JkCjkChnHaCF6h/UZvgcQ1NULjpW+B4eVhP90Q3HjXkEvZAzhRxL1rUAqmPw8Y8wSGoKRrw==}
+  '@openassistant/core@0.2.3':
+    resolution: {integrity: sha512-Jqw9ilVcS6bvc6E0VvraOJ1eK+V1c7fVkSeSWE+sRRQQofPmfG/voOohNgF7H08HhxFLSL5Ol293b7F19Bqy/A==}
     peerDependencies:
       react: '>=18.2'
 
@@ -9858,7 +9858,7 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 23.0.1
 
-  '@openassistant/core@0.2.1(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)':
+  '@openassistant/core@0.2.3(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)':
     dependencies:
       '@ai-sdk/anthropic': 1.1.15(zod@3.24.2)
       '@ai-sdk/deepseek': 0.1.13(zod@3.24.2)
