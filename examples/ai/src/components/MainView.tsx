@@ -14,6 +14,7 @@ import {
   QueryControls,
 } from '@sqlrooms/ai';
 import {useProjectStore} from '../store';
+import {LLM_MODELS} from './constant';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useProjectStore((s) => s.config.ai.currentSessionId);
@@ -30,15 +31,43 @@ export const MainView: React.FC = () => {
   // Get analysis results from current session
   const analysisResults = currentSession?.analysisResults || [];
 
-  const apiKey = useProjectStore((s) => s.openAiApiKey);
-  const setApiKey = useProjectStore((s) => s.setOpenAiApiKey);
-  const supportedModels = useProjectStore((s) => s.supportedModels);
+  const token = useProjectStore((s) => s.token);
+  const setToken = useProjectStore((s) => s.setToken);
 
   // Get the setAiModel function from the ai slice
   const setAiModel = useProjectStore((s) => s.ai.setAiModel);
+  const setSelectedModel = useProjectStore((s) => s.setSelectedModel);
 
   // The current model is from the session
-  const currentModel = currentSession?.model || '';
+  const currentModelProvider =
+    currentSession?.modelProvider || LLM_MODELS[0].name;
+  const currentModel = currentSession?.model || LLM_MODELS[0].models[0];
+
+  const apiKey = token[currentModelProvider] || '';
+
+  const onApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const token = e.target.value;
+    setToken(token, currentModelProvider);
+  };
+
+  const onModelProviderChange = (provider: string) => {
+    let model = currentModel;
+    // if currentModel is not in the provider, set the first model
+    if (
+      !LLM_MODELS.find((m) => m.name === provider)?.models.includes(
+        currentModel,
+      )
+    ) {
+      model = LLM_MODELS.find((m) => m.name === provider)?.models[0] || '';
+    }
+    setAiModel(provider, model);
+    setSelectedModel(model, provider);
+  };
+
+  const onModelChange = (model: string) => {
+    setAiModel(currentModelProvider, model);
+    setSelectedModel(model, currentModelProvider);
+  };
 
   return (
     <div className="w-full h-full flex flex-col gap-0 overflow-hidden p-4">
@@ -67,16 +96,33 @@ export const MainView: React.FC = () => {
               className="pl-8 w-[150px] placeholder:text-xs h-8"
               type="password"
               placeholder="OpenAI API Key"
-              value={apiKey || ''}
-              onChange={(e) => setApiKey(e.target.value)}
+              value={apiKey}
+              onChange={onApiKeyChange}
             />
           </div>
-          <Select value={currentModel} onValueChange={setAiModel}>
+          <Select
+            value={currentModelProvider}
+            onValueChange={onModelProviderChange}
+          >
+            <SelectTrigger className="w-[140px] text-xs h-8">
+              <SelectValue placeholder="Select model provider" />
+            </SelectTrigger>
+            <SelectContent>
+              {LLM_MODELS.map((model) => (
+                <SelectItem key={model.name} value={model.name}>
+                  {model.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={currentModel} onValueChange={onModelChange}>
             <SelectTrigger className="w-[140px] text-xs h-8">
               <SelectValue placeholder="Select model" />
             </SelectTrigger>
             <SelectContent>
-              {supportedModels.map((model) => (
+              {LLM_MODELS.find(
+                (m) => m.name === currentModelProvider,
+              )?.models.map((model) => (
                 <SelectItem key={model} value={model}>
                   {model}
                 </SelectItem>

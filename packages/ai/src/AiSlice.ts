@@ -51,7 +51,7 @@ export type AiSliceState = {
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
-    setAiModel: (model: string) => void;
+    setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
       name: string,
       modelProvider?: string,
@@ -130,7 +130,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
   initialAnalysisPrompt = '',
 }: {
-  getApiKey: () => string;
+  getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => ({
@@ -150,11 +150,12 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
        * Set the AI model for the current session
        * @param model - The model to set
        */
-      setAiModel: (model: string) => {
+      setAiModel: (modelProvider: string, model: string) => {
         set((state) =>
           produce(state, (draft) => {
             const currentSession = getCurrentSessionFromState(draft);
             if (currentSession) {
+              currentSession.modelProvider = modelProvider;
               currentSession.model = model;
             }
           }),
@@ -293,7 +294,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             prompt: get().ai.analysisPrompt,
             modelProvider: currentSession.modelProvider || 'openai',
             model: currentSession.model || 'gpt-4o-mini',
-            apiKey: getApiKey(),
+            apiKey: getApiKey(currentSession.modelProvider || 'openai'),
             abortController,
             set,
           });
