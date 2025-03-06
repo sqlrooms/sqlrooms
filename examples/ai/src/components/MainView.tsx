@@ -5,6 +5,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  SkeletonPane,
 } from '@sqlrooms/ui';
 import {KeyIcon} from 'lucide-react';
 import {
@@ -20,6 +21,11 @@ export const MainView: React.FC = () => {
     const sessions = s.config.ai.sessions;
     return sessions.find((session) => session.id === currentSessionId);
   });
+
+  // Check if data is available
+  const isDataAvailable = useProjectStore(
+    (state) => state.project.isDataAvailable,
+  );
 
   // Get analysis results from current session
   const analysisResults = currentSession?.analysisResults || [];
@@ -43,7 +49,14 @@ export const MainView: React.FC = () => {
 
       {/* Display AnalysisResultsContainer without the session controls UI */}
       <div className="flex-grow overflow-auto">
-        <AnalysisResultsContainer />
+        {isDataAvailable ? (
+          <AnalysisResultsContainer />
+        ) : (
+          <div className="flex flex-col items-center justify-center h-full w-full">
+            <SkeletonPane className="p-4" />
+            <p className="text-muted-foreground mt-4">Loading database...</p>
+          </div>
+        )}
       </div>
 
       <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">

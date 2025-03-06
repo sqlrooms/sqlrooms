@@ -61,6 +61,7 @@ export type AiSliceState = {
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
+    deleteAnalysisResult: (sessionId: string, resultId: string) => void;
   };
 };
 
@@ -248,7 +249,10 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         );
       },
 
-      // TODO: how to pass the history analysisResults?
+      /**
+       * Start the analysis
+       * TODO: how to pass the history analysisResults?
+       */
       startAnalysis: async () => {
         const resultId = createId();
         const abortController = new AbortController();
@@ -310,6 +314,24 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
           }),
         );
         get().ai.analysisAbortController?.abort('Analysis cancelled');
+      },
+
+      /**
+       * Delete an analysis result from a session
+       */
+      deleteAnalysisResult: (sessionId: string, resultId: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const session = draft.config.ai.sessions.find(
+              (s) => s.id === sessionId,
+            );
+            if (session) {
+              session.analysisResults = session.analysisResults.filter(
+                (r) => r.id !== resultId,
+              );
+            }
+          }),
+        );
       },
     },
   }));

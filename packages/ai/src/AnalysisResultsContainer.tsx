@@ -13,17 +13,7 @@ import {TOOLS} from './analysis';
 export const AnalysisResultsContainer: React.FC = () => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const [isLoading, setIsLoading] = React.useState(true);
-
-  // TODO: need to wait the datasets to be loaded before rendering the persisted analysis results
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
-
+  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const components = (Object.keys(TOOLS) as Array<keyof typeof TOOLS>).map(
     (tool) => ({
       toolName: tool,
@@ -36,14 +26,11 @@ export const AnalysisResultsContainer: React.FC = () => {
   const {showButton, scrollToBottom} =
     useScrollToBottomButton(messagesContainerRef);
 
-  if (isLoading) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full w-full">
-        <SkeletonPane className="p-4" />
-        <p className="text-muted-foreground mt-4">Loading database...</p>
-      </div>
-    );
-  }
+  const onDeleteAnalysisResult = (id: string) => {
+    if (currentSession) {
+      deleteAnalysisResult(currentSession.id, id);
+    }
+  };
 
   return (
     <div className="flex flex-col relative h-full w-full overflow-auto p-1">
@@ -59,6 +46,7 @@ export const AnalysisResultsContainer: React.FC = () => {
                 key={result.id}
                 result={result}
                 toolComponents={components}
+                onDeleteAnalysisResult={onDeleteAnalysisResult}
               />
             ))}
             {isRunningAnalysis && <SkeletonPane className="p-4" />}

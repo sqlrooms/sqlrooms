@@ -1,5 +1,5 @@
 import {AnalysisResultSchema} from './schemas';
-import {SquareTerminalIcon, CodeIcon} from 'lucide-react';
+import {SquareTerminalIcon, CodeIcon, TrashIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ToolResult} from './ToolResult';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
@@ -14,6 +14,7 @@ import {ErrorMessage} from './components/ErrorMessage';
 type AnalysisResultProps = {
   result: AnalysisResultSchema;
   toolComponents: ToolCallComponents;
+  onDeleteAnalysisResult: (id: string) => void;
 };
 
 /**
@@ -40,14 +41,15 @@ const stringifyResult = (result: AnalysisResultSchema) => {
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   result,
   toolComponents,
+  onDeleteAnalysisResult,
 }) => {
   // the toolResults are reasoning steps that the LLM took to achieve the final result
   // by calling function tools to answer the prompt
-  const {prompt, errorMessage, streamMessage, isCompleted} = result;
+  const {id, prompt, errorMessage, streamMessage} = result;
   const toolCallMessages = streamMessage.toolCallMessages || [];
 
   return (
-    <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md">
+    <div className="flex flex-col w-full text-sm gap-5 border py-6 px-4 rounded-md group">
       <div className="p-2 mb-2 rounded-md text-gray-700 dark:text-gray-100 flex items-center gap-2">
         <SquareTerminalIcon className="w-4 h-4" />
         {/** render prompt */}
@@ -77,6 +79,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             />
           </PopoverContent>
         </Popover>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="w-6 h-6 opacity-0 group-hover:opacity-100 transition-opacity"
+          onClick={() => onDeleteAnalysisResult(id)}
+        >
+          <TrashIcon className="w-4 h-4" />
+        </Button>
       </div>
       {/** render tools */}
       {toolCallMessages.length > 0 && (
