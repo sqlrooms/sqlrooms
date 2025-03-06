@@ -34,6 +34,6 @@
   "dependencies": {
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0",
-    "react-dropzone": "^14.3.8"
+    "react-dropzone": "^14.3.5"
   }
 }

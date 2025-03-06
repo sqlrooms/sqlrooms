@@ -19,9 +19,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@ai-sdk/provider": "^1.0.10",
+    "@ai-sdk/provider": "^1.0.7",
     "@duckdb/duckdb-wasm": "1.29.0",
-    "@openassistant/core": "0.2.1",
+    "@openassistant/core": "^0.2.1",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -30,12 +30,12 @@
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "^4.1.53",
+    "ai": "^4.1.28",
     "immer": "^10.1.1",
     "lucide-react": "^0.475.0",
-    "react-markdown": "^9.1.0",
+    "react-markdown": "^9.0.3",
     "react-vega": "^7.6.0",
-    "zod": "^3.24.2"
+    "zod": "^3.24.1"
   },
   "peerDependencies": {
     "react": "*",
