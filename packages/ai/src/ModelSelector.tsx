@@ -36,7 +36,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({className}) => {
   const handleModelChange = (value: string) => {
     const selectedModel = AI_MODELS.find((model) => model.value === value);
     if (selectedModel) {
-      setAiModel(value);
+      setAiModel(selectedModel.provider, value);
       // Provider change would be implemented here if needed
     }
   };

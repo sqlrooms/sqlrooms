@@ -831,7 +831,7 @@ importers:
   packages/project-config:
     dependencies:
       zod:
-        specifier: ^3.24.2
+        specifier: ^3.24.1
         version: 3.24.2
 
   packages/s3-browser:
