@@ -19,6 +19,7 @@
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "ai": "^4.1.24",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",

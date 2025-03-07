@@ -5,76 +5,80 @@ import {
   SelectGroup,
   SelectItem,
   SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
 import {useStoreWithAi} from './AiSlice';
-
-const AI_MODELS = [
-  {provider: 'openai', label: 'OpenAI GPT-4o-mini', value: 'gpt-4o-mini'},
-  {provider: 'openai', label: 'OpenAI GPT-4o', value: 'gpt-4o'},
-  {
-    provider: 'anthropic',
-    label: 'Anthropic Claude 3 Sonnet',
-    value: 'claude-3-sonnet-20240229',
-  },
-  {
-    provider: 'anthropic',
-    label: 'Anthropic Claude 3 Opus',
-    value: 'claude-3-opus-20240229',
-  },
-];
+import {capitalize} from '@sqlrooms/utils';
+interface Model {
+  provider: string;
+  label: string;
+  value: string;
+}
 
 interface ModelSelectorProps {
   className?: string;
+  models: Model[];
 }
 
-export const ModelSelector: React.FC<ModelSelectorProps> = ({className}) => {
+export const ModelSelector: React.FC<ModelSelectorProps> = ({
+  className,
+  models,
+}) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
 
   const handleModelChange = (value: string) => {
-    const selectedModel = AI_MODELS.find((model) => model.value === value);
+    const selectedModel = models.find((model) => model.value === value);
     if (selectedModel) {
       setAiModel(selectedModel.provider, value);
-      // Provider change would be implemented here if needed
     }
   };
 
   if (!currentSession) return null;
 
   const currentModel = currentSession.model;
-  const currentModelDetails = AI_MODELS.find(
-    (m) => m.value === currentModel,
-  ) || {provider: 'openai', label: currentModel, value: currentModel};
+  const currentModelDetails = models.find((m) => m.value === currentModel);
+
+  // Group models by provider
+  const modelsByProvider = models.reduce(
+    (acc, model) => {
+      if (!acc[model.provider]) {
+        acc[model.provider] = [];
+      }
+      acc[model.provider]!.push(model);
+      return acc;
+    },
+    {} as Record<string, Model[]>,
+  );
 
   return (
     <div className={className}>
       <Select value={currentModel} onValueChange={handleModelChange}>
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select AI Model">
-            {currentModelDetails.label}
+            {currentModelDetails?.label ?? ''}
           </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          <SelectGroup>
-            <SelectLabel>OpenAI Models</SelectLabel>
-            {AI_MODELS.filter((m) => m.provider === 'openai').map((model) => (
-              <SelectItem key={model.value} value={model.value}>
-                {model.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-          <SelectGroup>
-            <SelectLabel>Anthropic Models</SelectLabel>
-            {AI_MODELS.filter((m) => m.provider === 'anthropic').map(
-              (model) => (
-                <SelectItem key={model.value} value={model.value}>
-                  {model.label}
-                </SelectItem>
-              ),
-            )}
-          </SelectGroup>
+          {Object.entries(modelsByProvider).map(
+            ([provider, providerModels]) => (
+              <>
+                <SelectGroup key={provider}>
+                  <SelectLabel className="text-center text-sm font-bold text-muted-foreground/50">
+                    {capitalize(provider)}
+                  </SelectLabel>
+                  {providerModels.map((model) => (
+                    <SelectItem key={model.value} value={model.value}>
+                      {model.label}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+                <SelectSeparator />
+              </>
+            ),
+          )}
         </SelectContent>
       </Select>
     </div>
