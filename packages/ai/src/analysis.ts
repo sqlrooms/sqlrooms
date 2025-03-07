@@ -203,32 +203,43 @@ Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
     execute: async ({type, sqlQuery}) => {
-      const {conn} = await getDuckDb();
-      // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-      const result = await conn.query(sqlQuery);
-      // Only get summary if the query isn't already a SUMMARIZE query
-      const summaryData = sqlQuery.toLowerCase().includes('summarize')
-        ? arrowTableToJson(result)
-        : await getQuerySummary(conn, sqlQuery);
+      try {
+        const {conn} = await getDuckDb();
+        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+        const result = await conn.query(sqlQuery);
+        // Only get summary if the query isn't already a SUMMARIZE query
+        const summaryData = sqlQuery.toLowerCase().includes('summarize')
+          ? arrowTableToJson(result)
+          : await getQuerySummary(conn, sqlQuery);
 
-      // Get first 2 rows of the result as a json object
-      const subResult = result.slice(0, 2);
-      const firstTwoRows = arrowTableToJson(subResult);
+        // Get first 2 rows of the result as a json object
+        const subResult = result.slice(0, 2);
+        const firstTwoRows = arrowTableToJson(subResult);
 
-      return {
-        llmResult: {
-          success: true,
-          data: {
-            type,
-            summary: summaryData,
-            firstTwoRows,
+        return {
+          llmResult: {
+            success: true,
+            data: {
+              type,
+              summary: summaryData,
+              firstTwoRows,
+            },
           },
-        },
-        output: {
-          title: 'Query Result',
-          sqlQuery,
-        },
-      };
+          additionalData: {
+            title: 'Query Result',
+            sqlQuery,
+          },
+        };
+      } catch (error) {
+        return {
+          llmResult: {
+            success: false,
+            details: 'Query execution failed.',
+            errorMessage:
+              error instanceof Error ? error.message : 'Unknown error',
+          },
+        };
+      }
     },
     component: ToolQuery,
   }),
@@ -247,7 +258,7 @@ In the response:
           success: true,
           details: 'Chart created successfully.',
         },
-        output: {
+        additionalData: {
           sqlQuery,
           vegaLiteSpec,
         },

@@ -403,6 +403,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
             ),
             reasoning: streamMessage.reasoning,
             text: streamMessage.text,
+            analysis: streamMessage.analysis,
           };
         }
         if (errorMessage) {

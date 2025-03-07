@@ -3,7 +3,7 @@ import Markdown from 'react-markdown';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
-  answer: string;
+  content: string;
 };
 
 /**
@@ -24,7 +24,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
         content={props}
       >
         <Markdown className="text-xs prose dark:prose-invert max-w-none">
-          {props.answer}
+          {props.content}
         </Markdown>
       </MessageContainer>
     </div>

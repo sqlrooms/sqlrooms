@@ -88,6 +88,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <TrashIcon className="w-4 h-4" />
         </Button>
       </div>
+      {/** render analysis */}
+      {streamMessage.analysis && (
+        <AnalysisAnswer content={streamMessage.analysis} />
+      )}
       {/** render tools */}
       {toolCallMessages.length > 0 && (
         <div className="flex flex-col gap-5 px-4">
@@ -101,7 +105,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         </div>
       )}
       {/** render result */}
-      {streamMessage.text && <AnalysisAnswer answer={streamMessage.text} />}
+      {streamMessage.text && <AnalysisAnswer content={streamMessage.text} />}
       {/** render error message */}
       {errorMessage && <ErrorMessage errorMessage={errorMessage.error} />}
     </div>

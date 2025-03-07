@@ -76,7 +76,7 @@ export const ToolResult: React.FC<ToolResultProps> = ({
         <div className="text-red-500 gap-2 flex flex-col">
           <p className="text-sm font-bold">Oops! Something went wrong...</p>
           <p className="text-xs">{errorMessage}</p>
-          <p className="text-xs">{JSON.stringify(llmResult)}</p>
+          <p className="text-xs break-all">{JSON.stringify(llmResult)}</p>
         </div>
       )}
     </MessageContainer>
