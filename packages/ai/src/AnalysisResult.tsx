@@ -3,7 +3,7 @@ import {SquareTerminalIcon, CodeIcon, TrashIcon} from 'lucide-react';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ToolResult} from './ToolResult';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {ToolCallComponents, ToolCallMessage} from '@openassistant/core';
+import {ToolCallComponents} from '@openassistant/core';
 import {AnalysisAnswer} from './components/AnalysisAnswer';
 import {ErrorMessage} from './components/ErrorMessage';
 
@@ -88,24 +88,29 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <TrashIcon className="w-4 h-4" />
         </Button>
       </div>
-      {/** render analysis */}
-      {streamMessage.analysis && (
-        <AnalysisAnswer content={streamMessage.analysis} />
-      )}
-      {/** render tools */}
-      {toolCallMessages.length > 0 && (
-        <div className="flex flex-col gap-5 px-4">
-          {toolCallMessages.map((toolCallMessage: ToolCallMessage) => (
-            <ToolResult
-              key={toolCallMessage.toolCallId}
-              toolCallMessage={toolCallMessage}
-              toolComponents={toolComponents}
+      {/** render parts */}
+      {streamMessage.parts?.map((part, index) => (
+        <div key={part.type}>
+          {part.type === 'text' && (
+            <AnalysisAnswer
+              key={`text-part-${index}`}
+              content={part.text}
+              isAnswer={index === (streamMessage.parts?.length || 0) - 1}
             />
-          ))}
+          )}
+          {part.type === 'tool' && (
+            <div>
+              {part.toolCallMessages.map((toolCallMessage) => (
+                <ToolResult
+                  key={toolCallMessage.toolCallId}
+                  toolCallMessage={toolCallMessage}
+                  toolComponents={toolComponents}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      )}
-      {/** render result */}
-      {streamMessage.text && <AnalysisAnswer content={streamMessage.text} />}
+      ))}
       {/** render error message */}
       {errorMessage && <ErrorMessage errorMessage={errorMessage.error} />}
     </div>

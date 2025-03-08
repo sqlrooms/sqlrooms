@@ -404,6 +404,21 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
             reasoning: streamMessage.reasoning,
             text: streamMessage.text,
             analysis: streamMessage.analysis,
+            parts: streamMessage.parts?.map((part) => ({
+              ...part,
+              ...(part.type === 'text' && {text: part.text}),
+              ...(part.type === 'tool' && {
+                toolCallMessages: part.toolCallMessages?.map((toolCall) => ({
+                  args: {...toolCall.args},
+                  isCompleted: toolCall.isCompleted,
+                  llmResult: toolCall.llmResult,
+                  additionalData: toolCall.additionalData,
+                  text: toolCall.text,
+                  toolCallId: toolCall.toolCallId,
+                  toolName: toolCall.toolName,
+                })),
+              }),
+            })),
           };
         }
         if (errorMessage) {

@@ -4,6 +4,7 @@ import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
   content: string;
+  isAnswer: boolean;
 };
 
 /**
@@ -16,11 +17,11 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   props: AnalysisAnswerProps,
 ) {
   return (
-    <div className="flex flex-col gap-5 px-4">
+    <div className="flex flex-col gap-5">
       <MessageContainer
         isSuccess={true}
         borderColor={'border-green-500'}
-        title={'answer'}
+        title={props.isAnswer ? 'answer' : 'analysis'}
         content={props}
       >
         <Markdown className="text-xs prose dark:prose-invert max-w-none">

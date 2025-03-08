@@ -515,8 +515,8 @@ importers:
         specifier: 1.29.0
         version: 1.29.0
       '@openassistant/core':
-        specifier: ^0.2.5
-        version: 0.2.5(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)
+        specifier: 0.2.6
+        version: 0.2.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -2354,8 +2354,8 @@ packages:
   '@octokit/types@13.8.0':
     resolution: {integrity: sha512-x7DjTIbEpEWXK99DMd01QfWy0hd5h4EN+Q7shkdKds3otGQP+oWE/y0A76i1OvH9fygo4ddvNf7ZvF0t78P98A==}
 
-  '@openassistant/core@0.2.5':
-    resolution: {integrity: sha512-BKFd3oe/1VncZV8bu2wFP0x1j17cPeYZzGJUrR8OcqIcpOlfEythleZ33qQNlWozJEQxKIIH3Pgh58TN7KqMAw==}
+  '@openassistant/core@0.2.6':
+    resolution: {integrity: sha512-0+NIgg1CTyB8m+2wv7i2fVV2PodZRdPFae9uwMuoiZEz1gP/f3LqrR485p95llLAxNBj3PMgU5gS1ppsoRPOIg==}
     peerDependencies:
       react: '>=18.2'
 
@@ -3363,8 +3363,8 @@ packages:
   '@types/node-fetch@2.6.12':
     resolution: {integrity: sha512-8nneRWKCg3rMtF69nLQJnOYUcbafYeFSjqkw3jCRLsqkWFlHaoQrr5mXmofFGOx3DKn7UfmBMyov8ySvLRVldA==}
 
-  '@types/node@18.19.79':
-    resolution: {integrity: sha512-90K8Oayimbctc5zTPHPfZloc/lGVs7f3phUAAMcTgEPtg8kKquGZDERC8K4vkBYkQQh48msiYUslYtxTWvqcAg==}
+  '@types/node@18.19.80':
+    resolution: {integrity: sha512-kEWeMwMeIvxYkeg1gTc01awpwLbfMRZXdIhwRcakd/KlK53jmRC26LqcbIt7fnAQTu5GzlnWmzA3H6+l1u6xxQ==}
 
   '@types/node@20.17.23':
     resolution: {integrity: sha512-8PCGZ1ZJbEZuYNTMqywO+Sj4vSKjSjT6Ua+6RFOYlEvIvKQABPtrNkoVSLSKDb4obYcMhspVKmsw8Cm10NFRUg==}
@@ -6244,8 +6244,8 @@ packages:
     peerDependencies:
       openai: '>= 4.20.0'
 
-  openai@4.86.1:
-    resolution: {integrity: sha512-x3iCLyaC3yegFVZaxOmrYJjitKxZ9hpVbLi+ZlT5UHuHTMlEQEbKXkGOM78z9qm2T5GF+XRUZCP2/aV4UPFPJQ==}
+  openai@4.86.2:
+    resolution: {integrity: sha512-nvYeFjmjdSu6/msld+22JoUlCICNk/lUFpSMmc6KNhpeNLpqL70TqbD/8Vura/tFmYqHKW0trcjgPwUpKSPwaA==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -9449,14 +9449,14 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@langchain/core@0.3.42(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))':
+  '@langchain/core@0.3.42(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       ansi-styles: 5.2.0
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.19
-      langsmith: 0.3.12(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      langsmith: 0.3.12(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       mustache: 4.2.0
       p-queue: 6.6.2
       p-retry: 4.6.2
@@ -9864,7 +9864,7 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 23.0.1
 
-  '@openassistant/core@0.2.5(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)':
+  '@openassistant/core@0.2.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)':
     dependencies:
       '@ai-sdk/anthropic': 1.1.15(zod@3.24.2)
       '@ai-sdk/deepseek': 0.1.13(zod@3.24.2)
@@ -9873,11 +9873,11 @@ snapshots:
       '@ai-sdk/react': 1.1.21(react@19.0.0)(zod@3.24.2)
       '@ai-sdk/ui-utils': 1.1.17(zod@3.24.2)
       '@ai-sdk/xai': 1.1.13(zod@3.24.2)
-      '@langchain/core': 0.3.42(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      '@langchain/core': 0.3.42(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       ai: 4.1.53(react@19.0.0)(zod@3.24.2)
       ollama-ai-provider: 1.2.0(zod@3.24.2)
-      openai: 4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
-      openai-zod-functions: 0.1.2(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
+      openai-zod-functions: 0.1.2(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       react: 19.0.0
       zod: 3.24.2
       zod-to-json-schema: 3.24.3(zod@3.24.2)
@@ -11043,7 +11043,7 @@ snapshots:
       '@types/node': 22.13.9
       form-data: 4.0.2
 
-  '@types/node@18.19.79':
+  '@types/node@18.19.80':
     dependencies:
       undici-types: 5.26.5
 
@@ -13896,7 +13896,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.3.12(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
+  langsmith@0.3.12(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
     dependencies:
       '@types/uuid': 10.0.0
       chalk: 4.1.2
@@ -13906,7 +13906,7 @@ snapshots:
       semver: 7.7.1
       uuid: 10.0.0
     optionalDependencies:
-      openai: 4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
+      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
 
   leven@3.1.0: {}
 
@@ -14597,16 +14597,16 @@ snapshots:
       regex: 6.0.1
       regex-recursion: 6.0.2
 
-  openai-zod-functions@0.1.2(openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
+  openai-zod-functions@0.1.2(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
     dependencies:
-      openai: 4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
+      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
       zod: 3.24.2
       zod-to-json-schema: 3.24.3(zod@3.24.2)
       zod-validation-error: 2.1.0(zod@3.24.2)
 
-  openai@4.86.1(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2):
+  openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2):
     dependencies:
-      '@types/node': 18.19.79
+      '@types/node': 18.19.80
       '@types/node-fetch': 2.6.12
       abort-controller: 3.0.0
       agentkeepalive: 4.6.0
