@@ -2,12 +2,12 @@ import {DataTableModal} from '@sqlrooms/data-table';
 import {Button, useDisclosure} from '@sqlrooms/ui';
 import {TableIcon} from 'lucide-react';
 
-type ToolQueryProps = {
+type QueryToolResultProps = {
   title: string;
   sqlQuery: string;
 };
 
-export function ToolQuery({title, sqlQuery}: ToolQueryProps) {
+export function QueryToolResult({title, sqlQuery}: QueryToolResultProps) {
   const tableModal = useDisclosure();
   return (
     <>

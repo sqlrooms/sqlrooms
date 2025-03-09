@@ -1,43 +1,29 @@
-import {ToolCallComponents, ToolCallMessage} from '@openassistant/core';
+import {ToolCallMessage} from '@openassistant/core';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, useDisclosure} from '@sqlrooms/ui';
 import {InfoIcon} from 'lucide-react';
 import React from 'react';
-import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
+import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
+import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
 
 type ToolResultProps = {
   toolCallMessage: ToolCallMessage;
   errorMessage?: string;
-  toolComponents: ToolCallComponents;
 };
-
-export function getBorderColor(toolName: string) {
-  switch (toolName) {
-    case 'answer':
-    // return 'border-blue-500';
-    case 'thinking':
-    case 'query':
-    case 'chart':
-    default:
-      return 'border-gray-500/20';
-  }
-}
 
 export const ToolResult: React.FC<ToolResultProps> = ({
   toolCallMessage,
   errorMessage,
-  toolComponents,
 }) => {
   const {isOpen: showDetails, onToggle: toggleShowDetails} =
     useDisclosure(false);
   const {toolName, args, llmResult, additionalData, text, isCompleted} =
     toolCallMessage;
 
-  // get the component using the toolName
-  const Component = toolComponents?.find(
-    (component) => component.toolName === toolName,
-  )?.component;
+  const ToolComponent = useStoreWithAi((state) =>
+    state.ai.findToolComponent(toolName),
+  );
 
   // check if args has a property called 'reason'
   const reason = args.reasoning as string;
@@ -54,7 +40,6 @@ export const ToolResult: React.FC<ToolResultProps> = ({
   ) : (
     <MessageContainer
       isSuccess={isSuccess}
-      // borderColor={getBorderColor(toolName)}
       type={toolName}
       content={{
         toolName,
@@ -67,12 +52,12 @@ export const ToolResult: React.FC<ToolResultProps> = ({
       <div className="text-sm text-gray-500">
         {reason && <span>{reason}</span>}
       </div>
-      {Component && isSuccess && isCompleted && Boolean(additionalData) && (
+      {ToolComponent && isSuccess && isCompleted && Boolean(additionalData) && (
         <ToolCallErrorBoundary>
-          {typeof Component === 'function' ? (
-            <Component {...(additionalData as Record<string, unknown>)} />
+          {typeof ToolComponent === 'function' ? (
+            <ToolComponent {...(additionalData as Record<string, unknown>)} />
           ) : (
-            Component
+            ToolComponent
           )}
         </ToolCallErrorBoundary>
       )}

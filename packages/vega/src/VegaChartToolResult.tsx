@@ -1,9 +1,8 @@
-import {Spinner} from '@sqlrooms/ui';
-import {VegaLiteChart} from '@sqlrooms/vega';
 import {Suspense} from 'react';
-import {ToolQuery} from './ToolQuery';
+import {VegaLiteChart} from './VegaLiteChart';
+import {QueryToolResult} from '@sqlrooms/ai';
 
-type ToolChartProps = {
+type VegaChartToolResultProps = {
   reasoning: string;
   sqlQuery: string;
   vegaLiteSpec: string;
@@ -11,19 +10,22 @@ type ToolChartProps = {
 
 /**
  * Renders a chart tool call with visualization using Vega-Lite
- * @param {ChartToolParameters} props - The component props
+ * @param {VegaChartToolResultProps} props - The component props
  * @returns {JSX.Element} The rendered chart tool call
  */
-export function ToolChart({sqlQuery, vegaLiteSpec}: ToolChartProps) {
+export function VegaChartToolResult({
+  sqlQuery,
+  vegaLiteSpec,
+}: VegaChartToolResultProps) {
   return (
     <>
       {vegaLiteSpec && (
         <div className="flex flex-col gap-2">
-          <ToolQuery title="Query Result" sqlQuery={sqlQuery} />
+          <QueryToolResult title="Query" sqlQuery={sqlQuery} />
           <Suspense
             fallback={
               <div className="flex h-full w-full items-center justify-center">
-                <Spinner className="h-4 w-4" />
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
               </div>
             }
           >

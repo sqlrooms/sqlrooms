@@ -13,14 +13,6 @@ export const AnalysisResultsContainer: React.FC<{
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
-  const toolComponents = useMemo(
-    () =>
-      (Object.keys(TOOLS) as Array<keyof typeof TOOLS>).map((tool) => ({
-        toolName: tool,
-        component: TOOLS[tool].component,
-      })),
-    [],
-  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -46,7 +38,6 @@ export const AnalysisResultsContainer: React.FC<{
           <AnalysisResult
             key={result.id}
             result={result}
-            toolComponents={toolComponents}
             onDeleteAnalysisResult={onDeleteAnalysisResult}
           />
         ))}

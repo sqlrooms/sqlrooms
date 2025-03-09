@@ -26,6 +26,7 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
+import {createVegaChartTool} from '@sqlrooms/vega';
 
 export const ProjectPanelTypes = z.enum([
   'project-details',
@@ -120,9 +121,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
         getApiKey: (modelProvider: string) => {
           return get()?.apiKeys[modelProvider] || '';
         },
-        // Example of adding a custom tool
+        // Add custom tools
         customTools: {
-          // This is just an example - in a real app, you would implement a useful tool
+          // Add the VegaChart tool from the vega package with a custom description
+          chart: createVegaChartTool(),
+
+          // Example of adding a simple echo tool
           echo: {
             description: 'A simple echo tool that returns the input text',
             parameters: z.object({

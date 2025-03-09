@@ -1,23 +1,22 @@
-import {AnalysisResultSchema} from '../schemas';
-import {SquareTerminalIcon, CodeIcon, TrashIcon} from 'lucide-react';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
 } from '@sqlrooms/ui';
-import {ToolResult} from './tools/ToolResult';
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {ToolCallComponents} from '@openassistant/core';
+import {CodeIcon, SquareTerminalIcon, TrashIcon} from 'lucide-react';
+import {useState} from 'react';
+import {AnalysisResultSchema} from '../schemas';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
-import {useState} from 'react';
+import {ToolResult} from './tools/ToolResult';
 
 /**
  * Props for the AnalysisResult component
@@ -25,7 +24,6 @@ import {useState} from 'react';
  */
 type AnalysisResultProps = {
   result: AnalysisResultSchema;
-  toolComponents: ToolCallComponents;
   onDeleteAnalysisResult: (id: string) => void;
 };
 
@@ -52,7 +50,6 @@ const stringifyResult = (result: AnalysisResultSchema) => {
  */
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   result,
-  toolComponents,
   onDeleteAnalysisResult,
 }) => {
   // the toolResults are reasoning steps that the LLM took to achieve the final result
@@ -153,7 +150,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                 <ToolResult
                   key={toolCallMessage.toolCallId}
                   toolCallMessage={toolCallMessage}
-                  toolComponents={toolComponents}
                 />
               ))}
             </div>

@@ -11,17 +11,18 @@ export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 export const AnalysisSchema = z.string();
 export type AnalysisSchema = z.infer<typeof AnalysisSchema>;
 
-export const ChartToolParameters = z.object({
-  sqlQuery: z.string(),
-  vegaLiteSpec: z.string(),
-  reasoning: z.string(),
-});
-export type ChartToolParameters = z.infer<typeof ChartToolParameters>;
+// ChartToolParameters is now in @sqlrooms/vega package
+// export const ChartToolParameters = z.object({
+//   sqlQuery: z.string(),
+//   vegaLiteSpec: z.string(),
+//   reasoning: z.string(),
+// });
+// export type ChartToolParameters = z.infer<typeof ChartToolParameters>;
 
 export const ToolCallSchema = z.object({
   toolName: z.string(),
   toolCallId: z.string(),
-  args: z.union([QueryToolParameters, ChartToolParameters]),
+  args: QueryToolParameters, // Simplified since we only have one default tool now
 });
 export type ToolCallSchema = z.infer<typeof ToolCallSchema>;
 

@@ -1,4 +1,4 @@
-import {StreamMessage, tool} from '@openassistant/core';
+import {ExtendedTool, StreamMessage} from '@openassistant/core';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -9,7 +9,7 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {runAnalysis} from './analysis';
+import {getDefaultTools, runAnalysis, TOOLS} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
@@ -43,10 +43,13 @@ export function createDefaultAiConfig(): AiSliceConfig {
   };
 }
 
+export type AiSliceTool = ExtendedTool<any>;
+
 export type AiSliceState = {
   ai: {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
+    tools: Record<string, AiSliceTool>;
     analysisAbortController?: AbortController;
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
@@ -62,72 +65,9 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
+    findToolComponent: (toolName: string) => React.ComponentType | undefined;
   };
 };
-
-/**
- * Execute the analysis. It will be used by the action `startAnalysis`.
- *
- * Each analysis contains an array of toolCalls and the results of the tool calls (toolResults).
- * After all the tool calls have been executed, the LLM will stream the results as text stored in `analysis`.
- *
- * @param resultId - The result id
- * @param prompt - The prompt
- * @param model - The model
- * @param apiKey - The api key
- * @param abortController - The abort controller
- * @param addMessages - The add messages function
- * @param set - The set function
- */
-async function executeAnalysis({
-  resultId,
-  prompt,
-  modelProvider,
-  model,
-  apiKey,
-  abortController,
-  customTools,
-  set,
-}: {
-  resultId: string;
-  prompt: string;
-  modelProvider: string;
-  model: string;
-  apiKey: string;
-  abortController: AbortController;
-  customTools?: Record<string, ReturnType<typeof tool>>;
-  set: <T>(fn: (state: T) => T) => void;
-}) {
-  try {
-    await runAnalysis({
-      modelProvider,
-      model,
-      apiKey,
-      prompt,
-      abortController,
-      customTools,
-      onStreamResult: (isCompleted, streamMessage) => {
-        set(
-          makeResultsAppender({
-            resultId,
-            streamMessage,
-            isCompleted,
-          }),
-        );
-      },
-    });
-  } catch (err) {
-    set(
-      makeResultsAppender({
-        resultId,
-        isCompleted: true,
-        errorMessage: {
-          error: err instanceof Error ? err.message : String(err),
-        },
-      }),
-    );
-  }
-}
 
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
@@ -136,234 +76,266 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 }: {
   getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
-  customTools?: Record<string, ReturnType<typeof tool>>;
+  customTools?: Record<string, AiSliceTool>;
 }): StateCreator<AiSliceState> {
-  return createSlice<PC, AiSliceState>((set, get) => ({
-    ai: {
-      analysisPrompt: initialAnalysisPrompt,
-      isRunningAnalysis: false,
+  return createSlice<PC, AiSliceState>((set, get) => {
+    return {
+      ai: {
+        analysisPrompt: initialAnalysisPrompt,
+        isRunningAnalysis: false,
 
-      setAnalysisPrompt: (prompt: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.analysisPrompt = prompt;
-          }),
-        );
-      },
+        tools: {
+          ...getDefaultTools(),
+          ...customTools,
+        },
 
-      /**
-       * Set the AI model for the current session
-       * @param model - The model to set
-       */
-      setAiModel: (modelProvider: string, model: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const currentSession = getCurrentSessionFromState(draft);
-            if (currentSession) {
-              currentSession.modelProvider = modelProvider;
-              currentSession.model = model;
-            }
-          }),
-        );
-      },
+        setAnalysisPrompt: (prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.analysisPrompt = prompt;
+            }),
+          );
+        },
 
-      /**
-       * Get the current active session
-       */
-      getCurrentSession: () => {
-        const state = get();
-        const {currentSessionId, sessions} = state.config.ai;
-        return sessions.find((session) => session.id === currentSessionId);
-      },
+        /**
+         * Set the AI model for the current session
+         * @param model - The model to set
+         */
+        setAiModel: (modelProvider: string, model: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const currentSession = getCurrentSessionFromState(draft);
+              if (currentSession) {
+                currentSession.modelProvider = modelProvider;
+                currentSession.model = model;
+              }
+            }),
+          );
+        },
 
-      /**
-       * Create a new session with the given name and model settings
-       */
-      createSession: (
-        name?: string,
-        modelProvider?: string,
-        model?: string,
-      ) => {
-        const currentSession = get().ai.getCurrentSession();
-        const newSessionId = createId();
+        /**
+         * Get the current active session
+         */
+        getCurrentSession: () => {
+          const state = get();
+          const {currentSessionId, sessions} = state.config.ai;
+          return sessions.find((session) => session.id === currentSessionId);
+        },
 
-        // Generate a default name if none is provided
-        let sessionName = name;
-        if (!sessionName) {
-          // Generate a human-readable date and time for the session name
-          const now = new Date();
-          const formattedDate = now.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-          });
-          const formattedTime = now.toLocaleTimeString('en-US', {
-            hour: 'numeric',
-            minute: 'numeric',
-            hour12: true,
-          });
-          sessionName = `Session ${formattedDate} at ${formattedTime}`;
-        }
+        /**
+         * Create a new session with the given name and model settings
+         */
+        createSession: (
+          name?: string,
+          modelProvider?: string,
+          model?: string,
+        ) => {
+          const currentSession = get().ai.getCurrentSession();
+          const newSessionId = createId();
 
-        set((state) =>
-          produce(state, (draft) => {
-            draft.config.ai.sessions.unshift({
-              id: newSessionId,
-              name: sessionName,
-              modelProvider:
-                modelProvider || currentSession?.modelProvider || 'openai',
-              model: model || currentSession?.model || 'gpt-4o-mini',
-              analysisResults: [],
-              createdAt: new Date(),
+          // Generate a default name if none is provided
+          let sessionName = name;
+          if (!sessionName) {
+            // Generate a human-readable date and time for the session name
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
             });
-            draft.config.ai.currentSessionId = newSessionId;
-          }),
-        );
-      },
+            const formattedTime = now.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: 'numeric',
+              hour12: true,
+            });
+            sessionName = `Session ${formattedDate} at ${formattedTime}`;
+          }
 
-      /**
-       * Switch to a different session
-       */
-      switchSession: (sessionId: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.config.ai.currentSessionId = sessionId;
-          }),
-        );
-      },
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.ai.sessions.unshift({
+                id: newSessionId,
+                name: sessionName,
+                modelProvider:
+                  modelProvider || currentSession?.modelProvider || 'openai',
+                model: model || currentSession?.model || 'gpt-4o-mini',
+                analysisResults: [],
+                createdAt: new Date(),
+              });
+              draft.config.ai.currentSessionId = newSessionId;
+            }),
+          );
+        },
 
-      /**
-       * Rename an existing session
-       */
-      renameSession: (sessionId: string, name: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const session = draft.config.ai.sessions.find(
-              (s) => s.id === sessionId,
-            );
-            if (session) {
-              session.name = name;
-            }
-          }),
-        );
-      },
+        /**
+         * Switch to a different session
+         */
+        switchSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.ai.currentSessionId = sessionId;
+            }),
+          );
+        },
 
-      /**
-       * Delete a session
-       */
-      deleteSession: (sessionId: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const sessionIndex = draft.config.ai.sessions.findIndex(
-              (s) => s.id === sessionId,
-            );
-            if (sessionIndex !== -1) {
-              // Don't delete the last session
-              if (draft.config.ai.sessions.length > 1) {
-                draft.config.ai.sessions.splice(sessionIndex, 1);
-                // If we deleted the current session, switch to another one
-                if (draft.config.ai.currentSessionId === sessionId) {
-                  // Make sure there's at least one session before accessing its id
-                  if (draft.config.ai.sessions.length > 0) {
-                    const firstSession = draft.config.ai.sessions[0];
-                    if (firstSession) {
-                      draft.config.ai.currentSessionId = firstSession.id;
+        /**
+         * Rename an existing session
+         */
+        renameSession: (sessionId: string, name: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === sessionId,
+              );
+              if (session) {
+                session.name = name;
+              }
+            }),
+          );
+        },
+
+        /**
+         * Delete a session
+         */
+        deleteSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const sessionIndex = draft.config.ai.sessions.findIndex(
+                (s) => s.id === sessionId,
+              );
+              if (sessionIndex !== -1) {
+                // Don't delete the last session
+                if (draft.config.ai.sessions.length > 1) {
+                  draft.config.ai.sessions.splice(sessionIndex, 1);
+                  // If we deleted the current session, switch to another one
+                  if (draft.config.ai.currentSessionId === sessionId) {
+                    // Make sure there's at least one session before accessing its id
+                    if (draft.config.ai.sessions.length > 0) {
+                      const firstSession = draft.config.ai.sessions[0];
+                      if (firstSession) {
+                        draft.config.ai.currentSessionId = firstSession.id;
+                      }
                     }
                   }
                 }
               }
-            }
-          }),
-        );
-      },
+            }),
+          );
+        },
 
-      /**
-       * Start the analysis
-       * TODO: how to pass the history analysisResults?
-       */
-      startAnalysis: async () => {
-        const resultId = createId();
-        const abortController = new AbortController();
-        const currentSession = get().ai.getCurrentSession();
+        /**
+         * Start the analysis
+         * TODO: how to pass the history analysisResults?
+         */
+        startAnalysis: async () => {
+          const resultId = createId();
+          const abortController = new AbortController();
+          const currentSession = get().ai.getCurrentSession();
 
-        if (!currentSession) {
-          console.error('No current session found');
-          return;
-        }
+          if (!currentSession) {
+            console.error('No current session found');
+            return;
+          }
 
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.analysisAbortController = abortController;
-            draft.ai.isRunningAnalysis = true;
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.analysisAbortController = abortController;
+              draft.ai.isRunningAnalysis = true;
 
-            const session = draft.config.ai.sessions.find(
-              (s) => s.id === draft.config.ai.currentSessionId,
-            );
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === draft.config.ai.currentSessionId,
+              );
 
-            if (session) {
-              session.analysisResults.push({
-                id: resultId,
-                prompt: get().ai.analysisPrompt,
-                streamMessage: {
-                  toolCallMessages: [],
-                  reasoning: '',
-                  text: '',
+              if (session) {
+                session.analysisResults.push({
+                  id: resultId,
+                  prompt: get().ai.analysisPrompt,
+                  streamMessage: {
+                    toolCallMessages: [],
+                    reasoning: '',
+                    text: '',
+                  },
+                  isCompleted: false,
+                });
+              }
+            }),
+          );
+
+          try {
+            await runAnalysis({
+              modelProvider: currentSession.modelProvider || 'openai',
+              model: currentSession.model || 'gpt-4o-mini',
+              apiKey: getApiKey(currentSession.modelProvider || 'openai'),
+              prompt: get().ai.analysisPrompt,
+              abortController,
+              tools: get().ai.tools,
+              onStreamResult: (isCompleted, streamMessage) => {
+                set(
+                  makeResultsAppender({
+                    resultId,
+                    streamMessage,
+                    isCompleted,
+                  }),
+                );
+              },
+            });
+          } catch (err) {
+            set(
+              makeResultsAppender({
+                resultId,
+                isCompleted: true,
+                errorMessage: {
+                  error: err instanceof Error ? err.message : String(err),
                 },
-                isCompleted: false,
-              });
-            }
-          }),
-        );
+              }),
+            );
+          } finally {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.isRunningAnalysis = false;
+                draft.ai.analysisPrompt = '';
+              }),
+            );
+          }
+        },
 
-        try {
-          await executeAnalysis({
-            resultId,
-            prompt: get().ai.analysisPrompt,
-            modelProvider: currentSession.modelProvider || 'openai',
-            model: currentSession.model || 'gpt-4o-mini',
-            apiKey: getApiKey(currentSession.modelProvider || 'openai'),
-            abortController,
-            customTools,
-            set,
-          });
-        } finally {
+        cancelAnalysis: () => {
           set((state) =>
             produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisPrompt = '';
             }),
           );
-        }
-      },
+          get().ai.analysisAbortController?.abort('Analysis cancelled');
+        },
 
-      cancelAnalysis: () => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.isRunningAnalysis = false;
-          }),
-        );
-        get().ai.analysisAbortController?.abort('Analysis cancelled');
-      },
-
-      /**
-       * Delete an analysis result from a session
-       */
-      deleteAnalysisResult: (sessionId: string, resultId: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const session = draft.config.ai.sessions.find(
-              (s) => s.id === sessionId,
-            );
-            if (session) {
-              session.analysisResults = session.analysisResults.filter(
-                (r) => r.id !== resultId,
+        /**
+         * Delete an analysis result from a session
+         */
+        deleteAnalysisResult: (sessionId: string, resultId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === sessionId,
               );
-            }
-          }),
-        );
+              if (session) {
+                session.analysisResults = session.analysisResults.filter(
+                  (r) => r.id !== resultId,
+                );
+              }
+            }),
+          );
+        },
+
+        findToolComponent: (toolName: string) => {
+          return [
+            ...Object.entries(customTools),
+            ...Object.entries(TOOLS),
+          ].find(([name]) => name === toolName)?.[1]
+            ?.component as React.ComponentType;
+        },
       },
-    },
-  }));
+    };
+  });
 }
 
 /**

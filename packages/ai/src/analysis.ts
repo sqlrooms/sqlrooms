@@ -12,13 +12,9 @@ import {
   getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
 
-import {ToolChart} from './components/tools/ToolChart';
-import {ToolQuery} from './components/tools/ToolQuery';
-import {
-  AnalysisResultSchema,
-  ChartToolParameters,
-  QueryToolParameters,
-} from './schemas';
+import {QueryToolResult} from './components/tools/QueryToolResult';
+import {AnalysisResultSchema, QueryToolParameters} from './schemas';
+import {AiSliceTool} from './AiSlice';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -27,7 +23,7 @@ import {
  * - Creating visualizations with VegaLite
  * - Formatting final answers
  */
-const SYSTEM_PROMPT = `
+const DEFAULT_SYSTEM_PROMPT = `
 You are analyzing tables in DuckDB database in the context of a project.
 
 Instructions for analysis:
@@ -128,8 +124,8 @@ export type AnalysisConfig = {
   /** The history of analysis results (e.g. saved in localStorage) */
   historyAnalysis?: AnalysisResultSchema[];
 
-  /** Custom tools to add to the default tools (query and chart) */
-  customTools?: Record<string, ReturnType<typeof tool>>;
+  /** Tools to use in the analysis */
+  tools?: Record<string, AiSliceTool>;
 
   /**
    * Callback for handling streaming results
@@ -155,13 +151,9 @@ export async function runAnalysis({
   historyAnalysis,
   onStreamResult,
   maxSteps = 5,
-  customTools = {},
+  tools = {},
 }: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
-
-  // Combine default tools with custom tools
-  const defaultTools = getDefaultTools();
-  const combinedTools = {...defaultTools, ...customTools};
 
   // get the singlton assistant instance
   const assistant = await createAssistant({
@@ -170,8 +162,8 @@ export async function runAnalysis({
     model,
     apiKey,
     version: 'v1',
-    instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
-    functions: combinedTools,
+    instructions: `${DEFAULT_SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
+    functions: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -203,9 +195,8 @@ export async function runAnalysis({
  * Default tools available to the AI assistant for data analysis
  * Includes:
  * - query: Executes SQL queries against DuckDB
- * - chart: Creates VegaLite visualizations
  */
-export function getDefaultTools() {
+export function getDefaultTools(): Record<string, AiSliceTool> {
   return {
     query: tool({
       description: `A tool for running SQL queries on the tables in the database.
@@ -256,35 +247,9 @@ If a query fails, please don't try to run it again with the same syntax.`,
           };
         }
       },
-      component: ToolQuery,
-    }),
-
-    chart: tool({
-      description: `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
-In the response:
-- omit the data from the vegaLiteSpec
-- provide an sql query in sqlQuery instead.`,
-      parameters: ChartToolParameters,
-      execute: async ({sqlQuery, vegaLiteSpec}) => {
-        // data object of the vegaLiteSpec and sqlQuery
-        // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
-        return {
-          llmResult: {
-            success: true,
-            details: 'Chart created successfully.',
-          },
-          additionalData: {
-            sqlQuery,
-            vegaLiteSpec,
-          },
-        };
-      },
-      component: ToolChart,
+      component: QueryToolResult,
     }),
   };
 }
 
-/**
- * @deprecated Use {@link getDefaultTools} instead
- */
 export const TOOLS = getDefaultTools();

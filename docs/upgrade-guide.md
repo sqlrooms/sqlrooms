@@ -76,3 +76,25 @@ getApiKey: (modelProvider: string) => {
 #### Combining `useScrollToBottom` and `useScrollToBottomButton`
 
 `useScrollToBottom` is now combined with `useScrollToBottomButton`. `useScrollToBottom` now takes `dataToObserve`, `containerRef`, `endRef`. When the data changes, the hook will scroll to the bottom of the container.
+
+#### Vega Chart Tool is now a custom tool
+
+The Vega Chart Tool is no longer included by default and must be explicitly provided as a custom tool to `createAiSlice`. You need to import it from `@sqlrooms/vega` and add it to the `customTools` object:
+
+```typescript
+import {createVegaChartTool} from '@sqlrooms/vega';
+
+...createAiSlice({
+  getApiKey: (modelProvider: string) => {
+    return get()?.apiKeys[modelProvider] || '';
+  },
+  // Add custom tools
+  customTools: {
+    // Add the VegaChart tool from the vega package
+    chart: createVegaChartTool(),
+    // Other custom tools...
+  },
+})(set, get, store),
+```
+
+This change allows for more flexibility in configuring the chart tool and reduces bundle size for applications that don't need chart functionality.
