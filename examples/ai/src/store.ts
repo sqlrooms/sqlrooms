@@ -3,6 +3,7 @@ import {
   AiSliceState,
   createAiSlice,
   createDefaultAiConfig,
+  getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {
   createProjectSlice,
@@ -27,7 +28,8 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 import {createVegaChartTool} from '@sqlrooms/vega';
-
+import {DataTable} from '@sqlrooms/duckdb';
+import exampleSessions from './example-sessions.json';
 export const ProjectPanelTypes = z.enum([
   'project-details',
   'data-sources',
@@ -73,7 +75,6 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Base project slice
       ...createProjectSlice<AppConfig>({
         config: {
-          title: 'Demo App Project',
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
@@ -91,7 +92,9 @@ export const {projectStore, useProjectStore} = createProjectStore<
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          ...createDefaultAiConfig(),
+          ...createDefaultAiConfig(
+            AiSliceConfig.shape.ai.parse(exampleSessions),
+          ),
           ...createDefaultSqlEditorConfig(),
         },
         project: {
@@ -142,6 +145,12 @@ export const {projectStore, useProjectStore} = createProjectStore<
             },
           },
         },
+        // Example of customizing the system instructions
+        getInstructions: (tablesSchema: DataTable[]) => {
+          // You can use getDefaultInstructions() and append to it
+          const defaultInstructions = getDefaultInstructions(tablesSchema);
+          return `${defaultInstructions}. Please be polite and concise.`;
+        },
       })(set, get, store),
 
       selectedModel: {
@@ -167,7 +176,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
       name: 'app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: state.config,
+        config: AppConfig.parse(state.config),
         selectedModel: state.selectedModel,
         apiKeys: state.apiKeys,
       }),

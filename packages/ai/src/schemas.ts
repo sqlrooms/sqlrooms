@@ -86,6 +86,6 @@ export const AnalysisSessionSchema = z.object({
   modelProvider: z.string(),
   model: z.string(),
   analysisResults: z.array(AnalysisResultSchema),
-  createdAt: z.date().optional(),
+  createdAt: z.coerce.date().optional(),
 });
 export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;

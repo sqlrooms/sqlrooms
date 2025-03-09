@@ -17,6 +17,7 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export type {AiSliceTool} from './AiSlice';
 export {QueryToolResult} from './components/tools/QueryToolResult';
+export {getDefaultInstructions} from './analysis';
 
 export * from './components/ModelSelector';
 export * from './components/SessionControls';

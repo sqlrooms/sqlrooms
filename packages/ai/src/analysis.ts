@@ -7,6 +7,7 @@ import {
 } from '@openassistant/core';
 import {
   arrowTableToJson,
+  DataTable,
   DuckQueryError,
   getDuckDb,
   getDuckTableSchemas,
@@ -23,7 +24,7 @@ import {AiSliceTool} from './AiSlice';
  * - Creating visualizations with VegaLite
  * - Formatting final answers
  */
-const DEFAULT_SYSTEM_PROMPT = `
+const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a project.
 
 Instructions for analysis:
@@ -64,10 +65,17 @@ For your final answer:
 - Provide an explanation for how you got it
 - Explain your reasoning step by step
 - Include relevant statistics or metrics
-- For each prompt, please alwasy provide the final answer.
+- For each prompt, please always provide the final answer.
 
 Please use the following schema for the tables:
 `;
+
+/**
+ * Returns the default system instructions for the AI assistant
+ */
+export function getDefaultInstructions(tablesSchema: DataTable[]): string {
+  return `${DEFAULT_INSTRUCTIONS}\n${JSON.stringify(tablesSchema)}`;
+}
 
 /**
  * Generates summary statistics for a SQL query result
@@ -128,6 +136,13 @@ export type AnalysisConfig = {
   tools?: Record<string, AiSliceTool>;
 
   /**
+   * Function to get custom instructions for the AI assistant
+   * @param tablesSchema - The schema of the tables in the database
+   * @returns The instructions string to use
+   */
+  getInstructions?: (tablesSchema: DataTable[]) => string;
+
+  /**
    * Callback for handling streaming results
    * @param isCompleted - Indicates if this is the final message in the stream
    * @param streamMessage - Current message content being streamed
@@ -152,17 +167,20 @@ export async function runAnalysis({
   onStreamResult,
   maxSteps = 5,
   tools = {},
+  getInstructions,
 }: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
 
-  // get the singlton assistant instance
+  // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
     model,
     apiKey,
     version: 'v1',
-    instructions: `${DEFAULT_SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
+    instructions: getInstructions
+      ? getInstructions(tablesSchema)
+      : getDefaultInstructions(tablesSchema),
     functions: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
@@ -176,8 +194,8 @@ export async function runAnalysis({
       prompt: analysis.prompt,
       response: analysis.streamMessage,
     }));
-    const initalMessages = rebuildMessages(historyMessages);
-    assistant.setMessages(initalMessages);
+    const initialMessages = rebuildMessages(historyMessages);
+    assistant.setMessages(initialMessages);
   }
 
   // process the prompt

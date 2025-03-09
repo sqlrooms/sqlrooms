@@ -15,6 +15,7 @@ import {
   AnalysisSessionSchema,
   ErrorMessageSchema,
 } from './schemas';
+import {DataTable} from '@sqlrooms/duckdb';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -24,7 +25,9 @@ export const AiSliceConfig = z.object({
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
-export function createDefaultAiConfig(): AiSliceConfig {
+export function createDefaultAiConfig(
+  props: Partial<AiSliceConfig['ai']>,
+): AiSliceConfig {
   const defaultSessionId = createId();
   return {
     ai: {
@@ -39,6 +42,7 @@ export function createDefaultAiConfig(): AiSliceConfig {
         },
       ],
       currentSessionId: defaultSessionId,
+      ...props,
     },
   };
 }
@@ -73,10 +77,17 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
   initialAnalysisPrompt = '',
   customTools = {},
+  getInstructions,
 }: {
   getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
   customTools?: Record<string, AiSliceTool>;
+  /**
+   * Function to get custom instructions for the AI assistant
+   * @param tablesSchema - The schema of the tables in the database
+   * @returns The instructions string to use
+   */
+  getInstructions?: (tablesSchema: DataTable[]) => string;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => {
     return {
@@ -269,6 +280,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
+              getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
                   makeResultsAppender({
