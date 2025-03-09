@@ -4,5 +4,6 @@
   "tabWidth": 2,
   "bracketSpacing": false,
   "trailingComma": "all",
-  "printWidth": 80
+  "printWidth": 80,
+  "plugins": ["prettier-plugin-tailwindcss"]
 }

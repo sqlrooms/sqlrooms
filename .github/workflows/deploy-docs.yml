@@ -55,7 +55,7 @@ jobs:
 
       - name: Install dependencies
         # See https://github.com/pnpm/pnpm/issues/8840
-        run: pnpm install --shamefully-hoist
+        run: pnpm install --shamefully-hoist --no-frozen-lockfile
 
       - name: Build packages
         run: pnpm build
