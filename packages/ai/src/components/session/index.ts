@@ -1,3 +1,4 @@
+export * from './DeleteSessionButton';
 export * from './DeleteSessionDialog';
 export * from './SessionActions';
 export * from './SessionDropdown';

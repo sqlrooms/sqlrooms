@@ -1,5 +1,6 @@
 import {
   Button,
+  cn,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -7,23 +8,13 @@ import {
 } from '@sqlrooms/ui';
 import {Check, ChevronDown, History, Plus as PlusIcon} from 'lucide-react';
 import React from 'react';
-import {SessionType} from './SessionType';
+import {useStoreWithAi} from '../../AiSlice';
 
 /**
  * Props for the SessionDropdown component
  */
 export interface SessionDropdownProps {
-  /** List of available sessions */
-  sessions: SessionType[];
-
-  /** ID of the currently active session */
-  currentSessionId: string | undefined;
-
-  /** Callback function to create a new session */
-  onCreateSession: () => void;
-
-  /** Callback function to switch to a different session */
-  onSwitchSession: (sessionId: string) => void;
+  className?: string;
 }
 
 /**
@@ -32,34 +23,28 @@ export interface SessionDropdownProps {
  *
  * @example
  * ```tsx
- * <SessionDropdown
- *   sessions={[
- *     { id: "session1", name: "First Analysis" },
- *     { id: "session2", name: "Second Analysis" }
- *   ]}
- *   currentSessionId="session1"
- *   onCreateSession={() => console.log("Create new session")}
- *   onSwitchSession={(id) => console.log(`Switch to session ${id}`)}
- * />
+ * <SessionDropdown className="my-custom-class" />
  * ```
  */
 export const SessionDropdown: React.FC<SessionDropdownProps> = ({
-  sessions,
-  currentSessionId,
-  onCreateSession,
-  onSwitchSession,
+  className,
 }) => {
+  const sessions = useStoreWithAi((s) => s.config.ai.sessions);
+  const currentSessionId = useStoreWithAi((s) => s.config.ai.currentSessionId);
+  const switchSession = useStoreWithAi((s) => s.ai.switchSession);
+  const createSession = useStoreWithAi((s) => s.ai.createSession);
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button className={cn('gap-1', className)} variant="outline" size="sm">
           <History className="h-4 w-4" />
           <ChevronDown className="ml-1 h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-70">
         <DropdownMenuItem
-          onClick={onCreateSession}
+          onClick={() => createSession()}
           className="flex items-center py-2"
         >
           <PlusIcon className="mr-2 h-4 w-4" />
@@ -70,7 +55,7 @@ export const SessionDropdown: React.FC<SessionDropdownProps> = ({
           <DropdownMenuItem
             key={session.id}
             className="flex justify-between py-2"
-            onClick={() => onSwitchSession(session.id)}
+            onClick={() => switchSession(session.id)}
           >
             <span className="truncate">{session.name}</span>
             {session.id === currentSessionId && (

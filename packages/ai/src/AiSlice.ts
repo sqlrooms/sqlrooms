@@ -53,7 +53,7 @@ export type AiSliceState = {
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
-      name: string,
+      name?: string,
       modelProvider?: string,
       model?: string,
     ) => void;
@@ -174,15 +174,37 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
       /**
        * Create a new session with the given name and model settings
        */
-      createSession: (name: string, modelProvider?: string, model?: string) => {
+      createSession: (
+        name?: string,
+        modelProvider?: string,
+        model?: string,
+      ) => {
         const currentSession = get().ai.getCurrentSession();
         const newSessionId = createId();
+
+        // Generate a default name if none is provided
+        let sessionName = name;
+        if (!sessionName) {
+          // Generate a human-readable date and time for the session name
+          const now = new Date();
+          const formattedDate = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+          });
+          const formattedTime = now.toLocaleTimeString('en-US', {
+            hour: 'numeric',
+            minute: 'numeric',
+            hour12: true,
+          });
+          sessionName = `Session ${formattedDate} at ${formattedTime}`;
+        }
 
         set((state) =>
           produce(state, (draft) => {
             draft.config.ai.sessions.unshift({
               id: newSessionId,
-              name: name,
+              name: sessionName,
               modelProvider:
                 modelProvider || currentSession?.modelProvider || 'openai',
               model: model || currentSession?.model || 'gpt-4o-mini',

@@ -1,16 +1,12 @@
-import {EditableText} from '@sqlrooms/ui';
+import {cn, EditableText} from '@sqlrooms/ui';
 import React from 'react';
-import {SessionType} from './SessionType';
+import {useStoreWithAi} from '../../AiSlice';
 
 /**
  * Props for the SessionTitle component
  */
 export interface SessionTitleProps {
-  /** The current active session, or undefined if no session is selected */
-  currentSession: SessionType | undefined;
-
-  /** Callback function to rename a session */
-  onRenameSession: (sessionId: string, newName: string) => void;
+  className?: string;
 }
 
 /**
@@ -19,39 +15,27 @@ export interface SessionTitleProps {
  *
  * @example
  * ```tsx
- * <SessionTitle
- *   currentSession={{
- *     id: "session123",
- *     name: "My Analysis Session",
- *     model: "gpt-4o-mini"
- *   }}
- *   onRenameSession={(id, newName) => console.log(`Rename session ${id} to ${newName}`)}
- * />
+ * <SessionTitle className="my-custom-class" />
  * ```
  */
-export const SessionTitle: React.FC<SessionTitleProps> = ({
-  currentSession,
-  onRenameSession,
-}) => {
+export const SessionTitle: React.FC<SessionTitleProps> = ({className}) => {
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const renameSession = useStoreWithAi((s) => s.ai.renameSession);
+
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn('flex items-center gap-2', className)}>
       {currentSession ? (
-        <>
-          <EditableText
-            value={currentSession.name}
-            onChange={(newName) => {
-              if (currentSession && newName.trim()) {
-                onRenameSession(currentSession.id, newName);
-              }
-            }}
-            placeholder="Session name"
-            className="text-sm font-medium"
-            maxWidth={300}
-          />
-          <div className="text-muted-foreground text-xs">
-            {currentSession.model}
-          </div>
-        </>
+        <EditableText
+          value={currentSession.name}
+          onChange={(newName) => {
+            if (currentSession && newName.trim()) {
+              renameSession(currentSession.id, newName);
+            }
+          }}
+          placeholder="Session name"
+          className="text-sm font-medium"
+          maxWidth={300}
+        />
       ) : (
         <span className="text-muted-foreground text-sm font-medium">
           No session selected

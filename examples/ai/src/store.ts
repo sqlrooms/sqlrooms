@@ -51,9 +51,9 @@ type CustomAppState = {
     provider: string;
   };
   setSelectedModel: (model: string, provider: string) => void;
-  /** token: {provider: apiKey} */
-  token: Record<string, string | undefined>;
-  setToken: (apiKey: string, provider: string) => void;
+  /** API keys by provider */
+  apiKeys: Record<string, string | undefined>;
+  setProviderApiKey: (provider: string, apiKey: string) => void;
 };
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
@@ -118,7 +118,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Ai slice
       ...createAiSlice({
         getApiKey: (modelProvider: string) => {
-          return get()?.token[modelProvider] || '';
+          return get()?.apiKeys[modelProvider] || '';
         },
       })(set, get, store),
 
@@ -129,11 +129,13 @@ export const {projectStore, useProjectStore} = createProjectStore<
       setSelectedModel: (model: string, provider: string) => {
         set({selectedModel: {model, provider}});
       },
-      token: {
+      apiKeys: {
         openai: undefined,
       },
-      setToken: (apiKey: string, provider: string) => {
-        set({token: {...get().token, [provider]: apiKey}});
+      setProviderApiKey: (provider: string, apiKey: string) => {
+        set({
+          apiKeys: {...get().apiKeys, [provider]: apiKey},
+        });
       },
     }),
 
@@ -145,7 +147,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
       partialize: (state) => ({
         config: state.config,
         selectedModel: state.selectedModel,
-        token: state.token,
+        token: state.apiKeys,
         // projectConfig: state.config,
       }),
     },

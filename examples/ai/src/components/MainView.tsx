@@ -23,18 +23,17 @@ export const MainView: React.FC = () => {
     (state) => state.project.isDataAvailable,
   );
 
-  const token = useProjectStore((s) => s.token);
-  const setToken = useProjectStore((s) => s.setToken);
+  const apiKeys = useProjectStore((s) => s.apiKeys);
+  const setProviderApiKey = useProjectStore((s) => s.setProviderApiKey);
 
   // The current model is from the session
   const currentModelProvider =
     currentSession?.modelProvider || LLM_MODELS[0].name;
 
-  const apiKey = token[currentModelProvider] || '';
+  const apiKey = apiKeys[currentModelProvider] || '';
 
   const onApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const token = e.target.value;
-    setToken(token, currentModelProvider);
+    setProviderApiKey(currentModelProvider, e.target.value);
   };
 
   // Transform LLM_MODELS into the format expected by ModelSelector
