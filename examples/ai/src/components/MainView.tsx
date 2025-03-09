@@ -22,16 +22,12 @@ export const MainView: React.FC = () => {
     (state) => state.project.isDataAvailable,
   );
 
-  // Get analysis results from current session
-  const analysisResults = currentSession?.analysisResults || [];
-
   const token = useProjectStore((s) => s.token);
   const setToken = useProjectStore((s) => s.setToken);
 
   // The current model is from the session
   const currentModelProvider =
     currentSession?.modelProvider || LLM_MODELS[0].name;
-  const currentModel = currentSession?.model || LLM_MODELS[0].models[0];
 
   const apiKey = token[currentModelProvider] || '';
 
