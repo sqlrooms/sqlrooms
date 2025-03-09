@@ -40,7 +40,7 @@ import QueryDataTable from './QueryDataTable';
 const DataTableModal: FC<{
   title: string | undefined;
   query: string | undefined;
-  tableModal: UseDisclosureReturnValue;
+  tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
 }> = ({title, query, tableModal}) => {
   return (
     <Dialog
