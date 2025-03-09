@@ -52,6 +52,10 @@ export default defineConfig({
             text: 'Theming',
             link: '/theming',
           },
+          {
+            text: 'Upgrade Guide',
+            link: '/upgrade-guide',
+          },
         ],
       },
       {

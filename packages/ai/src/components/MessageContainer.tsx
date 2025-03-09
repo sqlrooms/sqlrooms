@@ -7,54 +7,61 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@sqlrooms/ui';
-import {CheckCircle2Icon, CodeIcon, XCircleIcon} from 'lucide-react';
+import {CodeIcon, XCircleIcon} from 'lucide-react';
 
 type MessageContainerProps = {
+  className?: string;
   isSuccess: boolean;
-  borderColor: string;
-  title: string;
+  // borderColor: string;
+  type: string;
   content: object;
   children: React.ReactNode;
 };
 
 export const MessageContainer: React.FC<MessageContainerProps> = ({
-  isSuccess,
-  borderColor,
-  title,
+  className,
+  type,
+  // borderColor,
   content,
   children,
 }) => {
   return (
     <div
       className={cn(
-        'border-2 relative bg-gray-100 dark:bg-gray-900 px-5 py-6 rounded-md text-gray-700 dark:text-gray-300 text-xs',
-        isSuccess ? borderColor : 'border-red-500',
+        'group relative px-5 py-2 text-xs',
+        className,
+        type === 'error' && 'border-destructive rounded-md border py-4',
+        // borderColor,
+        // isSuccess ? borderColor : 'border-red-500',
       )}
     >
-      <Badge
-        variant="secondary"
-        className={cn(
-          'text-xs absolute top-[-12px] left-2 dark:text-gray-100 text-gray-700 flex items-center gap-1 border',
-          isSuccess ? borderColor : 'border-red-500',
-        )}
-      >
-        {isSuccess ? (
-          <CheckCircle2Icon className="w-3 h-3 text-green-500" />
-        ) : (
-          <XCircleIcon className="w-3 h-3 text-red-500" />
-        )}
-        {title}
-      </Badge>
+      {type === 'error' && (
+        <Badge
+          variant="secondary"
+          className={cn(
+            'absolute left-2 top-[-12px] flex items-center gap-1 border text-xs',
+            'border-destructive text-destructive bg-background',
+            // isSuccess ? borderColor : 'border-red-500',
+          )}
+        >
+          {/* {isSuccess ? ( */}
+          {/* <CheckCircle2Icon className="h-3 w-3 text-green-500" /> */}
+          {/* ) : ( */}
+          <XCircleIcon className="h-3 w-3 text-red-500" />
+          {/* )} */}
+          {type}
+        </Badge>
+      )}
 
-      <div className="absolute top-2 right-2">
+      <div className="absolute right-2 top-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
         <Popover>
           <PopoverTrigger asChild>
-            <Button variant="outline" size="icon" className="w-6 h-6">
-              <CodeIcon className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-6 w-6">
+              <CodeIcon className="h-4 w-4" />
             </Button>
           </PopoverTrigger>
           <PopoverContent
-            className="w-[400px] max-h-[300px] overflow-auto p-4"
+            className="max-h-[300px] w-[400px] overflow-auto p-4"
             side="right"
             align="start"
           >
@@ -68,6 +75,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
                 automaticLayout: true,
                 folding: true,
                 lineNumbers: false,
+                wordWrap: 'on',
               }}
             />
           </PopoverContent>

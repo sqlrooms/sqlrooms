@@ -1,18 +1,19 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   createAssistant,
-  tool,
-  StreamMessage,
   rebuildMessages,
+  StreamMessage,
+  tool,
 } from '@openassistant/core';
 import {
   arrowTableToJson,
+  DuckQueryError,
   getDuckDb,
   getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
 
-import {ToolQuery} from './components/ToolQuery';
-import {ToolChart} from './components/ToolChart';
+import {ToolChart} from './components/tools/ToolChart';
+import {ToolQuery} from './components/tools/ToolQuery';
 import {
   AnalysisResultSchema,
   ChartToolParameters,
@@ -202,6 +203,7 @@ export const TOOLS = {
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
+    // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
     execute: async ({type, sqlQuery}) => {
       try {
         const {conn} = await getDuckDb();
@@ -236,7 +238,11 @@ If a query fails, please don't try to run it again with the same syntax.`,
             success: false,
             details: 'Query execution failed.',
             errorMessage:
-              error instanceof Error ? error.message : 'Unknown error',
+              error instanceof DuckQueryError
+                ? error.getMessageForUser()
+                : error instanceof Error
+                  ? error.message
+                  : 'Unknown error',
           },
         };
       }

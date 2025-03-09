@@ -180,7 +180,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 
         set((state) =>
           produce(state, (draft) => {
-            draft.config.ai.sessions.push({
+            draft.config.ai.sessions.unshift({
               id: newSessionId,
               name: name,
               modelProvider:

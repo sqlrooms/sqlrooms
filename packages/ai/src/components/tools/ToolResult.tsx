@@ -1,7 +1,10 @@
-import React from 'react';
 import {ToolCallComponents, ToolCallMessage} from '@openassistant/core';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {Button, useDisclosure} from '@sqlrooms/ui';
+import {InfoIcon} from 'lucide-react';
+import React from 'react';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
-import {MessageContainer} from './components/MessageContainer';
+import {MessageContainer} from '../MessageContainer';
 
 type ToolResultProps = {
   toolCallMessage: ToolCallMessage;
@@ -9,16 +12,15 @@ type ToolResultProps = {
   toolComponents: ToolCallComponents;
 };
 
-function getBorderColor(toolName: string) {
+export function getBorderColor(toolName: string) {
   switch (toolName) {
-    case 'query':
-      return 'border-gray-500';
-    case 'chart':
-      return 'border-blue-500';
     case 'answer':
-      return 'border-green-500';
+    // return 'border-blue-500';
+    case 'thinking':
+    case 'query':
+    case 'chart':
     default:
-      return 'border-gray-500';
+      return 'border-gray-500/20';
   }
 }
 
@@ -27,6 +29,8 @@ export const ToolResult: React.FC<ToolResultProps> = ({
   errorMessage,
   toolComponents,
 }) => {
+  const {isOpen: showDetails, onToggle: toggleShowDetails} =
+    useDisclosure(false);
   const {toolName, args, llmResult, additionalData, text, isCompleted} =
     toolCallMessage;
 
@@ -50,8 +54,8 @@ export const ToolResult: React.FC<ToolResultProps> = ({
   ) : (
     <MessageContainer
       isSuccess={isSuccess}
-      borderColor={getBorderColor(toolName)}
-      title={toolName}
+      // borderColor={getBorderColor(toolName)}
+      type={toolName}
       content={{
         toolName,
         args,
@@ -73,10 +77,32 @@ export const ToolResult: React.FC<ToolResultProps> = ({
         </ToolCallErrorBoundary>
       )}
       {isCompleted && (errorMessage || !isSuccess) && (
-        <div className="text-red-500 gap-2 flex flex-col">
-          <p className="text-sm font-bold">Oops! Something went wrong...</p>
+        <div className="flex flex-col gap-2">
+          <p className="text-sm font-bold text-red-500">Tool call failed</p>
           <p className="text-xs">{errorMessage}</p>
-          <p className="text-xs break-all">{JSON.stringify(llmResult)}</p>
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => toggleShowDetails()}
+            className="w-fit"
+          >
+            <InfoIcon className="h-4 w-4" />
+            {showDetails ? 'Hide Details' : 'Show Details'}
+          </Button>
+          {showDetails && (
+            <div className="h-[300px] w-full overflow-hidden rounded-md border">
+              <JsonMonacoEditor
+                value={toolCallMessage}
+                readOnly={true}
+                options={{
+                  lineNumbers: false,
+                  minimap: {enabled: false},
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                }}
+              />
+            </div>
+          )}
         </div>
       )}
     </MessageContainer>

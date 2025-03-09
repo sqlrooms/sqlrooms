@@ -1,6 +1,7 @@
 import React from 'react';
 import Markdown from 'react-markdown';
 import {MessageContainer} from './MessageContainer';
+import {getBorderColor} from './tools/ToolResult';
 
 type AnalysisAnswerProps = {
   content: string;
@@ -20,11 +21,13 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     <div className="flex flex-col gap-5">
       <MessageContainer
         isSuccess={true}
-        borderColor={'border-green-500'}
-        title={props.isAnswer ? 'answer' : 'analysis'}
+        // borderColor={
+        //   props.isAnswer ? getBorderColor('answer') : getBorderColor('thinking')
+        // }
+        type={props.isAnswer ? 'answer' : 'thinking'}
         content={props}
       >
-        <Markdown className="text-xs prose dark:prose-invert max-w-none">
+        <Markdown className="prose dark:prose-invert max-w-none text-sm">
           {props.content}
         </Markdown>
       </MessageContainer>

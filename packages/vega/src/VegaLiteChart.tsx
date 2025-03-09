@@ -109,7 +109,7 @@ export const VegaLiteChart: React.FC<{
     <div
       ref={containerRef}
       className={cn(
-        'w-full h-full flex flex-col gap-2 overflow-hidden',
+        'flex h-full w-full flex-col gap-2 overflow-hidden',
         className,
       )}
     >

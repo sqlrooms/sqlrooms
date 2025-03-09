@@ -9,6 +9,7 @@ import {
 import {useProjectStore} from '../store';
 import {LLM_MODELS} from './constant';
 import {capitalize} from '@sqlrooms/utils';
+import {useMemo} from 'react';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useProjectStore((s) => s.config.ai.currentSessionId);
@@ -37,27 +38,33 @@ export const MainView: React.FC = () => {
   };
 
   // Transform LLM_MODELS into the format expected by ModelSelector
-  const modelOptions = LLM_MODELS.flatMap((provider) =>
-    provider.models.map((model) => ({
-      provider: provider.name,
-      label: model,
-      value: model,
-    })),
+  const modelOptions = useMemo(
+    () =>
+      LLM_MODELS.flatMap((provider) =>
+        provider.models.map((model) => ({
+          provider: provider.name,
+          label: model,
+          value: model,
+        })),
+      ),
+    [],
   );
 
   return (
-    <div className="w-full h-full flex flex-col gap-0 overflow-hidden p-4">
+    <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
       {/* Display SessionControls at the top */}
-      <div className="mb-2">
+      <div className="mb-4">
         <SessionControls />
       </div>
 
       {/* Display AnalysisResultsContainer without the session controls UI */}
       <div className="flex-grow overflow-auto">
         {isDataAvailable ? (
-          <AnalysisResultsContainer />
+          <AnalysisResultsContainer
+            key={currentSessionId} // will prevent scrolling to bottom after changing current session
+          />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full w-full">
+          <div className="flex h-full w-full flex-col items-center justify-center">
             <SkeletonPane className="p-4" />
             <p className="text-muted-foreground mt-4">Loading database...</p>
           </div>
@@ -66,10 +73,10 @@ export const MainView: React.FC = () => {
 
       <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
         <div className="flex items-center justify-end gap-2">
-          <div className="flex items-center relative">
-            <KeyIcon className="w-4 h-4 absolute left-2 " />
+          <div className="relative flex items-center">
+            <KeyIcon className="absolute left-2 h-4 w-4" />
             <Input
-              className="pl-8 w-[165px]"
+              className="w-[165px] pl-8"
               type="password"
               placeholder={`${capitalize(currentModelProvider)} API Key`}
               value={apiKey}

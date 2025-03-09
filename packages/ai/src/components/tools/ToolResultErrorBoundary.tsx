@@ -22,7 +22,7 @@ export class ToolCallErrorBoundary extends React.Component<
   render() {
     if (this.state.hasError) {
       return (
-        <div className="text-sm text-danger text-red-500">
+        <div className="text-danger text-sm text-red-500">
           Failed to render tool component. Please try again or contact support.
           <pre>{JSON.stringify(this.state.error, null, 2)}</pre>
         </div>

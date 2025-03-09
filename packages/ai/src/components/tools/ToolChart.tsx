@@ -1,7 +1,7 @@
-import React, {Suspense} from 'react';
-import Markdown from 'react-markdown';
 import {Spinner} from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
+import {Suspense} from 'react';
+import {ToolQuery} from './ToolQuery';
 
 type ToolChartProps = {
   reasoning: string;
@@ -19,19 +19,17 @@ export function ToolChart({sqlQuery, vegaLiteSpec}: ToolChartProps) {
     <>
       {vegaLiteSpec && (
         <div className="flex flex-col gap-2">
-          <div className="text-xs text-muted-foreground font-mono">
-            {sqlQuery}
-          </div>
+          <ToolQuery title="Query Result" sqlQuery={sqlQuery} />
           <Suspense
             fallback={
-              <div className="w-full h-full flex items-center justify-center">
-                <Spinner className="w-4 h-4" />
+              <div className="flex h-full w-full items-center justify-center">
+                <Spinner className="h-4 w-4" />
               </div>
             }
           >
             <VegaLiteChart
-              width={400}
-              height={250}
+              className="max-w-[600px]"
+              aspectRatio={16 / 9}
               sqlQuery={sqlQuery}
               spec={vegaLiteSpec}
             />

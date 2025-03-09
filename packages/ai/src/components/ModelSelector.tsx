@@ -9,7 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {useStoreWithAi} from './AiSlice';
+import {useStoreWithAi} from '../AiSlice';
 import {capitalize} from '@sqlrooms/utils';
 interface Model {
   provider: string;
@@ -64,9 +64,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         <SelectContent>
           {Object.entries(modelsByProvider).map(
             ([provider, providerModels]) => (
-              <>
-                <SelectGroup key={provider}>
-                  <SelectLabel className="text-center text-sm font-bold text-muted-foreground/50">
+              <React.Fragment key={provider}>
+                <SelectGroup>
+                  <SelectLabel className="text-muted-foreground/50 text-center text-sm font-bold">
                     {capitalize(provider)}
                   </SelectLabel>
                   {providerModels.map((model) => (
@@ -76,7 +76,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                   ))}
                 </SelectGroup>
                 <SelectSeparator />
-              </>
+              </React.Fragment>
             ),
           )}
         </SelectContent>

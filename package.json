@@ -23,7 +23,6 @@
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "typedoc": "turbo typedoc",
     "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
-    "typescript": "tsc --noEmit",
     "graph": "turbo run build --graph",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs\"",

@@ -1,7 +1,7 @@
 import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
-import {useStoreWithAi} from './AiSlice';
+import {useStoreWithAi} from '../AiSlice';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -24,13 +24,16 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const model = currentSession?.model;
 
   useEffect(() => {
+    if (!isDataAvailable) return;
     // Focus the textarea when the component mounts
-    // Using a small timeout ensures the component is fully rendered
+    // Using a small timeout ensures the data is loaded and
+    // add timeout to prevent aria hidden warning caused by the
+    // loading progress dialog being still open
     const timer = setTimeout(() => {
       if (textareaRef.current) {
         textareaRef.current.focus();
       }
-    }, 100);
+    }, 500);
 
     return () => clearTimeout(timer);
   }, [isDataAvailable]);
@@ -59,7 +62,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center gap-4 w-full',
+        'flex w-full flex-col items-center justify-center gap-4',
         className,
       )}
     >
@@ -68,14 +71,14 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           <Textarea
             ref={textareaRef}
             disabled={isRunningAnalysis}
-            className="h-[100px] bg-muted/50 resize-none"
+            className="bg-muted/50 h-[100px] resize-none"
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoFocus
           />
-          <div className="flex items-center w-full justify-between gap-2 p-2 bg-muted/30">
+          <div className="bg-muted/30 flex w-full items-center justify-between gap-2 p-2">
             <div>{children}</div>
             <div className="flex-1" />
             <div>
@@ -85,12 +88,12 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   className="rounded-full"
                   onClick={cancelAnalysis}
                 >
-                  <OctagonXIcon className="w-4 h-4" />
+                  <OctagonXIcon className="h-4 w-4" />
                   Stop
                 </Button>
               )}
               <Button
-                className="rounded-full w-10 h-10"
+                className="h-10 w-10 rounded-full"
                 variant="default"
                 size="icon"
                 onClick={runAnalysis}
@@ -98,7 +101,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
               >
                 {isRunningAnalysis ? (
                   <div className="flex items-center gap-2">
-                    <Spinner className="w-4 h-4" />
+                    <Spinner className="h-4 w-4" />
                   </div>
                 ) : (
                   <ArrowUpIcon />
