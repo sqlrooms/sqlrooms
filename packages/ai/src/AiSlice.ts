@@ -1,3 +1,4 @@
+import {StreamMessage, tool} from '@openassistant/core';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -14,7 +15,6 @@ import {
   AnalysisSessionSchema,
   ErrorMessageSchema,
 } from './schemas';
-import {StreamMessage} from '@openassistant/core';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -86,6 +86,7 @@ async function executeAnalysis({
   model,
   apiKey,
   abortController,
+  customTools,
   set,
 }: {
   resultId: string;
@@ -94,6 +95,7 @@ async function executeAnalysis({
   model: string;
   apiKey: string;
   abortController: AbortController;
+  customTools?: Record<string, ReturnType<typeof tool>>;
   set: <T>(fn: (state: T) => T) => void;
 }) {
   try {
@@ -103,6 +105,7 @@ async function executeAnalysis({
       apiKey,
       prompt,
       abortController,
+      customTools,
       onStreamResult: (isCompleted, streamMessage) => {
         set(
           makeResultsAppender({
@@ -129,9 +132,11 @@ async function executeAnalysis({
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
   initialAnalysisPrompt = '',
+  customTools = {},
 }: {
   getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
+  customTools?: Record<string, ReturnType<typeof tool>>;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get) => ({
     ai: {
@@ -318,6 +323,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
             model: currentSession.model || 'gpt-4o-mini',
             apiKey: getApiKey(currentSession.modelProvider || 'openai'),
             abortController,
+            customTools,
             set,
           });
         } finally {

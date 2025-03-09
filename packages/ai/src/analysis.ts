@@ -128,6 +128,9 @@ export type AnalysisConfig = {
   /** The history of analysis results (e.g. saved in localStorage) */
   historyAnalysis?: AnalysisResultSchema[];
 
+  /** Custom tools to add to the default tools (query and chart) */
+  customTools?: Record<string, ReturnType<typeof tool>>;
+
   /**
    * Callback for handling streaming results
    * @param isCompleted - Indicates if this is the final message in the stream
@@ -152,8 +155,13 @@ export async function runAnalysis({
   historyAnalysis,
   onStreamResult,
   maxSteps = 5,
+  customTools = {},
 }: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
+
+  // Combine default tools with custom tools
+  const defaultTools = getDefaultTools();
+  const combinedTools = {...defaultTools, ...customTools};
 
   // get the singlton assistant instance
   const assistant = await createAssistant({
@@ -163,7 +171,7 @@ export async function runAnalysis({
     apiKey,
     version: 'v1',
     instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
-    functions: TOOLS,
+    functions: combinedTools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -192,84 +200,91 @@ export async function runAnalysis({
 }
 
 /**
- * Collection of tools available to the AI assistant for data analysis
+ * Default tools available to the AI assistant for data analysis
  * Includes:
  * - query: Executes SQL queries against DuckDB
  * - chart: Creates VegaLite visualizations
  */
-export const TOOLS = {
-  query: tool({
-    description: `A tool for running SQL queries on the tables in the database.
+export function getDefaultTools() {
+  return {
+    query: tool({
+      description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
-    parameters: QueryToolParameters,
-    // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
-    execute: async ({type, sqlQuery}) => {
-      try {
-        const {conn} = await getDuckDb();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await conn.query(sqlQuery);
-        // Only get summary if the query isn't already a SUMMARIZE query
-        const summaryData = sqlQuery.toLowerCase().includes('summarize')
-          ? arrowTableToJson(result)
-          : await getQuerySummary(conn, sqlQuery);
+      parameters: QueryToolParameters,
+      // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
+      execute: async ({type, sqlQuery}) => {
+        try {
+          const {conn} = await getDuckDb();
+          // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+          const result = await conn.query(sqlQuery);
+          // Only get summary if the query isn't already a SUMMARIZE query
+          const summaryData = sqlQuery.toLowerCase().includes('summarize')
+            ? arrowTableToJson(result)
+            : await getQuerySummary(conn, sqlQuery);
 
-        // Get first 2 rows of the result as a json object
-        const subResult = result.slice(0, 2);
-        const firstTwoRows = arrowTableToJson(subResult);
+          // Get first 2 rows of the result as a json object
+          const subResult = result.slice(0, 2);
+          const firstTwoRows = arrowTableToJson(subResult);
 
-        return {
-          llmResult: {
-            success: true,
-            data: {
-              type,
-              summary: summaryData,
-              firstTwoRows,
+          return {
+            llmResult: {
+              success: true,
+              data: {
+                type,
+                summary: summaryData,
+                firstTwoRows,
+              },
             },
-          },
-          additionalData: {
-            title: 'Query Result',
-            sqlQuery,
-          },
-        };
-      } catch (error) {
-        return {
-          llmResult: {
-            success: false,
-            details: 'Query execution failed.',
-            errorMessage:
-              error instanceof DuckQueryError
-                ? error.getMessageForUser()
-                : error instanceof Error
-                  ? error.message
-                  : 'Unknown error',
-          },
-        };
-      }
-    },
-    component: ToolQuery,
-  }),
+            additionalData: {
+              title: 'Query Result',
+              sqlQuery,
+            },
+          };
+        } catch (error) {
+          return {
+            llmResult: {
+              success: false,
+              details: 'Query execution failed.',
+              errorMessage:
+                error instanceof DuckQueryError
+                  ? error.getMessageForUser()
+                  : error instanceof Error
+                    ? error.message
+                    : 'Unknown error',
+            },
+          };
+        }
+      },
+      component: ToolQuery,
+    }),
 
-  chart: tool({
-    description: `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
+    chart: tool({
+      description: `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
 In the response:
 - omit the data from the vegaLiteSpec
 - provide an sql query in sqlQuery instead.`,
-    parameters: ChartToolParameters,
-    execute: async ({sqlQuery, vegaLiteSpec}) => {
-      // data object of the vegaLiteSpec and sqlQuery
-      // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
-      return {
-        llmResult: {
-          success: true,
-          details: 'Chart created successfully.',
-        },
-        additionalData: {
-          sqlQuery,
-          vegaLiteSpec,
-        },
-      };
-    },
-    component: ToolChart,
-  }),
-};
+      parameters: ChartToolParameters,
+      execute: async ({sqlQuery, vegaLiteSpec}) => {
+        // data object of the vegaLiteSpec and sqlQuery
+        // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
+        return {
+          llmResult: {
+            success: true,
+            details: 'Chart created successfully.',
+          },
+          additionalData: {
+            sqlQuery,
+            vegaLiteSpec,
+          },
+        };
+      },
+      component: ToolChart,
+    }),
+  };
+}
+
+/**
+ * @deprecated Use {@link getDefaultTools} instead
+ */
+export const TOOLS = getDefaultTools();

@@ -120,6 +120,24 @@ export const {projectStore, useProjectStore} = createProjectStore<
         getApiKey: (modelProvider: string) => {
           return get()?.apiKeys[modelProvider] || '';
         },
+        // Example of adding a custom tool
+        customTools: {
+          // This is just an example - in a real app, you would implement a useful tool
+          echo: {
+            description: 'A simple echo tool that returns the input text',
+            parameters: z.object({
+              text: z.string().describe('The text to echo back'),
+            }),
+            execute: async ({text}: {text: string}) => {
+              return {
+                llmResult: {
+                  success: true,
+                  details: `Echo: ${text}`,
+                },
+              };
+            },
+          },
+        },
       })(set, get, store),
 
       selectedModel: {
@@ -147,8 +165,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
       partialize: (state) => ({
         config: state.config,
         selectedModel: state.selectedModel,
-        token: state.apiKeys,
-        // projectConfig: state.config,
+        apiKeys: state.apiKeys,
       }),
     },
   ) as StateCreator<AppState>,
