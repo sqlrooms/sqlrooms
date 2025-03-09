@@ -46,11 +46,14 @@ export type AppConfig = z.infer<typeof AppConfig>;
  * Project state
  */
 type CustomAppState = {
-  supportedModels: string[];
-  openAiApiKey: string | undefined;
-  setOpenAiApiKey: (key: string) => void;
-  selectedModel: string;
-  setSelectedModel: (model: string) => void;
+  selectedModel: {
+    model: string;
+    provider: string;
+  };
+  setSelectedModel: (model: string, provider: string) => void;
+  /** token: {provider: apiKey} */
+  token: Record<string, string | undefined>;
+  setToken: (apiKey: string, provider: string) => void;
 };
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
@@ -114,27 +117,23 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
       // Ai slice
       ...createAiSlice({
-        getApiKey: () => {
-          return get()?.openAiApiKey || '';
+        getApiKey: (modelProvider: string) => {
+          return get()?.token[modelProvider] || '';
         },
       })(set, get, store),
 
-      // Custom app state
-      supportedModels: [
-        'gpt-4',
-        'gpt-4o',
-        'gpt-4o-mini',
-        'o3-mini',
-        'o3-mini-high',
-      ],
-
-      openAiApiKey: undefined,
-      selectedModel: 'gpt-4o-mini',
-      setOpenAiApiKey: (key: string | undefined) => {
-        set({openAiApiKey: key});
+      selectedModel: {
+        model: 'gpt-4o-mini',
+        provider: 'openai',
       },
-      setSelectedModel: (model: string) => {
-        set({selectedModel: model});
+      setSelectedModel: (model: string, provider: string) => {
+        set({selectedModel: {model, provider}});
+      },
+      token: {
+        openai: undefined,
+      },
+      setToken: (apiKey: string, provider: string) => {
+        set({token: {...get().token, [provider]: apiKey}});
       },
     }),
 
@@ -145,8 +144,8 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Subset of the state to persist
       partialize: (state) => ({
         config: state.config,
-        openAiApiKey: state.openAiApiKey,
         selectedModel: state.selectedModel,
+        token: state.token,
         // projectConfig: state.config,
       }),
     },

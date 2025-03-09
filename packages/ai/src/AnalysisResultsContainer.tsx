@@ -8,15 +8,29 @@ import {
   useScrollToBottom,
   useScrollToBottomButton,
 } from './hooks/use-scroll-to-bottom';
+import {TOOLS} from './analysis';
 
 export const AnalysisResultsContainer: React.FC = () => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
+  const components = (Object.keys(TOOLS) as Array<keyof typeof TOOLS>).map(
+    (tool) => ({
+      toolName: tool,
+      component: TOOLS[tool].component,
+    }),
+  );
 
   const [messagesContainerRef, messagesEndRef] =
     useScrollToBottom<HTMLDivElement>();
   const {showButton, scrollToBottom} =
     useScrollToBottomButton(messagesContainerRef);
+
+  const onDeleteAnalysisResult = (id: string) => {
+    if (currentSession) {
+      deleteAnalysisResult(currentSession.id, id);
+    }
+  };
 
   return (
     <div className="flex flex-col relative h-full w-full overflow-auto p-1">
@@ -28,7 +42,12 @@ export const AnalysisResultsContainer: React.FC = () => {
             ref={messagesContainerRef}
           >
             {currentSession.analysisResults.map((result) => (
-              <AnalysisResult key={result.id} result={result} />
+              <AnalysisResult
+                key={result.id}
+                result={result}
+                toolComponents={components}
+                onDeleteAnalysisResult={onDeleteAnalysisResult}
+              />
             ))}
             {isRunningAnalysis && <SkeletonPane className="p-4" />}
             <div className="h-20" />
