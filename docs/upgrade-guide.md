@@ -60,4 +60,19 @@ Check the [AI example store code](https://github.com/sqlrooms/examples/blob/main
 
 ### @sqlrooms/ai
 
-#### `useScrollToBottom` is now combined with `useScrollToBottomButton`. `useScrollToBottom` now takes `dataToObserve`, `containerRef`, `endRef`. When the data changes, the hook will scroll to the bottom of the container.
+#### Model provider in `getApiKey`
+
+`getApiKey` property of `createAiSlice` now takes `modelProvider`:
+
+```
+...createAiSlice({
+getApiKey: (modelProvider: string) => {
+  return get()?.apiKeys[modelProvider] || '';
+},
+})(set, get, store),
+
+```
+
+#### Combining `useScrollToBottom` and `useScrollToBottomButton`
+
+`useScrollToBottom` is now combined with `useScrollToBottomButton`. `useScrollToBottom` now takes `dataToObserve`, `containerRef`, `endRef`. When the data changes, the hook will scroll to the bottom of the container.

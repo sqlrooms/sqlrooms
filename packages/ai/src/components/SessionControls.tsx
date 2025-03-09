@@ -9,12 +9,15 @@ import {SessionActions, SessionDropdown, SessionTitle} from './session';
  *
  * @example
  * ```tsx
- * <SessionControls className="p-4 border-b" />
+ * <SessionControls className="p-4 border-b">
+ *   <Button>Custom Button</Button>
+ * </SessionControls>
  * ```
  */
-export const SessionControls: React.FC<{className?: string}> = ({
-  className,
-}) => {
+export const SessionControls: React.FC<{
+  className?: string;
+  children?: React.ReactNode;
+}> = ({className, children}) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   return (
     <>
@@ -32,6 +35,9 @@ export const SessionControls: React.FC<{className?: string}> = ({
             </div>
           )}
         </div>
+
+        {/* Render children if provided */}
+        {children}
 
         {/* Right side buttons */}
         <SessionActions />

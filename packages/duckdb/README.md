@@ -19,7 +19,7 @@ npm install @sqlrooms/duckdb
 
 ### Using the SQL Hook
 
-````tsx
+```tsx
 import {useSql} from '@sqlrooms/duckdb';
 
 function UserList() {
@@ -166,4 +166,7 @@ async function executeCustomQuery() {
 - **File Management**: Register and manage files in the DuckDB instance
 
 For more information, visit the SQLRooms documentation.
-````
+
+```
+
+```
