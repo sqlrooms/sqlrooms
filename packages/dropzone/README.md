@@ -51,7 +51,7 @@ function CustomStyledDropzone() {
   return (
     <FileDropzone
       onFileDrop={handleFiles}
-      className="border-2 border-dashed border-blue-400 rounded-lg p-8 hover:border-blue-600 transition-colors"
+      className="rounded-lg border-2 border-dashed border-blue-400 p-8 transition-colors hover:border-blue-600"
       activeClassName="border-green-500 bg-green-50"
       rejectClassName="border-red-500 bg-red-50"
       dragMessage="Drop your files here"
@@ -73,8 +73,8 @@ function DataFileUploader() {
   };
 
   return (
-    <div className="p-4 border rounded-lg">
-      <h2 className="text-xl font-bold mb-2">Upload Data Files</h2>
+    <div className="rounded-lg border p-4">
+      <h2 className="mb-2 text-xl font-bold">Upload Data Files</h2>
       <p className="mb-4 text-gray-600">
         Supported formats: CSV, JSON, Excel, Parquet
       </p>

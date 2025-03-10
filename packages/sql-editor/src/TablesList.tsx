@@ -21,7 +21,7 @@ const TablesList: FC<{
     onSelect,
     renderTableButton = (tableName: string, onSelect: OnSelectCallback) => (
       <Button
-        className="w-full justify-start font-normal overflow-hidden whitespace-normal min-h-[25px] text-sm text-left break-words select-text"
+        className="min-h-[25px] w-full select-text justify-start overflow-hidden whitespace-normal break-words text-left text-sm font-normal"
         variant={selectedTable === tableName ? 'secondary' : 'ghost'}
         size="sm"
         onClick={() => onSelect(tableName)}
@@ -33,7 +33,7 @@ const TablesList: FC<{
   } = props;
 
   return (
-    <div className="h-full bg-background/10 px-2 py-4 overflow-auto">
+    <div className="bg-background/10 h-full overflow-auto px-2 py-4">
       <ul className="space-y-1">
         {tableNames.map((tableName, i) => (
           <li key={i}>

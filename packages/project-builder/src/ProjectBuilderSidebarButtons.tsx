@@ -69,7 +69,7 @@ const ProjectBuilderSidebarButtons: FC = () => {
   const panels = useBaseProjectStore((state) => state.project.panels);
 
   return (
-    <div className="flex flex-col h-full grow">
+    <div className="flex h-full grow flex-col">
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)

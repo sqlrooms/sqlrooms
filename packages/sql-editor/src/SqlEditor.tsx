@@ -228,7 +228,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   }, []);
 
   return (
-    <div className="relative flex flex-col h-full w-full overflow-hidden">
+    <div className="relative flex h-full w-full flex-col overflow-hidden">
       <div className="absolute right-12 top-0">
         {documentationPanel ? (
           <Button
@@ -236,7 +236,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
             variant={showDocs ? 'secondary' : 'outline'}
             onClick={handleToggleDocs}
           >
-            <BookOpenIcon className="w-4 h-4 mr-2" />
+            <BookOpenIcon className="mr-2 h-4 w-4" />
             SQL reference
           </Button>
         ) : (
@@ -246,17 +246,17 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
             rel="noreferrer"
           >
             <Button size="sm" variant={'outline'}>
-              <BookOpenIcon className="w-4 h-4 mr-2" />
+              <BookOpenIcon className="mr-2 h-4 w-4" />
               SQL reference
             </Button>
           </a>
         )}
       </div>
-      <div className="flex flex-col w-full gap-2 h-full">
-        <div className="flex items-center gap-2 ml-1 mr-10 mb-2">
+      <div className="flex h-full w-full flex-col gap-2">
+        <div className="mb-2 ml-1 mr-10 flex items-center gap-2">
           <h2 className="text-lg font-semibold">SQL Editor</h2>
         </div>
-        <div className="flex-grow h-full bg-muted">
+        <div className="bg-muted h-full flex-grow">
           <ResizablePanelGroup direction="horizontal" className="h-full">
             {/* Main panel - takes full width when docs not shown, or 70% when docs shown */}
             <ResizablePanel defaultSize={showDocs ? 70 : 100}>
@@ -287,15 +287,15 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                       <Tabs
                         value={selectedQueryId}
                         onValueChange={handleTabChange}
-                        className="flex flex-col h-full overflow-hidden"
+                        className="flex h-full flex-col overflow-hidden"
                       >
-                        <div className="flex items-center gap-2 border-b border-border">
+                        <div className="border-border flex items-center gap-2 border-b">
                           <Button
                             size="sm"
                             onClick={() => void handleRunQuery()}
                             className="uppercase"
                           >
-                            <PlayIcon className="w-4 h-4 mr-2" />
+                            <PlayIcon className="mr-2 h-4 w-4" />
                             Run
                           </Button>
                           <TabsList className="flex-1">
@@ -310,7 +310,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
                                     <div
-                                      className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-6 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm"
+                                      className="hover:bg-accent absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm"
                                       onClick={(e) => e.stopPropagation()}
                                     >
                                       <MoreVerticalIcon className="h-3 w-3" />
@@ -354,9 +354,9 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                           <TabsContent
                             key={q.id}
                             value={q.id}
-                            className="relative flex-grow data-[state=active]:flex flex-col h-full"
+                            className="relative h-full flex-grow flex-col data-[state=active]:flex"
                           >
-                            <div className="flex-grow h-full w-full absolute inset-0">
+                            <div className="absolute inset-0 h-full w-full flex-grow">
                               <SqlMonacoEditor
                                 value={q.query}
                                 onChange={handleUpdateQuery}
@@ -402,7 +402,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                 <ResizableHandle withHandle />
                 <ResizablePanel
                   defaultSize={50}
-                  className="overflow-hidden bg-muted text-sm"
+                  className="bg-muted overflow-hidden text-sm"
                 >
                   {loading ? (
                     <SpinnerPane h="100%" />
@@ -411,13 +411,13 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                       query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
                     />
                   ) : error ? (
-                    <div className="w-full h-full p-5 overflow-auto">
+                    <div className="h-full w-full overflow-auto p-5">
                       <pre className="text-xs leading-tight text-red-500">
                         {error}
                       </pre>
                     </div>
                   ) : resultsTableData ? (
-                    <div className="flex-grow overflow-hidden flex flex-col relative w-full h-full">
+                    <div className="relative flex h-full w-full flex-grow flex-col overflow-hidden">
                       <DataTableVirtualized {...resultsTableData} />
                       <div className="absolute bottom-0 right-0 flex gap-2">
                         <Button
@@ -425,7 +425,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                           disabled={!resultsTableData}
                           onClick={handleCreateTable}
                         >
-                          <PlusIcon className="w-4 h-4 mr-2" />
+                          <PlusIcon className="mr-2 h-4 w-4" />
                           Create table
                         </Button>
                         <Button
@@ -433,7 +433,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                           disabled={!results}
                           onClick={exportResults}
                         >
-                          <DownloadIcon className="w-4 h-4 mr-2" />
+                          <DownloadIcon className="mr-2 h-4 w-4" />
                           Export
                         </Button>
                       </div>

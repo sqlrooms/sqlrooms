@@ -158,7 +158,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
   return (
     <div
       className={cn(
-        'w-48 bg-card/90 dark:bg-card/90 rounded-lg shadow-lg p-3 space-y-4',
+        'bg-card/90 dark:bg-card/90 w-48 space-y-4 rounded-lg p-3 shadow-lg',
         className,
       )}
     >
@@ -205,9 +205,9 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
               <TooltipTrigger asChild>
                 <Label
                   htmlFor={key}
-                  className="text-xs font-medium flex items-center gap-1 cursor-help"
+                  className="flex cursor-help items-center gap-1 text-xs font-medium"
                 >
-                  <Info className="w-3 h-3 text-muted-foreground/50" />
+                  <Info className="text-muted-foreground/50 h-3 w-3" />
                   {label}
                 </Label>
               </TooltipTrigger>
@@ -215,7 +215,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
                 {CosmosSliceConfig.shape.cosmos.shape[key].description}
               </TooltipContent>
             </Tooltip>
-            <span className="text-xs tabular-nums text-muted-foreground">
+            <span className="text-muted-foreground text-xs tabular-nums">
               {config[key].toFixed(2)}
             </span>
           </div>

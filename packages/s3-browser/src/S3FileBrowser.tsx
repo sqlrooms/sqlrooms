@@ -122,18 +122,18 @@ const S3FileBrowser: FC<{
   }, [selectedDirectory]);
 
   return (
-    <div className="relative w-full h-full overflow-hidden">
-      <div className="absolute w-full h-full overflow-x-auto overflow-y-auto flex flex-col py-0 items-start">
-        <div className="w-full rounded-lg border border-gray-600 overflow-y-auto">
+    <div className="relative h-full w-full overflow-hidden">
+      <div className="absolute flex h-full w-full flex-col items-start overflow-x-auto overflow-y-auto py-0">
+        <div className="w-full overflow-y-auto rounded-lg border border-gray-600">
           <Table disableWrapper>
             <TableHeader>
               {selectedDirectory ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="py-3 text-gray-100 bg-gray-800"
+                    className="bg-gray-800 py-3 text-gray-100"
                   >
-                    <div className="flex gap-2 items-center">
+                    <div className="flex items-center gap-2">
                       <Button
                         size="sm"
                         variant="outline"
@@ -141,7 +141,7 @@ const S3FileBrowser: FC<{
                           onChangeSelectedDirectory(parentDirectory)
                         }
                       >
-                        <Undo2Icon className="w-3 h-3 mr-1" />
+                        <Undo2Icon className="mr-1 h-3 w-3" />
                         ..
                       </Button>
                       <Breadcrumb>
@@ -196,8 +196,8 @@ const S3FileBrowser: FC<{
                     onCheckedChange={handleSelectAll}
                   />
                 </TableHead>
-                <TableHead className="py-2 text-foreground">Name</TableHead>
-                <TableHead className="py-2 text-foreground">Type</TableHead>
+                <TableHead className="text-foreground py-2">Name</TableHead>
+                <TableHead className="text-foreground py-2">Type</TableHead>
                 <TableHead className="text-foreground text-right">
                   Size
                 </TableHead>
@@ -212,7 +212,7 @@ const S3FileBrowser: FC<{
                 return (
                   <TableRow
                     key={key}
-                    className="cursor-pointer text-blue-300 hover:bg-blue-700 hover:text-foreground"
+                    className="hover:text-foreground cursor-pointer text-blue-300 hover:bg-blue-700"
                     onClick={(evt) => {
                       if (isDirectory) {
                         handleSelectDirectory(key);
@@ -231,7 +231,7 @@ const S3FileBrowser: FC<{
                     <TableCell className="text-xs">
                       {isDirectory ? (
                         <div className="flex items-center gap-2">
-                          <FolderIcon className="w-4 h-4" />
+                          <FolderIcon className="h-4 w-4" />
                           <span>{`${key}/`}</span>
                         </div>
                       ) : (
@@ -241,12 +241,12 @@ const S3FileBrowser: FC<{
                     <TableCell className="text-xs">
                       {isDirectory ? 'Directory' : object.contentType}
                     </TableCell>
-                    <TableCell className="text-xs text-right">
+                    <TableCell className="text-right text-xs">
                       {!isDirectory && object.size !== undefined
                         ? formatBytes(object.size)
                         : ''}
                     </TableCell>
-                    <TableCell className="text-xs text-right">
+                    <TableCell className="text-right text-xs">
                       {!isDirectory && object.lastModified
                         ? formatTimeRelative(object.lastModified)
                         : ''}

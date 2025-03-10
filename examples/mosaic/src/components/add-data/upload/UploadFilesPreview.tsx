@@ -117,11 +117,11 @@ const UploadFilesPreview: FC<Props> = (props) => {
   return isLoading ? (
     <SpinnerPane />
   ) : (
-    <div className="flex flex-col gap-3 h-full text-sm">
+    <div className="flex h-full flex-col gap-3 text-sm">
       <Tabs
         value={selectedFileIndex.toString()}
         onValueChange={(value) => setSelectedFileIndex(parseInt(value))}
-        className="flex-grow flex flex-col w-full h-full overflow-hidden"
+        className="flex h-full w-full flex-grow flex-col overflow-hidden"
       >
         <TabsList className="h-10">
           {addedFiles.map(({pathname}, i) => (
@@ -134,15 +134,15 @@ const UploadFilesPreview: FC<Props> = (props) => {
             </TabsTrigger>
           ))}
         </TabsList>
-        <div className="flex w-full h-full overflow-hidden">
+        <div className="flex h-full w-full overflow-hidden">
           {addedFiles.map(({pathname}, i) => (
             <TabsContent
               key={pathname}
               value={i.toString()}
-              className="flex-grow flex flex-col overflow-hidden m-0 border-none"
+              className="m-0 flex flex-grow flex-col overflow-hidden border-none"
             >
-              <div className="flex flex-col gap-3 overflow-auto flex-grow">
-                <div className="grid grid-cols-[1fr,auto] gap-1 items-center self-start justify-items-start pt-4 text-sm">
+              <div className="flex flex-grow flex-col gap-3 overflow-auto">
+                <div className="grid grid-cols-[1fr,auto] items-center justify-items-start gap-1 self-start pt-4 text-sm">
                   <span className="text-muted-foreground whitespace-nowrap">
                     File path:
                   </span>

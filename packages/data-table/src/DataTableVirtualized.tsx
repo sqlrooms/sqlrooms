@@ -67,28 +67,21 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
 
   return (
     <div className="flex flex-col overflow-hidden">
-      <div className="overflow-hidden border border-border">
-        <div ref={tableContainerRef} className="overflow-auto h-full">
+      <div className="border-border overflow-hidden border">
+        <div ref={tableContainerRef} className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`
-                      sticky top-0 left-0 w-auto whitespace-nowrap py-2 
-                      bg-background border-r text-center z-20
-                    `}
+                    className={`bg-background sticky left-0 top-0 z-20 w-auto whitespace-nowrap border-r py-2 text-center`}
                   />
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef.meta as any;
                     return (
                       <TableHead
                         key={header.id}
-                        className={`
-                          sticky top-0 font-mono whitespace-nowrap cursor-pointer px-7 py-2
-                          bg-background border-r hover:bg-muted/80 z-10
-                          ${meta?.isNumeric ? 'text-right' : 'text-left'}
-                        `}
+                        className={`bg-background hover:bg-muted/80 sticky top-0 z-10 cursor-pointer whitespace-nowrap border-r px-7 py-2 font-mono ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div
@@ -110,7 +103,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                           <div className="flex-1" />
                           <Badge
                             variant="outline"
-                            className="opacity-30 text-[9px]"
+                            className="text-[9px] opacity-30"
                           >
                             {String(meta?.type)}
                           </Badge>
@@ -132,7 +125,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                 if (!row) return null;
                 return (
                   <TableRow key={row.id} className="hover:bg-muted/50">
-                    <TableCell className="text-xs border-r bg-muted text-center text-muted-foreground sticky left-0">
+                    <TableCell className="bg-muted text-muted-foreground sticky left-0 border-r text-center text-xs">
                       {virtualRow.index + 1}
                     </TableCell>
                     {row.getVisibleCells().map((cell) => {
@@ -140,10 +133,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
                       return (
                         <TableCell
                           key={cell.id}
-                          className={`
-                            text-xs border-r max-w-[500px] overflow-hidden truncate px-7
-                            ${meta?.isNumeric ? 'text-right' : 'text-left'}
-                          `}
+                          className={`max-w-[500px] overflow-hidden truncate border-r px-7 text-xs ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                         >
                           {flexRender(
                             cell.column.columnDef.cell,
@@ -164,7 +154,7 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
           </Table>
         </div>
       </div>
-      <div className="sticky bottom-0 left-0 py-2 px-4 text-xs font-mono bg-background border border-t-0">
+      <div className="bg-background sticky bottom-0 left-0 border border-t-0 px-4 py-2 font-mono text-xs">
         {`${isPreview ? 'Preview of the first ' : ''}${formatCount(data.length)} rows`}
       </div>
     </div>

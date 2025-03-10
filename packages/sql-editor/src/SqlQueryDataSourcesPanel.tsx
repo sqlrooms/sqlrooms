@@ -58,7 +58,7 @@ const SqlQueryDataSourcesPanel: FC<{
   const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
 
   return (
-    <div className="flex flex-col overflow-auto flex-grow">
+    <div className="flex flex-grow flex-col overflow-auto">
       <div className="flex flex-col items-stretch">
         <Button
           variant="secondary"
@@ -78,15 +78,15 @@ const SqlQueryDataSourcesPanel: FC<{
         onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
       />
 
-      <div className="flex flex-col overflow-auto flex-grow">
+      <div className="flex flex-grow flex-col overflow-auto">
         {queryDataSources.map((dataSource) => (
-          <div key={dataSource.tableName} className="p-2 flex flex-col gap-1">
-            <div className="flex gap-1 cursor-pointer flex-row items-center">
-              <div className="flex-none w-[15px]">
+          <div key={dataSource.tableName} className="flex flex-col gap-1 p-2">
+            <div className="flex cursor-pointer flex-row items-center gap-1">
+              <div className="w-[15px] flex-none">
                 <FileIcon className="w-[15px]" />
               </div>
               <div className="flex-1 overflow-hidden text-ellipsis">
-                <span className="text-xs break-words">
+                <span className="break-words text-xs">
                   {dataSource.tableName}
                 </span>
               </div>
@@ -97,7 +97,7 @@ const SqlQueryDataSourcesPanel: FC<{
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-6 w-6 text-muted-foreground"
+                        className="text-muted-foreground h-6 w-6"
                       >
                         <EllipsisIcon className="h-5 w-5" />
                       </Button>
@@ -122,16 +122,16 @@ const SqlQueryDataSourcesPanel: FC<{
                 ) : null}
               </div>
             </div>
-            <div className="flex flex-row gap-1 items-center">
+            <div className="flex flex-row items-center gap-1">
               {dataSourceStates[dataSource.tableName]?.status ===
               DataSourceStatus.ERROR ? (
-                <div className="flex-1 bg-destructive/15 text-destructive text-xs p-1 rounded">
+                <div className="bg-destructive/15 text-destructive flex-1 rounded p-1 text-xs">
                   {dataSourceStates[dataSource.tableName]?.message}
                 </div>
               ) : dataSourceStates[dataSource.tableName]?.status ===
                 DataSourceStatus.FETCHING ? (
-                <div className="w-full bg-secondary h-1 rounded overflow-hidden">
-                  <div className="h-full bg-primary animate-pulse" />
+                <div className="bg-secondary h-1 w-full overflow-hidden rounded">
+                  <div className="bg-primary h-full animate-pulse" />
                 </div>
               ) : null}
             </div>

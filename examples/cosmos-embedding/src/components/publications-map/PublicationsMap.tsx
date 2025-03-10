@@ -55,7 +55,7 @@ export const PublicationsMap: FC = () => {
   }, [config, updateGraphConfig]);
 
   return graphData && colorScale ? (
-    <div className="relative w-full h-full">
+    <div className="relative h-full w-full">
       <CosmosGraph
         config={config}
         focusedPointIndex={focusedPointIndex}
@@ -71,7 +71,7 @@ export const PublicationsMap: FC = () => {
           );
         }}
       >
-        <CosmosGraphControls className="absolute top-0 left-0" />
+        <CosmosGraphControls className="absolute left-0 top-0" />
       </CosmosGraph>
       <Legend
         uniqueFields={uniqueFields}

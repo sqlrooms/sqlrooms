@@ -95,21 +95,18 @@ export default function DataTablePaginated<Data extends object>({
   }, [pagination?.pageIndex]);
 
   return (
-    <div className="relative w-full h-full flex flex-col">
-      <div className="flex-1 overflow-hidden border border-border font-mono">
-        <div className="overflow-auto h-full">
+    <div className="relative flex h-full w-full flex-col">
+      <div className="border-border flex-1 overflow-hidden border font-mono">
+        <div className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`
-                      sticky top-[-1px] left-0 w-auto whitespace-nowrap py-2 
-                      bg-background border-r text-center z-20
-                    `}
+                    className={`bg-background sticky left-0 top-[-1px] z-20 w-auto whitespace-nowrap border-r py-2 text-center`}
                   >
                     {isFetching ? (
-                      <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full" />
+                      <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
                     ) : null}
                   </TableHead>
                   {headerGroup.headers.map((header) => {
@@ -119,14 +116,10 @@ export default function DataTablePaginated<Data extends object>({
                       <TableHead
                         key={header.id}
                         colSpan={header.colSpan}
-                        className={`
-                          sticky top-[-1px] w-auto whitespace-nowrap cursor-pointer py-2 
-                          bg-background border-r hover:bg-muted z-10
-                          ${meta?.isNumeric ? 'text-right' : 'text-left'}
-                        `}
+                        className={`bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2 ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                         onClick={header.column.getToggleSortingHandler()}
                       >
-                        <div className="flex gap-2 items-center">
+                        <div className="flex items-center gap-2">
                           {header.isPlaceholder ? null : (
                             <div>
                               {flexRender(
@@ -145,7 +138,7 @@ export default function DataTablePaginated<Data extends object>({
                           <div className="flex-1" />
                           <Badge
                             variant="outline"
-                            className="opacity-30 text-xs truncate max-w-[400px]"
+                            className="max-w-[400px] truncate text-xs opacity-30"
                           >
                             {String(meta?.type)}
                           </Badge>
@@ -153,14 +146,14 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="sticky top-0 w-full whitespace-nowrap py-2 bg-background border-r border-t" />
+                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
                 </TableRow>
               ))}
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow key={row.id} className="hover:bg-muted bg-background">
-                  <TableCell className="text-xs bg-background border-r text-center text-muted-foreground sticky left-0">
+                  <TableCell className="bg-background text-muted-foreground sticky left-0 border-r text-center text-xs">
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
                       : ''}
@@ -170,10 +163,7 @@ export default function DataTablePaginated<Data extends object>({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`
-                          text-xs border-r max-w-[500px] overflow-hidden truncate px-7
-                          ${meta?.isNumeric ? 'text-right' : 'text-left'}
-                        `}
+                        className={`max-w-[500px] overflow-hidden truncate border-r px-7 text-xs ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -189,7 +179,7 @@ export default function DataTablePaginated<Data extends object>({
           </Table>
         </div>
       </div>
-      <div className="sticky bottom-0 left-0 bg-background p-2 flex gap-2 items-center flex-wrap border border-t-0">
+      <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
         <Button
           variant="outline"
           size="icon"
@@ -206,13 +196,13 @@ export default function DataTablePaginated<Data extends object>({
         >
           <ChevronLeftIcon className="h-4 w-4" />
         </Button>
-        <div className="flex items-center text-sm ml-1 gap-1">
+        <div className="ml-1 flex items-center gap-1 text-sm">
           <div>Page</div>
           <Input
             type="number"
             min={1}
             max={table.getPageCount()}
-            className="w-16 h-8"
+            className="h-8 w-16"
             value={internalPageIndex + 1}
             onChange={(e) => {
               const value = e.target.value;
@@ -252,7 +242,7 @@ export default function DataTablePaginated<Data extends object>({
           value={String(table.getState().pagination.pageSize)}
           onValueChange={(value) => table.setPageSize(Number(value))}
         >
-          <SelectTrigger className="w-[110px] h-8">
+          <SelectTrigger className="h-8 w-[110px]">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -280,16 +270,16 @@ export default function DataTablePaginated<Data extends object>({
             disabled={isExporting}
           >
             {isExporting ? (
-              <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full mr-2" />
+              <div className="border-primary mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
             ) : (
-              <ArrowDownIcon className="h-4 w-4 mr-2" />
+              <ArrowDownIcon className="mr-2 h-4 w-4" />
             )}
             Export CSV
           </Button>
         ) : null}
       </div>
       {isFetching ? (
-        <div className="absolute inset-0 bg-background/80 animate-pulse" />
+        <div className="bg-background/80 absolute inset-0 animate-pulse" />
       ) : null}
     </div>
   );

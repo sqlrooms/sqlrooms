@@ -16,15 +16,15 @@ const TableCard: FC<{
   return (
     <div
       className={cn(
-        `flex flex-col border border-border bg-card rounded-sm py-2 px-2 items-center justify-center relative cursor-pointer transition-colors hover:border-foreground`,
+        `border-border bg-card hover:border-foreground relative flex cursor-pointer flex-col items-center justify-center rounded-sm border px-2 py-2 transition-colors`,
         className,
       )}
       onClick={onClick}
     >
-      <div className="flex gap-2 px-2 mt-0 flex-col w-full">
-        <div className="overflow-auto w-full">
-          <div className="h-[30px] overflow-hidden relative mb-2">
-            <div className="absolute w-full text-foreground mb-1 py-1 whitespace-nowrap text-ellipsis overflow-hidden font-bold font-mono">
+      <div className="mt-0 flex w-full flex-col gap-2 px-2">
+        <div className="w-full overflow-auto">
+          <div className="relative mb-2 h-[30px] overflow-hidden">
+            <div className="text-foreground absolute mb-1 w-full overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono font-bold">
               {value.tableName}
             </div>
           </div>
@@ -32,14 +32,14 @@ const TableCard: FC<{
             {value.columns?.map((row, i) => (
               <Tooltip key={i}>
                 <TooltipTrigger asChild>
-                  <div className="flex items-center gap-3 hover:bg-foreground/10 rounded-sm font-mono">
+                  <div className="hover:bg-foreground/10 flex items-center gap-3 rounded-sm font-mono">
                     <Badge
                       variant="secondary"
-                      className="text-xs overflow-hidden whitespace-nowrap py-0 px-1 w-[70px] text-muted-foreground"
+                      className="text-muted-foreground w-[70px] overflow-hidden whitespace-nowrap px-1 py-0 text-xs"
                     >
                       {row.type}
                     </Badge>
-                    <div className="text-xs max-w-[100px]">{row.name}</div>
+                    <div className="max-w-[100px] text-xs">{row.name}</div>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent
@@ -49,7 +49,7 @@ const TableCard: FC<{
                 >
                   <div className="flex flex-col gap-1 font-mono">
                     <div className="text-sm font-bold">{row.name}</div>
-                    <div className="text-xs text-muted-foreground">
+                    <div className="text-muted-foreground text-xs">
                       {row.type}
                     </div>
                   </div>
@@ -57,7 +57,7 @@ const TableCard: FC<{
               </Tooltip>
             ))}
           </div>
-          <div className="text-xs text-right mt-1">
+          <div className="mt-1 text-right text-xs">
             {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
           </div>
         </div>

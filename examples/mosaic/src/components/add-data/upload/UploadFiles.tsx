@@ -107,7 +107,7 @@ const UploadFiles: FC = () => {
       onSetTableNames={setTableNames}
     />
   ) : (
-    <div className="flex flex-col items-stretch h-full w-full pt-5">
+    <div className="flex h-full w-full flex-col items-stretch pt-5">
       <FileDropzone multiple onDrop={handleDropzoneFilesAdded} />
     </div>
   );

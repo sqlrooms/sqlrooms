@@ -36,20 +36,20 @@ const DataSourcesPanel: FC = () => {
           }
         }}
       >
-        <div className="text-xs text-muted-foreground">
+        <div className="text-muted-foreground text-xs">
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
 
       <Accordion type="multiple" defaultValue={['files', 'sql', 'tables']}>
         <AccordionItem value="files">
-          <AccordionTrigger className="px-0 gap-1">
-            <div className="flex items-center text-muted-foreground">
+          <AccordionTrigger className="gap-1 px-0">
+            <div className="text-muted-foreground flex items-center">
               <FolderIcon className="h-4 w-4" />
               <h3 className="ml-1 text-xs uppercase">Files</h3>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="pb-5 pt-1 px-[5px]">
+          <AccordionContent className="px-[5px] pb-5 pt-1">
             <FileDataSourcesPanel />
           </AccordionContent>
         </AccordionItem>
@@ -69,13 +69,13 @@ const DataSourcesPanel: FC = () => {
         ) : null} */}
 
         <AccordionItem value="tables">
-          <AccordionTrigger className="px-0 gap-1">
-            <div className="flex items-center text-muted-foreground">
+          <AccordionTrigger className="gap-1 px-0">
+            <div className="text-muted-foreground flex items-center">
               <TableIcon className="h-4 w-4" />
               <h3 className="ml-1 text-xs uppercase">Tables</h3>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="pb-5 pt-1 px-[5px]">
+          <AccordionContent className="px-[5px] pb-5 pt-1">
             <TablesListPanel />
           </AccordionContent>
         </AccordionItem>

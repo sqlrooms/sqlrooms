@@ -26,10 +26,10 @@ export default function ProjectDetailsPanel() {
 
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['project-details']}>
-      <div className="flex flex-col flex-grow gap-3">
-        <div className="flex flex-col gap-3 flex-grow">
+      <div className="flex flex-grow flex-col gap-3">
+        <div className="flex flex-grow flex-col gap-3">
           <div className="flex flex-col gap-1.5">
-            <Label className="text-xs text-muted-foreground font-bold uppercase">
+            <Label className="text-muted-foreground text-xs font-bold uppercase">
               Title
             </Label>
             <div className="w-full overflow-hidden text-sm">
@@ -46,8 +46,8 @@ export default function ProjectDetailsPanel() {
             </div>
           </div>
 
-          <div className="flex flex-col gap-1.5 flex-grow">
-            <Label className="text-xs text-muted-foreground font-bold uppercase">
+          <div className="flex flex-grow flex-col gap-1.5">
+            <Label className="text-muted-foreground text-xs font-bold uppercase">
               Description
             </Label>
             {isReadOnly ? (
@@ -57,8 +57,8 @@ export default function ProjectDetailsPanel() {
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 className={cn(
-                  'flex-grow text-xs bg-secondary text-secondary-foreground resize-none',
-                  'placeholder:text-muted-foreground border-none min-h-0',
+                  'bg-secondary text-secondary-foreground flex-grow resize-none text-xs',
+                  'placeholder:text-muted-foreground min-h-0 border-none',
                 )}
                 placeholder="A story behind this project, what it represents"
                 maxLength={4096}

@@ -73,7 +73,7 @@ export default function useArrowDataTable(
                     {shorten(`${valueStr}`, MAX_VALUE_LENGTH)}
                   </span>
                 </PopoverTrigger>
-                <PopoverContent className="font-mono text-xs w-auto max-w-[500px]">
+                <PopoverContent className="w-auto max-w-[500px] font-mono text-xs">
                   <div className="space-y-2">
                     <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
                     <div className="relative">
@@ -81,7 +81,7 @@ export default function useArrowDataTable(
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="absolute top-0 right-0 h-6 w-6"
+                        className="absolute right-0 top-0 h-6 w-6"
                         onClick={() => navigator.clipboard.writeText(valueStr)}
                       >
                         <ClipboardIcon className="h-3 w-3" />

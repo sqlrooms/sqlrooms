@@ -24,7 +24,7 @@ const ProgressModal: FC<{
         </DialogHeader>
         <div className="flex flex-col gap-2">
           <Progress value={progress} className="w-full" />
-          <DialogDescription className="flex justify-between text-sm text-muted-foreground">
+          <DialogDescription className="text-muted-foreground flex justify-between text-sm">
             <span>{loadingStage ?? ''}</span>
             {progress ? <span>{progress}%</span> : null}
           </DialogDescription>

@@ -116,7 +116,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
 
 const QueryDataTableWithSuspense: FC<QueryDataTableProps> = (props) => {
   return (
-    <Suspense fallback={<SpinnerPane className="w-full h-full" />}>
+    <Suspense fallback={<SpinnerPane className="h-full w-full" />}>
       <QueryDataTable
         {...props}
         key={props.query} // reset state when query changes

@@ -9,7 +9,7 @@ import {cn} from '../lib/utils';
 export const Spinner: FC<{className?: string}> = ({className}) => {
   return (
     <LoaderCircleIcon
-      className={cn('animate-spin text-brand-primary', className)}
+      className={cn('text-brand-primary animate-spin', className)}
       size={17}
     />
   );

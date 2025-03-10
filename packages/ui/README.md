@@ -28,8 +28,8 @@ import {Button, Card, Input} from '@sqlrooms/ui';
 
 function LoginForm() {
   return (
-    <Card className="p-6 max-w-md mx-auto">
-      <h2 className="text-2xl font-bold mb-4">Login</h2>
+    <Card className="mx-auto max-w-md p-6">
+      <h2 className="mb-4 text-2xl font-bold">Login</h2>
       <form>
         <div className="space-y-4">
           <div>

@@ -32,7 +32,7 @@ const MosaicLayout: FC<MosaicProps<string>> = (props) => {
   );
 
   return (
-    <div className="relative w-full h-full bg">
+    <div className="bg relative h-full w-full">
       <style>{customMosaicStyles}</style>
       <Mosaic<string>
         {...props}

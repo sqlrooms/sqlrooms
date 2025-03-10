@@ -73,11 +73,11 @@ const AddDataModal: FC<{
               <DialogTitle>Add Data Sources</DialogTitle>
             </DialogHeader>
 
-            <div className="flex flex-col flex-grow gap-2 h-full overflow-hidden">
+            <div className="flex h-full flex-grow flex-col gap-2 overflow-hidden">
               <Tabs
                 value={selectedTab}
                 onValueChange={setSelectedTab}
-                className="flex-grow flex flex-col h-full"
+                className="flex h-full flex-grow flex-col"
               >
                 {showTabs ? (
                   <TabsList>
@@ -97,7 +97,7 @@ const AddDataModal: FC<{
                   <TabsContent
                     key={tab.id}
                     value={tab.id}
-                    className="flex-grow h-full"
+                    className="h-full flex-grow"
                   >
                     <Suspense fallback={<SpinnerPane h="100%" />}>
                       {selectedTab === tab.id ? tab.content() : null}
@@ -108,9 +108,9 @@ const AddDataModal: FC<{
             </div>
 
             {loadingStatus ? (
-              <div className="absolute inset-0 flex items-center justify-center bg-background/80">
+              <div className="bg-background/80 absolute inset-0 flex items-center justify-center">
                 <SpinnerPane>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="text-muted-foreground text-sm">
                     {loadingStatus}
                   </span>
                 </SpinnerPane>

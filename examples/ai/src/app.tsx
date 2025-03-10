@@ -10,8 +10,8 @@ import {TerminalIcon} from 'lucide-react';
 export const AppShell = () => {
   const sqlEditor = useDisclosure();
   return (
-    <div className="flex w-full h-full">
-      <div className="flex flex-col h-full py-2 px-1 bg-muted/50">
+    <div className="flex h-full w-full">
+      <div className="bg-muted/50 flex h-full flex-col px-1 py-2">
         <ProjectBuilderSidebarButtons />
         <SidebarButton
           title="SQL Editor"
@@ -21,7 +21,7 @@ export const AppShell = () => {
         />
         <ThemeSwitch />
       </div>
-      <div className="flex flex-col w-full h-full">
+      <div className="flex h-full w-full flex-col">
         <ProjectBuilder />
       </div>
       <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />

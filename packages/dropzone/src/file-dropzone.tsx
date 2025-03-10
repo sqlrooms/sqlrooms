@@ -88,7 +88,7 @@ export const FileDropzone: FC<{
       onClick={isAddingDropped ? undefined : open}
     >
       {isAddingDropped ? (
-        <div className="flex h-full w-full items-center justify-center gap-4 text-xs text-muted-foreground">
+        <div className="text-muted-foreground flex h-full w-full items-center justify-center gap-4 text-xs">
           <Spinner className="h-4 w-4" />
           Adding files...
         </div>
@@ -99,14 +99,14 @@ export const FileDropzone: FC<{
             <div className="flex h-full flex-col items-center justify-center gap-2">
               <div className="flex items-center gap-2">
                 <Plus className="h-6 w-6" />
-                <p className="text-sm text-muted-foreground">
+                <p className="text-muted-foreground text-sm">
                   {isDragActive ? 'Drop here ...' : 'Add files'}
                 </p>
               </div>
               {acceptedFormats && (
                 <div className="flex flex-wrap justify-center gap-2">
                   <p className="text-xs font-bold">Supported formats:</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-muted-foreground text-xs">
                     {Object.values(acceptedFormats).flat().join(', ')}
                   </p>
                 </div>

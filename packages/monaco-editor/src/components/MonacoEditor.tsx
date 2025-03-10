@@ -251,7 +251,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   };
 
   return (
-    <div className={cn('w-full h-[300px]', className)}>
+    <div className={cn('h-[300px] w-full', className)}>
       <Editor
         height="100%"
         width="100%"

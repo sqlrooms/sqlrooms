@@ -66,7 +66,7 @@ export const MammalsGraph: FC = () => {
       <CosmosGraphControls>
         <DownloadButton nodes={graphData.nodes} />
       </CosmosGraphControls>
-      <CosmosSimulationControls className="absolute top-1 right-1" />
+      <CosmosSimulationControls className="absolute right-1 top-1" />
     </CosmosGraph>
   ) : null;
 };

@@ -126,14 +126,14 @@ export const CosmosGraph: FC<CosmosGraphProps> = ({
   }, [setFocusedPoint, focusedPointIndex]);
 
   return (
-    <div className="relative w-full h-full">
-      <div ref={containerRef} className="absolute w-full h-full" />
+    <div className="relative h-full w-full">
+      <div ref={containerRef} className="absolute h-full w-full" />
       {renderPointTooltip ? (
         <div
           className={cn(
             'absolute z-50 max-w-xs',
-            'bg-white/90 dark:bg-gray-800/90 rounded-md shadow-lg p-2',
-            'text-xs flex gap-2 items-center pointer-events-none transition-opacity duration-150',
+            'rounded-md bg-white/90 p-2 shadow-lg dark:bg-gray-800/90',
+            'pointer-events-none flex items-center gap-2 text-xs transition-opacity duration-150',
             hoveredPoint ? 'opacity-100' : 'opacity-0',
           )}
           style={{

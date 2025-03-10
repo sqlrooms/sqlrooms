@@ -10,9 +10,9 @@ const ProjectBuilderPanel: FC<
   }>
 > = ({type: projectPanelType, children, className, showHeader = true}) => {
   return (
-    <div className={cn('flex flex-col flex-grow gap-3 h-full', className)}>
+    <div className={cn('flex h-full flex-grow flex-col gap-3', className)}>
       {showHeader && <ProjectBuilderPanelHeader panelKey={projectPanelType} />}
-      <div className="flex flex-col flex-grow gap-3 h-full overflow-auto">
+      <div className="flex h-full flex-grow flex-col gap-3 overflow-auto">
         {children}
       </div>
     </div>

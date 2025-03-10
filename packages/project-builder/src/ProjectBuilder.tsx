@@ -46,7 +46,7 @@ const ProjectBuilder: React.FC = () => {
   return (
     <ErrorBoundary>
       <Suspense fallback={<SpinnerPane h="100%" />}>
-        <div className="flex flex-col items-stretch px-0 pb-0 flex-grow w-full h-full">
+        <div className="flex h-full w-full flex-grow flex-col items-stretch px-0 pb-0">
           {layout ? (
             <MosaicLayout
               renderTile={(id) => <>{renderedPanels.get(id)}</>}

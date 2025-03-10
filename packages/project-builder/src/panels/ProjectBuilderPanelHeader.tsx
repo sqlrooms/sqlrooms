@@ -25,18 +25,18 @@ const ProjectBuilderPanelHeader: FC<{
 
   return (
     <div className="flex">
-      <div className="flex flex-row w-full items-center gap-2">
+      <div className="flex w-full flex-row items-center gap-2">
         {showHeader && (
           <>
-            {Icon ? <Icon className="w-4 h-4" /> : null}
-            <h2 className="text-xs uppercase text-muted-foreground font-semibold">
+            {Icon ? <Icon className="h-4 w-4" /> : null}
+            <h2 className="text-muted-foreground text-xs font-semibold uppercase">
               {title}
             </h2>
           </>
         )}
         {children}
       </div>
-      <div className="flex gap-0 bg-secondary/50">
+      <div className="bg-secondary/50 flex gap-0">
         <PanelHeaderButton
           isPinned={isPinned}
           icon={

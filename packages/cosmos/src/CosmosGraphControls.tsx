@@ -54,7 +54,7 @@ export const CosmosGraphControls: FC<
   const {fitView} = useStoreWithCosmos((s) => s.cosmos);
 
   return (
-    <div className={cn('absolute top-1 left-1 flex gap-2', className)}>
+    <div className={cn('absolute left-1 top-1 flex gap-2', className)}>
       <Button onClick={fitView} variant="outline" size="sm">
         <Maximize2 className="h-4 w-4" />
       </Button>

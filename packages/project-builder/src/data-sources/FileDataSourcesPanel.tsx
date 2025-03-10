@@ -12,7 +12,7 @@ const FileDataSourcesPanel: FC = () => {
   const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
 
   return (
-    <div className="flex flex-col overflow-auto flex-grow">
+    <div className="flex flex-grow flex-col overflow-auto">
       {projectFiles.map((fileInfo, i) => (
         <FileDataSourceCard
           key={i}

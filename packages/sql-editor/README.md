@@ -92,12 +92,12 @@ function AdvancedSqlEditor() {
   // Custom documentation component
   const Documentation = () => (
     <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">SQL Reference</h2>
+      <h2 className="mb-4 text-xl font-bold">SQL Reference</h2>
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold">SELECT</h3>
           <p>Retrieves data from a table</p>
-          <pre className="bg-gray-100 p-2 rounded mt-2">
+          <pre className="mt-2 rounded bg-gray-100 p-2">
             SELECT column1, column2 FROM table_name;
           </pre>
         </div>

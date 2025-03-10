@@ -3,7 +3,7 @@ import {MammalsGraph} from './mammals-graph/MammalsGraph';
 
 export const MainView: FC = () => {
   return (
-    <div className="w-full h-full p-4">
+    <div className="h-full w-full p-4">
       <MammalsGraph />
     </div>
   );

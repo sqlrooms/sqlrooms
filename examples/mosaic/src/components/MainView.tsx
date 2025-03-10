@@ -13,20 +13,20 @@ export const MainView = () => {
   }
   if (!isTableReady) {
     return (
-      <div className="flex flex-col gap-4 p-4 justify-center items-center w-full h-full">
+      <div className="flex h-full w-full flex-col items-center justify-center gap-4 p-4">
         No data available
       </div>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4 justify-center items-center w-full">
+    <div className="flex w-full flex-col items-center justify-center gap-4 p-4">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold mb-2">{chartSpec?.meta?.title}</h1>
-        <p className="text-gray-400 whitespace-pre-line text-sm">
+        <h1 className="mb-2 text-2xl font-bold">{chartSpec?.meta?.title}</h1>
+        <p className="whitespace-pre-line text-sm text-gray-400">
           {chartSpec?.meta?.description}
         </p>
-        <p className="text-sm text-gray-500 mt-2 italic">
+        <p className="mt-2 text-sm italic text-gray-500">
           {chartSpec?.meta?.credit?.replace(/\[(.*?)\]\((.*?)\)/, '$1')}
         </p>
       </div>

@@ -15,12 +15,12 @@ export const PublicationTooltip: FC<PublicationTooltipProps> = ({
 }) => {
   return (
     <div className="flex flex-col gap-1 text-xs">
-      <div className="text-xs font-medium text-gray-900 dark:text-gray-100 mb-1.5">
+      <div className="mb-1.5 text-xs font-medium text-gray-900 dark:text-gray-100">
         {publication.title}
       </div>
-      <div className="flex items-center gap-1.5 dark:text-gray-400 text-gray-900">
+      <div className="flex items-center gap-1.5 text-gray-900 dark:text-gray-400">
         <span
-          className="px-1.5 py-0.5 rounded text-gray-100"
+          className="rounded px-1.5 py-0.5 text-gray-100"
           style={{backgroundColor: fieldColor}}
         >
           {publication.mainField}

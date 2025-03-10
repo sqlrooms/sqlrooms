@@ -33,12 +33,12 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
       <div className="relative flex-grow">
         <div
           ref={containerRef}
-          className={cn('flex w-full h-full invisible', isLoaded && 'visible')}
+          className={cn('invisible flex h-full w-full', isLoaded && 'visible')}
         >
-          <iframe src={pageUrl} className="flex-1 w-full h-full border-none" />
+          <iframe src={pageUrl} className="h-full w-full flex-1 border-none" />
         </div>
         {!isLoaded && (
-          <div className="absolute top-0 w-full h-full">
+          <div className="absolute top-0 h-full w-full">
             <SkeletonPane className="px-4" n={6} />
           </div>
         )}
