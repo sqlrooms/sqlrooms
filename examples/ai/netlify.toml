@@ -3,6 +3,6 @@
   publish = "dist"
 
 [build.environment]
-  NETLIFY_USE_PNPM = "true"
+  NPM_FLAGS = "--force"  # Override dependency constraints
   CI = "false"  # This will prevent treating warnings as errors
 
