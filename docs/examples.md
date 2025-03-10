@@ -82,4 +82,4 @@ Features include:
 
 ## Looking for More?
 
-For real-world applications and success stories using SQLRooms, check out our [Case Studies](/case-studies) page. These case studies provide in-depth insights into how organizations are leveraging SQLRooms to solve complex data challenges and deliver impactful solutions.
+Make sure to check out our [Case Studies](/case-studies) page for real-world applications and success stories using SQLRooms.
