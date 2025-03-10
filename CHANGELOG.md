@@ -5,6 +5,10 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## [0.8.1](https://github.com/sqlrooms/sqlrooms/compare/v0.8.0...v0.8.1) (2025-03-10)
 
+## Fixes
+
+- Added missing `@tailwindcss/typography` dependency to `@sqlrooms/ui`
+
 **Note:** Version bump only for package sqlrooms
 
 # [0.8.0](https://github.com/sqlrooms/sqlrooms/compare/v0.7.0...v0.8.0) (2025-03-10)
