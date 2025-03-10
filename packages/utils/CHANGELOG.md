@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.8.0](https://github.com/sqlrooms/sqlrooms/compare/v0.7.0...v0.8.0) (2025-03-10)
+
+### Features
+
+* Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
+
 # [0.7.0](https://github.com/sqlrooms/sqlrooms/compare/v0.6.0...v0.7.0) (2025-03-01)
 
 **Note:** Version bump only for package @sqlrooms/utils
