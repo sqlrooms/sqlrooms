@@ -7,20 +7,29 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-* Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
+- Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
+- Config persistence improvements; AI example uses persistence
+- AI UI improvements: rendering now closer resembles modern LLM interfaces
+- AI supports multiple model providers now (anthropic, google, deepseek)
+- Added UI components for AI: ModelSelector, SessionControls etc
+- AI Better markdown rendering
+- AI Custom tools support (added custom echo tool component to AI example)
+- AI instructions (system prompt) are customizable now
+- Vega chart is now a custom tool, moved to @sqlrooms/vega
+- Using embedded JSON editor in AI results
 
 # [0.7.0](https://github.com/sqlrooms/sqlrooms/compare/v0.6.0...v0.7.0) (2025-03-01)
 
 ### Features
 
-* Adding SQL and JSON Monaco editors ([#24](https://github.com/sqlrooms/sqlrooms/issues/24)) ([656edd0](https://github.com/sqlrooms/sqlrooms/commit/656edd017cf477e10aa2fd1f5a6a90bcec879300))
+- Adding SQL and JSON Monaco editors ([#24](https://github.com/sqlrooms/sqlrooms/issues/24)) ([656edd0](https://github.com/sqlrooms/sqlrooms/commit/656edd017cf477e10aa2fd1f5a6a90bcec879300))
 
 # [0.6.0](https://github.com/sqlrooms/sqlrooms/compare/v0.5.1...v0.6.0) (2025-02-26)
 
 ### Features
 
-* Renamed useDuckDbQuery -> useSql, adding .rows() iterator and .toArray() ([#18](https://github.com/sqlrooms/sqlrooms/issues/18)) ([26fd317](https://github.com/sqlrooms/sqlrooms/commit/26fd31767eeed38069c0c8cd0a3d3e1a7d85d6b4))
-* switch to openassistant/core for AI module ([#11](https://github.com/sqlrooms/sqlrooms/issues/11)) ([5072e1f](https://github.com/sqlrooms/sqlrooms/commit/5072e1f286239396168f36a820159605b02b7f22))
+- Renamed useDuckDbQuery -> useSql, adding .rows() iterator and .toArray() ([#18](https://github.com/sqlrooms/sqlrooms/issues/18)) ([26fd317](https://github.com/sqlrooms/sqlrooms/commit/26fd31767eeed38069c0c8cd0a3d3e1a7d85d6b4))
+- switch to openassistant/core for AI module ([#11](https://github.com/sqlrooms/sqlrooms/issues/11)) ([5072e1f](https://github.com/sqlrooms/sqlrooms/commit/5072e1f286239396168f36a820159605b02b7f22))
 
 ## [0.5.1](https://github.com/sqlrooms/sqlrooms/compare/v0.5.0...v0.5.1) (2025-02-25)
 
@@ -30,13 +39,13 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Features
 
-* Introducing cosmos slice ([#15](https://github.com/sqlrooms/sqlrooms/issues/15)) ([da51434](https://github.com/sqlrooms/sqlrooms/commit/da5143440ae7984fde1bc9e07e6e63e011c71091))
+- Introducing cosmos slice ([#15](https://github.com/sqlrooms/sqlrooms/issues/15)) ([da51434](https://github.com/sqlrooms/sqlrooms/commit/da5143440ae7984fde1bc9e07e6e63e011c71091))
 
 ## [0.4.2](https://github.com/sqlrooms/sqlrooms/compare/v0.4.0...v0.4.2) (2025-02-23)
 
 ### Features
 
-* Adding useDuckDbQuery ([68668bb](https://github.com/sqlrooms/sqlrooms/commit/68668bb1c96e102ee8f706e5067f8eb889423b56))
+- Adding useDuckDbQuery ([68668bb](https://github.com/sqlrooms/sqlrooms/commit/68668bb1c96e102ee8f706e5067f8eb889423b56))
 
 ## [0.4.1](https://github.com/sqlrooms/sqlrooms/compare/v0.4.0...v0.4.1) (2025-02-21)
 
@@ -66,7 +75,7 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ### Reverts
 
-* Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
+- Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
 
 ## [0.0.1](https://github.com/sqlrooms/sqlrooms/compare/v0.0.1-alpha.0...v0.0.1) (2025-01-30)
 
