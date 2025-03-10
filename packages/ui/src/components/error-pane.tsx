@@ -43,13 +43,15 @@ const ErrorPane = React.forwardRef<HTMLDivElement, ErrorPaneProps>(
           )}
         >
           <div className="mb-4">
-            <TriangleAlertIcon className="h-8 w-8 text-destructive" />
+            <TriangleAlertIcon className="text-destructive h-8 w-8" />
           </div>
-          <AlertTitle className="mb-1 text-xl">{title}</AlertTitle>
-          <AlertDescription className="mt-3 max-w-sm px-2">
+          <AlertTitle className="text-foreground mb-1 text-xl">
+            {title}
+          </AlertTitle>
+          <AlertDescription className="text-foreground mt-3 max-w-sm px-2">
             <p className="mb-5 text-left">{text}</p>
             {actions && (
-              <div className="mt-6 mb-3">
+              <div className="mb-3 mt-6">
                 <div className="flex justify-center gap-2">
                   {onRetry && (
                     <Button

@@ -3,6 +3,7 @@ import {
   AiSliceState,
   createAiSlice,
   createDefaultAiConfig,
+  getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {
   createProjectSlice,
@@ -26,7 +27,10 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-
+import {createVegaChartTool} from '@sqlrooms/vega';
+import {DataTable} from '@sqlrooms/duckdb';
+import exampleSessions from './example-sessions.json';
+import EchoToolResult from './components/EchoToolResult';
 export const ProjectPanelTypes = z.enum([
   'project-details',
   'data-sources',
@@ -46,11 +50,14 @@ export type AppConfig = z.infer<typeof AppConfig>;
  * Project state
  */
 type CustomAppState = {
-  supportedModels: string[];
-  openAiApiKey: string | undefined;
-  setOpenAiApiKey: (key: string) => void;
-  selectedModel: string;
-  setSelectedModel: (model: string) => void;
+  selectedModel: {
+    model: string;
+    provider: string;
+  };
+  setSelectedModel: (model: string, provider: string) => void;
+  /** API keys by provider */
+  apiKeys: Record<string, string | undefined>;
+  setProviderApiKey: (provider: string, apiKey: string) => void;
 };
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
@@ -68,29 +75,30 @@ export const {projectStore, useProjectStore} = createProjectStore<
     (set, get, store) => ({
       // Base project slice
       ...createProjectSlice<AppConfig>({
-        project: {
-          config: {
-            title: 'Demo App Project',
-            layout: {
-              type: LayoutTypes.enum.mosaic,
-              nodes: {
-                direction: 'row',
-                first: ProjectPanelTypes.enum['data-sources'],
-                second: MAIN_VIEW,
-                splitPercentage: 30,
-              },
+        config: {
+          layout: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              first: ProjectPanelTypes.enum['data-sources'],
+              second: MAIN_VIEW,
+              splitPercentage: 30,
             },
-            dataSources: [
-              {
-                tableName: 'earthquakes',
-                type: 'url',
-                // url: 'https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv',
-                url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-              },
-            ],
-            ...createDefaultAiConfig(),
-            ...createDefaultSqlEditorConfig(),
           },
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              // url: 'https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
+          ],
+          ...createDefaultAiConfig(
+            AiSliceConfig.shape.ai.parse(exampleSessions),
+          ),
+          ...createDefaultSqlEditorConfig(),
+        },
+        project: {
           panels: {
             [ProjectPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
@@ -114,27 +122,53 @@ export const {projectStore, useProjectStore} = createProjectStore<
 
       // Ai slice
       ...createAiSlice({
-        getApiKey: () => {
-          return get()?.openAiApiKey || '';
+        getApiKey: (modelProvider: string) => {
+          return get()?.apiKeys[modelProvider] || '';
+        },
+        // Add custom tools
+        customTools: {
+          // Add the VegaChart tool from the vega package with a custom description
+          chart: createVegaChartTool(),
+
+          // Example of adding a simple echo tool
+          echo: {
+            description: 'A simple echo tool that returns the input text',
+            parameters: z.object({
+              text: z.string().describe('The text to echo back'),
+            }),
+            execute: async ({text}: {text: string}) => {
+              return {
+                llmResult: {
+                  success: true,
+                  details: `Echo: ${text}`,
+                },
+              };
+            },
+            component: EchoToolResult,
+          },
+        },
+        // Example of customizing the system instructions
+        getInstructions: (tablesSchema: DataTable[]) => {
+          // You can use getDefaultInstructions() and append to it
+          const defaultInstructions = getDefaultInstructions(tablesSchema);
+          return `${defaultInstructions}. Please be polite and concise.`;
         },
       })(set, get, store),
 
-      // Custom app state
-      supportedModels: [
-        'gpt-4',
-        'gpt-4o',
-        'gpt-4o-mini',
-        'o3-mini',
-        'o3-mini-high',
-      ],
-
-      openAiApiKey: undefined,
-      selectedModel: 'gpt-4o-mini',
-      setOpenAiApiKey: (key: string | undefined) => {
-        set({openAiApiKey: key});
+      selectedModel: {
+        model: 'gpt-4o-mini',
+        provider: 'openai',
       },
-      setSelectedModel: (model: string) => {
-        set({selectedModel: model});
+      setSelectedModel: (model: string, provider: string) => {
+        set({selectedModel: {model, provider}});
+      },
+      apiKeys: {
+        openai: undefined,
+      },
+      setProviderApiKey: (provider: string, apiKey: string) => {
+        set({
+          apiKeys: {...get().apiKeys, [provider]: apiKey},
+        });
       },
     }),
 
@@ -143,31 +177,11 @@ export const {projectStore, useProjectStore} = createProjectStore<
       // Local storage key
       name: 'app-state-storage',
       // Subset of the state to persist
-      partialize: (state) =>
-        ({
-          openAiApiKey: state.openAiApiKey,
-          selectedModel: state.selectedModel,
-          // projectConfig: state.project.config,
-        }) satisfies PersistedState,
-
-      //   merge: (persistedState, currentState: AppState): AppState => {
-      //     const {projectConfig, ...rest} = persistedState as PersistedState;
-      //     const mergedState = {
-      //       ...currentState,
-      //       ...rest,
-      //       project: {
-      //         ...currentState.project,
-      //         config: projectConfig,
-      //       },
-      //     };
-      //     return mergedState;
-      //   },
+      partialize: (state) => ({
+        config: AppConfig.parse(state.config),
+        selectedModel: state.selectedModel,
+        apiKeys: state.apiKeys,
+      }),
     },
   ) as StateCreator<AppState>,
 );
-
-type PersistedState = {
-  openAiApiKey: string | undefined;
-  selectedModel: string;
-  // projectConfig: AppConfig;
-};

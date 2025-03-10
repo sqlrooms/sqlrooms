@@ -6,6 +6,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  UseDisclosureReturnValue,
 } from '@sqlrooms/ui';
 import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
@@ -25,16 +26,12 @@ import QueryDataTable from './QueryDataTable';
  * import { DataTableModal } from '@sqlrooms/data-table';
  *
  * const MyComponent = () => {
- *   const [isOpen, setIsOpen] = useState(false);
- *
+ *   const tableModal = useDisclosure();
  *   return (
  *     <DataTableModal
  *       title="Users"
  *       query="SELECT * FROM users LIMIT 10"
- *       tableModal={{
- *         isOpen,
- *         onClose: () => setIsOpen(false)
- *       }}
+ *       tableModal={tableModal}
  *     />
  *   );
  * };
@@ -43,10 +40,7 @@ import QueryDataTable from './QueryDataTable';
 const DataTableModal: FC<{
   title: string | undefined;
   query: string | undefined;
-  tableModal: {
-    isOpen: boolean;
-    onClose: () => void;
-  };
+  tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
 }> = ({title, query, tableModal}) => {
   return (
     <Dialog
@@ -61,7 +55,7 @@ const DataTableModal: FC<{
           <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 bg-muted overflow-hidden">
+        <div className="bg-muted flex-1 overflow-hidden">
           {tableModal.isOpen && query ? <QueryDataTable query={query} /> : null}
         </div>
         <DialogFooter>

@@ -5,7 +5,7 @@ import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectStore} from './ProjectStateProvider';
 
 const ProjectBuilder: React.FC = () => {
-  const layout = useBaseProjectStore((state) => state.project.config.layout);
+  const layout = useBaseProjectStore((state) => state.config.layout);
   const setLayout = useBaseProjectStore((state) => state.project.setLayout);
   const panels = useBaseProjectStore((state) => state.project.panels);
   const loadingProgress = useBaseProjectStore((state) =>

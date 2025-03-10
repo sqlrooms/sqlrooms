@@ -23,7 +23,6 @@
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "typedoc": "turbo typedoc",
     "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
-    "typescript": "tsc --noEmit",
     "graph": "turbo run build --graph",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
     "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs\"",
@@ -49,6 +48,7 @@
     "@sqlrooms/eslint-config": "workspace:*",
     "@sqlrooms/typedoc-config": "workspace:*",
     "@sqlrooms/typescript-config": "workspace:*",
+    "@tailwindcss/typography": "^0.5.16",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.14",
     "@types/mocha": "^10.0.10",
@@ -71,13 +71,14 @@
     "shx": "^0.3.4",
     "turbo": "^2.4.4",
     "typedoc": "^0.27.9",
-    "typescript": "5.7.3",
+    "typescript": "^5.8.2",
     "vitepress": "^1.6.3"
   },
   "pnpm": {
     "overrides": {
       "apache-arrow": "18.1.0",
-      "@types/react": "18.3.18"
+      "@types/react": "18.3.18",
+      "typescript": "5.8.2"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

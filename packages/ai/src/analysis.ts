@@ -1,20 +1,21 @@
+import * as duckdb from '@duckdb/duckdb-wasm';
+import {
+  createAssistant,
+  rebuildMessages,
+  StreamMessage,
+  tool,
+} from '@openassistant/core';
 import {
   arrowTableToJson,
+  DataTable,
+  DuckQueryError,
   getDuckDb,
   getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
-import {StepResult} from 'ai';
-import * as duckdb from '@duckdb/duckdb-wasm';
-import {
-  CallbackFunctionProps,
-  createAssistant,
-  ToolCallMessage,
-  VercelToolSet,
-} from '@openassistant/core';
 
-import {ChartToolParameters, QueryToolParameters} from './schemas';
-import {queryMessage} from './QueryResult';
-import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
+import {QueryToolResult} from './components/tools/QueryToolResult';
+import {AnalysisResultSchema, QueryToolParameters} from './schemas';
+import {AiSliceTool} from './AiSlice';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -23,7 +24,7 @@ import {isChartToolParameters, isQueryToolParameters} from './ToolCall';
  * - Creating visualizations with VegaLite
  * - Formatting final answers
  */
-const SYSTEM_PROMPT = `
+const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a project.
 
 Instructions for analysis:
@@ -64,10 +65,17 @@ For your final answer:
 - Provide an explanation for how you got it
 - Explain your reasoning step by step
 - Include relevant statistics or metrics
-- For each prompt, please alwasy provide the final answer.
+- For each prompt, please always provide the final answer.
 
 Please use the following schema for the tables:
 `;
+
+/**
+ * Returns the default system instructions for the AI assistant
+ */
+export function getDefaultInstructions(tablesSchema: DataTable[]): string {
+  return `${DEFAULT_INSTRUCTIONS}\n${JSON.stringify(tablesSchema)}`;
+}
 
 /**
  * Generates summary statistics for a SQL query result
@@ -118,26 +126,28 @@ export type AnalysisConfig = {
   /** Optional controller for canceling the analysis operation */
   abortController?: AbortController;
 
-  /**
-   * Callback fired after each analysis step completion
-   * @param event - Current step result containing tool execution details. See Vercel AI SDK documentation for more details.
-   * Specifically, it contains the array of tool calls and the results of the tool calls (toolResults).
-   * @param toolCallMessages - Collection of messages generated during tool calls. They are linked to the tool call by the toolCallId.
-   */
-  onStepFinish?: (
-    event: StepResult<typeof TOOLS>,
-    toolCallMessages: ToolCallMessage[],
-  ) => Promise<void> | void;
-
   /** Maximum number of analysis steps allowed (default: 100) */
   maxSteps?: number;
 
+  /** The history of analysis results (e.g. saved in localStorage) */
+  historyAnalysis?: AnalysisResultSchema[];
+
+  /** Tools to use in the analysis */
+  tools?: Record<string, AiSliceTool>;
+
+  /**
+   * Function to get custom instructions for the AI assistant
+   * @param tablesSchema - The schema of the tables in the database
+   * @returns The instructions string to use
+   */
+  getInstructions?: (tablesSchema: DataTable[]) => string;
+
   /**
    * Callback for handling streaming results
-   * @param message - Current message content being streamed
    * @param isCompleted - Indicates if this is the final message in the stream
+   * @param streamMessage - Current message content being streamed
    */
-  onStreamResult: (message: string, isCompleted: boolean) => void;
+  onStreamResult: (isCompleted: boolean, streamMessage?: StreamMessage) => void;
 };
 
 /**
@@ -153,179 +163,111 @@ export async function runAnalysis({
   apiKey,
   prompt,
   abortController,
-  onStepFinish,
+  historyAnalysis,
   onStreamResult,
   maxSteps = 5,
+  tools = {},
+  getInstructions,
 }: AnalysisConfig) {
   const tablesSchema = await getDuckTableSchemas();
 
-  // get the singlton assistant instance
+  // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
     model,
     apiKey,
     version: 'v1',
-    instructions: `${SYSTEM_PROMPT}\n${JSON.stringify(tablesSchema)}`,
-    vercelFunctions: TOOLS,
+    instructions: getInstructions
+      ? getInstructions(tablesSchema)
+      : getDefaultInstructions(tablesSchema),
+    functions: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
     ...(abortController ? {abortController} : {}),
   });
 
+  // restore ai messages from historyAnalysis?
+  if (historyAnalysis) {
+    const historyMessages = historyAnalysis.map((analysis) => ({
+      prompt: analysis.prompt,
+      response: analysis.streamMessage,
+    }));
+    const initialMessages = rebuildMessages(historyMessages);
+    assistant.setMessages(initialMessages);
+  }
+
   // process the prompt
-  const result = await assistant.processTextMessage({
+  const newMessages = await assistant.processTextMessage({
     textMessage: prompt,
-    streamMessageCallback: (message) => {
-      // the final result (before the answer) can be streamed back here
-      onStreamResult(message.deltaMessage, message.isCompleted ?? false);
+    streamMessageCallback: ({isCompleted, message}) => {
+      onStreamResult(isCompleted ?? false, message);
     },
-    onStepFinish,
   });
 
-  return result;
+  return newMessages;
 }
 
 /**
- * Extracts a readable error message from an error object
- * @param error - Error object or unknown value
- * @returns Formatted error message string
- */
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    if (error.cause instanceof Error) {
-      return error.cause.message;
-    }
-    return error.message;
-  }
-  return String(error);
-}
-
-/**
- * Collection of tools available to the AI assistant for data analysis
+ * Default tools available to the AI assistant for data analysis
  * Includes:
  * - query: Executes SQL queries against DuckDB
- * - chart: Creates VegaLite visualizations
  */
-const TOOLS: VercelToolSet = {
-  query: {
-    description: `A tool for executing SQL queries in DuckDB that is embedded in browser using duckdb-wasm.
-Query results are returned as a json object "{success: boolean, data: object[], error?: string}"
-Please only analyze tables which are in the main schema.
-To obtain stats, use the "SUMMARIZE table_name" query.
-Don't execute queries that modify data unless explicitly asked.`,
-    parameters: QueryToolParameters,
-    executeWithContext: async (props: CallbackFunctionProps) => {
-      if (!isQueryToolParameters(props.functionArgs)) {
-        return {
-          name: 'query',
-          result: {
-            success: false,
-            error: 'Invalid query parameters',
-          },
-        };
-      }
+export function getDefaultTools(): Record<string, AiSliceTool> {
+  return {
+    query: tool({
+      description: `A tool for running SQL queries on the tables in the database.
+Please only run one query at a time.
+If a query fails, please don't try to run it again with the same syntax.`,
+      parameters: QueryToolParameters,
+      // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
+      execute: async ({type, sqlQuery}) => {
+        try {
+          const {conn} = await getDuckDb();
+          // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+          const result = await conn.query(sqlQuery);
+          // Only get summary if the query isn't already a SUMMARIZE query
+          const summaryData = sqlQuery.toLowerCase().includes('summarize')
+            ? arrowTableToJson(result)
+            : await getQuerySummary(conn, sqlQuery);
 
-      const {type, sqlQuery} = props.functionArgs;
-      try {
-        const {conn} = await getDuckDb();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await conn.query(sqlQuery);
-        // Only get summary if the query isn't already a SUMMARIZE query
-        const summaryData = sqlQuery.toLowerCase().includes('summarize')
-          ? arrowTableToJson(result)
-          : await getQuerySummary(conn, sqlQuery);
+          // Get first 2 rows of the result as a json object
+          const subResult = result.slice(0, 2);
+          const firstTwoRows = arrowTableToJson(subResult);
 
-        // Get first 2 rows of the result as a json object
-        const subResult = result.slice(0, 2);
-        const firstTwoRows = arrowTableToJson(subResult);
+          return {
+            llmResult: {
+              success: true,
+              data: {
+                type,
+                summary: summaryData,
+                firstTwoRows,
+              },
+            },
+            additionalData: {
+              title: 'Query Result',
+              sqlQuery,
+            },
+          };
+        } catch (error) {
+          return {
+            llmResult: {
+              success: false,
+              details: 'Query execution failed.',
+              errorMessage:
+                error instanceof DuckQueryError
+                  ? error.getMessageForUser()
+                  : error instanceof Error
+                    ? error.message
+                    : 'Unknown error',
+            },
+          };
+        }
+      },
+      component: QueryToolResult,
+    }),
+  };
+}
 
-        // create result object sent back to LLM for tool call
-        const llmResult = {
-          type,
-          success: true,
-          data: {
-            // only summary and first two rows will be sent back to LLM as context
-            summary: summaryData,
-            firstTwoRows,
-          },
-        };
-
-        // data object of the raw query result, which is NOT sent back to LLM
-        // we can use it to visualize the arrow table in the callback function `message()` below
-        const data = {sqlQuery};
-
-        return {
-          name: 'query',
-          result: llmResult,
-          data,
-        };
-      } catch (error) {
-        return {
-          name: 'query',
-          result: {
-            success: false,
-            description:
-              'Failed to execute the query. Please stop tool call and return error message.',
-            error: getErrorMessage(error),
-          },
-        };
-      }
-    },
-    message: queryMessage,
-  },
-
-  chart: {
-    description: `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
-In the response:
-- omit the data from the vegaLiteSpec
-- provide an sql query in sqlQuery instead.`,
-    parameters: ChartToolParameters,
-    executeWithContext: async (props: CallbackFunctionProps) => {
-      if (!isChartToolParameters(props.functionArgs)) {
-        return {
-          name: 'chart',
-          result: {
-            success: false,
-            error: 'Invalid chart parameters',
-          },
-        };
-      }
-      const {sqlQuery, vegaLiteSpec} = props.functionArgs;
-      const llmResult = {
-        success: true,
-        details: 'Chart created successfully.',
-      };
-
-      // data object of the vegaLiteSpec and sqlQuery
-      // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
-      const data = {
-        sqlQuery,
-        vegaLiteSpec,
-      };
-
-      return {
-        name: 'chart',
-        result: llmResult,
-        data,
-      };
-    },
-  },
-
-  // answer tool: the LLM will provide a structured answer
-  // answer: {
-  //   description: 'A tool for providing the final answer.',
-  //   parameters: AnswerToolParameters,
-  //   executeWithContext: async (props: CallbackFunctionProps) => {
-  //     const {answer} = props.functionArgs;
-  //     return {
-  //       name: 'answer',
-  //       result: {
-  //         success: true,
-  //         data: answer,
-  //       },
-  //     };
-  //   },
-  // },
-};
+export const TOOLS = getDefaultTools();

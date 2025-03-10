@@ -49,3 +49,14 @@ export function camelCaseToTitle(camelCase: string): string {
   // If no words were found, just capitalize the whole string
   return camelCase.charAt(0).toUpperCase() + camelCase.slice(1);
 }
+
+/**
+ * Capitalizes the first letter of string
+ * @param str - The string to capitalize
+ * @returns A new string with the first letter capitalized
+ * @example
+ * capitalize("hello world") // returns "Hello world"
+ */
+export function capitalize(str: string): string {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}

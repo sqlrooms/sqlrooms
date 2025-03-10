@@ -20,7 +20,8 @@
   },
   "dependencies": {
     "@ai-sdk/provider": "^1.0.7",
-    "@openassistant/core": "^0.1.9",
+    "@duckdb/duckdb-wasm": "1.29.0",
+    "@openassistant/core": "0.2.6",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
@@ -28,7 +29,7 @@
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "ai": "^4.1.28",
     "immer": "^10.1.1",
     "lucide-react": "^0.475.0",

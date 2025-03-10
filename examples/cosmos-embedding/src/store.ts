@@ -53,22 +53,22 @@ export const {projectStore, useProjectStore} = createProjectStore<
 >((set, get, store) => ({
   // Base project slice
   ...createProjectSlice<AppConfig>({
-    project: {
-      config: {
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: MAIN_VIEW,
-        },
-        dataSources: [
-          {
-            type: 'url',
-            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/publications/publications-sample-1pct.parquet',
-            tableName: 'publications',
-          },
-        ],
-        ...createDefaultSqlEditorConfig(),
-        ...createDefaultCosmosConfig(),
+    config: {
+      layout: {
+        type: LayoutTypes.enum.mosaic,
+        nodes: MAIN_VIEW,
       },
+      dataSources: [
+        {
+          type: 'url',
+          url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/publications/publications-sample-1pct.parquet',
+          tableName: 'publications',
+        },
+      ],
+      ...createDefaultSqlEditorConfig(),
+      ...createDefaultCosmosConfig(),
+    },
+    project: {
       panels: {
         [ProjectPanelTypes.enum['data-sources']]: {
           title: 'Data Sources',

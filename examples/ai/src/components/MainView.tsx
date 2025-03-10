@@ -1,61 +1,90 @@
-import {AnalysisResultsContainer, QueryControls} from '@sqlrooms/ai';
-import {
-  cn,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@sqlrooms/ui';
+import {Input, SkeletonPane} from '@sqlrooms/ui';
 import {KeyIcon} from 'lucide-react';
+import {
+  AnalysisResultsContainer,
+  SessionControls,
+  QueryControls,
+  ModelSelector,
+} from '@sqlrooms/ai';
 import {useProjectStore} from '../store';
+import {LLM_MODELS} from './constant';
+import {capitalize} from '@sqlrooms/utils';
+import {useMemo} from 'react';
 
 export const MainView: React.FC = () => {
-  const analysisResults = useProjectStore(
-    (s) => s.project.config.ai.analysisResults,
+  const currentSessionId = useProjectStore((s) => s.config.ai.currentSessionId);
+  const currentSession = useProjectStore((s) => {
+    const sessions = s.config.ai.sessions;
+    return sessions.find((session) => session.id === currentSessionId);
+  });
+
+  // Check if data is available
+  const isDataAvailable = useProjectStore(
+    (state) => state.project.isDataAvailable,
   );
-  const apiKey = useProjectStore((s) => s.openAiApiKey);
-  const setApiKey = useProjectStore((s) => s.setOpenAiApiKey);
-  const selectedModel = useProjectStore((s) => s.selectedModel);
-  const setSelectedModel = useProjectStore((s) => s.setSelectedModel);
-  const supportedModels = useProjectStore((s) => s.supportedModels);
+
+  const apiKeys = useProjectStore((s) => s.apiKeys);
+  const setProviderApiKey = useProjectStore((s) => s.setProviderApiKey);
+
+  // The current model is from the session
+  const currentModelProvider =
+    currentSession?.modelProvider || LLM_MODELS[0].name;
+
+  const apiKey = apiKeys[currentModelProvider] || '';
+
+  const onApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setProviderApiKey(currentModelProvider, e.target.value);
+  };
+
+  // Transform LLM_MODELS into the format expected by ModelSelector
+  const modelOptions = useMemo(
+    () =>
+      LLM_MODELS.flatMap((provider) =>
+        provider.models.map((model) => ({
+          provider: provider.name,
+          label: model,
+          value: model,
+        })),
+      ),
+    [],
+  );
 
   return (
-    <div className="w-full h-full flex flex-col gap-0 overflow-hidden">
-      {analysisResults.length > 0 && <AnalysisResultsContainer />}
-      <div
-        className={cn(
-          'w-full min-h-[200px] transition-all duration-300 ease-in-out pb-12',
-          analysisResults.length > 0 ? 'border-t' : 'flex-1 max-w-5xl mx-auto',
+    <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
+      {/* Display SessionControls at the top */}
+      <div className="mb-4">
+        <SessionControls />
+      </div>
+
+      {/* Display AnalysisResultsContainer without the session controls UI */}
+      <div className="flex-grow overflow-auto">
+        {isDataAvailable ? (
+          <AnalysisResultsContainer
+            key={currentSessionId} // will prevent scrolling to bottom after changing current session
+          />
+        ) : (
+          <div className="flex h-full w-full flex-col items-center justify-center">
+            <SkeletonPane className="p-4" />
+            <p className="text-muted-foreground mt-4">Loading database...</p>
+          </div>
         )}
-      >
-        <QueryControls />
-        <div className="flex items-center justify-end gap-2 px-4">
-          <div className="flex items-center relative">
-            <KeyIcon className="w-4 h-4 absolute left-2 " />
+      </div>
+
+      <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+        <div className="flex items-center justify-end gap-2">
+          <div className="relative flex items-center">
+            <KeyIcon className="absolute left-2 h-4 w-4" />
             <Input
+              className="w-[165px] pl-8"
               type="password"
-              placeholder="OpenAI API Key"
-              value={apiKey || ''}
-              onChange={(e) => setApiKey(e.target.value)}
-              className="pl-8 w-[200px]"
+              placeholder={`${capitalize(currentModelProvider)} API Key`}
+              value={apiKey}
+              onChange={onApiKeyChange}
             />
           </div>
-          <Select value={selectedModel || ''} onValueChange={setSelectedModel}>
-            <SelectTrigger className="w-[140px]">
-              <SelectValue placeholder="Select model" />
-            </SelectTrigger>
-            <SelectContent>
-              {supportedModels.map((model) => (
-                <SelectItem key={model} value={model}>
-                  {model}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <ModelSelector models={modelOptions} className="w-[200px]" />
         </div>
-      </div>
+      </QueryControls>
     </div>
   );
 };

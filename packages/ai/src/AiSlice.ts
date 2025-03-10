@@ -1,3 +1,4 @@
+import {ExtendedTool, StreamMessage} from '@openassistant/core';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -6,265 +7,361 @@ import {
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
-import {
-  CoreAssistantMessage,
-  CoreToolMessage,
-  CoreUserMessage,
-  StepResult,
-  ToolSet,
-} from 'ai';
-import {produce} from 'immer';
+import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {runAnalysis} from './analysis';
+import {getDefaultTools, runAnalysis, TOOLS} from './analysis';
 import {
   AnalysisResultSchema,
-  ToolCallSchema,
-  ToolResultSchema,
+  AnalysisSessionSchema,
+  ErrorMessageSchema,
 } from './schemas';
-import {ToolCallMessage} from '@openassistant/core';
-type AiMessage = (CoreToolMessage | CoreAssistantMessage | CoreUserMessage) & {
-  id: string;
-};
+import {DataTable} from '@sqlrooms/duckdb';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
-    modelProvider: z.string(),
-    model: z.string(),
-    analysisResults: z.array(AnalysisResultSchema),
+    sessions: z.array(AnalysisSessionSchema),
+    currentSessionId: z.string().optional(),
   }),
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
-export function createDefaultAiConfig(): AiSliceConfig {
+export function createDefaultAiConfig(
+  props: Partial<AiSliceConfig['ai']>,
+): AiSliceConfig {
+  const defaultSessionId = createId();
   return {
     ai: {
-      modelProvider: 'openai',
-      model: 'gpt-4o-mini',
-      analysisResults: [],
+      sessions: [
+        {
+          id: defaultSessionId,
+          name: 'Default Session',
+          modelProvider: 'openai',
+          model: 'gpt-4o-mini',
+          analysisResults: [],
+          createdAt: new Date(),
+        },
+      ],
+      currentSessionId: defaultSessionId,
+      ...props,
     },
   };
 }
+
+export type AiSliceTool = ExtendedTool<any>;
 
 export type AiSliceState = {
   ai: {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
+    tools: Record<string, AiSliceTool>;
     analysisAbortController?: AbortController;
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
-    messagesById: Map<string, AiMessage>;
-    addMessages: (messages: AiMessage[]) => void;
-    getMessages: () => AiMessage[];
-    setAiModel: (model: string) => void;
+    setAiModel: (modelProvider: string, model: string) => void;
+    createSession: (
+      name?: string,
+      modelProvider?: string,
+      model?: string,
+    ) => void;
+    switchSession: (sessionId: string) => void;
+    renameSession: (sessionId: string, name: string) => void;
+    deleteSession: (sessionId: string) => void;
+    getCurrentSession: () => AnalysisSessionSchema | undefined;
+    deleteAnalysisResult: (sessionId: string, resultId: string) => void;
+    findToolComponent: (toolName: string) => React.ComponentType | undefined;
   };
 };
 
-/**
- * Execute the analysis. It will be used by the action `startAnalysis`.
- *
- * Each analysis contains an array of toolCalls and the results of the tool calls (toolResults).
- * After all the tool calls have been executed, the LLM will stream the results as text stored in `analysis`.
- *
- * @param resultId - The result id
- * @param prompt - The prompt
- * @param model - The model
- * @param apiKey - The api key
- * @param abortController - The abort controller
- * @param addMessages - The add messages function
- * @param set - The set function
- */
-async function executeAnalysis({
-  resultId,
-  prompt,
-  modelProvider,
-  model,
-  apiKey,
-  abortController,
-  addMessages,
-  set,
-}: {
-  resultId: string;
-  prompt: string;
-  modelProvider: string;
-  model: string;
-  apiKey: string;
-  abortController: AbortController;
-  addMessages: (messages: AiMessage[]) => void;
-  set: <T>(fn: (state: T) => T) => void;
-}) {
-  try {
-    await runAnalysis({
-      modelProvider,
-      model,
-      apiKey,
-      prompt,
-      abortController,
-      onStepFinish: (
-        event: StepResult<ToolSet>,
-        toolCallMessages: ToolCallMessage[],
-      ) => {
-        addMessages(event.response.messages);
-        set(
-          makeResultsAppender({
-            resultId,
-            toolResults: event.toolResults,
-            toolCalls: event.toolCalls,
-            toolCallMessages,
-          }),
-        );
-      },
-      onStreamResult: (message, isCompleted) => {
-        set(
-          makeResultsAppender({
-            resultId,
-            analysis: message,
-            isCompleted,
-          }),
-        );
-      },
-    });
-  } catch (err) {
-    set(
-      makeResultsAppender({
-        resultId,
-        isCompleted: true,
-        toolResults: [
-          {
-            toolName: 'error',
-            toolCallId: createId(),
-            args: {},
-            result: {
-              success: false,
-              error: err instanceof Error ? err.message : String(err),
-            },
-          },
-        ],
-        toolCalls: [],
-      }),
-    );
-  }
-}
-
 export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
   getApiKey,
-  initialAnalysisPrompt = 'Describe the data in the tables and make a chart providing an overview of the most important features.',
+  initialAnalysisPrompt = '',
+  customTools = {},
+  getInstructions,
 }: {
-  getApiKey: () => string;
+  getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
+  customTools?: Record<string, AiSliceTool>;
+  /**
+   * Function to get custom instructions for the AI assistant
+   * @param tablesSchema - The schema of the tables in the database
+   * @returns The instructions string to use
+   */
+  getInstructions?: (tablesSchema: DataTable[]) => string;
 }): StateCreator<AiSliceState> {
-  return createSlice<PC, AiSliceState>((set, get) => ({
-    ai: {
-      analysisPrompt: initialAnalysisPrompt,
-      isRunningAnalysis: false,
-      messagesById: new Map(),
+  return createSlice<PC, AiSliceState>((set, get) => {
+    return {
+      ai: {
+        analysisPrompt: initialAnalysisPrompt,
+        isRunningAnalysis: false,
 
-      setAnalysisPrompt: (prompt: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.analysisPrompt = prompt;
-          }),
-        );
-      },
+        tools: {
+          ...getDefaultTools(),
+          ...customTools,
+        },
 
-      /**
-       * Set the AI model
-       * @param model - The model to set
-       */
-      setAiModel: (model: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.project.config.ai.model = model;
-          }),
-        );
-      },
-
-      /**
-       * Add messages to the project store uniquely by id
-       * @param messages - The messages to add.
-       */
-      addMessages: (messages: AiMessage[]) => {
-        set((state) => {
-          const newMessages = messages.filter(
-            (m) => !state.ai.messagesById.has(m.id),
+        setAnalysisPrompt: (prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.analysisPrompt = prompt;
+            }),
           );
-          const newMessagesById = new Map(state.ai.messagesById);
-          for (const m of newMessages) {
-            if (!m.id) {
-              console.warn('Message has no id', m);
-            }
-            newMessagesById.set(m.id, m);
-          }
-          return {
-            ai: {
-              ...state.ai,
-              messagesById: newMessagesById,
-            },
-          };
-        });
-      },
+        },
 
-      getMessages: () => {
-        return Array.from(get().ai.messagesById.values());
-      },
+        /**
+         * Set the AI model for the current session
+         * @param model - The model to set
+         */
+        setAiModel: (modelProvider: string, model: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const currentSession = getCurrentSessionFromState(draft);
+              if (currentSession) {
+                currentSession.modelProvider = modelProvider;
+                currentSession.model = model;
+              }
+            }),
+          );
+        },
 
-      startAnalysis: async () => {
-        const resultId = createId();
-        const abortController = new AbortController();
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.analysisAbortController = abortController;
-            draft.ai.isRunningAnalysis = true;
-            draft.project.config.ai.analysisResults.push({
-              id: resultId,
-              prompt: get().ai.analysisPrompt,
-              toolResults: [],
-              toolCalls: [],
-              toolCallMessages: [],
-              analysis: '',
-              isCompleted: false,
+        /**
+         * Get the current active session
+         */
+        getCurrentSession: () => {
+          const state = get();
+          const {currentSessionId, sessions} = state.config.ai;
+          return sessions.find((session) => session.id === currentSessionId);
+        },
+
+        /**
+         * Create a new session with the given name and model settings
+         */
+        createSession: (
+          name?: string,
+          modelProvider?: string,
+          model?: string,
+        ) => {
+          const currentSession = get().ai.getCurrentSession();
+          const newSessionId = createId();
+
+          // Generate a default name if none is provided
+          let sessionName = name;
+          if (!sessionName) {
+            // Generate a human-readable date and time for the session name
+            const now = new Date();
+            const formattedDate = now.toLocaleDateString('en-US', {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric',
             });
-          }),
-        );
+            const formattedTime = now.toLocaleTimeString('en-US', {
+              hour: 'numeric',
+              minute: 'numeric',
+              hour12: true,
+            });
+            sessionName = `Session ${formattedDate} at ${formattedTime}`;
+          }
 
-        get().ai.addMessages([
-          {
-            id: createId(),
-            role: 'user',
-            content: get().ai.analysisPrompt,
-          },
-        ]);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.ai.sessions.unshift({
+                id: newSessionId,
+                name: sessionName,
+                modelProvider:
+                  modelProvider || currentSession?.modelProvider || 'openai',
+                model: model || currentSession?.model || 'gpt-4o-mini',
+                analysisResults: [],
+                createdAt: new Date(),
+              });
+              draft.config.ai.currentSessionId = newSessionId;
+            }),
+          );
+        },
 
-        try {
-          await executeAnalysis({
-            resultId,
-            prompt: get().ai.analysisPrompt,
-            modelProvider: get().project.config.ai.modelProvider,
-            model: get().project.config.ai.model,
-            apiKey: getApiKey(),
-            abortController,
-            addMessages: get().ai.addMessages,
-            set,
-          });
-        } finally {
+        /**
+         * Switch to a different session
+         */
+        switchSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.ai.currentSessionId = sessionId;
+            }),
+          );
+        },
+
+        /**
+         * Rename an existing session
+         */
+        renameSession: (sessionId: string, name: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === sessionId,
+              );
+              if (session) {
+                session.name = name;
+              }
+            }),
+          );
+        },
+
+        /**
+         * Delete a session
+         */
+        deleteSession: (sessionId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const sessionIndex = draft.config.ai.sessions.findIndex(
+                (s) => s.id === sessionId,
+              );
+              if (sessionIndex !== -1) {
+                // Don't delete the last session
+                if (draft.config.ai.sessions.length > 1) {
+                  draft.config.ai.sessions.splice(sessionIndex, 1);
+                  // If we deleted the current session, switch to another one
+                  if (draft.config.ai.currentSessionId === sessionId) {
+                    // Make sure there's at least one session before accessing its id
+                    if (draft.config.ai.sessions.length > 0) {
+                      const firstSession = draft.config.ai.sessions[0];
+                      if (firstSession) {
+                        draft.config.ai.currentSessionId = firstSession.id;
+                      }
+                    }
+                  }
+                }
+              }
+            }),
+          );
+        },
+
+        /**
+         * Start the analysis
+         * TODO: how to pass the history analysisResults?
+         */
+        startAnalysis: async () => {
+          const resultId = createId();
+          const abortController = new AbortController();
+          const currentSession = get().ai.getCurrentSession();
+
+          if (!currentSession) {
+            console.error('No current session found');
+            return;
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.analysisAbortController = abortController;
+              draft.ai.isRunningAnalysis = true;
+
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === draft.config.ai.currentSessionId,
+              );
+
+              if (session) {
+                session.analysisResults.push({
+                  id: resultId,
+                  prompt: get().ai.analysisPrompt,
+                  streamMessage: {
+                    toolCallMessages: [],
+                    reasoning: '',
+                    text: '',
+                  },
+                  isCompleted: false,
+                });
+              }
+            }),
+          );
+
+          try {
+            await runAnalysis({
+              modelProvider: currentSession.modelProvider || 'openai',
+              model: currentSession.model || 'gpt-4o-mini',
+              apiKey: getApiKey(currentSession.modelProvider || 'openai'),
+              prompt: get().ai.analysisPrompt,
+              abortController,
+              tools: get().ai.tools,
+              getInstructions,
+              onStreamResult: (isCompleted, streamMessage) => {
+                set(
+                  makeResultsAppender({
+                    resultId,
+                    streamMessage,
+                    isCompleted,
+                  }),
+                );
+              },
+            });
+          } catch (err) {
+            set(
+              makeResultsAppender({
+                resultId,
+                isCompleted: true,
+                errorMessage: {
+                  error: err instanceof Error ? err.message : String(err),
+                },
+              }),
+            );
+          } finally {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.ai.isRunningAnalysis = false;
+                draft.ai.analysisPrompt = '';
+              }),
+            );
+          }
+        },
+
+        cancelAnalysis: () => {
           set((state) =>
             produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisPrompt = '';
             }),
           );
-        }
+          get().ai.analysisAbortController?.abort('Analysis cancelled');
+        },
+
+        /**
+         * Delete an analysis result from a session
+         */
+        deleteAnalysisResult: (sessionId: string, resultId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === sessionId,
+              );
+              if (session) {
+                session.analysisResults = session.analysisResults.filter(
+                  (r) => r.id !== resultId,
+                );
+              }
+            }),
+          );
+        },
+
+        findToolComponent: (toolName: string) => {
+          return [
+            ...Object.entries(customTools),
+            ...Object.entries(TOOLS),
+          ].find(([name]) => name === toolName)?.[1]
+            ?.component as React.ComponentType;
+        },
       },
-      cancelAnalysis: () => {
-        set((state) =>
-          produce(state, (draft) => {
-            draft.ai.isRunningAnalysis = false;
-          }),
-        );
-        get().ai.analysisAbortController?.abort('Analysis cancelled');
-      },
-    },
-  }));
+    };
+  });
+}
+
+/**
+ * Helper function to get the current session from state
+ */
+function getCurrentSessionFromState<
+  PC extends BaseProjectConfig & AiSliceConfig,
+>(
+  state: ProjectState<PC> | WritableDraft<ProjectState<PC>>,
+): AnalysisSessionSchema | undefined {
+  const {currentSessionId, sessions} = state.config.ai;
+  return sessions.find(
+    (session: AnalysisSessionSchema) => session.id === currentSessionId,
+  );
 }
 
 function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
@@ -272,52 +369,72 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
 }
 
 /**
- * Returns a function that will update the state by appending new results to the analysis results.
+ * Appends the tool results, tool calls, and analysis to the state
  *
- * @param resultId - The result id
- * @param toolCalls - The tool calls that were executed by the LLM, e.g. "query" or "chart" ("map" will be added soon). See {@link ToolCallSchema} for more details.
- * @param toolResults - The results of the tool calls that were executed by the LLM. See {@link ToolResultSchema} for more details.
- * @param toolCallMessages - The tool call messages that were created by some of our defined TOOLS, e.g. the table with query result. It's an array of React/JSX elements. It is linked to the tool call by the toolCallId.
- * @param analysis - The analysis is the content generated after all the tool calls have been executed
+ * @param resultId - The id of the result to append to
+ * @param message - The message to append to the state. The structure of the message is defined as:
+ * - reasoning: string The reasoning of the assistant
+ * - toolCallMessages: ToolCallMessage[] The tool call messages
+ * - text: string The final text message
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
  */
 function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   resultId,
-  toolResults,
-  toolCalls,
-  analysis,
+  streamMessage,
+  errorMessage,
   isCompleted,
-  toolCallMessages,
 }: {
   resultId: string;
-  toolResults?: ToolResultSchema[];
-  toolCalls?: ToolCallSchema[];
-  analysis?: string;
+  streamMessage?: StreamMessage;
+  errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
-  toolCallMessages?: ToolCallMessage[];
 }) {
   return (state: ProjectState<PC>) =>
     produce(state, (draft) => {
-      const result = findResultById(
-        draft.project.config.ai.analysisResults,
-        resultId,
-      );
+      const currentSession = getCurrentSessionFromState(draft);
+      if (!currentSession) {
+        console.error('No current session found');
+        return;
+      }
+
+      const result = findResultById(currentSession.analysisResults, resultId);
       if (result) {
-        if (toolResults) {
-          result.toolResults = [...result.toolResults, ...toolResults];
+        if (streamMessage) {
+          result.streamMessage = {
+            toolCallMessages: (streamMessage.toolCallMessages || []).map(
+              (toolCall) => ({
+                args: {...toolCall.args},
+                isCompleted: toolCall.isCompleted,
+                llmResult: toolCall.llmResult,
+                additionalData: toolCall.additionalData,
+                text: toolCall.text,
+                toolCallId: toolCall.toolCallId,
+                toolName: toolCall.toolName,
+              }),
+            ),
+            reasoning: streamMessage.reasoning,
+            text: streamMessage.text,
+            analysis: streamMessage.analysis,
+            parts: streamMessage.parts?.map((part) => ({
+              ...part,
+              ...(part.type === 'text' && {text: part.text}),
+              ...(part.type === 'tool' && {
+                toolCallMessages: part.toolCallMessages?.map((toolCall) => ({
+                  args: {...toolCall.args},
+                  isCompleted: toolCall.isCompleted,
+                  llmResult: toolCall.llmResult,
+                  additionalData: toolCall.additionalData,
+                  text: toolCall.text,
+                  toolCallId: toolCall.toolCallId,
+                  toolName: toolCall.toolName,
+                })),
+              }),
+            })),
+          };
         }
-        if (toolCalls) {
-          result.toolCalls = [...result.toolCalls, ...toolCalls];
-        }
-        if (toolCallMessages) {
-          result.toolCallMessages = [
-            ...result.toolCallMessages,
-            ...toolCallMessages,
-          ];
-        }
-        if (analysis) {
-          result.analysis = analysis;
+        if (errorMessage) {
+          result.errorMessage = errorMessage;
         }
         if (isCompleted) {
           result.isCompleted = isCompleted;

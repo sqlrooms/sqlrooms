@@ -87,7 +87,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
           // Create and configure new graph
           const graph = new Graph(container);
-          const config = get().project.config.cosmos;
+          const config = get().config.cosmos;
           graph.setConfig(config);
           graph.start();
 
@@ -143,9 +143,9 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
           set((state) =>
             produce(state, (draft) => {
-              Object.assign(draft.project.config.cosmos, config);
+              Object.assign(draft.config.cosmos, config);
               if (graph) {
-                graph.setConfig(draft.project.config.cosmos);
+                graph.setConfig(draft.config.cosmos);
               }
             }),
           );
@@ -156,9 +156,9 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
           set((state) =>
             produce(state, (draft) => {
-              Object.assign(draft.project.config.cosmos, config);
+              Object.assign(draft.config.cosmos, config);
               if (graph) {
-                graph.setConfig(draft.project.config.cosmos);
+                graph.setConfig(draft.config.cosmos);
               }
             }),
           );

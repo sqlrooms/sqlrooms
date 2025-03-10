@@ -3,6 +3,7 @@ import {DataTable} from '@sqlrooms/duckdb';
 import {FC, useState} from 'react';
 import {useBaseProjectStore} from '../ProjectStateProvider';
 import {TableCard} from './TableCard';
+import {useDisclosure} from '@sqlrooms/ui';
 
 const TablesListPanel: FC = () => {
   const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
@@ -15,21 +16,21 @@ const TablesListPanel: FC = () => {
   const [selectedTable, setSelectedTable] = useState<DataTable | undefined>(
     undefined,
   );
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleClick = (table: DataTable) => {
-    setIsModalOpen(true);
+    onOpen();
     setSelectedTable(table);
   };
 
   const handleClose = () => {
-    setIsModalOpen(false);
+    onClose();
     setSelectedTable(undefined);
   };
 
   return (
     <>
-      <div className="flex gap-2 flex-col flex-grow items-stretch relative">
+      <div className="relative flex flex-grow flex-col items-stretch gap-2">
         {tables?.length ? (
           <div className="flex flex-col gap-2">
             {tables.map((table, i) => (
@@ -47,7 +48,7 @@ const TablesListPanel: FC = () => {
 
       <DataTableModal
         tableModal={{
-          isOpen: isModalOpen,
+          isOpen: isOpen,
           onClose: handleClose,
         }}
         title={selectedTable?.tableName}
