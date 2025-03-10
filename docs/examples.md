@@ -79,3 +79,7 @@ Features include:
 - Seamless integration with Mosaic for interactive visualizations
 - Real-time cross-filtering capabilities across multiple views
 - Example dashboards with common visualization types
+
+## Looking for More?
+
+For real-world applications and success stories using SQLRooms, check out our [Case Studies](/case-studies) page. These case studies provide in-depth insights into how organizations are leveraging SQLRooms to solve complex data challenges and deliver impactful solutions.
