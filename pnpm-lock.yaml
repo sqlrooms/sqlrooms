@@ -34,9 +34,6 @@ importers:
       '@sqlrooms/typescript-config':
         specifier: workspace:*
         version: link:packages/typescript-config
-      '@tailwindcss/typography':
-        specifier: ^0.5.16
-        version: 0.5.16
       '@types/glob':
         specifier: ^8.1.0
         version: 8.1.0
@@ -142,6 +139,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../../packages/vega
       ai:
         specifier: ^4.1.24
         version: 4.1.53(react@19.0.0)(zod@3.24.2)
@@ -1006,6 +1006,9 @@ importers:
       '@radix-ui/react-tooltip':
         specifier: ^1.1.6
         version: 1.1.8(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@tailwindcss/typography':
+        specifier: ^0.5.16
+        version: 0.5.16(tailwindcss@3.4.17)
       autoprefixer:
         specifier: ^10.4.20
         version: 10.4.20(postcss@8.5.3)
@@ -10918,12 +10921,13 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@tailwindcss/typography@0.5.16':
+  '@tailwindcss/typography@0.5.16(tailwindcss@3.4.17)':
     dependencies:
       lodash.castarray: 4.4.0
       lodash.isplainobject: 4.0.6
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
+      tailwindcss: 3.4.17
 
   '@tanstack/react-table@8.21.2(react-dom@19.0.0(react@19.0.0))(react@19.0.0)':
     dependencies:
