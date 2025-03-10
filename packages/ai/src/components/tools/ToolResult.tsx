@@ -52,10 +52,13 @@ export const ToolResult: React.FC<ToolResultProps> = ({
       <div className="text-sm text-gray-500">
         {reason && <span>{reason}</span>}
       </div>
-      {ToolComponent && isSuccess && isCompleted && Boolean(additionalData) && (
+      {ToolComponent && isSuccess && isCompleted && (
         <ToolCallErrorBoundary>
           {typeof ToolComponent === 'function' ? (
-            <ToolComponent {...(additionalData as Record<string, unknown>)} />
+            <ToolComponent
+              {...(llmResult as Record<string, unknown>)}
+              {...(additionalData as Record<string, unknown>)}
+            />
           ) : (
             ToolComponent
           )}

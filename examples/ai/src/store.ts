@@ -30,6 +30,7 @@ import {MainView} from './components/MainView';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DataTable} from '@sqlrooms/duckdb';
 import exampleSessions from './example-sessions.json';
+import EchoToolResult from './components/EchoToolResult';
 export const ProjectPanelTypes = z.enum([
   'project-details',
   'data-sources',
@@ -143,6 +144,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
                 },
               };
             },
+            component: EchoToolResult,
           },
         },
         // Example of customizing the system instructions
