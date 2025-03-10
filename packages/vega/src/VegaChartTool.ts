@@ -36,18 +36,28 @@ export function createVegaChartTool({
     description,
     parameters: VegaChartToolParameters,
     execute: async ({sqlQuery, vegaLiteSpec}: VegaChartToolParameters) => {
-      // data object of the vegaLiteSpec and sqlQuery
-      // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
-      return {
-        llmResult: {
-          success: true,
-          details: 'Chart created successfully.',
-        },
-        additionalData: {
-          sqlQuery,
-          vegaLiteSpec,
-        },
-      };
+      try {
+        const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec);
+        // data object of the vegaLiteSpec and sqlQuery
+        // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
+        return {
+          llmResult: {
+            success: true,
+            details: 'Chart created successfully.',
+          },
+          additionalData: {
+            sqlQuery,
+            vegaLiteSpec: parsedVegaLiteSpec,
+          },
+        };
+      } catch (error) {
+        return {
+          llmResult: {
+            success: false,
+            details: `Not a valid JSON object: ${error}`,
+          },
+        };
+      }
     },
     component: VegaChartToolResult,
   };

@@ -1,11 +1,12 @@
 import {Suspense} from 'react';
 import {VegaLiteChart} from './VegaLiteChart';
 import {QueryToolResult} from '@sqlrooms/ai';
+import {VisualizationSpec} from 'react-vega';
 
 type VegaChartToolResultProps = {
   reasoning: string;
   sqlQuery: string;
-  vegaLiteSpec: string;
+  vegaLiteSpec: VisualizationSpec;
 };
 
 /**
