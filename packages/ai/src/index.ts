@@ -6,7 +6,7 @@
 export {
   AiSliceConfig,
   createAiSlice,
-  useStoreWithAi as useAiStore,
+  useStoreWithAi,
   createDefaultAiConfig,
 } from './AiSlice';
 
