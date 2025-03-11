@@ -35,31 +35,15 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Introduction',
+        text: 'Overview',
         items: [
           {
-            text: 'Overview',
+            text: 'Introduction',
             link: '/overview',
           },
           {
             text: 'Modular Architecture',
             link: '/architecture',
-          },
-          {
-            text: 'State Management',
-            link: '/state-management',
-          },
-          {
-            text: 'Getting started',
-            link: '/getting-started',
-          },
-          {
-            text: 'Theming',
-            link: '/theming',
-          },
-          {
-            text: 'Upgrade Guide',
-            link: '/upgrade-guide',
           },
         ],
       },
@@ -73,6 +57,27 @@ export default defineConfig({
           {
             text: 'Case Studies',
             link: '/case-studies',
+          },
+        ],
+      },
+      {
+        text: 'Developer Guide',
+        items: [
+          {
+            text: 'Getting Started',
+            link: '/getting-started',
+          },
+          {
+            text: 'State Management',
+            link: '/state-management',
+          },
+          {
+            text: 'Theming',
+            link: '/theming',
+          },
+          {
+            text: 'Upgrade Guide',
+            link: '/upgrade-guide',
           },
         ],
       },

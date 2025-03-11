@@ -1,12 +1,8 @@
 # Upgrade Guide
 
-## Introduction
-
 This document provides detailed guidance for upgrading between different versions of SQLRooms packages. Each section outlines breaking changes, required code modifications, and implementation examples to ensure a smooth upgrade process.
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
-
-Here we document breaking changes.
 
 ## 0.8.0
 
@@ -18,7 +14,7 @@ This was done to simplify persistence. To migrate you need to pull it up in your
 
 Before:
 
-```
+```typescript
 const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
@@ -38,7 +34,7 @@ const {projectStore, useProjectStore} = createProjectStore<
 
 After:
 
-```
+```typescript
 const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
   AppState
@@ -64,7 +60,7 @@ Check the [AI example store code](https://github.com/sqlrooms/examples/blob/main
 
 `getApiKey` property of `createAiSlice` now takes `modelProvider`:
 
-```
+```typescript
 ...createAiSlice({
 getApiKey: (modelProvider: string) => {
   return get()?.apiKeys[modelProvider] || '';
