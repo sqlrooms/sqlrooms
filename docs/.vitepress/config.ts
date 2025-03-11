@@ -41,12 +41,12 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Getting started',
-            link: '/getting-started',
+            text: 'Modular Architecture',
+            link: '/modular-architecture',
           },
           {
-            text: 'Package Structure',
-            link: '/packages',
+            text: 'Getting started',
+            link: '/getting-started',
           },
           {
             text: 'Theming',
