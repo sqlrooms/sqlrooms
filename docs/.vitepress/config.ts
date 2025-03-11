@@ -19,6 +19,7 @@ export default defineConfig({
     ],
   ],
   themeConfig: {
+    outline: 'deep',
     logo: '/logo.png',
     search: {
       provider: 'local',
@@ -41,8 +42,12 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Slice-Based Architecture',
-            link: '/slices',
+            text: 'Modular Architecture',
+            link: '/architecture',
+          },
+          {
+            text: 'State Management',
+            link: '/state-management',
           },
           {
             text: 'Getting started',

@@ -1,30 +1,37 @@
-# Understanding the Slice-Based Architecture
+# State Management
 
 SQLRooms uses a slice-based architecture powered by [Zustand](http://zustand.docs.pmnd.rs/) for state management. This approach allows you to compose different functionality slices into a unified application state.
 
-## What is a Slice?
+## Why Zustand?
 
-A [slice](https://zustand.docs.pmnd.rs/guides/slices-pattern) is a modular piece of state and associated actions that can be combined with other slices to form a complete application state. Each feature package typically provides its own slice that can be integrated into your application.
+[Zustand](https://zustand.docs.pmnd.rs/) is a small, fast, and scalable state management solution for React applications. SQLRooms chose Zustand for several key reasons:
 
-For example, from the [AI example application](http://localhost:5173/examples.html#ai-powered-analytics):
+- **Simplicity**: Zustand has a minimal API that's easy to learn and use, with no boilerplate code.
+- **Performance**: It uses the React concurrent renderer and only re-renders components when their specific slice of state changes.
+- **Flexibility**: Zustand works well with TypeScript, supports middleware, and can be used outside of React components.
+- **Composability**: The slices pattern allows for modular state management that scales with application complexity.
+
+Unlike other state management libraries, Zustand doesn't require providers or context wrappers, making it lightweight and straightforward to integrate into any component.
+
+## Understanding Slices
+
+A [slice](https://zustand.docs.pmnd.rs/guides/slices-pattern) is a modular piece of state and associated actions that can be combined with other slices to form a complete application state. Feature packages which manage their own state typically provide a slice that can be integrated into your application store.
+
+### How to Combine Slices
+
+Slices are combined in the store creation process. Here's an example from the AI example application:
 
 ```typescript
 import {AiSliceState} from '@sqlrooms/ai';
 import {ProjectState} from '@sqlrooms/project-builder';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
-// Combining multiple slices into a unified application state
+// Combining multiple slices into a unified application state type
 export type AppState = ProjectState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomAppState;
-```
 
-## How to Combine Slices
-
-Slices are combined in the store creation process. Here's an example from the AI example application:
-
-```typescript
 // Creating a store with multiple slices
 export const {projectStore, useProjectStore} = createProjectStore<
   AppConfig,
@@ -56,7 +63,7 @@ This approach allows you to:
 3. Extend slices with additional functionality
 4. Create custom slices for application-specific features
 
-## How to Access Store Data
+### How to Access Store Data
 
 Once you've combined slices into a unified store, you can access different parts of the store using selectors. Here's an example:
 
@@ -84,23 +91,28 @@ export const MyCustomView: React.FC = () => {
 
 Each selector function receives the entire store state and returns only the specific piece of data needed, which helps optimize rendering performance by preventing unnecessary re-renders.
 
-## Defining Configuration Types with Zod
+### Defining Configuration Types with Zod
 
 SQLRooms uses [Zod](https://zod.dev/) for runtime type validation. When combining slices, you'll often need to combine their configuration types as well. The `.merge` method from Zod makes this process straightforward.
 
 Here's an example from the AI example application showing how to combine configuration types:
 
 ```typescript
-import {AiSliceConfig, AiSliceState} from '@sqlrooms/ai';
-import {BaseProjectConfig, LayoutTypes} from '@sqlrooms/project-config';
-import {SqlEditorSliceConfig, SqlEditorSliceState} from '@sqlrooms/sql-editor';
+import {AiSliceConfig} from '@sqlrooms/ai';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {z} from 'zod';
 
 /**
  * Project config for saving - combining multiple slice configs
  */
-export const AppConfig =
-  BaseProjectConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export const AppConfig = BaseProjectConfig.merge(AiSliceConfig)
+  .merge(SqlEditorSliceConfig)
+  .merge(
+    z.object({
+      // Custom app config
+    }),
+  );
 export type AppConfig = z.infer<typeof AppConfig>;
 ```
 
