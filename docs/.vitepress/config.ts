@@ -41,8 +41,8 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Modular Architecture',
-            link: '/modular-architecture',
+            text: 'Slice-Based Architecture',
+            link: '/slices',
           },
           {
             text: 'Getting started',
