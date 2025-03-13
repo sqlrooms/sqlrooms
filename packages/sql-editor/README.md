@@ -22,72 +22,115 @@ npm install @sqlrooms/sql-editor
 
 ## Basic Usage
 
-### Simple SQL Editor
+### SqlEditor and SqlEditorModal Components
 
-The most basic way to use the SQL Editor with show/hide functionality:
+These components must be used within a `ProjectBuilderProvider` context as they rely on the SQLRooms store:
 
 ```tsx
-import {SqlEditor} from '@sqlrooms/sql-editor';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
+import {projectStore} from './store';
 
 function MyApp() {
-  const {isOpen, onOpen, onClose} = useDisclosure({defaultIsOpen: true});
+  const {isOpen, onOpen, onClose} = useDisclosure();
 
   return (
-    <div className="my-app">
-      <button onClick={isOpen ? onClose : onOpen}>
-        {isOpen ? 'Hide' : 'Show'} SQL Editor
-      </button>
+    <ProjectBuilderProvider projectStore={projectStore}>
+      <div className="my-app">
+        <button onClick={isOpen ? onClose : onOpen}>
+          {isOpen ? 'Hide' : 'Show'} SQL Editor
+        </button>
 
-      {isOpen && <SqlEditor isOpen={true} onClose={onClose} />}
-    </div>
+        <SqlEditorModal isOpen={isOpen} onClose={onClose} />
+      </div>
+    </ProjectBuilderProvider>
   );
 }
 ```
 
-### SQL Editor with Custom Configuration
+### Store Setup for SQL Editor
 
-Using the SQL Editor with project store integration for advanced functionality:
+The SQL Editor requires a properly configured store with the SQL Editor slice:
 
 ```tsx
-import {SqlEditor} from '@sqlrooms/sql-editor';
-import {useProjectStore} from './store';
+import {
+  createProjectSlice,
+  createProjectStore,
+  ProjectState,
+} from '@sqlrooms/project-builder';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceConfig,
+  SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
+import {z} from 'zod';
 
-function AdvancedEditor() {
-  // Use the store to access SQL editor state and actions
-  const executeQuery = useProjectStore((state) => state.executeQuery);
-  const currentQuery = useProjectStore((state) => state.getCurrentQuery());
+// Define combined config schema
+export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export type AppConfig = z.infer<typeof AppConfig>;
+
+// Define combined state type
+export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+
+// Create combined store
+export const {projectStore, useProjectStore} = createProjectStore<
+  AppConfig,
+  AppState
+>((set, get, store) => ({
+  // Base project slice
+  ...createProjectSlice<AppConfig>({
+    config: {
+      title: 'SQL Workspace',
+      // ... other project config
+      ...createDefaultSqlEditorConfig(),
+    },
+  })(set, get, store),
+
+  // Sql editor slice
+  ...createSqlEditorSlice()(set, get, store),
+}));
+```
+
+### Standalone SqlMonacoEditor Component
+
+Unlike the full SQL Editor components, the `SqlMonacoEditor` can be used as a standalone component without requiring the store:
+
+```tsx
+import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {useState} from 'react';
+
+function SimpleSqlEditor() {
+  const [query, setQuery] = useState('SELECT * FROM products');
+
+  const handleExecute = () => {
+    // Execute the query using your own logic
+    console.log('Executing query:', query);
+  };
 
   return (
-    <div className="sql-workspace">
-      <h2>SQL Workspace</h2>
-
-      <div className="tools">
-        <button onClick={() => executeQuery(currentQuery)}>Run Query</button>
-        <button onClick={() => exportResultsToCsv()}>Export Results</button>
-      </div>
-
-      <SqlEditor
-        isOpen={true}
-        onClose={() => {}}
-        schema="analytics"
-        initialQuery="SELECT * FROM users LIMIT 10;"
-      />
-    </div>
+    <>
+      <SqlMonacoEditor value={query} onChange={setQuery} height="400px" />
+      <button onClick={handleExecute}>Execute</button>
+    </>
   );
 }
 ```
 
 ### With Custom Documentation Panel
 
-Adding a custom documentation panel to provide SQL reference materials:
+Adding a custom documentation panel to the SQL Editor:
 
 ```tsx
-import {SqlEditor} from '@sqlrooms/sql-editor';
+import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {projectStore} from './store';
 
 function AdvancedSqlEditor() {
-  const {isOpen, onClose} = useDisclosure({defaultIsOpen: true});
+  const {isOpen, onOpen, onClose} = useDisclosure();
 
   // Custom documentation component
   const Documentation = () => (
@@ -107,48 +150,22 @@ function AdvancedSqlEditor() {
   );
 
   return (
-    <SqlEditor
-      isOpen={isOpen}
-      onClose={onClose}
-      schema="analytics"
-      documentationPanel={<Documentation />}
-    />
-  );
-}
-```
-
-### Using SQL Monaco Editor Standalone
-
-For cases where you only need the editor component without the full interface:
-
-```tsx
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
-
-function SimpleSqlEditor() {
-  const [query, setQuery] = useState('SELECT * FROM products');
-
-  const handleExecute = () => {
-    // Execute the query using your own logic
-    console.log('Executing query:', query);
-  };
-
-  return (
-    <>
-      <SqlMonacoEditor
-        value={query}
-        onChange={setQuery}
-        onExecuteQuery={handleExecute}
-        height="400px"
+    <ProjectBuilderProvider projectStore={projectStore}>
+      <button onClick={onOpen}>Open SQL Editor</button>
+      <SqlEditorModal
+        isOpen={isOpen}
+        onClose={onClose}
+        schema="analytics"
+        documentationPanel={<Documentation />}
       />
-      <button onClick={handleExecute}>Execute</button>
-    </>
+    </ProjectBuilderProvider>
   );
 }
 ```
 
 ## State Management
 
-The SQL editor provides a Zustand slice for managing state. You can use it in two ways:
+The SQL editor provides a Zustand slice for managing state. Here's how to set it up:
 
 ### Using in a Combined SQLRooms Store
 
@@ -165,25 +182,17 @@ import {
   createProjectSlice,
   createProjectStore,
   ProjectState,
+  ProjectBuilderProvider,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
-import {
-  createAiSlice,
-  createDefaultAiConfig,
-  AiSliceState,
-  AiSliceConfig,
-} from '@sqlrooms/ai';
 import {z} from 'zod';
 
 // 1. Define combined config schema
-export const AppConfig =
-  BaseProjectConfig.merge(SqlEditorSliceConfig).merge(AiSliceConfig);
+export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // 2. Define combined state type
-export type AppState = ProjectState<AppConfig> &
-  SqlEditorSliceState &
-  AiSliceState;
+export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
 
 // 3. Create combined store
 export const {projectStore, useProjectStore} = createProjectStore<
@@ -192,29 +201,24 @@ export const {projectStore, useProjectStore} = createProjectStore<
 >((set, get, store) => ({
   // Base project slice
   ...createProjectSlice<AppConfig>({
-    project: {
-      config: {
-        title: 'SQL Workspace',
-        // ... other project config
-        ...createDefaultSqlEditorConfig(),
-        ...createDefaultAiConfig(),
-      },
-      // ... panels config
+    config: {
+      title: 'SQL Workspace',
+      // ... other project config
+      ...createDefaultSqlEditorConfig(),
     },
   })(set, get, store),
 
   // Sql editor slice
   ...createSqlEditorSlice()(set, get, store),
-
-  // Ai slice
-  ...createAiSlice()(set, get, store),
 }));
 
 // 4. Use the store in components
 function MyComponent() {
   // Access SQL editor state and actions
-  const executeQuery = useProjectStore((state) => state.executeQuery);
-  const createQueryTab = useProjectStore((state) => state.createQueryTab);
+  const executeQuery = useProjectStore((state) => state.sqlEditor.executeQuery);
+  const createQueryTab = useProjectStore(
+    (state) => state.sqlEditor.createQueryTab,
+  );
 
   // Use actions
   const handleExecute = () => {
@@ -222,188 +226,212 @@ function MyComponent() {
   };
 
   return (
-    <div>
-      <button onClick={handleExecute}>Run Query</button>
-      <SqlEditor store={useProjectStore} />
-    </div>
+    <ProjectBuilderProvider projectStore={projectStore}>
+      <div>
+        <button onClick={handleExecute}>Run Query</button>
+        <SqlEditorModal isOpen={true} onClose={() => {}} />
+      </div>
+    </ProjectBuilderProvider>
   );
 }
 ```
 
-### Standalone SQL Editor Store
-
-For simpler use cases where you only need the SQL editor:
-
-```tsx
-// Create default configuration
-const config = createDefaultSqlEditorConfig();
-
-// Create a store with the SQL editor slice
-const useStore = createProjectStore({
-  sqlEditor: createSqlEditorSlice(config),
-});
-
-// Use the store in components with the provided selector hook
-const {executeQuery, getCurrentQuery} = useStoreWithSqlEditor(useStore);
-```
-
 ### Available State Actions
 
-- `executeQuery(query: string, schema?: string)`: Execute a SQL query
-- `exportResultsToCsv(results: Table, filename?: string)`: Export results to CSV
-- `createQueryTab(initialQuery?: string)`: Create a new query tab
-- `deleteQueryTab(queryId: string)`: Delete a query tab
-- `renameQueryTab(queryId: string, newName: string)`: Rename a query tab
-- `updateQueryText(queryId: string, queryText: string)`: Update query text
-- `setSelectedQueryId(queryId: string)`: Set the selected query tab
-- `getCurrentQuery(defaultQuery?: string)`: Get current query text
+- `sqlEditor.executeQuery(query: string, schema?: string)`: Execute a SQL query
+- `sqlEditor.exportResultsToCsv(results: Table, filename?: string)`: Export results to CSV
+- `sqlEditor.createQueryTab(initialQuery?: string)`: Create a new query tab
+- `sqlEditor.deleteQueryTab(queryId: string)`: Delete a query tab
+- `sqlEditor.renameQueryTab(queryId: string, newName: string)`: Rename a query tab
+- `sqlEditor.updateQueryText(queryId: string, queryText: string)`: Update query text
+- `sqlEditor.setSelectedQueryId(queryId: string)`: Set the selected query tab
+- `sqlEditor.getCurrentQuery(defaultQuery?: string)`: Get current query text
 
 ## Available Components
 
 ### SqlEditor
 
-The main component providing a full-featured SQL editor interface.
+The main component providing a full-featured SQL editor interface. Must be used within a ProjectBuilderProvider.
 
 ```tsx
 import {SqlEditor} from '@sqlrooms/sql-editor';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {projectStore} from './store';
 
-<SqlEditor
-  isOpen={boolean}
-  onClose={() => void}
-  schema="main"
-  documentationPanel={ReactNode}
-/>
+<ProjectBuilderProvider projectStore={projectStore}>
+  <SqlEditor
+    isOpen={boolean}
+    onClose={() => void}
+    schema="main"
+    documentationPanel={ReactNode}
+  />
+</ProjectBuilderProvider>
 ```
 
 ### SqlMonacoEditor
 
-A standalone SQL-specific Monaco editor component.
+A standalone SQL-specific Monaco editor component. Can be used independently without ProjectBuilderProvider.
 
 ```tsx
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {useState} from 'react';
 
-<SqlMonacoEditor
-  value="SELECT * FROM users"
-  onChange={(value) => console.log(value)}
-  onExecuteQuery={() => executeQuery()}
-/>;
+function SimpleSqlEditor() {
+  const [query, setQuery] = useState('SELECT * FROM products');
+
+  const handleExecute = () => {
+    // Execute the query using your own logic
+    console.log('Executing query:', query);
+  };
+
+  return (
+    <>
+      <SqlMonacoEditor value={query} onChange={setQuery} height="400px" />
+      <button onClick={handleExecute}>Execute</button>
+    </>
+  );
+}
 ```
 
 ### SqlEditorModal
 
-A modal wrapper around the SQL editor.
+A modal wrapper around the SQL editor. Must be used within a ProjectBuilderProvider.
 
 ```tsx
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {projectStore} from './store';
 
 function EditorWithModal() {
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   return (
-    <>
+    <ProjectBuilderProvider projectStore={projectStore}>
       <button onClick={onOpen}>Open SQL Editor</button>
       <SqlEditorModal isOpen={isOpen} onClose={onClose} />
-    </>
+    </ProjectBuilderProvider>
   );
 }
 ```
 
 ### CreateTableModal
 
-A modal for creating new tables from SQL queries.
+A modal for creating new tables from SQL queries. Must be used within a ProjectBuilderProvider.
 
 ```tsx
 import {CreateTableModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {projectStore} from './store';
+import {useProjectStore} from './store';
 
 function TableCreator() {
   const {isOpen, onOpen, onClose} = useDisclosure();
+  const addOrUpdateSqlQueryDataSource = useProjectStore(
+    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  );
 
   return (
-    <>
+    <ProjectBuilderProvider projectStore={projectStore}>
       <button onClick={onOpen}>Create Table from Results</button>
       <CreateTableModal
         isOpen={isOpen}
         onClose={onClose}
-        onCreateTable={(tableName) =>
-          console.log(`Created table: ${tableName}`)
-        }
-        tableData={queryResults}
+        onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
+        query="SELECT * FROM users"
       />
-    </>
+    </ProjectBuilderProvider>
   );
 }
 ```
 
 ### SqlQueryDataSourcesPanel
 
-A panel showing available data sources for SQL queries.
+A panel showing available data sources for SQL queries. Must be used within a ProjectBuilderProvider.
 
 ```tsx
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
+import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {projectStore} from './store';
 
-<SqlQueryDataSourcesPanel
-  onSelectTable={(tableName) => {
-    console.log(`Selected table: ${tableName}`);
-  }}
-/>;
+<ProjectBuilderProvider projectStore={projectStore}>
+  <SqlQueryDataSourcesPanel
+    onSelectTable={(tableName) => {
+      console.log(`Selected table: ${tableName}`);
+    }}
+  />
+</ProjectBuilderProvider>;
 ```
 
 ## Props
 
 ### SqlEditor Props
 
-| Prop               | Type        | Default   | Description                            |
-| ------------------ | ----------- | --------- | -------------------------------------- |
-| isOpen             | boolean     | -         | Whether the editor is open             |
-| onClose            | function    | -         | Callback when the editor is closed     |
-| schema             | string      | 'main'    | Default schema to use for queries      |
-| documentationPanel | ReactNode   | undefined | Custom documentation panel to display  |
-| initialQuery       | string      | ''        | Initial query to display in the editor |
-| store              | StoreObject | undefined | Custom Zustand store to use (optional) |
+| Prop               | Type      | Default   | Description                           |
+| ------------------ | --------- | --------- | ------------------------------------- |
+| isOpen             | boolean   | -         | Whether the editor is open            |
+| onClose            | function  | -         | Callback when the editor is closed    |
+| schema             | string    | 'main'    | Default schema to use for queries     |
+| documentationPanel | ReactNode | undefined | Custom documentation panel to display |
 
 ### SqlMonacoEditor Props
 
-| Prop           | Type     | Default | Description                                  |
-| -------------- | -------- | ------- | -------------------------------------------- |
-| value          | string   | ''      | The SQL query text                           |
-| onChange       | function | -       | Callback when the query text changes         |
-| onExecuteQuery | function | -       | Callback when the execute command is invoked |
-| height         | string   | '300px' | Height of the editor                         |
-| readOnly       | boolean  | false   | Whether the editor is read-only              |
-| theme          | string   | 'dark'  | Editor theme ('dark' or 'light')             |
+| Prop             | Type        | Default | Description                             |
+| ---------------- | ----------- | ------- | --------------------------------------- |
+| value            | string      | ''      | The SQL query text                      |
+| onChange         | function    | -       | Callback when the query text changes    |
+| height           | string      | '300px' | Height of the editor                    |
+| readOnly         | boolean     | false   | Whether the editor is read-only         |
+| theme            | string      | 'dark'  | Editor theme ('dark' or 'light')        |
+| tableSchemas     | DataTable[] | []      | Table schemas for autocompletion        |
+| customKeywords   | string[]    | []      | Custom SQL keywords for autocompletion  |
+| customFunctions  | string[]    | []      | Custom SQL functions for autocompletion |
+| getLatestSchemas | function    | -       | Callback to get latest table schemas    |
+| className        | string      | -       | Additional CSS class names              |
+| options          | object      | -       | Monaco editor options                   |
+| onMount          | function    | -       | Callback when editor is mounted         |
 
 ### SqlEditorModal Props
 
-| Prop    | Type     | Default | Description                       |
-| ------- | -------- | ------- | --------------------------------- |
-| isOpen  | boolean  | -       | Whether the modal is open         |
-| onClose | function | -       | Callback when the modal is closed |
-| schema  | string   | 'main'  | Default schema to use for queries |
+| Prop               | Type      | Default   | Description                           |
+| ------------------ | --------- | --------- | ------------------------------------- |
+| isOpen             | boolean   | -         | Whether the modal is open             |
+| onClose            | function  | -         | Callback when the modal is closed     |
+| schema             | string    | 'main'    | Default schema to use for queries     |
+| documentationPanel | ReactNode | undefined | Custom documentation panel to display |
 
 ### CreateTableModal Props
 
-| Prop          | Type     | Default | Description                               |
-| ------------- | -------- | ------- | ----------------------------------------- |
-| isOpen        | boolean  | -       | Whether the modal is open                 |
-| onClose       | function | -       | Callback when the modal is closed         |
-| onCreateTable | function | -       | Callback when a table is created          |
-| tableData     | Table    | -       | Apache Arrow Table data for the new table |
+| Prop                  | Type     | Default | Description                       |
+| --------------------- | -------- | ------- | --------------------------------- |
+| isOpen                | boolean  | -       | Whether the modal is open         |
+| onClose               | function | -       | Callback when the modal is closed |
+| onAddOrUpdateSqlQuery | function | -       | Callback when a table is created  |
+| query                 | string   | -       | SQL query that generated the data |
 
 ## Configuration
 
 The SQL editor can be configured through the Zustand store.
 
 ```tsx
-const config = {
-  sqlEditor: {
-    queries: [
-      {id: 'default', name: 'Untitled', query: 'SELECT * FROM users LIMIT 10;'},
-    ],
-    selectedQueryId: 'default',
-  },
-};
+const config = createDefaultSqlEditorConfig();
+// Customize if needed
+config.sqlEditor.queries = [
+  {id: 'default', name: 'Untitled', query: 'SELECT * FROM users LIMIT 10;'},
+];
+config.sqlEditor.selectedQueryId = 'default';
+
+// Use in store creation
+const {projectStore} = createProjectStore({
+  ...createProjectSlice({
+    config: {
+      ...config,
+      // other config options
+    },
+  }),
+  ...createSqlEditorSlice(),
+});
 ```
 
 For more information, visit the SQLRooms documentation.
