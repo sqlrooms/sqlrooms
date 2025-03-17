@@ -28,6 +28,9 @@ importers:
       '@sqlrooms/eslint-config':
         specifier: workspace:*
         version: link:packages/eslint-config
+      '@sqlrooms/jest-config':
+        specifier: workspace:*
+        version: link:packages/jest-config
       '@sqlrooms/typedoc-config':
         specifier: workspace:*
         version: link:packages/typedoc-config
@@ -657,9 +660,6 @@ importers:
         specifier: ^3.24.1
         version: 3.24.2
     devDependencies:
-      '@sqlrooms/jest-config':
-        specifier: workspace:*
-        version: link:../jest-config
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.14
