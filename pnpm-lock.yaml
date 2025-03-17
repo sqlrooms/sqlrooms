@@ -563,9 +563,6 @@ importers:
       react-markdown:
         specifier: ^9.0.3
         version: 9.1.0(@types/react@18.3.18)(react@19.0.0)
-      react-vega:
-        specifier: ^7.6.0
-        version: 7.6.0(react@19.0.0)(vega-lite@5.23.0(vega@5.32.0(encoding@0.1.13)))(vega@5.32.0(encoding@0.1.13))
       zod:
         specifier: ^3.24.1
         version: 3.24.2
@@ -1109,6 +1106,9 @@ importers:
       vega-lite:
         specifier: ^5.23.0
         version: 5.23.0(vega@5.32.0(encoding@0.1.13))
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.2
 
 packages:
 
