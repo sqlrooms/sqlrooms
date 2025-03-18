@@ -1,5 +1,6 @@
 import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
+  DuckDbConnector,
   escapeVal,
   getColValAsNumber,
   getDuckDb,
@@ -15,33 +16,23 @@ import {ProjectFileInfo} from '../types';
 export async function processDroppedFile({
   file,
   existingTables,
+  duckDbConnector,
 }: {
   file: File;
   existingTables?: string[];
+  duckDbConnector: DuckDbConnector;
 }): Promise<{tableName: string; fileInfo: ProjectFileInfo}> {
-  const {db} = await getDuckDb();
   const tableName = convertToUniqueColumnOrTableName(
     file.name,
-    existingTables ?? (await getDuckTables()),
+    existingTables ?? (await duckDbConnector.getTables()),
   );
   const {ext} = splitFilePath(file.name);
   const duckdbFileName = `${genRandomStr(6).toLowerCase()}.${ext}`;
-  await db.registerFileHandle(
-    duckdbFileName,
-    file,
-    DuckDBDataProtocol.BROWSER_FILEREADER,
-    true,
-  );
-  const {conn} = await getDuckDb();
-  let numRows = 0;
-  try {
-    numRows = getColValAsNumber(
-      await conn.query(`SELECT COUNT(*) FROM ${escapeVal(duckdbFileName)}`),
-    );
-  } catch (err) {
-    // do nothing
-  }
-  if (numRows > 0) {
+
+  // Load the file using the connector
+  const {rowCount} = await duckDbConnector.loadFile(file, duckdbFileName);
+
+  if (rowCount > 0) {
     return {
       tableName,
       fileInfo: {
@@ -49,7 +40,7 @@ export async function processDroppedFile({
         pathname: file.name,
         size: file.size,
         file,
-        numRows,
+        numRows: rowCount,
       },
     };
   } else {
@@ -64,24 +55,30 @@ export async function processDroppedFiles(
     onLoadingStatusChange,
     setTableNames,
     setAddedFiles,
+    duckDbConnector,
   }: {
     onError: (message: string) => void;
     onLoadingStatusChange: (status: string | undefined) => void;
     setTableNames: (tableNames: string[]) => void;
     setAddedFiles: (files: ProjectFileInfo[]) => void;
+    duckDbConnector: DuckDbConnector;
   },
 ): Promise<void> {
   const filesToAdd: ProjectFileInfo[] = [];
   const tableNames: string[] = [];
   let lastFileName: string | null = null;
   try {
-    const existingTables = await getDuckTables();
+    const existingTables = await duckDbConnector.getTables();
     for (const file of droppedFiles) {
       onLoadingStatusChange(`Loading file "${file.name}"…`);
       lastFileName = file.name;
 
       try {
-        const result = await processDroppedFile({file, existingTables});
+        const result = await processDroppedFile({
+          file,
+          existingTables,
+          duckDbConnector,
+        });
         const {tableName, fileInfo} = result;
         tableNames.push(tableName);
         existingTables.push(tableName);

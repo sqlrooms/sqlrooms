@@ -22,13 +22,13 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {WasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 import {createVegaChartTool} from '@sqlrooms/vega';
-import {DataTable} from '@sqlrooms/duckdb';
 import exampleSessions from './example-sessions.json';
 import EchoToolResult from './components/EchoToolResult';
 export const ProjectPanelTypes = z.enum([
@@ -63,6 +63,9 @@ export type AppState = ProjectState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomAppState;
+
+// Create a DuckDB connector instance
+const duckDbConnector = new WasmDuckDbConnector();
 
 /**
  * Create a customized project store
@@ -115,6 +118,8 @@ export const {projectStore, useProjectStore} = createProjectStore<
             },
           },
         },
+        // Pass the DuckDB connector instance
+        duckDbConnector,
       })(set, get, store),
 
       // Sql editor slice

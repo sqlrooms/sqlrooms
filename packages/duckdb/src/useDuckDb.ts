@@ -1,7 +1,8 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import * as arrow from 'apache-arrow';
-import {DataTable, TableColumn} from './types';
+import {DataTable, TableColumn, DuckDbConnector} from './types';
 import {useState, useEffect} from 'react';
+import {WasmDuckDbConnector} from './WasmDuckDbConnector';
 
 /**
  * @deprecated DuckConn is deprecated, use DuckDb instead
@@ -22,10 +23,12 @@ const SilentLogger = {
   },
 };
 
-// TODO: shut DB down at some point
-
+// Singleton for backward compatibility
 let duckConn: DuckDb;
 let initialize: Promise<DuckDb> | undefined;
+
+// Global singleton connector instance for backward compatibility
+let globalConnector: WasmDuckDbConnector | null = null;
 
 export class DuckQueryError extends Error {
   readonly cause: unknown;
@@ -49,10 +52,26 @@ export class DuckQueryError extends Error {
 }
 
 /**
+ * Get the global DuckDB connector (creates one if it doesn't exist)
+ *
+ * @returns A promise that resolves to the global DuckDB connector
+ */
+export async function getGlobalDuckDbConnector(): Promise<DuckDbConnector> {
+  if (!globalConnector) {
+    globalConnector = new WasmDuckDbConnector();
+    await globalConnector.initialize();
+  }
+  return globalConnector;
+}
+
+/**
  * @deprecated getDuckConn is deprecated, use getDuckDb instead
  */
 export const getDuckConn = getDuckDb;
 
+/**
+ * @deprecated Use getGlobalDuckDbConnector() or the connector from ProjectStore instead
+ */
 export async function getDuckDb(): Promise<DuckDb> {
   if (!globalThis.Worker) {
     return Promise.reject('No Worker support');
@@ -72,55 +91,16 @@ export async function getDuckDb(): Promise<DuckDb> {
   });
 
   try {
-    // TODO: Consider to load locally https://github.com/duckdb/duckdb-wasm/issues/1425#issuecomment-1742156605
-    const allBundles = duckdb.getJsDelivrBundles();
-    const bestBundle = await duckdb.selectBundle(allBundles);
-    if (!bestBundle.mainWorker) {
-      throw new Error('No best bundle found for DuckDB worker');
-    }
-    const workerUrl = URL.createObjectURL(
-      new Blob([`importScripts("${bestBundle.mainWorker}");`], {
-        type: 'text/javascript',
-      }),
-    );
-    // const worker = await duckdb.createWorker(bestBundle.mainWorker);
-    const worker = new window.Worker(workerUrl);
-    const logger = ENABLE_DUCK_LOGGING
-      ? new duckdb.ConsoleLogger()
-      : SilentLogger;
-    const db = new (class extends duckdb.AsyncDuckDB {
-      onError(event: ErrorEvent) {
-        super.onError(event);
-        console.error('onError', event);
-      }
-    })(logger, worker);
-    await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
-    URL.revokeObjectURL(workerUrl);
-    await db.open({
-      path: ':memory:',
-      query: {
-        // castBigIntToDouble: true
-      },
-    });
-    const conn = await db.connect();
-    // Replace conn.query to include full query in the error message
-    const connQuery = conn.query;
-    conn.query = (async (q: string) => {
-      const stack = new Error().stack;
-      try {
-        return await connQuery.call(conn, q);
-      } catch (err) {
-        throw new DuckQueryError(err, q, stack);
-        // throw new Error(
-        //   `Query failed: ${err}\n\nFull query:\n\n${q}\n\nQuery call stack:\n\n${stack}\n\n`,
-        // );
-      }
-    }) as typeof conn.query;
-    await conn.query(`
-      SET max_expression_depth TO 100000;
-      SET memory_limit = '10GB';
-    `);
-    duckConn = {db, conn, worker};
+    // Initialize the global connector
+    const connector = (await getGlobalDuckDbConnector()) as WasmDuckDbConnector;
+
+    // For backward compatibility, expose the internal implementation details
+    duckConn = {
+      db: connector.getDb(),
+      conn: connector.getConn(),
+      worker: connector.getWorker(),
+    };
+
     resolve!(duckConn);
   } catch (err) {
     reject!(err);
@@ -138,6 +118,9 @@ let duckPromise: Promise<DuckDb> | null = null;
  */
 export const useDuckConn = useDuckDb;
 
+/**
+ * @deprecated Use the connector from ProjectStore instead
+ */
 export function useDuckDb(): DuckDb {
   if (!duckPromise) {
     duckPromise = getDuckDb();
@@ -186,111 +169,79 @@ export const escapeId = (id: string) => {
   return `"${str.replace(/"/g, '""')}"`;
 };
 
+// All of the following functions are now just wrappers around the connector API
+// They're maintained for backward compatibility
+
+/**
+ * @deprecated Use connector.getTables() instead
+ */
 export async function getDuckTables(schema = 'main'): Promise<string[]> {
-  const {conn} = await getDuckDb();
-  const tablesResults = await conn.query(
-    `SELECT * FROM information_schema.tables 
-     WHERE table_schema = '${schema}'
-     ORDER BY table_name`,
-  );
-  const tableNames: string[] = [];
-  for (let i = 0; i < tablesResults.numRows; i++) {
-    tableNames.push(tablesResults.getChild('table_name')?.get(i));
-  }
-  return tableNames;
+  const connector = await getGlobalDuckDbConnector();
+  return connector.getTables(schema);
 }
 
+/**
+ * @deprecated Use connector.getTableSchema() instead
+ */
 export async function getDuckTableSchema(
   tableName: string,
   schema = 'main',
 ): Promise<DataTable> {
-  const {conn} = await getDuckDb();
-  const describeResults = await conn.query(`DESCRIBE ${schema}.${tableName}`);
-  const columnNames = describeResults.getChild('column_name');
-  const columnTypes = describeResults.getChild('column_type');
-  const columns: TableColumn[] = [];
-  for (let di = 0; di < describeResults.numRows; di++) {
-    const columnName = columnNames?.get(di);
-    const columnType = columnTypes?.get(di);
-    columns.push({name: columnName, type: columnType});
-  }
-  return {
-    tableName,
-    columns,
-    // Costly to get the row count for large tables
-    // rowCount: getColValAsNumber(
-    //   await conn.query(`SELECT COUNT(*) FROM ${schema}.${tableName}`),
-    // ),
-  };
+  const connector = await getGlobalDuckDbConnector();
+  return connector.getTableSchema(tableName, schema);
 }
 
+/**
+ * @deprecated Use connector.getTableSchemas() instead
+ */
 export async function getDuckTableSchemas(
   schema = 'main',
 ): Promise<DataTable[]> {
-  const tableNames = await getDuckTables(schema);
-  const tablesInfo: DataTable[] = [];
-  for (const tableName of tableNames) {
-    tablesInfo.push(await getDuckTableSchema(tableName, schema));
-  }
-  return tablesInfo;
+  const connector = await getGlobalDuckDbConnector();
+  return connector.getTableSchemas(schema);
 }
 
+/**
+ * @deprecated Use connector.tableExists() instead
+ */
 export async function checkTableExists(
   tableName: string,
   schema = 'main',
 ): Promise<boolean> {
-  const {conn} = await getDuckDb();
-  const res = await conn.query(
-    `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = '${tableName}'`,
-  );
-  return getColValAsNumber(res) > 0;
+  const connector = await getGlobalDuckDbConnector();
+  return connector.tableExists(tableName, schema);
 }
 
+/**
+ * @deprecated Use connector.dropTable() instead
+ */
 export async function dropAllTables(schema?: string): Promise<void> {
-  try {
-    const {conn} = await getDuckDb();
-    if (schema && schema !== 'main') {
-      await conn.query(`DROP SCHEMA IF EXISTS ${schema} CASCADE`);
-    } else {
-      const res = await conn.query(
-        `SELECT table_name, table_schema, table_type FROM information_schema.tables${
-          schema ? ` WHERE table_schema = '${schema}'` : ''
-        }`,
-      );
-      const schemasCol = res.getChild('table_schema');
-      const tableNamesCol = res.getChild('table_name');
-      const tableTypesCol = res.getChild('table_type');
-      for (let i = 0; i < res.numRows; i++) {
-        try {
-          const schemaName = schemasCol?.get(i);
-          const tableName = tableNamesCol?.get(i);
-          const tableType = tableTypesCol?.get(i);
-          if (tableName) {
-            const query = `DROP ${
-              tableType === 'VIEW' ? 'VIEW' : 'TABLE'
-            } IF EXISTS ${schemaName}.${tableName}`;
-            await conn.query(query);
-          }
-        } catch (err) {
-          console.error(err);
-        }
-      }
-    }
-  } catch (err) {
-    console.error(err);
+  const connector = await getGlobalDuckDbConnector();
+  const tables = await connector.getTables(schema);
+  for (const tableName of tables) {
+    await connector.dropTable(tableName);
   }
 }
 
+/**
+ * @deprecated Use connector.dropTable() instead
+ */
 export async function dropTable(tableName: string): Promise<void> {
-  const {conn} = await getDuckDb();
-  await conn.query(`DROP TABLE IF EXISTS ${tableName};`);
+  const connector = await getGlobalDuckDbConnector();
+  await connector.dropTable(tableName);
 }
 
+/**
+ * @deprecated Use connector.dropFile() instead
+ */
 export async function dropFile(fname: string): Promise<void> {
-  const {db} = await getDuckDb();
-  db.dropFile(fname);
+  const connector = await getGlobalDuckDbConnector();
+  await connector.dropFile(fname);
 }
 
+/**
+ * @deprecated Use connector.dropFile() for each file instead
+ */
 export async function dropAllFiles(): Promise<void> {
   const {db} = await getDuckDb();
   db.dropFiles();
