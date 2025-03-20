@@ -107,4 +107,15 @@ export default defineConfig({
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
+  transformPageData(pageData) {
+    const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
+      .replace(/index\.md$/, '')
+      .replace(/\.md$/, '.html')
+
+    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head.push([
+      'link',
+      { rel: 'canonical', href: canonicalUrl }
+    ])
+  }
 });
