@@ -1,4 +1,4 @@
-import {sqlFrom, literalToSQL} from '../sql-from';
+import {sqlFrom, literalToSQL} from '../src/sql-from';
 
 describe('sql-from', () => {
   describe('literalToSQL', () => {

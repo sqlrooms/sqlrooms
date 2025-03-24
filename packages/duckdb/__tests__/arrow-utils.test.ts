@@ -1,5 +1,5 @@
 import * as arrow from 'apache-arrow';
-import {arrowTableToJson} from '../arrow-utils';
+import {arrowTableToJson} from '../src/arrow-utils';
 
 /// TODO: Revise tests for nested objects once https://github.com/apache/arrow/issues/33394 is fixed
 
