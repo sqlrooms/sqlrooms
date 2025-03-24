@@ -1,6 +1,6 @@
 import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
+import {useBaseProjectStore} from '../../../project/src/ProjectStateProvider';
 import {PanelHeaderButton} from './PanelHeaderButton';
 
 const ProjectBuilderPanelHeader: FC<{

@@ -1,5 +1,5 @@
 import {FC} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
+import {useBaseProjectStore} from '../../../project/src/ProjectStateProvider';
 import {FileDataSourceCard} from './FileDataSourceCard';
 
 const FileDataSourcesPanel: FC = () => {

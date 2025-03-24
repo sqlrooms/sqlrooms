@@ -4,4 +4,5 @@
  */
 
 export * from './BaseProjectConfig';
-export * from './LayoutConfig';
+export * from './ProjectStore';
+export * from './ProjectStateProvider';

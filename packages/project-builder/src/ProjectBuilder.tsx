@@ -2,7 +2,7 @@ import {ProgressModal, SpinnerPane} from '@sqlrooms/ui';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import React, {Suspense, useCallback, useMemo} from 'react';
 import type {MosaicNode} from 'react-mosaic-component';
-import {useBaseProjectStore} from './ProjectStateProvider';
+import {useBaseProjectStore} from '../../project/src/ProjectStateProvider';
 
 const ProjectBuilder: React.FC = () => {
   const layout = useBaseProjectStore((state) => state.config.layout);

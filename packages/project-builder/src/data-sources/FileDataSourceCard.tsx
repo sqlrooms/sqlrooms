@@ -19,7 +19,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
+import {useBaseProjectStore} from '../../../project/src/ProjectStateProvider';
 import {ProjectFileInfo, ProjectFileState} from '../types';
 
 const FileDataSourceCard: FC<{

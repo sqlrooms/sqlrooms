@@ -1,4 +1,4 @@
-import {MAIN_VIEW} from '@sqlrooms/project-config';
+import {MAIN_VIEW} from '@sqlrooms/project';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';

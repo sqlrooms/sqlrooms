@@ -15,3 +15,9 @@ export * from './tableManagement';
 
 // Export connector implementation
 export * from './WasmDuckDbConnector';
+
+// Export DuckDB slice
+export * from './DuckDbSlice';
+
+// Re-export useSql hook and its types
+export * from './useSql';

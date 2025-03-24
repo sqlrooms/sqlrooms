@@ -11,11 +11,7 @@ import {
   ProjectState,
   StateCreator,
 } from '@sqlrooms/project-builder';
-import {
-  BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+import {BaseProjectConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/project';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,

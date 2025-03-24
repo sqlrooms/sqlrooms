@@ -1,4 +1,4 @@
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import React, {createContext, ReactNode, useContext} from 'react';
 import {StoreApi, useStore} from 'zustand';
 import {ProjectState, ProjectStore} from './ProjectStore';

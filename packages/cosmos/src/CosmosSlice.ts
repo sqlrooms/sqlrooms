@@ -9,7 +9,7 @@ import {
   useBaseProjectStore,
   type ProjectState,
 } from '@sqlrooms/project-builder';
-import type {BaseProjectConfig} from '@sqlrooms/project-config';
+import type {BaseProjectConfig} from '@sqlrooms/project';
 import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';

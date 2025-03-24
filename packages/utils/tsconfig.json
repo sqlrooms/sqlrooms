@@ -1,5 +1,5 @@
 {
-  "extends": "../../tsconfig.json",
+  "extends": "@sqlrooms/typescript-config/base.json",
   "compilerOptions": {"outDir": "dist"},
   "include": ["src/**/*", "test/**/*", "../ui/src/hooks/useChartDimensions.ts"]
 }

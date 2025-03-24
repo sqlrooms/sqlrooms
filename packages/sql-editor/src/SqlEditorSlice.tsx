@@ -1,11 +1,11 @@
-import {DuckQueryError, getDuckDb, getDuckTableSchemas} from '@sqlrooms/duckdb';
+import {DuckQueryError} from '@sqlrooms/duckdb';
 import {
+  BaseProjectConfig,
   createSlice,
   ProjectState,
   StateCreator,
   useBaseProjectStore,
-} from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+} from '@sqlrooms/project';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
@@ -111,15 +111,17 @@ export function createSqlEditorSlice<
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
       executeQuery: async (query, schema = 'main') => {
-        const duckDb = await getDuckDb();
-        if (!duckDb.conn) {
-          return {error: 'No DuckDB connection available'};
+        // Use the DuckDB connector from the duckdb slice
+        if (!get().duckdb?.connector) {
+          return {error: 'No DuckDB connector available'};
         }
 
+        const connector = get().duckdb.connector;
+
         try {
-          await duckDb.conn.query(`SET search_path = ${schema}`);
-          const results = await duckDb.conn.query(query);
-          await duckDb.conn.query(`SET search_path = main`);
+          await connector.query(`SET search_path = ${schema}`);
+          const results = await connector.query(query);
+          await connector.query(`SET search_path = main`);
 
           // Refresh table schemas after query execution
           await get().project.refreshTableSchemas();

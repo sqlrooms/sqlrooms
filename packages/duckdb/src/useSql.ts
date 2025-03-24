@@ -1,8 +1,8 @@
 import * as arrow from 'apache-arrow';
 import {useEffect, useState} from 'react';
-import {getDuckDb, getGlobalDuckDbConnector} from './useDuckDb';
 import {z} from 'zod';
 import {DuckDbConnector} from './types';
+import {useDuckDbConnector} from './DuckDbSlice';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,
@@ -78,12 +78,12 @@ function createTypedRowAccessor<T>({
  * 2. Using Zod schemas (both compile-time and runtime validation)
  *
  * @param options Configuration object containing the query and execution control
- * @param connector Optional DuckDB connector to use (falls back to global one if not provided)
+ * @param customConnector Optional custom connector to use instead of the store's connector
  * @returns Object containing the query result, loading state, and any error
  */
 export function useSql<Row>(
   options: {query: string; enabled?: boolean},
-  connector?: DuckDbConnector,
+  customConnector?: DuckDbConnector,
 ): {
   data: UseSqlQueryResult<Row> | undefined;
   error: Error | null;
@@ -96,7 +96,7 @@ export function useSql<Row>(
  *
  * @param schema A Zod schema that defines the expected shape and validation rules for each row
  * @param options Configuration object containing the query and execution control
- * @param connector Optional DuckDB connector to use (falls back to global one if not provided)
+ * @param customConnector Optional custom connector to use instead of the store's connector
  * @returns Object containing the validated query result, loading state, and any error
  */
 export function useSql<Schema extends z.ZodType>(
@@ -105,7 +105,7 @@ export function useSql<Schema extends z.ZodType>(
     query: string;
     enabled?: boolean;
   },
-  connector?: DuckDbConnector,
+  customConnector?: DuckDbConnector,
 ): {
   data: UseSqlQueryResult<z.infer<Schema>> | undefined;
   error: Error | null;
@@ -130,10 +130,14 @@ export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
     : (schemaOrOptions as {query: string; enabled?: boolean});
   const schema = hasSchema ? (schemaOrOptions as Schema) : undefined;
 
-  // Determine the connector to use
-  const connector = hasSchema
+  // Get the connector from props or from the store
+  const customConnector = hasSchema
     ? maybeConnector
     : (maybeOptionsOrConnector as DuckDbConnector | undefined);
+
+  // Use the connector from the store if no custom connector is provided
+  const storeConnector = useDuckDbConnector();
+  const connector = customConnector || storeConnector;
 
   const [data, setData] = useState<UseSqlQueryResult<Row> | undefined>(
     undefined,
@@ -153,9 +157,11 @@ export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
       setError(null);
 
       try {
-        // Use the provided connector or fall back to the global one
-        const duckDbConnector = connector || (await getGlobalDuckDbConnector());
-        const result = await duckDbConnector.query(options.query);
+        if (!connector) {
+          throw new Error('DuckDB connector not available');
+        }
+
+        const result = await connector.query(options.query);
 
         // Create a row accessor that optionally validates with the schema
         const rowAccessor = createTypedRowAccessor<Row>({

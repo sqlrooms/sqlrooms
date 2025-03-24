@@ -1,5 +1,5 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
-import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project-config';
+import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store';

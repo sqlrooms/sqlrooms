@@ -76,11 +76,7 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 1. First, define your panel types and project configuration:
 
 ```typescript
-import {
-  BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+import {BaseProjectConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/project';
 import {z} from 'zod';
 
 // Define panel types

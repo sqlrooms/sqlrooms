@@ -1,6 +1,6 @@
 import {zodResolver} from '@hookform/resolvers/zod';
 import {DuckQueryError} from '@sqlrooms/duckdb';
-import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {SqlQueryDataSource} from '@sqlrooms/project';
 import {
   Alert,
   AlertDescription,

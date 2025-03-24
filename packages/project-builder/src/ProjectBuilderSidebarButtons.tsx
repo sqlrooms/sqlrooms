@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
-import {useBaseProjectStore} from './ProjectStateProvider';
+import {useBaseProjectStore} from '../../project/src/ProjectStateProvider';
 
 const SidebarButton: FC<{
   title: string;

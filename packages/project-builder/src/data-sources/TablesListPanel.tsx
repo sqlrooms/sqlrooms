@@ -1,7 +1,7 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
 import {FC, useState} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
+import {useBaseProjectStore} from '../../../project/src/ProjectStateProvider';
 import {TableCard} from './TableCard';
 import {useDisclosure} from '@sqlrooms/ui';
 

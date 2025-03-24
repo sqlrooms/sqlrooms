@@ -6,7 +6,7 @@ import {
   useBaseProjectStore,
   type StateCreator,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
 import {getDefaultTools, runAnalysis, TOOLS} from './analysis';

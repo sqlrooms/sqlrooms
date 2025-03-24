@@ -3,7 +3,7 @@ import {
   ProjectBuilderPanel,
   TablesListPanel,
 } from '@sqlrooms/project-builder';
-import {DataSourceTypes} from '@sqlrooms/project-config';
+import {DataSourceTypes} from '@sqlrooms/project';
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 import {
   Accordion,

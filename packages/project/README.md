@@ -20,7 +20,7 @@ yarn add @sqlrooms/project-config
 ### Working with Base Project Configuration
 
 ```tsx
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 
 // Create a new project configuration
 const projectConfig: BaseProjectConfig = {
@@ -47,7 +47,7 @@ import {
   createProjectStore,
   createProjectSlice,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 
 // Create a store with persistence for configuration
 const {useProjectStore} = createProjectStore(
@@ -89,7 +89,7 @@ function ConfigComponent() {
 ### Using Layout Configuration
 
 ```tsx
-import {LayoutConfig} from '@sqlrooms/project-config';
+import {LayoutConfig} from '@sqlrooms/project';
 
 // Define a layout configuration
 const layoutConfig: LayoutConfig = {

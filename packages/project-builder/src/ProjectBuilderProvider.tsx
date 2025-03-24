@@ -1,9 +1,9 @@
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import {Toaster, TooltipProvider} from '@sqlrooms/ui';
 import {
   ProjectStateProvider,
   ProjectStateProviderProps,
-} from './ProjectStateProvider';
+} from '../../project/src/ProjectStateProvider';
 
 export function ProjectBuilderProvider<PC extends BaseProjectConfig>({
   children,

@@ -1,32 +1,21 @@
 import {
   DataTable,
-  DuckDbConnector,
+  DuckDbSliceState,
   DuckQueryError,
+  createDuckDbSlice,
   createTableFromArrowTable,
   createTableFromObjects,
   createTableFromQuery,
   createViewFromFile,
-  createViewFromRegisteredFile,
-  dropFile,
-  dropTable,
-  getDuckDb,
-  getDuckTableSchema,
-  getDuckTableSchemas,
-  getDuckTables,
 } from '@sqlrooms/duckdb';
-import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
   BaseProjectConfig,
-  DEFAULT_MOSAIC_LAYOUT,
   DataSource,
   DataSourceTypes,
   FileDataSource,
-  LayoutConfig,
-  MAIN_VIEW,
   SqlQueryDataSource,
   UrlDataSource,
-  isMosaicLayoutParent,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/project';
 import {ErrorBoundary} from '@sqlrooms/ui';
 import {
   ProgressInfo,
@@ -38,14 +27,14 @@ import * as arrow from 'apache-arrow';
 import {castDraft, produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi, createStore} from 'zustand';
-import {useBaseProjectStore} from './ProjectStateProvider';
 import {
   DataSourceState,
   DataSourceStatus,
   ProjectFileInfo,
   ProjectFileState,
-} from './types';
-import {processDroppedFile} from './utils/processDroppedFiles';
+} from '../../project-builder/src/types';
+import {processDroppedFile} from '../../project-builder/src/utils/processDroppedFiles';
+import {useBaseProjectStore} from './ProjectStateProvider';
 
 export type TaskProgress = {
   progress?: number | undefined;
@@ -87,26 +76,24 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
     console.error(exception);
   },
   CustomErrorBoundary: ErrorBoundary,
-  duckDbConnector: undefined as unknown as DuckDbConnector, // Will be initialized during project initialization
 };
 
 export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   title: '',
   description: '',
   dataSources: [],
-  layout: DEFAULT_MOSAIC_LAYOUT,
 };
 
 export type ProjectStateProps<PC extends BaseProjectConfig> = {
   schema: string;
-  tasksProgress: Record<string, TaskProgress>;
   projectId: string | undefined; // undefined if the project is new
   panels: Record<string, ProjectPanelInfo>;
   isReadOnly: boolean;
+  lastSavedConfig: PC | undefined;
+  tasksProgress: Record<string, TaskProgress>;
   tables: DataTable[];
   projectFiles: ProjectFileInfo[];
   projectFilesProgress: {[pathname: string]: ProjectFileState};
-  lastSavedConfig: PC | undefined;
   initialized: boolean; // Whether the project has been initialized so we can render UI
   isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
   dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
@@ -116,7 +103,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
     onRetry?: () => void;
     children?: ReactNode;
   }>;
-  duckDbConnector: DuckDbConnector;
 };
 
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
@@ -143,34 +129,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
    * @returns True if the project has unsaved changes, false otherwise.
    */
   hasUnsavedChanges(): boolean; // since last save
-  /**
-   * Set the layout of the project.
-   * @param layout - The layout to set.
-   */
-  setLayout(layout: LayoutConfig): void;
-  /**
-   * Toggle a panel.
-   * @param panel - The panel to toggle.
-   * @param show - Whether to show the panel.
-   */
-  togglePanel: (panel: string, show?: boolean) => void;
-  /**
-   * Toggle the pin state of a panel.
-   * @param panel - The panel to toggle the pin state of.
-   */
-  togglePanelPin: (panel: string) => void;
-  /**
-   * Add or update a SQL query data source.
-   * @param tableName - The name of the table to create or update.
-   * @param query - The SQL query to execute.
-   * @param oldTableName - The name of the table to replace (optional).
-   */
-  addOrUpdateSqlQueryDataSource(
-    tableName: string,
-    query: string,
-    oldTableName?: string,
-  ): Promise<void>;
-  removeSqlQueryDataSource(tableName: string): Promise<void>;
   replaceProjectFile(
     projectFile: ProjectFileInfo,
   ): Promise<DataTable | undefined>;
@@ -179,7 +137,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
     desiredTableName?: string,
   ): Promise<DataTable | undefined>;
   removeProjectFile(pathname: string): void;
-  maybeDownloadDataSources(): Promise<void>;
   setProjectFiles(info: ProjectFileInfo[]): void;
   setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
   /**
@@ -219,7 +176,7 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
 export type ProjectState<PC extends BaseProjectConfig> = {
   config: PC;
   project: ProjectStateProps<PC> & ProjectStateActions<PC>;
-};
+} & DuckDbSliceState;
 
 export function createSlice<PC extends BaseProjectConfig, S>(
   sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
@@ -240,7 +197,6 @@ type InitialState<PC extends BaseProjectConfig> = {
   project: Partial<Omit<ProjectStateProps<PC>, 'config' | 'panels'>> & {
     panels: ProjectStateProps<PC>['panels'];
   };
-  duckDbConnector?: DuckDbConnector;
 };
 
 /**
@@ -275,104 +231,23 @@ export function createProjectStore<
     return useBaseProjectStore(selector as (state: AppState) => T);
   }
 
-  // if (import.meta.hot) {
-  //   console.log('yep');
-  //   projectStore.subscribe((state) => {
-  //     if (typeof window !== 'undefined') {
-  //       window.__store = state;
-  //     }
-  //   });
-  //   import.meta.hot!.accept((newModule) => {
-  //     console.log('yep update');
-  //     if (!newModule) return;
-  //     const newStore = newModule.useStore;
-  //     if (!newStore) return;
-  //     if (window.__store) {
-  //       newStore.setState(window.__store, true);
-  //     }
-  //   });
-  // }
   return {projectStore, useProjectStore};
 }
-
-// // If you have `StateCreator<S>` = (set, get, store) => S
-// // we want to extract that S:
-// type ExtractSliceState<SC> = SC extends (...args: any[]) => infer R ? R : never;
-
-// /**
-//  * Convert a union type A|B|C into an intersection A & B & C
-//  * e.g. UnionToIntersection<{ a: number } | { b: string }>
-//  *               -> { a: number, b: string }
-//  */
-// type UnionToIntersection<U> = (U extends any ? (k: U) => void : never) extends (
-//   k: infer I,
-// ) => void
-//   ? I
-//   : never;
-
-// export function createProjectStore<
-//   PC extends BaseProjectConfig,
-//   // "Creators" is now an array of whatever `createSlice<PC, S>` returns
-//   // which should be `StateCreator<S>`.
-//   Creators extends Array<
-//     ReturnType<typeof createSlice<PC, any>>
-//   > = any[],
-// >(initialState: InitialState<PC>, ...sliceCreators: Creators) {
-//   //
-//   // 1) Figure out the intersection of all slice return types
-//   //
-//   type CombinedSlices = UnionToIntersection<
-//     ExtractSliceState<Creators[number]> // Each item is a StateCreator<S>, so we pull out S
-//   >;
-
-//   //
-//   // 2) The final store shape is the base ProjectState<PC> plus all slices
-//   //
-//   type StoreType = ProjectState<PC> & CombinedSlices;
-
-//   //
-//   // 3) Actually create the store with a properly typed object
-//   //
-//   const projectStore = createStore<StoreType>((set, get, store) => ({
-//     ...createSlice<PC>(initialState)(set, get, store),
-//     ...sliceCreators.reduce(
-//       (acc, slice) => {
-//         return {...acc, ...slice(set, get, store)};
-//       },
-//       {} as Record<string, unknown>,
-//     ),
-//   }));
-
-//
-// 4) Provide a typed selector hook
-//
-//   function useProjectStore<T>(selector: (state: StoreType) => T): T {
-//     // Cast if needed, or if your `useBaseProjectStore` is generic, pass the type parameter directly
-//     return useBaseProjectStore(selector as (state: StoreType) => T);
-//   }
-
-//   return {projectStore, useProjectStore};
-// }
 
 export function createProjectSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,
 ): StateCreator<ProjectState<PC>> {
-  const {
-    config: configProps,
-    project: projectStateProps,
-    duckDbConnector,
-    ...restState
-  } = props;
+  const {config: configProps, project: projectStateProps, ...restState} = props;
   const initialConfig: PC = {
     ...INITIAL_BASE_PROJECT_CONFIG,
     ...configProps,
+    ...createDefaultDuckDbConfig(),
   } as PC;
   const initialProjectState: ProjectStateProps<PC> = {
     ...INITIAL_BASE_PROJECT_STATE,
     ...projectStateProps,
     schema: projectStateProps.schema ?? INITIAL_BASE_PROJECT_STATE.schema,
     lastSavedConfig: undefined,
-    duckDbConnector: duckDbConnector as DuckDbConnector,
   };
 
   const slice: StateCreator<ProjectState<PC>> = (set, get) => {
@@ -386,28 +261,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           progress: undefined,
         });
 
-        if (!get().project.duckDbConnector) {
-          try {
-            const {WasmDuckDbConnector} = await import('@sqlrooms/duckdb');
-            const connector = new WasmDuckDbConnector();
-            await connector.initialize();
-
-            set((state) =>
-              produce(state, (draft) => {
-                draft.project.duckDbConnector = connector;
-              }),
-            );
-          } catch (err) {
-            console.error(
-              'Failed to initialize default DuckDB connector:',
-              err,
-            );
-            get().project.captureException(err);
-            throw err;
-          }
-        } else {
-          await get().project.duckDbConnector.initialize();
-        }
+        await get().duckdb.initialize();
 
         setTaskProgress(INIT_DB_TASK, undefined);
 
@@ -504,19 +358,20 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async addTable(tableName, data) {
-        const {tables, duckDbConnector} = get().project;
+        const {tables} = get().project;
+        const {connector} = get().duckdb;
         const table = tables.find((t) => t.tableName === tableName);
         if (table) {
           return table;
         }
 
         if (data instanceof arrow.Table) {
-          await createTableFromArrowTable(tableName, data, duckDbConnector);
+          await createTableFromArrowTable(tableName, data, connector);
         } else {
-          await createTableFromObjects(tableName, data, duckDbConnector);
+          await createTableFromObjects(tableName, data, connector);
         }
 
-        const newTable = await duckDbConnector.getTableSchema(tableName);
+        const newTable = await connector.getTableSchema(tableName);
 
         set((state) =>
           produce(state, (draft) => {
@@ -528,19 +383,20 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async addOrUpdateSqlQueryDataSource(tableName, query, oldTableName) {
-        const {schema, duckDbConnector} = get().project;
+        const {schema} = get().project;
+        const {connector} = get().duckdb;
         const newTableName =
           tableName !== oldTableName
             ? convertToUniqueColumnOrTableName(
                 tableName,
-                await duckDbConnector.getTables(schema),
+                await connector.getTables(schema),
               )
             : tableName;
 
         const {rowCount} = await createTableFromQuery(
           newTableName,
           query,
-          duckDbConnector,
+          connector,
         );
         get().project.setTableRowCount(newTableName, rowCount);
         set((state) =>
@@ -566,12 +422,12 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             };
           }),
         );
-        await get().project.setTables(await duckDbConnector.getTableSchemas());
+        await get().project.setTables(await connector.getTableSchemas());
       },
 
       removeSqlQueryDataSource: async (tableName) => {
-        const {duckDbConnector} = get().project;
-        await duckDbConnector.dropTable(tableName);
+        const {connector} = get().duckdb;
+        await connector.dropTable(tableName);
         set((state) =>
           produce(state, (draft) => {
             draft.config.dataSources = draft.config.dataSources.filter(
@@ -580,7 +436,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             delete draft.project.dataSourceStates[tableName];
           }),
         );
-        await get().project.setTables(await duckDbConnector.getTableSchemas());
+        await get().project.setTables(await connector.getTableSchemas());
       },
 
       setProjectFiles: (projectFiles) =>
@@ -598,7 +454,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             );
           }),
         );
-        const {duckDbConnector} = get().project;
+        const {connector} = get().duckdb;
         const dataSource = get().config.dataSources.find(
           (d) =>
             d.type === DataSourceTypes.enum.file &&
@@ -613,7 +469,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             }),
           );
           if (projectFile.duckdbFileName) {
-            const result = await duckDbConnector.loadFile(
+            const result = await connector.loadFile(
               projectFile.duckdbFileName,
               dataSource.tableName,
             );
@@ -630,14 +486,14 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async addProjectFile(info, desiredTableName) {
-        const {duckDbConnector} = get().project;
+        const {connector} = get().duckdb;
         const fileInfo =
           info instanceof File
             ? (
                 await processDroppedFile({
                   file: info,
-                  existingTables: await duckDbConnector.getTables(),
-                  duckDbConnector,
+                  existingTables: await connector.getTables(),
+                  duckDbConnector: connector,
                 })
               ).fileInfo
             : info;
@@ -649,15 +505,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         const {name} = splitFilePath(pathname);
         const tableName =
           desiredTableName ??
-          convertToUniqueColumnOrTableName(
-            name,
-            await duckDbConnector.getTables(),
-          );
+          convertToUniqueColumnOrTableName(name, await connector.getTables());
         if (duckdbFileName) {
-          const result = await duckDbConnector.loadFile(
-            duckdbFileName,
-            tableName,
-          );
+          const result = await connector.loadFile(duckdbFileName, tableName);
           get().project.setTableRowCount(tableName, result.rowCount);
         }
         // This must come before addDataSource, as addDataSource can trigger
@@ -685,7 +535,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         return get().project.findTableByName(tableName);
       },
       removeProjectFile(pathname) {
-        const {duckDbConnector} = get().project;
+        const {connector} = get().duckdb;
         set((state) =>
           produce(state, (draft) => {
             draft.project.projectFiles = draft.project.projectFiles.filter(
@@ -697,7 +547,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             );
           }),
         );
-        duckDbConnector.dropFile(pathname);
+        connector.dropFile(pathname);
       },
 
       setProjectFileProgress(pathname, fileState) {
@@ -791,93 +641,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             draft.config.description = description;
           }),
         ),
-      setLayout: (layout) =>
-        set((state) =>
-          produce(state, (draft) => {
-            draft.config.layout = layout;
-          }),
-        ),
-
-      togglePanel: (panel, show) => {
-        const {config} = get();
-        if (config.layout?.nodes === panel) {
-          // don't hide the view if it's the only one
-          return;
-        }
-        const result = removeMosaicNodeByKey(config.layout?.nodes, panel);
-        const isShown = result.success;
-        if (isShown) {
-          if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.config.layout;
-              layout.nodes = result.nextTree;
-              if (layout.pinned?.includes(panel)) {
-                layout.pinned = layout.pinned.filter((p) => p !== panel);
-              }
-            }),
-          );
-        } else {
-          if (show === false) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.config.layout;
-              const root = layout.nodes;
-              const placement = draft.project.panels[panel]?.placement;
-              const side = placement === 'sidebar' ? 'first' : 'second';
-              const toReplace = isMosaicLayoutParent(root)
-                ? root[side]
-                : undefined;
-              if (
-                toReplace &&
-                isMosaicLayoutParent(root) &&
-                !isMosaicLayoutParent(toReplace) &&
-                toReplace !== MAIN_VIEW &&
-                !layout.fixed?.includes(toReplace) &&
-                !layout.pinned?.includes(toReplace)
-              ) {
-                // replace first un-pinned leaf
-                root[side] = panel;
-              } else {
-                const panelNode = {node: panel, weight: 1};
-                const restNode = {
-                  node: config.layout?.nodes,
-                  weight: 3,
-                };
-                // add to to the left
-                layout.nodes = makeMosaicStack(
-                  placement === 'sidebar-bottom' ? 'column' : 'row',
-                  side === 'first'
-                    ? [panelNode, restNode]
-                    : [restNode, panelNode],
-                );
-              }
-            }),
-          );
-        }
-      },
-
-      /**
-       * Toggle the pin state of a panel.
-       * @param panel - The panel to toggle the pin state of.
-       */
-      togglePanelPin: (panel: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const layout = draft.config.layout;
-            const pinned = layout.pinned ?? [];
-            if (pinned.includes(panel)) {
-              layout.pinned = pinned.filter((p) => p !== panel);
-            } else {
-              layout.pinned = [...pinned, panel];
-            }
-          }),
-        );
-      },
 
       areDatasetsReady: () => {
         const {dataSourceStates} = get().project;
@@ -919,14 +682,19 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       },
 
       async refreshTableSchemas(): Promise<DataTable[]> {
-        const {duckDbConnector} = get().project;
-        const tables = await duckDbConnector.getTableSchemas();
+        const {connector} = get().duckdb;
+        const tables = await connector.getTableSchemas();
         await get().project.setTables(tables);
         return tables;
       },
     };
 
-    return {config: initialConfig, project: projectState, ...restState};
+    return {
+      config: initialConfig,
+      project: projectState,
+      ...createDuckDbSlice()(set, get),
+      ...restState,
+    };
 
     function updateTotalFileDownloadProgress() {
       const {projectFilesProgress, setTaskProgress} = get().project;
@@ -1029,7 +797,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
     }
 
     async function runDataSourceQueries(queries: SqlQueryDataSource[]) {
-      const {duckDbConnector} = get().project;
+      const {connector} = get().duckdb;
       for (const ds of queries) {
         try {
           const {tableName, sqlQuery} = ds;
@@ -1041,11 +809,11 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
             }),
           );
 
-          const resultTable = await duckDbConnector.query(
+          const resultTable = await connector.query(
             `CREATE OR REPLACE TABLE ${tableName} AS ${sqlQuery}`,
           );
 
-          const countResult = await duckDbConnector.query(
+          const countResult = await connector.query(
             `SELECT COUNT(*) FROM ${tableName}`,
           );
           const rowCount = Number(countResult.getChildAt(0)?.get(0));
@@ -1078,8 +846,8 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
     }
 
     async function updateTables(): Promise<DataTable[]> {
-      const {duckDbConnector} = get().project;
-      const tables = await duckDbConnector.getTableSchemas();
+      const {connector} = get().duckdb;
+      const tables = await connector.getTableSchemas();
       await get().project.setTables(tables);
       return tables;
     }

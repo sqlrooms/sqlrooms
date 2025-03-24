@@ -99,7 +99,7 @@ Here's an example from the AI example application showing how to combine configu
 
 ```typescript
 import {AiSliceConfig} from '@sqlrooms/ai';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {z} from 'zod';
 

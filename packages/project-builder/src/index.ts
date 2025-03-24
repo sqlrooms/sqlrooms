@@ -30,7 +30,7 @@ export {
   ProjectStateProvider,
   useBaseProjectStore,
   type ProjectStateProviderProps,
-} from './ProjectStateProvider';
+} from '../../project/src/ProjectStateProvider';
 
 export {ProjectBuilderProvider} from './ProjectBuilderProvider';
 
@@ -44,7 +44,7 @@ export {
   type ProjectStateActions,
   type ProjectStateProps,
   type ProjectStore,
-} from './ProjectStore';
+} from '../../project/src/ProjectStore';
 
 export {
   DataSourceStatus,

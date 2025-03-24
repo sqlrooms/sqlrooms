@@ -59,7 +59,7 @@ import {
   createProjectStore,
   ProjectState,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -184,7 +184,7 @@ import {
   ProjectState,
   ProjectBuilderProvider,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseProjectConfig} from '@sqlrooms/project';
 import {z} from 'zod';
 
 // 1. Define combined config schema
