@@ -1,0 +1,40 @@
+{
+  "name": "@sqlrooms/kepler",
+  "version": "0.8.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "private": false,
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^10.1.1",
+    "lucide-react": "^0.475.0",
+    "zod": "^3.24.1"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typedoc": "typedoc"
+  }
+}
