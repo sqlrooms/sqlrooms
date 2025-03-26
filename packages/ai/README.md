@@ -17,6 +17,42 @@ npm install @sqlrooms/ai
 yarn add @sqlrooms/ai
 ```
 
+Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use OpenAI, you can install the `@ai-sdk/openai` package:
+
+```bash
+npm install @ai-sdk/openai
+```
+
+Google LLM provider:
+
+```bash
+npm install @ai-sdk/google
+```
+
+Anthropic LLM provider:
+
+```bash
+npm install @ai-sdk/anthropic
+```
+
+DeepSeek LLM provider:
+
+```bash
+npm install @ai-sdk/deepseek
+```
+
+XAI LLM provider:
+
+```bash
+npm install @ai-sdk/xai
+```
+
+ollama LLM provider:
+
+```bash
+npm install ollama-ai-provider
+```
+
 ## Basic Usage
 
 ### Setting Up AI Integration

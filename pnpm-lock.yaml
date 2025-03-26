@@ -112,9 +112,18 @@ importers:
 
   examples/ai:
     dependencies:
-      '@ai-sdk/openai':
-        specifier: ^1.1.0
+      '@ai-sdk/anthropic':
+        specifier: ^1.2.1
         version: 1.2.1(zod@3.24.2)
+      '@ai-sdk/deepseek':
+        specifier: ^0.2.1
+        version: 0.2.1(zod@3.24.2)
+      '@ai-sdk/google':
+        specifier: ^1.2.3
+        version: 1.2.3(zod@3.24.2)
+      '@ai-sdk/openai':
+        specifier: ^1.3.2
+        version: 1.3.2(zod@3.24.2)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -522,8 +531,8 @@ importers:
         specifier: 1.29.0
         version: 1.29.0
       '@openassistant/core':
-        specifier: 0.2.6
-        version: 0.2.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)
+        specifier: ^0.2.7
+        version: 0.2.7(@ai-sdk/anthropic@1.2.1(zod@3.24.2))(@ai-sdk/google@1.2.3(zod@3.24.2))(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))(react@19.0.0)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -1115,32 +1124,32 @@ packages:
   '@adobe/css-tools@4.4.2':
     resolution: {integrity: sha512-baYZExFpsdkBNuvGKTKWCwKH57HRZLVtycZS05WTQNVOiXVSeAki3nU35zlRbToeMW8aHlJfyS+1C4BOv27q0A==}
 
-  '@ai-sdk/anthropic@1.1.15':
-    resolution: {integrity: sha512-KqI2vjEPLieBmZh+QIB0055JGUh9F7QcMdqj+dOGrtBawd0zjhZ2uBxP8Ghvl4WhbuTEOo54mlAg7RZO0eP2Tg==}
+  '@ai-sdk/anthropic@1.2.1':
+    resolution: {integrity: sha512-X2bcuDXDKl8UCxUbiK+BX/xW8FLLzc36jngQmQycRvzr1Lmc8k8l+0pgLjgvmWRmbF+L9XOzP38Wm86bdTrFzQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/deepseek@0.1.13':
-    resolution: {integrity: sha512-CakdBNwO3as4IMfpFA3tHsyVO1d/xBWFqJAhc0HMTcV4l3yjx7cF47sgFp+jGgozc2/mLrHr4f6le+hjG9AyMA==}
+  '@ai-sdk/deepseek@0.2.1':
+    resolution: {integrity: sha512-ZgLygIYtvzO+vP2SclKye1XQPdggqyyK3f9E9jjh1Q+Z9uDXJg9WQf8WC5UGHw/ZiN2SH8Gnh+dBDhAdAwGuKg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/google@1.1.20':
-    resolution: {integrity: sha512-vsYtmFYy5vQAovWWAqb9XoLZ01lmcfpfxviY8lMV92YwwbLLhYcaPQ4dKaaKo0tSksCWsO2Qehw8bN3eBxmZdA==}
+  '@ai-sdk/google@1.2.3':
+    resolution: {integrity: sha512-zsgwko7T+MFIdEfhg4fIXv6O2dnzTLFr6BOpAA21eo/moOBA5szVzOto1jTwIwoBYsF2ixPGNZBoc+k/fQ2AWw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/openai-compatible@0.1.13':
-    resolution: {integrity: sha512-hgj6BdvasVXCTmJwbsiWo+e626GkmEBJKG8PYwpVq7moLWj93wJnfBNlDjxVjhZ32d5KGT32RIMZjqaX8QkClg==}
+  '@ai-sdk/openai-compatible@0.2.1':
+    resolution: {integrity: sha512-7vQePiL/+BcbWf3qq5p+Ym+VH3DLY7cuwHucRtcuYSALrxtltKvVBlPr3vU3R9WdxcLyNwykW7UkVE2UpNp5JQ==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
 
-  '@ai-sdk/openai@1.2.1':
-    resolution: {integrity: sha512-UtVDNrmrKzb3b4T9bnpduXs4FKpWGn+sH5qaFP1mtxOPeYGUF9OoJfGilH3CNfqGAE4QdZh/LT3IV6GHacooGg==}
+  '@ai-sdk/openai@1.3.2':
+    resolution: {integrity: sha512-TgtD2NbDKiOipaLb5/eY6fN64Gu32V/sZ0VM5UndsWAGKkB1if3jSLic6TcQjNvnBuhkzZY6L9deVDe4z+2PBg==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -1154,8 +1163,18 @@ packages:
       zod:
         optional: true
 
+  '@ai-sdk/provider-utils@2.2.1':
+    resolution: {integrity: sha512-BuExLp+NcpwsAVj1F4bgJuQkSqO/+roV9wM7RdIO+NVrcT8RBUTdXzf5arHt5T58VpK7bZyB2V9qigjaPHE+Dg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.23.8
+
   '@ai-sdk/provider@1.0.10':
     resolution: {integrity: sha512-pco8Zl9U0xwXI+nCLc0woMtxbvjU8hRmGTseAUiPHFLYAAL8trRPCukg69IDeinOvIeo1SmXxAIdWWPZOLb4Cg==}
+    engines: {node: '>=18'}
+
+  '@ai-sdk/provider@1.1.0':
+    resolution: {integrity: sha512-0M+qjp+clUD0R1E5eWQFhxEvWLNaOtGQRUaBn8CUABnSKredagq92hUS9VjOzGsTm37xLfpaxl97AVtbeOsHew==}
     engines: {node: '>=18'}
 
   '@ai-sdk/react@1.1.21':
@@ -1178,12 +1197,6 @@ packages:
     peerDependenciesMeta:
       zod:
         optional: true
-
-  '@ai-sdk/xai@1.1.13':
-    resolution: {integrity: sha512-3v4ATVLrmSMbah9FJpHyWRKOLBAyQR9Hm7SNav5E6hmCJquwYgJy6EMGCtkjRtcemA/qBHpAmgNcqlb2uBLFBQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.0.0
 
   '@algolia/autocomplete-core@1.17.7':
     resolution: {integrity: sha512-BjiPOW6ks90UKl7TwMv7oNQMnzU+t/wk9mgIDi6b1tXpUek7MW0lbNOUHpvam9pe3lVCf4xPFT+lK7s+e+fs7Q==}
@@ -2166,8 +2179,8 @@ packages:
   '@jridgewell/trace-mapping@0.3.25':
     resolution: {integrity: sha512-vNk6aEwybGtawWmy/PzwnGDOjCkLWSD2wqvjGGAgOAwCGWySYXfYoxt00IJkTF+8Lb57DwOb3Aa0o9CApepiYQ==}
 
-  '@langchain/core@0.3.42':
-    resolution: {integrity: sha512-pT/jC5lqWK3YGDq8dQwgKoa6anqAhMtG1x5JbnrOj9NdaLeBbCKBDQ+/Ykzk3nZ8o+0UMsaXNZo7IVL83VVjHg==}
+  '@langchain/core@0.3.43':
+    resolution: {integrity: sha512-DwiSUwmZqcuOn7j8SFdeOH1nvaUqG7q8qn3LhobdQYEg5PmjLgd2yLr2KzuT/YWMBfjkOR+Di5K6HEdFmouTxg==}
     engines: {node: '>=18'}
 
   '@lerna-lite/cli@3.12.1':
@@ -2361,10 +2374,26 @@ packages:
   '@octokit/types@13.8.0':
     resolution: {integrity: sha512-x7DjTIbEpEWXK99DMd01QfWy0hd5h4EN+Q7shkdKds3otGQP+oWE/y0A76i1OvH9fygo4ddvNf7ZvF0t78P98A==}
 
-  '@openassistant/core@0.2.6':
-    resolution: {integrity: sha512-0+NIgg1CTyB8m+2wv7i2fVV2PodZRdPFae9uwMuoiZEz1gP/f3LqrR485p95llLAxNBj3PMgU5gS1ppsoRPOIg==}
+  '@openassistant/core@0.2.7':
+    resolution: {integrity: sha512-NDQSbzAKMOzQwywdPblKYU3ZmzXwDxVRawYE46rXyTHxbUScU0KOCdm5SQiP8FqB01OdlmYWquJLrdCtN6zQvg==}
     peerDependencies:
+      '@ai-sdk/anthropic': ^1.1.14
+      '@ai-sdk/deepseek': ^0.1.8
+      '@ai-sdk/google': ^1.1.8
+      '@ai-sdk/xai': ^1.1.8
+      ollama-ai-provider: ^1.2.0
       react: '>=18.2'
+    peerDependenciesMeta:
+      '@ai-sdk/anthropic':
+        optional: true
+      '@ai-sdk/deepseek':
+        optional: true
+      '@ai-sdk/google':
+        optional: true
+      '@ai-sdk/xai':
+        optional: true
+      ollama-ai-provider:
+        optional: true
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -3370,8 +3399,8 @@ packages:
   '@types/node-fetch@2.6.12':
     resolution: {integrity: sha512-8nneRWKCg3rMtF69nLQJnOYUcbafYeFSjqkw3jCRLsqkWFlHaoQrr5mXmofFGOx3DKn7UfmBMyov8ySvLRVldA==}
 
-  '@types/node@18.19.80':
-    resolution: {integrity: sha512-kEWeMwMeIvxYkeg1gTc01awpwLbfMRZXdIhwRcakd/KlK53jmRC26LqcbIt7fnAQTu5GzlnWmzA3H6+l1u6xxQ==}
+  '@types/node@18.19.83':
+    resolution: {integrity: sha512-D69JeR5SfFS5H6FLbUaS0vE4r1dGhmMBbG4Ed6BNS4wkDK8GZjsdCShT5LCN59vOHEUHnFCY9J4aclXlIphMkA==}
 
   '@types/node@20.17.23':
     resolution: {integrity: sha512-8PCGZ1ZJbEZuYNTMqywO+Sj4vSKjSjT6Ua+6RFOYlEvIvKQABPtrNkoVSLSKDb4obYcMhspVKmsw8Cm10NFRUg==}
@@ -5707,8 +5736,8 @@ packages:
     resolution: {integrity: sha512-eTIzlVOSUR+JxdDFepEYcBMtZ9Qqdef+rnzWdRZuMbOywu5tO2w2N7rqjoANZ5k9vywhL6Br1VRjUIgTQx4E8w==}
     engines: {node: '>=6'}
 
-  langsmith@0.3.12:
-    resolution: {integrity: sha512-e4qWM27hxEr8GfO6dgXrc3W8La+wxkX1zEtMhxhqS/Th2ujTt5OH7x0uXfXFDqCv9WaC3nquo1Y2s4vpYmLLtg==}
+  langsmith@0.3.14:
+    resolution: {integrity: sha512-MzoxdRkFFV/6140vpP5V2e2fkTG6x/0zIjw77bsRwAXEMjPRTUyDazfXeSyrS5uJvbLgxAXc+MF1h6vPWe6SXQ==}
     peerDependencies:
       openai: '*'
     peerDependenciesMeta:
@@ -6219,15 +6248,6 @@ packages:
     resolution: {integrity: sha512-gXah6aZrcUxjWg2zR2MwouP2eHlCBzdV4pygudehaKXSGW4v2AsRQUK+lwwXhii6KFZcunEnmSUoYp5CXibxtA==}
     engines: {node: '>= 0.4'}
 
-  ollama-ai-provider@1.2.0:
-    resolution: {integrity: sha512-jTNFruwe3O/ruJeppI/quoOUxG7NA6blG3ZyQj3lei4+NnJo7bi3eIRWqlVpRlu/mbzbFXeJSBuYQWF6pzGKww==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: ^3.0.0
-    peerDependenciesMeta:
-      zod:
-        optional: true
-
   once@1.4.0:
     resolution: {integrity: sha512-lNaJgI+2Q5URQBkccEKHTQOPaXdUxnZZElQTZY0MFUAuaEqe1E+Nyvgdz/aIyNi6Z9MzO5dv1H8n58/GELp3+w==}
 
@@ -6251,8 +6271,8 @@ packages:
     peerDependencies:
       openai: '>= 4.20.0'
 
-  openai@4.86.2:
-    resolution: {integrity: sha512-nvYeFjmjdSu6/msld+22JoUlCICNk/lUFpSMmc6KNhpeNLpqL70TqbD/8Vura/tFmYqHKW0trcjgPwUpKSPwaA==}
+  openai@4.89.0:
+    resolution: {integrity: sha512-XNI0q2l8/Os6jmojxaID5EhyQjxZgzR2gWcpEjYWK5hGKwE7AcifxEY7UNwFDDHJQXqeiosQ0CJwQN+rvnwdjA==}
     hasBin: true
     peerDependencies:
       ws: ^8.18.0
@@ -6383,9 +6403,6 @@ packages:
 
   parse5@7.2.1:
     resolution: {integrity: sha512-BuBYQYlv1ckiPdQi/ohiivi9Sagc9JG+Ozs0r7b/0iK3sKmrb0b9FdWdBbOdx6hBCM/F9Ir82ofnBhtZOjCRPQ==}
-
-  partial-json@0.1.7:
-    resolution: {integrity: sha512-Njv/59hHaokb/hRUjce3Hdv12wd60MtM9Z5Olmn+nehe0QDAsRtRbJPvJ0Z91TusF0SuZRIvnM+S4l6EIP8leA==}
 
   path-exists@4.0.0:
     resolution: {integrity: sha512-ak9Qy5Q7jYb2Wwcey5Fpvg2KoAc/ZIhLSLOSBmRmygPsGwkVVt0fZa0qrtMz+m6tJTAHfZQ8FnmB4MG4LWy7/w==}
@@ -8113,35 +8130,35 @@ snapshots:
 
   '@adobe/css-tools@4.4.2': {}
 
-  '@ai-sdk/anthropic@1.1.15(zod@3.24.2)':
+  '@ai-sdk/anthropic@1.2.1(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.0
+      '@ai-sdk/provider-utils': 2.2.1(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/deepseek@0.1.13(zod@3.24.2)':
+  '@ai-sdk/deepseek@0.2.1(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/openai-compatible': 0.1.13(zod@3.24.2)
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
+      '@ai-sdk/openai-compatible': 0.2.1(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.0
+      '@ai-sdk/provider-utils': 2.2.1(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/google@1.1.20(zod@3.24.2)':
+  '@ai-sdk/google@1.2.3(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.0
+      '@ai-sdk/provider-utils': 2.2.1(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/openai-compatible@0.1.13(zod@3.24.2)':
+  '@ai-sdk/openai-compatible@0.2.1(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.0
+      '@ai-sdk/provider-utils': 2.2.1(zod@3.24.2)
       zod: 3.24.2
 
-  '@ai-sdk/openai@1.2.1(zod@3.24.2)':
+  '@ai-sdk/openai@1.3.2(zod@3.24.2)':
     dependencies:
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
+      '@ai-sdk/provider': 1.1.0
+      '@ai-sdk/provider-utils': 2.2.1(zod@3.24.2)
       zod: 3.24.2
 
   '@ai-sdk/provider-utils@2.1.11(zod@3.24.2)':
@@ -8153,7 +8170,18 @@ snapshots:
     optionalDependencies:
       zod: 3.24.2
 
+  '@ai-sdk/provider-utils@2.2.1(zod@3.24.2)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.0
+      nanoid: 3.3.8
+      secure-json-parse: 2.7.0
+      zod: 3.24.2
+
   '@ai-sdk/provider@1.0.10':
+    dependencies:
+      json-schema: 0.4.0
+
+  '@ai-sdk/provider@1.1.0':
     dependencies:
       json-schema: 0.4.0
 
@@ -8173,13 +8201,6 @@ snapshots:
       '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
       zod-to-json-schema: 3.24.3(zod@3.24.2)
     optionalDependencies:
-      zod: 3.24.2
-
-  '@ai-sdk/xai@1.1.13(zod@3.24.2)':
-    dependencies:
-      '@ai-sdk/openai-compatible': 0.1.13(zod@3.24.2)
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
       zod: 3.24.2
 
   '@algolia/autocomplete-core@1.17.7(@algolia/client-search@5.20.4)(algoliasearch@5.20.4)(search-insights@2.17.3)':
@@ -9501,14 +9522,14 @@ snapshots:
       '@jridgewell/resolve-uri': 3.1.2
       '@jridgewell/sourcemap-codec': 1.5.0
 
-  '@langchain/core@0.3.42(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))':
+  '@langchain/core@0.3.43(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       ansi-styles: 5.2.0
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.19
-      langsmith: 0.3.12(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      langsmith: 0.3.14(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       mustache: 4.2.0
       p-queue: 6.6.2
       p-retry: 4.6.2
@@ -9916,26 +9937,22 @@ snapshots:
     dependencies:
       '@octokit/openapi-types': 23.0.1
 
-  '@openassistant/core@0.2.6(encoding@0.1.13)(react@19.0.0)(ws@8.18.1)':
+  '@openassistant/core@0.2.7(@ai-sdk/anthropic@1.2.1(zod@3.24.2))(@ai-sdk/google@1.2.3(zod@3.24.2))(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))(react@19.0.0)':
     dependencies:
-      '@ai-sdk/anthropic': 1.1.15(zod@3.24.2)
-      '@ai-sdk/deepseek': 0.1.13(zod@3.24.2)
-      '@ai-sdk/google': 1.1.20(zod@3.24.2)
-      '@ai-sdk/openai': 1.2.1(zod@3.24.2)
+      '@ai-sdk/openai': 1.3.2(zod@3.24.2)
       '@ai-sdk/react': 1.1.21(react@19.0.0)(zod@3.24.2)
       '@ai-sdk/ui-utils': 1.1.17(zod@3.24.2)
-      '@ai-sdk/xai': 1.1.13(zod@3.24.2)
-      '@langchain/core': 0.3.42(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      '@langchain/core': 0.3.43(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       ai: 4.1.53(react@19.0.0)(zod@3.24.2)
-      ollama-ai-provider: 1.2.0(zod@3.24.2)
-      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
-      openai-zod-functions: 0.1.2(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
+      openai-zod-functions: 0.1.2(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))
       react: 19.0.0
       zod: 3.24.2
       zod-to-json-schema: 3.24.3(zod@3.24.2)
+    optionalDependencies:
+      '@ai-sdk/anthropic': 1.2.1(zod@3.24.2)
+      '@ai-sdk/google': 1.2.3(zod@3.24.2)
     transitivePeerDependencies:
-      - encoding
-      - ws
+      - openai
 
   '@opentelemetry/api@1.9.0': {}
 
@@ -11096,7 +11113,7 @@ snapshots:
       '@types/node': 22.13.9
       form-data: 4.0.2
 
-  '@types/node@18.19.80':
+  '@types/node@18.19.83':
     dependencies:
       undici-types: 5.26.5
 
@@ -13949,7 +13966,7 @@ snapshots:
 
   kleur@3.0.3: {}
 
-  langsmith@0.3.12(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
+  langsmith@0.3.14(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
     dependencies:
       '@types/uuid': 10.0.0
       chalk: 4.1.2
@@ -13959,7 +13976,7 @@ snapshots:
       semver: 7.7.1
       uuid: 10.0.0
     optionalDependencies:
-      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
+      openai: 4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
 
   leven@3.1.0: {}
 
@@ -14620,14 +14637,6 @@ snapshots:
       define-properties: 1.2.1
       es-object-atoms: 1.1.1
 
-  ollama-ai-provider@1.2.0(zod@3.24.2):
-    dependencies:
-      '@ai-sdk/provider': 1.0.10
-      '@ai-sdk/provider-utils': 2.1.11(zod@3.24.2)
-      partial-json: 0.1.7
-    optionalDependencies:
-      zod: 3.24.2
-
   once@1.4.0:
     dependencies:
       wrappy: 1.0.2
@@ -14650,16 +14659,16 @@ snapshots:
       regex: 6.0.1
       regex-recursion: 6.0.2
 
-  openai-zod-functions@0.1.2(openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
+  openai-zod-functions@0.1.2(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)):
     dependencies:
-      openai: 4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
+      openai: 4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2)
       zod: 3.24.2
       zod-to-json-schema: 3.24.3(zod@3.24.2)
       zod-validation-error: 2.1.0(zod@3.24.2)
 
-  openai@4.86.2(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2):
+  openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2):
     dependencies:
-      '@types/node': 18.19.80
+      '@types/node': 18.19.83
       '@types/node-fetch': 2.6.12
       abort-controller: 3.0.0
       agentkeepalive: 4.6.0
@@ -14828,8 +14837,6 @@ snapshots:
   parse5@7.2.1:
     dependencies:
       entities: 4.5.0
-
-  partial-json@0.1.7: {}
 
   path-exists@4.0.0: {}
 
