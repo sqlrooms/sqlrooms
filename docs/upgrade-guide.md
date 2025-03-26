@@ -4,6 +4,26 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.9.0
+
+### @sqlrooms/project-builder
+
+#### processDroppedFile() is deleted
+
+Use `ProjectStore.addProjectFile` directly.
+
+#### ProjectStore.replaceProjectFile() is deleted
+
+Use `ProjectStore.addProjectFile` instead.
+
+#### ProjectStore.addProjectFile parameter changes
+
+The function now takes a File or a pathname instead of the result of `processDroppedFile()`.
+
+#### ProjectStore.addProjectFile behavior changes
+
+The function will no longer attempt to create unique table names, but will overwrite the created table.
+
 ## 0.8.0
 
 ### @sqlrooms/project-builder

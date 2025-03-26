@@ -1,4 +1,4 @@
-import {DuckQueryError, getDuckDb, getDuckTableSchemas} from '@sqlrooms/duckdb';
+import {DuckQueryError, getDuckDb} from '@sqlrooms/duckdb';
 import {
   createSlice,
   ProjectState,

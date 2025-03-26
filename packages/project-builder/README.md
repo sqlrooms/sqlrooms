@@ -558,17 +558,6 @@ const removeSqlQueryDataSource = useProjectStore(
 await removeSqlQueryDataSource('filtered_data');
 ```
 
-#### `replaceProjectFile(projectFile)`
-
-Replace a project file.
-
-```tsx
-const replaceProjectFile = useProjectStore(
-  (state) => state.project.replaceProjectFile,
-);
-await replaceProjectFile(newFileInfo);
-```
-
 #### `addProjectFile(info, desiredTableName)`
 
 Add a project file.
