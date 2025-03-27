@@ -6,8 +6,8 @@
 import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   createSlice,
-  useBaseProjectStore,
-  type ProjectState,
+  useBaseProjectBuilderStore,
+  type ProjectBuilderState,
 } from '@sqlrooms/project-builder';
 import type {BaseProjectConfig} from '@sqlrooms/project-config';
 import type {StateCreator} from 'zustand';
@@ -59,7 +59,7 @@ export type CosmosSliceState = {
  * Combined type representing the full project state including Cosmos functionality.
  * Merges the base project state with Cosmos-specific state and configuration.
  */
-export type ProjectStateWithCosmos = ProjectState<
+export type ProjectStateWithCosmos = ProjectBuilderState<
   BaseProjectConfig & CosmosSliceConfig
 > &
   CosmosSliceState;
@@ -237,7 +237,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 export function useStoreWithCosmos<T>(
   selector: (state: ProjectStateWithCosmos) => T,
 ): T {
-  return useBaseProjectStore<
+  return useBaseProjectBuilderStore<
     BaseProjectConfig & CosmosSliceConfig,
     ProjectStateWithCosmos,
     T

@@ -25,6 +25,39 @@ export function splitFilePath(filePath: string): {
 }
 
 /**
+ * Converts a filename into a valid column or table name for database use.
+ * - Removes file extension
+ * - Replaces invalid characters with underscores
+ * - Ensures the name starts with a letter or underscore
+ * - Truncates to max length of 63 characters
+ *
+ * @param filename - The original filename to convert
+ * @returns A valid table/column name
+ * @example
+ * convertToValidColumnOrTableName("my-file.csv") // returns "my_file"
+ * convertToValidColumnOrTableName("123data.csv") // returns "_123data"
+ */
+export function convertToValidColumnOrTableName(filename: string): string {
+  // Remove file extension
+  const base = filename.replace(/\.[^/.]+$/, '');
+
+  // Replace any invalid character with underscore, and convert to lowercase
+  let tableName = base.replace(/[^a-z0-9_]/gi, '_');
+
+  // If the first character is a number, prepend an underscore
+  if (/^\d/.test(tableName)) {
+    tableName = '_' + tableName;
+  }
+
+  // Truncate to the max length 63
+  if (tableName.length > 63) {
+    tableName = tableName.substring(0, 63);
+  }
+
+  return tableName;
+}
+
+/**
  * Converts a filename into a valid and unique column or table name for database use.
  * - Removes file extension
  * - Replaces invalid characters with underscores
@@ -43,25 +76,8 @@ export function convertToUniqueColumnOrTableName(
   filename: string,
   existingTables?: string[],
 ): string {
-  // Remove file extension
-  const base = filename.replace(/\.[^/.]+$/, '');
-
-  // Replace any invalid character with underscore, and convert to lowercase
-  let tableName = base.replace(/[^a-z0-9_]/gi, '_');
-
-  // If the first character is a number, prepend an underscore
-  if (/^\d/.test(tableName)) {
-    tableName = '_' + tableName;
-  }
-
-  // Truncate to the max length 63
-  if (tableName.length > 63) {
-    tableName = tableName.substring(0, 63);
-  }
-
-  tableName = generateUniqueName(tableName, existingTables);
-
-  return tableName;
+  const tableName = convertToValidColumnOrTableName(filename);
+  return generateUniqueName(tableName, existingTables);
 }
 
 /**

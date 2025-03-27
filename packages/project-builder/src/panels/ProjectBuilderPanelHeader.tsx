@@ -1,6 +1,6 @@
 import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
+import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 import {PanelHeaderButton} from './PanelHeaderButton';
 
 const ProjectBuilderPanelHeader: FC<{
@@ -9,13 +9,15 @@ const ProjectBuilderPanelHeader: FC<{
   children?: React.ReactNode;
 }> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
-  const panels = useBaseProjectStore((state) => state.project.panels);
+  const panels = useBaseProjectBuilderStore((state) => state.project.panels);
   const {icon: Icon, title} = panels[type] ?? {};
-  const togglePanel = useBaseProjectStore((state) => state.project.togglePanel);
-  const togglePanelPin = useBaseProjectStore(
+  const togglePanel = useBaseProjectBuilderStore(
+    (state) => state.project.togglePanel,
+  );
+  const togglePanelPin = useBaseProjectBuilderStore(
     (state) => state.project.togglePanelPin,
   );
-  const pinnedPanels = useBaseProjectStore(
+  const pinnedPanels = useBaseProjectBuilderStore(
     (state) => state.config.layout.pinned,
   );
   const isPinned = useMemo(

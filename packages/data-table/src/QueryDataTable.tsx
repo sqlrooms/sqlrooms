@@ -1,7 +1,7 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {
   escapeId,
-  exportToCsv,
+  useExportToCsv,
   getColValAsNumber,
   useDuckDb,
 } from '@sqlrooms/duckdb';
@@ -17,7 +17,8 @@ export type QueryDataTableProps = {
 };
 
 const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
-  const {conn} = useDuckDb();
+  const connector = useDuckDb();
+  const {exportToCsv} = useExportToCsv();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -45,7 +46,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
       try {
         setIsFetching(true);
         const countQuery = `SELECT COUNT(*)::int FROM (${sanitizedQuery})`;
-        const result = await conn.query(countQuery);
+        const result = await connector.query(countQuery);
         setCount(getColValAsNumber(result));
       } catch (error) {
         console.error('Error fetching count:', error);
@@ -55,14 +56,14 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
     };
 
     fetchCount();
-  }, [conn, sanitizedQuery]);
+  }, [connector, sanitizedQuery]);
 
   // Fetch data
   useEffect(() => {
     const fetchData = async () => {
       try {
         setIsFetching(true);
-        const result = await conn.query(
+        const result = await connector.query(
           `SELECT * FROM (
             ${sanitizedQuery}
           ) ${
@@ -84,7 +85,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
     };
 
     fetchData();
-  }, [pagination, sorting, conn, sanitizedQuery]);
+  }, [pagination, sorting, connector, sanitizedQuery]);
 
   const arrowTableData = useArrowDataTable(data);
 

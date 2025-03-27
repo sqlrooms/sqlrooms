@@ -79,7 +79,7 @@ export const VegaLiteChart: React.FC<{
     aspectRatio,
   });
 
-  const {conn} = useDuckDb();
+  const connector = useDuckDb();
   const [data, setData] = useState<Record<string, unknown>>();
 
   const refinedSpec = useMemo(() => {
@@ -99,11 +99,11 @@ export const VegaLiteChart: React.FC<{
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await conn.query(sqlQuery);
+      const result = await connector.query(sqlQuery);
       setData({[DATA_NAME]: arrowTableToJson(result)});
     };
     fetchData();
-  }, [sqlQuery, conn]);
+  }, [sqlQuery, connector]);
 
   return (
     <div

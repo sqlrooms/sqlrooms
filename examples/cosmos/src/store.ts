@@ -1,7 +1,7 @@
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
+  createProjectBuilderSlice,
+  createProjectBuilderStore,
+  ProjectBuilderState,
 } from '@sqlrooms/project-builder';
 import {
   BaseProjectConfig,
@@ -40,19 +40,19 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Project state
  */
-export type AppState = ProjectState<AppConfig> &
+export type AppState = ProjectBuilderState<AppConfig> &
   SqlEditorSliceState &
   CosmosSliceState;
 
 /**
  * Create a customized project store
  */
-export const {projectStore, useProjectStore} = createProjectStore<
+export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
   // Base project slice
-  ...createProjectSlice<AppConfig>({
+  ...createProjectBuilderSlice<AppConfig>({
     config: {
       layout: {
         type: LayoutTypes.enum.mosaic,

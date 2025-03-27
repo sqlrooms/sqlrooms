@@ -31,7 +31,7 @@ import {TablesList} from './TablesList';
 import {SqlMonacoEditor} from './SqlMonacoEditor';
 import type * as Monaco from 'monaco-editor';
 import {useTableManagement, useQueryExecution, useMonacoEditor} from './hooks';
-import {useBaseProjectStore} from '@sqlrooms/project-builder';
+import {useBaseProjectBuilderStore} from '@sqlrooms/project-builder';
 
 // Define the types for Monaco Editor
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
@@ -70,7 +70,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = 'main', documentationPanel} = props;
 
   // Store access - directly use the selector
-  const addOrUpdateSqlQueryDataSource = useBaseProjectStore(
+  const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
     (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
 

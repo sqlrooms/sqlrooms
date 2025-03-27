@@ -1,40 +1,41 @@
 import * as arrow from 'apache-arrow';
-import {getDuckDb} from './useDuckDb';
+import {useStoreWithDuckDb} from './DuckDbSlice';
 
-export async function exportToCsv(
-  query: string,
-  fileName: string,
-  pageSize = 100000,
-) {
-  const {conn} = await getDuckDb();
+export function useExportToCsv() {
+  const getConnector = useStoreWithDuckDb((state) => state.db.getConnector);
+  return {
+    exportToCsv: async (query: string, fileName: string, pageSize = 100000) => {
+      const dbConnector = await getConnector();
 
-  let offset = 0;
-  const blobs: Blob[] = [];
-  let headersAdded = false;
+      let offset = 0;
+      const blobs: Blob[] = [];
+      let headersAdded = false;
 
-  while (true) {
-    const currentQuery = `(
-        ${query}
-    ) LIMIT ${pageSize} OFFSET ${offset}`;
-    const results = await conn.query(currentQuery);
+      while (true) {
+        const currentQuery = `(
+          ${query}
+        ) LIMIT ${pageSize} OFFSET ${offset}`;
+        const results = await dbConnector.query(currentQuery);
 
-    // Check if we received any results; if not, we are done.
-    if (results.numRows === 0) {
-      break;
-    }
+        // Check if we received any results; if not, we are done.
+        if (results.numRows === 0) {
+          break;
+        }
 
-    const csvChunk = convertToCsv(results, !headersAdded);
-    blobs.push(new Blob([csvChunk], {type: 'text/csv'}));
+        const csvChunk = convertToCsv(results, !headersAdded);
+        blobs.push(new Blob([csvChunk], {type: 'text/csv'}));
 
-    // Ensure that headers are not added in subsequent iterations
-    headersAdded = true;
+        // Ensure that headers are not added in subsequent iterations
+        headersAdded = true;
 
-    // Increment offset to fetch the next chunk
-    offset += pageSize;
-  }
+        // Increment offset to fetch the next chunk
+        offset += pageSize;
+      }
 
-  const fullCsvBlob = new Blob(blobs, {type: 'text/csv'});
-  downloadBlob(fullCsvBlob, fileName);
+      const fullCsvBlob = new Blob(blobs, {type: 'text/csv'});
+      downloadBlob(fullCsvBlob, fileName);
+    },
+  };
 }
 
 function convertToCsv(

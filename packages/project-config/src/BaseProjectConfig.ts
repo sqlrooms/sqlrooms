@@ -52,7 +52,11 @@ export type DataSource = z.infer<typeof DataSource>;
 export const BaseProjectConfig = z
   .object({
     title: z.string().default(DEFAULT_PROJECT_TITLE).describe('Project title.'),
-    description: z.string().optional().describe('Project description.'),
+    description: z
+      .string()
+      .nullable()
+      .optional()
+      .describe('Project description.'),
     dataSources: z
       .array(DataSource)
       .default([])

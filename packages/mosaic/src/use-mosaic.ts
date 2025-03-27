@@ -1,27 +1,36 @@
-import {getDuckDb} from '@sqlrooms/duckdb';
+import {
+  DuckDbConnector,
+  useDuckDb,
+  WasmDuckDbConnector,
+} from '@sqlrooms/duckdb';
 import {coordinator, wasmConnector} from '@uwdata/mosaic-core';
 import {useEffect, useState} from 'react';
 
 type MosaicConnector = ReturnType<typeof coordinator>['databaseConnector'];
-let connector: MosaicConnector;
+let mosaicConnector: MosaicConnector;
+
+// TODO: Create MosaicSlice and keep the connector in the store
 
 /**
  * Retrieves a Mosaic connector for the DuckDB database.
  *
  * @returns {Promise<MosaicConnector>} The Mosaic connector for the DuckDB database.
  */
-export async function getMosaicConnector() {
-  if (connector) {
-    return connector;
+async function getMosaicConnector(duckDb: DuckDbConnector) {
+  if (mosaicConnector) {
+    return mosaicConnector;
   }
-  const duckDb = await getDuckDb();
-  connector = await coordinator().databaseConnector(
+  if (!(duckDb instanceof WasmDuckDbConnector)) {
+    throw new Error('Only WasmDuckDbConnector is currently supported');
+  }
+  await duckDb.initialize();
+  mosaicConnector = await coordinator().databaseConnector(
     wasmConnector({
-      duckDb: duckDb.db,
-      connection: duckDb.conn,
+      duckDb: duckDb.getDb(),
+      connection: duckDb.getConnection(),
     }),
   );
-  return connector;
+  return mosaicConnector;
 }
 
 /**
@@ -32,10 +41,11 @@ export async function getMosaicConnector() {
 export function useMosaic() {
   const [isLoading, setIsLoading] = useState(true);
   const [connector, setConnector] = useState<MosaicConnector>();
+  const duckDb = useDuckDb();
   useEffect(() => {
-    getMosaicConnector()
+    getMosaicConnector(duckDb)
       .then(setConnector)
       .finally(() => setIsLoading(false));
-  }, []);
+  }, [duckDb]);
   return {isMosaicLoading: isLoading, mosaicConnector: connector};
 }

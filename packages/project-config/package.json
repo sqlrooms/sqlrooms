@@ -21,6 +21,9 @@
   "dependencies": {
     "zod": "^3.24.1"
   },
+  "peerDependencies": {
+    "react": "*"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",

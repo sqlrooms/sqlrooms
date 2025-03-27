@@ -1,4 +1,4 @@
-// Adapted from https://github.com/uwdata/mosaic/blob/main/packages/sql/src/load/sql-from.js
+// Adapted from https://github.com/uwdata/mosaic/blob/main/packages/sql/src/load/
 // BSD 3-Clause License Copyright (c) 2023, UW Interactive Data Lab
 
 /**
