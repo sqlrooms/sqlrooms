@@ -653,6 +653,12 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.0
         version: 1.29.0
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
       apache-arrow:
         specifier: 18.1.0
         version: 18.1.0
@@ -793,6 +799,18 @@ importers:
         specifier: '*'
         version: 19.0.0(react@19.0.0)
 
+  packages/project:
+    dependencies:
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
+      react:
+        specifier: '*'
+        version: 18.3.1
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.2
+
   packages/project-builder:
     dependencies:
       '@duckdb/duckdb-wasm':
@@ -807,6 +825,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
       '@sqlrooms/project-config':
         specifier: workspace:*
         version: link:../project-config
@@ -837,6 +858,9 @@ importers:
 
   packages/project-config:
     dependencies:
+      react:
+        specifier: '*'
+        version: 18.3.1
       zod:
         specifier: ^3.24.1
         version: 3.24.2

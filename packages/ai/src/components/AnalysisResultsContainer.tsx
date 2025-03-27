@@ -1,11 +1,9 @@
-'use client';
 import {cn, SkeletonPane} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useMemo, useRef} from 'react';
+import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {TOOLS} from '../analysis';
-import {AnalysisResult} from './AnalysisResult';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
+import {AnalysisResult} from './AnalysisResult';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;

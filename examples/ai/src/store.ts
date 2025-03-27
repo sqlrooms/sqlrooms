@@ -6,9 +6,9 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
+  createProjectBuilderSlice,
+  createProjectBuilderStore,
+  ProjectBuilderState,
   StateCreator,
 } from '@sqlrooms/project-builder';
 import {
@@ -59,7 +59,7 @@ type CustomAppState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
-export type AppState = ProjectState<AppConfig> &
+export type AppState = ProjectBuilderState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomAppState;
@@ -67,14 +67,14 @@ export type AppState = ProjectState<AppConfig> &
 /**
  * Create a customized project store
  */
-export const {projectStore, useProjectStore} = createProjectStore<
+export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
 >(
   persist(
     (set, get, store) => ({
       // Base project slice
-      ...createProjectSlice<AppConfig>({
+      ...createProjectBuilderSlice<AppConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,

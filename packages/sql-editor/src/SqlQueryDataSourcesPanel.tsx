@@ -1,4 +1,7 @@
-import {DataSourceStatus, useBaseProjectStore} from '@sqlrooms/project-builder';
+import {
+  DataSourceStatus,
+  useBaseProjectBuilderStore,
+} from '@sqlrooms/project-builder';
 import {SqlQueryDataSource} from '@sqlrooms/project-config';
 import {
   Button,
@@ -17,7 +20,6 @@ import {
 } from 'lucide-react';
 import {FC, useCallback, useState} from 'react';
 import CreateTableModal from './CreateTableModal';
-import {useStoreWithSqlEditor} from './SqlEditorSlice';
 
 const SqlQueryDataSourcesPanel: FC<{
   queryDataSources: SqlQueryDataSource[];
@@ -26,10 +28,10 @@ const SqlQueryDataSourcesPanel: FC<{
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();
   const [isOpen, setIsOpen] = useState(false);
-  const dataSourceStates = useBaseProjectStore(
+  const dataSourceStates = useBaseProjectBuilderStore(
     (state) => state.project.dataSourceStates,
   );
-  const removeSqlQueryDataSource = useBaseProjectStore(
+  const removeSqlQueryDataSource = useBaseProjectBuilderStore(
     (state) => state.project.removeSqlQueryDataSource,
   );
 
@@ -51,11 +53,13 @@ const SqlQueryDataSourcesPanel: FC<{
     [removeSqlQueryDataSource],
   );
 
-  const addOrUpdateSqlQueryDataSource = useBaseProjectStore(
+  const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
     (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
 
-  const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
+  const isReadOnly = useBaseProjectBuilderStore(
+    (state) => state.project.isReadOnly,
+  );
 
   return (
     <div className="flex flex-grow flex-col overflow-auto">

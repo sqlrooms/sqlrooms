@@ -54,7 +54,7 @@ export function load(
   const params = parameters({...defaults, ...file});
   const read =
     method === 'auto'
-      ? `read_file('${fileName}'${params ? ', ' + params : ''})`
+      ? `'${fileName}'${params ? ', ' + params : ''}`
       : `${method}('${fileName}'${params ? ', ' + params : ''})`;
   const filter = where ? ` WHERE ${where}` : '';
   const query = `SELECT ${select.join(', ')} FROM ${read}${filter}`;

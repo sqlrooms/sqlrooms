@@ -1,9 +1,9 @@
-import {DuckQueryError, getDuckDb} from '@sqlrooms/duckdb';
+import {DuckDbSliceConfig, DuckQueryError} from '@sqlrooms/duckdb';
 import {
   createSlice,
-  ProjectState,
+  ProjectBuilderState,
   StateCreator,
-  useBaseProjectStore,
+  useBaseProjectBuilderStore,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
@@ -106,20 +106,17 @@ export type SqlEditorSliceState = {
 };
 
 export function createSqlEditorSlice<
-  PC extends BaseProjectConfig & SqlEditorSliceConfig,
+  PC extends BaseProjectConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
       executeQuery: async (query, schema = 'main') => {
-        const duckDb = await getDuckDb();
-        if (!duckDb.conn) {
-          return {error: 'No DuckDB connection available'};
-        }
+        const connector = await get().db.getConnector();
 
         try {
-          await duckDb.conn.query(`SET search_path = ${schema}`);
-          const results = await duckDb.conn.query(query);
-          await duckDb.conn.query(`SET search_path = main`);
+          await connector.query(`SET search_path = ${schema}`);
+          const results = await connector.query(query);
+          await connector.query(`SET search_path = main`);
 
           // Refresh table schemas after query execution
           await get().project.refreshTableSchemas();
@@ -245,15 +242,15 @@ export function createSqlEditorSlice<
 }
 
 type ProjectConfigWithSqlEditor = BaseProjectConfig & SqlEditorSliceConfig;
-type ProjectStateWithSqlEditor = ProjectState<ProjectConfigWithSqlEditor> &
-  SqlEditorSliceState;
+type ProjectStateWithSqlEditor =
+  ProjectBuilderState<ProjectConfigWithSqlEditor> & SqlEditorSliceState;
 
 export function useStoreWithSqlEditor<T>(
   selector: (state: ProjectStateWithSqlEditor) => T,
 ): T {
-  return useBaseProjectStore<
+  return useBaseProjectBuilderStore<
     BaseProjectConfig & SqlEditorSliceConfig,
-    ProjectState<ProjectConfigWithSqlEditor>,
+    ProjectBuilderState<ProjectConfigWithSqlEditor>,
     T
   >((state) => selector(state as unknown as ProjectStateWithSqlEditor));
 }

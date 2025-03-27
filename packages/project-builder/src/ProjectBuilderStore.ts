@@ -1,11 +1,17 @@
 import {
   DataTable,
   DuckDbSliceState,
-  DuckQueryError,
   LoadFileOptions,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
+import {
+  createProjectSlice,
+  ProjectState,
+  ProjectStateActions,
+  ProjectStateContext,
+  ProjectStateProps,
+} from '@sqlrooms/project';
 import {
   BaseProjectConfig,
   DEFAULT_MOSAIC_LAYOUT,
@@ -28,9 +34,8 @@ import {
 } from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {castDraft, produce} from 'immer';
-import {ReactNode} from 'react';
-import {StateCreator, StoreApi, createStore} from 'zustand';
-import {useBaseProjectStore} from './ProjectStateProvider';
+import {ReactNode, useContext} from 'react';
+import {StateCreator, StoreApi, useStore} from 'zustand';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -47,8 +52,8 @@ const INIT_DB_TASK = 'init-db';
 const INIT_PROJECT_TASK = 'init-project';
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 
-export type ProjectStore<PC extends BaseProjectConfig> = StoreApi<
-  ProjectState<PC>
+export type ProjectBuilderStore<PC extends BaseProjectConfig> = StoreApi<
+  ProjectBuilderState<PC>
 >;
 
 export type ProjectPanelInfo = {
@@ -58,8 +63,8 @@ export type ProjectPanelInfo = {
   placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
 
-export const INITIAL_BASE_PROJECT_STATE: Omit<
-  ProjectStateProps<BaseProjectConfig>,
+export const INITIAL_PROJECT_BUILDER_STATE: Omit<
+  ProjectBuilderStateProps<BaseProjectConfig>,
   'config' | 'lastSavedConfig' | 'panels'
 > = {
   schema: 'main',
@@ -87,194 +92,172 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
   layout: DEFAULT_MOSAIC_LAYOUT,
 };
 
-export type ProjectStateProps<PC extends BaseProjectConfig> = {
-  schema: string;
-  tasksProgress: Record<string, TaskProgress>;
-  projectId: string | undefined; // undefined if the project is new
-  panels: Record<string, ProjectPanelInfo>;
-  isReadOnly: boolean;
-  tables: DataTable[];
-  projectFiles: ProjectFileInfo[];
-  projectFilesProgress: {[pathname: string]: ProjectFileState};
-  lastSavedConfig: PC | undefined;
-  initialized: boolean; // Whether the project has been initialized so we can render UI
-  isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
-  dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-  tableRowCounts: {[tableName: string]: number};
-  captureException: (exception: unknown, captureContext?: unknown) => void;
-  CustomErrorBoundary: React.ComponentType<{
-    onRetry?: () => void;
-    children?: ReactNode;
-  }>;
-};
+export type ProjectBuilderStateProps<PC extends BaseProjectConfig> =
+  ProjectStateProps<PC> & {
+    schema: string;
+    tasksProgress: Record<string, TaskProgress>;
+    projectId: string | undefined; // undefined if the project is new
+    panels: Record<string, ProjectPanelInfo>;
+    isReadOnly: boolean;
+    tables: DataTable[];
+    projectFiles: ProjectFileInfo[];
+    projectFilesProgress: {[pathname: string]: ProjectFileState};
+    lastSavedConfig: PC | undefined;
+    initialized: boolean; // Whether the project has been initialized so we can render UI
+    isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
+    dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
+    tableRowCounts: {[tableName: string]: number};
+    captureException: (exception: unknown, captureContext?: unknown) => void;
+    CustomErrorBoundary: React.ComponentType<{
+      onRetry?: () => void;
+      children?: ReactNode;
+    }>;
+  };
 
-export type ProjectStateActions<PC extends BaseProjectConfig> = {
-  /**
-   * Initialize the project state.
-   * @returns A promise that resolves when the project state has been initialized.
-   */
-  initialize: () => Promise<void>;
-  setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
-  getLoadingProgress: () => TaskProgress | undefined;
-  /**
-   * Set the project config.
-   * @param config - The project config to set.
-   */
-  setProjectConfig: (config: PC) => void;
-  setProjectId: (projectId: string | undefined) => void;
-  /**
-   * Set the last saved project config. This can be used to check if the project has unsaved changes.
-   * @param config - The project config to set.
-   */
-  setLastSavedConfig: (config: PC) => void;
-  /**
-   * Check if the project has unsaved changes.
-   * @returns True if the project has unsaved changes, false otherwise.
-   */
-  hasUnsavedChanges(): boolean; // since last save
-  /**
-   * Set the layout of the project.
-   * @param layout - The layout to set.
-   */
-  setLayout(layout: LayoutConfig): void;
-  /**
-   * Toggle a panel.
-   * @param panel - The panel to toggle.
-   * @param show - Whether to show the panel.
-   */
-  togglePanel: (panel: string, show?: boolean) => void;
-  /**
-   * Toggle the pin state of a panel.
-   * @param panel - The panel to toggle the pin state of.
-   */
-  togglePanelPin: (panel: string) => void;
-  /**
-   * Add or update a SQL query data source.
-   * @param tableName - The name of the table to create or update.
-   * @param query - The SQL query to execute.
-   * @param oldTableName - The name of the table to replace (optional).
-   */
-  addOrUpdateSqlQueryDataSource(
-    tableName: string,
-    query: string,
-    oldTableName?: string,
-  ): Promise<void>;
-  removeSqlQueryDataSource(tableName: string): Promise<void>;
+export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
+  ProjectStateActions<PC> & {
+    /**
+     * Initialize the project state.
+     * @returns A promise that resolves when the project state has been initialized.
+     */
+    initialize: () => Promise<void>;
+    setTaskProgress: (
+      id: string,
+      taskProgress: TaskProgress | undefined,
+    ) => void;
+    getLoadingProgress: () => TaskProgress | undefined;
+    /**
+     * Set the project config.
+     * @param config - The project config to set.
+     */
+    setProjectConfig: (config: PC) => void;
+    setProjectId: (projectId: string | undefined) => void;
+    /**
+     * Set the last saved project config. This can be used to check if the project has unsaved changes.
+     * @param config - The project config to set.
+     */
+    setLastSavedConfig: (config: PC) => void;
+    /**
+     * Check if the project has unsaved changes.
+     * @returns True if the project has unsaved changes, false otherwise.
+     */
+    hasUnsavedChanges(): boolean; // since last save
+    /**
+     * Set the layout of the project.
+     * @param layout - The layout to set.
+     */
+    setLayout(layout: LayoutConfig): void;
+    /**
+     * Toggle a panel.
+     * @param panel - The panel to toggle.
+     * @param show - Whether to show the panel.
+     */
+    togglePanel: (panel: string, show?: boolean) => void;
+    /**
+     * Toggle the pin state of a panel.
+     * @param panel - The panel to toggle the pin state of.
+     */
+    togglePanelPin: (panel: string) => void;
+    /**
+     * Add or update a SQL query data source.
+     * @param tableName - The name of the table to create or update.
+     * @param query - The SQL query to execute.
+     * @param oldTableName - The name of the table to replace (optional).
+     */
+    addOrUpdateSqlQueryDataSource(
+      tableName: string,
+      query: string,
+      oldTableName?: string,
+    ): Promise<void>;
+    removeSqlQueryDataSource(tableName: string): Promise<void>;
 
-  addProjectFile(
-    file: File | string,
-    tableName?: string,
-    loadFileOptions?: LoadFileOptions,
-  ): Promise<DataTable | undefined>;
-  removeProjectFile(pathname: string): void;
-  maybeDownloadDataSources(): Promise<void>;
-  setProjectFiles(info: ProjectFileInfo[]): void;
-  setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
-  /**
-   * Add a table to the project.
-   * @param tableName - The name of the table to add.
-   * @param data - The data to add to the table: an arrow table or an array of records.
-   * @returns A promise that resolves to the table that was added.
-   */
-  addTable(
-    tableName: string,
-    data: arrow.Table | Record<string, unknown>[],
-  ): Promise<DataTable>;
-  addDataSource: (
-    dataSource: DataSource,
-    status?: DataSourceStatus,
-  ) => Promise<void>;
-  getTable(tableName: string): DataTable | undefined;
-  setTables(dataTable: DataTable[]): Promise<void>;
-  setTableRowCount(tableName: string, rowCount: number): void;
-  setProjectTitle(title: string): void;
-  setDescription(description: string): void;
-  areDatasetsReady(): boolean;
-  findTableByName(tableName: string): DataTable | undefined;
-  /**
-   * Update the status of all data sources based on the current tables.
-   */
-  updateReadyDataSources(): Promise<void>;
-  onDataUpdated: () => Promise<void>;
-  areViewsReadyToRender(): boolean;
-  /**
-   * Refresh table schemas from the database.
-   * @returns A promise that resolves to the updated tables.
-   */
-  refreshTableSchemas(): Promise<DataTable[]>;
-};
+    addProjectFile(
+      file: File | string,
+      tableName?: string,
+      loadFileOptions?: LoadFileOptions,
+    ): Promise<DataTable | undefined>;
+    removeProjectFile(pathname: string): void;
+    maybeDownloadDataSources(): Promise<void>;
+    setProjectFiles(info: ProjectFileInfo[]): void;
+    setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
+    /**
+     * Add a table to the project.
+     * @param tableName - The name of the table to add.
+     * @param data - The data to add to the table: an arrow table or an array of records.
+     * @returns A promise that resolves to the table that was added.
+     */
+    addTable(
+      tableName: string,
+      data: arrow.Table | Record<string, unknown>[],
+    ): Promise<DataTable>;
+    addDataSource: (
+      dataSource: DataSource,
+      status?: DataSourceStatus,
+    ) => Promise<void>;
+    getTable(tableName: string): DataTable | undefined;
+    setTables(dataTable: DataTable[]): Promise<void>;
+    setTableRowCount(tableName: string, rowCount: number): void;
+    setProjectTitle(title: string): void;
+    setDescription(description: string): void;
+    areDatasetsReady(): boolean;
+    findTableByName(tableName: string): DataTable | undefined;
+    /**
+     * Update the status of all data sources based on the current tables.
+     */
+    updateReadyDataSources(): Promise<void>;
+    onDataUpdated: () => Promise<void>;
+    areViewsReadyToRender(): boolean;
+    /**
+     * Refresh table schemas from the database.
+     * @returns A promise that resolves to the updated tables.
+     */
+    refreshTableSchemas(): Promise<DataTable[]>;
+  };
 
-export type ProjectState<PC extends BaseProjectConfig> = {
-  config: PC;
-  project: ProjectStateProps<PC> & ProjectStateActions<PC>;
-} & DuckDbSliceState;
-
-export function createSlice<PC extends BaseProjectConfig, S>(
-  sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
-): StateCreator<S> {
-  return (set, get, store) =>
-    sliceCreator(
-      set,
-      get as () => S & ProjectState<PC>,
-      store as StoreApi<S & ProjectState<PC>>,
-    );
-}
+export type ProjectBuilderState<PC extends BaseProjectConfig> =
+  ProjectState<PC> & {
+    config: PC;
+    project: ProjectBuilderStateProps<PC> & ProjectBuilderStateActions<PC>;
+  } & DuckDbSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
 type InitialState<PC extends BaseProjectConfig> = {
   config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
-  project: Partial<Omit<ProjectStateProps<PC>, 'config' | 'panels'>> & {
-    panels: ProjectStateProps<PC>['panels'];
+  project: Partial<Omit<ProjectBuilderStateProps<PC>, 'config' | 'panels'>> & {
+    panels: ProjectBuilderStateProps<PC>['panels'];
   };
 };
 
-/**
- * Create a project store with custom fields and methods
- * @param initialState - The initial state and config for the project
- * @param sliceCreators - The slices to add to the project store
- * @returns The project store and a hook for accessing the project store
- */
-export function createProjectStore<
-  PC extends BaseProjectConfig,
-  AppState extends ProjectState<PC>,
->(stateCreator: StateCreator<AppState>) {
-  const projectStore = createStore<AppState>((set, get, store) => ({
-    ...stateCreator(set, get, store),
-  }));
-  projectStore.getState().project.initialize();
-
-  function useProjectStore<T>(selector: (state: AppState) => T): T {
-    // @ts-ignore TODO fix typing
-    return useBaseProjectStore(selector as (state: AppState) => T);
-  }
-
-  return {projectStore, useProjectStore};
-}
-export function createProjectSlice<PC extends BaseProjectConfig>(
+export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,
-): StateCreator<ProjectState<PC>> {
+): StateCreator<ProjectBuilderState<PC>> {
   const {config: configProps, project: projectStateProps, ...restState} = props;
   const initialConfig: PC = {
     ...INITIAL_BASE_PROJECT_CONFIG,
     ...configProps,
   } as PC;
-  const initialProjectState: ProjectStateProps<PC> = {
-    ...INITIAL_BASE_PROJECT_STATE,
+  const initialProjectState: ProjectBuilderStateProps<PC> = {
+    ...INITIAL_PROJECT_BUILDER_STATE,
     ...projectStateProps,
-    schema: projectStateProps.schema ?? INITIAL_BASE_PROJECT_STATE.schema,
+    schema: projectStateProps.schema ?? INITIAL_PROJECT_BUILDER_STATE.schema,
     lastSavedConfig: undefined,
   };
 
-  const slice: StateCreator<ProjectState<PC>> = (set, get, store) => {
-    const projectState: ProjectState<PC> = {
+  const slice: StateCreator<ProjectBuilderState<PC>> = (set, get, store) => {
+    const projectSliceState = createProjectSlice({
       config: initialConfig,
+      project: initialProjectState,
+    })(set, get, store);
+    const projectState: ProjectBuilderState<PC> = {
+      ...projectSliceState,
       ...createDuckDbSlice({})(set, get, store),
       project: {
         ...initialProjectState,
-
+        ...projectSliceState.project,
         async initialize() {
+          projectSliceState.project.initialize();
           const {setTaskProgress} = get().project;
           setTaskProgress(INIT_DB_TASK, {
             message: 'Initializing database…',
@@ -893,4 +876,29 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
   };
 
   return slice;
+}
+
+export function useBaseProjectBuilderStore<
+  PC extends BaseProjectConfig,
+  PS extends ProjectBuilderState<PC>,
+  T,
+>(selector: (state: ProjectBuilderState<PC>) => T): T {
+  const store = useContext(ProjectStateContext);
+  if (!store) {
+    throw new Error('Missing ProjectStateProvider in the tree');
+  }
+  return useStore(store as unknown as StoreApi<PS>, selector);
+}
+
+export function createSlice<PC extends BaseProjectConfig, S>(
+  sliceCreator: (
+    ...args: Parameters<StateCreator<S & ProjectBuilderState<PC>>>
+  ) => S,
+): StateCreator<S> {
+  return (set, get, store) =>
+    sliceCreator(
+      set,
+      get as () => S & ProjectBuilderState<PC>,
+      store as StoreApi<S & ProjectBuilderState<PC>>,
+    );
 }

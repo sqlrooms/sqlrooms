@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/duckdb",
+  "name": "@sqlrooms/project",
   "version": "0.8.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,25 +19,16 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/project": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
-    "@duckdb/duckdb-wasm": "1.29.0",
-    "apache-arrow": "^18.1.0",
-    "zod": "^3.24.1",
-    "zustand": "^5.0.3"
+    "zod": "^3.24.1"
   },
-  "devDependencies": {
-    "@types/jest": "^29.5.12",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.1.2"
+  "peerDependencies": {
+    "react": "*"
   },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "typedoc": "typedoc",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "typedoc": "typedoc"
   }
 }

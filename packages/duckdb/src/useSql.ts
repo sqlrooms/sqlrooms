@@ -1,7 +1,7 @@
 import * as arrow from 'apache-arrow';
 import {useEffect, useState} from 'react';
-import {getDuckDb} from './useDuckDb';
 import {z} from 'zod';
+import {useStoreWithDuckDb} from './DuckDbSlice';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,
@@ -249,6 +249,7 @@ export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  const getConnector = useStoreWithDuckDb((state) => state.db.getConnector);
   useEffect(() => {
     let isMounted = true;
 
@@ -261,8 +262,8 @@ export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
       setError(null);
 
       try {
-        const duckDb = await getDuckDb();
-        const result = await duckDb.conn.query(options.query);
+        const connector = await getConnector();
+        const result = await connector.query(options.query);
 
         // Create a row accessor that optionally validates with the schema
         const rowAccessor = createTypedRowAccessor<Row>({

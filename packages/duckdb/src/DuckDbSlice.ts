@@ -1,23 +1,25 @@
+import {ProjectState, useBaseProjectStore} from '@sqlrooms/project';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
+import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
 import {getColValAsNumber} from './duckdb-utils';
 import {DataTable, TableColumn} from './types';
-
 /**
  * Configuration for the DuckDB slice
  */
-// export const DuckDbSliceConfig = z.object({Ú
-//   // dataSources: z.array(DataSource),
-// });
-// export type DuckDbSliceConfig = z.infer<typeof DuckDbSliceConfig>;
+export const DuckDbSliceConfig = z.object({
+  // dataSources: z.array(DataSource),
+});
+export type DuckDbSliceConfig = z.infer<typeof DuckDbSliceConfig>;
 
-// export function createDefaultDuckDbConfig(): DuckDbSliceConfig {
-//   return {
-//     // dataSources: [],
-//   };
-// }
+export function createDefaultDuckDbConfig(): DuckDbSliceConfig {
+  return {
+    // dataSources: [],
+  };
+}
 
 /**
  * State and actions for the DuckDB slice
@@ -245,4 +247,18 @@ export function createDuckDbSlice({
       },
     },
   });
+}
+
+type ProjectConfigWithDuckDb = BaseProjectConfig & DuckDbSliceConfig;
+type ProjectStateWithDuckDb = ProjectState<ProjectConfigWithDuckDb> &
+  DuckDbSliceState;
+
+export function useStoreWithDuckDb<T>(
+  selector: (state: ProjectStateWithDuckDb) => T,
+): T {
+  return useBaseProjectStore<
+    BaseProjectConfig & DuckDbSliceConfig,
+    ProjectState<ProjectConfigWithDuckDb>,
+    T
+  >((state) => selector(state as unknown as ProjectStateWithDuckDb));
 }

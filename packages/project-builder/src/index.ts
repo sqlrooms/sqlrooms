@@ -8,11 +8,6 @@ export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
 export {TableCard} from './data-sources/TableCard';
 export {TablesListPanel} from './data-sources/TablesListPanel';
 
-export {
-  processDroppedFile,
-  processDroppedFiles,
-} from './utils/processDroppedFiles';
-
 export {ProjectBuilderPanel} from './panels/ProjectBuilderPanel';
 export {ProjectBuilderPanelHeader} from './panels/ProjectBuilderPanelHeader';
 export {PanelHeaderButton} from './panels/PanelHeaderButton';
@@ -25,26 +20,18 @@ export {
 
 export {ProjectBuilder} from './ProjectBuilder';
 
-export {
-  ProjectStateContext,
-  ProjectStateProvider,
-  useBaseProjectStore,
-  type ProjectStateProviderProps,
-} from './ProjectStateProvider';
+export {createProjectStore as createProjectBuilderStore} from '@sqlrooms/project';
 
 export {ProjectBuilderProvider} from './ProjectBuilderProvider';
 
 export {
   createSlice,
-  createProjectSlice,
-  createProjectStore,
+  createProjectBuilderSlice,
+  type ProjectBuilderState,
   type TaskProgress,
   type ProjectPanelInfo,
-  type ProjectState,
-  type ProjectStateActions,
-  type ProjectStateProps,
-  type ProjectStore,
-} from './ProjectStore';
+  useBaseProjectBuilderStore,
+} from './ProjectBuilderStore';
 
 export {
   DataSourceStatus,
@@ -53,4 +40,4 @@ export {
   type ProjectFileState,
 } from './types';
 
-export type {StateCreator} from 'zustand';
+export type {StateCreator, StoreApi} from 'zustand';

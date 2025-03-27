@@ -1,4 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
+import {useStoreWithDuckDb} from './DuckDbSlice';
+import {DuckDbConnector} from './connectors/DuckDbConnector';
 
 /**
  * @deprecated DuckConn is deprecated, use DuckDb instead
@@ -11,4 +13,7 @@ export type DuckDb = {
   worker: Worker;
 };
 
-export function useDuckDb(): DuckDb {}
+export function useDuckDb(): DuckDbConnector {
+  const connector = useStoreWithDuckDb((state) => state.db.connector);
+  return connector;
+}

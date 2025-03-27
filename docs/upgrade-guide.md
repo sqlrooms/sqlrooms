@@ -8,27 +8,49 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ### @sqlrooms/project-builder
 
-#### processDroppedFile() is deleted
+- `createProjectSlice` renamed into `createProjectBuilderSlice`
 
-Use `ProjectStore.addProjectFile` directly.
+- `createProjectStore` renamed into `createProjectBuilderStore`
 
-#### ProjectStore.replaceProjectFile() is deleted
+- `ProjectState` renamed into `ProjectBuilderState`
 
-Use `ProjectStore.addProjectFile` instead.
+- `ProjectState` renamed into `ProjectBuilderState`
 
-#### ProjectStore.addProjectFile parameter changes
+- `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
-The function now takes a File or a pathname instead of the result of `processDroppedFile()`.
+- `useBaseProjectStore` was renamed into `useBaseProjectBuilderStore`, but it's better to use `useProjectStore` returned by `createProjectBuilderStore` instead
 
-#### ProjectStore.addProjectFile behavior changes
+- `processDroppedFile()` is removed: Use `ProjectStore.addProjectFile` directly.
 
-The function will no longer attempt to create unique table names, but will overwrite the created table.
+- `ProjectStore.replaceProjectFile` is removed: Use `ProjectStore.addProjectFile` instead.
+
+- `ProjectStore.addProjectFile` parameter changes: The function now takes a File or a pathname instead of the result of `processDroppedFile()`.
+
+- `ProjectStore.addProjectFile` behavior changes: The function will no longer attempt to create unique table names, but will overwrite the created table.
+
+### @sqlrooms/duckdb
+
+- `useDuckDb()` now returns an instance of [`DuckDbConnector`](api/duckdb/interfaces/DuckDbConnector) to enable support for external DuckDB
+
+- `getDuckDb` was removed: Use `useDuckDb()` instead
+
+- `getDuckTableSchemas` was removed: use `const getTableSchemas = useProjectStore(state => state.db.getTableSchemas)`
+
+- `exportToCsv` was removed: Use `useExportToCsv` instead
+
+### @sqlrooms/mosaic
+
+- `getMosaicConnector` removed: Use `useMosaic` instead
+
+### @sqlrooms/ai
+
+- `TOOLS` is not exported anymore: use `useProjectStore(state => state.ai.tools)` instead
 
 ## 0.8.0
 
 ### @sqlrooms/project-builder
 
-#### `project.config` moved to top level of `ProjectStore`
+- `project.config` moved to top level of `ProjectStore`
 
 This was done to simplify persistence. To migrate you need to pull it up in your slice creation code.
 
@@ -76,7 +98,7 @@ Check the [AI example store code](https://github.com/sqlrooms/examples/blob/main
 
 ### @sqlrooms/ai
 
-#### Model provider in `getApiKey`
+- Model provider in `getApiKey`
 
 `getApiKey` property of `createAiSlice` now takes `modelProvider`:
 
@@ -89,11 +111,11 @@ getApiKey: (modelProvider: string) => {
 
 ```
 
-#### Combining `useScrollToBottom` and `useScrollToBottomButton`
+- Combining `useScrollToBottom` and `useScrollToBottomButton`
 
 `useScrollToBottom` is now combined with `useScrollToBottomButton`. `useScrollToBottom` now takes `dataToObserve`, `containerRef`, `endRef`. When the data changes, the hook will scroll to the bottom of the container.
 
-#### Vega Chart Tool is now a custom tool
+- Vega Chart Tool is now a custom tool
 
 The Vega Chart Tool is no longer included by default and must be explicitly provided as a custom tool to `createAiSlice`. You need to import it from `@sqlrooms/vega` and add it to the `customTools` object:
 

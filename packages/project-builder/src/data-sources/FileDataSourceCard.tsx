@@ -19,9 +19,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
 import {ProjectFileInfo, ProjectFileState} from '../types';
-
+import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 const FileDataSourceCard: FC<{
   isReadOnly?: boolean;
   fileInfo: ProjectFileInfo;
@@ -30,7 +29,7 @@ const FileDataSourceCard: FC<{
   const {isReadOnly, fileInfo, fileState} = props;
   const {pathname, size} = fileInfo;
   const {filename} = splitFilePath(pathname);
-  const removeProjectFile = useBaseProjectStore(
+  const removeProjectFile = useBaseProjectBuilderStore(
     (state) => state.project.removeProjectFile,
   );
   const handleRemoveFromProject = useCallback(() => {

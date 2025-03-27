@@ -2,16 +2,18 @@ import {ProgressModal, SpinnerPane} from '@sqlrooms/ui';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import React, {Suspense, useCallback, useMemo} from 'react';
 import type {MosaicNode} from 'react-mosaic-component';
-import {useBaseProjectStore} from './ProjectStateProvider';
+import {useBaseProjectBuilderStore} from './ProjectBuilderStore';
 
 const ProjectBuilder: React.FC = () => {
-  const layout = useBaseProjectStore((state) => state.config.layout);
-  const setLayout = useBaseProjectStore((state) => state.project.setLayout);
-  const panels = useBaseProjectStore((state) => state.project.panels);
-  const loadingProgress = useBaseProjectStore((state) =>
+  const layout = useBaseProjectBuilderStore((state) => state.config.layout);
+  const setLayout = useBaseProjectBuilderStore(
+    (state) => state.project.setLayout,
+  );
+  const panels = useBaseProjectBuilderStore((state) => state.project.panels);
+  const loadingProgress = useBaseProjectBuilderStore((state) =>
     state.project.getLoadingProgress(),
   );
-  const ErrorBoundary = useBaseProjectStore(
+  const ErrorBoundary = useBaseProjectBuilderStore(
     (state) => state.project.CustomErrorBoundary,
   );
 

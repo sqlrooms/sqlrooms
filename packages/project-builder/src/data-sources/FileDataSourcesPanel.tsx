@@ -1,15 +1,17 @@
 import {FC} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
 import {FileDataSourceCard} from './FileDataSourceCard';
+import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 
 const FileDataSourcesPanel: FC = () => {
-  const projectFiles = useBaseProjectStore(
+  const projectFiles = useBaseProjectBuilderStore(
     (state) => state.project.projectFiles,
   );
-  const projectFilesProgress = useBaseProjectStore(
+  const projectFilesProgress = useBaseProjectBuilderStore(
     (state) => state.project.projectFilesProgress,
   );
-  const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
+  const isReadOnly = useBaseProjectBuilderStore(
+    (state) => state.project.isReadOnly,
+  );
 
   return (
     <div className="flex flex-grow flex-col overflow-auto">
