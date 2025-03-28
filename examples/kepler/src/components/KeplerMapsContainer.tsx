@@ -13,7 +13,7 @@ import {
   TabsTrigger,
 } from '@sqlrooms/ui';
 import {useProjectStore} from '../store';
-import {KeplerMapContainer} from '@sqlrooms/kepler';
+import {KeplerMapContainer} from './KeplerMapContainer';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
 import {useState} from 'react';
 

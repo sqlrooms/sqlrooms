@@ -7,11 +7,11 @@ import './index.css';
 import {projectStore} from './store';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ui-theme">
-      <ProjectBuilderProvider projectStore={projectStore}>
-        <AppShell />
-      </ProjectBuilderProvider>
-    </ThemeProvider>
-  </StrictMode>,
+  // <StrictMode>
+  <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ui-theme">
+    <ProjectBuilderProvider projectStore={projectStore}>
+      <AppShell />
+    </ProjectBuilderProvider>
+  </ThemeProvider>,
+  // </StrictMode>,
 );
