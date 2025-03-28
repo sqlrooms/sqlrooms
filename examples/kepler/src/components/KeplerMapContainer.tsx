@@ -1,5 +1,5 @@
 import {FC} from 'react';
-import {useKeplerStore} from '../store';
+import {useKeplerStore, useProjectStore} from '../store';
 import {ThemeProvider} from 'styled-components';
 
 import {
@@ -18,15 +18,31 @@ const keplerActionSelector = makeGetActionCreators();
 export const KeplerMapContainer: FC<{
   mapId: string;
 }> = ({mapId}) => {
-  const keplerState = useKeplerStore();
+  // const keplerState = useKeplerStore();
 
-  const {visStateActions, mapStateActions, uiStateActions} =
-    keplerActionSelector(useKeplerStore.dispatch, {});
-  const keplerProps = {
-    ...keplerState.map,
+  const dispatchAction = useProjectStore(
+    (state) => state.kepler.dispatchAction,
+  );
+  const keplerState = useProjectStore((state) => state.kepler.map);
+
+  const {
     visStateActions,
     mapStateActions,
     uiStateActions,
+    mapStyleActions,
+    providerActions,
+    dispatch,
+  } = keplerActionSelector(dispatchAction, {});
+  const keplerProps = {
+    id: mapId,
+    mapboxApiAccessToken: '',
+    ...keplerState,
+    visStateActions,
+    mapStateActions,
+    uiStateActions,
+    mapStyleActions,
+    providerActions,
+    dispatch,
   };
 
   const mepFields = mapFieldsSelector(keplerProps);

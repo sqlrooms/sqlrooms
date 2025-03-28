@@ -8,6 +8,14 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {z} from 'zod';
+import {redux} from 'zustand/middleware';
+import {registerEntry} from '@kepler.gl/actions';
+import keplerGlReducer, {
+  KeplerGlState,
+  MapStyle,
+  ProviderState,
+} from '@kepler.gl/reducers';
+import type {VisState} from '@kepler.gl/schemas';
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
@@ -44,6 +52,8 @@ export function createDefaultKeplerConfig(
 
 export type KeplerSliceState = {
   kepler: {
+    map: KeplerGlState;
+    dispatchAction: (action: any) => void;
     setCurrentMapId: (mapId: string) => void;
     createMap: (name?: string) => void;
     deleteMap: (mapId: string) => void;
@@ -55,9 +65,25 @@ export type KeplerSliceState = {
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
 >(): StateCreator<KeplerSliceState> {
-  return createSlice<PC, KeplerSliceState>((set, get) => {
+  return createSlice<PC, KeplerSliceState>((set, get, store) => {
+    const keplerReducer = keplerGlReducer.initialState({
+      visState: {
+        layerClasses: [],
+      },
+      mapStyle: {
+        styleType: 'light',
+      },
+    });
+    const {map, dispatch} = redux(
+      keplerReducer,
+      keplerReducer(undefined, registerEntry({id: 'map'})),
+    )(set, get, store);
+
     return {
       kepler: {
+        map: map as unknown as KeplerGlState,
+        dispatchAction: dispatch,
+
         getCurrentMap: () => {
           return get().config.kepler.maps.find(
             (map) => map.id === get().config.kepler.currentMapId,
