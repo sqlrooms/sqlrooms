@@ -13,9 +13,9 @@ import {
   TabsTrigger,
 } from '@sqlrooms/ui';
 import {useProjectStore} from '../store';
-import {KeplerMapContainer} from './KeplerMapContainer';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
 import {useState} from 'react';
+import {KeplerMapContainer} from '@sqlrooms/kepler';
 
 export function KeplerMapsContainer() {
   const maps = useProjectStore((state) => state.config.kepler.maps);
@@ -85,7 +85,7 @@ export function KeplerMapsContainer() {
           </div>
         </TabsList>
         {maps.map((map) => (
-          <TabsContent key={map.id} value={map.id} className="flex-grow">
+          <TabsContent key={map.id} value={map.id} className="h-full w-full">
             <KeplerMapContainer mapId={map.id} />
           </TabsContent>
         ))}

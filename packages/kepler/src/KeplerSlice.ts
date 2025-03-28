@@ -77,12 +77,20 @@ export function createKeplerSlice<
     const {map, dispatch} = redux(
       keplerReducer,
       keplerReducer(undefined, registerEntry({id: 'map'})),
-    )(set, get, store);
+      // @ts-ignore
+    )(set, get, {
+      ...store,
+      getState: () => store.getState().kepler,
+      // setState: (state) => set(state),
+    });
 
     return {
       kepler: {
         map: map as unknown as KeplerGlState,
-        dispatchAction: dispatch,
+        dispatchAction: (...args: any[]) => {
+          console.log('dispatchAction', args);
+          dispatch(...args);
+        },
 
         getCurrentMap: () => {
           return get().config.kepler.maps.find(
