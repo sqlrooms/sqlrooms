@@ -850,6 +850,9 @@ importers:
       '@kepler.gl/styles':
         specifier: ^3.1.1
         version: 3.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@kepler.gl/utils':
+        specifier: 3.1.1
+        version: 3.1.1(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@18.3.1(react@18.3.1))
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -871,12 +874,18 @@ importers:
       mapbox-gl:
         specifier: ^1.13.1
         version: 1.13.1
+      maplibre-gl:
+        specifier: ^3.6.2
+        version: 3.6.2
       react:
         specifier: '*'
         version: 18.3.1
       react-dom:
         specifier: '*'
         version: 18.3.1(react@18.3.1)
+      react-palm:
+        specifier: ^3.3.8
+        version: 3.3.8(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(react-test-renderer@18.3.1(react@18.3.1))(react@18.3.1)
       styled-components:
         specifier: 6.1.8
         version: 6.1.8(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2143,6 +2152,9 @@ importers:
       lodash.throttle:
         specifier: ^4.1.1
         version: 4.1.1
+      mapbox-gl:
+        specifier: ^1.13.1
+        version: 1.13.1
       maplibre-gl:
         specifier: ^3.6.2
         version: 3.6.2

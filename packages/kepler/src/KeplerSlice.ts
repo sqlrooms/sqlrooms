@@ -1,3 +1,5 @@
+import {registerEntry} from '@kepler.gl/actions';
+import keplerGlReducer, {KeplerGlState} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -8,14 +10,9 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {redux} from 'zustand/middleware';
-import {registerEntry} from '@kepler.gl/actions';
-import keplerGlReducer, {
-  KeplerGlState,
-  MapStyle,
-  ProviderState,
-} from '@kepler.gl/reducers';
-import type {VisState} from '@kepler.gl/schemas';
+import {redux} from './redux';
+import type {StoreApi} from 'zustand';
+import {taskMiddleware} from 'react-palm/tasks';
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
@@ -71,26 +68,32 @@ export function createKeplerSlice<
         layerClasses: [],
       },
       mapStyle: {
-        styleType: 'light',
+        styleType: 'positron',
       },
     });
-    const {map, dispatch} = redux(
+
+    const {map: keplerState, dispatch: dispatchAction} = redux(
       keplerReducer,
       keplerReducer(undefined, registerEntry({id: 'map'})),
       // @ts-ignore
     )(set, get, {
       ...store,
-      getState: () => store.getState().kepler,
-      // setState: (state) => set(state),
+      dispatch: (action) => {
+        console.log('dispatchAction', action);
+        return dispatchAction(action);
+      },
     });
+
+    //   {
+    //   ...store,
+    //   getState: () => store.getState().kepler,
+    //   // setState: (state) => set(state),
+    // });
 
     return {
       kepler: {
-        map: map as unknown as KeplerGlState,
-        dispatchAction: (...args: any[]) => {
-          console.log('dispatchAction', args);
-          dispatch(...args);
-        },
+        map: keplerState as unknown as KeplerGlState,
+        dispatchAction,
 
         getCurrentMap: () => {
           return get().config.kepler.maps.find(

@@ -1,4 +1,4 @@
-import {FC} from 'react';
+import {FC, useEffect} from 'react';
 import {ThemeProvider} from 'styled-components';
 import {useStoreWithKepler} from '../KeplerSlice';
 
@@ -10,11 +10,22 @@ import {
   provideRecipesToInjector,
 } from '@kepler.gl/components';
 import {theme} from '@kepler.gl/styles';
+import {initApplicationConfig} from '@kepler.gl/utils';
+import maplibre from 'maplibre-gl';
+import {requestMapStyles} from '@kepler.gl/actions';
 
 // Privde custom components for Dashboard and BI
 const KeplerInjector = provideRecipesToInjector([], appInjector);
 const MapContainer = KeplerInjector.get(MapContainerFactory);
 const keplerActionSelector = makeGetActionCreators();
+
+initApplicationConfig({
+  plugins: [
+    // keplerGlDuckdbPlugin
+  ],
+  getMapLib: () => ({...maplibre}),
+  // table: KeplerGlDuckDbTable
+});
 
 export const KeplerMapContainer: FC<{
   mapId: string;
@@ -48,21 +59,35 @@ export const KeplerMapContainer: FC<{
     dispatch,
   };
 
-  const mepFields = mapFieldsSelector(keplerProps);
-  console.log(mepFields);
+  useEffect(() => {
+    const style =
+      keplerProps.mapStyle.mapStyles[keplerProps.mapStyle.styleType];
+    console.log('setting style', style);
+    if (style) {
+      dispatch(requestMapStyles({[style.id]: style}));
+    }
+  }, []);
+
+  const mapFields = mapFieldsSelector(keplerProps);
+  console.log({
+    mapFields,
+    keplerProps,
+  });
   return (
-    <div className="h-full w-full">
-      <ThemeProvider theme={theme}>
-        {/* <div> */}
-        <MapContainer
-          primary={true}
-          key={0}
-          index={0}
-          {...mepFields}
-          containerId={0}
-        />
-        {/* </div> */}
-      </ThemeProvider>
+    <div className="relative h-full w-full">
+      <div className="absolute h-full w-full">
+        <ThemeProvider theme={theme}>
+          {/* <div> */}
+          <MapContainer
+            primary={true}
+            key={0}
+            index={0}
+            {...mapFields}
+            containerId={0}
+          />
+          {/* </div> */}
+        </ThemeProvider>
+      </div>
     </div>
   );
 
