@@ -264,7 +264,15 @@ export function createProjectStore<
   //   };
   // });
   const projectStore = createStore<AppState>(stateCreator);
-  projectStore.getState().project.initialize();
+
+  Object.values(projectStore.getState()).forEach(
+    (slice: Record<string, unknown>) => {
+      const initializeSlice = slice.initialize;
+      if (typeof initializeSlice === 'function') {
+        initializeSlice();
+      }
+    },
+  );
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing

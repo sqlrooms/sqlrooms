@@ -21,9 +21,11 @@
   "dependencies": {
     "@kepler.gl/actions": "^3.1.1",
     "@kepler.gl/components": "^3.1.1",
+    "@kepler.gl/processors": "3.1.1",
     "@kepler.gl/reducers": "^3.1.1",
     "@kepler.gl/schemas": "3.1.1",
     "@kepler.gl/styles": "^3.1.1",
+    "@kepler.gl/types": "3.1.1",
     "@kepler.gl/utils": "3.1.1",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/project-builder": "workspace:*",
@@ -34,6 +36,7 @@
     "mapbox-gl": "^1.13.1",
     "maplibre-gl": "^3.6.2",
     "react-palm": "^3.3.8",
+    "redux-logger": "^3.0.6",
     "styled-components": "6.1.8",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
@@ -47,5 +50,8 @@
     "build": "tsc",
     "lint": "eslint .",
     "typedoc": "typedoc"
+  },
+  "devDependencies": {
+    "@types/redux-logger": "^3.0.13"
   }
 }

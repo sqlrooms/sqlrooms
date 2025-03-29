@@ -85,7 +85,12 @@ export function KeplerMapsContainer() {
           </div>
         </TabsList>
         {maps.map((map) => (
-          <TabsContent key={map.id} value={map.id} className="h-full w-full">
+          <TabsContent
+            key={map.id}
+            value={map.id}
+            className="h-full w-full"
+            forceMount
+          >
             <KeplerMapContainer mapId={map.id} />
           </TabsContent>
         ))}

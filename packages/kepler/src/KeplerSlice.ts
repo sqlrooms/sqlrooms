@@ -9,10 +9,9 @@ import {
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
-import {z} from 'zod';
-import {redux} from './redux';
-import type {StoreApi} from 'zustand';
 import {taskMiddleware} from 'react-palm/tasks';
+import {z} from 'zod';
+import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
@@ -20,6 +19,10 @@ export const KeplerMapSchema = z.object({
   // ...
 });
 export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
+
+export type CreateKeplerSliceOptions = {
+  actionLogging?: boolean | ReduxLoggerOptions;
+};
 
 export const KeplerSliceConfig = z.object({
   kepler: z.object({
@@ -47,10 +50,15 @@ export function createDefaultKeplerConfig(
   };
 }
 
+export type KeplerAction = {
+  type: string;
+  payload: unknown;
+};
+
 export type KeplerSliceState = {
   kepler: {
     map: KeplerGlState;
-    dispatchAction: (action: any) => void;
+    dispatchAction: (action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
     createMap: (name?: string) => void;
     deleteMap: (mapId: string) => void;
@@ -61,8 +69,9 @@ export type KeplerSliceState = {
 
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
->(): StateCreator<KeplerSliceState> {
-  return createSlice<PC, KeplerSliceState>((set, get, store) => {
+>(options: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
+  const {actionLogging = false} = options;
+  return createSlice<PC, KeplerSliceState>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState({
       visState: {
         layerClasses: [],
@@ -72,28 +81,46 @@ export function createKeplerSlice<
       },
     });
 
-    const {map: keplerState, dispatch: dispatchAction} = redux(
-      keplerReducer,
-      keplerReducer(undefined, registerEntry({id: 'map'})),
-      // @ts-ignore
-    )(set, get, {
-      ...store,
-      dispatch: (action) => {
-        console.log('dispatchAction', action);
-        return dispatchAction(action);
-      },
-    });
+    const keplerInitialState: {map: KeplerGlState} = keplerReducer(
+      undefined,
+      registerEntry({id: 'map'}),
+    );
 
-    //   {
-    //   ...store,
-    //   getState: () => store.getState().kepler,
-    //   // setState: (state) => set(state),
-    // });
+    const dispatch = (action: KeplerAction) => {
+      set((state: KeplerSliceState) => ({
+        ...state,
+        kepler: {
+          ...state.kepler,
+          ...keplerReducer({map: state.kepler.map}, action),
+        },
+      }));
+      return action;
+    };
+
+    const middleware = [taskMiddleware];
+    if (actionLogging) {
+      const logger = createLogger(
+        actionLogging === true ? {collapsed: true} : actionLogging,
+      );
+      middleware.push(logger);
+    }
+    const dispatchWithMiddleware = (action: KeplerAction) => {
+      middleware.forEach((m) =>
+        m({dispatch, getState: () => get().kepler.map})(dispatch)(action),
+      );
+      dispatch(action);
+      return action;
+    };
 
     return {
       kepler: {
-        map: keplerState as unknown as KeplerGlState,
-        dispatchAction,
+        ...keplerInitialState,
+        dispatchAction: dispatchWithMiddleware,
+
+        initialize: () => {
+          console.log('initialize slice');
+          console.log(get().config.kepler.maps);
+        },
 
         getCurrentMap: () => {
           return get().config.kepler.maps.find(

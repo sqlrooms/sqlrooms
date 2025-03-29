@@ -23,9 +23,9 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
+import {persist} from 'zustand/middleware';
 
 export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
@@ -97,7 +97,9 @@ export const {projectStore, useProjectStore} = createProjectStore<
         },
       })(set, get, store),
 
-      ...createKeplerSlice()(set, get, store),
+      ...createKeplerSlice({
+        actionLogging: true,
+      })(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),
     }),
@@ -112,16 +114,3 @@ export const {projectStore, useProjectStore} = createProjectStore<
     },
   ) as StateCreator<AppState>,
 );
-
-// const keplerReducer = keplerGlReducer.initialState({
-//   visState: {
-//     layerClasses: [],
-//   },
-//   mapStyle: {
-//     styleType: 'light',
-//   },
-// });
-
-// export const useKeplerStore = create(
-//   redux(keplerReducer, keplerReducer(undefined, registerEntry({id: 'map'}))), // Initial state
-// );
