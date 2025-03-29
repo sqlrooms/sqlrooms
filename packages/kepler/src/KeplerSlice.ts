@@ -1,4 +1,4 @@
-import {registerEntry} from '@kepler.gl/actions';
+import {registerEntry, requestMapStyles} from '@kepler.gl/actions';
 import keplerGlReducer, {KeplerGlState} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
@@ -12,6 +12,7 @@ import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
 import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+import type {Store as ReduxStore} from 'redux';
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
@@ -64,6 +65,7 @@ export type KeplerSliceState = {
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
+    __reduxProviderStore: ReduxStore<KeplerGlState, KeplerAction>;
   };
 };
 
@@ -112,14 +114,28 @@ export function createKeplerSlice<
       return action;
     };
 
+    const __reduxProviderStore: ReduxStore<KeplerGlState, KeplerAction> = {
+      // @ts-ignore
+      dispatch: dispatchWithMiddleware,
+      getState: () => get().kepler.map,
+      subscribe: () => () => {},
+      replaceReducer: () => {},
+      // @ts-ignore
+      [Symbol.observable]: () => {},
+    };
+
     return {
       kepler: {
         ...keplerInitialState,
         dispatchAction: dispatchWithMiddleware,
+        __reduxProviderStore,
 
         initialize: () => {
-          console.log('initialize slice');
-          console.log(get().config.kepler.maps);
+          const {mapStyle} = get().kepler.map;
+          const style = mapStyle.mapStyles[mapStyle.styleType];
+          if (style) {
+            get().kepler.dispatchAction(requestMapStyles({[style.id]: style}));
+          }
         },
 
         getCurrentMap: () => {

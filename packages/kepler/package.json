@@ -21,6 +21,7 @@
   "dependencies": {
     "@kepler.gl/actions": "^3.1.1",
     "@kepler.gl/components": "^3.1.1",
+    "@kepler.gl/localization": "3.1.1",
     "@kepler.gl/processors": "3.1.1",
     "@kepler.gl/reducers": "^3.1.1",
     "@kepler.gl/schemas": "3.1.1",
@@ -35,7 +36,10 @@
     "lucide-react": "^0.475.0",
     "mapbox-gl": "^1.13.1",
     "maplibre-gl": "^3.6.2",
+    "react-intl": "^6.3.0",
     "react-palm": "^3.3.8",
+    "react-redux": "^8.0.5",
+    "redux": "^4.2.1",
     "redux-logger": "^3.0.6",
     "styled-components": "6.1.8",
     "zod": "^3.24.1",
