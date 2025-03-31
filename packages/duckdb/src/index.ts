@@ -18,3 +18,8 @@ export * from './connectors/DuckDbConnector';
 export * from './connectors/WasmDuckDbConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';
+export {
+  LoadFileOptions,
+  SpatialLoadFileOptions,
+  isSpatialLoadFileOptions,
+} from '@sqlrooms/project-config';

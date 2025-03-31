@@ -1,18 +1,13 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
-import * as arrow from 'apache-arrow';
 import {
-  DuckDbConnector,
-  LoadArrowOptions,
+  isSpatialLoadFileOptions,
   LoadFileOptions,
-} from './DuckDbConnector';
-import {
-  load,
-  loadObjects,
-  LoadOptions,
-  loadSpatial,
-  LoadSpatialOptions,
-} from './load/load';
+  StandardLoadOptions,
+} from '@sqlrooms/project-config';
+import * as arrow from 'apache-arrow';
+import {DuckDbConnector} from './DuckDbConnector';
+import {load, loadObjects, loadSpatial} from './load/load';
 
 export class WasmDuckDbConnector implements DuckDbConnector {
   private logging: boolean;
@@ -170,14 +165,20 @@ export class WasmDuckDbConnector implements DuckDbConnector {
     opts?: LoadFileOptions,
   ) {
     await this.withTempRegisteredFile(file, async (conn, fileName) => {
-      await conn.query(load(opts?.method ?? 'auto', tableName, fileName, opts));
+      if (opts && isSpatialLoadFileOptions(opts)) {
+        await conn.query(loadSpatial(tableName, fileName, opts));
+      } else {
+        await conn.query(
+          load(opts?.method ?? 'auto', tableName, fileName, opts),
+        );
+      }
     });
   }
 
   async loadArrow(
     file: arrow.Table | Uint8Array,
     tableName: string,
-    opts?: LoadArrowOptions,
+    opts?: {schema?: string},
   ) {
     await this.ensureInitialized();
     if (!this.conn) {
@@ -194,23 +195,13 @@ export class WasmDuckDbConnector implements DuckDbConnector {
   async loadObjects(
     file: Record<string, unknown>[],
     tableName: string,
-    opts?: LoadOptions,
+    opts?: StandardLoadOptions,
   ) {
     await this.ensureInitialized();
     if (!this.conn) {
       throw new Error('DuckDB connection not initialized');
     }
     await this.conn.query(loadObjects(tableName, file, opts));
-  }
-
-  async loadSpatialFile(
-    fileName: string | File,
-    tableName: string,
-    opts?: LoadSpatialOptions,
-  ) {
-    await this.withTempRegisteredFile(fileName, async (conn, fileName) => {
-      await conn.query(loadSpatial(tableName, fileName, opts));
-    });
   }
 
   private async withTempRegisteredFile(

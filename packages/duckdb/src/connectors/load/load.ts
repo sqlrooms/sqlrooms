@@ -1,38 +1,13 @@
 // Adapted from https://github.com/uwdata/mosaic/blob/main/packages/sql/src/load/
 // BSD 3-Clause License Copyright (c) 2023, UW Interactive Data Lab
 
+import {
+  LoadFile,
+  SpatialLoadOptions,
+  StandardLoadOptions,
+} from '@sqlrooms/project-config';
 import {createTable} from './create';
 import {sqlFrom} from './sql-from';
-
-export type LoadMethod =
-  | 'read_json'
-  | 'read_ndjson'
-  | 'read_parquet'
-  | 'read_csv'
-  | 'st_read'
-  | 'auto';
-
-export interface LoadOptions {
-  /** Schema to load the table into */
-  schema?: string;
-  /** Columns to select, defaults to ['*'] */
-  select?: string[];
-  /** WHERE clause filter condition */
-  where?: string;
-  /** Whether to create as a view */
-  view?: boolean;
-  /** Whether to create as a temporary table */
-  temp?: boolean;
-  /** Whether to replace existing table */
-  replace?: boolean;
-  /** Additional file-specific options */
-  [key: string]: unknown;
-}
-
-export interface LoadSpatialOptions extends LoadOptions {
-  /** Nested options for st_read open_options parameter */
-  options?: string[] | string | Record<string, unknown>;
-}
 
 /**
  * Generic function to load data from a file into a DuckDB table
@@ -44,10 +19,10 @@ export interface LoadSpatialOptions extends LoadOptions {
  * @returns SQL query string to create the table
  */
 export function load(
-  method: LoadMethod,
+  method: LoadFile,
   tableName: string,
   fileName: string,
-  options: LoadOptions = {},
+  options: StandardLoadOptions = {},
   defaults: Record<string, unknown> = {},
 ): string {
   const {schema, select = ['*'], where, view, temp, replace, ...file} = options;
@@ -75,7 +50,7 @@ export function load(
 export function loadCSV(
   tableName: string,
   fileName: string,
-  options?: LoadOptions,
+  options?: StandardLoadOptions,
 ): string {
   return load('read_csv', tableName, fileName, options, {
     auto_detect: true,
@@ -93,7 +68,7 @@ export function loadCSV(
 export function loadJSON(
   tableName: string,
   fileName: string,
-  options?: LoadOptions,
+  options?: StandardLoadOptions,
 ): string {
   return load('read_json', tableName, fileName, options, {
     auto_detect: true,
@@ -111,7 +86,7 @@ export function loadJSON(
 export function loadParquet(
   tableName: string,
   fileName: string,
-  options?: LoadOptions,
+  options?: StandardLoadOptions,
 ): string {
   return load('read_parquet', tableName, fileName, options);
 }
@@ -129,7 +104,7 @@ export function loadParquet(
 export function loadSpatial(
   tableName: string,
   fileName: string,
-  options: LoadSpatialOptions = {},
+  options: SpatialLoadOptions = {},
 ): string {
   // nested options map to the open_options argument of st_read
   const {schema, options: opt, ...rest} = options;
@@ -164,7 +139,7 @@ export function loadSpatial(
 export function loadObjects(
   tableName: string,
   data: Record<string, unknown>[],
-  options: LoadOptions = {},
+  options: StandardLoadOptions = {},
 ): string {
   const {schema, select = ['*'], ...opt} = options;
   const values = sqlFrom(data);

@@ -672,6 +672,9 @@ importers:
         specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
     devDependencies:
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.14

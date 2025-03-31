@@ -1,11 +1,5 @@
+import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
 import * as arrow from 'apache-arrow';
-import {LoadMethod, LoadOptions, LoadSpatialOptions} from './load/load';
-
-export type LoadFileOptions = {
-  method?: LoadMethod;
-} & LoadOptions;
-
-export type LoadArrowOptions = Pick<LoadOptions, 'schema'>;
 
 export interface DuckDbConnector {
   /**
@@ -37,18 +31,6 @@ export interface DuckDbConnector {
   ): Promise<void>;
 
   /**
-   * Load a spatial file into DuckDB using the st_read function
-   * @param fileName - Path to the file to load
-   * @param tableName - Name of the table to create
-   * @param opts - Load options
-   */
-  loadSpatialFile(
-    fileName: string | File,
-    tableName: string,
-    opts?: LoadSpatialOptions,
-  ): Promise<void>;
-
-  /**
    * Load an arrow table or an arrow IPC stream into DuckDB
    * @param table - Arrow table or arrow IPC stream to load
    * @param tableName - Name of the table to create
@@ -56,7 +38,7 @@ export interface DuckDbConnector {
   loadArrow(
     table: arrow.Table | Uint8Array,
     tableName: string,
-    opts?: LoadArrowOptions,
+    opts?: {schema?: string},
   ): Promise<void>;
 
   /**
@@ -68,6 +50,6 @@ export interface DuckDbConnector {
   loadObjects(
     data: Record<string, unknown>[],
     tableName: string,
-    opts?: LoadOptions,
+    opts?: StandardLoadOptions,
   ): Promise<void>;
 }

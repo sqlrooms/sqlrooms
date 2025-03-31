@@ -638,6 +638,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
             await db.connector.loadFile(
               new File([downloadedFile], fileName),
               ds.tableName,
+              ds.loadOptions,
             );
             setTableRowCount(
               ds.tableName,
