@@ -143,7 +143,12 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
   const projectStore = createStore<AppState>((set, get, store) => ({
     ...stateCreator(set, get, store),
   }));
-  projectStore.getState().project.initialize();
+  Object.values(projectStore.getState()).forEach((slice) => {
+    const initializeSlice = (slice as Record<string, unknown>).initialize;
+    if (typeof initializeSlice === 'function') {
+      initializeSlice();
+    }
+  });
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
