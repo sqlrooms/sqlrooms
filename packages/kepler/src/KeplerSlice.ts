@@ -3,8 +3,8 @@ import keplerGlReducer, {KeplerGlState} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
-  ProjectState,
-  useBaseProjectStore,
+  ProjectBuilderState,
+  useBaseProjectBuilderStore,
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
@@ -188,15 +188,15 @@ export function createKeplerSlice<
 }
 
 type ProjectConfigWithKepler = BaseProjectConfig & KeplerSliceConfig;
-type ProjectStateWithKepler = ProjectState<ProjectConfigWithKepler> &
+type ProjectStateWithKepler = ProjectBuilderState<ProjectConfigWithKepler> &
   KeplerSliceState;
 
 export function useStoreWithKepler<T>(
   selector: (state: ProjectStateWithKepler) => T,
 ): T {
-  return useBaseProjectStore<
+  return useBaseProjectBuilderStore<
     BaseProjectConfig & KeplerSliceConfig,
-    ProjectState<ProjectConfigWithKepler>,
+    ProjectBuilderState<ProjectConfigWithKepler>,
     T
   >((state) => selector(state as unknown as ProjectStateWithKepler));
 }

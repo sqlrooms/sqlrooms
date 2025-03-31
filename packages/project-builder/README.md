@@ -472,15 +472,6 @@ const config = useProjectStore((state) => state.config);
 setProjectConfig({...config, title: 'New Title'});
 ```
 
-#### `setProjectId(projectId)`
-
-Set the project ID.
-
-```tsx
-const setProjectId = useProjectStore((state) => state.project.setProjectId);
-setProjectId('new-project-id');
-```
-
 #### `setLastSavedConfig(config)`
 
 Set the last saved project configuration.
@@ -556,17 +547,6 @@ const removeSqlQueryDataSource = useProjectStore(
   (state) => state.project.removeSqlQueryDataSource,
 );
 await removeSqlQueryDataSource('filtered_data');
-```
-
-#### `replaceProjectFile(projectFile)`
-
-Replace a project file.
-
-```tsx
-const replaceProjectFile = useProjectStore(
-  (state) => state.project.replaceProjectFile,
-);
-await replaceProjectFile(newFileInfo);
 ```
 
 #### `addProjectFile(info, desiredTableName)`

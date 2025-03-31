@@ -6,16 +6,13 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
+  createProjectBuilderSlice,
+  createProjectBuilderStore,
+  ProjectBuilderState,
   StateCreator,
-} from '@sqlrooms/project-builder';
-import {
   BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/project-builder';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -59,7 +56,7 @@ type CustomAppState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
-export type AppState = ProjectState<AppConfig> &
+export type AppState = ProjectBuilderState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomAppState;
@@ -67,14 +64,14 @@ export type AppState = ProjectState<AppConfig> &
 /**
  * Create a customized project store
  */
-export const {projectStore, useProjectStore} = createProjectStore<
+export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
 >(
   persist(
     (set, get, store) => ({
       // Base project slice
-      ...createProjectSlice<AppConfig>({
+      ...createProjectBuilderSlice<AppConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -91,6 +88,9 @@ export const {projectStore, useProjectStore} = createProjectStore<
               type: 'url',
               // url: 'https://gist.githubusercontent.com/curran/a08a1080b88344b0c8a7/raw/0e7a9b0a5d22642a06d3d5b9bcbad9890c8ee534/iris.csv',
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+              loadOptions: {
+                method: 'st_read',
+              },
             },
           ],
           ...createDefaultAiConfig(
@@ -175,7 +175,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
     // Persist settings
     {
       // Local storage key
-      name: 'app-state-storage',
+      name: 'ai-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
         config: AppConfig.parse(state.config),

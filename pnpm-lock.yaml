@@ -753,13 +753,28 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.0
         version: 1.29.0
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
       apache-arrow:
         specifier: 18.1.0
         version: 18.1.0
+      fast-deep-equal:
+        specifier: ^3.1.3
+        version: 3.1.3
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       zod:
         specifier: ^3.24.1
         version: 3.24.2
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
     devDependencies:
+      '@sqlrooms/project-config':
+        specifier: workspace:*
+        version: link:../project-config
       '@types/jest':
         specifier: ^29.5.12
         version: 29.5.14
@@ -1523,10 +1538,10 @@ importers:
         version: 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
       '@kepler.gl/processors':
         specifier: 3.1.1
-        version: 3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
+        version: 3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
       '@kepler.gl/table':
         specifier: 3.1.1
-        version: 3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
+        version: 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
       '@kepler.gl/types':
         specifier: 3.1.1
         version: 3.1.1
@@ -2177,9 +2192,6 @@ importers:
       lodash.throttle:
         specifier: ^4.1.1
         version: 4.1.1
-      mapbox-gl:
-        specifier: ^1.13.1
-        version: 1.13.1
       maplibre-gl:
         specifier: ^3.6.2
         version: 3.6.2
@@ -2271,6 +2283,21 @@ importers:
         specifier: '*'
         version: 19.0.0(react@19.0.0)
 
+  packages/project:
+    dependencies:
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: '*'
+        version: 19.0.0
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.2
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
+
   packages/project-builder:
     dependencies:
       '@duckdb/duckdb-wasm':
@@ -2285,6 +2312,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
       '@sqlrooms/project-config':
         specifier: workspace:*
         version: link:../project-config
@@ -2309,12 +2339,18 @@ importers:
       react-mosaic-component:
         specifier: 5.3.0
         version: 5.3.0(@types/hoist-non-react-statics@3.3.6)(@types/node@22.13.9)(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      zod:
+        specifier: ^3.24.1
+        version: 3.24.2
       zustand:
         specifier: ^5.0.3
         version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@19.0.0)(use-sync-external-store@1.4.0(react@19.0.0))
 
   packages/project-config:
     dependencies:
+      react:
+        specifier: '*'
+        version: 18.3.1
       zod:
         specifier: ^3.24.1
         version: 3.24.2
@@ -16114,6 +16150,46 @@ snapshots:
       - react
       - react-dom
 
+  '@kepler.gl/deckgl-layers@3.1.1(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3))(react-dom@19.0.0(react@19.0.0))(react@18.3.1)':
+    dependencies:
+      '@danmarshall/deckgl-typings': 4.9.22
+      '@deck.gl/aggregation-layers': 8.9.36(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)
+      '@deck.gl/core': 8.9.36
+      '@deck.gl/geo-layers': 8.9.36(@deck.gl/core@8.9.36)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)
+      '@deck.gl/layers': 8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/types': 3.1.1
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
+      '@luma.gl/constants': 8.5.21
+      '@luma.gl/core': 8.5.21
+      '@mapbox/geo-viewport': 0.4.1
+      '@mapbox/vector-tile': 1.3.1
+      '@types/d3-array': 2.12.7
+      '@types/geojson': 7946.0.16
+      '@types/lodash.memoize': 4.1.9
+      '@types/supercluster': 7.1.3
+      d3-array: 2.12.1
+      global: 4.4.0
+      lodash: 4.17.21
+      lodash.memoize: 4.1.2
+      pbf: 3.3.0
+      supercluster: 7.1.5
+      viewport-mercator-project: 6.2.3
+    transitivePeerDependencies:
+      - '@deck.gl/extensions'
+      - '@deck.gl/mesh-layers'
+      - '@dnd-kit/core'
+      - '@loaders.gl/core'
+      - '@loaders.gl/gltf'
+      - '@loaders.gl/images'
+      - '@luma.gl/engine'
+      - '@luma.gl/gltools'
+      - '@luma.gl/shadertools'
+      - '@luma.gl/webgl'
+      - mapbox-gl
+      - react
+      - react-dom
+
   '@kepler.gl/deckgl-layers@3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@18.3.1))(react@18.3.1))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@danmarshall/deckgl-typings': 4.9.22
@@ -16768,6 +16844,86 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@kepler.gl/layers@3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(typescript@5.8.2)':
+    dependencies:
+      '@danmarshall/deckgl-typings': 4.9.22
+      '@deck.gl/core': 8.9.36
+      '@deck.gl/extensions': 8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21)(@luma.gl/core@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(gl-matrix@3.4.3)
+      '@deck.gl/geo-layers': 8.9.36(@deck.gl/core@8.9.36)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)
+      '@deck.gl/layers': 8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21)
+      '@deck.gl/mesh-layers': 8.9.36(@deck.gl/core@8.9.36)(@luma.gl/core@8.5.21)
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/deckgl-arrow-layers': 3.1.1(@deck.gl/core@8.9.36)(@deck.gl/geo-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3)))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/deckgl-layers': 3.1.1(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3))(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/localization': 3.1.1(typescript@5.8.2)
+      '@kepler.gl/table': 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/types': 3.1.1
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
+      '@loaders.gl/arrow': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/core': 4.3.3
+      '@loaders.gl/gis': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/gltf': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/mvt': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/parquet': 4.3.3(@loaders.gl/core@4.3.3)(apache-arrow@18.1.0)
+      '@loaders.gl/pmtiles': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/schema': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/wkt': 4.3.3(@loaders.gl/core@4.3.3)
+      '@luma.gl/constants': 8.5.21
+      '@mapbox/geojson-normalize': 0.0.1
+      '@nebula.gl/edit-modes': 1.0.2-alpha.1
+      '@nebula.gl/layers': 1.0.2-alpha.1(@deck.gl/core@8.9.36)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/geo-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.36)(@luma.gl/constants@8.5.21))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@loaders.gl/core@4.3.3)(@loaders.gl/gltf@4.3.3(@loaders.gl/core@4.3.3)))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.36))(@luma.gl/constants@8.5.21)
+      '@turf/bbox': 6.5.0
+      '@turf/boolean-within': 6.5.0
+      '@turf/center': 6.5.0
+      '@turf/helpers': 6.5.0
+      '@types/geojson': 7946.0.16
+      '@types/keymirror': 0.1.4
+      '@types/lodash.memoize': 4.1.9
+      '@types/lodash.uniq': 4.5.9
+      '@types/styled-components': 5.1.34
+      apache-arrow: 18.1.0
+      buffer: 6.0.3
+      d3-array: 2.12.1
+      d3-shape: 1.3.7
+      global: 4.4.0
+      keymirror: 0.1.1
+      lodash.memoize: 4.1.2
+      lodash.throttle: 4.1.1
+      lodash.uniq: 4.5.0
+      long: 4.0.0
+      prop-types: 15.8.1
+      react: 18.3.1
+      react-intl: 6.8.9(react@18.3.1)(typescript@5.8.2)
+      react-markdown: 10.1.0(@types/react@18.3.18)(react@18.3.1)
+      reselect: 4.1.8
+      s2-geometry: 1.2.10
+      styled-components: 6.1.8(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      type-analyzer: 0.4.0
+      viewport-mercator-project: 6.2.3
+    transitivePeerDependencies:
+      - '@deck.gl/aggregation-layers'
+      - '@dnd-kit/core'
+      - '@loaders.gl/images'
+      - '@luma.gl/core'
+      - '@luma.gl/engine'
+      - '@luma.gl/gltools'
+      - '@luma.gl/shadertools'
+      - '@luma.gl/webgl'
+      - '@math.gl/core'
+      - '@math.gl/web-mercator'
+      - '@types/react'
+      - bufferutil
+      - enzyme
+      - enzyme-adapter-utils
+      - gl-matrix
+      - mapbox-gl
+      - react-dom
+      - react-test-renderer
+      - supports-color
+      - typescript
+      - utf-8-validate
+
   '@kepler.gl/localization@3.1.1(typescript@5.8.2)':
     dependencies:
       react: 18.3.1
@@ -16968,15 +17124,15 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@kepler.gl/processors@3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)':
+  '@kepler.gl/processors@3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)':
     dependencies:
       '@danmarshall/deckgl-typings': 4.9.22
-      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
-      '@kepler.gl/schemas': 3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@loaders.gl/core@4.3.3)(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
-      '@kepler.gl/table': 3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/common-utils': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@kepler.gl/constants': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
+      '@kepler.gl/schemas': 3.1.1(@loaders.gl/core@4.3.3)(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
+      '@kepler.gl/table': 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
       '@kepler.gl/types': 3.1.1
-      '@kepler.gl/utils': 3.1.1(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@19.0.0(react@19.0.0))
+      '@kepler.gl/utils': 3.1.1(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@18.3.1(react@18.3.1))
       '@loaders.gl/arrow': 4.3.3(@loaders.gl/core@4.3.3)
       '@loaders.gl/core': 4.3.3
       '@loaders.gl/csv': 4.3.3(@loaders.gl/core@4.3.3)
@@ -17016,15 +17172,15 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@kepler.gl/processors@3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)':
+  '@kepler.gl/processors@3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)':
     dependencies:
       '@danmarshall/deckgl-typings': 4.9.22
-      '@kepler.gl/common-utils': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
-      '@kepler.gl/constants': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
-      '@kepler.gl/schemas': 3.1.1(@loaders.gl/core@4.3.3)(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
-      '@kepler.gl/table': 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/schemas': 3.1.1(@loaders.gl/core@4.3.3)(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)
+      '@kepler.gl/table': 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
       '@kepler.gl/types': 3.1.1
-      '@kepler.gl/utils': 3.1.1(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@18.3.1(react@18.3.1))
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
       '@loaders.gl/arrow': 4.3.3(@loaders.gl/core@4.3.3)
       '@loaders.gl/core': 4.3.3
       '@loaders.gl/csv': 4.3.3(@loaders.gl/core@4.3.3)
@@ -17474,6 +17630,48 @@ snapshots:
       - typescript
       - utf-8-validate
 
+  '@kepler.gl/schemas@3.1.1(@loaders.gl/core@4.3.3)(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)(typescript@5.8.2)':
+    dependencies:
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/layers': 3.1.1(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(typescript@5.8.2)
+      '@kepler.gl/table': 3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/types': 3.1.1
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
+      '@loaders.gl/loader-utils': 4.3.3(@loaders.gl/core@4.3.3)
+      '@types/keymirror': 0.1.4
+      '@types/lodash.clonedeep': 4.5.9
+      '@types/lodash.pick': 4.4.9
+      apache-arrow: 18.1.0
+      global: 4.4.0
+      keymirror: 0.1.1
+      lodash.clonedeep: 4.5.0
+      lodash.pick: 4.4.0
+    transitivePeerDependencies:
+      - '@deck.gl/aggregation-layers'
+      - '@dnd-kit/core'
+      - '@loaders.gl/core'
+      - '@loaders.gl/images'
+      - '@luma.gl/core'
+      - '@luma.gl/engine'
+      - '@luma.gl/gltools'
+      - '@luma.gl/shadertools'
+      - '@luma.gl/webgl'
+      - '@math.gl/core'
+      - '@math.gl/web-mercator'
+      - '@types/react'
+      - bufferutil
+      - enzyme
+      - enzyme-adapter-utils
+      - gl-matrix
+      - mapbox-gl
+      - react
+      - react-dom
+      - react-test-renderer
+      - supports-color
+      - typescript
+      - utf-8-validate
+
   '@kepler.gl/styles@3.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@kepler.gl/constants': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -17645,6 +17843,58 @@ snapshots:
       '@kepler.gl/constants': 3.1.1(react-dom@18.3.1(react@18.3.1))(react@19.0.0)
       '@kepler.gl/types': 3.1.1
       '@kepler.gl/utils': 3.1.1(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(@loaders.gl/core@4.3.3)(mapbox-gl@1.13.1)(react-dom@18.3.1(react@18.3.1))
+      '@loaders.gl/mvt': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/pmtiles': 4.3.3(@loaders.gl/core@4.3.3)
+      '@types/d3-array': 2.12.7
+      '@types/lodash.uniq': 4.5.9
+      d3-array: 2.12.1
+      global: 4.4.0
+      lodash.uniq: 4.5.0
+      moment: 2.30.1
+      react-palm: 3.3.8(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)
+      type-analyzer: 0.4.0
+    transitivePeerDependencies:
+      - '@dnd-kit/core'
+      - '@loaders.gl/core'
+      - enzyme
+      - enzyme-adapter-utils
+      - mapbox-gl
+      - react
+      - react-dom
+      - react-test-renderer
+
+  '@kepler.gl/table@3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@18.3.1)':
+    dependencies:
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/types': 3.1.1
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
+      '@loaders.gl/mvt': 4.3.3(@loaders.gl/core@4.3.3)
+      '@loaders.gl/pmtiles': 4.3.3(@loaders.gl/core@4.3.3)
+      '@types/d3-array': 2.12.7
+      '@types/lodash.uniq': 4.5.9
+      d3-array: 2.12.1
+      global: 4.4.0
+      lodash.uniq: 4.5.0
+      moment: 2.30.1
+      react-palm: 3.3.8(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-test-renderer@18.3.1(react@19.0.0))(react@18.3.1)
+      type-analyzer: 0.4.0
+    transitivePeerDependencies:
+      - '@dnd-kit/core'
+      - '@loaders.gl/core'
+      - enzyme
+      - enzyme-adapter-utils
+      - mapbox-gl
+      - react
+      - react-dom
+      - react-test-renderer
+
+  '@kepler.gl/table@3.1.1(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@19.0.0))(enzyme@3.11.0)(react-dom@19.0.0(react@19.0.0))(react-test-renderer@18.3.1(react@19.0.0))(react@19.0.0)':
+    dependencies:
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
+      '@kepler.gl/types': 3.1.1
+      '@kepler.gl/utils': 3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))
       '@loaders.gl/mvt': 4.3.3(@loaders.gl/core@4.3.3)
       '@loaders.gl/pmtiles': 4.3.3(@loaders.gl/core@4.3.3)
       '@types/d3-array': 2.12.7
@@ -17908,6 +18158,57 @@ snapshots:
     dependencies:
       '@deck.gl/core': 8.9.36
       '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.3.1(react-dom@19.0.0(react@19.0.0))(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      '@kepler.gl/types': 3.1.1
+      '@loaders.gl/arrow': 4.3.3(@loaders.gl/core@4.3.3)
+      '@luma.gl/constants': 8.5.21
+      '@luma.gl/core': 8.5.21
+      '@mapbox/geo-viewport': 0.4.1
+      '@turf/boolean-within': 6.5.0
+      '@turf/helpers': 6.5.0
+      '@types/d3-array': 2.12.7
+      '@types/keymirror': 0.1.4
+      '@types/lodash.clonedeep': 4.5.9
+      '@types/lodash.get': 4.4.9
+      '@types/lodash.isequal': 4.5.8
+      '@types/lodash.memoize': 4.1.9
+      '@types/lodash.throttle': 4.1.9
+      apache-arrow: 18.1.0
+      d3-array: 2.12.1
+      d3-color: 2.0.0
+      d3-format: 2.0.0
+      d3-interpolate: 2.0.1
+      decimal.js: 10.5.0
+      global: 4.4.0
+      h3-js: 3.7.2
+      keymirror: 0.1.1
+      lodash.clonedeep: 4.5.0
+      lodash.get: 4.4.2
+      lodash.isequal: 4.5.0
+      lodash.memoize: 4.1.2
+      lodash.throttle: 4.1.1
+      maplibre-gl: 3.6.2
+      maplibregl-mapbox-request-transformer: 0.0.2
+      mini-svg-data-uri: 1.4.4
+      moment: 2.30.1
+      moment-timezone: 0.5.48
+      react: 18.3.1
+      react-map-gl: 7.1.9(mapbox-gl@1.13.1)(maplibre-gl@3.6.2)(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
+      resize-observer-polyfill: 1.5.1
+      suncalc: 1.9.0
+      type-analyzer: 0.4.0
+      viewport-mercator-project: 6.2.3
+    transitivePeerDependencies:
+      - '@dnd-kit/core'
+      - '@loaders.gl/core'
+      - mapbox-gl
+      - react-dom
+
+  '@kepler.gl/utils@3.1.1(@loaders.gl/core@4.3.3)(react-dom@19.0.0(react@19.0.0))':
+    dependencies:
+      '@deck.gl/core': 8.9.36
+      '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@kepler.gl/common-utils': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
       '@kepler.gl/constants': 3.1.1(react-dom@19.0.0(react@19.0.0))(react@18.3.1)
       '@kepler.gl/types': 3.1.1
@@ -20693,7 +20994,7 @@ snapshots:
 
   '@react-aria/calendar@3.6.0(react-dom@19.0.0(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@react-aria/i18n': 3.12.4(react@18.3.1)
       '@react-aria/interactions': 3.22.5(react@18.3.1)
       '@react-aria/live-announcer': 3.4.1
@@ -20745,7 +21046,7 @@ snapshots:
 
   '@react-aria/datepicker@3.12.0(react-dom@19.0.0(react@18.3.1))(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@internationalized/number': 3.6.0
       '@internationalized/string': 3.2.5
       '@react-aria/focus': 3.20.1(react-dom@19.0.0(react@18.3.1))(react@18.3.1)
@@ -21253,7 +21554,7 @@ snapshots:
 
   '@react-stately/calendar@3.6.0(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@react-stately/utils': 3.10.5(react@18.3.1)
       '@react-types/calendar': 3.5.0(react@18.3.1)
       '@react-types/shared': 3.26.0(react@18.3.1)
@@ -21296,7 +21597,7 @@ snapshots:
 
   '@react-stately/datepicker@3.11.0(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@internationalized/string': 3.2.5
       '@react-stately/form': 3.1.2(react@18.3.1)
       '@react-stately/overlays': 3.6.14(react@18.3.1)
@@ -21511,7 +21812,7 @@ snapshots:
 
   '@react-types/calendar@3.5.0(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@react-types/shared': 3.26.0(react@18.3.1)
       react: 18.3.1
 
@@ -21538,7 +21839,7 @@ snapshots:
 
   '@react-types/datepicker@3.9.0(react@18.3.1)':
     dependencies:
-      '@internationalized/date': 3.6.0
+      '@internationalized/date': 3.7.0
       '@react-types/calendar': 3.6.1(react@18.3.1)
       '@react-types/overlays': 3.8.13(react@18.3.1)
       '@react-types/shared': 3.28.0(react@18.3.1)

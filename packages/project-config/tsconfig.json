@@ -1,5 +1,8 @@
 {
-  "extends": "../../tsconfig.json",
-  "compilerOptions": {"outDir": "dist"},
-  "include": ["src/**/*", "test/**/*"]
+  "extends": "@sqlrooms/typescript-config/base.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["src", "src/BaseProjectConfig.ts"],
+  "exclude": ["node_modules", "dist"]
 }

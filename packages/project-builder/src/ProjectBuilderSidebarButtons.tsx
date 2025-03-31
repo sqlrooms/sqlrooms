@@ -7,8 +7,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
-import {useBaseProjectStore} from './ProjectStateProvider';
-
+import {useBaseProjectBuilderStore} from './ProjectBuilderStore';
 const SidebarButton: FC<{
   title: string;
   isSelected: boolean;
@@ -43,14 +42,18 @@ const SidebarButton: FC<{
 const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
   projectPanelType,
 }) => {
-  const initialized = useBaseProjectStore((state) => state.project.initialized);
-  const layout = useBaseProjectStore((state) => state.config.layout);
-  const panels = useBaseProjectStore((state) => state.project.panels);
+  const initialized = useBaseProjectBuilderStore(
+    (state) => state.project.initialized,
+  );
+  const layout = useBaseProjectBuilderStore((state) => state.config.layout);
+  const panels = useBaseProjectBuilderStore((state) => state.project.panels);
   const visibleProjectPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),
     [layout],
   );
-  const togglePanel = useBaseProjectStore((state) => state.project.togglePanel);
+  const togglePanel = useBaseProjectBuilderStore(
+    (state) => state.project.togglePanel,
+  );
   const {icon: Icon, title} = panels[projectPanelType] ?? {};
 
   return (
@@ -66,7 +69,7 @@ const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
 };
 
 const ProjectBuilderSidebarButtons: FC = () => {
-  const panels = useBaseProjectStore((state) => state.project.panels);
+  const panels = useBaseProjectBuilderStore((state) => state.project.panels);
 
   return (
     <div className="flex h-full grow flex-col">

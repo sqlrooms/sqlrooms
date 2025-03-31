@@ -5,7 +5,7 @@ export const MainView = () => {
   const {isMosaicLoading} = useMosaic();
 
   const isTableReady = useProjectStore((state) =>
-    state.project.tables.find((t) => t.tableName === 'latency'),
+    state.db.tables.find((t) => t.tableName === 'latency'),
   );
 
   if (isMosaicLoading) {

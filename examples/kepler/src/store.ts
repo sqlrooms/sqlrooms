@@ -5,9 +5,9 @@ import {
   KeplerSliceState,
 } from '@sqlrooms/kepler';
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
+  createProjectBuilderSlice,
+  createProjectBuilderStore,
+  ProjectBuilderState,
   StateCreator,
 } from '@sqlrooms/project-builder';
 import {
@@ -23,9 +23,9 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
+import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import {persist} from 'zustand/middleware';
 
 export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
@@ -43,7 +43,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 type CustomAppState = {
   // TODO: Add custom state here
 };
-export type AppState = ProjectState<AppConfig> &
+export type AppState = ProjectBuilderState<AppConfig> &
   KeplerSliceState &
   SqlEditorSliceState &
   CustomAppState;
@@ -51,14 +51,14 @@ export type AppState = ProjectState<AppConfig> &
 /**
  * Create a customized project store
  */
-export const {projectStore, useProjectStore} = createProjectStore<
+export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
 >(
   persist(
     (set, get, store) => ({
       // Base project slice
-      ...createProjectSlice<AppConfig>({
+      ...createProjectBuilderSlice<AppConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -106,7 +106,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
     // Persist settings
     {
       // Local storage key
-      name: 'app-state-storage',
+      name: 'sqlrooms-kepler-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
         config: AppConfig.parse(state.config),

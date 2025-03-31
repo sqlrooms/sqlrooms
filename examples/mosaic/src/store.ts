@@ -1,13 +1,10 @@
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
-} from '@sqlrooms/project-builder';
-import {
+  createProjectBuilderSlice,
+  createProjectBuilderStore,
+  ProjectBuilderState,
   BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/project-builder';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -39,17 +36,17 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Project state
  */
-export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+export type AppState = ProjectBuilderState<AppConfig> & SqlEditorSliceState;
 
 /**
  * Create a customized project store
  */
-export const {projectStore, useProjectStore} = createProjectStore<
+export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
   // Base project slice
-  ...createProjectSlice<AppConfig>({
+  ...createProjectBuilderSlice<AppConfig>({
     config: {
       title: 'Demo App Project',
       layout: {

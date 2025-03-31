@@ -1,21 +1,21 @@
 import {ExtendedTool, StreamMessage} from '@openassistant/core';
 import {createId} from '@paralleldrive/cuid2';
+import {DataTable} from '@sqlrooms/duckdb';
 import {
   createSlice,
-  ProjectState,
-  useBaseProjectStore,
+  ProjectBuilderState,
+  useBaseProjectBuilderStore,
   type StateCreator,
+  BaseProjectConfig,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {getDefaultTools, runAnalysis, TOOLS} from './analysis';
+import {getDefaultTools, runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
   ErrorMessageSchema,
 } from './schemas';
-import {DataTable} from '@sqlrooms/duckdb';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -89,14 +89,14 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
 }): StateCreator<AiSliceState> {
-  return createSlice<PC, AiSliceState>((set, get) => {
+  return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
 
         tools: {
-          ...getDefaultTools(),
+          ...getDefaultTools(store),
           ...customTools,
         },
 
@@ -274,6 +274,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 
           try {
             await runAnalysis({
+              tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || 'openai',
               model: currentSession.model || 'gpt-4o-mini',
               apiKey: getApiKey(currentSession.modelProvider || 'openai'),
@@ -339,11 +340,9 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
         },
 
         findToolComponent: (toolName: string) => {
-          return [
-            ...Object.entries(customTools),
-            ...Object.entries(TOOLS),
-          ].find(([name]) => name === toolName)?.[1]
-            ?.component as React.ComponentType;
+          return Object.entries(get().ai.tools).find(
+            ([name]) => name === toolName,
+          )?.[1]?.component as React.ComponentType;
         },
       },
     };
@@ -356,7 +355,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 function getCurrentSessionFromState<
   PC extends BaseProjectConfig & AiSliceConfig,
 >(
-  state: ProjectState<PC> | WritableDraft<ProjectState<PC>>,
+  state: ProjectBuilderState<PC> | WritableDraft<ProjectBuilderState<PC>>,
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.config.ai;
   return sessions.find(
@@ -390,7 +389,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
 }) {
-  return (state: ProjectState<PC>) =>
+  return (state: ProjectBuilderState<PC>) =>
     produce(state, (draft) => {
       const currentSession = getCurrentSessionFromState(draft);
       if (!currentSession) {
@@ -446,14 +445,15 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
 }
 
 type ProjectConfigWithAi = BaseProjectConfig & AiSliceConfig;
-type ProjectStateWithAi = ProjectState<ProjectConfigWithAi> & AiSliceState;
+type ProjectBuilderStateWithAi = ProjectBuilderState<ProjectConfigWithAi> &
+  AiSliceState;
 
 export function useStoreWithAi<T>(
-  selector: (state: ProjectStateWithAi) => T,
+  selector: (state: ProjectBuilderStateWithAi) => T,
 ): T {
-  return useBaseProjectStore<
+  return useBaseProjectBuilderStore<
     BaseProjectConfig & AiSliceConfig,
-    ProjectState<ProjectConfigWithAi>,
+    ProjectBuilderState<ProjectConfigWithAi>,
     T
-  >((state) => selector(state as unknown as ProjectStateWithAi));
+  >((state) => selector(state as unknown as ProjectBuilderStateWithAi));
 }

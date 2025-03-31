@@ -1,4 +1,3 @@
-import * as duckdb from '@duckdb/duckdb-wasm';
 import {
   createAssistant,
   rebuildMessages,
@@ -8,14 +7,15 @@ import {
 import {
   arrowTableToJson,
   DataTable,
+  DuckDbConnector,
+  DuckDbSliceState,
   DuckQueryError,
-  getDuckDb,
-  getDuckTableSchemas,
 } from '@sqlrooms/duckdb';
 
+import type {StoreApi} from '@sqlrooms/project-builder';
+import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
 import {AnalysisResultSchema, QueryToolParameters} from './schemas';
-import {AiSliceTool} from './AiSlice';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -79,24 +79,21 @@ export function getDefaultInstructions(tablesSchema: DataTable[]): string {
 
 /**
  * Generates summary statistics for a SQL query result
- * @param conn - DuckDB connection instance
+ * @param connector - DuckDB connection instance
  * @param sqlQuery - SQL SELECT query to analyze
  * @returns Summary statistics as JSON object, or null if the query is not a SELECT statement or if summary generation fails
  */
-async function getQuerySummary(
-  conn: duckdb.AsyncDuckDBConnection,
-  sqlQuery: string,
-) {
+async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
   if (!sqlQuery.toLowerCase().trim().startsWith('select')) {
     return null;
   }
 
   try {
     const viewName = `temp_result_${Date.now()}`; // unique view name to avoid conflicts
-    await conn.query(`CREATE TEMPORARY VIEW ${viewName} AS ${sqlQuery}`);
-    const summaryResult = await conn.query(`SUMMARIZE ${viewName}`);
+    await connector.query(`CREATE TEMPORARY VIEW ${viewName} AS ${sqlQuery}`);
+    const summaryResult = await connector.query(`SUMMARIZE ${viewName}`);
     const summaryData = arrowTableToJson(summaryResult);
-    await conn.query(`DROP VIEW IF EXISTS ${viewName}`);
+    await connector.query(`DROP VIEW IF EXISTS ${viewName}`);
     return summaryData;
   } catch (error) {
     console.warn('Failed to get summary:', error);
@@ -107,7 +104,9 @@ async function getQuerySummary(
 /**
  * Configuration options for running an AI analysis session
  */
-export type AnalysisConfig = {
+type AnalysisParameters = {
+  tableSchemas: DataTable[];
+
   /** Assistant instance identifier (default: 'sqlrooms-ai') */
   name?: string;
 
@@ -153,11 +152,12 @@ export type AnalysisConfig = {
 /**
  * Executes an AI analysis session on the project data
  *
- * @param config - Analysis configuration options. See {@link AnalysisConfig} for more details.
+ * @param config - Analysis configuration options. See {@link AnalysisParameters} for more details.
  * @returns Object containing tool calls executed and the final analysis result
  */
 export async function runAnalysis({
   name = 'sqlrooms-ai',
+  tableSchemas,
   modelProvider,
   model,
   apiKey,
@@ -168,9 +168,7 @@ export async function runAnalysis({
   maxSteps = 5,
   tools = {},
   getInstructions,
-}: AnalysisConfig) {
-  const tablesSchema = await getDuckTableSchemas();
-
+}: AnalysisParameters) {
   // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
@@ -179,8 +177,8 @@ export async function runAnalysis({
     apiKey,
     version: 'v1',
     instructions: getInstructions
-      ? getInstructions(tablesSchema)
-      : getDefaultInstructions(tablesSchema),
+      ? getInstructions(tableSchemas)
+      : getDefaultInstructions(tableSchemas),
     functions: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
@@ -214,7 +212,9 @@ export async function runAnalysis({
  * Includes:
  * - query: Executes SQL queries against DuckDB
  */
-export function getDefaultTools(): Record<string, AiSliceTool> {
+export function getDefaultTools(
+  store: StoreApi<AiSliceState & DuckDbSliceState>,
+): Record<string, AiSliceTool> {
   return {
     query: tool({
       description: `A tool for running SQL queries on the tables in the database.
@@ -224,13 +224,13 @@ If a query fails, please don't try to run it again with the same syntax.`,
       // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
       execute: async ({type, sqlQuery}) => {
         try {
-          const {conn} = await getDuckDb();
+          const connector = await store.getState().db.getConnector();
           // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-          const result = await conn.query(sqlQuery);
+          const result = await connector.query(sqlQuery);
           // Only get summary if the query isn't already a SUMMARIZE query
           const summaryData = sqlQuery.toLowerCase().includes('summarize')
             ? arrowTableToJson(result)
-            : await getQuerySummary(conn, sqlQuery);
+            : await getQuerySummary(connector, sqlQuery);
 
           // Get first 2 rows of the result as a json object
           const subResult = result.slice(0, 2);
@@ -269,5 +269,3 @@ If a query fails, please don't try to run it again with the same syntax.`,
     }),
   };
 }
-
-export const TOOLS = getDefaultTools();
