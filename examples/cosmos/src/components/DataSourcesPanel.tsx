@@ -1,9 +1,9 @@
+import {DataSourceTypes} from '@sqlrooms/project-config';
 import {
   FileDataSourcesPanel,
   ProjectBuilderPanel,
   TablesListPanel,
 } from '@sqlrooms/project-builder';
-import {DataSourceTypes} from '@sqlrooms/project-config';
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 import {
   Accordion,

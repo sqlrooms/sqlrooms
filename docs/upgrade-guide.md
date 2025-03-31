@@ -6,6 +6,11 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.9.0
 
+### @sqlrooms/project-config
+
+- `BaseProjectConfig` moved to `@sqlrooms/project-builder`
+- Zod schemas `*DataSource` moved to `@sqlrooms/duckdb`
+
 ### @sqlrooms/project-builder
 
 - `createProjectSlice` renamed into `createProjectBuilderSlice`
@@ -15,6 +20,8 @@ When upgrading, please follow the version-specific instructions below that apply
 - `ProjectState` renamed into `ProjectBuilderState`
 
 - `ProjectState` renamed into `ProjectBuilderState`
+
+- `projectId` and `setProjectId` removed: add custom state if necessary
 
 - `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
@@ -27,6 +34,10 @@ When upgrading, please follow the version-specific instructions below that apply
 - `ProjectStore.addProjectFile` parameter changes: The function now takes a File or a pathname instead of the result of `processDroppedFile()`.
 
 - `ProjectStore.addProjectFile` behavior changes: The function will no longer attempt to create unique table names, but will overwrite the created table.
+
+- `ProjectStore.areViewsReadyToRender` and `onDataUpdated` were removed
+
+- `ProjectStore.setTables` removed: use `state.db.refreshTableSchemas()` instead.
 
 ### @sqlrooms/duckdb
 

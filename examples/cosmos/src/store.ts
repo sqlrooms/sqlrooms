@@ -2,12 +2,9 @@ import {
   createProjectBuilderSlice,
   createProjectBuilderStore,
   ProjectBuilderState,
-} from '@sqlrooms/project-builder';
-import {
   BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/project-builder';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -63,6 +60,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           type: 'url',
           url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
           tableName: 'mammals',
+          loadOptions: {
+            method: 'st_read',
+          },
         },
       ],
       ...createDefaultSqlEditorConfig(),

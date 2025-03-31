@@ -8,7 +8,12 @@ export * from './useDuckDb';
 export * from './exportToCsv';
 export * from './arrow-utils';
 export * from './useSql';
-export * from './DuckDbSlice';
+export {
+  createDuckDbSlice,
+  createDefaultDuckDbConfig,
+  DuckDbSliceConfig,
+  type DuckDbSliceState,
+} from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/WasmDuckDbConnector';
 export * from './connectors/load/load';

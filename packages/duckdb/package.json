@@ -19,10 +19,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/project": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*",
     "@duckdb/duckdb-wasm": "1.29.0",
+    "@sqlrooms/project": "workspace:*",
     "apache-arrow": "^18.1.0",
+    "fast-deep-equal": "^3.1.3",
+    "immer": "^10.1.1",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
   },

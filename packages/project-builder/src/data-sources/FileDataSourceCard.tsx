@@ -19,8 +19,8 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {ProjectFileInfo, ProjectFileState} from '../types';
 import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
+import {ProjectFileInfo, ProjectFileState} from '../types';
 const FileDataSourceCard: FC<{
   isReadOnly?: boolean;
   fileInfo: ProjectFileInfo;

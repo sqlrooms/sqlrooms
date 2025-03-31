@@ -2,15 +2,12 @@ import {FC} from 'react';
 import {FileDataSourceCard} from './FileDataSourceCard';
 import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 
-const FileDataSourcesPanel: FC = () => {
+const FileDataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const projectFiles = useBaseProjectBuilderStore(
     (state) => state.project.projectFiles,
   );
   const projectFilesProgress = useBaseProjectBuilderStore(
     (state) => state.project.projectFilesProgress,
-  );
-  const isReadOnly = useBaseProjectBuilderStore(
-    (state) => state.project.isReadOnly,
   );
 
   return (

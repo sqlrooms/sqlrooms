@@ -1,5 +1,4 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
-import {DEFAULT_PROJECT_TITLE} from '@sqlrooms/project-config';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store';
@@ -17,7 +16,7 @@ export default function ProjectDetailsPanel() {
 
   const handleSetProjectTitle = useCallback(
     (title: string) => {
-      const nextTitle = title.trim() || DEFAULT_PROJECT_TITLE;
+      const nextTitle = title.trim() || 'Untitled project';
       setProjectTitle(nextTitle);
       return nextTitle;
     },

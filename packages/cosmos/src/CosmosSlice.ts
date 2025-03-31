@@ -8,8 +8,8 @@ import {
   createSlice,
   useBaseProjectBuilderStore,
   type ProjectBuilderState,
+  BaseProjectConfig,
 } from '@sqlrooms/project-builder';
-import type {BaseProjectConfig} from '@sqlrooms/project-config';
 import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';

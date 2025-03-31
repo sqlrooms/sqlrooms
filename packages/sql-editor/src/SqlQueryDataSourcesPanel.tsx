@@ -2,7 +2,7 @@ import {
   DataSourceStatus,
   useBaseProjectBuilderStore,
 } from '@sqlrooms/project-builder';
-import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {SqlQueryDataSource} from '@sqlrooms/project-builder';
 import {
   Button,
   DropdownMenu,

@@ -3,7 +3,7 @@ import {
   ProjectBuilderPanel,
   TablesListPanel,
 } from '@sqlrooms/project-builder';
-import {DataSourceTypes} from '@sqlrooms/project-config';
+import {DataSourceTypes} from '@sqlrooms/project-builder';
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 import {
   Accordion,
@@ -16,7 +16,6 @@ import {FC, useMemo} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
-  const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
   const projectFiles = useProjectStore((state) => state.project.projectFiles);
   const dataSources = useProjectStore((state) => state.config.dataSources);
   const queryDataSources = useMemo(
@@ -49,7 +48,7 @@ const DataSourcesPanel: FC = () => {
                 </AccordionContent>
               </AccordionItem>
 
-              {!isReadOnly || queryDataSources.length > 0 ? (
+              {queryDataSources.length > 0 ? (
                 <AccordionItem value="sql">
                   <AccordionTrigger className="gap-1 px-0">
                     <div className="text-muted-foreground flex items-center">

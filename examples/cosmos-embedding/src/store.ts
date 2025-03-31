@@ -2,12 +2,9 @@ import {
   createProjectBuilderSlice,
   createProjectBuilderStore,
   ProjectBuilderState,
-} from '@sqlrooms/project-builder';
-import {
   BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/project-builder';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,

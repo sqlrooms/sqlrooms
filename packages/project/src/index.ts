@@ -12,4 +12,6 @@ export {
   type ProjectStateProps,
   type ProjectState,
   type ProjectStore,
+  type TaskProgress,
+  createBaseSlice,
 } from './ProjectStore';

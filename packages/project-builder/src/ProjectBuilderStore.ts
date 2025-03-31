@@ -1,19 +1,20 @@
 import {
   DataTable,
+  DuckDbSliceConfig,
   DuckDbSliceState,
   LoadFileOptions,
+  createDefaultDuckDbConfig,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
 import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
 import {
-  createProjectSlice,
   ProjectState,
   ProjectStateActions,
   ProjectStateContext,
   ProjectStateProps,
+  createProjectSlice,
 } from '@sqlrooms/project';
 import {
-  BaseProjectConfig,
   DEFAULT_MOSAIC_LAYOUT,
   DataSource,
   DataSourceTypes,
@@ -24,33 +25,23 @@ import {
   UrlDataSource,
   isMosaicLayoutParent,
 } from '@sqlrooms/project-config';
-
 import {ErrorBoundary} from '@sqlrooms/ui';
-import {
-  ProgressInfo,
-  convertToUniqueColumnOrTableName,
-  convertToValidColumnOrTableName,
-  downloadFile,
-} from '@sqlrooms/utils';
-import * as arrow from 'apache-arrow';
 import {castDraft, produce} from 'immer';
 import {ReactNode, useContext} from 'react';
 import {StateCreator, StoreApi, useStore} from 'zustand';
+import {BaseProjectConfig} from '@sqlrooms/project-config/src/BaseProjectConfig';
 import {
   DataSourceState,
   DataSourceStatus,
   ProjectFileInfo,
   ProjectFileState,
 } from './types';
-
-export type TaskProgress = {
-  progress?: number | undefined;
-  message: string;
-};
-
-const INIT_DB_TASK = 'init-db';
-const INIT_PROJECT_TASK = 'init-project';
-const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
+import {
+  convertToUniqueColumnOrTableName,
+  convertToValidColumnOrTableName,
+  downloadFile,
+  ProgressInfo,
+} from '@sqlrooms/utils';
 
 export type ProjectBuilderStore<PC extends BaseProjectConfig> = StoreApi<
   ProjectBuilderState<PC>
@@ -63,51 +54,24 @@ export type ProjectPanelInfo = {
   placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
 
-export const INITIAL_PROJECT_BUILDER_STATE: Omit<
-  ProjectBuilderStateProps<BaseProjectConfig>,
-  'config' | 'lastSavedConfig' | 'panels'
-> = {
-  schema: 'main',
-  tasksProgress: {},
-  projectId: undefined,
-  initialized: false,
-  isDataAvailable: false,
-  isReadOnly: false,
-  projectFiles: [],
-  projectFilesProgress: {},
-  // userId: undefined,
-  tables: [],
-  tableRowCounts: {},
-  dataSourceStates: {},
-  captureException(exception: unknown) {
-    console.error(exception);
-  },
-  CustomErrorBoundary: ErrorBoundary,
-};
-
-export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig = {
+export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig &
+  DuckDbSliceConfig = {
   title: '',
   description: '',
-  dataSources: [],
   layout: DEFAULT_MOSAIC_LAYOUT,
+  dataSources: [],
+  ...createDefaultDuckDbConfig(),
 };
 
 export type ProjectBuilderStateProps<PC extends BaseProjectConfig> =
   ProjectStateProps<PC> & {
-    schema: string;
-    tasksProgress: Record<string, TaskProgress>;
-    projectId: string | undefined; // undefined if the project is new
-    panels: Record<string, ProjectPanelInfo>;
-    isReadOnly: boolean;
-    tables: DataTable[];
+    initialized: boolean;
     projectFiles: ProjectFileInfo[];
     projectFilesProgress: {[pathname: string]: ProjectFileState};
-    lastSavedConfig: PC | undefined;
-    initialized: boolean; // Whether the project has been initialized so we can render UI
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-    tableRowCounts: {[tableName: string]: number};
-    captureException: (exception: unknown, captureContext?: unknown) => void;
+
+    panels: Record<string, ProjectPanelInfo>;
     CustomErrorBoundary: React.ComponentType<{
       onRetry?: () => void;
       children?: ReactNode;
@@ -121,27 +85,7 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
      * @returns A promise that resolves when the project state has been initialized.
      */
     initialize: () => Promise<void>;
-    setTaskProgress: (
-      id: string,
-      taskProgress: TaskProgress | undefined,
-    ) => void;
-    getLoadingProgress: () => TaskProgress | undefined;
-    /**
-     * Set the project config.
-     * @param config - The project config to set.
-     */
-    setProjectConfig: (config: PC) => void;
-    setProjectId: (projectId: string | undefined) => void;
-    /**
-     * Set the last saved project config. This can be used to check if the project has unsaved changes.
-     * @param config - The project config to set.
-     */
-    setLastSavedConfig: (config: PC) => void;
-    /**
-     * Check if the project has unsaved changes.
-     * @returns True if the project has unsaved changes, false otherwise.
-     */
-    hasUnsavedChanges(): boolean; // since last save
+
     /**
      * Set the layout of the project.
      * @param layout - The layout to set.
@@ -158,6 +102,10 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
      * @param panel - The panel to toggle the pin state of.
      */
     togglePanelPin: (panel: string) => void;
+
+    setProjectTitle(title: string): void;
+    setDescription(description: string): void;
+
     /**
      * Add or update a SQL query data source.
      * @param tableName - The name of the table to create or update.
@@ -170,6 +118,7 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
       oldTableName?: string,
     ): Promise<void>;
     removeSqlQueryDataSource(tableName: string): Promise<void>;
+    areDatasetsReady(): boolean;
 
     addProjectFile(
       file: File | string,
@@ -177,41 +126,12 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
       loadFileOptions?: LoadFileOptions,
     ): Promise<DataTable | undefined>;
     removeProjectFile(pathname: string): void;
-    maybeDownloadDataSources(): Promise<void>;
     setProjectFiles(info: ProjectFileInfo[]): void;
     setProjectFileProgress(pathname: string, fileState: ProjectFileState): void;
-    /**
-     * Add a table to the project.
-     * @param tableName - The name of the table to add.
-     * @param data - The data to add to the table: an arrow table or an array of records.
-     * @returns A promise that resolves to the table that was added.
-     */
-    addTable(
-      tableName: string,
-      data: arrow.Table | Record<string, unknown>[],
-    ): Promise<DataTable>;
     addDataSource: (
       dataSource: DataSource,
       status?: DataSourceStatus,
     ) => Promise<void>;
-    getTable(tableName: string): DataTable | undefined;
-    setTables(dataTable: DataTable[]): Promise<void>;
-    setTableRowCount(tableName: string, rowCount: number): void;
-    setProjectTitle(title: string): void;
-    setDescription(description: string): void;
-    areDatasetsReady(): boolean;
-    findTableByName(tableName: string): DataTable | undefined;
-    /**
-     * Update the status of all data sources based on the current tables.
-     */
-    updateReadyDataSources(): Promise<void>;
-    onDataUpdated: () => Promise<void>;
-    areViewsReadyToRender(): boolean;
-    /**
-     * Refresh table schemas from the database.
-     * @returns A promise that resolves to the updated tables.
-     */
-    refreshTableSchemas(): Promise<DataTable[]>;
   };
 
 export type ProjectBuilderState<PC extends BaseProjectConfig> =
@@ -230,26 +150,37 @@ type InitialState<PC extends BaseProjectConfig> = {
   };
 };
 
+const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
+const INIT_DB_TASK = 'init-db';
+const INIT_PROJECT_TASK = 'init-project';
+
 export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
   props: InitialState<PC>,
 ): StateCreator<ProjectBuilderState<PC>> {
-  const {config: configProps, project: projectStateProps, ...restState} = props;
-  const initialConfig: PC = {
-    ...INITIAL_BASE_PROJECT_CONFIG,
-    ...configProps,
-  } as PC;
-  const initialProjectState: ProjectBuilderStateProps<PC> = {
-    ...INITIAL_PROJECT_BUILDER_STATE,
-    ...projectStateProps,
-    schema: projectStateProps.schema ?? INITIAL_PROJECT_BUILDER_STATE.schema,
-    lastSavedConfig: undefined,
-  };
-
   const slice: StateCreator<ProjectBuilderState<PC>> = (set, get, store) => {
+    const {
+      config: configProps,
+      project: projectStateProps,
+      ...restState
+    } = props;
+    const initialConfig: PC = {
+      ...INITIAL_BASE_PROJECT_CONFIG,
+      ...configProps,
+    } as PC;
+    const initialProjectState = {
+      initialized: false,
+      CustomErrorBoundary: ErrorBoundary,
+      projectFiles: [],
+      projectFilesProgress: {},
+      isDataAvailable: false,
+      dataSourceStates: {},
+      ...projectStateProps,
+    };
     const projectSliceState = createProjectSlice({
       config: initialConfig,
       project: initialProjectState,
     })(set, get, store);
+
     const projectState: ProjectBuilderState<PC> = {
       ...projectSliceState,
       ...createDuckDbSlice({})(set, get, store),
@@ -258,6 +189,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
         ...projectSliceState.project,
         async initialize() {
           projectSliceState.project.initialize();
+
           const {setTaskProgress} = get().project;
           setTaskProgress(INIT_DB_TASK, {
             message: 'Initializing database…',
@@ -270,11 +202,10 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
             message: 'Loading data sources…',
             progress: undefined,
           });
-          await get().project.updateReadyDataSources();
-          await get().project.maybeDownloadDataSources();
+          await updateReadyDataSources();
+          await maybeDownloadDataSources();
           setTaskProgress(INIT_PROJECT_TASK, undefined);
 
-          await get().project.onDataUpdated();
           set((state) =>
             produce(state, (draft) => {
               draft.project.initialized = true;
@@ -282,45 +213,6 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           );
         },
 
-        onDataUpdated: async () => {
-          // Do nothing: to be overridden by the view store
-        },
-
-        areViewsReadyToRender: () => {
-          // Can be overridden by the view store
-          return true;
-        },
-
-        setTaskProgress(id, taskProgress) {
-          set((state) =>
-            produce(state, (draft) => {
-              if (taskProgress) {
-                draft.project.tasksProgress[id] = taskProgress;
-              } else {
-                delete draft.project.tasksProgress[id];
-              }
-            }),
-          );
-        },
-
-        /** Returns the progress of the last task */
-        getLoadingProgress() {
-          const {tasksProgress} = get().project;
-          const keys = Object.keys(tasksProgress);
-          const lastKey = keys[keys.length - 1];
-          if (lastKey) {
-            return tasksProgress[lastKey];
-          }
-          return undefined;
-        },
-
-        // setUserId: (userId) => set(() => ({userId})),
-        setProjectId: (projectId) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.projectId = projectId;
-            }),
-          ),
         setProjectConfig: (config) =>
           set((state) =>
             produce(state, (draft) => {
@@ -337,244 +229,6 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           const {lastSavedConfig} = get().project;
           const {config} = get();
           return config !== lastSavedConfig;
-        },
-
-        addDataSource: async (
-          dataSource,
-          status = DataSourceStatus.PENDING,
-        ) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const dataSources = draft.config.dataSources;
-              const tableName = dataSource.tableName;
-              const index = dataSources.findIndex(
-                (d) => d.tableName === tableName,
-              );
-              if (index >= 0) {
-                dataSources[index] = dataSource;
-              } else {
-                dataSources.push(dataSource);
-              }
-              draft.project.dataSourceStates[tableName] = {status};
-            }),
-          );
-          await get().project.maybeDownloadDataSources();
-        },
-
-        async addTable(tableName, data) {
-          const {tables} = get().project;
-          const table = tables.find((t) => t.tableName === tableName);
-          if (table) {
-            return table;
-          }
-
-          const {db} = get();
-          if (data instanceof arrow.Table) {
-            await db.connector.loadArrow(data, tableName);
-          } else {
-            await db.connector.loadObjects(data, tableName);
-          }
-          const newTable = await db.getTableSchema(tableName);
-
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.tables.push(newTable);
-            }),
-          );
-          await get().project.updateReadyDataSources();
-          return newTable;
-        },
-
-        async addOrUpdateSqlQueryDataSource(tableName, query, oldTableName) {
-          const {schema} = get().project;
-          const {db} = get();
-          const newTableName =
-            tableName !== oldTableName
-              ? convertToUniqueColumnOrTableName(
-                  tableName,
-                  await db.getTables(schema),
-                )
-              : tableName;
-          const {rowCount} = await db.createTableFromQuery(newTableName, query);
-          get().project.setTableRowCount(newTableName, rowCount);
-          set((state) =>
-            produce(state, (draft) => {
-              const newDataSource = {
-                type: DataSourceTypes.enum.sql,
-                sqlQuery: query,
-                tableName: newTableName,
-              };
-              if (oldTableName) {
-                draft.config.dataSources = draft.config.dataSources.map(
-                  (dataSource) =>
-                    dataSource.tableName === oldTableName
-                      ? newDataSource
-                      : dataSource,
-                );
-                delete draft.project.dataSourceStates[oldTableName];
-              } else {
-                draft.config.dataSources.push(newDataSource);
-              }
-              draft.project.dataSourceStates[newTableName] = {
-                status: DataSourceStatus.READY,
-              };
-            }),
-          );
-          await get().project.setTables(await db.getTableSchemas());
-        },
-
-        removeSqlQueryDataSource: async (tableName) => {
-          const {db} = get();
-          await db.dropTable(tableName);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) => d.tableName !== tableName,
-              );
-              delete draft.project.dataSourceStates[tableName];
-            }),
-          );
-          await get().project.setTables(await db.getTableSchemas());
-        },
-
-        setProjectFiles: (projectFiles) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.projectFiles = projectFiles;
-            }),
-          ),
-
-        async addProjectFile(file, desiredTableName, loadOptions) {
-          const {db} = get();
-
-          const pathname = file instanceof File ? file.name : file;
-          const tableName =
-            desiredTableName ?? convertToValidColumnOrTableName(pathname);
-
-          await db.connector.loadFile(file, tableName, loadOptions);
-
-          // This must come before addDataSource, as addDataSource can trigger
-          // download which also adds the file
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.projectFiles.push({
-                pathname,
-                duckdbFileName: pathname,
-                size: file instanceof File ? file.size : undefined,
-                file: file instanceof File ? file : undefined,
-              });
-            }),
-          );
-          await get().project.addDataSource(
-            {
-              type: DataSourceTypes.enum.file,
-              fileName: pathname,
-              tableName,
-            },
-            // duckdbFileName ? DataSourceStatus.READY : DataSourceStatus.PENDING,
-            DataSourceStatus.READY,
-          );
-          await updateTables();
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.isDataAvailable = true;
-            }),
-          );
-          return get().project.findTableByName(tableName);
-        },
-
-        removeProjectFile(pathname) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.projectFiles = draft.project.projectFiles.filter(
-                (f) => f.pathname !== pathname,
-              );
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) =>
-                  d.type !== DataSourceTypes.Enum.file ||
-                  d.fileName !== pathname,
-              );
-            }),
-          );
-        },
-
-        setProjectFileProgress(pathname, fileState) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.projectFilesProgress[pathname] = fileState;
-              // Update the file size in the project config from the progress info
-              const fileInfo = draft.project.projectFiles.find(
-                (f) => f.pathname === pathname,
-              );
-              if (fileInfo && fileInfo.size === undefined) {
-                if (fileState.status !== 'error' && fileState.progress) {
-                  fileInfo.size = fileState.progress.total;
-                }
-              }
-            }),
-          );
-        },
-
-        async maybeDownloadDataSources() {
-          const {projectFilesProgress, dataSourceStates} = get().project;
-          const {dataSources} = get().config;
-          const pendingDataSources = dataSources.filter(
-            (ds) =>
-              !dataSourceStates[ds.tableName] ||
-              dataSourceStates[ds.tableName]?.status ===
-                DataSourceStatus.PENDING,
-          );
-
-          const filesToDownload = pendingDataSources.filter((ds) => {
-            switch (ds.type) {
-              case DataSourceTypes.Enum.file:
-                return !projectFilesProgress[ds.fileName];
-              case DataSourceTypes.Enum.url:
-                return !projectFilesProgress[ds.url];
-              default:
-                return false;
-            }
-          }) as (FileDataSource | UrlDataSource)[];
-
-          if (filesToDownload.length > 0) {
-            await downloadProjectFiles(filesToDownload);
-          }
-
-          const queriesToRun = pendingDataSources.filter(
-            (ds) => ds.type === DataSourceTypes.Enum.sql,
-          );
-
-          if (queriesToRun.length > 0) {
-            await runDataSourceQueries(queriesToRun);
-          }
-
-          if (get().config.dataSources.length > 0) {
-            set((state) =>
-              produce(state, (draft) => {
-                draft.project.isDataAvailable = true;
-              }),
-            );
-          }
-        },
-
-        setTableRowCount: (tableName, rowCount) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.tableRowCounts[tableName] = rowCount;
-            }),
-          ),
-
-        getTable(tableName) {
-          return get().project.tables.find((t) => t.tableName === tableName);
-        },
-
-        setTables: async (tables) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.tables = tables;
-            }),
-          );
-          await get().project.updateReadyDataSources();
         },
 
         setProjectTitle: (title) =>
@@ -678,6 +332,164 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           );
         },
 
+        addDataSource: async (
+          dataSource,
+          status = DataSourceStatus.PENDING,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const dataSources = draft.config.dataSources;
+              const tableName = dataSource.tableName;
+              const index = dataSources.findIndex(
+                (d) => d.tableName === tableName,
+              );
+              if (index >= 0) {
+                dataSources[index] = dataSource;
+              } else {
+                dataSources.push(dataSource);
+              }
+              draft.project.dataSourceStates[tableName] = {status};
+            }),
+          );
+          await maybeDownloadDataSources();
+        },
+
+        async addOrUpdateSqlQueryDataSource(tableName, query, oldTableName) {
+          const {schema} = get().db;
+          const {db} = get();
+          const newTableName =
+            tableName !== oldTableName
+              ? convertToUniqueColumnOrTableName(
+                  tableName,
+                  await db.getTables(schema),
+                )
+              : tableName;
+          const {rowCount} = await db.createTableFromQuery(newTableName, query);
+          get().db.setTableRowCount(newTableName, rowCount);
+          set((state) =>
+            produce(state, (draft) => {
+              const newDataSource = {
+                type: DataSourceTypes.enum.sql,
+                sqlQuery: query,
+                tableName: newTableName,
+              };
+              if (oldTableName) {
+                draft.config.dataSources = draft.config.dataSources.map(
+                  (dataSource) =>
+                    dataSource.tableName === oldTableName
+                      ? newDataSource
+                      : dataSource,
+                );
+                delete draft.project.dataSourceStates[oldTableName];
+              } else {
+                draft.config.dataSources.push(newDataSource);
+              }
+              draft.project.dataSourceStates[newTableName] = {
+                status: DataSourceStatus.READY,
+              };
+            }),
+          );
+          await get().db.refreshTableSchemas();
+        },
+
+        removeSqlQueryDataSource: async (tableName) => {
+          const {db} = get();
+          await db.dropTable(tableName);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.dataSources = draft.config.dataSources.filter(
+                (d) => d.tableName !== tableName,
+              );
+              delete draft.project.dataSourceStates[tableName];
+            }),
+          );
+          await get().db.refreshTableSchemas();
+        },
+
+        setProjectFiles: (projectFiles) =>
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectFiles = projectFiles;
+            }),
+          ),
+
+        async addProjectFile(file, desiredTableName, loadOptions) {
+          const {db} = get();
+
+          const pathname = file instanceof File ? file.name : file;
+          const tableName =
+            desiredTableName ?? convertToValidColumnOrTableName(pathname);
+
+          await db.connector.loadFile(file, tableName, loadOptions);
+
+          // This must come before addDataSource, as addDataSource can trigger
+          // download which also adds the file
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectFiles.push({
+                pathname,
+                duckdbFileName: pathname,
+                size: file instanceof File ? file.size : undefined,
+                file: file instanceof File ? file : undefined,
+              });
+            }),
+          );
+          await get().project.addDataSource(
+            {
+              type: DataSourceTypes.enum.file,
+              fileName: pathname,
+              tableName,
+            },
+            // duckdbFileName ? DataSourceStatus.READY : DataSourceStatus.PENDING,
+            DataSourceStatus.READY,
+          );
+          await get().db.refreshTableSchemas();
+          set((state) =>
+            produce(state, (draft) => {
+              if (
+                Object.values(get().project.dataSourceStates).every(
+                  (ds) => ds.status === DataSourceStatus.READY,
+                )
+              ) {
+                draft.project.isDataAvailable = true;
+              }
+            }),
+          );
+          return get().db.findTableByName(tableName);
+        },
+
+        removeProjectFile(pathname) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectFiles = draft.project.projectFiles.filter(
+                (f) => f.pathname !== pathname,
+              );
+              draft.config.dataSources = draft.config.dataSources.filter(
+                (d) =>
+                  d.type !== DataSourceTypes.Enum.file ||
+                  d.fileName !== pathname,
+              );
+            }),
+          );
+        },
+
+        setProjectFileProgress(pathname, fileState) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectFilesProgress[pathname] = fileState;
+              // Update the file size in the project config from the progress info
+              const fileInfo = draft.project.projectFiles.find(
+                (f) => f.pathname === pathname,
+              );
+              if (fileInfo && fileInfo.size === undefined) {
+                if (fileState.status !== 'error' && fileState.progress) {
+                  fileInfo.size = fileState.progress.total;
+                }
+              }
+            }),
+          );
+        },
+
         areDatasetsReady: () => {
           const {dataSourceStates} = get().project;
           const {config} = get();
@@ -687,74 +499,93 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
               dataSourceStates[ds.tableName]?.status === DataSourceStatus.READY,
           );
         },
-
-        findTableByName(tableName: string) {
-          return get().project.tables.find((t) => t.tableName === tableName);
-        },
-
-        async updateReadyDataSources() {
-          const {tables, dataSourceStates} = get().project;
-          const {config} = get();
-          const dataSources = config.dataSources;
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.dataSourceStates = dataSources.reduce(
-                (acc, ds) => {
-                  const tableName = ds.tableName;
-                  const table = tables.find((t) => t.tableName === tableName);
-                  acc[tableName] = {
-                    status: table
-                      ? DataSourceStatus.READY
-                      : // Don't change the existing status which could be ERROR or PENDING
-                        (dataSourceStates[tableName]?.status ??
-                        DataSourceStatus.PENDING),
-                  };
-                  return acc;
-                },
-                {...dataSourceStates},
-              );
-            }),
-          );
-        },
-
-        async refreshTableSchemas(): Promise<DataTable[]> {
-          const tables = await get().db.getTableSchemas();
-          await get().project.setTables(tables);
-          return tables;
-        },
       },
+
       ...restState,
     };
 
-    return projectState;
-
-    function updateTotalFileDownloadProgress() {
-      const {projectFilesProgress, setTaskProgress} = get().project;
-      let total = 0,
-        loaded = 0;
-      for (const p of Object.values(projectFilesProgress)) {
-        if (p.status === 'download' || p.status === 'done') {
-          total += p.progress?.total || 0;
-          loaded += p.progress?.loaded || 0;
-        }
+    // If the tables have changed, update the data sources
+    store.subscribe((state, prevState) => {
+      if (state.db.tables !== prevState.db.tables) {
+        updateReadyDataSources();
       }
-      setTaskProgress(DOWNLOAD_DATA_SOURCES_TASK, {
-        progress: total > 0 ? Math.round((loaded / total) * 100) : undefined,
-        message: 'Downloading data…',
-      });
+    });
+
+    async function updateReadyDataSources() {
+      const {tables} = get().db;
+      const {dataSourceStates} = get().project;
+      const {config} = get();
+      const {dataSources} = config;
+      set((state) =>
+        produce(state, (draft) => {
+          for (const ds of dataSources) {
+            const tableName = ds.tableName;
+            const table = tables.find((t) => t.tableName === tableName);
+            if (table) {
+              draft.project.dataSourceStates[tableName] = {
+                status: DataSourceStatus.READY,
+              };
+            } else {
+              // Prev status could be ERROR or PENDING, don't change it then
+              if (!dataSourceStates[tableName]?.status) {
+                draft.project.dataSourceStates[tableName] = {
+                  status: DataSourceStatus.PENDING,
+                };
+              }
+            }
+          }
+        }),
+      );
+    }
+
+    async function maybeDownloadDataSources() {
+      const {projectFilesProgress, dataSourceStates} = get().project;
+      const {dataSources} = get().config;
+      const pendingDataSources = dataSources.filter(
+        (ds) =>
+          !dataSourceStates[ds.tableName] ||
+          dataSourceStates[ds.tableName]?.status === DataSourceStatus.PENDING,
+      );
+
+      const filesToDownload = pendingDataSources.filter((ds) => {
+        switch (ds.type) {
+          case DataSourceTypes.Enum.file:
+            return !projectFilesProgress[ds.fileName];
+          case DataSourceTypes.Enum.url:
+            return !projectFilesProgress[ds.url];
+          default:
+            return false;
+        }
+      }) as (FileDataSource | UrlDataSource)[];
+
+      if (filesToDownload.length > 0) {
+        await downloadProjectFiles(filesToDownload);
+      }
+
+      const queriesToRun = pendingDataSources.filter(
+        (ds) => ds.type === DataSourceTypes.Enum.sql,
+      );
+
+      if (queriesToRun.length > 0) {
+        await runDataSourceQueries(queriesToRun);
+      }
+
+      if (get().config.dataSources.length > 0) {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.project.isDataAvailable = true;
+          }),
+        );
+      }
     }
 
     async function downloadProjectFiles(
       filesToDownload: (FileDataSource | UrlDataSource)[],
     ) {
       if (!filesToDownload.length) return;
-      const {
-        setProjectFileProgress,
-        setTableRowCount,
-        setTables,
-        captureException,
-        setTaskProgress,
-      } = get().project;
+      const {setTableRowCount} = get().db;
+      const {captureException, setTaskProgress, setProjectFileProgress} =
+        get().project;
       filesToDownload.forEach((ds) => {
         const fileName =
           ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
@@ -826,7 +657,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
         }),
       );
       if (loadedFiles.length) {
-        await setTables(await get().db.getTableSchemas());
+        await get().db.refreshTableSchemas();
       }
     }
 
@@ -845,7 +676,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
             tableName,
             sqlQuery,
           );
-          get().project.setTableRowCount(tableName, rowCount);
+          get().db.setTableRowCount(tableName, rowCount);
           set((state) =>
             produce(state, (draft) => {
               draft.project.dataSourceStates[tableName] = {
@@ -865,14 +696,27 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           // TODO: Make sure the errors are shown
         }
       }
-      await get().project.setTables(await get().db.getTableSchemas());
+      await get().db.refreshTableSchemas();
+      await updateReadyDataSources();
     }
 
-    async function updateTables(): Promise<DataTable[]> {
-      const tables = await get().db.getTableSchemas();
-      await get().project.setTables(tables);
-      return tables;
+    function updateTotalFileDownloadProgress() {
+      const {setTaskProgress, projectFilesProgress} = get().project;
+      let total = 0,
+        loaded = 0;
+      for (const p of Object.values(projectFilesProgress)) {
+        if (p.status === 'download' || p.status === 'done') {
+          total += p.progress?.total || 0;
+          loaded += p.progress?.loaded || 0;
+        }
+      }
+      setTaskProgress(DOWNLOAD_DATA_SOURCES_TASK, {
+        progress: total > 0 ? Math.round((loaded / total) * 100) : undefined,
+        message: 'Downloading data…',
+      });
     }
+
+    return projectState;
   };
 
   return slice;

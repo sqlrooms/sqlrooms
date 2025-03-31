@@ -4,8 +4,8 @@ import {
   ProjectBuilderState,
   StateCreator,
   useBaseProjectBuilderStore,
+  BaseProjectConfig,
 } from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import {Table} from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
