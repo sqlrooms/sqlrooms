@@ -119,7 +119,7 @@ export function createSqlEditorSlice<
           await connector.query(`SET search_path = main`);
 
           // Refresh table schemas after query execution
-          await get().project.refreshTableSchemas();
+          await get().db.refreshTableSchemas();
 
           return {results};
         } catch (e) {

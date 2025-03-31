@@ -39,6 +39,8 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - `ProjectStore.setTables` removed: use `state.db.refreshTableSchemas()` instead.
 
+- `ProjectStore.isReadOnly` was removed: pass `isReadOnly` as a prop to respective components instead
+
 ### @sqlrooms/duckdb
 
 - `useDuckDb()` now returns an instance of [`DuckDbConnector`](api/duckdb/interfaces/DuckDbConnector) to enable support for external DuckDB

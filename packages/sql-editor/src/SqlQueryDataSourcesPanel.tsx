@@ -22,9 +22,9 @@ import {FC, useCallback, useState} from 'react';
 import CreateTableModal from './CreateTableModal';
 
 const SqlQueryDataSourcesPanel: FC<{
+  isReadOnly: boolean;
   queryDataSources: SqlQueryDataSource[];
-}> = (props) => {
-  const {queryDataSources} = props;
+}> = ({queryDataSources, isReadOnly}) => {
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();
   const [isOpen, setIsOpen] = useState(false);
@@ -55,10 +55,6 @@ const SqlQueryDataSourcesPanel: FC<{
 
   const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
     (state) => state.project.addOrUpdateSqlQueryDataSource,
-  );
-
-  const isReadOnly = useBaseProjectBuilderStore(
-    (state) => state.project.isReadOnly,
   );
 
   return (

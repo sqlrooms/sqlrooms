@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.5.0",
+  "packageManager": "pnpm@10.7.0",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -14,7 +14,7 @@
     "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
-    "build": "turbo build --filter=@sqlrooms/* --filter=!@sqlrooms/cosmos",
+    "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
     "build:examples": "turbo build --filter=./examples/*",
     "test": "turbo test",

@@ -274,7 +274,7 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 
           try {
             await runAnalysis({
-              tableSchemas: get().project.tables,
+              tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || 'openai',
               model: currentSession.model || 'gpt-4o-mini',
               apiKey: getApiKey(currentSession.modelProvider || 'openai'),
