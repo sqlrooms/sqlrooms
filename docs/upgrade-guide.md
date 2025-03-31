@@ -25,6 +25,11 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
+- A number of project store props amnd moved from `.project` to `.db`:
+
+  - `.tables`
+  - `.refresh`
+
 - `useBaseProjectStore` was renamed into `useBaseProjectBuilderStore`, but it's better to use `useProjectStore` returned by `createProjectBuilderStore` instead
 
 - `processDroppedFile()` is removed: Use `ProjectStore.addProjectFile` directly.

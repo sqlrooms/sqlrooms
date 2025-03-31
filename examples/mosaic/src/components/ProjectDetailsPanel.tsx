@@ -1,11 +1,13 @@
-import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
+import {
+  DEFAULT_PROJECT_TITLE,
+  ProjectBuilderPanel,
+} from '@sqlrooms/project-builder';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {ProjectPanelTypes, useProjectStore} from '../store';
 
 export default function ProjectDetailsPanel() {
   const title = useProjectStore((state) => state.config.title);
-  const isReadOnly = useProjectStore((state) => state.project.isReadOnly);
   const setProjectTitle = useProjectStore(
     (state) => state.project.setProjectTitle,
   );
@@ -32,16 +34,11 @@ export default function ProjectDetailsPanel() {
               Title
             </Label>
             <div className="w-full overflow-hidden text-sm">
-              {isReadOnly ? (
-                <span>{title}</span>
-              ) : (
-                <EditableText
-                  isReadOnly={isReadOnly}
-                  value={title}
-                  placeholder={DEFAULT_PROJECT_TITLE}
-                  onChange={handleSetProjectTitle}
-                />
-              )}
+              <EditableText
+                value={title}
+                placeholder={DEFAULT_PROJECT_TITLE}
+                onChange={handleSetProjectTitle}
+              />
             </div>
           </div>
 
@@ -49,20 +46,17 @@ export default function ProjectDetailsPanel() {
             <Label className="text-muted-foreground text-xs font-bold uppercase">
               Description
             </Label>
-            {isReadOnly ? (
-              <p className="text-xs">{description}</p>
-            ) : (
-              <Textarea
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                className={cn(
-                  'bg-secondary text-secondary-foreground flex-grow resize-none text-xs',
-                  'placeholder:text-muted-foreground min-h-0 border-none',
-                )}
-                placeholder="A story behind this project, what it represents"
-                maxLength={4096}
-              />
-            )}
+
+            <Textarea
+              value={description || ''}
+              onChange={(e) => setDescription(e.target.value)}
+              className={cn(
+                'bg-secondary text-secondary-foreground flex-grow resize-none text-xs',
+                'placeholder:text-muted-foreground min-h-0 border-none',
+              )}
+              placeholder="A story behind this project, what it represents"
+              maxLength={4096}
+            />
           </div>
         </div>
       </div>

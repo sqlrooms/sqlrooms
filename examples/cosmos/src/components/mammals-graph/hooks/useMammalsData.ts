@@ -9,7 +9,7 @@ interface Edge {
 
 export const useMammalsData = () => {
   const isTableReady = useProjectStore((state) =>
-    Boolean(state.project.tables.find((t) => t.tableName === 'mammals')),
+    Boolean(state.db.tables.find((t) => t.tableName === 'mammals')),
   );
 
   const {data: queryResult} = useSql<Edge>({

@@ -21,7 +21,7 @@ export const citationStatsSchema = z.object({
 
 export const usePublicationsData = () => {
   const isTableReady = useProjectStore((state) =>
-    Boolean(state.project.tables.find((t) => t.tableName === 'publications')),
+    Boolean(state.db.tables.find((t) => t.tableName === 'publications')),
   );
 
   const {data: queryResult} = useSql(publicationSchema, {
