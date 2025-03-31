@@ -1,6 +1,5 @@
 import {zodResolver} from '@hookform/resolvers/zod';
-import {DuckQueryError} from '@sqlrooms/duckdb';
-import {SqlQueryDataSource} from '@sqlrooms/project-config';
+import {SqlQueryDataSource} from '@sqlrooms/project-builder';
 import {
   Alert,
   AlertDescription,
@@ -72,11 +71,7 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
         form.reset();
         onClose();
       } catch (err) {
-        form.setError('root', {
-          type: 'manual',
-          message:
-            err instanceof DuckQueryError ? err.getMessageForUser() : `${err}`,
-        });
+        form.setError('root', {type: 'manual', message: `${err}`});
       }
     },
     [onAddOrUpdateSqlQuery, editDataSource?.tableName, onClose, form],

@@ -1,16 +1,14 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
-import {FC, useState} from 'react';
-import {useBaseProjectStore} from '../ProjectStateProvider';
-import {TableCard} from './TableCard';
 import {useDisclosure} from '@sqlrooms/ui';
+import {FC, useState} from 'react';
+import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
+import {TableCard} from './TableCard';
 
-const TablesListPanel: FC = () => {
-  const isReadOnly = useBaseProjectStore((state) => state.project.isReadOnly);
-
-  const tables = useBaseProjectStore((state) => state.project.tables);
-  const tableRowCounts = useBaseProjectStore(
-    (state) => state.project.tableRowCounts,
+const TablesListPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
+  const tables = useBaseProjectBuilderStore((state) => state.db.tables);
+  const tableRowCounts = useBaseProjectBuilderStore(
+    (state) => state.db.tableRowCounts,
   );
 
   const [selectedTable, setSelectedTable] = useState<DataTable | undefined>(

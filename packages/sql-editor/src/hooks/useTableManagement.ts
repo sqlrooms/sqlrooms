@@ -7,13 +7,13 @@ import {useStoreWithSqlEditor} from '../SqlEditorSlice';
  */
 export function useTableManagement() {
   // Get data from the store without refs
-  const rawTables = useStoreWithSqlEditor((s) => s.project.tables);
+  const rawTables = useStoreWithSqlEditor((s) => s.db.tables);
   const tables = useMemo(
     () => rawTables.map((t: DataTable) => t.tableName),
     [rawTables],
   );
   const refreshTableSchemas = useStoreWithSqlEditor(
-    (s) => s.project.refreshTableSchemas,
+    (s) => s.db.refreshTableSchemas,
   );
 
   // Use the DataTable[] directly without transforming it
