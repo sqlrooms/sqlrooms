@@ -128,7 +128,10 @@ jobs:
           fi
 
           # Proceed with version update
-          pnpm lerna version --conventional-commits --yes
+          pnpm lerna version --conventional-commits --create-release github --yes
+
+          # Push all tags
+          git push --follow-tags origin $VERSION_BRANCH
 
           # Create PR
           gh pr create \
