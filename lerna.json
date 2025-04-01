@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "npmClient": "pnpm",
   "command": {
     "version": {
@@ -15,5 +15,7 @@
       "conventionalCommits": true
     }
   },
-  "packages": ["packages/*"]
+  "packages": [
+    "packages/*"
+  ]
 }
