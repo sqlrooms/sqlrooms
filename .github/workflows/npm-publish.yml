@@ -13,49 +13,14 @@ on:
   workflow_dispatch:
 
 jobs:
-  publish:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: write
+    outputs:
+      should_bump: ${{ steps.check-commits.outputs.bump }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        # See https://github.com/pnpm/pnpm/issues/8840
-        run: pnpm install --shamefully-hoist
-
-      - name: Build packages
-        run: pnpm build
-
-      - name: Lint
-        run: pnpm lint
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
 
       - name: Check commits for version bump
         id: check-commits
@@ -83,12 +48,57 @@ jobs:
             echo "bump=false" >> $GITHUB_OUTPUT
           fi
 
+  publish:
+    needs: check
+    if: needs.check.outputs.should_bump == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        # See https://github.com/pnpm/pnpm/issues/8840
+        run: pnpm install --shamefully-hoist
+
+      - name: Build packages
+        run: pnpm build:all
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
       - name: Create Version PR
-        if: steps.check-commits.outputs.bump == 'true'
         run: |
           # Create and checkout version branch
           VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
           git checkout -b $VERSION_BRANCH
+
+          # Push the new branch to remote
+          git push origin $VERSION_BRANCH
 
           # Run version update
           pnpm lerna version --conventional-commits --yes
@@ -102,12 +112,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Skip Version Notice
-        if: steps.check-commits.outputs.bump != 'true'
-        run: echo "No version bump needed. Skipping version and publish."
-
       - name: Publish to NPM
-        if: steps.check-commits.outputs.bump == 'true'
         run: pnpm lerna publish from-package --force-publish --yes
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
