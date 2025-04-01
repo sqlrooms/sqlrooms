@@ -1,4 +1,9 @@
-import {registerEntry, requestMapStyles} from '@kepler.gl/actions';
+import {
+  deleteEntry,
+  registerEntry,
+  requestMapStyles,
+  wrapTo,
+} from '@kepler.gl/actions';
 import keplerGlReducer, {KeplerGlState} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
@@ -33,10 +38,11 @@ export const KeplerSliceConfig = z.object({
 });
 export type KeplerSliceConfig = z.infer<typeof KeplerSliceConfig>;
 
+const defaultMapId = 'untitled_map';
+
 export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig['kepler']>,
 ): KeplerSliceConfig {
-  const defaultMapId = createId();
   return {
     kepler: {
       maps: [
@@ -55,17 +61,18 @@ export type KeplerAction = {
   type: string;
   payload: unknown;
 };
-
+// support multiple kepler maps
+export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type KeplerSliceState = {
   kepler: {
-    map: KeplerGlState;
+    map: KeplerGlReduxState;
     dispatchAction: (action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
     createMap: (name?: string) => void;
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
-    __reduxProviderStore: ReduxStore<KeplerGlState, KeplerAction>;
+    __reduxProviderStore: ReduxStore<KeplerGlReduxState, KeplerAction>;
   };
 };
 
@@ -75,17 +82,14 @@ export function createKeplerSlice<
   const {actionLogging = false} = options;
   return createSlice<PC, KeplerSliceState>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState({
-      visState: {
-        layerClasses: [],
-      },
       mapStyle: {
         styleType: 'positron',
       },
     });
 
-    const keplerInitialState: {map: KeplerGlState} = keplerReducer(
+    const keplerInitialState: KeplerGlReduxState = keplerReducer(
       undefined,
-      registerEntry({id: 'map'}),
+      registerEntry({id: defaultMapId}),
     );
 
     const dispatch = (action: KeplerAction) => {
@@ -93,12 +97,13 @@ export function createKeplerSlice<
         ...state,
         kepler: {
           ...state.kepler,
-          ...keplerReducer({map: state.kepler.map}, action),
+          map: keplerReducer(state.kepler.map, action),
         },
       }));
       return action;
     };
-
+    // forward kepler action to default map
+    // const forwardDispatch = forwardTo(defaultMapId, dispatch);
     const middleware = [taskMiddleware];
     if (actionLogging) {
       const logger = createLogger(
@@ -108,13 +113,16 @@ export function createKeplerSlice<
     }
     const dispatchWithMiddleware = (action: KeplerAction) => {
       middleware.forEach((m) =>
-        m({dispatch, getState: () => get().kepler.map})(dispatch)(action),
+        m({
+          dispatch: dispatch,
+          getState: () => get().kepler.map,
+        })(dispatch)(action),
       );
       dispatch(action);
       return action;
     };
 
-    const __reduxProviderStore: ReduxStore<KeplerGlState, KeplerAction> = {
+    const __reduxProviderStore: ReduxStore<KeplerGlReduxState, KeplerAction> = {
       // @ts-ignore
       dispatch: dispatchWithMiddleware,
       getState: () => get().kepler.map,
@@ -126,15 +134,17 @@ export function createKeplerSlice<
 
     return {
       kepler: {
-        ...keplerInitialState,
+        map: keplerInitialState,
         dispatchAction: dispatchWithMiddleware,
         __reduxProviderStore,
 
         initialize: () => {
-          const {mapStyle} = get().kepler.map;
+          const {mapStyle} = get().kepler.map[defaultMapId];
           const style = mapStyle.mapStyles[mapStyle.styleType];
           if (style) {
-            get().kepler.dispatchAction(requestMapStyles({[style.id]: style}));
+            get().kepler.dispatchAction(
+              wrapTo(defaultMapId)(requestMapStyles({[style.id]: style})),
+            );
           }
         },
 
@@ -152,20 +162,28 @@ export function createKeplerSlice<
         },
         createMap: (name?: string) => {
           const mapId = createId();
-          set((state) =>
-            produce(state, (draft) => {
+          set((state) => {
+            return produce(state, (draft) => {
               draft.config.kepler.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
               });
-            }),
-          );
+              draft.kepler.map = keplerReducer(
+                draft.kepler.map,
+                registerEntry({id: mapId}),
+              );
+            });
+          });
         },
         deleteMap: (mapId: string) => {
           set((state) =>
             produce(state, (draft) => {
               draft.config.kepler.maps = draft.config.kepler.maps.filter(
                 (map) => map.id !== mapId,
+              );
+              draft.kepler.map = keplerReducer(
+                draft.kepler.map,
+                deleteEntry(mapId),
               );
             }),
           );

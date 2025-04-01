@@ -1,8 +1,9 @@
-import {FC} from 'react';
+import {FC, useMemo} from 'react';
 import {IntlProvider} from 'react-intl';
 import {ThemeProvider} from 'styled-components';
-import {useStoreWithKepler} from '../KeplerSlice';
+import {KeplerGlReduxState, useStoreWithKepler} from '../KeplerSlice';
 import {messages} from '@kepler.gl/localization';
+import {forwardTo} from '@kepler.gl/actions';
 
 import {
   appInjector,
@@ -10,6 +11,7 @@ import {
   MapContainerFactory,
   mapFieldsSelector,
   provideRecipesToInjector,
+  KeplerGlContext,
 } from '@kepler.gl/components';
 import {theme} from '@kepler.gl/styles';
 import {Provider} from 'react-redux';
@@ -37,12 +39,19 @@ export const KeplerMapContainer: FC<{
   const dispatchAction = useStoreWithKepler(
     (state) => state.kepler.dispatchAction,
   );
-  const keplerState = useStoreWithKepler((state) => state.kepler.map);
+  const forwardToDispatch = useMemo(
+    () => forwardTo(mapId, dispatchAction),
+    [mapId, dispatchAction],
+  );
+  const keplerState = useStoreWithKepler((state) => {
+    return state.kepler.map[mapId];
+  });
+
   const mapFields = mapFieldsSelector({
     id: mapId,
     mapboxApiAccessToken: '',
     ...keplerState,
-    ...keplerActionSelector(dispatchAction, {}),
+    ...keplerActionSelector(forwardToDispatch, {}),
   });
 
   // useEffect(() => {
@@ -87,20 +96,28 @@ export const KeplerMapContainer: FC<{
   //     dispatchAction(addDataToMap(payload));
   //   }, 5000);
   // }, []);
-
+  const keplerContext = useMemo(
+    () => ({
+      selector: (state: KeplerGlReduxState) => state[mapId],
+      id: mapId,
+    }),
+    [mapId],
+  );
   return (
     <div className="relative h-full w-full">
       <div className="absolute h-full w-full">
         <IntlProvider locale="en" messages={messages['en']}>
           <Provider store={reduxProviderStore}>
             <ThemeProvider theme={theme}>
-              <MapContainer
-                primary={true}
-                containerId={0}
-                key={0}
-                index={0}
-                {...mapFields}
-              />
+              <KeplerGlContext.Provider value={keplerContext}>
+                <MapContainer
+                  primary={true}
+                  containerId={0}
+                  key={0}
+                  index={0}
+                  {...mapFields}
+                />
+              </KeplerGlContext.Provider>
             </ThemeProvider>
           </Provider>
         </IntlProvider>
