@@ -12,6 +12,12 @@ on:
   # Enable the workflow to be triggered manually
   workflow_dispatch:
 
+# Add top-level permissions
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
@@ -52,10 +58,6 @@ jobs:
     needs: check
     if: needs.check.outputs.should_bump == 'true'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
