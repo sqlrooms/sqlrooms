@@ -165,8 +165,8 @@ jobs:
             --head "$VERSION_BRANCH" \
             --base "main"
         env:
-          # Use PAT for PR creation and release creation
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          # Use built-in token for PR creation and release creation
+          GH_TOKEN: ${{ github.token }}
 
       - name: Publish to NPM
         run: |
@@ -175,4 +175,4 @@ jobs:
           pnpm lerna publish from-package --force-publish --yes
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+          GH_TOKEN: ${{ github.token }}
