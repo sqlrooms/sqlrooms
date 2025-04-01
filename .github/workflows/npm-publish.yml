@@ -93,35 +93,32 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
+          # Configure Git to use token authentication
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
           # Ensure we have all tags
           git fetch --tags --force
 
-      - name: Create Version PR
+      - name: Create Version Update
         run: |
           # Create and checkout version branch
           VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
           git checkout -b $VERSION_BRANCH
 
-          # Push the new branch to remote
-          git push origin $VERSION_BRANCH
-
           # Create version update and GitHub release
           pnpm lerna version --conventional-commits --create-release github --yes
 
-          # Push all tags
+          # Push branch and tags
           git push --follow-tags origin $VERSION_BRANCH
 
-          # Authenticate gh cli with token
-          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+          # Merge the version branch into main
+          git checkout main
+          git merge --no-ff $VERSION_BRANCH -m "chore: merge version bump [skip ci]"
+          git push origin main
 
-          # Create PR
-          gh pr create \
-            --title "chore: version bump" \
-            --body "Automated version bump" \
-            --base main \
-            --head $VERSION_BRANCH \
-            --repo ${{ github.repository }}
+          # Clean up the temporary branch
+          git push origin --delete $VERSION_BRANCH
         env:
+          # Use GITHUB_TOKEN for lerna's GitHub release creation
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to NPM
