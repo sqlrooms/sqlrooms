@@ -113,19 +113,37 @@ jobs:
           # Push tags and changes
           git push --follow-tags origin $VERSION_BRANCH
 
-          # Merge the version branch into main
-          git checkout main
-          git merge --no-ff $VERSION_BRANCH -m "chore: merge version bump [skip ci]"
-          git push origin main
-
-          # Clean up the temporary branch
-          git push origin --delete $VERSION_BRANCH
+          # Create PR using REST API (more reliable than gh cli for Actions)
+          curl -L \
+            -X POST \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            https://api.github.com/repos/${{ github.repository }}/pulls \
+            -d '{
+              "title":"chore: version bump",
+              "body":"Automated version bump",
+              "head":"'$VERSION_BRANCH'",
+              "base":"main"
+            }'
         env:
           # Use GITHUB_TOKEN for lerna's GitHub release creation
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to NPM
-        run: pnpm lerna publish from-package --force-publish --yes
+        run: |
+          # Make sure we're on the version branch
+          git checkout $VERSION_BRANCH
+          pnpm lerna publish from-package --force-publish --yes
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Add PR Instructions
+        run: |
+          PR_URL=$(gh pr list --head $VERSION_BRANCH --json url -q '.[0].url')
+          if [ ! -z "$PR_URL" ]; then
+            gh pr comment $PR_URL --body "This PR contains version bump changes. Please review and merge to update package versions in main branch. The packages have already been published to npm."
+          fi
+        env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
