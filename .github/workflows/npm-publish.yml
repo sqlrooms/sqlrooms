@@ -75,10 +75,20 @@ jobs:
         with:
           node-version: '22'
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sqlrooms'
 
       - name: Install dependencies
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
+
+      - name: Configure NPM
+        run: |
+          # Configure npm for the organization scope
+          npm config set @sqlrooms:registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          # Ensure packages are published as public
+          echo "access=public" >> .npmrc
 
       - name: Build packages
         run: pnpm build
@@ -134,10 +144,11 @@ jobs:
         run: |
           # Make sure we're on the version branch
           git checkout $VERSION_BRANCH
-          pnpm lerna publish from-package --force-publish --yes
+          pnpm lerna publish from-package --force-publish --yes --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NPM_CONFIG_ACCESS: public
 
       - name: Add PR Instructions
         run: |
