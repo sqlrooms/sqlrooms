@@ -4,6 +4,13 @@ on:
   push:
     branches:
       - main
+    # Restrict to changes in packages/ or configuration files
+    paths:
+      - 'packages/**'
+      - 'lerna.json'
+      - 'package.json'
+  # Enable the workflow to be triggered manually
+  workflow_dispatch:
 
 jobs:
   publish:
@@ -17,6 +24,9 @@ jobs:
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - uses: pnpm/action-setup@v4
         name: Install pnpm
         with:
@@ -25,15 +35,18 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
+          node-version: 22
           cache: 'pnpm'
 
       - name: Install dependencies
+        # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
 
       - name: Build packages
-        run: pnpm build:all
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
 
       - name: Run tests
         run: pnpm test
