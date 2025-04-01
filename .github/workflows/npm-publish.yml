@@ -63,6 +63,7 @@ jobs:
         with:
           fetch-depth: 0 # Fetches the complete Git history, including all commits and tags
           token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-tags: true # Explicitly fetch all tags
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -92,6 +93,8 @@ jobs:
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
+          # Ensure we have all tags
+          git fetch --tags --force
 
       - name: Create Version PR
         run: |
@@ -102,7 +105,29 @@ jobs:
           # Push the new branch to remote
           git push origin $VERSION_BRANCH
 
-          # Run version update
+          # Run version update with --no-git-tag-version first to check the next version
+          NEXT_VERSION=$(pnpm lerna version --conventional-commits --no-git-tag-version --no-push --yes | grep -o 'v[0-9]\+\.[0-9]\+\.[0-9]\+' | tail -n1)
+
+          # Reset the changes from the dry run
+          git reset --hard
+
+          # Check if tag exists
+          if git tag | grep -q "^$NEXT_VERSION$"; then
+            echo "Tag $NEXT_VERSION exists, checking if it was published..."
+            
+            # Try to fetch the package version from npm
+            PKG_NAME=$(node -p "require('./package.json').name")
+            if ! npm view "$PKG_NAME@$NEXT_VERSION" version &>/dev/null; then
+              echo "Version exists in git but not in npm, deleting tag..."
+              git tag -d $NEXT_VERSION
+              git push origin :refs/tags/$NEXT_VERSION
+            else
+              echo "Version $NEXT_VERSION already published to npm, skipping version bump"
+              exit 1
+            fi
+          fi
+
+          # Proceed with version update
           pnpm lerna version --conventional-commits --yes
 
           # Create PR
@@ -113,6 +138,7 @@ jobs:
             --head $VERSION_BRANCH
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }} # Needed for npm view
 
       - name: Publish to NPM
         run: pnpm lerna publish from-package --force-publish --yes
