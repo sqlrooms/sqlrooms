@@ -144,11 +144,10 @@ jobs:
         run: |
           # Make sure we're on the version branch
           git checkout $VERSION_BRANCH
-          pnpm lerna publish from-package --force-publish --yes --access public
+          pnpm lerna publish from-package --force-publish --yes
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_ACCESS: public
 
       - name: Add PR Instructions
         run: |
