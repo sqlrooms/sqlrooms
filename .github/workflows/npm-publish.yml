@@ -18,6 +18,7 @@ jobs:
     permissions:
       contents: write
       packages: write
+      pull-requests: write
     steps:
       - uses: actions/checkout@v4
         with:
@@ -35,7 +36,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: '22'
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -82,13 +83,32 @@ jobs:
             echo "bump=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Version and Publish
+      - name: Create Version PR
         if: steps.check-commits.outputs.bump == 'true'
-        run: pnpm lerna version --conventional-commits --yes && pnpm lerna publish from-package --force-publish --yes
+        run: |
+          # Create and checkout version branch
+          VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $VERSION_BRANCH
+
+          # Run version update
+          pnpm lerna version --conventional-commits --yes
+
+          # Create PR
+          gh pr create \
+            --title "chore: version bump" \
+            --body "Automated version bump" \
+            --base main \
+            --head $VERSION_BRANCH
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Skip Version Notice
         if: steps.check-commits.outputs.bump != 'true'
         run: echo "No version bump needed. Skipping version and publish."
+
+      - name: Publish to NPM
+        if: steps.check-commits.outputs.bump == 'true'
+        run: pnpm lerna publish from-package --force-publish --yes
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
