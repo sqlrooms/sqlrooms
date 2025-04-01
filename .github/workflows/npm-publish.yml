@@ -59,7 +59,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
+          fetch-depth: 0 # Fetches the complete Git history, including all commits and tags
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: pnpm/action-setup@v4
@@ -78,7 +78,7 @@ jobs:
         run: pnpm install --shamefully-hoist
 
       - name: Build packages
-        run: pnpm build:all
+        run: pnpm build
 
       - name: Lint
         run: pnpm lint
