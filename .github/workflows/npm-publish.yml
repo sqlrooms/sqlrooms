@@ -11,6 +11,17 @@ on:
       - 'package.json'
   # Enable the workflow to be triggered manually
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
 
 # Add top-level permissions
 permissions:
@@ -42,16 +53,12 @@ jobs:
           # Debug git information
           echo "Git version:"
           git --version
-          echo "All refs:"
-          git show-ref
+          echo "Current commit:"
+          git rev-parse HEAD
 
-          # Try different methods to get the latest tag
-          echo "Method 1 - git describe:"
-          git describe --tags --abbrev=0 || echo "git describe failed"
-
-          echo "Method 2 - sort by version:"
+          # Get latest tag using version sort
           LAST_TAG=$(git tag -l | sort -V | tail -n 1)
-          echo "Latest tag found by sort: $LAST_TAG"
+          echo "Latest tag found: $LAST_TAG"
 
           if [ -z "$LAST_TAG" ]; then
             echo "No previous tag found. Will bump version."
@@ -59,14 +66,18 @@ jobs:
             exit 0
           fi
 
+          # Get the commit hash for the tag
+          TAG_COMMIT=$(git rev-parse $LAST_TAG)
+          echo "Tag $LAST_TAG is at commit: $TAG_COMMIT"
+
           echo "Last tag: $LAST_TAG"
           # Get commit subjects since the last tag
-          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%h %s")
           echo "Commits since $LAST_TAG:"
           echo "$COMMITS"
 
           # Check for feat, fix, perf, refactor, or build commits
-          if echo "$COMMITS" | grep -E "^(feat|fix|perf|refactor|build)(\(|:)" > /dev/null; then
+          if echo "$COMMITS" | grep -E "^[a-f0-9]+ (feat|fix|perf|refactor|build)(\(|:)" > /dev/null; then
             echo "Found commit that triggers version bump"
             echo "bump=true" >> $GITHUB_OUTPUT
           else
@@ -90,74 +101,78 @@ jobs:
         with:
           run_install: false
 
-      # - name: Setup Node
-      #   uses: actions/setup-node@v4
-      #   with:
-      #     node-version: '22'
-      #     cache: 'pnpm'
-      #     registry-url: 'https://registry.npmjs.org'
-      #     scope: '@sqlrooms'
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sqlrooms'
 
-      # - name: Install dependencies
-      #   # See https://github.com/pnpm/pnpm/issues/8840
-      #   run: pnpm install --shamefully-hoist
+      - name: Install dependencies
+        # See https://github.com/pnpm/pnpm/issues/8840
+        run: pnpm install --shamefully-hoist
 
-      # - name: Configure NPM
-      #   run: |
-      #     # Configure npm for the organization scope
-      #     npm config set @sqlrooms:registry https://registry.npmjs.org/
-      #     npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-      #     # Ensure packages are published as public
-      #     echo "access=public" >> .npmrc
+      - name: Configure NPM
+        run: |
+          # Configure npm for the organization scope
+          npm config set @sqlrooms:registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          # Ensure packages are published as public
+          echo "access=public" >> .npmrc
 
-      # - name: Build packages
-      #   run: pnpm build
+      - name: Build packages
+        run: pnpm build
 
-      # - name: Lint
-      #   run: pnpm lint
+      - name: Lint
+        run: pnpm lint
 
-      # - name: Run tests
-      #   run: pnpm test
+      - name: Run tests
+        run: pnpm test
 
-      # - name: Configure Git
-      #   run: |
-      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-      #     git config --global user.name "github-actions[bot]"
-      #     # Configure Git to use token authentication
-      #     git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-      #     # Ensure we have all tags
-      #     git fetch --tags --force
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          # Configure Git to use token authentication
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          # Ensure we have all tags
+          git fetch --tags --force
 
-      # - name: Create Version Update
-      #   run: |
-      #     # Create and checkout version branch
-      #     VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
-      #     git checkout -b $VERSION_BRANCH
+      - name: Create Version Update
+        run: |
+          # Create and checkout version branch
+          VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $VERSION_BRANCH
 
-      #     # Push empty branch first to establish it on remote
-      #     git push -u origin $VERSION_BRANCH
+          # Push empty branch first to establish it on remote
+          git push -u origin $VERSION_BRANCH
 
-      #     # Create version update and GitHub release
-      #     pnpm lerna version --conventional-commits --create-release github --yes
+          # Create version update and GitHub release
+          if [ "${{ inputs.version }}" = "auto" ]; then
+            pnpm lerna version --conventional-commits --create-release github --yes
+          else
+            pnpm lerna version ${{ inputs.version }} --create-release github --yes
+          fi
 
-      #     # Push tags and changes
-      #     git push --follow-tags origin $VERSION_BRANCH
+          # Push tags and changes
+          git push --follow-tags origin $VERSION_BRANCH
 
-      #     # Create PR using GitHub CLI
-      #     gh pr create \
-      #       --title "chore: version bump" \
-      #       --body "Automated version bump. The packages have been published to npm. Please review and merge to update package versions in main branch." \
-      #       --head "$VERSION_BRANCH" \
-      #       --base "main"
-      #   env:
-      #     # Use PAT for PR creation and release creation
-      #     GH_TOKEN: ${{ secrets.GH_PAT }}
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title "chore: version bump" \
+            --body "Automated version bump. The packages have been published to npm. Please review and merge to update package versions in main branch." \
+            --head "$VERSION_BRANCH" \
+            --base "main"
+        env:
+          # Use PAT for PR creation and release creation
+          GH_TOKEN: ${{ secrets.GH_PAT }}
 
-      # - name: Publish to NPM
-      #   run: |
-      #     # Make sure we're on the version branch
-      #     git checkout $VERSION_BRANCH
-      #     pnpm lerna publish from-package --force-publish --yes
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-      #     GH_TOKEN: ${{ secrets.GH_PAT }}
+      - name: Publish to NPM
+        run: |
+          # Make sure we're on the version branch
+          git checkout $VERSION_BRANCH
+          pnpm lerna publish from-package --force-publish --yes
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
