@@ -3,7 +3,7 @@ name: NPM Publish
 on:
   push:
     branches:
-      - main, npm-publish
+      - main
     # Restrict to changes in packages/ or configuration files
     paths:
       - 'packages/**'
@@ -39,8 +39,20 @@ jobs:
       - name: Check commits for version bump
         id: check-commits
         run: |
-          # Get the latest tag
-          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          # Debug git information
+          echo "Git version:"
+          git --version
+          echo "All refs:"
+          git show-ref
+
+          # Try different methods to get the latest tag
+          echo "Method 1 - git describe:"
+          git describe --tags --abbrev=0 || echo "git describe failed"
+
+          echo "Method 2 - sort by version:"
+          LAST_TAG=$(git tag -l | sort -V | tail -n 1)
+          echo "Latest tag found by sort: $LAST_TAG"
+
           if [ -z "$LAST_TAG" ]; then
             echo "No previous tag found. Will bump version."
             echo "bump=true" >> $GITHUB_OUTPUT
