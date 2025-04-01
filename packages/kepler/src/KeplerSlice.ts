@@ -66,7 +66,7 @@ export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type KeplerSliceState = {
   kepler: {
     map: KeplerGlReduxState;
-    dispatchAction: (action: KeplerAction) => void;
+    dispatchAction: (mapId: string, action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
     createMap: (name?: string) => void;
     deleteMap: (mapId: string) => void;
@@ -92,18 +92,18 @@ export function createKeplerSlice<
       registerEntry({id: defaultMapId}),
     );
 
-    const dispatch = (action: KeplerAction) => {
+    const dispatch = (mapId: string, action: KeplerAction) => {
       set((state: KeplerSliceState) => ({
         ...state,
         kepler: {
           ...state.kepler,
-          map: keplerReducer(state.kepler.map, action),
+          map: keplerReducer(state.kepler.map, wrapTo(mapId, action)),
         },
       }));
       return action;
     };
+
     // forward kepler action to default map
-    // const forwardDispatch = forwardTo(defaultMapId, dispatch);
     const middleware = [taskMiddleware];
     if (actionLogging) {
       const logger = createLogger(
@@ -111,14 +111,15 @@ export function createKeplerSlice<
       );
       middleware.push(logger);
     }
-    const dispatchWithMiddleware = (action: KeplerAction) => {
+    const dispatchWithMiddleware = (mapId: string, action: KeplerAction) => {
+      const wrapDispatch = (a: KeplerAction) => dispatch(mapId, a);
       middleware.forEach((m) =>
         m({
-          dispatch: dispatch,
+          dispatch: wrapDispatch,
           getState: () => get().kepler.map,
-        })(dispatch)(action),
+        })(wrapDispatch)(action),
       );
-      dispatch(action);
+      dispatch(mapId, action);
       return action;
     };
 
@@ -139,11 +140,12 @@ export function createKeplerSlice<
         __reduxProviderStore,
 
         initialize: () => {
-          const {mapStyle} = get().kepler.map[defaultMapId];
-          const style = mapStyle.mapStyles[mapStyle.styleType];
+          const {mapStyle} = get().kepler.map[defaultMapId] || {};
+          const style = mapStyle?.mapStyles[mapStyle.styleType];
           if (style) {
             get().kepler.dispatchAction(
-              wrapTo(defaultMapId)(requestMapStyles({[style.id]: style})),
+              defaultMapId,
+              requestMapStyles({[style.id]: style}),
             );
           }
         },
@@ -199,6 +201,9 @@ export function createKeplerSlice<
               }
             }),
           );
+        },
+        addDataToMap: (mapId: string, data: string) => {
+          // take a SQL query
         },
       },
     };

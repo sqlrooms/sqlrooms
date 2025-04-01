@@ -1,7 +1,11 @@
 import {FC, useMemo} from 'react';
 import {IntlProvider} from 'react-intl';
 import {ThemeProvider} from 'styled-components';
-import {KeplerGlReduxState, useStoreWithKepler} from '../KeplerSlice';
+import {
+  KeplerAction,
+  KeplerGlReduxState,
+  useStoreWithKepler,
+} from '../KeplerSlice';
 import {messages} from '@kepler.gl/localization';
 import {forwardTo} from '@kepler.gl/actions';
 
@@ -40,19 +44,21 @@ export const KeplerMapContainer: FC<{
     (state) => state.kepler.dispatchAction,
   );
   const forwardToDispatch = useMemo(
-    () => forwardTo(mapId, dispatchAction),
+    () => (action: KeplerAction) => dispatchAction(mapId, action),
     [mapId, dispatchAction],
   );
   const keplerState = useStoreWithKepler((state) => {
     return state.kepler.map[mapId];
   });
 
-  const mapFields = mapFieldsSelector({
-    id: mapId,
-    mapboxApiAccessToken: '',
-    ...keplerState,
-    ...keplerActionSelector(forwardToDispatch, {}),
-  });
+  const mapFields = keplerState
+    ? mapFieldsSelector({
+        id: mapId,
+        mapboxApiAccessToken: '',
+        ...keplerState,
+        ...keplerActionSelector(forwardToDispatch, {}),
+      })
+    : null;
 
   // useEffect(() => {
   //   const data = arrow.tableFromJSON([
@@ -110,13 +116,15 @@ export const KeplerMapContainer: FC<{
           <Provider store={reduxProviderStore}>
             <ThemeProvider theme={theme}>
               <KeplerGlContext.Provider value={keplerContext}>
-                <MapContainer
-                  primary={true}
-                  containerId={0}
-                  key={0}
-                  index={0}
-                  {...mapFields}
-                />
+                {mapFields ? (
+                  <MapContainer
+                    primary={true}
+                    containerId={0}
+                    key={0}
+                    index={0}
+                    {...mapFields}
+                  />
+                ) : null}
               </KeplerGlContext.Provider>
             </ThemeProvider>
           </Provider>

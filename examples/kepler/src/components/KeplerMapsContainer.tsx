@@ -88,7 +88,7 @@ export function KeplerMapsContainer() {
           <TabsContent
             key={map.id}
             value={map.id}
-            className="h-full w-full"
+            className="h-full w-full data-[state=inactive]:hidden"
             forceMount
           >
             <KeplerMapContainer mapId={map.id} />

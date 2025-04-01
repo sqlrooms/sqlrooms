@@ -54,63 +54,50 @@ export type AppState = ProjectBuilderState<AppConfig> &
 export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
->(
-  persist(
-    (set, get, store) => ({
-      // Base project slice
-      ...createProjectBuilderSlice<AppConfig>({
-        config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: ProjectPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
-          dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
-          ],
-          ...createDefaultKeplerConfig(),
-          ...createDefaultSqlEditorConfig(),
+>((set, get, store) => ({
+  // Base project slice
+  ...createProjectBuilderSlice<AppConfig>({
+    config: {
+      layout: {
+        type: LayoutTypes.enum.mosaic,
+        nodes: {
+          direction: 'row',
+          first: ProjectPanelTypes.enum['data-sources'],
+          second: MAIN_VIEW,
+          splitPercentage: 30,
         },
-        project: {
-          panels: {
-            [ProjectPanelTypes.enum['data-sources']]: {
-              title: 'Data Sources',
-              icon: DatabaseIcon,
-              component: DataSourcesPanel,
-              placement: 'sidebar',
-            },
-            main: {
-              title: 'Main view',
-              icon: () => null,
-              component: MainView,
-              placement: 'main',
-            },
-          },
+      },
+      dataSources: [
+        {
+          tableName: 'earthquakes',
+          type: 'url',
+          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
         },
-      })(set, get, store),
-
-      ...createKeplerSlice({
-        actionLogging: true,
-      })(set, get, store),
-
-      ...createSqlEditorSlice()(set, get, store),
-    }),
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sqlrooms-kepler-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: AppConfig.parse(state.config),
-      }),
+      ],
+      ...createDefaultKeplerConfig(),
+      ...createDefaultSqlEditorConfig(),
     },
-  ) as StateCreator<AppState>,
-);
+    project: {
+      panels: {
+        [ProjectPanelTypes.enum['data-sources']]: {
+          title: 'Data Sources',
+          icon: DatabaseIcon,
+          component: DataSourcesPanel,
+          placement: 'sidebar',
+        },
+        main: {
+          title: 'Main view',
+          icon: () => null,
+          component: MainView,
+          placement: 'main',
+        },
+      },
+    },
+  })(set, get, store),
+
+  ...createKeplerSlice({
+    actionLogging: true,
+  })(set, get, store),
+
+  ...createSqlEditorSlice()(set, get, store),
+}));
