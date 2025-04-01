@@ -1,14 +1,14 @@
 name: NPM Publish
 
 on:
-  push:
-    branches:
-      - main
-    # Restrict to changes in packages/ or configuration files
-    paths:
-      - 'packages/**'
-      - 'lerna.json'
-      - 'package.json'
+  # push:
+  #   branches:
+  #     - main
+  #   # Restrict to changes in packages/ or configuration files
+  #   paths:
+  #     - 'packages/**'
+  #     - 'lerna.json'
+  #     - 'package.json'
   # Enable the workflow to be triggered manually
   workflow_dispatch:
     inputs:
