@@ -4,44 +4,29 @@ on:
   push:
     branches:
       - main
+    # Restrict to changes in packages/ or configuration files
+    paths:
+      - 'packages/**'
+      - 'lerna.json'
+      - 'package.json'
+  # Enable the workflow to be triggered manually
+  workflow_dispatch:
+
+# Add top-level permissions
+permissions:
+  contents: write
+  pull-requests: write
+  packages: write
 
 jobs:
-  publish:
+  check:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
+    outputs:
+      should_bump: ${{ steps.check-commits.outputs.bump }}
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-
-      - uses: pnpm/action-setup@v4
-        name: Install pnpm
-        with:
-          run_install: false
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          registry-url: 'https://registry.npmjs.org'
-          cache: 'pnpm'
-
-      - name: Install dependencies
-        run: pnpm install --shamefully-hoist
-
-      - name: Build packages
-        run: pnpm build:all
-
-      - name: Run tests
-        run: pnpm test
-
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
 
       - name: Check commits for version bump
         id: check-commits
@@ -69,13 +54,90 @@ jobs:
             echo "bump=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Version and Publish
-        if: steps.check-commits.outputs.bump == 'true'
-        run: pnpm lerna version --conventional-commits --yes && pnpm lerna publish from-package --force-publish --yes
+  publish:
+    needs: check
+    if: needs.check.outputs.should_bump == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Fetches the complete Git history, including all commits and tags
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-tags: true # Explicitly fetch all tags
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sqlrooms'
+
+      - name: Install dependencies
+        # See https://github.com/pnpm/pnpm/issues/8840
+        run: pnpm install --shamefully-hoist
+
+      - name: Configure NPM
+        run: |
+          # Configure npm for the organization scope
+          npm config set @sqlrooms:registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          # Ensure packages are published as public
+          echo "access=public" >> .npmrc
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+          # Configure Git to use token authentication
+          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+          # Ensure we have all tags
+          git fetch --tags --force
+
+      - name: Create Version Update
+        run: |
+          # Create and checkout version branch
+          VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
+          git checkout -b $VERSION_BRANCH
+
+          # Push empty branch first to establish it on remote
+          git push -u origin $VERSION_BRANCH
+
+          # Create version update and GitHub release
+          pnpm lerna version --conventional-commits --create-release github --yes
+
+          # Push tags and changes
+          git push --follow-tags origin $VERSION_BRANCH
+
+          # Create PR using GitHub CLI
+          gh pr create \
+            --title "chore: version bump" \
+            --body "Automated version bump. The packages have been published to npm. Please review and merge to update package versions in main branch." \
+            --head "$VERSION_BRANCH" \
+            --base "main"
+        env:
+          # Use PAT for PR creation and release creation
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Publish to NPM
+        run: |
+          # Make sure we're on the version branch
+          git checkout $VERSION_BRANCH
+          pnpm lerna publish from-package --force-publish --yes
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Skip Version Notice
-        if: steps.check-commits.outputs.bump != 'true'
-        run: echo "No version bump needed. Skipping version and publish."
+          GH_TOKEN: ${{ secrets.GH_PAT }}
