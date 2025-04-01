@@ -9,7 +9,7 @@ export default {
     {type: 'perf', section: 'Performance Improvements', hidden: false},
     {type: 'test', section: 'Tests', hidden: false},
     {type: 'build', section: 'Build System', hidden: false},
-    {type: 'ci', section: 'Continuous Integration', hidden: false},
+    {type: 'ci', section: 'Continuous Integration', hidden: true},
   ],
   // Which commit types trigger which version bumps
   // NOTE: list of commits that trigger an automatic version bump must also be adjusted in npm-publish.yml
