@@ -3,7 +3,7 @@ name: NPM Publish
 on:
   push:
     branches:
-      - main
+      - main, npm-publish
     # Restrict to changes in packages/ or configuration files
     paths:
       - 'packages/**'
@@ -27,6 +27,14 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          fetch-tags: true
+
+      - name: Debug - List tags
+        run: |
+          echo "Listing all tags:"
+          git tag -l
+          echo "Current git status:"
+          git status
 
       - name: Check commits for version bump
         id: check-commits
@@ -70,74 +78,74 @@ jobs:
         with:
           run_install: false
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          registry-url: 'https://registry.npmjs.org'
-          scope: '@sqlrooms'
+      # - name: Setup Node
+      #   uses: actions/setup-node@v4
+      #   with:
+      #     node-version: '22'
+      #     cache: 'pnpm'
+      #     registry-url: 'https://registry.npmjs.org'
+      #     scope: '@sqlrooms'
 
-      - name: Install dependencies
-        # See https://github.com/pnpm/pnpm/issues/8840
-        run: pnpm install --shamefully-hoist
+      # - name: Install dependencies
+      #   # See https://github.com/pnpm/pnpm/issues/8840
+      #   run: pnpm install --shamefully-hoist
 
-      - name: Configure NPM
-        run: |
-          # Configure npm for the organization scope
-          npm config set @sqlrooms:registry https://registry.npmjs.org/
-          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
-          # Ensure packages are published as public
-          echo "access=public" >> .npmrc
+      # - name: Configure NPM
+      #   run: |
+      #     # Configure npm for the organization scope
+      #     npm config set @sqlrooms:registry https://registry.npmjs.org/
+      #     npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+      #     # Ensure packages are published as public
+      #     echo "access=public" >> .npmrc
 
-      - name: Build packages
-        run: pnpm build
+      # - name: Build packages
+      #   run: pnpm build
 
-      - name: Lint
-        run: pnpm lint
+      # - name: Lint
+      #   run: pnpm lint
 
-      - name: Run tests
-        run: pnpm test
+      # - name: Run tests
+      #   run: pnpm test
 
-      - name: Configure Git
-        run: |
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global user.name "github-actions[bot]"
-          # Configure Git to use token authentication
-          git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
-          # Ensure we have all tags
-          git fetch --tags --force
+      # - name: Configure Git
+      #   run: |
+      #     git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      #     git config --global user.name "github-actions[bot]"
+      #     # Configure Git to use token authentication
+      #     git config --global url."https://${{ secrets.GITHUB_TOKEN }}@github.com/".insteadOf "https://github.com/"
+      #     # Ensure we have all tags
+      #     git fetch --tags --force
 
-      - name: Create Version Update
-        run: |
-          # Create and checkout version branch
-          VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
-          git checkout -b $VERSION_BRANCH
+      # - name: Create Version Update
+      #   run: |
+      #     # Create and checkout version branch
+      #     VERSION_BRANCH="version-bump-$(date +%Y%m%d-%H%M%S)"
+      #     git checkout -b $VERSION_BRANCH
 
-          # Push empty branch first to establish it on remote
-          git push -u origin $VERSION_BRANCH
+      #     # Push empty branch first to establish it on remote
+      #     git push -u origin $VERSION_BRANCH
 
-          # Create version update and GitHub release
-          pnpm lerna version --conventional-commits --create-release github --yes
+      #     # Create version update and GitHub release
+      #     pnpm lerna version --conventional-commits --create-release github --yes
 
-          # Push tags and changes
-          git push --follow-tags origin $VERSION_BRANCH
+      #     # Push tags and changes
+      #     git push --follow-tags origin $VERSION_BRANCH
 
-          # Create PR using GitHub CLI
-          gh pr create \
-            --title "chore: version bump" \
-            --body "Automated version bump. The packages have been published to npm. Please review and merge to update package versions in main branch." \
-            --head "$VERSION_BRANCH" \
-            --base "main"
-        env:
-          # Use PAT for PR creation and release creation
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+      #     # Create PR using GitHub CLI
+      #     gh pr create \
+      #       --title "chore: version bump" \
+      #       --body "Automated version bump. The packages have been published to npm. Please review and merge to update package versions in main branch." \
+      #       --head "$VERSION_BRANCH" \
+      #       --base "main"
+      #   env:
+      #     # Use PAT for PR creation and release creation
+      #     GH_TOKEN: ${{ secrets.GH_PAT }}
 
-      - name: Publish to NPM
-        run: |
-          # Make sure we're on the version branch
-          git checkout $VERSION_BRANCH
-          pnpm lerna publish from-package --force-publish --yes
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-          GH_TOKEN: ${{ secrets.GH_PAT }}
+      # - name: Publish to NPM
+      #   run: |
+      #     # Make sure we're on the version branch
+      #     git checkout $VERSION_BRANCH
+      #     pnpm lerna publish from-package --force-publish --yes
+      #   env:
+      #     NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      #     GH_TOKEN: ${{ secrets.GH_PAT }}
