@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/typedoc-config",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "type": "module",
   "private": true,
   "exports": {
