@@ -1,0 +1,81 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          registry-url: 'https://registry.npmjs.org'
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        run: pnpm install --shamefully-hoist
+
+      - name: Build packages
+        run: pnpm build:all
+
+      - name: Run tests
+        run: pnpm test
+
+      - name: Configure Git
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Check commits for version bump
+        id: check-commits
+        run: |
+          # Get the latest tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            echo "No previous tag found. Will bump version."
+            echo "bump=true" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          echo "Last tag: $LAST_TAG"
+          # Get commit subjects since the last tag
+          COMMITS=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s")
+          echo "Commits since $LAST_TAG:"
+          echo "$COMMITS"
+
+          # Check for feat, fix, perf, refactor, or build commits
+          if echo "$COMMITS" | grep -E "^(feat|fix|perf|refactor|build)(\(|:)" > /dev/null; then
+            echo "Found commit that triggers version bump"
+            echo "bump=true" >> $GITHUB_OUTPUT
+          else
+            echo "No trigger commit found. Skipping version bump."
+            echo "bump=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Version and Publish
+        if: steps.check-commits.outputs.bump == 'true'
+        run: pnpm lerna version --conventional-commits --yes && pnpm lerna publish from-package --force-publish --yes
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Skip Version Notice
+        if: steps.check-commits.outputs.bump != 'true'
+        run: echo "No version bump needed. Skipping version and publish."

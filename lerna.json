@@ -1,17 +1,19 @@
 {
+  "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
   "version": "0.9.0",
   "npmClient": "pnpm",
   "command": {
     "version": {
-      "exact": false
+      "conventionalCommits": true,
+      "message": "chore(release): publish %v",
+      "changelogPreset": "./conventional-changelog-preset.js",
+      "push": true,
+      "forcePublish": true,
+      "createRelease": "github"
     },
     "publish": {
-      "conventionalCommits": true,
-      "message": "chore(release): publish %s"
+      "conventionalCommits": true
     }
   },
-  "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
-  "packages": [
-    "packages/*"
-  ]
+  "packages": ["packages/*"]
 }
