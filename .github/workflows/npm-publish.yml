@@ -111,14 +111,18 @@ jobs:
           # Push all tags
           git push --follow-tags origin $VERSION_BRANCH
 
+          # Authenticate gh cli with token
+          echo "${{ secrets.GITHUB_TOKEN }}" | gh auth login --with-token
+
           # Create PR
           gh pr create \
             --title "chore: version bump" \
             --body "Automated version bump" \
             --base main \
-            --head $VERSION_BRANCH
+            --head $VERSION_BRANCH \
+            --repo ${{ github.repository }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Publish to NPM
         run: pnpm lerna publish from-package --force-publish --yes
