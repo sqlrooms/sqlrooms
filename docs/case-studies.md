@@ -27,7 +27,7 @@ The platform enables users to upload their own mobility datasets and create inte
 
 [Cosmograph](https://cosmograph.app/) is a powerful web-based application for visualizing and analyzing large graph datasets and machine learning embeddings. The application runs entirely in the browser, leveraging your GPU for all computations while keeping your data private and secure. The upcoming version of Cosmograph is being built using SQLRooms to enhance its data processing capabilities and analytical features.
 
-[<img src=/media/case-studies/cosmograph.webp width=400>](https://cosmograph.fly.dev/)
+[<img src=/media/case-studies/cosmograph.webp width=400>](https://run.cosmograph.app/)
 
 Key features include:
 
