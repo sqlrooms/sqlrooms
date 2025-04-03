@@ -23,6 +23,22 @@
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     },
+    "./components/*": {
+      "types": "./dist/components/*.d.ts",
+      "default": "./dist/components/*.js"
+    },
+    "./hooks/*": {
+      "types": "./dist/hooks/*.d.ts",
+      "default": "./dist/hooks/*.js"
+    },
+    "./lib/*": {
+      "types": "./dist/lib/*.d.ts",
+      "default": "./dist/lib/*.js"
+    },
+    "./theme/*": {
+      "types": "./dist/theme/*.d.ts",
+      "default": "./dist/theme/*.js"
+    },
     "./tailwind-preset.css": "./dist/tailwind-preset.css"
   },
   "scripts": {
