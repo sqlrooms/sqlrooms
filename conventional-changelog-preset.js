@@ -2,13 +2,13 @@ export default {
   types: [
     {type: 'feat', section: 'Features', hidden: false},
     {type: 'fix', section: 'Bug Fixes', hidden: false},
-    {type: 'chore', section: 'Chores', hidden: true},
-    {type: 'docs', section: 'Documentation', hidden: false},
-    {type: 'style', section: 'Styles', hidden: false},
-    {type: 'refactor', section: 'Code Refactoring', hidden: false},
     {type: 'perf', section: 'Performance Improvements', hidden: false},
-    {type: 'test', section: 'Tests', hidden: false},
-    {type: 'build', section: 'Build System', hidden: false},
+    {type: 'refactor', section: 'Code Refactoring', hidden: false},
+    {type: 'docs', section: 'Documentation', hidden: true},
+    {type: 'style', section: 'Styles', hidden: true},
+    {type: 'chore', section: 'Chores', hidden: true},
+    {type: 'test', section: 'Tests', hidden: true},
+    {type: 'build', section: 'Build System', hidden: true},
     {type: 'ci', section: 'Continuous Integration', hidden: true},
   ],
   // Which commit types trigger which version bumps
@@ -25,4 +25,18 @@ export default {
     {type: 'test', release: false},
     {type: 'ci', release: false},
   ],
+  parserOpts: {
+    noteKeywords: ['BREAKING CHANGE', 'BREAKING CHANGES'],
+  },
+  writerOpts: {
+    groupBy: 'type',
+    commitGroupsSort: 'title',
+    commitsSort: ['scope', 'subject'],
+    noteGroupsSort: 'title',
+    mainTemplate: '{{> header}}{{> commits}}{{> footer}}',
+    headerPartial: '# {{version}}\n\n',
+    commitPartial:
+      '* {{#if scope}}**{{scope}}:** {{/if}}{{subject}} {{#if hash}}([{{shortHash}}]({{commitUrlFormat}})){{/if}}\n',
+    footerPartial: '{{> notes}}',
+  },
 };

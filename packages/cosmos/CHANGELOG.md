@@ -5,47 +5,6 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## <small>0.9.3 (2025-04-03)</small>
 
-* chore: Format after adding prettier-plugin-tailwindcss ([fc306d6](https://github.com/sqlrooms/sqlrooms/commit/fc306d6))
-* chore(release): publish 0.9.1 (#34) ([125c365](https://github.com/sqlrooms/sqlrooms/commit/125c365)), closes [#34](https://github.com/sqlrooms/sqlrooms/issues/34)
-* chore(release): publish 0.9.2 (#36) ([97c6eda](https://github.com/sqlrooms/sqlrooms/commit/97c6eda)), closes [#36](https://github.com/sqlrooms/sqlrooms/issues/36)
-* chore(release): publish v0.4.2 ([32ad14f](https://github.com/sqlrooms/sqlrooms/commit/32ad14f))
-* chore(release): publish v0.5.0 ([2a27ef8](https://github.com/sqlrooms/sqlrooms/commit/2a27ef8))
-* chore(release): publish v0.5.1 ([5e41362](https://github.com/sqlrooms/sqlrooms/commit/5e41362))
-* chore(release): publish v0.6.0 ([f46dfe6](https://github.com/sqlrooms/sqlrooms/commit/f46dfe6))
-* chore(release): publish v0.7.0 ([8be65f0](https://github.com/sqlrooms/sqlrooms/commit/8be65f0))
-* chore(release): publish v0.8.0 ([7d2d1bc](https://github.com/sqlrooms/sqlrooms/commit/7d2d1bc))
-* chore(release): publish v0.8.1 ([475476a](https://github.com/sqlrooms/sqlrooms/commit/475476a))
-* chore(release): publish v0.9.0 ([03b1163](https://github.com/sqlrooms/sqlrooms/commit/03b1163))
-* feat: Duckdb slice with pluggable connector (#31) ([515aae5](https://github.com/sqlrooms/sqlrooms/commit/515aae5)), closes [#31](https://github.com/sqlrooms/sqlrooms/issues/31)
-* feat: Introducing cosmos slice (#15) ([da51434](https://github.com/sqlrooms/sqlrooms/commit/da51434)), closes [#15](https://github.com/sqlrooms/sqlrooms/issues/15)
-* feat: Support for Ai Sessions (#25) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff)), closes [#25](https://github.com/sqlrooms/sqlrooms/issues/25) [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
-* Docs improvements ([1887e77](https://github.com/sqlrooms/sqlrooms/commit/1887e77))
-* Improved cosmos examples ([b15060b](https://github.com/sqlrooms/sqlrooms/commit/b15060b))
-* Feat: added CosmosSimulationControls ([e92bae9](https://github.com/sqlrooms/sqlrooms/commit/e92bae9))
-* Feat: improved simulation controls ([2e70739](https://github.com/sqlrooms/sqlrooms/commit/2e70739))
-* Fix: Cosmos would restart on hover ([d4251f7](https://github.com/sqlrooms/sqlrooms/commit/d4251f7))
-
-## <small>0.9.2 (2025-04-01)</small>
-
-* chore: Format after adding prettier-plugin-tailwindcss ([fc306d6](https://github.com/sqlrooms/sqlrooms/commit/fc306d6))
-* chore(release): publish 0.9.1 (#34) ([125c365](https://github.com/sqlrooms/sqlrooms/commit/125c365)), closes [#34](https://github.com/sqlrooms/sqlrooms/issues/34)
-* chore(release): publish v0.4.2 ([32ad14f](https://github.com/sqlrooms/sqlrooms/commit/32ad14f))
-* chore(release): publish v0.5.0 ([2a27ef8](https://github.com/sqlrooms/sqlrooms/commit/2a27ef8))
-* chore(release): publish v0.5.1 ([5e41362](https://github.com/sqlrooms/sqlrooms/commit/5e41362))
-* chore(release): publish v0.6.0 ([f46dfe6](https://github.com/sqlrooms/sqlrooms/commit/f46dfe6))
-* chore(release): publish v0.7.0 ([8be65f0](https://github.com/sqlrooms/sqlrooms/commit/8be65f0))
-* chore(release): publish v0.8.0 ([7d2d1bc](https://github.com/sqlrooms/sqlrooms/commit/7d2d1bc))
-* chore(release): publish v0.8.1 ([475476a](https://github.com/sqlrooms/sqlrooms/commit/475476a))
-* chore(release): publish v0.9.0 ([03b1163](https://github.com/sqlrooms/sqlrooms/commit/03b1163))
-* feat: Duckdb slice with pluggable connector (#31) ([515aae5](https://github.com/sqlrooms/sqlrooms/commit/515aae5)), closes [#31](https://github.com/sqlrooms/sqlrooms/issues/31)
-* feat: Introducing cosmos slice (#15) ([da51434](https://github.com/sqlrooms/sqlrooms/commit/da51434)), closes [#15](https://github.com/sqlrooms/sqlrooms/issues/15)
-* feat: Support for Ai Sessions (#25) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff)), closes [#25](https://github.com/sqlrooms/sqlrooms/issues/25) [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
-* Docs improvements ([1887e77](https://github.com/sqlrooms/sqlrooms/commit/1887e77))
-* Improved cosmos examples ([b15060b](https://github.com/sqlrooms/sqlrooms/commit/b15060b))
-* Feat: added CosmosSimulationControls ([e92bae9](https://github.com/sqlrooms/sqlrooms/commit/e92bae9))
-* Feat: improved simulation controls ([2e70739](https://github.com/sqlrooms/sqlrooms/commit/2e70739))
-* Fix: Cosmos would restart on hover ([d4251f7](https://github.com/sqlrooms/sqlrooms/commit/d4251f7))
-
 ## <small>0.9.1 (2025-04-01)</small>
 
 # [0.9.0](https://github.com/sqlrooms/sqlrooms/compare/v0.8.1...v0.9.0) (2025-03-31)
