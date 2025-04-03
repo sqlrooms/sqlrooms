@@ -150,9 +150,9 @@ jobs:
 
           # Create version update and GitHub release
           if [ "${{ inputs.version }}" = "auto" ]; then
-            pnpm lerna version --conventional-commits --create-release github --yes
+            pnpm lerna version --conventional-commits --from-git --create-release github --yes
           else
-            pnpm lerna version ${{ inputs.version }} --create-release github --yes
+            pnpm lerna version ${{ inputs.version }} --conventional-commits --create-release github --yes
           fi
 
           # Push tags and changes
