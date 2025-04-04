@@ -7,7 +7,6 @@ import {
   useStoreWithKepler,
 } from '../KeplerSlice';
 import {messages} from '@kepler.gl/localization';
-import {forwardTo} from '@kepler.gl/actions';
 
 import {
   appInjector,

@@ -8,7 +8,6 @@ import {
   createProjectBuilderSlice,
   createProjectBuilderStore,
   ProjectBuilderState,
-  StateCreator,
 } from '@sqlrooms/project-builder';
 import {
   BaseProjectConfig,
@@ -21,9 +20,18 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {
+  getDuckDBColumnTypes,
+  getDuckDBColumnTypesMap,
+  getGeometryColumns,
+  constructST_asWKBQuery,
+} from '@kepler.gl/duckdb';
+import {arrowSchemaToFields} from '@kepler.gl/processors';
+import {Field} from '@kepler.gl/types';
+import * as arrow from 'apache-arrow';
+
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 
@@ -54,9 +62,9 @@ export type AppState = ProjectBuilderState<AppConfig> &
 export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
   AppState
->((set, get, store) => ({
+>((set, get, store) => {
   // Base project slice
-  ...createProjectBuilderSlice<AppConfig>({
+  const projectSlice = createProjectBuilderSlice<AppConfig>({
     config: {
       layout: {
         type: LayoutTypes.enum.mosaic,
@@ -93,11 +101,65 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         },
       },
     },
-  })(set, get, store),
+  })(set, get, store);
 
-  ...createKeplerSlice({
+  const keplerSlice = createKeplerSlice({
     actionLogging: true,
-  })(set, get, store),
+  })(set, get, store);
+  return {
+    ...projectSlice,
+    project: {
+      ...projectSlice.project,
+      addProjectFile: async (file, tName, loadOptions) => {
+        const addedTable = await projectSlice.project.addProjectFile(
+          file,
+          tName,
+          loadOptions,
+        );
 
-  ...createSqlEditorSlice()(set, get, store),
-}));
+        const connector = await get().db.getConnector();
+        const {tableName} = addedTable;
+        let fields: Field[] = [];
+        let cols: arrow.Vector[] = [];
+
+        try {
+          const duckDbColumns = await getDuckDBColumnTypes(
+            connector,
+            tableName,
+          );
+          const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
+          const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
+          const adjustedQuery = constructST_asWKBQuery(
+            tableName,
+            columnsToConvertToWKB,
+          );
+          const arrowResult = await connector.query(adjustedQuery);
+          fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
+          cols = [...Array(arrowResult.numCols).keys()]
+            .map((i) => arrowResult.getChildAt(i))
+            .filter((col) => col) as arrow.Vector[];
+        } catch (error) {
+          console.error('kepler DuckDB: createTableAndGetArrow', error);
+        }
+        if (fields && cols) {
+          const currentMapId = get().config.kepler.currentMapId;
+          const datasets = {
+            data: {
+              fields,
+              cols,
+            },
+            info: {
+              label: tableName,
+              id: tableName,
+            },
+          };
+          keplerSlice.kepler.addDataToMap(currentMapId, {datasets});
+        }
+        // return addedTable;
+      },
+    },
+
+    ...keplerSlice,
+    ...createSqlEditorSlice()(set, get, store),
+  };
+});

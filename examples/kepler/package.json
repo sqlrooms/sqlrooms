@@ -10,6 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@kepler.gl/duckdb": "^3.1.1",
+    "@kepler.gl/processors": "3.1.1",
+    "@kepler.gl/types": "3.1.1",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/kepler": "workspace:*",
@@ -34,6 +37,7 @@
     "@types/react-dom": "^18.3.5",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
+    "esbuild-plugin-react-virtualized": "^1.0.4",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.16",
@@ -42,8 +46,7 @@
     "tailwindcss": "^3.4.17",
     "typescript": "^5.8.2",
     "typescript-eslint": "^8.18.2",
-    "vite": "^6.2.0",
-    "esbuild-plugin-react-virtualized": "^1.0.4"
+    "vite": "^6.2.0"
   },
   "overrides": {
     "apache-arrow": "18.1.0"
