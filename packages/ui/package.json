@@ -10,7 +10,8 @@
     "url": "https://github.com/sqlrooms/sqlrooms.git"
   },
   "files": [
-    "dist"
+    "dist",
+    "tailwind-preset.css"
   ],
   "publishConfig": {
     "access": "public"
@@ -18,33 +19,9 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
-    },
-    "./components/*": {
-      "types": "./dist/components/*.d.ts",
-      "default": "./dist/components/*.js"
-    },
-    "./hooks/*": {
-      "types": "./dist/hooks/*.d.ts",
-      "default": "./dist/hooks/*.js"
-    },
-    "./lib/*": {
-      "types": "./dist/lib/*.d.ts",
-      "default": "./dist/lib/*.js"
-    },
-    "./theme/*": {
-      "types": "./dist/theme/*.d.ts",
-      "default": "./dist/theme/*.js"
-    },
-    "./tailwind-preset.css": "./dist/tailwind-preset.css"
-  },
   "scripts": {
-    "dev": "npm run copy-tailwind-preset && tsc -w",
-    "build": "tsc && npm run copy-tailwind-preset",
-    "copy-tailwind-preset": "mkdir -p dist && cp src/tailwind-preset.css dist/tailwind-preset.css",
+    "dev": "tsc -w",
+    "build": "tsc",
     "lint": "eslint .",
     "typedoc": "typedoc"
   },
