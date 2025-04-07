@@ -29,7 +29,7 @@ import {ErrorBoundary} from '@sqlrooms/ui';
 import {castDraft, produce} from 'immer';
 import {ReactNode, useContext} from 'react';
 import {StateCreator, StoreApi, useStore} from 'zustand';
-import {BaseProjectConfig} from '@sqlrooms/project-config/src/BaseProjectConfig';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -66,6 +66,7 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig &
 export type ProjectBuilderStateProps<PC extends BaseProjectConfig> =
   ProjectStateProps<PC> & {
     initialized: boolean;
+    autoDownloadDataSources: boolean;
     projectFiles: ProjectFileInfo[];
     projectFilesProgress: {[pathname: string]: ProjectFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
@@ -169,6 +170,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
     } as PC;
     const initialProjectState = {
       initialized: false,
+      autoDownloadDataSources: true,
       CustomErrorBoundary: ErrorBoundary,
       projectFiles: [],
       projectFilesProgress: {},
@@ -539,6 +541,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
     }
 
     async function maybeDownloadDataSources() {
+      if (!get().project.autoDownloadDataSources) return;
       const {projectFilesProgress, dataSourceStates} = get().project;
       const {dataSources} = get().config;
       const pendingDataSources = dataSources.filter(
