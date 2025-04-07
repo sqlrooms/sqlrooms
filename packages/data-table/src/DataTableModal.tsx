@@ -1,5 +1,6 @@
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -38,17 +39,18 @@ import QueryDataTable from './QueryDataTable';
  * ```
  */
 const DataTableModal: FC<{
+  className?: string;
   title: string | undefined;
   query: string | undefined;
   tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
-}> = ({title, query, tableModal}) => {
+}> = ({className, title, query, tableModal}) => {
   return (
     <Dialog
       open={tableModal.isOpen}
       onOpenChange={(isOpen: boolean) => !isOpen && tableModal.onClose()}
     >
       <DialogContent
-        className="h-[80vh] max-w-[75vw]"
+        className={cn('h-[80vh] max-w-[75vw]', className)}
         aria-describedby="data-table-modal"
       >
         <DialogHeader>

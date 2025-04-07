@@ -21,6 +21,7 @@
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.29.0",
     "@sqlrooms/project": "workspace:*",
+    "@sqlrooms/utils": "^0.9.3",
     "apache-arrow": "^18.1.0",
     "fast-deep-equal": "^3.1.3",
     "immer": "^10.1.1",
