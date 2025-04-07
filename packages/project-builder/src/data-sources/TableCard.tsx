@@ -1,4 +1,11 @@
-import {Badge, cn, Tooltip, TooltipContent, TooltipTrigger} from '@sqlrooms/ui';
+import {
+  Badge,
+  Card,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
 import {FC} from 'react';
@@ -13,10 +20,11 @@ const TableCard: FC<{
 }> = ({value, rowCount, onClick, className}) => {
   if (!value) return null;
 
+  const numRows = value.rowCount ?? rowCount;
   return (
-    <div
+    <Card
       className={cn(
-        `border-border bg-card hover:border-foreground relative flex cursor-pointer flex-col items-center justify-center rounded-sm border px-2 py-2 transition-colors`,
+        `hover:border-foreground relative flex cursor-pointer flex-col items-center justify-center rounded-sm border px-2 py-2 transition-colors`,
         className,
       )}
       onClick={onClick}
@@ -24,7 +32,7 @@ const TableCard: FC<{
       <div className="mt-0 flex w-full flex-col gap-2 px-2">
         <div className="w-full overflow-auto">
           <div className="relative mb-2 h-[30px] overflow-hidden">
-            <div className="text-foreground absolute mb-1 w-full overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono font-bold">
+            <div className="text-foreground absolute mb-1 w-full overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
               {value.tableName}
             </div>
           </div>
@@ -57,12 +65,14 @@ const TableCard: FC<{
               </Tooltip>
             ))}
           </div>
-          <div className="mt-1 text-right text-xs">
-            {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
-          </div>
+          {numRows !== undefined && Number.isFinite(numRows) && (
+            <div className="mt-1 text-right text-xs">
+              {`${formatNumber(numRows)} rows`}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </Card>
   );
 };
 
