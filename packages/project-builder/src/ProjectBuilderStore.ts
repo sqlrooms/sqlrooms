@@ -624,10 +624,6 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
             const url = ds.url;
             setProjectFileProgress(fileName, {status: 'download'});
             const downloadedFile = await downloadFile(url, {
-              ...(ds.type === DataSourceTypes.Enum.url && {
-                method: ds.method,
-                headers: ds.headers,
-              }),
               onProgress: (progress: ProgressInfo) => {
                 setProjectFileProgress(fileName, {
                   status: 'download',
