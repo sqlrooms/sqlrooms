@@ -1,5 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
+import {splitFilePath} from '@sqlrooms/utils';
 import {
   isSpatialLoadFileOptions,
   LoadFileOptions,
@@ -216,8 +217,12 @@ export class WasmDuckDbConnector implements DuckDbConnector {
       throw new Error('DuckDB connection not initialized');
     }
     let fileName: string;
+    let tempFileName: string | undefined = undefined;
     if (file instanceof File) {
-      fileName = file.name;
+      // Extension might help DuckDB determine the file type
+      const {ext} = splitFilePath(file.name);
+      tempFileName = `${Math.random().toString(36).substring(2, 15)}${ext ? `.${ext}` : ''}`;
+      fileName = tempFileName;
       await this.db.registerFileHandle(
         fileName,
         file,
@@ -229,8 +234,13 @@ export class WasmDuckDbConnector implements DuckDbConnector {
     }
     try {
       await action(this.conn, fileName);
+    } catch (err) {
+      console.error(`Error during file loading "${fileName}":`, err);
+      throw err;
     } finally {
-      await this.db.dropFile(fileName);
+      if (tempFileName) {
+        await this.db.dropFile(tempFileName);
+      }
     }
   }
 

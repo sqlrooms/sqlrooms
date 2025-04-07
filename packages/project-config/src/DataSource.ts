@@ -57,7 +57,16 @@ export const UrlDataSource = BaseDataSource.extend({
       'URL to fetch data from. Currently only CSV and Parquet files are supported.',
     ),
   /** Optional configuration for file loading */
-  loadOptions: LoadFileOptions.optional(),
+  loadOptions: LoadFileOptions.optional().describe(
+    'Options for loading the file.',
+  ),
+  /** Optional HTTP method to use for the request */
+  method: z.string().optional().describe('HTTP method to use for the request.'),
+  /** Optional headers to include in the request */
+  headers: z
+    .record(z.string(), z.string())
+    .optional()
+    .describe('Headers to include in the request.'),
 });
 export type UrlDataSource = z.infer<typeof UrlDataSource>;
 
