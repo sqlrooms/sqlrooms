@@ -61,7 +61,10 @@ export const UrlDataSource = BaseDataSource.extend({
     'Options for loading the file.',
   ),
   /** Optional HTTP method to use for the request */
-  method: z.string().optional().describe('HTTP method to use for the request.'),
+  httpMethod: z
+    .string()
+    .optional()
+    .describe('HTTP method to use for the request.'),
   /** Optional headers to include in the request */
   headers: z
     .record(z.string(), z.string())

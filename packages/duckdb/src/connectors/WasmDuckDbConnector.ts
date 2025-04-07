@@ -1,24 +1,16 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
+import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
 import {splitFilePath} from '@sqlrooms/utils';
-import {
-  isSpatialLoadFileOptions,
-  LoadFileOptions,
-  StandardLoadOptions,
-} from '@sqlrooms/project-config';
 import * as arrow from 'apache-arrow';
-import {DuckDbConnector} from './DuckDbConnector';
-import {load, loadObjects, loadSpatial} from './load/load';
+import {BaseDuckDbConnector} from './BaseDuckDbConnector';
+import {loadObjects} from './load/load';
 
-export class WasmDuckDbConnector implements DuckDbConnector {
+export class WasmDuckDbConnector extends BaseDuckDbConnector {
   private logging: boolean;
-  private dbPath: string;
-  private initializationQuery: string;
   private db: duckdb.AsyncDuckDB | null = null;
   private conn: duckdb.AsyncDuckDBConnection | null = null;
   private worker: Worker | null = null;
-  private initialized = false;
-  private initializing: Promise<void> | null = null;
   private queryConfig?: DuckDBQueryConfig;
 
   constructor({
@@ -32,30 +24,16 @@ export class WasmDuckDbConnector implements DuckDbConnector {
     initializationQuery?: string;
     logging?: boolean;
   } = {}) {
-    this.dbPath = dbPath;
+    super({dbPath, initializationQuery});
     this.queryConfig = queryConfig;
-    this.initializationQuery = initializationQuery;
     this.logging = logging;
   }
 
-  async initialize(): Promise<void> {
-    if (this.initialized) {
-      return;
-    }
-
-    if (this.initializing) {
-      return this.initializing;
-    }
-
+  protected async initializeInternal(): Promise<void> {
     if (!globalThis.Worker) {
       throw new Error('No Worker support in this environment');
     }
 
-    this.initializing = this.initializeInternal();
-    return this.initializing;
-  }
-
-  private async initializeInternal(): Promise<void> {
     try {
       const allBundles = duckdb.getJsDelivrBundles();
       const bestBundle = await duckdb.selectBundle(allBundles);
@@ -146,12 +124,6 @@ export class WasmDuckDbConnector implements DuckDbConnector {
     }
   }
 
-  private async ensureInitialized(): Promise<void> {
-    if (!this.initialized) {
-      await this.initialize();
-    }
-  }
-
   async query(query: string): Promise<arrow.Table> {
     await this.ensureInitialized();
     if (!this.conn) {
@@ -165,14 +137,8 @@ export class WasmDuckDbConnector implements DuckDbConnector {
     tableName: string,
     opts?: LoadFileOptions,
   ) {
-    await this.withTempRegisteredFile(file, async (conn, fileName) => {
-      if (opts && isSpatialLoadFileOptions(opts)) {
-        await conn.query(loadSpatial(tableName, fileName, opts));
-      } else {
-        await conn.query(
-          load(opts?.method ?? 'auto', tableName, fileName, opts),
-        );
-      }
+    await this.withTempRegisteredFile(file, async (fileName) => {
+      super.loadFile(fileName, tableName, opts);
     });
   }
 
@@ -207,10 +173,7 @@ export class WasmDuckDbConnector implements DuckDbConnector {
 
   private async withTempRegisteredFile(
     file: string | File,
-    action: (
-      conn: duckdb.AsyncDuckDBConnection,
-      fileName: string,
-    ) => Promise<void>,
+    action: (fileName: string) => Promise<void>,
   ) {
     await this.ensureInitialized();
     if (!this.conn || !this.db) {
@@ -233,7 +196,7 @@ export class WasmDuckDbConnector implements DuckDbConnector {
       fileName = file;
     }
     try {
-      await action(this.conn, fileName);
+      await action(fileName);
     } catch (err) {
       console.error(`Error during file loading "${fileName}":`, err);
       throw err;
