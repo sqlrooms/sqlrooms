@@ -1,3 +1,5 @@
+'use client';
+
 import {ChangeEvent, FC, useCallback, useEffect, useRef, useState} from 'react';
 
 import {Input} from './input';
