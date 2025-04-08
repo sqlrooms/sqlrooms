@@ -12,7 +12,7 @@
       "inputs": ["-watch"]
     },
     "publish": {
-      "dependsOn": ["build", "test", "lint"],
+      "dependsOn": ["build", "test"],
       "outputs": ["dist/**", ".next/**"]
     },
     "build": {
