@@ -35,6 +35,8 @@ function createTypedRowAccessor<T>({
   arrowTable: arrow.Table;
   validate?: (row: unknown) => T;
 }): UseSqlQueryResult<T> {
+  let cachedArray: T[] | undefined;
+
   return {
     arrowTable,
     get length() {
@@ -61,10 +63,14 @@ function createTypedRowAccessor<T>({
       }
     },
     toArray(): T[] {
+      if (cachedArray) {
+        return cachedArray;
+      }
       const result: T[] = [];
       for (let i = 0; i < this.length; i++) {
         result.push(this.getRow(i));
       }
+      cachedArray = result;
       return result;
     },
   };

@@ -6,7 +6,7 @@ import {
   SpatialLoadOptions,
   StandardLoadOptions,
 } from '@sqlrooms/project-config';
-import {createTable} from './create';
+import {createSchema, createTable} from './create';
 import {sqlFrom} from './sql-from';
 
 /**
@@ -25,7 +25,17 @@ export function load(
   options: StandardLoadOptions = {},
   defaults: Record<string, unknown> = {},
 ): string {
-  const {schema, select = ['*'], where, view, temp, replace, ...file} = options;
+  const {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    method: _method, // Remove from options
+    schema,
+    select = ['*'],
+    where,
+    view,
+    temp,
+    replace,
+    ...file
+  } = options;
   const params = parameters({...defaults, ...file});
   const read =
     method === 'auto'
@@ -33,11 +43,14 @@ export function load(
       : `${method}('${fileName}'${params ? ', ' + params : ''})`;
   const filter = where ? ` WHERE ${where}` : '';
   const query = `SELECT ${select.join(', ')} FROM ${read}${filter}`;
-  return createTable(schema ? `${schema}.${tableName}` : tableName, query, {
-    view,
-    temp,
-    replace,
-  });
+  return (
+    (schema ? `${createSchema(schema)}; ` : '') +
+    createTable(schema ? `${schema}.${tableName}` : tableName, query, {
+      view,
+      temp,
+      replace,
+    })
+  );
 }
 
 /**

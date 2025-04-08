@@ -143,7 +143,14 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
   const projectStore = createStore<AppState>((set, get, store) => ({
     ...stateCreator(set, get, store),
   }));
-  projectStore.getState().project.initialize();
+
+  if (typeof window !== 'undefined') {
+    projectStore.getState().project.initialize();
+  } else {
+    console.warn(
+      'Skipping project store initialization. Project store should be only used on client.',
+    );
+  }
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
