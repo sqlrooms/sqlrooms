@@ -29,12 +29,11 @@
     "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs && echo 'open http://localhost:4173'",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
-    "version-prerelease": "lerna version prerelease --sync-workspace-lock --force-publish",
-    "version-patch": "lerna version patch --sync-workspace-lock --force-publish",
-    "version-minor": "lerna version minor --sync-workspace-lock --force-publish",
-    "version-major": "lerna version major --sync-workspace-lock --force-publish",
+    "version-auto": "lerna version --conventional-commits --yes --sync-workspace-lock",
+    "version-patch": "lerna version patch --yes --sync-workspace-lock",
+    "version-minor": "lerna version minor --yes --sync-workspace-lock",
+    "version-major": "lerna version major --yes --sync-workspace-lock",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
-    "publish-preview": "turbo run publish && lerna publish from-package --yes --dist-tag preview",
     "publish-release": "turbo run publish && lerna publish from-package --yes"
   },
   "engines": {
