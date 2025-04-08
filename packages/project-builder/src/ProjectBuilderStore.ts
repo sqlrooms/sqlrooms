@@ -1,5 +1,6 @@
 import {
   DataTable,
+  DuckDbConnector,
   DuckDbSliceConfig,
   DuckDbSliceState,
   LoadFileOptions,
@@ -145,6 +146,7 @@ export type ProjectBuilderState<PC extends BaseProjectConfig> =
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
 type InitialState<PC extends BaseProjectConfig> = {
+  connector?: DuckDbConnector;
   config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
   project: Partial<Omit<ProjectBuilderStateProps<PC>, 'config' | 'panels'>> & {
     panels: ProjectBuilderStateProps<PC>['panels'];
@@ -160,6 +162,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
 ): StateCreator<ProjectBuilderState<PC>> {
   const slice: StateCreator<ProjectBuilderState<PC>> = (set, get, store) => {
     const {
+      connector,
       config: configProps,
       project: projectStateProps,
       ...restState
@@ -185,7 +188,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
 
     const projectState: ProjectBuilderState<PC> = {
       ...projectSliceState,
-      ...createDuckDbSlice({})(set, get, store),
+      ...createDuckDbSlice({connector})(set, get, store),
       project: {
         ...initialProjectState,
         ...projectSliceState.project,
