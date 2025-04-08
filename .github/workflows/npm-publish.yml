@@ -21,7 +21,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    if: ${{ !startsWith(github.event.head_commit.message, 'chore(release):') }}
+    # only run publish if run manually or if commit starts with one of "feat|fix"
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat:') || startsWith(github.event.head_commit.message, 'fix:')
     steps:
       - uses: actions/checkout@v4
         with:
