@@ -145,7 +145,12 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
   }));
 
   if (typeof window !== 'undefined') {
-    projectStore.getState().project.initialize();
+    Object.values(projectStore.getState()).forEach((slice) => {
+      const initializeSlice = (slice as Record<string, unknown>).initialize;
+      if (typeof initializeSlice === 'function') {
+        initializeSlice();
+      }
+    });
   } else {
     console.warn(
       'Skipping project store initialization. Project store should be only used on client.',
