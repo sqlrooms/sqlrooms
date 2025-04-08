@@ -1,5 +1,5 @@
 {
-  "version": "0.9.4",
+  "version": "0.9.3",
   "npmClient": "pnpm",
   "command": {
     "version": {
@@ -14,7 +14,5 @@
     }
   },
   "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
-  "packages": [
-    "packages/*"
-  ]
+  "packages": ["packages/*"]
 }
