@@ -3,6 +3,31 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.10.0 (2025-04-08)
+
+### Bug Fixes
+
+* Properly map all @sqlrooms/ui subpath exports ([#38](https://github.com/sqlrooms/sqlrooms/issues/38)) ([2edd7d8](https://github.com/sqlrooms/sqlrooms/commit/2edd7d83edcff1abf10614cb264155af0b91af68))
+* Remove duplicate DuckDbSlice.tableExists ([ecc5a20](https://github.com/sqlrooms/sqlrooms/commit/ecc5a20c33ae44b624f8115c1f9d8212b8fb0f3f))
+
+### Features
+
+* Adding SQL and JSON Monaco editors ([#24](https://github.com/sqlrooms/sqlrooms/issues/24)) ([656edd0](https://github.com/sqlrooms/sqlrooms/commit/656edd017cf477e10aa2fd1f5a6a90bcec879300))
+* Adding useDuckDbQuery ([68668bb](https://github.com/sqlrooms/sqlrooms/commit/68668bb1c96e102ee8f706e5067f8eb889423b56))
+* Duckdb slice with pluggable connector ([#31](https://github.com/sqlrooms/sqlrooms/issues/31)) ([515aae5](https://github.com/sqlrooms/sqlrooms/commit/515aae58ffdffe8bfa1889acd62a9acdcd68cb3d))
+* Introducing cosmos slice ([#15](https://github.com/sqlrooms/sqlrooms/issues/15)) ([da51434](https://github.com/sqlrooms/sqlrooms/commit/da5143440ae7984fde1bc9e07e6e63e011c71091))
+* Recharts module, more ui components ([#40](https://github.com/sqlrooms/sqlrooms/issues/40)) ([47b1e77](https://github.com/sqlrooms/sqlrooms/commit/47b1e77bb8ef553d285e17ccdffa51b87e6eb9de))
+* Renamed useDuckDbQuery -> useSql, adding .rows() iterator and .toArray() ([#18](https://github.com/sqlrooms/sqlrooms/issues/18)) ([26fd317](https://github.com/sqlrooms/sqlrooms/commit/26fd31767eeed38069c0c8cd0a3d3e1a7d85d6b4))
+* Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
+* switch to openassistant/core for AI module ([#11](https://github.com/sqlrooms/sqlrooms/issues/11)) ([5072e1f](https://github.com/sqlrooms/sqlrooms/commit/5072e1f286239396168f36a820159605b02b7f22))
+
+### Reverts
+
+* Revert "chore(release): publish v0.9.4" ([973b141](https://github.com/sqlrooms/sqlrooms/commit/973b1414f20c299d814da00652aeafa92c5f53cb))
+* Revert "chore(release): publish v0.9.4" ([5a81162](https://github.com/sqlrooms/sqlrooms/commit/5a81162f4d95ee983eb3b58fdaca577745bc33e8))
+* Revert "chore(release): publish v0.10.0" ([2d1c58f](https://github.com/sqlrooms/sqlrooms/commit/2d1c58fb5faee9d20635c2d71e011273cf6529fd))
+* Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
+
 ## <small>0.9.3 (2025-04-03)</small>
 
 - fix: Properly map all @sqlrooms/ui subpath exports (#38) ([2edd7d8](https://github.com/sqlrooms/sqlrooms/commit/2edd7d8)), closes [#38](https://github.com/sqlrooms/sqlrooms/issues/38)
