@@ -25,9 +25,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # Fetches the complete Git history, including all commits and tags
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-tags: true # Explicitly fetch all tags
+          fetch-depth: 0
+          token: ${{ secrets.GH_PAT }}
+          fetch-tags: true
 
       - name: Setup git user
         run: |
@@ -65,7 +65,7 @@ jobs:
       - name: Bump version
         run: pnpm run version-${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_PAT }}
 
       # - name: Publish
       #   run: npm run publish-release
