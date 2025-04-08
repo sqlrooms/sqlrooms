@@ -3,16 +3,6 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-# 0.10.0 (2025-04-08)
-
-### Features
-
-* Duckdb slice with pluggable connector ([#31](https://github.com/sqlrooms/sqlrooms/issues/31)) ([515aae5](https://github.com/sqlrooms/sqlrooms/commit/515aae58ffdffe8bfa1889acd62a9acdcd68cb3d))
-
-### Reverts
-
-* Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
-
 ## <small>0.9.3 (2025-04-03)</small>
 
 ## <small>0.9.2 (2025-04-01)</small>

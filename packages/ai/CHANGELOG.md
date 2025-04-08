@@ -3,15 +3,6 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-# 0.10.0 (2025-04-08)
-
-### Features
-
-* Adding SQL and JSON Monaco editors ([#24](https://github.com/sqlrooms/sqlrooms/issues/24)) ([656edd0](https://github.com/sqlrooms/sqlrooms/commit/656edd017cf477e10aa2fd1f5a6a90bcec879300))
-* Duckdb slice with pluggable connector ([#31](https://github.com/sqlrooms/sqlrooms/issues/31)) ([515aae5](https://github.com/sqlrooms/sqlrooms/commit/515aae58ffdffe8bfa1889acd62a9acdcd68cb3d))
-* Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
-* switch to openassistant/core for AI module ([#11](https://github.com/sqlrooms/sqlrooms/issues/11)) ([5072e1f](https://github.com/sqlrooms/sqlrooms/commit/5072e1f286239396168f36a820159605b02b7f22))
-
 ## <small>0.9.3 (2025-04-03)</small>
 
 ## <small>0.9.1 (2025-04-01)</small>

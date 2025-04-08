@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/dropzone",
-  "version": "0.10.0",
+  "version": "0.9.3",
   "type": "module",
   "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",

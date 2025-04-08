@@ -3,21 +3,6 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
-# 0.10.0 (2025-04-08)
-
-### Bug Fixes
-
-* Properly map all @sqlrooms/ui subpath exports ([#38](https://github.com/sqlrooms/sqlrooms/issues/38)) ([2edd7d8](https://github.com/sqlrooms/sqlrooms/commit/2edd7d83edcff1abf10614cb264155af0b91af68))
-
-### Features
-
-* Recharts module, more ui components ([#40](https://github.com/sqlrooms/sqlrooms/issues/40)) ([47b1e77](https://github.com/sqlrooms/sqlrooms/commit/47b1e77bb8ef553d285e17ccdffa51b87e6eb9de))
-* Support for Ai Sessions ([#25](https://github.com/sqlrooms/sqlrooms/issues/25)) ([328f7ff](https://github.com/sqlrooms/sqlrooms/commit/328f7ff0a1e77f2f4f1e6b08320097edc7c06c21)), closes [#27](https://github.com/sqlrooms/sqlrooms/issues/27)
-
-### Reverts
-
-* Revert "chore(release): publish v0.0.2" ([6c00184](https://github.com/sqlrooms/sqlrooms/commit/6c00184595ac6be08424751e297880d1ed013364))
-
 ## <small>0.9.3 (2025-04-03)</small>
 
 - fix: Properly map all @sqlrooms/ui subpath exports (#38) ([2edd7d8](https://github.com/sqlrooms/sqlrooms/commit/2edd7d8)), closes [#38](https://github.com/sqlrooms/sqlrooms/issues/38)
