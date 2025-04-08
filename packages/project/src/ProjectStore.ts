@@ -143,12 +143,19 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
   const projectStore = createStore<AppState>((set, get, store) => ({
     ...stateCreator(set, get, store),
   }));
-  Object.values(projectStore.getState()).forEach((slice) => {
-    const initializeSlice = (slice as Record<string, unknown>).initialize;
-    if (typeof initializeSlice === 'function') {
-      initializeSlice();
-    }
-  });
+
+  if (typeof window !== 'undefined') {
+    Object.values(projectStore.getState()).forEach((slice) => {
+      const initializeSlice = (slice as Record<string, unknown>).initialize;
+      if (typeof initializeSlice === 'function') {
+        initializeSlice();
+      }
+    });
+  } else {
+    console.warn(
+      'Skipping project store initialization. Project store should be only used on client.',
+    );
+  }
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing

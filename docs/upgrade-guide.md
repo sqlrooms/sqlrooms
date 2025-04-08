@@ -6,11 +6,6 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.9.0
 
-### @sqlrooms/project-config
-
-- `BaseProjectConfig` moved to `@sqlrooms/project-builder`
-- Zod schemas `*DataSource` moved to `@sqlrooms/duckdb`
-
 ### @sqlrooms/project-builder
 
 - `createProjectSlice` renamed into `createProjectBuilderSlice`
@@ -28,7 +23,18 @@ When upgrading, please follow the version-specific instructions below that apply
 - A number of project store props amnd moved from `.project` to `.db`:
 
   - `.tables`
-  - `.refresh`
+  - `.addTable`
+  - `.getTable`
+  - `.getTables`
+  - `.getTableRowCount`
+  - `.getTableSchema`
+  - `.getTableSchemas`
+  - `.checkTableExists`
+  - `.dropTable`
+  - `.createTableFromQuery`
+  - `.setTableRowCount`
+  - `.findTableByName`
+  - `.refreshTableSchemas`
 
 - `useBaseProjectStore` was renamed into `useBaseProjectBuilderStore`, but it's better to use `useProjectStore` returned by `createProjectBuilderStore` instead
 
@@ -60,7 +66,7 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - `getMosaicConnector` removed: Use `useMosaic` instead
 
-### @sqlrooms/ai
+### @sqlrooms/ai
 
 - `TOOLS` is not exported anymore: use `useProjectStore(state => state.ai.tools)` instead
 

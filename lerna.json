@@ -1,9 +1,12 @@
 {
-  "version": "0.8.1",
+  "version": "0.10.0",
   "npmClient": "pnpm",
   "command": {
     "version": {
-      "exact": false
+      "exact": false,
+      "createRelease": "github",
+      "syncWorkspaceLock": true,
+      "forcePublish": true
     },
     "publish": {
       "conventionalCommits": true,

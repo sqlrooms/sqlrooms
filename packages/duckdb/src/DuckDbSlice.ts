@@ -113,11 +113,6 @@ export type DuckDbSliceState = {
     dropTable: (tableName: string) => Promise<void>;
 
     /**
-     * Check if a table exists
-     */
-    tableExists: (tableName: string, schema?: string) => Promise<boolean>;
-
-    /**
      * Create a table from a query.
      * @param tableName - The name of the table to create.
      * @param query - The query to create the table from.
@@ -256,17 +251,6 @@ export function createDuckDbSlice({
         async dropTable(tableName: string): Promise<void> {
           const connector = await get().db.getConnector();
           await connector.query(`DROP TABLE IF EXISTS ${tableName};`);
-        },
-
-        async tableExists(
-          tableName: string,
-          schema = 'main',
-        ): Promise<boolean> {
-          const connector = await get().db.getConnector();
-          const result = await connector.query(
-            `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = '${tableName}'`,
-          );
-          return Number(result.getChildAt(0)?.get(0)) > 0;
         },
 
         async addTable(tableName, data) {

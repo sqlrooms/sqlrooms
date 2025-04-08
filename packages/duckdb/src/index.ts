@@ -15,6 +15,7 @@ export {
   type DuckDbSliceState,
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
+export * from './connectors/BaseDuckDbConnector';
 export * from './connectors/WasmDuckDbConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';

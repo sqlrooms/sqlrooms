@@ -1,6 +1,6 @@
-# sqlrooms
+# <img src=https://github.com/user-attachments/assets/dd6b2929-29f5-4c8b-a0c0-51ec84603e6b width=23> SQLRooms
 
-Building blocks for React data analytics applications powered by [DuckDB-WASM](https://duckdb.org/docs/api/wasm/overview.html)
+Building blocks for React data analytics applications powered by [DuckDB](https://duckdb.org/docs/api/wasm/overview.html)
 
 [Documentation](https://sqlrooms.github.io/) | [Examples](https://sqlrooms.org/examples.html)
 

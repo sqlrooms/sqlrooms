@@ -4,14 +4,7 @@ import type {Config} from 'tailwindcss';
 const preset = sqlroomsTailwindPreset({prefix: ''});
 const config = {
   ...preset,
-  content: [
-    'src/**/*.{ts,tsx}',
-    // @sqlrooms-packages-content-start
-    // !IMPORTANT! Replace the following by
-    //             when not developing sqlrooms in the monorepo
-    '../../packages/*/src/**/*.{ts,tsx}',
-    // @sqlrooms-packages-content-end
-  ],
+  content: ['src/**/*.{ts,tsx}', './node_modules/@sqlrooms/*/dist/**/*.js'],
   theme: {
     ...preset.theme,
     extend: {

@@ -1,0 +1,70 @@
+name: NPM Publish
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version'
+        required: true
+        default: 'auto'
+        type: choice
+        options:
+          - auto
+          - patch
+          - minor
+          - major
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    # only run publish if run manually or if commit starts with one of "feat|fix"
+    if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat:') || startsWith(github.event.head_commit.message, 'fix:')
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+
+      - name: Setup git user
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - uses: pnpm/action-setup@v4
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
+          scope: '@sqlrooms'
+
+      - name: Install dependencies
+        # See https://github.com/pnpm/pnpm/issues/8840
+        run: pnpm install --shamefully-hoist
+
+      - name: Configure NPM
+        run: |
+          # Configure npm for the organization scope
+          npm config set @sqlrooms:registry https://registry.npmjs.org/
+          npm config set //registry.npmjs.org/:_authToken=${{ secrets.NPM_TOKEN }}
+          # Ensure packages are published as public
+          echo "access=public" >> .npmrc
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Bump version
+        run: pnpm run version-${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+
+      - name: Publish
+        run: pnpm publish-release

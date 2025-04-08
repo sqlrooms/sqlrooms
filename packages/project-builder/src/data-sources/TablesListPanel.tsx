@@ -1,11 +1,14 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
-import {useDisclosure} from '@sqlrooms/ui';
+import {cn, useDisclosure} from '@sqlrooms/ui';
 import {FC, useState} from 'react';
 import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 import {TableCard} from './TableCard';
 
-const TablesListPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
+const TablesListPanel: FC<{className?: string; isReadOnly?: boolean}> = ({
+  className,
+  isReadOnly,
+}) => {
   const tables = useBaseProjectBuilderStore((state) => state.db.tables);
   const tableRowCounts = useBaseProjectBuilderStore(
     (state) => state.db.tableRowCounts,
@@ -28,7 +31,12 @@ const TablesListPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
 
   return (
     <>
-      <div className="relative flex flex-grow flex-col items-stretch gap-2">
+      <div
+        className={cn(
+          'relative flex flex-grow flex-col items-stretch gap-2',
+          className,
+        )}
+      >
         {tables?.length ? (
           <div className="flex flex-col gap-2">
             {tables.map((table, i) => (
@@ -45,6 +53,7 @@ const TablesListPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
       </div>
 
       <DataTableModal
+        className="h-[80vh] max-w-[75vw]"
         tableModal={{
           isOpen: isOpen,
           onClose: handleClose,

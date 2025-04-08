@@ -3,6 +3,7 @@ node_modules
 build/
 dist/
 npm-debug.log*
+lerna-debug.log*
 *.tsbuildinfo
 .turbo
 .vscode
