@@ -70,5 +70,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
-      # - name: Publish
-      #   run: npm run publish-release
+      - name: Publish
+        run: pnpm publish-release
