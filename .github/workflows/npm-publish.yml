@@ -26,6 +26,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+          fetch-tags: true
 
       - name: Setup git user
         run: |
