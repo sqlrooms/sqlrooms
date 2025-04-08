@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.9.4 (2025-04-08)
+
+**Note:** Version bump only for package @sqlrooms/cosmos
+
 ## <small>0.9.3 (2025-04-03)</small>
 
 ## <small>0.9.1 (2025-04-01)</small>
