@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.10.0 (2025-04-08)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
 ## <small>0.9.3 (2025-04-03)</small>
 
 - fix: Properly map all @sqlrooms/ui subpath exports (#38) ([2edd7d8](https://github.com/sqlrooms/sqlrooms/commit/2edd7d8)), closes [#38](https://github.com/sqlrooms/sqlrooms/issues/38)
