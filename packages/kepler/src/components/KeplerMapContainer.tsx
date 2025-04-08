@@ -40,8 +40,7 @@ export const KeplerMapContainer: FC<{
   const keplerState = useStoreWithKepler((state) => {
     return state.kepler.map[mapId];
   });
-  console.log('keplerState', keplerState?.mapState);
-
+  
   const mapFields = keplerState
     ? mapFieldsSelector({
         id: mapId,
