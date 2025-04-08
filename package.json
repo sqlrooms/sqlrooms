@@ -83,6 +83,9 @@
       "@swc/core",
       "esbuild",
       "msw"
+    ],
+    "ignoredBuiltDependencies": [
+      "sharp"
     ]
   }
 }
