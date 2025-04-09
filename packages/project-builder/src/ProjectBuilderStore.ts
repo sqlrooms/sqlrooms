@@ -146,7 +146,7 @@ export type ProjectBuilderState<PC extends BaseProjectConfig> =
  */
 type InitialState<PC extends BaseProjectConfig> = {
   connector?: DuckDbConnector;
-  config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
+  config: Partial<PC>;
   project: Partial<Omit<ProjectBuilderStateProps<PC>, 'config' | 'panels'>> & {
     panels: ProjectBuilderStateProps<PC>['panels'];
   };
