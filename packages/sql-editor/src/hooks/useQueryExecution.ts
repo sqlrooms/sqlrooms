@@ -19,6 +19,9 @@ export function useQueryExecution(schema: string = 'main') {
   const exportResultsToCsv = useStoreWithSqlEditor(
     (s) => s.sqlEditor.exportResultsToCsv,
   );
+  const refreshTableSchemas = useStoreWithSqlEditor(
+    (s) => s.db.refreshTableSchemas,
+  );
 
   /**
    * Execute a SQL query
@@ -37,6 +40,9 @@ export function useQueryExecution(schema: string = 'main') {
           setResults(undefined);
         } else if (queryResults) {
           setResults(queryResults);
+          // Trigger refresh table schemas after query execution,
+          // but don't await it
+          refreshTableSchemas();
         }
 
         return queryResults;

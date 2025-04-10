@@ -12,6 +12,7 @@ import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
 import {getColValAsNumber} from './duckdb-utils';
 import {DataTable, TableColumn} from './types';
+import { BaseDuckDbConnector } from './connectors/BaseDuckDbConnector';
 
 export const DuckDbSliceConfig = z.object({
   // nothing yet
@@ -152,10 +153,10 @@ export function createDuckDbSlice({
 
         initialize: async () => {
           await get().db.connector.initialize();
+          await get().db.refreshTableSchemas();
         },
 
         getConnector: async () => {
-          await get().db.initialize();
           return get().db.connector;
         },
 
@@ -212,6 +213,7 @@ export function createDuckDbSlice({
             columns.push({name: columnName, type: columnType});
           }
           return {
+            schema,
             tableName,
             columns,
           };
@@ -229,6 +231,7 @@ export function createDuckDbSlice({
         },
 
         async getTableSchemas(schema = 'main'): Promise<DataTable[]> {
+
           const tableNames = await get().db.getTables(schema);
           const tablesInfo: DataTable[] = [];
           for (const tableName of tableNames) {
@@ -292,11 +295,27 @@ export function createDuckDbSlice({
         },
 
         async refreshTableSchemas(): Promise<DataTable[]> {
-          const newTables = await get().db.getTableSchemas();
-          const currentTables = get().db.tables;
+          console.log('Refreshing table schemas');
+          const connector = await get().db.getConnector();
+          const describeResults = await connector.query(
+            `FROM (DESCRIBE) SELECT schema, name, column_names, column_types`,
+          );
+
+          const newTables: DataTable[] = [];
+          for (let i = 0; i < describeResults.numRows; i++) {
+            const schema = describeResults.getChild('schema')?.get(i);
+            const tableName = describeResults.getChild('name')?.get(i);
+            const columnNames = describeResults.getChild('column_names')?.get(i);
+            const columnTypes = describeResults.getChild('column_types')?.get(i);
+            const columns: TableColumn[] = [];
+            for (let di = 0; di < columnNames.length; di++) {
+              columns.push({name: columnNames.get(di), type: columnTypes.get(di)});
+            }
+            newTables.push({schema, tableName, columns});
+          }
 
           // Only update if there's an actual change in the schemas
-          if (!deepEquals(newTables, currentTables)) {
+          if (!deepEquals(newTables, get().db.tables)) {
             set((state) =>
               produce(state, (draft) => {
                 draft.db.tables = newTables;

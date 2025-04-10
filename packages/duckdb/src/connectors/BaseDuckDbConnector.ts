@@ -36,7 +36,11 @@ export class BaseDuckDbConnector implements DuckDbConnector {
   }
 
   protected async initializeInternal(): Promise<void> {
-    // To be implemented by subclasses
+    // To be overridden by subclasses
+    if (this.initializationQuery) {
+      await this.query(this.initializationQuery);
+    }
+    this.initialized = true;
   }
 
   async destroy(): Promise<void> {

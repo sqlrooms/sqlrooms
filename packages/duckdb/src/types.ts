@@ -4,6 +4,7 @@ export type TableColumn = {
 };
 
 export type DataTable = {
+  schema?: string;
   tableName: string;
   columns: TableColumn[];
   rowCount?: number;

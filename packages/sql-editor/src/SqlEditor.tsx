@@ -117,8 +117,8 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     tablesError,
     tableSchemas,
     selectedTable,
-    fetchTables,
     handleSelectTable,
+    refreshTableSchemas
   } = useTableManagement();
 
   const {results, resultsTableData, loading, error, runQuery, exportResults} =
@@ -210,12 +210,6 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
     setRunQueryHandler(handleRunQuery);
   }, [handleRunQuery, setRunQueryHandler]);
 
-  // Check if table schemas are empty and refetch if needed
-  useEffect(() => {
-    if (Object.keys(tableSchemas).length === 0) {
-      void fetchTables();
-    }
-  }, [fetchTables, tableSchemas]);
 
   // Handle toggle documentation panel
   const handleToggleDocs = useCallback(() => {
@@ -383,12 +377,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                                 }}
                                 tableSchemas={tableSchemas}
                                 getLatestSchemas={() => {
-                                  // If tableSchemas is empty, try to fetch tables
-                                  if (Object.keys(tableSchemas).length === 0) {
-                                    // We can't await here, but we can trigger the fetch
-                                    // This will update the state for next time
-                                    void fetchTables();
-                                  }
+                                  // TODO: do we need this?
                                   return {tableSchemas};
                                 }}
                               />
