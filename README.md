@@ -2,7 +2,7 @@
 
 Building blocks for React data analytics applications powered by [DuckDB](https://duckdb.org/docs/api/wasm/overview.html)
 
-[Documentation](https://sqlrooms.github.io/) | [Examples](https://sqlrooms.org/examples.html)
+[Documentation](https://sqlrooms.org/) | [Examples](https://sqlrooms.org/examples.html)
 
 <img width=600 src=/docs/media/overview/collage.webp>
 
@@ -24,24 +24,24 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 
 ### Core Packages
 
-- **[@sqlrooms/project-builder](https://sqlrooms.github.io/api/project-builder/)**: Foundation for building analytics applications with Zustand-based state management
-- **[@sqlrooms/project-config](https://sqlrooms.github.io/api/project-config/)**: Central configuration and type definitions using Zod schemas
-- **[@sqlrooms/duckdb](https://sqlrooms.github.io/api/duckdb/)**: DuckDB integration for query execution and data source connections
-- **[@sqlrooms/ui](https://sqlrooms.github.io/api/ui/)**: Comprehensive UI toolkit based on shadcn/ui with Tailwind preset
+- **[@sqlrooms/project-builder](/api/project-builder/)**: Foundation for building analytics applications with Zustand-based state management
+- **[@sqlrooms/project-config](/api/project-config/)**: Central configuration and type definitions using Zod schemas
+- **[@sqlrooms/duckdb](/api/duckdb/)**: DuckDB integration for query execution and data source connections
+- **[@sqlrooms/ui](/api/ui/)**: Comprehensive UI toolkit based on shadcn/ui with Tailwind preset
 
 ### Feature Packages
 
-- **[@sqlrooms/data-table](https://sqlrooms.github.io/api/data-table/)**: Interactive data grid for query result visualization
-- **[@sqlrooms/sql-editor](https://sqlrooms.github.io/api/sql-editor/)**: SQL query editor with syntax highlighting and auto-completion
-- **[@sqlrooms/layout](https://sqlrooms.github.io/api/layout/)**: Flexible panel management system
-- **[@sqlrooms/s3-browser](https://sqlrooms.github.io/api/s3-browser/)**: S3-compatible storage browser for data management
-- **[@sqlrooms/vega](https://sqlrooms.github.io/api/vega/)**: Data visualization integration with Vega-Lite
-- **[@sqlrooms/ai](https://sqlrooms.github.io/api/ai/)**: Optional AI integration for natural language querying
-- **[@sqlrooms/cosmos](https://sqlrooms.github.io/api/cosmos/)**: Graph visualization capabilities
-- **[@sqlrooms/dropzone](https://sqlrooms.github.io/api/dropzone/)**: Drag-and-drop file upload functionality
-- **[@sqlrooms/mosaic](https://sqlrooms.github.io/api/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
-- **[@sqlrooms/monaco-editor](https://sqlrooms.github.io/api/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
-- **[@sqlrooms/utils](https://sqlrooms.github.io/api/utils/)**: Shared helper functions for various operations
+- **[@sqlrooms/data-table](/api/data-table/)**: Interactive data grid for query result visualization
+- **[@sqlrooms/sql-editor](/api/sql-editor/)**: SQL query editor with syntax highlighting and auto-completion
+- **[@sqlrooms/layout](/api/layout/)**: Flexible panel management system
+- **[@sqlrooms/s3-browser](/api/s3-browser/)**: S3-compatible storage browser for data management
+- **[@sqlrooms/vega](/api/vega/)**: Data visualization integration with Vega-Lite
+- **[@sqlrooms/ai](/api/ai/)**: Optional AI integration for natural language querying
+- **[@sqlrooms/cosmos](/api/cosmos/)**: Graph visualization capabilities
+- **[@sqlrooms/dropzone](/api/dropzone/)**: Drag-and-drop file upload functionality
+- **[@sqlrooms/mosaic](/api/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
+- **[@sqlrooms/monaco-editor](/api/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
+- **[@sqlrooms/utils](/api/utils/)**: Shared helper functions for various operations
 
 ### Use Cases
 

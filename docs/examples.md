@@ -24,6 +24,21 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Project state persistence
 
+## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
+
+[Try live](https://sqlrooms-nextjs.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
+
+<a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
+  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
+</a>
+
+A minimalistic [Next.js](https://nextjs.org/) app example featuring:
+
+- [Recharts module](/api/recharts) for data visualization
+- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling
+
 ## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
 [Try live](http://sqlrooms-cosmos.netlify.app/)
