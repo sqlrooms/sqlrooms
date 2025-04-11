@@ -34,6 +34,12 @@ export type ProjectStateActions<PC> = {
    */
   hasUnsavedChanges(): boolean; // since last save
 
+  /**
+   * Called when the project config is saved. To be overridden by the custom project state.
+   * @param config - The project config to save.
+   */
+  onSaveConfig?: (config: PC) => void;
+
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
 };
@@ -68,7 +74,6 @@ export function createProjectSlice<PC>(props: {
         initialize: async () => {
           // To be overridden by the project builder
         },
-
         setProjectConfig: (config) =>
           set((state) =>
             produce(state, (draft) => {
@@ -156,6 +161,12 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
       'Skipping project store initialization. Project store should be only used on client.',
     );
   }
+  projectStore.subscribe((state) => {
+    if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
+      state.project.onSaveConfig(state.config);
+      state.project.setLastSavedConfig(state.config);
+    }
+  });
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
