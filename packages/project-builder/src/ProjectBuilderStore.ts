@@ -193,29 +193,36 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
         ...initialProjectState,
         ...projectSliceState.project,
         async initialize() {
-          projectSliceState.project.initialize();
-
           const {setTaskProgress} = get().project;
-          setTaskProgress(INIT_DB_TASK, {
-            message: 'Initializing database…',
-            progress: undefined,
-          });
-          await get().db.initialize();
-          setTaskProgress(INIT_DB_TASK, undefined);
+          try {
+            projectSliceState.project.initialize();
 
-          setTaskProgress(INIT_PROJECT_TASK, {
-            message: 'Loading data sources…',
-            progress: undefined,
-          });
-          await updateReadyDataSources();
-          await maybeDownloadDataSources();
-          setTaskProgress(INIT_PROJECT_TASK, undefined);
+            setTaskProgress(INIT_DB_TASK, {
+              message: 'Initializing database…',
+              progress: undefined,
+            });
+              await get().db.initialize();
+            setTaskProgress(INIT_DB_TASK, undefined);
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.initialized = true;
-            }),
-          );
+            setTaskProgress(INIT_PROJECT_TASK, {
+              message: 'Loading data sources…',
+              progress: undefined,
+            });
+            await updateReadyDataSources();
+            await maybeDownloadDataSources();
+            setTaskProgress(INIT_PROJECT_TASK, undefined);
+
+            set((state) =>
+              produce(state, (draft) => {
+                draft.project.initialized = true;
+              }),
+            );
+          } catch (error) {
+            setTaskProgress(INIT_DB_TASK, undefined);
+            get().project.captureException(error);
+            get().project.setProjectError(new Error(`Error initializing database: ${error}`, {cause: error}));
+            return;
+          }
         },
 
         setProjectConfig: (config) =>

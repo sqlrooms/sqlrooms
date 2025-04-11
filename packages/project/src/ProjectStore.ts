@@ -7,6 +7,7 @@ export type ProjectStore<PC> = StoreApi<ProjectState<PC>>;
 export type ProjectStateProps<PC> = {
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
+  projectError: Error | undefined;
   captureException: (exception: unknown, captureContext?: unknown) => void;
 };
 
@@ -42,6 +43,7 @@ export type ProjectStateActions<PC> = {
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
+  setProjectError: (error: Error) => void;
 };
 
 export type ProjectState<PC> = {
@@ -62,6 +64,7 @@ export function createProjectSlice<PC>(props: {
     ...projectStateProps,
     lastSavedConfig: undefined,
     tasksProgress: {},
+    projectError: undefined,
     captureException: (exception: unknown) => {
       console.error(exception);
     },
@@ -104,6 +107,14 @@ export function createProjectSlice<PC>(props: {
           return undefined;
         },
 
+        setProjectError(error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectError = error;
+            }),
+          );
+        },
+        
         setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
@@ -162,9 +173,14 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
     );
   }
   projectStore.subscribe((state) => {
-    if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
-      state.project.onSaveConfig(state.config);
-      state.project.setLastSavedConfig(state.config);
+    try {
+      if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
+        state.project.onSaveConfig(state.config);
+        state.project.setLastSavedConfig(state.config);
+      }
+    } catch (error) {
+      state.project.captureException(error);
+      state.project.setProjectError(new Error('Error saving project config', {cause: error}));
     }
   });
 

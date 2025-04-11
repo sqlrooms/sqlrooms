@@ -1,6 +1,6 @@
-import {ProgressModal, SpinnerPane} from '@sqlrooms/ui';
+import {ProgressModal, SpinnerPane, useToast} from '@sqlrooms/ui';
 import {MosaicLayout, getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
-import React, {Suspense, useCallback, useMemo} from 'react';
+import React, {Suspense, useCallback, useEffect, useMemo} from 'react';
 import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectBuilderStore} from './ProjectBuilderStore';
 
@@ -45,6 +45,18 @@ const ProjectBuilder: React.FC = () => {
     }, new Map<string, React.ReactNode>());
   }, [ErrorBoundary, panels, visibleProjectPanels]);
 
+  const projectError = useBaseProjectBuilderStore((state) => state.project.projectError);
+  const {toast} = useToast();
+  useEffect(() => {
+    if (projectError) {
+      toast({
+        title: 'Project initialization failed',
+        variant: 'destructive',
+        description: projectError.message,
+        duration: Infinity,
+      });
+    }
+  }, [projectError]);
   return (
     <ErrorBoundary>
       <Suspense fallback={<SpinnerPane h="100%" />}>
@@ -62,7 +74,8 @@ const ProjectBuilder: React.FC = () => {
           isOpen={loadingProgress !== undefined}
           title="Loading"
           loadingStage={loadingProgress?.message}
-          progress={loadingProgress?.progress}
+          progress={undefined}
+          // progress={loadingProgress?.progress}
         />
       </Suspense>
     </ErrorBoundary>
