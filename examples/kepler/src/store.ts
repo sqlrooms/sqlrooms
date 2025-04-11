@@ -30,12 +30,31 @@ import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {Field} from '@kepler.gl/types';
 import * as arrow from 'apache-arrow';
 
-import {DatabaseIcon} from 'lucide-react';
+import {
+  DatabaseIcon,
+  Layers,
+  Filter,
+  SlidersHorizontal,
+  Map as MapIcon,
+} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
+import {
+  KeplerSidePanelLayerManager,
+  KeplerSidePanelFilterManager,
+  KeplerSidePanelBaseMapManager,
+  KeplerSidePanelInteractionManager,
+} from './components/KeplerSidePanels';
 
-export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
+export const ProjectPanelTypes = z.enum([
+  'data-sources',
+  'kepler-layers',
+  'kepler-filters',
+  'kepler-interactions',
+  'kepler-basemaps',
+  MAIN_VIEW,
+] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 
 /**
@@ -93,6 +112,31 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           component: DataSourcesPanel,
           placement: 'sidebar',
         },
+        [ProjectPanelTypes.enum['kepler-layers']]: {
+          title: 'Layers',
+          icon: Layers,
+          component: KeplerSidePanelLayerManager,
+          placement: 'sidebar',
+        },
+        [ProjectPanelTypes.enum['kepler-filters']]: {
+          title: 'Filters',
+          icon: Filter,
+          component: KeplerSidePanelFilterManager,
+          placement: 'sidebar',
+        },
+        [ProjectPanelTypes.enum['kepler-interactions']]: {
+          title: 'Interactions',
+          icon: SlidersHorizontal,
+          component: KeplerSidePanelInteractionManager,
+          placement: 'sidebar',
+        },
+        [ProjectPanelTypes.enum['kepler-basemaps']]: {
+          title: 'Base Maps',
+          icon: MapIcon,
+          component: KeplerSidePanelBaseMapManager,
+          placement: 'sidebar',
+        },
+        // MapIcon
         main: {
           title: 'Main view',
           icon: () => null,

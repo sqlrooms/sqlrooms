@@ -13,3 +13,4 @@ export {
 export type {KeplerSliceState} from './KeplerSlice';
 
 export {KeplerMapContainer} from './components/KeplerMapContainer';
+export {KeplerSidePanels} from './components/KeplerSidePanels';

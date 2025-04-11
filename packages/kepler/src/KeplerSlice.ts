@@ -178,7 +178,7 @@ export function createKeplerSlice<
         };
     }
 
-    function requestInitialMapStyle(mapId) {
+    function requestInitialMapStyle(mapId: string) {
       const {mapStyle} = get().kepler.map[mapId] || {};
       const style = mapStyle?.mapStyles[mapStyle.styleType];
 
@@ -206,6 +206,7 @@ export function createKeplerSlice<
         dispatch: wrapDispatch,
       };
 
+      // @ts-ignore
       applyMiddleware(middlewareAPI, middlewares)(action);
     };
 
