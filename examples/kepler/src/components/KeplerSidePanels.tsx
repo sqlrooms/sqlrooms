@@ -1,9 +1,5 @@
 import {KeplerSidePanels} from '@sqlrooms/kepler';
-import {
-  FileDataSourcesPanel,
-  ProjectBuilderPanel,
-  TablesListPanel,
-} from '@sqlrooms/project-builder';
+import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes, useProjectStore} from '../store';
 
 export function KeplerSidePanelLayerManager() {
