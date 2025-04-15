@@ -24,24 +24,24 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 
 ### Core Packages
 
-- **[@sqlrooms/project-builder](/api/project-builder/)**: Foundation for building analytics applications with Zustand-based state management
-- **[@sqlrooms/project-config](/api/project-config/)**: Central configuration and type definitions using Zod schemas
-- **[@sqlrooms/duckdb](/api/duckdb/)**: DuckDB integration for query execution and data source connections
-- **[@sqlrooms/ui](/api/ui/)**: Comprehensive UI toolkit based on shadcn/ui with Tailwind preset
+- **[@sqlrooms/project-builder](/packages/project-builder/)**: Foundation for building analytics applications with Zustand-based state management
+- **[@sqlrooms/project-config](/packages/project-config/)**: Central configuration and type definitions using Zod schemas
+- **[@sqlrooms/duckdb](/packages/duckdb/)**: DuckDB integration for query execution and data source connections
+- **[@sqlrooms/ui](/packages/ui/)**: Comprehensive UI toolkit based on shadcn/ui with Tailwind preset
 
 ### Feature Packages
 
-- **[@sqlrooms/data-table](/api/data-table/)**: Interactive data grid for query result visualization
-- **[@sqlrooms/sql-editor](/api/sql-editor/)**: SQL query editor with syntax highlighting and auto-completion
-- **[@sqlrooms/layout](/api/layout/)**: Flexible panel management system
-- **[@sqlrooms/s3-browser](/api/s3-browser/)**: S3-compatible storage browser for data management
-- **[@sqlrooms/vega](/api/vega/)**: Data visualization integration with Vega-Lite
-- **[@sqlrooms/ai](/api/ai/)**: Optional AI integration for natural language querying
-- **[@sqlrooms/cosmos](/api/cosmos/)**: Graph visualization capabilities
-- **[@sqlrooms/dropzone](/api/dropzone/)**: Drag-and-drop file upload functionality
-- **[@sqlrooms/mosaic](/api/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
-- **[@sqlrooms/monaco-editor](/api/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
-- **[@sqlrooms/utils](/api/utils/)**: Shared helper functions for various operations
+- **[@sqlrooms/data-table](/packages/data-table/)**: Interactive data grid for query result visualization
+- **[@sqlrooms/sql-editor](/packages/sql-editor/)**: SQL query editor with syntax highlighting and auto-completion
+- **[@sqlrooms/layout](/packages/layout/)**: Flexible panel management system
+- **[@sqlrooms/s3-browser](/packages/s3-browser/)**: S3-compatible storage browser for data management
+- **[@sqlrooms/vega](/packages/vega/)**: Data visualization integration with Vega-Lite
+- **[@sqlrooms/ai](/packages/ai/)**: Optional AI integration for natural language querying
+- **[@sqlrooms/cosmos](/packages/cosmos/)**: Graph visualization capabilities
+- **[@sqlrooms/dropzone](/packages/dropzone/)**: Drag-and-drop file upload functionality
+- **[@sqlrooms/mosaic](/packages/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
+- **[@sqlrooms/monaco-editor](/packages/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
+- **[@sqlrooms/utils](/packages/utils/)**: Shared helper functions for various operations
 
 ### Use Cases
 
