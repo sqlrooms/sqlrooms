@@ -8,7 +8,7 @@ import {
 } from '@kepler.gl/actions';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
 
-import keplerGlReducer, {KeplerGlState} from '@kepler.gl/reducers';
+import keplerGlReducer, {KeplerGlState, INITIAL_UI_STATE} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -127,6 +127,19 @@ export function createKeplerSlice<
       mapStyle: {
         styleType: DEFAULT_MAP_STYLE,
       },
+      uiState: {
+        mapControls: {
+          ...INITIAL_UI_STATE.mapControls,
+          splitMap: {
+            ...INITIAL_UI_STATE.mapControls.splitMap,
+            show: false
+          },
+          mapLocale: {
+            ...INITIAL_UI_STATE.mapControls.mapLocale,
+            show: false
+          }
+        }
+      }
     });
 
     const keplerInitialState: KeplerGlReduxState = keplerReducer(
