@@ -1,4 +1,4 @@
-import {DuckDbSliceConfig, DuckQueryError} from '@sqlrooms/duckdb';
+import {DuckDbSliceConfig, DuckQueryError, DataTable} from '@sqlrooms/duckdb';
 import {
   createSlice,
   ProjectBuilderState,
@@ -13,6 +13,7 @@ import {saveAs} from 'file-saver';
 import {produce} from 'immer';
 import {z} from 'zod';
 
+// Saved state (persisted)
 export const SqlEditorSliceConfig = z.object({
   sqlEditor: z.object({
     queries: z.array(
@@ -26,6 +27,7 @@ export const SqlEditorSliceConfig = z.object({
       .string()
       .default('default')
       .describe('The id of the currently selected query.'),
+    lastExecutedQuery: z.string().optional().describe('Last executed query'),
   }),
 });
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
@@ -41,6 +43,14 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
 
 export type SqlEditorSliceState = {
   sqlEditor: {
+    // Runtime state
+    selectedTable?: string;
+    queryResults?: Table | null;
+    queryError?: string;
+    isQueryLoading: boolean;
+    isTablesLoading: boolean;
+    tablesError?: string;
+
     /**
      * Execute a SQL query and return the results.
      * @param query - The SQL query to execute.
@@ -102,6 +112,11 @@ export type SqlEditorSliceState = {
      * @param defaultQuery - Optional default query text to return if no query is found.
      */
     getCurrentQuery(defaultQuery?: string): string;
+
+    selectTable(table: string | undefined): void;
+
+    runQuery(query: string, schema?: string): Promise<void>;
+    clearQueryResults(): void;
   };
 };
 
@@ -110,6 +125,10 @@ export function createSqlEditorSlice<
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
+      // Initialize runtime state
+      isQueryLoading: false,
+      isTablesLoading: false,
+
       executeQuery: async (query, schema = 'main') => {
         const connector = await get().db.getConnector();
 
@@ -236,6 +255,62 @@ export function createSqlEditorSlice<
         const query = sqlEditorConfig.queries.find((q) => q.id === selectedId);
         // If found, return its query text, otherwise default
         return query?.query || defaultQuery;
+      },
+
+      selectTable: (table) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.sqlEditor.selectedTable = table;
+          }),
+        );
+      },
+
+      runQuery: async (query, schema = 'main') => {
+        // First update loading state and clear results
+        set((state) =>
+          produce(state, (draft) => {
+            draft.sqlEditor.selectedTable = undefined;
+            draft.sqlEditor.isQueryLoading = true;
+            draft.sqlEditor.queryError = undefined;
+            draft.sqlEditor.queryResults = null;
+            draft.config.sqlEditor.lastExecutedQuery = query;
+          }),
+        );
+
+        try {
+          const {results, error} = await get().sqlEditor.executeQuery(
+            query,
+            schema,
+          );
+
+          // Update state without using Immer for the Table type
+          set((state) => ({
+            ...state,
+            sqlEditor: {
+              ...state.sqlEditor,
+              queryError: error,
+              queryResults: results || null,
+            },
+          }));
+        } finally {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.sqlEditor.isQueryLoading = false;
+            }),
+          );
+        }
+      },
+
+      clearQueryResults: () => {
+        // Update state without using Immer for the Table type
+        set((state) => ({
+          ...state,
+          sqlEditor: {
+            ...state.sqlEditor,
+            queryResults: null,
+            queryError: undefined,
+          },
+        }));
       },
     },
   }));

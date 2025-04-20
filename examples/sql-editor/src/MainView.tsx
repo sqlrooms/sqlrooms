@@ -4,7 +4,7 @@ import {ThemeSwitch} from '@sqlrooms/ui';
 export const MainView: FC = () => {
   return (
     <>
-      <ThemeSwitch />
+      {/* <ThemeSwitch className="absolute left-[120px] top-1" /> */}
       <SqlEditor isOpen={true} onClose={() => {}} />
     </>
   );

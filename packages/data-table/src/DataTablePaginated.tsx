@@ -180,79 +180,83 @@ export default function DataTablePaginated<Data extends object>({
         </div>
       </div>
       <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}
-        >
-          <ChevronDoubleLeftIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </Button>
-        <div className="ml-1 flex items-center gap-1 text-sm">
-          <div>Page</div>
-          <Input
-            type="number"
-            min={1}
-            max={table.getPageCount()}
-            className="h-8 w-16"
-            value={internalPageIndex + 1}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value) {
-                const page = Math.max(
-                  0,
-                  Math.min(table.getPageCount() - 1, Number(value) - 1),
-                );
-                setInternalPageIndex(page);
-              }
-            }}
-            onBlur={() => {
-              if (internalPageIndex !== pagination?.pageIndex) {
-                table.setPageIndex(internalPageIndex);
-              }
-            }}
-          />
-          <div>{`of ${formatCount(table.getPageCount())}`}</div>
-        </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          disabled={!table.getCanNextPage()}
-        >
-          <ChevronDoubleRightIcon className="h-4 w-4" />
-        </Button>
-        <Select
-          value={String(table.getState().pagination.pageSize)}
-          onValueChange={(value) => table.setPageSize(Number(value))}
-        >
-          <SelectTrigger className="h-8 w-[110px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[10, 50, 100, 500, 1000].map((pageSize) => (
-              <SelectItem key={pageSize} value={String(pageSize)}>
-                {`${pageSize} rows`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        {pagination && (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.setPageIndex(0)}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronDoubleLeftIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.previousPage()}
+              disabled={!table.getCanPreviousPage()}
+            >
+              <ChevronLeftIcon className="h-4 w-4" />
+            </Button>
+            <div className="ml-1 flex items-center gap-1 text-sm">
+              <div>Page</div>
+              <Input
+                type="number"
+                min={1}
+                max={table.getPageCount()}
+                className="h-8 w-16"
+                value={internalPageIndex + 1}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  if (value) {
+                    const page = Math.max(
+                      0,
+                      Math.min(table.getPageCount() - 1, Number(value) - 1),
+                    );
+                    setInternalPageIndex(page);
+                  }
+                }}
+                onBlur={() => {
+                  if (internalPageIndex !== pagination?.pageIndex) {
+                    table.setPageIndex(internalPageIndex);
+                  }
+                }}
+              />
+              <div>{`of ${formatCount(table.getPageCount())}`}</div>
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.nextPage()}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronRightIcon className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              disabled={!table.getCanNextPage()}
+            >
+              <ChevronDoubleRightIcon className="h-4 w-4" />
+            </Button>
+            <Select
+              value={String(table.getState().pagination.pageSize)}
+              onValueChange={(value) => table.setPageSize(Number(value))}
+            >
+              <SelectTrigger className="h-8 w-[110px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {[10, 50, 100, 500, 1000].map((pageSize) => (
+                  <SelectItem key={pageSize} value={String(pageSize)}>
+                    {`${pageSize} rows`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
 
         <div className="flex-1" />
 

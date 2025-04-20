@@ -14,15 +14,16 @@ import useArrowDataTable from './useArrowDataTable';
 export type QueryDataTableProps = {
   query: string;
   queryKeyComponents?: unknown[];
+  limit?: number;
 };
 
-const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
+const QueryDataTable: FC<QueryDataTableProps> = ({query, limit}) => {
   const connector = useDuckDb();
   const {exportToCsv} = useExportToCsv();
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
-    pageSize: 100,
+    pageSize: limit ?? 100,
   });
 
   const [count, setCount] = useState<number | undefined>(undefined);
@@ -43,6 +44,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
   // Fetch row count
   useEffect(() => {
     const fetchCount = async () => {
+      if (limit !== undefined) return;
       try {
         setIsFetching(true);
         const countQuery = `SELECT COUNT(*)::int FROM (${sanitizedQuery})`;
@@ -56,7 +58,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
     };
 
     fetchCount();
-  }, [connector, sanitizedQuery]);
+  }, [connector, sanitizedQuery, limit]);
 
   // Fetch data
   useEffect(() => {
@@ -105,7 +107,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({query}) => {
       pageCount={Math.ceil((count ?? 0) / pagination.pageSize)}
       numRows={count}
       isFetching={isFetching}
-      pagination={pagination}
+      pagination={limit ? undefined : pagination}
       onPaginationChange={setPagination}
       sorting={sorting}
       onSortingChange={setSorting}
