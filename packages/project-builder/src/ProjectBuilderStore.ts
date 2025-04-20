@@ -49,8 +49,8 @@ export type ProjectBuilderStore<PC extends BaseProjectConfig> = StoreApi<
 >;
 
 export type ProjectPanelInfo = {
-  title: string;
-  icon: React.ComponentType<{className?: string}>;
+  title?: string;
+  icon?: React.ComponentType<{className?: string}>;
   component: React.ComponentType;
   placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
