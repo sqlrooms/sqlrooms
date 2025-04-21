@@ -23,10 +23,18 @@ import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import type {Action, Store as ReduxStore} from 'redux';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
+import {Datasets} from '@kepler.gl/tables';
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
   name: z.string(),
+  datasets: z.array(z.object({
+    id: z.string(),
+    label: z.string(),
+    metadata: z.object({
+      tableName: z.string()
+    }),
+  })),
   config: z
     .object({
       version: z.literal('v1'),
@@ -66,6 +74,7 @@ export function createDefaultKeplerConfig(
           id: defaultMapId,
           name: 'Untitled Map',
           config: undefined,
+          datasets: []
         },
       ],
       currentMapId: defaultMapId,
@@ -184,10 +193,18 @@ export function createKeplerSlice<
                   (map) => map.id === mapId,
                 );
                 if (mapToSave) {
-                  // @ts-expect-error: declare uistate schema in kepler schema manager
                   mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
                   );
+                  // map tables to the datasets in the kepler state
+                  const datasetsToSave = Object.entries(state.kepler.map[mapId].visState.datasets as Datasets)
+                    .map(([key, value]) => ({
+                      id: value.id,
+                      label: value.label,
+                      metadata:  value.metadata
+                    }));
+
+                  mapToSave.datasets = datasetsToSave;
                 }
               }),
             );
@@ -268,6 +285,7 @@ export function createKeplerSlice<
               draft.config.kepler.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
+                datasets: [],
               });
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
@@ -306,6 +324,10 @@ export function createKeplerSlice<
           console.log('add data to map', data);
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
+        addConfigToMap: (mapId: string, config: any) => {
+          console.log('add config to map', config);
+          get().kepler.dispatchAction(mapId, addDataToMap({config}));
+        }
       },
     };
   });
