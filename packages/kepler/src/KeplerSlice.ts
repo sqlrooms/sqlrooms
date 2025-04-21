@@ -128,6 +128,9 @@ export function createKeplerSlice<
         styleType: DEFAULT_MAP_STYLE,
       },
       uiState: {
+        // side panel is closed by default
+        activeSidePanel: false,
+        // hide split map and locale controls by default
         mapControls: {
           ...INITIAL_UI_STATE.mapControls,
           splitMap: {
