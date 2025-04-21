@@ -12,6 +12,9 @@ import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
 
 const MapContainer = KeplerInjector.get(MapContainerFactory);
 
+// @ts-expect-error: injected with define
+const MAPBOX_TOKEN = process.env.MapboxAccessToken;
+
 export const KeplerMapContainer: FC<{
   mapId: string;
 }> = ({mapId}) => {
@@ -40,6 +43,7 @@ export const KeplerMapContainer: FC<{
                     key={0}
                     index={0}
                     {...mapFields}
+                    mapboxApiAccessToken={MAPBOX_TOKEN}
                   />
                 </MapViewStateContextProvider>
               ) : null}

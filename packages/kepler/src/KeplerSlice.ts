@@ -117,6 +117,8 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.UPDATE_MAP,
 ];
 
+// @ts-expect-error: injected with define
+const MAPBOX_TOKEN = process.env.MapboxAccessToken;
 const DEFAULT_MAP_STYLE = 'positron';
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
@@ -126,6 +128,7 @@ export function createKeplerSlice<
     const keplerReducer = keplerGlReducer.initialState({
       mapStyle: {
         styleType: DEFAULT_MAP_STYLE,
+        mapboxApiAccessToken: MAPBOX_TOKEN
       },
       uiState: {
         // side panel is closed by default
