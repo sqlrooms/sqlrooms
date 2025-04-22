@@ -62,7 +62,10 @@ const TableCard: FC<{
                 {tableActions.map((action, i) => (
                   <DropdownMenuItem
                     key={i}
-                    onClick={() => action.onClick(value.tableName)}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      action.onClick(value.tableName)
+                    }}
                   >
                     <action.icon className="mr-2 h-4 w-4" />
                     {action.label}
