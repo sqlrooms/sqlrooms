@@ -3,10 +3,11 @@ import {DataTable} from '@sqlrooms/duckdb';
 import {cn, useDisclosure} from '@sqlrooms/ui';
 import {FC, useState} from 'react';
 import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
-import {TableCard} from './TableCard';
+import {TableCard, TableAction} from './TableCard';
 
-const TablesListPanel: FC<{className?: string; isReadOnly?: boolean}> = ({
+const TablesListPanel: FC<{className?: string; isReadOnly?: boolean, tableActions?: TableAction[]}> = ({
   className,
+  tableActions,
   isReadOnly,
 }) => {
   const tables = useBaseProjectBuilderStore((state) => state.db.tables);
@@ -46,6 +47,7 @@ const TablesListPanel: FC<{className?: string; isReadOnly?: boolean}> = ({
                 isReadOnly={isReadOnly}
                 value={table}
                 rowCount={tableRowCounts[table.tableName]}
+                tableActions={tableActions}
               />
             ))}
           </div>
