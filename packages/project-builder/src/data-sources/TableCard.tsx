@@ -43,37 +43,39 @@ const TableCard: FC<{
     >
       <div className="mt-0 flex w-full flex-col gap-2 px-2">
         <div className="w-full overflow-auto">
-          <div className="relative mb-2 h-[30px] overflow-hidden flex cursor-pointer flex-row items-center gap-1">
-            <div className="text-foreground mb-1 overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold flex-1">
+          <div className="relative mb-2 flex h-[30px] cursor-pointer flex-row items-center gap-1 overflow-hidden">
+            <div className="text-foreground mb-1 flex-1 overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
               {value.tableName}
             </div>
-            {tableActions ? <div className="flex-none">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  className="text-muted-foreground h-6 w-6"
-                >
-                  <EllipsisIcon className="h-5 w-5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                {tableActions.map((action, i) => (
-                  <DropdownMenuItem
-                    key={i}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      action.onClick(value.tableName)
-                    }}
-                  >
-                    <action.icon className="mr-2 h-4 w-4" />
-                    {action.label}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div> : null}
+            {tableActions ? (
+              <div className="flex-none">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground h-6 w-6"
+                    >
+                      <EllipsisIcon className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {tableActions.map((action, i) => (
+                      <DropdownMenuItem
+                        key={i}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          action.onClick(value.tableName);
+                        }}
+                      >
+                        <action.icon className="mr-2 h-4 w-4" />
+                        {action.label}
+                      </DropdownMenuItem>
+                    ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-col gap-1">
             {value.columns?.map((row, i) => (
