@@ -14,7 +14,7 @@ import {
 import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
 import {EllipsisIcon} from 'lucide-react';
-import {FC} from 'react';
+import React, {FC} from 'react';
 
 export type TableAction = {
   icon: React.FC<{className: string}>;
@@ -28,8 +28,8 @@ const TableCard: FC<{
   onReset?: () => void;
   onClick?: () => void;
   className?: string;
-  tableActions?: TableAction[];
-}> = ({value, rowCount, onClick, className, tableActions}) => {
+  menuRenderer?: (v: DataTable) => React.ReactNode;
+}> = ({value, rowCount, onClick, className, menuRenderer}) => {
   if (!value) return null;
 
   const numRows = value.rowCount ?? rowCount;
@@ -47,7 +47,7 @@ const TableCard: FC<{
             <div className="text-foreground mb-1 flex-1 overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
               {value.tableName}
             </div>
-            {tableActions ? (
+            {menuRenderer ? (
               <div className="flex-none">
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -60,18 +60,7 @@ const TableCard: FC<{
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
-                    {tableActions.map((action, i) => (
-                      <DropdownMenuItem
-                        key={i}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          action.onClick(value.tableName);
-                        }}
-                      >
-                        <action.icon className="mr-2 h-4 w-4" />
-                        {action.label}
-                      </DropdownMenuItem>
-                    ))}
+                    {menuRenderer(value)}
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
