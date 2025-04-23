@@ -1,15 +1,25 @@
 import {
   Badge,
+  Button,
   Card,
   cn,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {DataTable} from '@sqlrooms/duckdb';
 import {formatNumber} from '@sqlrooms/utils';
-import {FC} from 'react';
+import {EllipsisIcon} from 'lucide-react';
+import React, {FC} from 'react';
 
+export type TableAction = {
+  icon: React.FC<{className: string}>;
+  label: string;
+  onClick: (tableName: string) => void;
+};
 const TableCard: FC<{
   isReadOnly?: boolean;
   value?: DataTable;
@@ -17,7 +27,8 @@ const TableCard: FC<{
   onReset?: () => void;
   onClick?: () => void;
   className?: string;
-}> = ({value, rowCount, onClick, className}) => {
+  menuRenderer?: (v: DataTable) => React.ReactNode;
+}> = ({value, rowCount, onClick, className, menuRenderer}) => {
   if (!value) return null;
 
   const numRows = value.rowCount ?? rowCount;
@@ -31,10 +42,28 @@ const TableCard: FC<{
     >
       <div className="mt-0 flex w-full flex-col gap-2 px-2">
         <div className="w-full overflow-auto">
-          <div className="relative mb-2 h-[30px] overflow-hidden">
-            <div className="text-foreground absolute mb-1 w-full overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
+          <div className="relative mb-2 flex h-[30px] cursor-pointer flex-row items-center gap-1 overflow-hidden">
+            <div className="text-foreground mb-1 flex-1 overflow-hidden text-ellipsis whitespace-nowrap py-1 font-mono text-sm font-bold">
               {value.tableName}
             </div>
+            {menuRenderer ? (
+              <div className="flex-none">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground h-6 w-6"
+                    >
+                      <EllipsisIcon className="h-5 w-5" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {menuRenderer(value)}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-col gap-1">
             {value.columns?.map((row, i) => (
