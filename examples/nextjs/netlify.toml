@@ -1,0 +1,11 @@
+[build]
+  command = "npm run build"
+  publish = ".next"
+
+[build.environment]
+  NPM_FLAGS = "--force"  # Override dependency constraints
+  CI = "false"  # This will prevent treating warnings as errors
+  NEXT_TELEMETRY_DISABLED = "1"
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs" 

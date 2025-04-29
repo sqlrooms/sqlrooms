@@ -24,6 +24,7 @@ export * from './components/label';
 export * from './components/popover';
 export * from './components/progress-modal';
 export * from './components/progress';
+export * from './components/radio-group';
 export * from './components/resizable';
 export * from './components/select';
 export * from './components/skeleton-pane';

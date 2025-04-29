@@ -147,7 +147,7 @@ export type ProjectBuilderState<PC extends BaseProjectConfig> =
  */
 type InitialState<PC extends BaseProjectConfig> = {
   connector?: DuckDbConnector;
-  config: Omit<PC, keyof BaseProjectConfig> & Partial<BaseProjectConfig>;
+  config: Partial<PC>;
   project: Partial<Omit<ProjectBuilderStateProps<PC>, 'config' | 'panels'>> & {
     panels: ProjectBuilderStateProps<PC>['panels'];
   };
@@ -201,7 +201,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
               message: 'Initializing database…',
               progress: undefined,
             });
-              await get().db.initialize();
+            await get().db.initialize();
             setTaskProgress(INIT_DB_TASK, undefined);
 
             setTaskProgress(INIT_PROJECT_TASK, {
@@ -220,7 +220,11 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           } catch (error) {
             setTaskProgress(INIT_DB_TASK, undefined);
             get().project.captureException(error);
-            get().project.setProjectError(new Error(`Error initializing database: ${error}`, {cause: error}));
+            get().project.setProjectError(
+              new Error(`Error initializing database: ${error}`, {
+                cause: error,
+              }),
+            );
             return;
           }
         },
