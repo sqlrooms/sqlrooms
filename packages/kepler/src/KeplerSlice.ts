@@ -142,7 +142,7 @@ export function createKeplerSlice<
         mapStyles: DEFAULT_MAP_STYLES.reduce(
           (accu, curr) => ({
             ...accu, 
-            // Note: this has to be done only Kepler Desktop
+            // Note: this has to be done only for Kepler Desktop
             [curr.id]: {...curr, icon: `http://localhost:3001/static/basemap/${curr.icon.split('/').pop()}`}
           }), 
           {}
