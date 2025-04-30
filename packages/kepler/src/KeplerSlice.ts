@@ -9,7 +9,10 @@ import {
 import {DEFAULT_MAP_STYLES} from '@kepler.gl/constants';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
 
-import keplerGlReducer, {KeplerGlState, INITIAL_UI_STATE} from '@kepler.gl/reducers';
+import keplerGlReducer, {
+  KeplerGlState,
+  INITIAL_UI_STATE,
+} from '@kepler.gl/reducers';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
@@ -29,21 +32,23 @@ import {Datasets} from '@kepler.gl/tables';
 export const KeplerMapSchema = z.object({
   id: z.string(),
   name: z.string(),
-  datasets: z.array(z.object({
-    id: z.string(),
-    label: z.string(),
-    metadata: z.object({
-      tableName: z.string()
+  datasets: z.array(
+    z.object({
+      id: z.string(),
+      label: z.string(),
+      metadata: z.object({
+        tableName: z.string(),
+      }),
     }),
-  })),
+  ),
   config: z
     .object({
       version: z.literal('v1'),
       config: z.object({
-        visState: z.object({}),
-        mapState: z.object({}),
-        mapStyle: z.object({}),
-        uiState: z.object({}),
+        visState: z.object({}).passthrough(),
+        mapState: z.object({}).passthrough(),
+        mapStyle: z.object({}).passthrough(),
+        uiState: z.object({}).passthrough(),
       }),
     })
     .optional(),
@@ -75,7 +80,7 @@ export function createDefaultKeplerConfig(
           id: defaultMapId,
           name: 'Untitled Map',
           config: undefined,
-          datasets: []
+          datasets: [],
         },
       ],
       currentMapId: defaultMapId,
@@ -141,12 +146,15 @@ export function createKeplerSlice<
         mapboxApiAccessToken: MAPBOX_TOKEN,
         mapStyles: DEFAULT_MAP_STYLES.reduce(
           (accu, curr) => ({
-            ...accu, 
+            ...accu,
             // Note: this has to be done only for Kepler Desktop
-            [curr.id]: {...curr, icon: `http://localhost:3001/static/basemap/${curr.icon.split('/').pop()}`}
-          }), 
-          {}
-        )
+            [curr.id]: {
+              ...curr,
+              icon: `http://localhost:3001/static/basemap/${curr.icon.split('/').pop()}`,
+            },
+          }),
+          {},
+        ),
       },
       uiState: {
         // side panel is closed by default
@@ -156,14 +164,14 @@ export function createKeplerSlice<
           ...INITIAL_UI_STATE.mapControls,
           splitMap: {
             ...INITIAL_UI_STATE.mapControls.splitMap,
-            show: false
+            show: false,
           },
           mapLocale: {
             ...INITIAL_UI_STATE.mapControls.mapLocale,
-            show: false
-          }
-        }
-      }
+            show: false,
+          },
+        },
+      },
     });
 
     const keplerInitialState: KeplerGlReduxState = keplerReducer(
@@ -206,12 +214,13 @@ export function createKeplerSlice<
                     state.kepler.map[mapId],
                   );
                   // map tables to the datasets in the kepler state
-                  const datasetsToSave = Object.entries(state.kepler.map[mapId].visState.datasets as Datasets)
-                    .map(([key, value]) => ({
-                      id: value.id,
-                      label: value.label,
-                      metadata:  value.metadata
-                    }));
+                  const datasetsToSave = Object.entries(
+                    state.kepler.map[mapId].visState.datasets as Datasets,
+                  ).map(([key, value]) => ({
+                    id: value.id,
+                    label: value.label,
+                    metadata: value.metadata,
+                  }));
 
                   mapToSave.datasets = datasetsToSave;
                 }
@@ -330,13 +339,15 @@ export function createKeplerSlice<
           );
         },
         addDataToMap: (mapId: string, data: any) => {
-          console.log('add data to map', data);
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
         addConfigToMap: (mapId: string, config: any) => {
-          console.log('add config to map', config);
-          get().kepler.dispatchAction(mapId, addDataToMap({config}));
-        }
+          const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
+          get().kepler.dispatchAction(
+            mapId,
+            addDataToMap({config: parsedConfig}),
+          );
+        },
       },
     };
   });
