@@ -6,6 +6,7 @@ import {
   ActionTypes as KeplerActionTypes,
   addDataToMap,
 } from '@kepler.gl/actions';
+import {DEFAULT_MAP_STYLES} from '@kepler.gl/constants';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
 
 import keplerGlReducer, {KeplerGlState, INITIAL_UI_STATE} from '@kepler.gl/reducers';
@@ -137,7 +138,15 @@ export function createKeplerSlice<
     const keplerReducer = keplerGlReducer.initialState({
       mapStyle: {
         styleType: DEFAULT_MAP_STYLE,
-        mapboxApiAccessToken: MAPBOX_TOKEN
+        mapboxApiAccessToken: MAPBOX_TOKEN,
+        mapStyles: DEFAULT_MAP_STYLES.reduce(
+          (accu, curr) => ({
+            ...accu, 
+            // Note: this has to be done only Kepler Desktop
+            [curr.id]: {...curr, icon: `http://localhost:3001/static/basemap/${curr.icon.split('/').pop()}`}
+          }), 
+          {}
+        )
       },
       uiState: {
         // side panel is closed by default
