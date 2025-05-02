@@ -6,6 +6,7 @@ import {
   FilterManagerFactory,
   InteractionManagerFactory,
   MapManagerFactory,
+  DndContextFactory,
 } from '@kepler.gl/components';
 import {SIDEBAR_PANELS} from '@kepler.gl/constants';
 
@@ -17,6 +18,7 @@ const LayerManager = KeplerInjector.get(LayerManagerFactory);
 const FilterManager = KeplerInjector.get(FilterManagerFactory);
 const InteractionManager = KeplerInjector.get(InteractionManagerFactory);
 const MapManager = KeplerInjector.get(MapManagerFactory);
+const DndContext = KeplerInjector.get(DndContextFactory);
 
 const layerPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'layer');
 const filterPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'filter');
@@ -105,14 +107,20 @@ export const KeplerSidePanels: React.FC<KeplerSidePanelProps> = ({
   mapId,
   panelId,
 }) => {
+  const {keplerState} = useKeplerStateActions({mapId});
+
   return (
     <KeplerProvider mapId={mapId}>
-      {panelId === 'layer' ? <KeplerLayerManager mapId={mapId} /> : null}
-      {panelId === 'filter' ? <KeplerFilterManager mapId={mapId} /> : null}
-      {panelId === 'interaction' ? (
-        <KeplerInteractionManager mapId={mapId} />
-      ) : null}
-      {panelId === 'map' ? <KeplerBasemapManager mapId={mapId} /> : null}
+      <DndContext visState={keplerState?.visState}>
+        <div>
+          {panelId === 'layer' ? <KeplerLayerManager mapId={mapId} /> : null}
+          {panelId === 'filter' ? <KeplerFilterManager mapId={mapId} /> : null}
+          {panelId === 'interaction' ? (
+            <KeplerInteractionManager mapId={mapId} />
+          ) : null}
+          {panelId === 'map' ? <KeplerBasemapManager mapId={mapId} /> : null}
+        </div>
+      </DndContext>
     </KeplerProvider>
   );
 };
