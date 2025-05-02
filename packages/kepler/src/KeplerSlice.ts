@@ -28,7 +28,20 @@ import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import type {Action, Store as ReduxStore} from 'redux';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
-import {Datasets} from '@kepler.gl/tables';
+import {Datasets, KeplerTable} from '@kepler.gl/table';
+import {initApplicationConfig} from '@kepler.gl/utils';
+
+class DesktopKeplerTable extends KeplerTable {
+  static getInputDataValidator = function () {
+    // Default validator accepts only string timestamps
+    return d => d;
+  };
+}
+
+// configure Kepler Desktop application
+initApplicationConfig({
+  table: DesktopKeplerTable,
+});
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
