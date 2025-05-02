@@ -9,7 +9,8 @@ import {
 import {DEFAULT_MAP_STYLES} from '@kepler.gl/constants';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
 
-import keplerGlReducer, {
+import {
+  keplerGlReducer,
   KeplerGlState,
   INITIAL_UI_STATE,
 } from '@kepler.gl/reducers';
