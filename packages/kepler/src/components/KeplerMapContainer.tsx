@@ -8,7 +8,7 @@ import {
   MapViewStateContextProvider,
   RootContext,
 } from '@kepler.gl/components';
-import {useTheme} from 'styled-components';
+import styled, {useTheme} from 'styled-components';
 
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
@@ -19,6 +19,12 @@ const BottomWidget = KeplerInjector.get(BottomWidgetFactory);
 
 const MAPBOX_TOKEN = process.env.MapboxAccessToken;
 
+// HACK! should fix it in kepler.gl
+const CustomWidgetcontainer = styled.div`
+  .bottom-widget--inner {
+    margin-top: 0;
+  }
+`;
 const KeplerGl: FC<{
   mapId: string;
 }> = ({mapId}) => {
@@ -46,7 +52,7 @@ const KeplerGl: FC<{
     : null;
 
   return (
-    <>
+    <CustomWidgetcontainer className="kepler-gl flex h-full w-full flex-col justify-between">
       {mapFields?.mapState ? (
         <MapViewStateContextProvider mapState={mapFields.mapState}>
           <MapContainer
@@ -59,14 +65,12 @@ const KeplerGl: FC<{
           />
         </MapViewStateContextProvider>
       ) : null}
-      <div className="absolute bottom-0 left-0 right-0">
-        <BottomWidget
-          rootRef={bottomWidgetRef}
-          {...bottomWidgetFields}
-          theme={theme}
-        />
-      </div>
-    </>
+      <BottomWidget
+        rootRef={bottomWidgetRef}
+        {...bottomWidgetFields}
+        theme={theme}
+      />
+    </CustomWidgetcontainer>
   );
 };
 
@@ -79,9 +83,7 @@ export const KeplerMapContainer: FC<{
     <RootContext.Provider value={root}>
       <KeplerProvider mapId={mapId}>
         <div className="relative h-full w-full">
-          <div className="kepler-gl absolute h-full w-full" ref={root}>
-            <KeplerGl mapId={mapId} />
-          </div>
+          <KeplerGl mapId={mapId} />
         </div>
       </KeplerProvider>
     </RootContext.Provider>
