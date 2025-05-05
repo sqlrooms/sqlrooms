@@ -5,7 +5,7 @@ import {ThemeProvider, StyleSheetManager} from 'styled-components';
 import {KeplerGlReduxState, useStoreWithKepler} from '../KeplerSlice';
 
 import {KeplerGlContext, shouldForwardProp} from '@kepler.gl/components';
-import {theme} from '@kepler.gl/styles';
+import {darkTheme} from '../styles/theme';
 import {Provider} from 'react-redux';
 
 type KeplerProviderProps = {
@@ -33,7 +33,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
         <StyleSheetManager shouldForwardProp={shouldForwardProp}>
-          <ThemeProvider theme={theme}>
+          <ThemeProvider theme={darkTheme}>
             <KeplerGlContext.Provider value={keplerContext}>
               {children}
             </KeplerGlContext.Provider>
