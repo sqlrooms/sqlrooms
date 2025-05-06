@@ -4,7 +4,7 @@ import {makeGetActionCreators} from '@kepler.gl/components';
 import {KeplerGlState} from '@kepler.gl/reducers';
 
 const keplerActionSelector = makeGetActionCreators();
-type KeplerActions = {
+export type KeplerActions = {
   visStateActions: any;
   mapStateActions: any;
   mapStyleActions: any;
