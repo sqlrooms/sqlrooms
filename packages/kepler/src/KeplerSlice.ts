@@ -45,6 +45,17 @@ class DesktopKeplerTable extends KeplerTable {
 // configure Kepler Desktop application
 initApplicationConfig({
   table: DesktopKeplerTable,
+
+  // Raster Tile layer config
+  enableRasterTileLayer: true,
+  rasterServerUseLatestTitiler: false,
+  // TODO: provide a default free server or leave blank
+  rasterServerUrls: [
+    'https://d1q7gb82o5qayp.cloudfront.net',
+    'https://d34k46lorssas.cloudfront.net',
+    'https://d2k92ng3gmu32o.cloudfront.net',
+  ],
+  rasterServerSupportsElevation: true,
 });
 
 export const KeplerMapSchema = z.object({
