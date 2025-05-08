@@ -8,15 +8,14 @@ export const darkTheme = {
   sidePanelBg: 'hsl(var(--background))',
   bottomWidgetBgd: 'hsl(var(--background))',
   textColor: 'hsl(var(--foreground))',
-
+  activeColor: 'hsl(var(--chart-1))',
   subtextColor: 'hsl(var(--muted-foreground))',
   labelColor: 'hsl(var(--muted-foreground))',
   panelBackground: 'hsl(var(--primary-foreground))',
   panelBorderColor: 'hsl(var(--muted-foreground) / 0.2)',
-  floatingBtnBgd: 'hsl(var(--primary-foreground))',
-  floatingBtnBgdHover: 'hsl(var(--secondary))',
-  floatingBtnColor: 'hsl(var(--foreground))',
   panelContentBackground: 'hsl(var(--background))',
+  mapPanelBackgroundColor: 'hsl(var(--primary-foreground))',
+  mapPanelHeaderBackgroundColor: 'hsl(var(--muted))',
 
   inputBgd: 'hsl(var(--input))',
   inputBgdHover: 'hsl(var(--input) / 0.8)',
@@ -42,10 +41,17 @@ export const darkTheme = {
   panelHeaderIcon: 'hsl(var(--muted-foreground))',
   panelHeaderIconActive: 'hsl(var(--foreground))',
   panelHeaderIconHover: 'hsl(var(--foreground))',
+
   // button
   primaryBtnBgd: 'hsl(var(--chart-1))',
   primaryBtnBgdHover: 'hsl(var(--chart-1) / 0.8)',
   floatingBtnRadius: '4px',
+  ctaBtnBgd: 'hsl(var(--chart-1))',
+  ctaBtnBgdHover: 'hsl(var(--chart-1) / 0.8)',
+  ctaBtnActBgd: 'hsl(var(--chart-1) / 0.8)',
+  floatingBtnBgd: 'hsl(var(--primary-foreground))',
+  floatingBtnBgdHover: 'hsl(var(--secondary))',
+  floatingBtnColor: 'hsl(var(--foreground))',
 
   // dropdown
   dropdownListBgd: 'hsl(var(--primary-foreground))',

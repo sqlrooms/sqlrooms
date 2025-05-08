@@ -4,16 +4,13 @@ import {
   AddDataButtonFactory,
   PanelTitleFactory,
 } from '@kepler.gl/components';
-import {PropsWithChildren} from 'react';
 
-// hide add data button
-function EmptyComponent() {
-  return null;
-}
+import React, {PropsWithChildren} from 'react';
 
 const CustomAddDataButtonFactory = () => {
-  return EmptyComponent;
+  return () => null;
 };
+
 const CustomPanelTitleFactory = () => {
   const PanelTitle: React.FC<PropsWithChildren> = ({children}) => (
     <div className="flex items-center justify-end">{children}</div>

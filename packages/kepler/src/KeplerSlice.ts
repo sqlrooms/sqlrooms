@@ -6,7 +6,11 @@ import {
   ActionTypes as KeplerActionTypes,
   addDataToMap,
 } from '@kepler.gl/actions';
-import {DEFAULT_MAP_STYLES} from '@kepler.gl/constants';
+import {
+  DEFAULT_MAP_STYLES,
+  ALL_FIELD_TYPES,
+  VectorTileDatasetMetadata,
+} from '@kepler.gl/constants';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
 
 import {
@@ -34,13 +38,24 @@ import {initApplicationConfig} from '@kepler.gl/utils';
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
     // Default validator accepts only string timestamps
-    return d => d;
+    return (d) => d;
   };
 }
 
 // configure Kepler Desktop application
 initApplicationConfig({
   table: DesktopKeplerTable,
+
+  // Raster Tile layer config
+  enableRasterTileLayer: true,
+  rasterServerUseLatestTitiler: false,
+  // TODO: provide a default free server or leave blank
+  rasterServerUrls: [
+    'https://d1q7gb82o5qayp.cloudfront.net',
+    'https://d34k46lorssas.cloudfront.net',
+    'https://d2k92ng3gmu32o.cloudfront.net',
+  ],
+  rasterServerSupportsElevation: true,
 });
 
 export const KeplerMapSchema = z.object({
@@ -50,8 +65,9 @@ export const KeplerMapSchema = z.object({
     z.object({
       id: z.string(),
       label: z.string(),
+      type: z.string().optional(),
       metadata: z.object({
-        tableName: z.string(),
+        tableName: z.string().optional(),
       }),
     }),
   ),
@@ -173,6 +189,7 @@ export function createKeplerSlice<
       uiState: {
         // side panel is closed by default
         activeSidePanel: false,
+        currentModal: null,
         // hide split map and locale controls by default
         mapControls: {
           ...INITIAL_UI_STATE.mapControls,
@@ -223,7 +240,7 @@ export function createKeplerSlice<
                 const mapToSave = draft.config.kepler.maps.find(
                   (map) => map.id === mapId,
                 );
-                if (mapToSave) {
+                if (mapToSave && state.kepler.map?.[mapId]) {
                   mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
                   );
@@ -233,7 +250,11 @@ export function createKeplerSlice<
                   ).map(([key, value]) => ({
                     id: value.id,
                     label: value.label,
-                    metadata: value.metadata,
+                    metadata: {
+                      // table name is undefined for tile datasets
+                      tableName: value.metadata.tableName,
+                    },
+                    type: value.type,
                   }));
 
                   mapToSave.datasets = datasetsToSave;
@@ -354,6 +375,52 @@ export function createKeplerSlice<
         },
         addDataToMap: (mapId: string, data: any) => {
           get().kepler.dispatchAction(mapId, addDataToMap(data));
+        },
+        addTileSetToMap: (
+          mapId: string,
+          tableName: string,
+          tileset: {
+            name: string;
+            type: string;
+            metadata: VectorTileDatasetMetadata;
+          },
+          tileMetadata: Record<string, any>,
+        ) => {
+          const dataset = {
+            info: {
+              label: tileset.name,
+              type: tileset.type,
+              format: 'rows',
+              // important for kepler to reload this tileset
+              id: tableName,
+            },
+            data: {
+              fields: tileMetadata?.fields || [],
+              rows: [],
+            },
+            metadata: {
+              // duckdb table name
+              tableName,
+              ...tileMetadata,
+              ...tileset.metadata,
+            },
+            // vector tile layer only supports gpu filtering for now
+            supportedFilterTypes: [
+              ALL_FIELD_TYPES.real,
+              ALL_FIELD_TYPES.integer,
+            ],
+            disableDataOperation: true,
+          };
+          get().kepler.dispatchAction(
+            mapId,
+            addDataToMap({
+              datasets: dataset,
+              options: {
+                autoCreateLayers: true,
+                centerMap: true,
+              },
+            }),
+          );
         },
         addConfigToMap: (mapId: string, config: any) => {
           const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
