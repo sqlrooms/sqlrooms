@@ -79,54 +79,52 @@ const KeplerGl: FC<{
     containerRef.current,
   );
   return (
-    <CustomWidgetcontainer
-      ref={containerRef}
-      className="kepler-gl relative flex h-full w-full flex-col justify-between"
-    >
-      {mapFields?.mapState ? (
-        <MapViewStateContextProvider mapState={mapFields.mapState}>
-          <MapContainer
-            primary={true}
-            containerId={0}
-            key={0}
+    <RootContext.Provider value={containerRef}>
+      <CustomWidgetcontainer
+        ref={containerRef}
+        className="kepler-gl relative flex h-full w-full flex-col justify-between"
+      >
+        {mapFields?.mapState ? (
+          <MapViewStateContextProvider mapState={mapFields.mapState}>
+            <MapContainer
+              primary={true}
+              containerId={0}
+              key={0}
+              index={0}
+              {...mapFields}
+              mapboxApiAccessToken={MAPBOX_TOKEN}
+            />
+          </MapViewStateContextProvider>
+        ) : null}
+        {interactionConfig?.geocoder.enabled ? (
+          <GeoCoderPanel
+            {...geoCoderPanelFields}
             index={0}
-            {...mapFields}
-            mapboxApiAccessToken={MAPBOX_TOKEN}
+            unsyncedViewports={false}
           />
-        </MapViewStateContextProvider>
-      ) : null}
-      {interactionConfig?.geocoder.enabled ? (
-        <GeoCoderPanel
-          {...geoCoderPanelFields}
-          index={0}
-          unsyncedViewports={false}
+        ) : null}
+        <BottomWidget
+          rootRef={bottomWidgetRef}
+          {...bottomWidgetFields}
+          theme={theme}
+          containerW={size?.width}
         />
-      ) : null}
-      <BottomWidget
-        rootRef={bottomWidgetRef}
-        {...bottomWidgetFields}
-        theme={theme}
-        containerW={size?.width}
-      />
-      <ModalContainer
-        {...modalContainerFields}
-        containerW={size?.width}
-        containerH={size?.height}
-      />
-    </CustomWidgetcontainer>
+        <ModalContainer
+          {...modalContainerFields}
+          containerW={size?.width}
+          containerH={size?.height}
+        />
+      </CustomWidgetcontainer>
+    </RootContext.Provider>
   );
 };
 
 export const KeplerMapContainer: FC<{
   mapId: string;
 }> = ({mapId}) => {
-  const root = useRef(null);
-
   return (
-    <RootContext.Provider value={root}>
-      <KeplerProvider mapId={mapId}>
-        <KeplerGl mapId={mapId} />
-      </KeplerProvider>
-    </RootContext.Provider>
+    <KeplerProvider mapId={mapId}>
+      <KeplerGl mapId={mapId} />
+    </KeplerProvider>
   );
 };

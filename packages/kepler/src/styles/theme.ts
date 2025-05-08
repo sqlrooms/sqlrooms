@@ -8,12 +8,14 @@ export const darkTheme = {
   sidePanelBg: 'hsl(var(--background))',
   bottomWidgetBgd: 'hsl(var(--background))',
   textColor: 'hsl(var(--foreground))',
-
+  activeColor: 'hsl(var(--chart-1))',
   subtextColor: 'hsl(var(--muted-foreground))',
   labelColor: 'hsl(var(--muted-foreground))',
   panelBackground: 'hsl(var(--primary-foreground))',
   panelBorderColor: 'hsl(var(--muted-foreground) / 0.2)',
   panelContentBackground: 'hsl(var(--background))',
+  mapPanelBackgroundColor: 'hsl(var(--primary-foreground))',
+  mapPanelHeaderBackgroundColor: 'hsl(var(--muted))',
 
   inputBgd: 'hsl(var(--input))',
   inputBgdHover: 'hsl(var(--input) / 0.8)',
