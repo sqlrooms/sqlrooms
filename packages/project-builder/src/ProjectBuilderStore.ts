@@ -14,6 +14,7 @@ import {
   ProjectStateContext,
   ProjectStateProps,
   createProjectSlice,
+  type Slice,
 } from '@sqlrooms/project';
 import {
   DEFAULT_MOSAIC_LAYOUT,
@@ -66,7 +67,6 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig &
 
 export type ProjectBuilderStateProps<PC extends BaseProjectConfig> =
   ProjectStateProps<PC> & {
-    initialized: boolean;
     autoDownloadDataSources: boolean;
     projectFiles: ProjectFileInfo[];
     projectFilesProgress: {[pathname: string]: ProjectFileState};
@@ -195,8 +195,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
         async initialize() {
           const {setTaskProgress} = get().project;
           try {
-            projectSliceState.project.initialize();
-
+            await projectSliceState.project.initialize();
             setTaskProgress(INIT_DB_TASK, {
               message: 'Initializing database…',
               progress: undefined,
@@ -211,12 +210,6 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
             await updateReadyDataSources();
             await maybeDownloadDataSources();
             setTaskProgress(INIT_PROJECT_TASK, undefined);
-
-            set((state) =>
-              produce(state, (draft) => {
-                draft.project.initialized = true;
-              }),
-            );
           } catch (error) {
             setTaskProgress(INIT_DB_TASK, undefined);
             get().project.captureException(error);
@@ -756,7 +749,7 @@ export function useBaseProjectBuilderStore<
   return useStore(store as unknown as StoreApi<PS>, selector);
 }
 
-export function createSlice<PC extends BaseProjectConfig, S>(
+export function createSlice<PC extends BaseProjectConfig, S extends Slice>(
   sliceCreator: (
     ...args: Parameters<StateCreator<S & ProjectBuilderState<PC>>>
   ) => S,

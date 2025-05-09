@@ -141,7 +141,7 @@ export function createDuckDbSlice({
         schema: 'main',
         tables: [],
         tableRowCounts: {},
-
+        
         setConnector: (connector: DuckDbConnector) => {
           set(
             produce((state) => {

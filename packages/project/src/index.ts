@@ -6,6 +6,7 @@ export {
 } from './ProjectStateProvider';
 
 export {
+  type Slice,
   createProjectStore,
   createProjectSlice,
   type ProjectStateActions,

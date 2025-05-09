@@ -5,6 +5,7 @@ import {useBaseProjectStore} from './ProjectStateProvider';
 export type ProjectStore<PC> = StoreApi<ProjectState<PC>>;
 
 export type ProjectStateProps<PC> = {
+  initialized: boolean;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
   projectError: Error | undefined;
@@ -37,9 +38,11 @@ export type ProjectStateActions<PC> = {
 
   /**
    * Called when the project config is saved. To be overridden by the custom project state.
+   * Implementations should call get().project.setLastSavedConfig(config) after a successful
+   * save to update the last saved config.
    * @param config - The project config to save.
    */
-  onSaveConfig?: (config: PC) => void;
+  onSaveConfig?: (config: PC) => Promise<void>;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
@@ -62,6 +65,7 @@ export function createProjectSlice<PC>(props: {
   } = props;
   const initialProjectState: ProjectStateProps<PC> = {
     ...projectStateProps,
+    initialized: false,
     lastSavedConfig: undefined,
     tasksProgress: {},
     projectError: undefined,
@@ -136,7 +140,12 @@ export function createProjectSlice<PC>(props: {
   return slice;
 }
 
-export function createBaseSlice<PC, S>(
+export type Slice = {
+  initialize?: () => Promise<void>;
+};
+
+
+export function createBaseSlice<PC, S extends Slice>(
   sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
@@ -145,6 +154,11 @@ export function createBaseSlice<PC, S>(
       get as () => S & ProjectState<PC>,
       store as StoreApi<S & ProjectState<PC>>,
     );
+}
+
+
+function isSliceWithInitialize(slice: unknown): slice is Slice & Required<Pick<Slice, 'initialize'>> {
+  return typeof slice === 'object' && slice !== null && 'initialize' in slice;
 }
 
 /**
@@ -160,29 +174,38 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
     ...stateCreator(set, get, store),
   }));
 
-  if (typeof window !== 'undefined') {
-    Object.values(projectStore.getState()).forEach((slice) => {
-      const initializeSlice = (slice as Record<string, unknown>).initialize;
-      if (typeof initializeSlice === 'function') {
-        initializeSlice();
+  (async () => {
+    if (typeof window !== 'undefined') {
+      const slices = Object.entries(projectStore.getState());
+      for (const [key, slice] of slices) {
+        if (isSliceWithInitialize(slice)) {
+          console.log('Initializing slice', key);
+          await slice.initialize();
+        }
       }
-    });
-  } else {
-    console.warn(
-      'Skipping project store initialization. Project store should be only used on client.',
-    );
-  }
-  projectStore.subscribe((state) => {
-    try {
-      if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
-        state.project.onSaveConfig(state.config);
-        state.project.setLastSavedConfig(state.config);
-      }
-    } catch (error) {
-      state.project.captureException(error);
-      state.project.setProjectError(new Error('Error saving project config', {cause: error}));
+      // Subscribe to the project store changes after initialization
+      projectStore.subscribe(async (state) => {
+        try {
+          // Only save the project config if it has an onSaveConfig function and has unsaved changes
+          if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
+            state.project.onSaveConfig(state.config);
+          }
+        } catch (error) {
+          state.project.captureException(error);
+          state.project.setProjectError(new Error('Error saving project config', {cause: error}));
+        }
+      });      
+      projectStore.setState((state) =>
+        produce(state, (draft) => {
+          draft.project.initialized = true;
+        }),
+      );
+    } else {
+      console.warn(
+        'Skipping project store initialization. Project store should be only used on client.',
+      );
     }
-  });
+  })();
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing

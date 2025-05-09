@@ -26,7 +26,7 @@ import {
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
-import {produce} from 'immer';
+import {castDraft, produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
 import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
@@ -34,14 +34,16 @@ import type {Action, Store as ReduxStore} from 'redux';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
 import {Datasets, KeplerTable} from '@kepler.gl/table';
 import {initApplicationConfig} from '@kepler.gl/utils';
+import { ParsedConfig } from '@kepler.gl/types';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
     // Default validator accepts only string timestamps
-    return (d) => d;
+    return (d: any) => d;
   };
 }
 
+// TODO: initApplicationConfig should be called from createKeplerSlice
 // configure Kepler Desktop application
 initApplicationConfig({
   table: DesktopKeplerTable,
@@ -145,6 +147,19 @@ export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type KeplerSliceState = {
   kepler: {
     map: KeplerGlReduxState;
+    initialize: () => Promise<void>;
+    addDataToMap: (mapId: string, data: any) => void;
+    addTileSetToMap: (
+      mapId: string,
+      tableName: string,
+      tileset: {
+        name: string;
+        type: string;
+        metadata: VectorTileDatasetMetadata;
+      },
+      tileMetadata: Record<string, any>,
+    ) => void;
+    addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
     dispatchAction: (mapId: string, action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
     createMap: (name?: string) => void;
@@ -162,9 +177,9 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.UPDATE_MAP,
 ];
 
-// @ts-expect-error: injected with define
 const MAPBOX_TOKEN = process.env.MapboxAccessToken;
 const DEFAULT_MAP_STYLE = 'positron';
+
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
 >(options: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
@@ -177,7 +192,7 @@ export function createKeplerSlice<
         mapStyles: DEFAULT_MAP_STYLES.reduce(
           (accu, curr) => ({
             ...accu,
-            // Note: this has to be done only for Kepler Desktop
+            // TODO: Note: this has to be done only for Kepler Desktop
             [curr.id]: {
               ...curr,
               icon: `http://localhost:3001/static/basemap/${curr.icon.split('/').pop()}`,
@@ -243,11 +258,11 @@ export function createKeplerSlice<
                 if (mapToSave && state.kepler.map?.[mapId]) {
                   mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
-                  );
+                  ) as any;
                   // map tables to the datasets in the kepler state
                   const datasetsToSave = Object.entries(
                     state.kepler.map[mapId].visState.datasets as Datasets,
-                  ).map(([key, value]) => ({
+                  ).map(([_key, value]: [string, any]) => ({
                     id: value.id,
                     label: value.label,
                     metadata: {
@@ -315,7 +330,7 @@ export function createKeplerSlice<
         dispatchAction: dispatchWithMiddleware,
         __reduxProviderStore,
 
-        initialize: () => {
+        async initialize() {
           requestInitialMapStyle(defaultMapId);
         },
 
@@ -324,14 +339,14 @@ export function createKeplerSlice<
             (map) => map.id === get().config.kepler.currentMapId,
           );
         },
-        setCurrentMapId: (mapId: string) => {
+        setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
               draft.config.kepler.currentMapId = mapId;
             }),
           );
         },
-        createMap: (name?: string) => {
+        createMap: (name) => {
           const mapId = createId();
           set((state) => {
             return produce(state, (draft) => {
@@ -348,7 +363,7 @@ export function createKeplerSlice<
           });
           requestInitialMapStyle(mapId);
         },
-        deleteMap: (mapId: string) => {
+        deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
               draft.config.kepler.maps = draft.config.kepler.maps.filter(
@@ -361,7 +376,7 @@ export function createKeplerSlice<
             }),
           );
         },
-        renameMap: (mapId: string, name: string) => {
+        renameMap: (mapId, name) => {
           set((state) =>
             produce(state, (draft) => {
               const map = draft.config.kepler.maps.find(
@@ -373,18 +388,14 @@ export function createKeplerSlice<
             }),
           );
         },
-        addDataToMap: (mapId: string, data: any) => {
+        addDataToMap: (mapId, data) => {
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
         addTileSetToMap: (
-          mapId: string,
-          tableName: string,
-          tileset: {
-            name: string;
-            type: string;
-            metadata: VectorTileDatasetMetadata;
-          },
-          tileMetadata: Record<string, any>,
+          mapId,
+          tableName,
+          tileset,
+          tileMetadata,
         ) => {
           const dataset = {
             info: {
@@ -422,11 +433,14 @@ export function createKeplerSlice<
             }),
           );
         },
-        addConfigToMap: (mapId: string, config: any) => {
-          const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
+        addConfigToMap: (mapId, config) => {
+          const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config as any);
+          if (!parsedConfig) {
+            throw new Error('Failed to parse config');
+          }
           get().kepler.dispatchAction(
             mapId,
-            addDataToMap({config: parsedConfig}),
+            addDataToMap({config: parsedConfig, datasets: []}),
           );
         },
       },

@@ -5,6 +5,7 @@ import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseProjectBuilderStore} from './ProjectBuilderStore';
 
 const ProjectBuilder: React.FC = () => {
+  const initialized = useBaseProjectBuilderStore((state) => state.project.initialized);
   const layout = useBaseProjectBuilderStore((state) => state.config.layout);
   const setLayout = useBaseProjectBuilderStore(
     (state) => state.project.setLayout,
@@ -57,6 +58,9 @@ const ProjectBuilder: React.FC = () => {
       });
     }
   }, [projectError]);
+  if (!initialized) {
+    return <SpinnerPane h="100%" />;
+  }
   return (
     <ErrorBoundary>
       <Suspense fallback={<SpinnerPane h="100%" />}>
