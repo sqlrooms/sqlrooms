@@ -28,27 +28,13 @@ export function useTableManagement() {
     setSelectedTable(table);
   }, []);
 
-  // The fetchTables method now just refreshes the schemas from ProjectStore
-  const fetchTables = useCallback(async () => {
-    try {
-      setTablesLoading(true);
-      setTablesError(null);
-      if (refreshTableSchemas) await refreshTableSchemas();
-    } catch (error) {
-      console.error('Error refreshing tables:', error);
-      setTablesError(error as Error);
-    } finally {
-      setTablesLoading(false);
-    }
-  }, [refreshTableSchemas]);
-
-  return {
+   return {
     tables,
     tablesLoading,
     tablesError,
     tableSchemas,
     selectedTable,
-    fetchTables,
     handleSelectTable,
+    refreshTableSchemas
   };
 }

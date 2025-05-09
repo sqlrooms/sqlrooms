@@ -118,19 +118,19 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                 </FormItem>
               )}
             />
-
             <FormField
               // @ts-ignore
               control={form.control}
               name="query"
+              
               render={({field}) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>SQL query:</FormLabel>
                   <FormControl>
                     <SqlMonacoEditor
                       value={field.value}
                       onChange={field.onChange}
-                      className="min-h-[200px]"
+                      className="w-full h-[200px]"
                       options={{
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
@@ -143,13 +143,12 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                 </FormItem>
               )}
             />
-
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {editDataSource ? 'Update' : 'Create'}
+                {editDataSource ? 'Update' : 'Create and Add to Map'}
               </Button>
             </DialogFooter>
           </form>

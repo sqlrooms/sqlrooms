@@ -5,8 +5,10 @@ import {useBaseProjectStore} from './ProjectStateProvider';
 export type ProjectStore<PC> = StoreApi<ProjectState<PC>>;
 
 export type ProjectStateProps<PC> = {
+  initialized: boolean;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
+  projectError: Error | undefined;
   captureException: (exception: unknown, captureContext?: unknown) => void;
 };
 
@@ -34,8 +36,17 @@ export type ProjectStateActions<PC> = {
    */
   hasUnsavedChanges(): boolean; // since last save
 
+  /**
+   * Called when the project config is saved. To be overridden by the custom project state.
+   * Implementations should call get().project.setLastSavedConfig(config) after a successful
+   * save to update the last saved config.
+   * @param config - The project config to save.
+   */
+  onSaveConfig?: (config: PC) => Promise<void>;
+
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
+  setProjectError: (error: Error) => void;
 };
 
 export type ProjectState<PC> = {
@@ -54,8 +65,10 @@ export function createProjectSlice<PC>(props: {
   } = props;
   const initialProjectState: ProjectStateProps<PC> = {
     ...projectStateProps,
+    initialized: false,
     lastSavedConfig: undefined,
     tasksProgress: {},
+    projectError: undefined,
     captureException: (exception: unknown) => {
       console.error(exception);
     },
@@ -68,7 +81,6 @@ export function createProjectSlice<PC>(props: {
         initialize: async () => {
           // To be overridden by the project builder
         },
-
         setProjectConfig: (config) =>
           set((state) =>
             produce(state, (draft) => {
@@ -99,6 +111,14 @@ export function createProjectSlice<PC>(props: {
           return undefined;
         },
 
+        setProjectError(error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.project.projectError = error;
+            }),
+          );
+        },
+        
         setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
@@ -120,7 +140,12 @@ export function createProjectSlice<PC>(props: {
   return slice;
 }
 
-export function createBaseSlice<PC, S>(
+export type Slice = {
+  initialize?: () => Promise<void>;
+};
+
+
+export function createBaseSlice<PC, S extends Slice>(
   sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
@@ -129,6 +154,11 @@ export function createBaseSlice<PC, S>(
       get as () => S & ProjectState<PC>,
       store as StoreApi<S & ProjectState<PC>>,
     );
+}
+
+
+function isSliceWithInitialize(slice: unknown): slice is Slice & Required<Pick<Slice, 'initialize'>> {
+  return typeof slice === 'object' && slice !== null && 'initialize' in slice;
 }
 
 /**
@@ -144,13 +174,38 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
     ...stateCreator(set, get, store),
   }));
 
-  if (typeof window !== 'undefined') {
-    projectStore.getState().project.initialize();
-  } else {
-    console.warn(
-      'Skipping project store initialization. Project store should be only used on client.',
-    );
-  }
+  (async () => {
+    if (typeof window !== 'undefined') {
+      const slices = Object.entries(projectStore.getState());
+      for (const [key, slice] of slices) {
+        if (isSliceWithInitialize(slice)) {
+          console.log('Initializing slice', key);
+          await slice.initialize();
+        }
+      }
+      // Subscribe to the project store changes after initialization
+      projectStore.subscribe(async (state) => {
+        try {
+          // Only save the project config if it has an onSaveConfig function and has unsaved changes
+          if (state.project.onSaveConfig && state.project.hasUnsavedChanges()) {
+            state.project.onSaveConfig(state.config);
+          }
+        } catch (error) {
+          state.project.captureException(error);
+          state.project.setProjectError(new Error('Error saving project config', {cause: error}));
+        }
+      });      
+      projectStore.setState((state) =>
+        produce(state, (draft) => {
+          draft.project.initialized = true;
+        }),
+      );
+    } else {
+      console.warn(
+        'Skipping project store initialization. Project store should be only used on client.',
+      );
+    }
+  })();
 
   function useProjectStore<T>(selector: (state: AppState) => T): T {
     // @ts-ignore TODO fix typing
