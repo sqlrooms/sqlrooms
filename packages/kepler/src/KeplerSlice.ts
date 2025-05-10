@@ -46,6 +46,8 @@ import {Datasets, KeplerTable} from '@kepler.gl/table';
 import {initApplicationConfig} from '@kepler.gl/utils';
 import * as arrow from 'apache-arrow';
 import {DatabaseConnection} from '@kepler.gl/utils';
+import {ParsedConfig} from '@kepler.gl/types';
+
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
     // Default validator accepts only string timestamps
@@ -177,6 +179,7 @@ export type KeplerSliceState = {
      * @param action - The action
      */
     onAction?: (mapId: string, action: Action) => void;
+    registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, KeplerAction>;
   };
 };
@@ -453,12 +456,12 @@ export function createKeplerSlice<
             }),
           );
         },
-        addTileSetToMap: (
-          mapId,
-          tableName,
-          tileset,
-          tileMetadata,
-        ) => {
+        addDataToMap: (mapId: string, data: any) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addDataToMap(data));
+        },
+        addTileSetToMap: (mapId, tableName, tileset, tileMetadata) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
           const dataset = {
             info: {
               label: tileset.name,
@@ -495,8 +498,10 @@ export function createKeplerSlice<
             }),
           );
         },
-        addConfigToMap: (mapId, config) => {
-          const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config as any);
+        addConfigToMap: (mapId: string, config: any) => {
+          // if map not registered, register it
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
           if (!parsedConfig) {
             throw new Error('Failed to parse config');
           }
@@ -504,6 +509,19 @@ export function createKeplerSlice<
             mapId,
             addDataToMap({config: parsedConfig, datasets: []}),
           );
+        },
+        registerKeplerMapIfNotExists(mapId: string) {
+          if (!get().kepler.map[mapId]) {
+            set((state) => {
+              return produce(state, (draft) => {
+                draft.kepler.map = keplerReducer(
+                  draft.kepler.map,
+                  registerEntry({id: mapId}),
+                );
+              });
+            });
+            requestInitialMapStyle(mapId);
+          }
         },
       },
     };
