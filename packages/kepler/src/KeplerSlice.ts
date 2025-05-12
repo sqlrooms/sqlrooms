@@ -12,7 +12,16 @@ import {
   VectorTileDatasetMetadata,
 } from '@kepler.gl/constants';
 import {MiddlewareAPI, Middleware, Dispatch, AnyAction, compose} from 'redux';
-
+import {
+  constructST_asWKBQuery,
+  getDuckDBColumnTypes,
+  getDuckDBColumnTypesMap,
+  getGeometryColumns,
+  restoreGeoarrowMetadata,
+  setGeoArrowWKBExtension
+} from '@kepler.gl/duckdb';
+import {arrowSchemaToFields} from '@kepler.gl/processors';
+import {Field} from '@kepler.gl/types';
 import {
   keplerGlReducer,
   KeplerGlState,
@@ -35,7 +44,8 @@ import KeplerGLSchemaManager from '@kepler.gl/schemas';
 // @ts-ignore
 import {Datasets, KeplerTable} from '@kepler.gl/table';
 import {initApplicationConfig} from '@kepler.gl/utils';
-
+import * as arrow from 'apache-arrow';
+import {DatabaseConnection} from '@kepler.gl/utils';
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
     // Default validator accepts only string timestamps
@@ -63,16 +73,6 @@ initApplicationConfig({
 export const KeplerMapSchema = z.object({
   id: z.string(),
   name: z.string(),
-  datasets: z.array(
-    z.object({
-      id: z.string(),
-      label: z.string(),
-      type: z.string().optional(),
-      metadata: z.object({
-        tableName: z.string().optional(),
-      }),
-    }),
-  ),
   config: z
     .object({
       version: z.literal('v1'),
@@ -113,7 +113,6 @@ export function createDefaultKeplerConfig(
           id: defaultMapId,
           name: 'Untitled Map',
           config: undefined,
-          datasets: [],
         },
       ],
       currentMapId: defaultMapId,
@@ -149,7 +148,12 @@ export type KeplerSliceState = {
   kepler: {
     map: KeplerGlReduxState;
     initialize: () => Promise<void>;
-    addDataToMap: (mapId: string, data: any) => void;
+    /**
+     * Update the datasets in all the kepler map so that they correspond to
+     * the latest table schemas in the database
+     */
+    syncKeplerDatasets: () => Promise<void>;
+    addTableToMap: (mapId: string, tableName: string) => Promise<void>;
     addTileSetToMap: (
       mapId: string,
       tableName: string,
@@ -272,20 +276,6 @@ export function createKeplerSlice<
                   mapToSave.config = KeplerGLSchemaManager.getConfigToSave(
                     state.kepler.map[mapId],
                   ) as any;
-                  // map tables to the datasets in the kepler state
-                  const datasetsToSave = Object.entries(
-                    state.kepler.map[mapId].visState.datasets as Datasets,
-                  ).map(([_key, value]: [string, any]) => ({
-                    id: value.id,
-                    label: value.label,
-                    metadata: {
-                      // table name is undefined for tile datasets
-                      tableName: value.metadata.tableName,
-                    },
-                    type: value.type,
-                  }));
-
-                  mapToSave.datasets = datasetsToSave;
                 }
               }),
             );
@@ -351,6 +341,45 @@ export function createKeplerSlice<
           requestInitialMapStyle(defaultMapId);
         },
 
+        addTableToMap: async (mapId, tableName) => {
+          const connector = await get().db.getConnector();
+          let fields: Field[] = [];
+          let cols: arrow.Vector[] = [];
+  
+          const duckDbColumns = await getDuckDBColumnTypes(
+            connector as unknown as DatabaseConnection,
+            tableName
+          );
+          const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
+          const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
+          const adjustedQuery = constructST_asWKBQuery(tableName, columnsToConvertToWKB);
+          const arrowResult = await connector.query(adjustedQuery);
+          setGeoArrowWKBExtension(arrowResult, duckDbColumns);
+          // TODO remove once DuckDB doesn't drop geoarrow metadata
+          restoreGeoarrowMetadata(arrowResult, {});
+          fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
+          cols = [...Array(arrowResult.numCols).keys()]
+            .map(i => arrowResult.getChildAt(i))
+            .filter(col => col) as arrow.Vector[];
+  
+          if (fields && cols) {
+            const datasets = {
+              data: {
+                fields,
+                cols
+              },
+              info: {
+                label: tableName,
+                id: tableName
+              },
+              metadata: {
+                tableName
+              }
+            };
+            get().kepler.dispatchAction(mapId, addDataToMap({datasets}));
+          }
+        },
+  
         getCurrentMap: () => {
           return get().config.kepler.maps.find(
             (map) => map.id === get().config.kepler.currentMapId,
@@ -363,14 +392,13 @@ export function createKeplerSlice<
             }),
           );
         },
-        createMap: (name) => {
+        createMap: async (name) => {
           const mapId = createId();
           set((state) => {
             return produce(state, (draft) => {
               draft.config.kepler.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
-                datasets: [],
               });
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
@@ -379,7 +407,21 @@ export function createKeplerSlice<
             });
           });
           requestInitialMapStyle(mapId);
+          await get().kepler.syncKeplerDatasets();
+
         },
+
+        async syncKeplerDatasets() {
+          for (const mapId of Object.keys(get().kepler.map)) {
+            const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
+            for (const {schema, tableName} of get().db.tables) {
+              if (schema === 'main' && !keplerDatasets[tableName]) {
+                await get().kepler.addTableToMap(mapId, tableName);
+              }
+            }
+          }
+        },
+
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
@@ -404,9 +446,6 @@ export function createKeplerSlice<
               }
             }),
           );
-        },
-        addDataToMap: (mapId, data) => {
-          get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
         addTileSetToMap: (
           mapId,

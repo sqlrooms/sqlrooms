@@ -21,31 +21,21 @@ import {
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {
-  getDuckDBColumnTypes,
-  getDuckDBColumnTypesMap,
-  getGeometryColumns,
-  constructST_asWKBQuery,
-} from '@kepler.gl/duckdb';
-import {arrowSchemaToFields} from '@kepler.gl/processors';
-import {Field} from '@kepler.gl/types';
-import * as arrow from 'apache-arrow';
-
-import {
   DatabaseIcon,
-  Layers,
   Filter,
-  SlidersHorizontal,
+  Layers,
   Map as MapIcon,
+  SlidersHorizontal,
 } from 'lucide-react';
-import {z} from 'zod';
-import {DataSourcesPanel} from './components/DataSourcesPanel';
-import {MainView} from './components/MainView';
+import { z } from 'zod';
+import { DataSourcesPanel } from './components/DataSourcesPanel';
 import {
-  KeplerSidePanelLayerManager,
-  KeplerSidePanelFilterManager,
   KeplerSidePanelBaseMapManager,
+  KeplerSidePanelFilterManager,
   KeplerSidePanelInteractionManager,
+  KeplerSidePanelLayerManager,
 } from './components/KeplerSidePanels';
+import { MainView } from './components/MainView';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
@@ -160,46 +150,50 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           tName,
           loadOptions,
         );
-
-        const connector = await get().db.getConnector();
-        const {tableName} = addedTable;
-        let fields: Field[] = [];
-        let cols: arrow.Vector[] = [];
-
-        try {
-          const duckDbColumns = await getDuckDBColumnTypes(
-            connector,
-            tableName,
-          );
-          const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
-          const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
-          const adjustedQuery = constructST_asWKBQuery(
-            tableName,
-            columnsToConvertToWKB,
-          );
-          const arrowResult = await connector.query(adjustedQuery);
-          fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
-          cols = [...Array(arrowResult.numCols).keys()]
-            .map((i) => arrowResult.getChildAt(i))
-            .filter((col) => col) as arrow.Vector[];
-        } catch (error) {
-          console.error('kepler DuckDB: createTableAndGetArrow', error);
+        if (!addedTable) {
+          return;
         }
-        if (fields && cols) {
-          const currentMapId = get().config.kepler.currentMapId;
-          const datasets = {
-            data: {
-              fields,
-              cols,
-            },
-            info: {
-              label: tableName,
-              id: tableName,
-            },
-          };
-          keplerSlice.kepler.addDataToMap(currentMapId, {datasets});
-        }
-        // return addedTable;
+        const currentMapId = get().config.kepler.currentMapId;
+        get().kepler.addDataToMap(currentMapId, addedTable.tableName);
+        return addedTable;
+
+        // const connector = await get().db.getConnector();
+        // const {tableName} = addedTable;
+        // let fields: Field[] = [];
+        // let cols: arrow.Vector[] = [];
+        // try {
+        //   const duckDbColumns = await getDuckDBColumnTypes(
+        //     connector as unknown as DatabaseConnection,
+        //     tableName,
+        //   );
+        //   const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
+        //   const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
+        //   const adjustedQuery = constructST_asWKBQuery(
+        //     tableName,
+        //     columnsToConvertToWKB,
+        //   );
+        //   const arrowResult = await connector.query(adjustedQuery);
+        //   fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
+        //   cols = [...Array(arrowResult.numCols).keys()]
+        //     .map((i) => arrowResult.getChildAt(i))
+        //     .filter((col) => col) as arrow.Vector[];
+        // } catch (error) {
+        //   console.error('kepler DuckDB: createTableAndGetArrow', error);
+        // }
+        // if (fields && cols) {
+        //   const currentMapId = get().config.kepler.currentMapId;
+        //   const datasets = {
+        //     data: {
+        //       fields,
+        //       cols,
+        //     },
+        //     info: {
+        //       label: tableName,
+        //       id: tableName,
+        //     },
+        //   };
+        //   keplerSlice.kepler.dispatchAction(currentMapId, addDataToMap({datasets}));
+        // }
       },
     },
 
