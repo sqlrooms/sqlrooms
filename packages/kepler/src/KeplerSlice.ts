@@ -32,6 +32,7 @@ import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import type {Action, Store as ReduxStore} from 'redux';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
+// @ts-ignore
 import {Datasets, KeplerTable} from '@kepler.gl/table';
 import {initApplicationConfig} from '@kepler.gl/utils';
 import { ParsedConfig } from '@kepler.gl/types';

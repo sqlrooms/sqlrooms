@@ -42,6 +42,8 @@ const CustomWidgetcontainer = styled.div`
   }
 `;
 
+type KeplerGLProps= Parameters<typeof geoCoderPanelSelector>[0];
+
 const KeplerGl: FC<{
   mapId: string;
 }> = ({mapId}) => {
@@ -56,18 +58,17 @@ const KeplerGl: FC<{
       ...KEPLER_PROPS,
       ...keplerState,
       ...keplerActions,
-    };
+      id: mapId,
+    } as KeplerGLProps;
   }, [keplerState, keplerActions]);
+
   const geoCoderPanelFields = geoCoderPanelSelector(
     mergedKeplerProps,
     // dont need height
     size || DEFAULT_DIMENSIONS,
   );
   const mapFields = keplerState
-    ? mapFieldsSelector({
-        id: mapId,
-        ...mergedKeplerProps,
-      })
+    ? mapFieldsSelector(mergedKeplerProps)
     : null;
 
   const bottomWidgetFields = keplerState

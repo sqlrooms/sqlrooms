@@ -2,7 +2,7 @@
   "name": "@sqlrooms/kepler",
   "version": "0.8.1",
   "main": "dist/index.js",
-  "types": "src/index.ts",
+  "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
@@ -57,6 +57,7 @@
     "typedoc": "typedoc"
   },
   "devDependencies": {
-    "@types/redux-logger": "^3.0.13"
+    "@types/redux-logger": "^3.0.13",
+    "typescript": "^5.8.3"
   }
 }

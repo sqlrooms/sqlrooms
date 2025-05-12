@@ -3,6 +3,7 @@ import {
   provideRecipesToInjector,
   AddDataButtonFactory,
   PanelTitleFactory,
+  Factory
 } from '@kepler.gl/components';
 
 import React, {PropsWithChildren} from 'react';
@@ -21,5 +22,6 @@ const CustomPanelTitleFactory = () => {
 const recipes = [
   [AddDataButtonFactory, CustomAddDataButtonFactory],
   [PanelTitleFactory, CustomPanelTitleFactory],
-];
+] as [Factory, Factory][];
+
 export const KeplerInjector = provideRecipesToInjector(recipes, appInjector);
