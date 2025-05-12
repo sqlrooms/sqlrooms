@@ -71,10 +71,9 @@ const KeplerGl: FC<{
     ? mapFieldsSelector(mergedKeplerProps)
     : null;
 
-  const bottomWidgetFields = keplerState
+  const bottomWidgetFields = keplerState?.visState.filters?.length
     ? bottomWidgetSelector(mergedKeplerProps, theme)
     : null;
-
   const modalContainerFields = modalContainerSelector(
     mergedKeplerProps,
     containerRef.current,
@@ -104,17 +103,17 @@ const KeplerGl: FC<{
             unsyncedViewports={false}
           />
         ) : null}
-        <BottomWidget
+        {bottomWidgetFields ? <BottomWidget
           rootRef={bottomWidgetRef}
           {...bottomWidgetFields}
           theme={theme}
           containerW={size?.width}
-        />
-        <ModalContainer
+        /> : null}
+        {modalContainerFields ? <ModalContainer
           {...modalContainerFields}
           containerW={size?.width}
           containerH={size?.height}
-        />
+        /> : null}
       </CustomWidgetcontainer>
     </RootContext.Provider>
   );

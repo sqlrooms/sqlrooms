@@ -26,7 +26,7 @@ import {
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
-import {castDraft, produce} from 'immer';
+import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
 import {z} from 'zod';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
@@ -35,7 +35,6 @@ import KeplerGLSchemaManager from '@kepler.gl/schemas';
 // @ts-ignore
 import {Datasets, KeplerTable} from '@kepler.gl/table';
 import {initApplicationConfig} from '@kepler.gl/utils';
-import { ParsedConfig } from '@kepler.gl/types';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
@@ -91,6 +90,7 @@ export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
 
 export type CreateKeplerSliceOptions = {
   actionLogging?: boolean | ReduxLoggerOptions;
+  middlewares?: Middleware[];
 };
 
 export const KeplerSliceConfig = z.object({
@@ -167,6 +167,12 @@ export type KeplerSliceState = {
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
+    /**
+     * Override the function to be called when a kepler action is dispatched
+     * @param mapId - The map id
+     * @param action - The action
+     */
+    onAction?: (mapId: string, action: Action) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, KeplerAction>;
   };
 };
@@ -183,8 +189,10 @@ const DEFAULT_MAP_STYLE = 'positron';
 
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
->(options: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
-  const {actionLogging = false} = options;
+>({
+  actionLogging = false,
+  middlewares: additionalMiddlewares = [],
+}: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
   return createSlice<PC, KeplerSliceState>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState({
       mapStyle: {
@@ -234,6 +242,10 @@ export function createKeplerSlice<
           map: keplerReducer(state.kepler.map, wrapTo(mapId, action)),
         },
       }));
+      
+      // Call onAction if it's defined
+      get().kepler.onAction?.(mapId, action);
+      
       return action;
     };
 
@@ -295,14 +307,18 @@ export function createKeplerSlice<
       }
     }
     // forward kepler action to default map
-    const middlewares = [taskMiddleware, saveKeplerConfigMiddleware];
+    const middlewares: Middleware[] = [
+      taskMiddleware,
+      saveKeplerConfigMiddleware,
+      ...additionalMiddlewares,
+    ];
     if (actionLogging) {
       const logger = createLogger(
         actionLogging === true ? {collapsed: true} : actionLogging,
-      );
+      ) as Middleware;
       middlewares.push(logger);
     }
-    const dispatchWithMiddleware = (mapId: string, action: Action) => {
+    const dispatchWithMiddleware = (mapId: string, action: KeplerAction) => {
       const wrapDispatch = (a: Action) => dispatch(mapId, a);
       wrapDispatch.mapId = mapId;
 
