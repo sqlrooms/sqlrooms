@@ -154,46 +154,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           return;
         }
         const currentMapId = get().config.kepler.currentMapId;
-        get().kepler.addDataToMap(currentMapId, addedTable.tableName);
+        get().kepler.addTableToMap(currentMapId, addedTable.tableName);
         return addedTable;
-
-        // const connector = await get().db.getConnector();
-        // const {tableName} = addedTable;
-        // let fields: Field[] = [];
-        // let cols: arrow.Vector[] = [];
-        // try {
-        //   const duckDbColumns = await getDuckDBColumnTypes(
-        //     connector as unknown as DatabaseConnection,
-        //     tableName,
-        //   );
-        //   const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
-        //   const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
-        //   const adjustedQuery = constructST_asWKBQuery(
-        //     tableName,
-        //     columnsToConvertToWKB,
-        //   );
-        //   const arrowResult = await connector.query(adjustedQuery);
-        //   fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
-        //   cols = [...Array(arrowResult.numCols).keys()]
-        //     .map((i) => arrowResult.getChildAt(i))
-        //     .filter((col) => col) as arrow.Vector[];
-        // } catch (error) {
-        //   console.error('kepler DuckDB: createTableAndGetArrow', error);
-        // }
-        // if (fields && cols) {
-        //   const currentMapId = get().config.kepler.currentMapId;
-        //   const datasets = {
-        //     data: {
-        //       fields,
-        //       cols,
-        //     },
-        //     info: {
-        //       label: tableName,
-        //       id: tableName,
-        //     },
-        //   };
-        //   keplerSlice.kepler.dispatchAction(currentMapId, addDataToMap({datasets}));
-        // }
       },
     },
 

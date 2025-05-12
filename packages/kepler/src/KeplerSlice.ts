@@ -414,7 +414,10 @@ export function createKeplerSlice<
           const {currentMapId} = get().config.kepler;
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-            for (const {schema, tableName} of get().db.tables) {
+            for (const {
+              // @ts-ignore Added in next published version of @sqlrooms/duckdb
+              schema, 
+              tableName} of get().db.tables) {
               if (schema === 'main' && !keplerDatasets[tableName]) {
                 await get().kepler.addTableToMap(mapId, tableName, mapId === currentMapId ? {
                   autoCreateLayers: true,
