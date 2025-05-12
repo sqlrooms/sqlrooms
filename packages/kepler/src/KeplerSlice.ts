@@ -21,7 +21,7 @@ import {
   setGeoArrowWKBExtension
 } from '@kepler.gl/duckdb';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
-import {Field} from '@kepler.gl/types';
+import {AddDataToMapPayload, Field} from '@kepler.gl/types';
 import {
   keplerGlReducer,
   KeplerGlState,
@@ -153,7 +153,7 @@ export type KeplerSliceState = {
      * the latest table schemas in the database
      */
     syncKeplerDatasets: () => Promise<void>;
-    addTableToMap: (mapId: string, tableName: string) => Promise<void>;
+    addTableToMap: (mapId: string, tableName: string, options?: AddDataToMapPayload['options']) => Promise<void>;
     addTileSetToMap: (
       mapId: string,
       tableName: string,
@@ -340,12 +340,12 @@ export function createKeplerSlice<
         async initialize() {
           requestInitialMapStyle(defaultMapId);
         },
-
-        addTableToMap: async (mapId, tableName) => {
+        
+        addTableToMap: async (mapId, tableName, options = {}) => {
           const connector = await get().db.getConnector();
           let fields: Field[] = [];
           let cols: arrow.Vector[] = [];
-  
+          
           const duckDbColumns = await getDuckDBColumnTypes(
             connector as unknown as DatabaseConnection,
             tableName
@@ -363,20 +363,20 @@ export function createKeplerSlice<
             .filter(col => col) as arrow.Vector[];
   
           if (fields && cols) {
-            const datasets = {
+            const datasets: AddDataToMapPayload['datasets'] = {
               data: {
                 fields,
-                cols
+                cols,
+                rows: []
               },
-              info: {
-                label: tableName,
+              info: {label: tableName,
                 id: tableName
               },
               metadata: {
                 tableName
               }
             };
-            get().kepler.dispatchAction(mapId, addDataToMap({datasets}));
+            get().kepler.dispatchAction(mapId, addDataToMap({datasets, options}));
           }
         },
   
@@ -410,13 +410,16 @@ export function createKeplerSlice<
           await get().kepler.syncKeplerDatasets();
 
         },
-
         async syncKeplerDatasets() {
+          const {currentMapId} = get().config.kepler;
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
             for (const {schema, tableName} of get().db.tables) {
               if (schema === 'main' && !keplerDatasets[tableName]) {
-                await get().kepler.addTableToMap(mapId, tableName);
+                await get().kepler.addTableToMap(mapId, tableName, mapId === currentMapId ? {
+                  autoCreateLayers: true,
+                  centerMap: true,
+                } : {});
               }
             }
           }
