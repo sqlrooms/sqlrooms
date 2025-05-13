@@ -124,6 +124,16 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
   }
 
+  async query<T extends arrow.TypeMap = any>(
+    query: string,
+  ): Promise<arrow.Table<T>> {
+    await this.ensureInitialized();
+    if (!this.conn) {
+      throw new Error('DuckDB connection not initialized');
+    }
+    return await this.conn.query(query);
+  }
+
   async loadFile(
     file: string | File,
     tableName: string,
