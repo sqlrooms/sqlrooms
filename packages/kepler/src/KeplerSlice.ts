@@ -21,7 +21,8 @@ import {
 import { arrowSchemaToFields } from '@kepler.gl/processors';
 import {
   keplerGlReducer,
-  KeplerGlState
+  KeplerGlState,
+  MapStyle
 } from '@kepler.gl/reducers';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
 import { AddDataToMapPayload, Field } from '@kepler.gl/types';
@@ -100,21 +101,20 @@ export const KeplerSliceConfig = z.object({
 });
 export type KeplerSliceConfig = z.infer<typeof KeplerSliceConfig>;
 
-const defaultMapId = 'untitled_map';
-
 export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig['kepler']>,
 ): KeplerSliceConfig {
+  const mapId = createId();
   return {
     kepler: {
       maps: [
         {
-          id: defaultMapId,
+          id: mapId,
           name: 'Untitled Map',
           config: undefined,
         },
       ],
-      currentMapId: defaultMapId,
+      currentMapId: mapId,
       ...props,
     },
   };
@@ -175,27 +175,26 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
 >({
-  initialKeplerState,
+  initialKeplerState = {
+    mapStyle: {styleType: 'positron'} as MapStyle,
+  },
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState<PC>> {
   return createSlice<PC, KeplerSliceState<PC>>((set, get) => {    
-    const keplerReducer = keplerGlReducer.initialState(
-      initialKeplerState || {}
-    );   
-
+    const keplerReducer = keplerGlReducer.initialState(initialKeplerState);   
     return {
       kepler: {
         map: {},
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
 
-        async initialize(config?: PC) {          
+        async initialize(config?: PC) {   
+          const currentMapId = config?.kepler.currentMapId || get().config.kepler.currentMapId;
           const keplerInitialState: KeplerGlReduxState = keplerReducer(
             undefined,
-            registerEntry({id: defaultMapId}),
+            registerEntry({id: currentMapId}),
           );
-
           const dispatch = (mapId: string, action: Action) => {
             set((state: KeplerSliceState<PC>) => ({
               ...state,
@@ -204,10 +203,8 @@ export function createKeplerSlice<
                 map: keplerReducer(state.kepler.map, wrapTo(mapId, action)),
               },
             }));
-            
             // Call onAction if it's defined
-            get().kepler.onAction?.(mapId, action);
-            
+            get().kepler.onAction?.(mapId, action);          
             return action;
           };
           const middlewares: Middleware[] = [
@@ -237,7 +234,10 @@ export function createKeplerSlice<
               map: keplerInitialState,
               dispatchAction: dispatchWithMiddleware,
               __reduxProviderStore: {
-                dispatch: ((action: KeplerAction) => dispatchWithMiddleware(defaultMapId, action)) as Dispatch<KeplerAction>,
+                dispatch: ((action: KeplerAction) => {
+                  const mapId = get().config.kepler.currentMapId;
+                  return dispatchWithMiddleware(mapId, action);
+                }) as Dispatch<KeplerAction>,
                 getState: () => get().kepler.map || {},
                 subscribe: () => () => { },
                 replaceReducer: () => { },
@@ -254,17 +254,13 @@ export function createKeplerSlice<
                 get().kepler.addConfigToMap(id, config as unknown as KeplerMapSchema);
               }
             }
-          }
-          
+          }          
           await get().kepler.syncKeplerDatasets();
-          requestInitialMapStyle(get().config.kepler.currentMapId);
+          requestMapStyle(get().config.kepler.currentMapId);
         },
         
         addTableToMap: async (mapId, tableName, options = {}) => {
-          const connector = await get().db.getConnector();
-          let fields: Field[] = [];
-          let cols: arrow.Vector[] = [];
-          
+          const connector = await get().db.getConnector();        
           const duckDbColumns = await getDuckDBColumnTypes(
             connector as unknown as DatabaseConnection,
             tableName
@@ -276,9 +272,8 @@ export function createKeplerSlice<
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
           // TODO remove once DuckDB doesn't drop geoarrow metadata
           restoreGeoarrowMetadata(arrowResult, {});
-          fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
-          cols = [...Array(arrowResult.numCols).keys()]
-            .map(i => arrowResult.getChildAt(i))
+          const fields = arrowSchemaToFields(arrowResult, tableDuckDBTypes);
+          const cols = Array.from({length: arrowResult.numCols}, (_, i) => arrowResult.getChildAt(i))
             .filter(col => col) as arrow.Vector[];
   
           if (fields && cols) {
@@ -296,6 +291,7 @@ export function createKeplerSlice<
             (map) => map.id === get().config.kepler.currentMapId,
           );
         },
+
         setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
@@ -303,24 +299,23 @@ export function createKeplerSlice<
             }),
           );
         },
+
         createMap: async (name) => {
           const mapId = createId();
-          set((state) => {
-            return produce(state, (draft) => {
-              draft.config.kepler.maps.push({
-                id: mapId,
-                name: name ?? 'Untitled Map',
-              });
-              draft.kepler.map = keplerReducer(
-                draft.kepler.map,
-                registerEntry({id: mapId}),
-              );
+          set((state) => produce(state, (draft) => {
+            draft.config.kepler.maps.push({
+              id: mapId,
+              name: name ?? 'Untitled Map',
             });
-          });
-          requestInitialMapStyle(mapId);
+            draft.kepler.map = keplerReducer(
+              draft.kepler.map,
+              registerEntry({ id: mapId })
+            );
+          }));
+          requestMapStyle(mapId);
           await get().kepler.syncKeplerDatasets();
-
         },
+
         async syncKeplerDatasets() {
           const {currentMapId} = get().config.kepler;
           for (const mapId of Object.keys(get().kepler.map)) {
@@ -328,10 +323,11 @@ export function createKeplerSlice<
             for (const {
               // @ts-ignore Added in next published version of @sqlrooms/duckdb
               schema, 
-              tableName} of get().db.tables) {
+              tableName
+            } of get().db.tables) {
               if (schema === 'main' && !keplerDatasets[tableName]) {
                 await get().kepler.addTableToMap(mapId, tableName, mapId === currentMapId ? {
-                  autoCreateLayers: true,
+                  autoCreateLayers: mapId === currentMapId,
                   centerMap: true,
                 } : {});
               }
@@ -352,6 +348,7 @@ export function createKeplerSlice<
             }),
           );
         },
+
         renameMap: (mapId, name) => {
           set((state) =>
             produce(state, (draft) => {
@@ -364,10 +361,12 @@ export function createKeplerSlice<
             }),
           );
         },
+
         addDataToMap: (mapId: string, data: any) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
+
         addTileSetToMap: (mapId, tableName, tileset, tileMetadata) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const dataset = {
@@ -406,6 +405,7 @@ export function createKeplerSlice<
             }),
           );
         },
+
         addConfigToMap: (mapId: string, config: any) => {
           // if map not registered, register it
           get().kepler.registerKeplerMapIfNotExists(mapId);
@@ -418,23 +418,22 @@ export function createKeplerSlice<
             addDataToMap({config: parsedConfig, datasets: []}),
           );
         },
+
         registerKeplerMapIfNotExists(mapId: string) {
           if (!get().kepler.map[mapId]) {
-            set((state) => {
-              return produce(state, (draft) => {
-                draft.kepler.map = keplerReducer(
-                  draft.kepler.map,
-                  registerEntry({id: mapId}),
-                );
-              });
+            set({
+              kepler: {
+                ...get().kepler,
+                map: keplerReducer(get().kepler.map, registerEntry({id: mapId})),
+              }
             });
-            requestInitialMapStyle(mapId);
+            requestMapStyle(mapId);
           }
         },
       },
     };
 
-    function requestInitialMapStyle(mapId: string) {
+    function requestMapStyle(mapId: string) {
       const {mapStyle} = get().kepler.map[mapId] || {};
       const style = mapStyle?.mapStyles[mapStyle.styleType];
 
