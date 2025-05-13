@@ -24,3 +24,7 @@ export {
   SpatialLoadFileOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/project-config';
+export {
+  type TypedRowAccessor,
+  createTypedRowAccessor,
+} from './typedRowAccessor';

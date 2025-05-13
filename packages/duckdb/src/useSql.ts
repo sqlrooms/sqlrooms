@@ -2,79 +2,21 @@ import * as arrow from 'apache-arrow';
 import {useEffect, useState} from 'react';
 import {z} from 'zod';
 import {useStoreWithDuckDb} from './DuckDbSlice';
+import {createTypedRowAccessor, TypedRowAccessor} from './typedRowAccessor';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,
  * a typed row accessor, and the number of rows.
  */
-export interface UseSqlQueryResult<T> {
+export interface UseSqlQueryResult<T> extends TypedRowAccessor<T> {
   /** The underlying Arrow table */
   arrowTable: arrow.Table;
-  /** Returns a typed row at the specified index by converting on demand */
-  getRow(index: number): T;
-  /** Number of rows in the table */
-  length: number;
-  /** Returns an iterator that yields each row in the table */
-  rows(): IterableIterator<T>;
-  /** Returns an array containing all rows in the table */
-  toArray(): T[];
 }
 
 /**
  * @deprecated Use UseSqlQueryResult instead
  */
 export type DuckDbQueryResult<T> = UseSqlQueryResult<T>;
-
-/**
- * Creates a row accessor wrapper around an Arrow table that provides typed row access.
- */
-function createTypedRowAccessor<T>({
-  arrowTable,
-  validate,
-}: {
-  arrowTable: arrow.Table;
-  validate?: (row: unknown) => T;
-}): UseSqlQueryResult<T> {
-  let cachedArray: T[] | undefined;
-
-  return {
-    arrowTable,
-    get length() {
-      return arrowTable.numRows;
-    },
-    getRow(index: number): T {
-      const row: Record<string, unknown> = {};
-      arrowTable.schema.fields.forEach((field: arrow.Field) => {
-        const column = arrowTable.getChild(field.name);
-        if (column) {
-          row[field.name] = column.get(index);
-        }
-      });
-
-      // If a validator is provided, use it to validate/parse the row
-      if (validate) {
-        return validate(row);
-      }
-      return row as T;
-    },
-    *rows(): IterableIterator<T> {
-      for (let i = 0; i < this.length; i++) {
-        yield this.getRow(i);
-      }
-    },
-    toArray(): T[] {
-      if (cachedArray) {
-        return cachedArray;
-      }
-      const result: T[] = [];
-      for (let i = 0; i < this.length; i++) {
-        result.push(this.getRow(i));
-      }
-      cachedArray = result;
-      return result;
-    },
-  };
-}
 
 /**
  * A React hook for executing SQL queries with automatic state management.
@@ -213,7 +155,7 @@ function createTypedRowAccessor<T>({
  * @returns Object containing the query result, loading state, and any error
  *
  * @template Schema The Zod schema type that defines the shape and validation of each row
- * @param schema A Zod schema that defines the expected shape and validation rules for each row
+ * @param zodSchema A Zod schema that defines the expected shape and validation rules for each row
  * @param options Configuration object containing the query and execution control
  * @returns Object containing the validated query result, loading state, and any error
  */
@@ -224,7 +166,7 @@ export function useSql<Row>(options: {query: string; enabled?: boolean}): {
 };
 
 export function useSql<Schema extends z.ZodType>(
-  schema: Schema,
+  zodSchema: Schema,
   options: {
     query: string;
     enabled?: boolean;
@@ -238,16 +180,19 @@ export function useSql<Schema extends z.ZodType>(
 /**
  * Implementation of useSql that handles both overloads
  */
-export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
-  schemaOrOptions: Schema | {query: string; enabled?: boolean},
+export function useSql<
+  Row extends arrow.TypeMap,
+  Schema extends z.ZodType = z.ZodType,
+>(
+  zodSchemaOrOptions: Schema | {query: string; enabled?: boolean},
   maybeOptions?: {query: string; enabled?: boolean},
 ) {
   // Determine if we're using the schema overload
-  const hasSchema = maybeOptions !== undefined;
-  const options = hasSchema
+  const hasZodSchema = maybeOptions !== undefined;
+  const options = hasZodSchema
     ? maybeOptions
-    : (schemaOrOptions as {query: string; enabled?: boolean});
-  const schema = hasSchema ? (schemaOrOptions as Schema) : undefined;
+    : (zodSchemaOrOptions as {query: string; enabled?: boolean});
+  const schema = hasZodSchema ? (zodSchemaOrOptions as Schema) : undefined;
 
   const [data, setData] = useState<UseSqlQueryResult<Row> | undefined>(
     undefined,
@@ -278,7 +223,7 @@ export function useSql<Row, Schema extends z.ZodType = z.ZodType>(
         });
 
         if (isMounted) {
-          setData(rowAccessor);
+          setData({...rowAccessor, arrowTable: result});
         }
       } catch (err) {
         if (isMounted) {
