@@ -6,7 +6,8 @@ import {
 import * as arrow from 'apache-arrow';
 import {DuckDbConnector} from './DuckDbConnector';
 import {load, loadObjects, loadSpatial} from './load/load';
-import {createTypedRowAccessor} from '../useSql';
+import {createTypedRowAccessor} from '../typedRowAccessor';
+import {TypeMap} from 'apache-arrow';
 
 export class BaseDuckDbConnector implements DuckDbConnector {
   protected dbPath: string;
@@ -54,17 +55,16 @@ export class BaseDuckDbConnector implements DuckDbConnector {
     await this.query(query);
   }
 
-  async query(query: string): Promise<arrow.Table> {
+  async query<T extends TypeMap = any>(query: string): Promise<arrow.Table<T>> {
     // To be implemented by subclasses
     throw new Error('Not implemented', {cause: query});
   }
 
-  async queryJson(query: string): Promise<Record<string, unknown>[]> {
-    const result = await this.query(query);
-    const rowAccessor = createTypedRowAccessor({
-      arrowTable: result,
-    });
-    return rowAccessor.toArray() as Record<string, unknown>[];
+  async queryJson<T = Record<string, any>>(
+    query: string,
+  ): Promise<Iterable<T>> {
+    const arrowTable = await this.query(query);
+    return createTypedRowAccessor({arrowTable});
   }
 
   async loadFile(
