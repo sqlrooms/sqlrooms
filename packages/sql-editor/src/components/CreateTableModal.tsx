@@ -21,7 +21,7 @@ import {
 import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
-import {SqlMonacoEditor} from './SqlMonacoEditor';
+import {SqlMonacoEditor} from '../SqlMonacoEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -124,13 +124,13 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
               control={form.control}
               name="query"
               render={({field}) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>SQL query:</FormLabel>
                   <FormControl>
                     <SqlMonacoEditor
                       value={field.value}
                       onChange={field.onChange}
-                      className="min-h-[200px]"
+                      className="h-[200px] w-full"
                       options={{
                         scrollBeyondLastLine: false,
                         automaticLayout: true,

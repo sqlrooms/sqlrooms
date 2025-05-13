@@ -10,7 +10,7 @@ import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
-import {getColValAsNumber} from './duckdb-utils';
+import {escapeVal, getColValAsNumber} from './duckdb-utils';
 import {DataTable, TableColumn} from './types';
 
 export const DuckDbSliceConfig = z.object({
@@ -122,6 +122,27 @@ export type DuckDbSliceState = {
       tableName: string,
       query: string,
     ) => Promise<{tableName: string; rowCount: number}>;
+
+    /**
+     * Parse a SQL SELECT statement to JSON
+     * @param sql - The SQL SELECT statement to parse.
+     * @returns A promise that resolves to the parsed JSON.
+     */
+    sqlSelectToJson: (sql: string) => Promise<
+      | {
+          error: true;
+          error_type: string;
+          error_message: string;
+          error_subtype: string;
+          position: string;
+        }
+      | {
+          error: false;
+          statements: {
+            node: Record<string, unknown>;
+          }[];
+        }
+    >;
   };
 };
 
@@ -304,6 +325,18 @@ export function createDuckDbSlice({
             );
           }
           return newTables;
+        },
+
+        async sqlSelectToJson(sql: string) {
+          const connector = await get().db.getConnector();
+          const parsedQuery = (
+            await connector.query(
+              `SELECT json_serialize_sql(${escapeVal(sql)})`,
+            )
+          )
+            .getChildAt(0)
+            ?.get(0);
+          return JSON.parse(parsedQuery);
         },
       },
     };

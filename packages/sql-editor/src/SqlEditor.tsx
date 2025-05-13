@@ -1,19 +1,18 @@
-import React, {useCallback, useState} from 'react';
+import {useBaseProjectBuilderStore} from '@sqlrooms/project-builder';
 import {
+  Button,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
 } from '@sqlrooms/ui';
-import {useBaseProjectBuilderStore} from '@sqlrooms/project-builder';
-import {SqlEditorHeader} from './components/SqlEditorHeader';
-import {TableStructurePanel} from './components/TableStructurePanel';
+import {PlusIcon} from 'lucide-react';
+import React, {useCallback, useState} from 'react';
+import CreateTableModal from './components/CreateTableModal';
 import {QueryEditorPanel} from './components/QueryEditorPanel';
 import {QueryResultPanel} from './components/QueryResultPanel';
-import CreateTableModal from './CreateTableModal';
-import DeleteSqlQueryModal from './DeleteSqlQueryModal';
-import RenameSqlQueryModal from './RenameSqlQueryModal';
+import {SqlEditorHeader} from './components/SqlEditorHeader';
+import {TableStructurePanel} from './components/TableStructurePanel';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
-
 export type SqlEditorProps = {
   /** The database schema to use for queries. Defaults to 'main' */
   schema?: string;
@@ -32,21 +31,19 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
     (state) => state.project.addOrUpdateSqlQueryDataSource,
   );
-  const lastExecutedQuery = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.lastExecutedQuery,
+  const lastQueryStatement = useStoreWithSqlEditor((s) =>
+    s.sqlEditor.queryResult?.status === 'success' &&
+    s.sqlEditor.queryResult?.isSelect
+      ? s.sqlEditor.queryResult.lastQueryStatement
+      : '',
   );
-  const currentQuery = useStoreWithSqlEditor((s) =>
-    s.sqlEditor.getCurrentQuery(''),
-  );
+  // const currentQuery = useStoreWithSqlEditor((s) =>
+  //   s.sqlEditor.getCurrentQuery(),
+  // );
 
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
-  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
-  const [queryToRename, setQueryToRename] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
 
   // Handlers
   const handleToggleDocs = useCallback((show: boolean) => {
@@ -83,8 +80,14 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={50}>
                 <QueryResultPanel
-                  schema={schema}
-                  onCreateTable={handleCreateTable}
+                  customActions={
+                    <div className="flex gap-2">
+                      <Button size="xs" onClick={handleCreateTable}>
+                        <PlusIcon className="mr-2 h-4 w-4" />
+                        Create table
+                      </Button>
+                    </div>
+                  }
                 />
               </ResizablePanel>
             </ResizablePanelGroup>
@@ -100,29 +103,10 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
         </ResizablePanelGroup>
       </div>
       <CreateTableModal
-        query={lastExecutedQuery || currentQuery}
+        query={lastQueryStatement}
         isOpen={createTableModalOpen}
         onClose={() => setCreateTableModalOpen(false)}
         onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
-      />
-      <DeleteSqlQueryModal
-        isOpen={queryToDelete !== null}
-        onClose={() => setQueryToDelete(null)}
-        onConfirm={() => {
-          if (queryToDelete) {
-            setQueryToDelete(null);
-          }
-        }}
-      />
-      <RenameSqlQueryModal
-        isOpen={queryToRename !== null}
-        onClose={() => setQueryToRename(null)}
-        initialName={queryToRename?.name ?? ''}
-        onRename={(newName) => {
-          if (queryToRename) {
-            setQueryToRename(null);
-          }
-        }}
       />
     </div>
   );

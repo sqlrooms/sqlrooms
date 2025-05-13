@@ -1,69 +1,49 @@
-import React, {useMemo} from 'react';
-import {Button, cn, SpinnerPane} from '@sqlrooms/ui';
-import {DataTableVirtualized, QueryDataTable} from '@sqlrooms/data-table';
-import {DownloadIcon, PlusIcon} from 'lucide-react';
-import {useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {QueryDataTable} from '@sqlrooms/data-table';
 import {escapeId} from '@sqlrooms/duckdb';
+import {cn, SpinnerPane} from '@sqlrooms/ui';
+import React from 'react';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
-  /** The database schema to use. Defaults to 'main' */
-  schema?: string;
-  /** Callback when create table button is clicked */
-  onCreateTable?: () => void;
+  /** Custom actions to render in the query result panel */
+  customActions?: React.ReactNode;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
-  schema = 'main',
-  onCreateTable,
+  customActions,
 }) => {
   // Get state and methods from the store
   const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
-  const results = useStoreWithSqlEditor((s) => s.sqlEditor.queryResults);
-  const error = useStoreWithSqlEditor((s) => s.sqlEditor.queryError);
-  const isLoading = useStoreWithSqlEditor((s) => s.sqlEditor.isQueryLoading);
+  const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
 
-  const exportResultsToCsv = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.exportResultsToCsv,
-  );
-  const resultsTableData = useMemo(
-    () => (results ? {data: results.toArray()} : undefined),
-    [results],
-  );
-
-  // Handle export results
-  const handleExport = () => {
-    if (results) {
-      exportResultsToCsv(results);
-    }
-  };
-
-  if (isLoading) {
+  if (queryResult?.status === 'loading') {
     return <SpinnerPane h="100%" />;
   }
 
   if (selectedTable) {
     return (
-      <div className={className}>
-        <QueryDataTable
-          query={`SELECT * FROM ${schema}.${escapeId(selectedTable)}`}
-          // limit={100}
-        />
-      </div>
+      <QueryDataTable
+        className={className}
+        fontSize="text-xs"
+        query={`SELECT * FROM ${escapeId(selectedTable)}`}
+      />
     );
   }
 
-  if (error) {
+  if (queryResult?.status === 'error') {
     return (
       <div className="h-full w-full overflow-auto p-5">
-        <pre className="text-xs leading-tight text-red-500">{error}</pre>
+        <pre className="whitespace-pre-line text-xs leading-tight text-red-500">
+          {queryResult.error}
+        </pre>
       </div>
     );
   }
 
-  if (resultsTableData) {
+  if (queryResult?.status === 'success') {
     return (
       <div
         className={cn(
@@ -71,17 +51,18 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           className,
         )}
       >
-        <DataTableVirtualized {...resultsTableData} />
-        <div className="absolute bottom-0 right-0 flex gap-2">
-          <Button size="sm" onClick={onCreateTable}>
-            <PlusIcon className="mr-2 h-4 w-4" />
-            Create table
-          </Button>
-          <Button size="sm" onClick={handleExport}>
-            <DownloadIcon className="mr-2 h-4 w-4" />
-            Export
-          </Button>
-        </div>
+        {queryResult.isSelect ? (
+          <QueryDataTable
+            fontSize="text-xs"
+            className={cn('overflow-hidden', className)}
+            query={queryResult.lastQueryStatement}
+            customActions={customActions}
+          />
+        ) : (
+          <pre className="p-4 text-xs leading-tight text-green-500">
+            Successfully executed query
+          </pre>
+        )}
       </div>
     );
   }
