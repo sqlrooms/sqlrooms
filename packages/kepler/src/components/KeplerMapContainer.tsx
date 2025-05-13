@@ -42,7 +42,7 @@ const CustomWidgetcontainer = styled.div`
   }
 `;
 
-type KeplerGLProps= Parameters<typeof geoCoderPanelSelector>[0];
+type KeplerGLProps = Parameters<typeof geoCoderPanelSelector>[0];
 
 const KeplerGl: FC<{
   mapId: string;
@@ -61,23 +61,24 @@ const KeplerGl: FC<{
       id: mapId,
     } as KeplerGLProps;
   }, [keplerState, keplerActions]);
-
-  const geoCoderPanelFields = geoCoderPanelSelector(
-    mergedKeplerProps,
-    // dont need height
-    size || DEFAULT_DIMENSIONS,
-  );
-  const mapFields = keplerState
+  const geoCoderPanelFields = keplerState?.visState
+    ? geoCoderPanelSelector(
+        mergedKeplerProps,
+        // dont need height
+        size || DEFAULT_DIMENSIONS,
+      )
+    : null;
+  const mapFields = keplerState?.visState
     ? mapFieldsSelector(mergedKeplerProps)
     : null;
 
   const bottomWidgetFields = keplerState?.visState.filters?.length
     ? bottomWidgetSelector(mergedKeplerProps, theme)
     : null;
-  const modalContainerFields = modalContainerSelector(
-    mergedKeplerProps,
-    containerRef.current,
-  );
+
+  const modalContainerFields = keplerState?.visState
+    ? modalContainerSelector(mergedKeplerProps, containerRef.current)
+    : null;
   return (
     <RootContext.Provider value={containerRef}>
       <CustomWidgetcontainer
@@ -96,24 +97,28 @@ const KeplerGl: FC<{
             />
           </MapViewStateContextProvider>
         ) : null}
-        {interactionConfig?.geocoder.enabled ? (
+        {interactionConfig?.geocoder?.enabled ? (
           <GeoCoderPanel
             {...geoCoderPanelFields}
             index={0}
             unsyncedViewports={false}
           />
         ) : null}
-        {bottomWidgetFields ? <BottomWidget
-          rootRef={bottomWidgetRef}
-          {...bottomWidgetFields}
-          theme={theme}
-          containerW={size?.width}
-        /> : null}
-        {modalContainerFields ? <ModalContainer
-          {...modalContainerFields}
-          containerW={size?.width}
-          containerH={size?.height}
-        /> : null}
+        {bottomWidgetFields ? (
+          <BottomWidget
+            rootRef={bottomWidgetRef}
+            {...bottomWidgetFields}
+            theme={theme}
+            containerW={size?.width}
+          />
+        ) : null}
+        {modalContainerFields ? (
+          <ModalContainer
+            {...modalContainerFields}
+            containerW={size?.width}
+            containerH={size?.height}
+          />
+        ) : null}
       </CustomWidgetcontainer>
     </RootContext.Provider>
   );
