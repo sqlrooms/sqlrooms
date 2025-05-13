@@ -1,5 +1,6 @@
 import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
 import * as arrow from 'apache-arrow';
+import {TypeMap} from 'apache-arrow';
 
 export interface DuckDbConnector {
   /**
@@ -13,10 +14,22 @@ export interface DuckDbConnector {
   destroy(): Promise<void>;
 
   /**
+   * Execute a SQL query without returning a result
+   * @param sql SQL query to execute
+   */
+  execute(sql: string): Promise<void>;
+
+  /**
    * Execute a SQL query and return the result as an Arrow table
    * @param query SQL query to execute
    */
-  query(query: string): Promise<arrow.Table>;
+  query<T extends TypeMap = any>(query: string): Promise<arrow.Table<T>>;
+
+  /**
+   * Execute a SQL query and return the result as a JSON object
+   * @param query
+   */
+  queryJson<T = Record<string, any>>(query: string): Promise<Iterable<T>>;
 
   /**
    * Load a file into DuckDB and create a table
