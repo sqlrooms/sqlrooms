@@ -69,10 +69,7 @@ const KeplerGl: FC<{
       )
     : null;
   const mapFields = keplerState?.visState
-    ? mapFieldsSelector({
-        id: mapId,
-        ...mergedKeplerProps,
-      })
+    ? mapFieldsSelector(mergedKeplerProps)
     : null;
 
   const bottomWidgetFields = keplerState?.visState.filters?.length

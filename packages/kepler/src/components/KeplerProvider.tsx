@@ -29,6 +29,9 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
     }),
     [mapId],
   );
+  if (!reduxProviderStore) {
+    return null;
+  }
   return (
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
