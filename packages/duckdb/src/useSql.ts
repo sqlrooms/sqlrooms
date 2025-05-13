@@ -28,7 +28,7 @@ export type DuckDbQueryResult<T> = UseSqlQueryResult<T>;
 /**
  * Creates a row accessor wrapper around an Arrow table that provides typed row access.
  */
-function createTypedRowAccessor<T>({
+export function createTypedRowAccessor<T>({
   arrowTable,
   validate,
 }: {

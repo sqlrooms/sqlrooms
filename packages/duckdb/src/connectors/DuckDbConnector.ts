@@ -13,10 +13,22 @@ export interface DuckDbConnector {
   destroy(): Promise<void>;
 
   /**
+   * Execute a SQL query without returning a result
+   * @param sql SQL query to execute
+   */
+  execute(sql: string): Promise<void>;
+
+  /**
    * Execute a SQL query and return the result as an Arrow table
    * @param query SQL query to execute
    */
   query(query: string): Promise<arrow.Table>;
+
+  /**
+   * Execute a SQL query and return the result as a JSON object
+   * @param query SQL query to execute
+   */
+  queryJson(query: string): Promise<Record<string, unknown>[]>;
 
   /**
    * Load a file into DuckDB and create a table
