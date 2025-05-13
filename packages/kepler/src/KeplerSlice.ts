@@ -42,7 +42,7 @@ import { createLogger, ReduxLoggerOptions } from 'redux-logger';
 import { z } from 'zod';
 // @ts-ignore
 import { KeplerTable } from '@kepler.gl/table';
-import { DatabaseConnection, initApplicationConfig } from '@kepler.gl/utils';
+import { DatabaseConnection, initApplicationConfig, KeplerApplicationConfig } from '@kepler.gl/utils';
 import * as arrow from 'apache-arrow';
 
 class DesktopKeplerTable extends KeplerTable {
@@ -51,23 +51,6 @@ class DesktopKeplerTable extends KeplerTable {
     return (d: any) => d;
   };
 }
-
-// TODO: initApplicationConfig should be called from createKeplerSlice
-// configure Kepler Desktop application
-initApplicationConfig({
-  table: DesktopKeplerTable,
-
-  // Raster Tile layer config
-  enableRasterTileLayer: true,
-  rasterServerUseLatestTitiler: false,
-  // TODO: provide a default free server or leave blank
-  rasterServerUrls: [
-    'https://d1q7gb82o5qayp.cloudfront.net',
-    'https://d34k46lorssas.cloudfront.net',
-    'https://d2k92ng3gmu32o.cloudfront.net',
-  ],
-  rasterServerSupportsElevation: true,
-});
 
 export const KeplerMapSchema = z.object({
   id: z.string(),
@@ -91,6 +74,7 @@ export type CreateKeplerSliceOptions = {
   initialKeplerState?: Partial<KeplerGlState>;
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
+  applicationConfig?: KeplerApplicationConfig;
 };
 
 export const KeplerSliceConfig = z.object({
@@ -180,7 +164,12 @@ export function createKeplerSlice<
   },
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
+  applicationConfig
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState<PC>> {
+  initApplicationConfig({
+    table: DesktopKeplerTable,
+    ...applicationConfig,
+  });
   return createSlice<PC, KeplerSliceState<PC>>((set, get) => {    
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);   
     return {
