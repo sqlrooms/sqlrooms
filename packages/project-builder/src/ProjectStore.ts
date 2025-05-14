@@ -63,7 +63,7 @@ export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
     Required<Pick<ProjectStateProps<PC>, 'projectConfig'>>;
   schema?: string;
   genSignedUrl: (params: {
-    projectId?: string;
+    projectId: string;
     fname: string;
     upload?: boolean;
     password?: string;
@@ -134,7 +134,7 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   tableRowCounts: {[tableName: string]: number};
   captureException: (exception: any, captureContext?: any) => void;
   genSignedUrl: (params: {
-    projectId?: string;
+    projectId: string;
     fname: string;
     upload?: boolean;
     password?: string;
@@ -762,6 +762,9 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         captureException,
         setTaskProgress,
       } = get();
+      if (!projectId) {
+        return;
+      }
       filesToDownload.forEach((ds) => {
         const fileName =
           ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
