@@ -29,7 +29,7 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
-import type {Action, Store as ReduxStore} from 'redux';
+import type {Action, MiddlewareAPI, Store as ReduxStore} from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {z} from 'zod';
@@ -98,7 +98,7 @@ export function createDefaultKeplerConfig(
           name: 'Untitled Map',
           config: undefined,
         },
-      ],
+      ],s
       currentMapId: mapId,
       ...props,
     },
@@ -228,16 +228,9 @@ export function createKeplerSlice<
                 'Other middleware would not be applied to this dispatch.',
             );
           };
-
-          interface MiddlewareAPI {
-            getState: typeof get;
-            dispatch: (action: Action, ...args: any[]) => Action;
-          }
-
           const middlewareAPI: MiddlewareAPI = {
             getState: get,
-            dispatch: (action: Action, ...args: any[]): Action =>
-              wrapDispatch(action, ...args),
+            dispatch: (action, ...args): Action => wrapDispatch(action, ...args),
           };
 
           const chain = middlewares.map((middleware) =>
