@@ -86,7 +86,6 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   tasksProgress: {},
   projectId: undefined,
   password: undefined,
-  projectFolder: undefined,
   initialized: false,
   isDataAvailable: false,
   isReadOnly: false,
@@ -119,7 +118,6 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   tasksProgress: Record<string, TaskProgress>;
   projectId: string | undefined; // undefined if the project is new
   password: string | undefined; // Password for protected published projects (needs to be sent to get access to data)
-  projectFolder: string | undefined; // will be derived from project title, if not explicitly set
   projectConfig: PC;
   projectPanels: Record<ProjectPanelTypes | string, ProjectPanelInfo>;
   isPublic: boolean;
@@ -155,8 +153,6 @@ export type ProjectStateActions<PC extends BaseProjectConfig> = {
   }) => Promise<void>;
   setProjectConfig: (config: PC) => void;
   setProjectId: (projectId: string | undefined) => void;
-  setProjectFolder: (projectFolder: string) => void;
-  getProjectFolder: () => string;
   setLastSavedConfig: (config: PC) => void;
   hasUnsavedChanges(): boolean; // since last save
   setLayout(layout: LayoutConfig): void;
@@ -349,26 +345,6 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
         await get().maybeDownloadDataSources();
       },
 
-      setProjectFolder: (projectFolder) =>
-        set((state) =>
-          produce(state, (draft) => {
-            // let path = convertToValidS3FolderPath(projectFolder).trim();
-            // path = path.replace(/\/+/g, '/');
-            // if (path === '/') path = '';
-            draft.projectFolder = projectFolder;
-          }),
-        ),
-
-      getProjectFolder() {
-        const {
-          projectFolder,
-          projectConfig: {title},
-        } = get();
-        return (
-          projectFolder ??
-          convertToUniqueS3FolderPath(title || DEFAULT_PROJECT_TITLE)
-        );
-      },
 
       addOrUpdateSqlQuery: async (tableName, query, oldTableName) => {
         const {schema} = get();
