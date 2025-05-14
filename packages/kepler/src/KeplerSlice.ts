@@ -98,7 +98,7 @@ export function createDefaultKeplerConfig(
           name: 'Untitled Map',
           config: undefined,
         },
-      ],s
+      ],
       currentMapId: mapId,
       ...props,
     },
@@ -230,7 +230,8 @@ export function createKeplerSlice<
           };
           const middlewareAPI: MiddlewareAPI = {
             getState: get,
-            dispatch: (action, ...args): Action => wrapDispatch(action, ...args),
+            dispatch: (action, ...args): Action =>
+              wrapDispatch(action, ...args),
           };
 
           const chain = middlewares.map((middleware) =>
