@@ -69,9 +69,13 @@ export const KeplerMapSchema = z.object({
 });
 
 export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
+export type KeplerGLBasicProps = {
+  mapboxApiAccessToken?: string;
+}
 
 export type CreateKeplerSliceOptions = {
   initialKeplerState?: Partial<KeplerGlState>;
+  basicKeplerProps?: Partial<KeplerGLBasicProps>;
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
@@ -114,6 +118,7 @@ export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type KeplerSliceState<PC extends ProjectConfigWithKepler> = {
   kepler: {
     map: KeplerGlReduxState;
+    basicKeplerProps?: Partial<KeplerGLBasicProps>;
     initialize: (config?: PC) => Promise<void>;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -159,12 +164,13 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
 export function createKeplerSlice<
   PC extends BaseProjectConfig & KeplerSliceConfig,
 >({
+  basicKeplerProps = {},
   initialKeplerState = {
     mapStyle: {styleType: 'positron'} as MapStyle,
   },
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
-  applicationConfig
+  applicationConfig,
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState<PC>> {
   initApplicationConfig({
     table: DesktopKeplerTable,
@@ -174,6 +180,7 @@ export function createKeplerSlice<
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);   
     return {
       kepler: {
+        basicKeplerProps,
         map: {},
         dispatchAction: () => {},
         __reduxProviderStore: undefined,

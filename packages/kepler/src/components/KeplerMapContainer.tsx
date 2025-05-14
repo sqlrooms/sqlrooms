@@ -18,19 +18,18 @@ import styled, {useTheme} from 'styled-components';
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
+import { useStoreWithKepler } from '../KeplerSlice';
 
 const MapContainer = KeplerInjector.get(MapContainerFactory);
 const BottomWidget = KeplerInjector.get(BottomWidgetFactory);
 const GeoCoderPanel = KeplerInjector.get(GeocoderPanelFactory);
 const ModalContainer = KeplerInjector.get(ModalContainerFactory);
 
-const MAPBOX_TOKEN = process.env.MapboxAccessToken;
 const DEFAULT_DIMENSIONS = {
   width: 0,
   height: 0,
 };
 const KEPLER_PROPS = {
-  mapboxApiAccessToken: MAPBOX_TOKEN || '',
   mapboxApiUrl: 'https://api.mapbox.com',
   appName: 'kepler.gl',
   sidePanelWidth: 0,
@@ -50,6 +49,8 @@ const KeplerGl: FC<{
   const bottomWidgetRef = useRef(null);
   const [containerRef, size] = useDimensions<HTMLDivElement>();
   const theme = useTheme();
+  const basicKeplerProps = useStoreWithKepler((state) => state.kepler.basicKeplerProps);
+
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
@@ -93,7 +94,10 @@ const KeplerGl: FC<{
               key={0}
               index={0}
               {...mapFields}
-              mapboxApiAccessToken={MAPBOX_TOKEN}
+              mapboxApiAccessToken={
+                mapFields?.mapStyle?.mapboxApiAccessToken || 
+                basicKeplerProps?.mapboxApiAccessToken
+              }
             />
           </MapViewStateContextProvider>
         ) : null}
