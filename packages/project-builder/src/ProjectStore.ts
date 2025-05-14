@@ -34,7 +34,6 @@ import {
   convertToUniqueS3FolderPath,
   downloadFile,
   generateUniqueName,
-  getSignedFileUrl,
   splitFilePath,
 } from '@sqlrooms/utils';
 import {produce} from 'immer';
@@ -63,6 +62,13 @@ export type CreateProjectSliceProps<PC extends BaseProjectConfig> = {
   initialState: Partial<ProjectStateProps<PC>> &
     Required<Pick<ProjectStateProps<PC>, 'projectConfig'>>;
   schema?: string;
+  genSignedUrl: (params: {
+    projectId?: string;
+    fname: string;
+    upload?: boolean;
+    password?: string;
+    published?: boolean;
+  }) => Promise<string | null>;
 };
 
 export type ProjectPanelInfo = {
@@ -91,6 +97,10 @@ export const INITIAL_BASE_PROJECT_STATE: Omit<
   tables: [],
   tableRowCounts: {},
   dataSourceStates: {},
+  genSignedUrl: async () => {
+    console.error('genSignedUrl not implemented');
+    return null;
+  },
   captureException(exception: any) {
     console.error(exception);
   },
@@ -123,6 +133,13 @@ export type ProjectStateProps<PC extends BaseProjectConfig> = {
   dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
   tableRowCounts: {[tableName: string]: number};
   captureException: (exception: any, captureContext?: any) => void;
+  genSignedUrl: (params: {
+    projectId?: string;
+    fname: string;
+    upload?: boolean;
+    password?: string;
+    published?: boolean;
+  }) => Promise<string | null>;
 };
 
 export type ProjectStateActions<PC extends BaseProjectConfig> = {
@@ -197,6 +214,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
       ...props.initialState.projectPanels,
     },
     lastSavedConfig: undefined,
+    genSignedUrl: props.genSignedUrl,
   };
 
   const slice: StateCreator<ProjectState<PC>> = (set, get) => {
@@ -776,19 +794,20 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
           const fileName =
             ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
           try {
-            const url =
-              ds.type === DataSourceTypes.Enum.file
-                ? await getSignedFileUrl(
-                    isPublicProject
-                      ? {
-                          projectId,
-                          fname: fileName,
-                          upload: false,
-                          password,
-                        }
-                      : {fname: fileName, upload: false},
-                  )
-                : ds.url;
+            const { genSignedUrl } = get();
+            const signedUrl = await genSignedUrl({
+              projectId,
+              fname: fileName,
+              upload: false,
+              password,
+              published: isPublicProject,
+            });
+            
+            if (!signedUrl) {
+              throw new Error(`Failed to get signed URL for ${fileName}`);
+            }
+            
+            const url = ds.type === DataSourceTypes.Enum.file ? signedUrl : ds.url;
             setProjectFileProgress(fileName, {status: 'download'});
             const downloadedFile = await downloadFile(url, {
               onProgress: (progress: ProgressInfo) => {
