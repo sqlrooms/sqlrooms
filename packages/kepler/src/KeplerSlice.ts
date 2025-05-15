@@ -1,7 +1,6 @@
 import {
   addDataToMap,
   deleteEntry,
-  isForwardAction,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   requestMapStyles,
@@ -30,7 +29,12 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
-import type {Action, MiddlewareAPI, Store as ReduxStore} from 'redux';
+import type {
+  Action,
+  AnyAction,
+  MiddlewareAPI,
+  Store as ReduxStore,
+} from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {z} from 'zod';
@@ -69,7 +73,7 @@ export const KeplerMapSchema = z.object({
 export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
 export type KeplerGLBasicProps = {
   mapboxApiAccessToken?: string;
-}
+};
 
 export type CreateKeplerSliceOptions = {
   initialKeplerState?: Partial<KeplerGlState>;
@@ -116,6 +120,9 @@ export type KeplerSliceState<PC extends ProjectConfigWithKepler> = {
   kepler: {
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
+    forwardDispatch: {
+      [mapId: string]: Dispatch;
+    };
     initialize: (config?: PC) => Promise<void>;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -151,9 +158,7 @@ export type KeplerSliceState<PC extends ProjectConfigWithKepler> = {
      */
     onAction?: (mapId: string, action: Action) => void;
     registerKeplerMapIfNotExists: (mapId: string) => void;
-    __reduxProviderStore:
-      | ReduxStore<KeplerGlReduxState, KeplerAction>
-      | undefined;
+    __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
   };
 };
 
@@ -194,8 +199,7 @@ export function createKeplerSlice<
       middlewares.push(logger);
     }
 
-    const storeDispatch = (action: Action) => {
-      console.log('store dispatch action', action);
+    const storeDispatch = (action: AnyAction) => {
       set((state: KeplerSliceState<PC>) => ({
         ...state,
         kepler: {
@@ -205,17 +209,12 @@ export function createKeplerSlice<
       }));
 
       // Call onAction if it's defined
+      const mapId = action.payload?.meta?._id_;
       get().kepler.onAction?.(mapId, action);
 
       return action;
     };
-    const forwardDispatch = {
-      // [currentMapId]: getForwardDispatch(
-      //   currentMapId,
-      //   storeDispatch,
-      //   middlewares,
-      // ),
-    };
+    const forwardDispatch: {[id: string]: Dispatch} = {};
     return {
       kepler: {
         basicKeplerProps,
@@ -251,11 +250,10 @@ export function createKeplerSlice<
               map: keplerInitialState,
               forwardDispatch,
               dispatchAction: (mid, action) => {
-                console.log('dispatchAction', mid, action);
                 // wrapDispatch(wrapTo(mapId)(action));
-                const dispatch = get().kepler.forwardDispatch[mid];
-                if (dispatch) {
-                  dispatch(action);
+                const dispatchToMap = get().kepler.forwardDispatch[mid];
+                if (dispatchToMap) {
+                  dispatchToMap(wrapTo(mid, action));
                 } else {
                   console.error('dispatchAction: mapId not found', mid);
                 }
@@ -313,7 +311,6 @@ export function createKeplerSlice<
               info: {label: tableName, id: tableName},
               metadata: {tableName},
             };
-            console.log('Adding table to map', {mapId});
             get().kepler.dispatchAction(
               mapId,
               addDataToMap({datasets, options}),
@@ -359,7 +356,6 @@ export function createKeplerSlice<
         },
 
         async syncKeplerDatasets() {
-          const {currentMapId} = get().config.kepler;
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
             for (const {
@@ -368,20 +364,10 @@ export function createKeplerSlice<
               tableName,
             } of get().db.tables) {
               if (schema === 'main' && !keplerDatasets[tableName]) {
-                await get().kepler.addTableToMap(
-                  mapId,
-                  tableName,
-                  {
-                    autoCreateLayers: false,
-                    centerMap: false,
-                  },
-                  // mapId === currentMapId
-                  //   ? {
-                  //       autoCreateLayers: mapId === currentMapId,
-                  //       centerMap: true,
-                  //     }
-                  //   : {},
-                );
+                await get().kepler.addTableToMap(mapId, tableName, {
+                  autoCreateLayers: false,
+                  centerMap: false,
+                });
               }
             }
           }
@@ -462,7 +448,6 @@ export function createKeplerSlice<
 
         addConfigToMap: (mapId: string, config: any) => {
           // if map not registered, register it
-          console.log('addConfigToMap', mapId, config);
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
           if (!parsedConfig) {
@@ -483,6 +468,14 @@ export function createKeplerSlice<
                   get().kepler.map,
                   registerEntry({id: mapId}),
                 ),
+                forwardDispatch: {
+                  ...get().kepler.forwardDispatch,
+                  [mapId]: getForwardDispatch(
+                    mapId,
+                    storeDispatch,
+                    middlewares,
+                  ),
+                },
               },
             });
             requestMapStyle(mapId);
@@ -494,7 +487,6 @@ export function createKeplerSlice<
     function requestMapStyle(mapId: string) {
       const {mapStyle} = get().kepler.map[mapId] || {};
       const style = mapStyle?.mapStyles[mapStyle.styleType];
-      console.log('requestMapStyle', mapId);
       if (style) {
         get().kepler.dispatchAction(
           mapId,
@@ -503,10 +495,9 @@ export function createKeplerSlice<
       }
     }
 
-    function saveKeplerConfigMiddleware(store) {
+    function saveKeplerConfigMiddleware() {
       return (next: (action: KeplerAction) => void) =>
         (action: KeplerAction) => {
-          console.log('saveKeplerConfigMiddleware', action);
           // get id from kepler action payload meta
           const mapId = action.payload?.meta?._id_;
           const result = next(action);
@@ -542,9 +533,7 @@ export function createKeplerSlice<
       const middlewareAPI: MiddlewareAPI = {
         getState: get,
         dispatch: (action, ...args): Action => {
-          console.log('middleware dispatch action', wrapToMap(action), args);
           // need to forward here as well
-
           return wrapDispatch(wrapToMap(action), ...args);
         },
       };
