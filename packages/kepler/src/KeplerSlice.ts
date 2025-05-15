@@ -209,14 +209,14 @@ export function createKeplerSlice<
       const mapId = action.payload?.meta?._id_;
       get().kepler.onAction?.(mapId, action);
     };
-    const forwardDispatch: {[id: string]: Dispatch} = {};
+    // const forwardDispatch: {[id: string]: Dispatch} = {};
     return {
       kepler: {
         basicKeplerProps,
         map: {},
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
-        forwardDispatch,
+        forwardDispatch: {},
 
         async initialize(config?: PC) {
           const currentMapId =
@@ -225,7 +225,10 @@ export function createKeplerSlice<
             undefined,
             registerEntry({id: currentMapId}),
           );
-          forwardDispatch[currentMapId] = getForwardDispatch(currentMapId);
+
+          const forwardDispatch = {
+            [currentMapId]: getForwardDispatch(currentMapId),
+          };
           if (config) {
             for (const {id} of config.kepler.maps) {
               forwardDispatch[id] = getForwardDispatch(id);
