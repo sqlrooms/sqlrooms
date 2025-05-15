@@ -1,6 +1,7 @@
 import {
   addDataToMap,
   deleteEntry,
+  isForwardAction,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   requestMapStyles,
@@ -180,12 +181,48 @@ export function createKeplerSlice<
   });
   return createSlice<PC, KeplerSliceState<PC>>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
+    const middlewares: Middleware[] = [
+      taskMiddleware,
+      saveKeplerConfigMiddleware,
+      ...additionalMiddlewares,
+    ];
+
+    if (actionLogging) {
+      const logger = createLogger(
+        actionLogging === true ? {collapsed: true} : actionLogging,
+      ) as Middleware;
+      middlewares.push(logger);
+    }
+
+    const storeDispatch = (action: Action) => {
+      console.log('store dispatch action', action);
+      set((state: KeplerSliceState<PC>) => ({
+        ...state,
+        kepler: {
+          ...state.kepler,
+          map: keplerReducer(state.kepler.map, action),
+        },
+      }));
+
+      // Call onAction if it's defined
+      get().kepler.onAction?.(mapId, action);
+
+      return action;
+    };
+    const forwardDispatch = {
+      // [currentMapId]: getForwardDispatch(
+      //   currentMapId,
+      //   storeDispatch,
+      //   middlewares,
+      // ),
+    };
     return {
       kepler: {
         basicKeplerProps,
         map: {},
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
+        forwardDispatch,
 
         async initialize(config?: PC) {
           const currentMapId =
@@ -194,58 +231,37 @@ export function createKeplerSlice<
             undefined,
             registerEntry({id: currentMapId}),
           );
-          const middlewares: Middleware[] = [
-            taskMiddleware,
-            saveKeplerConfigMiddleware,
-            ...additionalMiddlewares,
-          ];
-          if (actionLogging) {
-            const logger = createLogger(
-              actionLogging === true ? {collapsed: true} : actionLogging,
-            ) as Middleware;
-            middlewares.push(logger);
-          }
-
-          const storeDispatch = (action: Action) => {
-            set((state: KeplerSliceState<PC>) => ({
-              ...state,
-              kepler: {
-                ...state.kepler,
-                map: keplerReducer(state.kepler.map, action),
-              },
-            }));
-
-            // Call onAction if it's defined
-            get().kepler.onAction?.(mapId, action);
-
-            return action;
-          };
-
-          /** Adapted from  applyMiddleware in redux */
-          let wrapDispatch: Dispatch = () => {
-            throw new Error(
-              'Dispatching while constructing your middleware is not allowed. ' +
-                'Other middleware would not be applied to this dispatch.',
-            );
-          };
-          const middlewareAPI: MiddlewareAPI = {
-            getState: get,
-            dispatch: (action, ...args): Action =>
-              wrapDispatch(action, ...args),
-          };
-
-          const chain = middlewares.map((middleware) =>
-            middleware(middlewareAPI),
+          forwardDispatch[currentMapId] = getForwardDispatch(
+            currentMapId,
+            storeDispatch,
+            middlewares,
           );
-          wrapDispatch = compose<Dispatch>(...chain)(storeDispatch);
+          if (config) {
+            for (const {id} of config.kepler.maps) {
+              forwardDispatch[id] = getForwardDispatch(
+                id,
+                storeDispatch,
+                middlewares,
+              );
+            }
+          }
           set({
             kepler: {
               ...get().kepler,
               map: keplerInitialState,
-              dispatchAction: (mapId, action) =>
-                wrapDispatch(wrapTo(mapId, action)),
+              forwardDispatch,
+              dispatchAction: (mid, action) => {
+                console.log('dispatchAction', mid, action);
+                // wrapDispatch(wrapTo(mapId)(action));
+                const dispatch = get().kepler.forwardDispatch[mid];
+                if (dispatch) {
+                  dispatch(action);
+                } else {
+                  console.error('dispatchAction: mapId not found', mid);
+                }
+              },
               __reduxProviderStore: {
-                dispatch: wrapDispatch as Dispatch<KeplerAction>,
+                dispatch: storeDispatch,
                 getState: () => get().kepler.map || {},
                 subscribe: () => () => {},
                 replaceReducer: () => {},
@@ -297,6 +313,7 @@ export function createKeplerSlice<
               info: {label: tableName, id: tableName},
               metadata: {tableName},
             };
+            console.log('Adding table to map', {mapId});
             get().kepler.dispatchAction(
               mapId,
               addDataToMap({datasets, options}),
@@ -330,6 +347,11 @@ export function createKeplerSlice<
                 draft.kepler.map,
                 registerEntry({id: mapId}),
               );
+              draft.kepler.forwardDispatch[mapId] = getForwardDispatch(
+                mapId,
+                storeDispatch,
+                middlewares,
+              );
             }),
           );
           requestMapStyle(mapId);
@@ -349,12 +371,16 @@ export function createKeplerSlice<
                 await get().kepler.addTableToMap(
                   mapId,
                   tableName,
-                  mapId === currentMapId
-                    ? {
-                        autoCreateLayers: mapId === currentMapId,
-                        centerMap: true,
-                      }
-                    : {},
+                  {
+                    autoCreateLayers: false,
+                    centerMap: false,
+                  },
+                  // mapId === currentMapId
+                  //   ? {
+                  //       autoCreateLayers: mapId === currentMapId,
+                  //       centerMap: true,
+                  //     }
+                  //   : {},
                 );
               }
             }
@@ -371,6 +397,8 @@ export function createKeplerSlice<
                 draft.kepler.map,
                 deleteEntry(mapId),
               );
+
+              delete draft.kepler.forwardDispatch[mapId];
             }),
           );
         },
@@ -434,6 +462,7 @@ export function createKeplerSlice<
 
         addConfigToMap: (mapId: string, config: any) => {
           // if map not registered, register it
+          console.log('addConfigToMap', mapId, config);
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const parsedConfig = KeplerGLSchemaManager.parseSavedConfig(config);
           if (!parsedConfig) {
@@ -465,7 +494,7 @@ export function createKeplerSlice<
     function requestMapStyle(mapId: string) {
       const {mapStyle} = get().kepler.map[mapId] || {};
       const style = mapStyle?.mapStyles[mapStyle.styleType];
-
+      console.log('requestMapStyle', mapId);
       if (style) {
         get().kepler.dispatchAction(
           mapId,
@@ -474,9 +503,10 @@ export function createKeplerSlice<
       }
     }
 
-    function saveKeplerConfigMiddleware() {
+    function saveKeplerConfigMiddleware(store) {
       return (next: (action: KeplerAction) => void) =>
         (action: KeplerAction) => {
+          console.log('saveKeplerConfigMiddleware', action);
           // get id from kepler action payload meta
           const mapId = action.payload?.meta?._id_;
           const result = next(action);
@@ -498,6 +528,30 @@ export function createKeplerSlice<
           // save kepler config to local storage
           return result;
         };
+    }
+
+    function getForwardDispatch(mapId, storeDispatch, middlewares) {
+      /** Adapted from  applyMiddleware in redux */
+      let wrapDispatch: Dispatch = () => {
+        throw new Error(
+          'Dispatching while constructing your middleware is not allowed. ' +
+            'Other middleware would not be applied to this dispatch.',
+        );
+      };
+      const wrapToMap = wrapTo(mapId);
+      const middlewareAPI: MiddlewareAPI = {
+        getState: get,
+        dispatch: (action, ...args): Action => {
+          console.log('middleware dispatch action', wrapToMap(action), args);
+          // need to forward here as well
+
+          return wrapDispatch(wrapToMap(action), ...args);
+        },
+      };
+
+      const chain = middlewares.map((middleware) => middleware(middlewareAPI));
+      wrapDispatch = compose<Dispatch>(...chain)(storeDispatch);
+      return wrapDispatch;
     }
   });
 }
