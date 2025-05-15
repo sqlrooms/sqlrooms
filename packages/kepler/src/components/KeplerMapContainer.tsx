@@ -18,7 +18,7 @@ import styled, {useTheme} from 'styled-components';
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
-import { useStoreWithKepler } from '../KeplerSlice';
+import {useStoreWithKepler} from '../KeplerSlice';
 
 const MapContainer = KeplerInjector.get(MapContainerFactory);
 const BottomWidget = KeplerInjector.get(BottomWidgetFactory);
@@ -34,10 +34,14 @@ const KEPLER_PROPS = {
   appName: 'kepler.gl',
   sidePanelWidth: 0,
 };
-// HACK! should fix it in kepler.gl
+// overide kepler default style
 const CustomWidgetcontainer = styled.div`
   .bottom-widget--inner {
     margin-top: 0;
+  }
+
+  .map-popover {
+    z-index: 50;
   }
 `;
 
@@ -49,8 +53,9 @@ const KeplerGl: FC<{
   const bottomWidgetRef = useRef(null);
   const [containerRef, size] = useDimensions<HTMLDivElement>();
   const theme = useTheme();
-  const basicKeplerProps = useStoreWithKepler((state) => state.kepler.basicKeplerProps);
-
+  const basicKeplerProps = useStoreWithKepler(
+    (state) => state.kepler.basicKeplerProps,
+  );
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
@@ -61,7 +66,7 @@ const KeplerGl: FC<{
       ...keplerActions,
       id: mapId,
     } as KeplerGLProps;
-  }, [keplerState, keplerActions]);
+  }, [keplerState, keplerActions, mapId]);
   const geoCoderPanelFields = keplerState?.visState
     ? geoCoderPanelSelector(
         mergedKeplerProps,
@@ -95,7 +100,7 @@ const KeplerGl: FC<{
               index={0}
               {...mapFields}
               mapboxApiAccessToken={
-                mapFields?.mapStyle?.mapboxApiAccessToken || 
+                mapFields?.mapStyle?.mapboxApiAccessToken ||
                 basicKeplerProps?.mapboxApiAccessToken
               }
             />

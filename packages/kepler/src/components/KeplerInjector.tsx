@@ -3,9 +3,8 @@ import {
   provideRecipesToInjector,
   AddDataButtonFactory,
   PanelTitleFactory,
-  Factory
+  Factory,
 } from '@kepler.gl/components';
-
 import React, {PropsWithChildren} from 'react';
 
 const CustomAddDataButtonFactory = () => {

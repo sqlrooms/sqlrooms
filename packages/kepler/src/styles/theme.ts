@@ -45,6 +45,10 @@ export const darkTheme = {
   // button
   primaryBtnBgd: 'hsl(var(--chart-1))',
   primaryBtnBgdHover: 'hsl(var(--chart-1) / 0.8)',
+  primaryBtnRadius: 'calc(var(--radius) - 2px)',
+  primaryBtnColor: 'hsl(var(--primary-foreground))',
+  primaryBtnActColor: 'hsl(var(--primary-foreground))',
+  primaryBtnFontSizeDefault: '0.875rem',
   floatingBtnRadius: '4px',
   ctaBtnBgd: 'hsl(var(--chart-1))',
   ctaBtnBgdHover: 'hsl(var(--chart-1) / 0.8)',
