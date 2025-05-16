@@ -1071,6 +1071,34 @@ importers:
         specifier: ^3.24.1
         version: 3.24.2
 
+  packages/schema-tree:
+    dependencies:
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lucide-react:
+        specifier: ^0.474.0
+        version: 0.474.0(react@18.3.1)
+      react:
+        specifier: '*'
+        version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
+    devDependencies:
+      '@types/react':
+        specifier: 18.3.18
+        version: 18.3.18
+      '@types/react-dom':
+        specifier: ^18.2.18
+        version: 18.3.5(@types/react@18.3.18)
+
   packages/sql-editor:
     dependencies:
       '@hookform/resolvers':
@@ -1097,6 +1125,9 @@ importers:
       '@sqlrooms/project-config':
         specifier: workspace:*
         version: link:../project-config
+      '@sqlrooms/schema-tree':
+        specifier: workspace:*
+        version: link:../schema-tree
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui

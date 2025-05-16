@@ -70,7 +70,9 @@ export type SqlEditorSliceState = {
     // Runtime state
     queryResult?: QueryResult;
     selectedTable?: string;
+    /** @deprecated Use `useStoreWithSqlEditor((s) => s.db.isRefreshingTableSchemas)` instead. */
     isTablesLoading: boolean;
+    /** @deprecated */
     tablesError?: string;
 
     /**
@@ -190,6 +192,7 @@ export function createSqlEditorSlice<
             await get().db.sqlSelectToJson(lastStatement);
 
           const isValidSelectQuery = !parsedLastStatement.error;
+
           if (isValidSelectQuery) {
             queryResult = {
               status: 'success',
@@ -204,7 +207,10 @@ export function createSqlEditorSlice<
                   : await connector.query(lastStatement),
             };
           } else {
-            if (parsedLastStatement.error) {
+            if (
+              parsedLastStatement.error &&
+              parsedLastStatement.error_type !== 'not implemented'
+            ) {
               throw (
                 `${parsedLastStatement.error_type} ${parsedLastStatement.error_subtype}: ${parsedLastStatement.error_message}` +
                 `\n${getSqlErrorWithPointer(lastStatement, Number(parsedLastStatement.position)).formatted}`

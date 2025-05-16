@@ -5,7 +5,45 @@ export type TableColumn = {
 
 export type DataTable = {
   tableName: string;
+  schema: string;
   columns: TableColumn[];
   rowCount?: number;
   inputFileName?: string;
+};
+export type ColumnTypeCategory =
+  | 'number'
+  | 'string'
+  | 'datetime'
+  | 'boolean'
+  | 'binary'
+  | 'json'
+  | 'struct'
+  | 'geometry';
+
+export type DbSchemaNode = {
+  key: string;
+  object: NodeData;
+  children?: DbSchemaNode[];
+  isOpen?: boolean;
+};
+
+export type NodeData = ColumnNodeData | TableNodeData | SchemaNodeData;
+
+type BaseNodeData = {
+  name: string;
+};
+
+export type ColumnNodeData = BaseNodeData & {
+  type: 'column';
+  columnType: string;
+  columnTypeCategory?: ColumnTypeCategory;
+};
+
+export type TableNodeData = BaseNodeData & {
+  type: 'table';
+  schema: string;
+};
+
+export type SchemaNodeData = BaseNodeData & {
+  type: 'schema';
 };

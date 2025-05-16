@@ -1,13 +1,15 @@
-import {SpinnerPane} from '@sqlrooms/ui';
+import {cn, SpinnerPane} from '@sqlrooms/ui';
 import React, {useCallback, useMemo} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {TablesList} from '../TablesList';
+import {TableSchemaTree} from '@sqlrooms/schema-tree';
 
 export interface TableStructurePanelProps {
   /** Custom class name for styling */
   className?: string;
-  /** The database schema to use. Defaults to 'main' */
-  schema?: string;
+  /** The database schema to use. Defaults to 'main'.
+   * If '*' is provided, all tables will be shown.
+   * If a function is provided, it will be used to filter the tables. */
+  schema?: string | ((name: string) => boolean);
   /** Callback when a table is selected */
   onTableSelect?: (table: string | undefined) => void;
 }
@@ -18,42 +20,52 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   onTableSelect,
 }) => {
   // Get state from store
-  const tables = useStoreWithSqlEditor((s) => s.db.tables);
-  const tableNames = useMemo(() => tables.map((t) => t.tableName), [tables]);
-  const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
-  const isLoading = useStoreWithSqlEditor((s) => s.sqlEditor.isTablesLoading);
-  const error = useStoreWithSqlEditor((s) => s.sqlEditor.tablesError);
+  const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
+  const filteredSchemaTrees = useMemo(() => {
+    if (schema === '*') {
+      return schemaTrees;
+    }
+    if (typeof schema === 'function') {
+      return schemaTrees?.filter((tree) => schema(tree.object.name));
+    }
+    return schemaTrees?.filter((tree) => tree.object.name === schema);
+  }, [schema, schemaTrees]);
 
-  // Get methods from store
-  const selectTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectTable);
-
-  // Memoize the table selection handler
-  const handleTableSelect = useCallback(
-    (table: string | undefined) => {
-      selectTable(table);
-      onTableSelect?.(table);
-    },
-    [selectTable, onTableSelect],
+  const isRefreshing = useStoreWithSqlEditor(
+    (s) => s.db.isRefreshingTableSchemas,
   );
 
-  if (isLoading) {
-    return <SpinnerPane h="100%" />;
-  }
+  // Get methods from store
+  // const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
+  // const selectTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectTable);
+  // // Memoize the table selection handler
+  // const handleTableSelect = useCallback(
+  //   (table: string | undefined) => {
+  //     selectTable(table);
+  //     onTableSelect?.(table);
+  //   },
+  //   [selectTable, onTableSelect],
+  // );
 
-  if (error) {
-    return (
-      <div className="p-4 text-red-500">Error loading tables: {error}</div>
-    );
-  }
+  // if (error) {
+  //   return (
+  //     <div className="p-4 text-red-500">Error loading tables: {error}</div>
+  //   );
+  // }
 
   return (
-    <div className={className}>
-      <TablesList
-        schema={schema}
-        tableNames={tableNames}
-        selectedTable={selectedTable}
-        onSelect={handleTableSelect}
-      />
+    <div
+      className={cn(
+        'relative flex h-full flex-col gap-2 overflow-auto p-2',
+        className,
+      )}
+    >
+      {filteredSchemaTrees && (
+        <TableSchemaTree schemaTrees={filteredSchemaTrees} />
+      )}
+      {isRefreshing && (
+        <SpinnerPane className="bg-background/80 absolute inset-0 h-full" />
+      )}
     </div>
   );
 };

@@ -4,14 +4,15 @@ import {
   useBaseProjectStore,
 } from '@sqlrooms/project';
 import * as arrow from 'apache-arrow';
-import {produce} from 'immer';
 import deepEquals from 'fast-deep-equal';
+import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
 import {escapeVal, getColValAsNumber} from './duckdb-utils';
-import {DataTable, TableColumn} from './types';
+import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
+import {DataTable, TableColumn, DbSchemaNode} from './types';
 
 export const DuckDbSliceConfig = z.object({
   // nothing yet
@@ -34,9 +35,10 @@ export type DuckDbSliceState = {
      */
     connector: DuckDbConnector;
     schema: string;
-
+    isRefreshingTableSchemas: boolean;
     tables: DataTable[];
     tableRowCounts: {[tableName: string]: number};
+    schemaTrees?: DbSchemaNode[];
 
     /**
      * Set a new DuckDB connector
@@ -159,8 +161,10 @@ export function createDuckDbSlice({
       db: {
         connector, // Will be initialized during init
         schema: 'main',
+        isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
+        schemaTree: undefined,
 
         setConnector: (connector: DuckDbConnector) => {
           set(
@@ -235,6 +239,7 @@ export function createDuckDbSlice({
           return {
             tableName,
             columns,
+            schema,
           };
         },
 
@@ -313,18 +318,35 @@ export function createDuckDbSlice({
         },
 
         async refreshTableSchemas(): Promise<DataTable[]> {
-          const newTables = await get().db.getTableSchemas();
-          const currentTables = get().db.tables;
+          set((state) =>
+            produce(state, (draft) => {
+              draft.db.isRefreshingTableSchemas = true;
+            }),
+          );
+          try {
+            const newTables = await get().db.getTableSchemas();
+            const currentTables = get().db.tables;
 
-          // Only update if there's an actual change in the schemas
-          if (!deepEquals(newTables, currentTables)) {
+            // Only update if there's an actual change in the schemas
+            if (!deepEquals(newTables, currentTables)) {
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.db.tables = newTables;
+                  draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                }),
+              );
+            }
+            return newTables;
+          } catch (err) {
+            get().project.captureException(err);
+            return [];
+          } finally {
             set((state) =>
               produce(state, (draft) => {
-                draft.db.tables = newTables;
+                draft.db.isRefreshingTableSchemas = false;
               }),
             );
           }
-          return newTables;
         },
 
         async sqlSelectToJson(sql: string) {
