@@ -30,7 +30,7 @@ import {
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
-import type {Action, AnyAction, Store as ReduxStore} from 'redux';
+import type {Action, AnyAction, MiddlewareAPI, Store as ReduxStore} from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {z} from 'zod';
@@ -108,8 +108,19 @@ export function createDefaultKeplerConfig(
 
 export type KeplerAction = {
   type: string;
-  payload: unknown;
+  payload?: unknown;
 };
+
+export function hasMapId(action: KeplerAction): action is KeplerAction & {
+ payload: {meta: {_id_: string}}
+} {
+  return typeof action.payload === 'object' && action.payload !== null &&
+    'meta' in action.payload &&
+    typeof action.payload.meta === 'object' &&
+    action.payload.meta !== null &&
+    '_id_' in action.payload.meta
+}
+
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
 export type KeplerSliceState<PC extends ProjectConfigWithKepler> = {
@@ -196,7 +207,7 @@ export function createKeplerSlice<
       middlewares.push(logger);
     }
 
-    const storeDispatch: Dispatch<AnyAction> = (action: AnyAction) => {
+    const storeDispatch: Dispatch<KeplerAction> = (action) => {
       set((state: KeplerSliceState<PC>) => ({
         ...state,
         kepler: {
@@ -206,8 +217,10 @@ export function createKeplerSlice<
       }));
 
       // Call onAction if it's defined
-      const mapId = action.payload?.meta?._id_;
+      const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
+      if (!mapId) throw new Error('Map ID not found in action payload');
       get().kepler.onAction?.(mapId, action);
+      return action;
     };
     // const forwardDispatch: {[id: string]: Dispatch} = {};
     return {
@@ -349,7 +362,7 @@ export function createKeplerSlice<
               schema,
               tableName,
             } of get().db.tables) {
-              if (schema === 'main' && !keplerDatasets[tableName]) {
+              if (schema === 'main' && !keplerDatasets?.[tableName]) {
                 await get().kepler.addTableToMap(mapId, tableName, {
                   autoCreateLayers: false,
                   centerMap: false,
@@ -490,7 +503,8 @@ export function createKeplerSlice<
       return (next: (action: KeplerAction) => void) =>
         (action: KeplerAction) => {
           // get id from kepler action payload meta
-          const mapId = action.payload?.meta?._id_;
+          const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
+          if (!mapId) throw new Error('Map ID not found in action payload');
           const result = next(action);
           if (!SKIP_AUTO_SAVE_ACTIONS.includes(action.type) && mapId) {
             // save kepler config to store
@@ -512,16 +526,16 @@ export function createKeplerSlice<
         };
     }
 
-    function getForwardDispatch(mapId: string): Dispatch<AnyAction> {
+    function getForwardDispatch(mapId: string): Dispatch<KeplerAction> {
       /** Adapted from  applyMiddleware in redux */
-      let wrapDispatch: Dispatch = () => {
+      let wrapDispatch: ((action: KeplerAction, ...args: any) => KeplerAction) = () => {
         throw new Error(
           'Dispatching while constructing your middleware is not allowed. ' +
             'Other middleware would not be applied to this dispatch.',
         );
       };
       const wrapToMap = wrapTo(mapId);
-      const middlewareAPI = {
+      const middlewareAPI: MiddlewareAPI<any, any> = {
         getState: get,
         dispatch: (action: Action, ...args: any) => {
           // need to forward here as well
@@ -531,7 +545,7 @@ export function createKeplerSlice<
 
       const chain = middlewares.map((middleware) => middleware(middlewareAPI));
       wrapDispatch = compose<Dispatch>(...chain)(storeDispatch);
-      return wrapDispatch;
+      return wrapDispatch as Dispatch<KeplerAction>;
     }
   });
 }
