@@ -1,0 +1,3 @@
+[submodule "packages/kepler.gl"]
+	path = packages/kepler.gl
+	url = git@github.com:keplergl/kepler.gl.git

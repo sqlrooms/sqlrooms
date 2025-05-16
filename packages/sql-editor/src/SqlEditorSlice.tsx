@@ -1,4 +1,4 @@
-import {DuckDbSliceConfig, DuckQueryError} from '@sqlrooms/duckdb';
+import {DuckDbSliceConfig} from '@sqlrooms/duckdb';
 import {
   createSlice,
   ProjectBuilderState,
@@ -44,11 +44,9 @@ export type SqlEditorSliceState = {
     /**
      * Execute a SQL query and return the results.
      * @param query - The SQL query to execute.
-     * @param schema - The schema to use (default: main).
      */
     executeQuery(
       query: string,
-      schema?: string,
     ): Promise<{
       results?: Table;
       error?: string;
@@ -110,25 +108,23 @@ export function createSqlEditorSlice<
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
-      executeQuery: async (query, schema = 'main') => {
+      executeQuery: async (query) => {
         const connector = await get().db.getConnector();
 
         try {
-          await connector.query(`SET search_path = ${schema}`);
           const results = await connector.query(query);
-          await connector.query(`SET search_path = main`);
-
           // Refresh table schemas after query execution
-          await get().db.refreshTableSchemas();
+          try {
+            // Trigger refreshTableSchemas, but don't wait for it
+            get().db.refreshTableSchemas();
+          } catch (e) {
+            console.error(e);
+          }
 
           return {results};
         } catch (e) {
           console.error(e);
-          const errorMessage =
-            e instanceof DuckQueryError
-              ? e.getMessageForUser()
-              : 'Query failed';
-
+          const errorMessage = e instanceof Error ? e.message : String(e);
           return {error: errorMessage || String(e)};
         }
       },
