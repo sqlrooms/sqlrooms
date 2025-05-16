@@ -67,6 +67,7 @@ const KeplerGl: FC<{
       id: mapId,
     } as KeplerGLProps;
   }, [keplerState, keplerActions, mapId]);
+  console.log(interactionConfig);
   const geoCoderPanelFields = keplerState?.visState
     ? geoCoderPanelSelector(
         mergedKeplerProps,
@@ -74,6 +75,7 @@ const KeplerGl: FC<{
         size || DEFAULT_DIMENSIONS,
       )
     : null;
+  console.log(geoCoderPanelFields);
   const mapFields = keplerState?.visState
     ? mapFieldsSelector(mergedKeplerProps)
     : null;
@@ -85,6 +87,10 @@ const KeplerGl: FC<{
   const modalContainerFields = keplerState?.visState
     ? modalContainerSelector(mergedKeplerProps, containerRef.current)
     : null;
+
+  const mapboxApiAccessToken =
+    mapFields?.mapStyle?.mapboxApiAccessToken ||
+    basicKeplerProps?.mapboxApiAccessToken;
   return (
     <RootContext.Provider value={containerRef}>
       <CustomWidgetcontainer
@@ -99,10 +105,7 @@ const KeplerGl: FC<{
               key={0}
               index={0}
               {...mapFields}
-              mapboxApiAccessToken={
-                mapFields?.mapStyle?.mapboxApiAccessToken ||
-                basicKeplerProps?.mapboxApiAccessToken
-              }
+              mapboxApiAccessToken={mapboxApiAccessToken}
             />
           </MapViewStateContextProvider>
         ) : null}
@@ -111,6 +114,7 @@ const KeplerGl: FC<{
             {...geoCoderPanelFields}
             index={0}
             unsyncedViewports={false}
+            mapboxApiAccessToken={mapboxApiAccessToken}
           />
         ) : null}
         {bottomWidgetFields ? (
