@@ -67,7 +67,6 @@ const KeplerGl: FC<{
       id: mapId,
     } as KeplerGLProps;
   }, [keplerState, keplerActions, mapId]);
-  console.log(interactionConfig);
   const geoCoderPanelFields = keplerState?.visState
     ? geoCoderPanelSelector(
         mergedKeplerProps,
@@ -75,7 +74,6 @@ const KeplerGl: FC<{
         size || DEFAULT_DIMENSIONS,
       )
     : null;
-  console.log(geoCoderPanelFields);
   const mapFields = keplerState?.visState
     ? mapFieldsSelector(mergedKeplerProps)
     : null;
