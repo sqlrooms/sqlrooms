@@ -24,62 +24,62 @@ export const CommentSchema = CommentBaseSchema.extend({
 });
 export type CommentSchema = z.infer<typeof CommentSchema>;
 
-// Annotation extends base with targetId and contains comments
-export const AnnotationSchema = CommentBaseSchema.extend({
+// Discussion extends base with targetId and contains comments
+export const DiscussionSchema = CommentBaseSchema.extend({
   targetId: z.string().optional(),
   comments: z.array(CommentSchema),
 });
-export type AnnotationSchema = z.infer<typeof AnnotationSchema>;
+export type DiscussionSchema = z.infer<typeof DiscussionSchema>;
 
-// UI state for annotations
+// UI state for discussions
 export type ReplyTo = {
-  annotationId: string;
+  discussionId: string;
   commentId?: string;
 };
 
 export type EditingItem = {
-  annotationId: string;
+  discussionId: string;
   commentId?: string;
 };
 
 export type DeleteItem = {
-  annotationId: string;
+  discussionId: string;
   commentId?: string;
   itemType: string;
 };
 
-export type AnnotationSliceState = {
-  annotation: {
+export type DiscussionSliceState = {
+  discussion: {
     userId: string;
     getUserName: (userId: string) => string;
-    annotations: AnnotationSchema[];
+    discussions: DiscussionSchema[];
 
     // UI-connected actions - preferred API for most use cases
     /**
-     * Submit content based on current UI state (add annotation, reply to annotation/comment, or edit).
+     * Submit content based on current UI state (add discussion, reply to discussion/comment, or edit).
      * This automatically handles state management and is the preferred way to submit content.
      */
     submitEdit: (text: string) => void;
 
     // UI state management
     /**
-     * Current annotation or comment being replied to.
+     * Current discussion or comment being replied to.
      * Used by the form to determine context when submitting.
      */
     replyToItem: ReplyTo | undefined;
     /**
-     * Sets the annotation or comment being replied to.
+     * Sets the discussion or comment being replied to.
      * Will clear editing state if set.
      */
     setReplyToItem: (replyToItem: ReplyTo | undefined) => void;
 
     /**
-     * Current annotation or comment being edited.
+     * Current discussion or comment being edited.
      * Used by the form to determine context when submitting.
      */
     editingItem: EditingItem | undefined;
     /**
-     * Sets the annotation or comment being edited.
+     * Sets the discussion or comment being edited.
      * Will clear replyTo state if set.
      */
     setEditingItem: (editingItem: EditingItem | undefined) => void;
@@ -90,7 +90,7 @@ export type AnnotationSliceState = {
      */
     itemToDelete: DeleteItem | undefined;
     /**
-     * Sets the annotation or comment to be deleted.
+     * Sets the discussion or comment to be deleted.
      * Should be used before showing the confirmation dialog.
      */
     setItemToDelete: (item: DeleteItem | undefined) => void;
@@ -111,44 +111,44 @@ export type AnnotationSliceState = {
 
     // Direct CRUD operations - use these only for custom integrations
     // that don't use the built-in UI state management
-    addAnnotation: (text: string, targetId?: string) => void;
-    editAnnotation: (id: string, text: string) => void;
-    removeAnnotation: (id: string) => void;
-    addComment: (annotationId: string, text: string, parentId?: string) => void;
+    addDiscussion: (text: string, targetId?: string) => void;
+    editDiscussion: (id: string, text: string) => void;
+    removeDiscussion: (id: string) => void;
+    addComment: (discussionId: string, text: string, parentId?: string) => void;
     editComment: (
-      annotationId: string,
+      discussionId: string,
       commentId: string,
       text: string,
     ) => void;
-    removeComment: (annotationId: string, commentId: string) => void;
+    removeComment: (discussionId: string, commentId: string) => void;
   };
 };
 
-export type ProjectStateWithAnnotation =
-  ProjectBuilderState<BaseProjectConfig> & AnnotationSliceState;
+export type ProjectStateWithDiscussion =
+  ProjectBuilderState<BaseProjectConfig> & DiscussionSliceState;
 
-export function createAnnotationSlice({
+export function createDiscussionSlice({
   userId,
   getUserName,
 }: {
   userId: string;
   getUserName: (userId: string) => string;
-}): StateCreator<AnnotationSliceState> {
-  return createSlice<BaseProjectConfig, AnnotationSliceState>((set, get) => ({
-    annotation: {
+}): StateCreator<DiscussionSliceState> {
+  return createSlice<BaseProjectConfig, DiscussionSliceState>((set, get) => ({
+    discussion: {
       userId,
       getUserName,
-      annotations: [],
+      discussions: [],
 
       // Direct CRUD operations - These are exposed for advanced use cases
       // For normal usage with UI integration, prefer submitEdit
 
       /**
-       * Directly adds a new annotation without managing UI state.
+       * Directly adds a new discussion without managing UI state.
        * For UI-integrated usage, prefer submitEdit.
        */
-      addAnnotation: (text, targetId) => {
-        const newAnnotation: AnnotationSchema = {
+      addDiscussion: (text, targetId) => {
+        const newDiscussion: DiscussionSchema = {
           id: createId(),
           userId,
           targetId,
@@ -159,40 +159,40 @@ export function createAnnotationSlice({
 
         set((state) =>
           produce(state, (draft) => {
-            draft.annotation.annotations.push(newAnnotation);
+            draft.discussion.discussions.push(newDiscussion);
           }),
         );
       },
 
       /**
-       * Directly removes an annotation without managing UI state.
+       * Directly removes an discussion without managing UI state.
        * For UI-integrated usage, prefer setting itemToDelete and using handleDeleteConfirm.
        */
-      removeAnnotation: (id) => {
+      removeDiscussion: (id) => {
         set((state) =>
           produce(state, (draft) => {
-            const index = draft.annotation.annotations.findIndex(
+            const index = draft.discussion.discussions.findIndex(
               (a) => a.id === id,
             );
             if (index !== -1) {
-              draft.annotation.annotations.splice(index, 1);
+              draft.discussion.discussions.splice(index, 1);
             }
           }),
         );
       },
 
       /**
-       * Directly edits an annotation without managing UI state.
+       * Directly edits an discussion without managing UI state.
        * For UI-integrated usage, prefer submitEdit.
        */
-      editAnnotation: (id, text) => {
+      editDiscussion: (id, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const annotation = draft.annotation.annotations.find(
+            const discussion = draft.discussion.discussions.find(
               (a) => a.id === id,
             );
-            if (annotation) {
-              annotation.text = text;
+            if (discussion) {
+              discussion.text = text;
             }
           }),
         );
@@ -202,7 +202,7 @@ export function createAnnotationSlice({
        * Directly adds a comment without managing UI state.
        * For UI-integrated usage, prefer submitEdit.
        */
-      addComment: (annotationId, text, parentId) => {
+      addComment: (discussionId, text, parentId) => {
         const newComment: CommentSchema = {
           id: createId(),
           userId,
@@ -213,11 +213,11 @@ export function createAnnotationSlice({
 
         set((state) =>
           produce(state, (draft) => {
-            const annotation = draft.annotation.annotations.find(
-              (a) => a.id === annotationId,
+            const discussion = draft.discussion.discussions.find(
+              (a) => a.id === discussionId,
             );
-            if (annotation) {
-              annotation.comments.push(newComment);
+            if (discussion) {
+              discussion.comments.push(newComment);
             }
           }),
         );
@@ -227,14 +227,14 @@ export function createAnnotationSlice({
        * Directly edits a comment without managing UI state.
        * For UI-integrated usage, prefer submitEdit.
        */
-      editComment: (annotationId, commentId, text) => {
+      editComment: (discussionId, commentId, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const annotation = draft.annotation.annotations.find(
-              (a) => a.id === annotationId,
+            const discussion = draft.discussion.discussions.find(
+              (a) => a.id === discussionId,
             );
-            if (annotation) {
-              const comment = annotation.comments.find(
+            if (discussion) {
+              const comment = discussion.comments.find(
                 (c) => c.id === commentId,
               );
               if (comment) {
@@ -249,18 +249,18 @@ export function createAnnotationSlice({
        * Directly removes a comment without managing UI state.
        * For UI-integrated usage, prefer setting itemToDelete and using handleDeleteConfirm.
        */
-      removeComment: (annotationId, commentId) => {
+      removeComment: (discussionId, commentId) => {
         set((state) =>
           produce(state, (draft) => {
-            const annotation = draft.annotation.annotations.find(
-              (a) => a.id === annotationId,
+            const discussion = draft.discussion.discussions.find(
+              (a) => a.id === discussionId,
             );
-            if (annotation) {
-              const index = annotation.comments.findIndex(
+            if (discussion) {
+              const index = discussion.comments.findIndex(
                 (c) => c.id === commentId,
               );
               if (index !== -1) {
-                annotation.comments.splice(index, 1);
+                discussion.comments.splice(index, 1);
               }
             }
           }),
@@ -269,40 +269,40 @@ export function createAnnotationSlice({
 
       // UI state management
       /**
-       * Current annotation or comment being replied to.
+       * Current discussion or comment being replied to.
        * Used by the form to determine context when submitting.
        */
       replyToItem: undefined,
       /**
-       * Sets the annotation or comment being replied to.
+       * Sets the discussion or comment being replied to.
        * Will clear editing state if set.
        */
       setReplyToItem: (replyToItem) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.annotation.replyToItem = replyToItem;
+            draft.discussion.replyToItem = replyToItem;
             if (replyToItem) {
-              draft.annotation.editingItem = undefined;
+              draft.discussion.editingItem = undefined;
             }
           }),
         );
       },
 
       /**
-       * Current annotation or comment being edited.
+       * Current discussion or comment being edited.
        * Used by the form to determine context when submitting.
        */
       editingItem: undefined,
       /**
-       * Sets the annotation or comment being edited.
+       * Sets the discussion or comment being edited.
        * Will clear replyTo state if set.
        */
       setEditingItem: (editingItem) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.annotation.editingItem = editingItem;
+            draft.discussion.editingItem = editingItem;
             if (editingItem) {
-              draft.annotation.replyToItem = undefined;
+              draft.discussion.replyToItem = undefined;
             }
           }),
         );
@@ -314,25 +314,25 @@ export function createAnnotationSlice({
        */
       itemToDelete: undefined,
       /**
-       * Sets the annotation or comment to be deleted.
+       * Sets the discussion or comment to be deleted.
        * Should be used before showing the confirmation dialog.
        */
       setItemToDelete: (item) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.annotation.itemToDelete = item;
+            draft.discussion.itemToDelete = item;
           }),
         );
       },
 
       /**
        * Main form submission handler that processes content based on UI state.
-       * This is the preferred method to submit annotation/comment content.
+       * This is the preferred method to submit discussion/comment content.
        *
        * Will automatically:
-       * - Add a new annotation if no context is set
+       * - Add a new discussion if no context is set
        * - Add a comment as a reply if replyToItem is set
-       * - Edit an annotation or comment if editing is set
+       * - Edit an discussion or comment if editing is set
        * - Clear UI state after submission
        */
       submitEdit: (text) => {
@@ -340,28 +340,28 @@ export function createAnnotationSlice({
         const {
           editingItem,
           replyToItem,
-          addAnnotation,
-          editAnnotation,
+          addDiscussion,
+          editDiscussion,
           editComment,
           addComment,
-        } = state.annotation;
+        } = state.discussion;
 
         if (editingItem) {
           if (editingItem.commentId) {
-            editComment(editingItem.annotationId, editingItem.commentId, text);
+            editComment(editingItem.discussionId, editingItem.commentId, text);
           } else {
-            editAnnotation(editingItem.annotationId, text);
+            editDiscussion(editingItem.discussionId, text);
           }
-          state.annotation.setEditingItem(undefined);
+          state.discussion.setEditingItem(undefined);
         } else if (replyToItem) {
           if (replyToItem.commentId) {
-            addComment(replyToItem.annotationId, text, replyToItem.commentId);
+            addComment(replyToItem.discussionId, text, replyToItem.commentId);
           } else {
-            addComment(replyToItem.annotationId, text);
+            addComment(replyToItem.discussionId, text);
           }
-          state.annotation.setReplyToItem(undefined);
+          state.discussion.setReplyToItem(undefined);
         } else {
-          addAnnotation(text);
+          addDiscussion(text);
         }
       },
 
@@ -370,46 +370,46 @@ export function createAnnotationSlice({
        * Should be called after the user confirms deletion in the UI.
        *
        * Will:
-       * - Delete the annotation or comment specified in itemToDelete
+       * - Delete the discussion or comment specified in itemToDelete
        * - Clear the itemToDelete state
        */
       handleDeleteConfirm: () => {
         const state = get();
-        const {itemToDelete, removeComment, removeAnnotation} =
-          state.annotation;
+        const {itemToDelete, removeComment, removeDiscussion} =
+          state.discussion;
 
         if (itemToDelete) {
           if (itemToDelete.commentId) {
-            removeComment(itemToDelete.annotationId, itemToDelete.commentId);
+            removeComment(itemToDelete.discussionId, itemToDelete.commentId);
           } else {
-            removeAnnotation(itemToDelete.annotationId);
+            removeDiscussion(itemToDelete.discussionId);
           }
-          state.annotation.setItemToDelete(undefined);
+          state.discussion.setItemToDelete(undefined);
         }
       },
 
       // Helper function to get the name of the user being replied to
       getReplyingToName: () => {
         const state = get();
-        const {replyToItem, annotations, getUserName} = state.annotation;
+        const {replyToItem, discussions, getUserName} = state.discussion;
 
         if (!replyToItem) return '';
 
         if (replyToItem.commentId) {
-          const annotation = annotations.find(
-            (a) => a.id === replyToItem.annotationId,
+          const discussion = discussions.find(
+            (a) => a.id === replyToItem.discussionId,
           );
-          if (annotation) {
-            const comment = annotation.comments.find(
+          if (discussion) {
+            const comment = discussion.comments.find(
               (c) => c.id === replyToItem.commentId,
             );
             if (comment) return getUserName(comment.userId);
           }
         } else {
-          const annotation = annotations.find(
-            (a) => a.id === replyToItem.annotationId,
+          const discussion = discussions.find(
+            (a) => a.id === replyToItem.discussionId,
           );
-          if (annotation) return getUserName(annotation.userId);
+          if (discussion) return getUserName(discussion.userId);
         }
 
         return 'unknown';
@@ -418,12 +418,12 @@ export function createAnnotationSlice({
   }));
 }
 
-export function useStoreWithAnnotation<T>(
-  selector: (state: ProjectStateWithAnnotation) => T,
+export function useStoreWithDiscussion<T>(
+  selector: (state: ProjectStateWithDiscussion) => T,
 ): T {
   return useBaseProjectBuilderStore<
     BaseProjectConfig,
-    ProjectStateWithAnnotation,
+    ProjectStateWithDiscussion,
     T
-  >((state) => selector(state as ProjectStateWithAnnotation));
+  >((state) => selector(state as ProjectStateWithDiscussion));
 }

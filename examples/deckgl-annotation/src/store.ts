@@ -1,7 +1,7 @@
 import {
-  AnnotationSliceState,
-  createAnnotationSlice,
-} from '@sqlrooms/annotation';
+  DiscussionSliceState,
+  createDiscussionSlice,
+} from '@sqlrooms/discussion';
 import {
   BaseProjectConfig,
   createProjectBuilderSlice,
@@ -11,13 +11,13 @@ import {
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import AnnotationPanel from './components/AnnotationPanel';
 import {MainView} from './components/MainView';
 import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
+import DiscussionPanel from './components/DiscussionPanel';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
-  'annotations',
+  'discussion',
   MAIN_VIEW,
 ] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
@@ -25,7 +25,7 @@ export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
 export const AppConfig = BaseProjectConfig;
 export type AppConfig = z.infer<typeof AppConfig>;
 
-export type AppState = ProjectBuilderState<AppConfig> & AnnotationSliceState;
+export type AppState = ProjectBuilderState<AppConfig> & DiscussionSliceState;
 
 export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppConfig,
@@ -40,7 +40,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         type: LayoutTypes.enum.mosaic,
         nodes: {
           direction: 'row',
-          first: ProjectPanelTypes.enum['annotations'],
+          first: ProjectPanelTypes.enum['discussion'],
           second: ProjectPanelTypes.enum['main'],
           splitPercentage: 30,
         },
@@ -59,10 +59,10 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
     },
     project: {
       panels: {
-        [ProjectPanelTypes.enum['annotations']]: {
-          title: 'Annotations',
+        [ProjectPanelTypes.enum['discussion']]: {
+          title: 'Discussion',
           icon: MessageCircleIcon,
-          component: AnnotationPanel,
+          component: DiscussionPanel,
           placement: 'sidebar',
         },
         main: {
@@ -74,7 +74,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       },
     },
   })(set, get, store),
-  ...createAnnotationSlice({
+  ...createDiscussionSlice({
     userId: 'user1',
     getUserName: (userId: string) => {
       // Implement your own logic to get the user name from the user id

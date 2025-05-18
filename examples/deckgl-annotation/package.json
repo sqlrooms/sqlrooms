@@ -1,5 +1,5 @@
 {
-  "name": "sqlrooms-deckgl-annotation",
+  "name": "sqlrooms-deckgl-discussion",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -12,7 +12,7 @@
   "dependencies": {
     "deck.gl": "^9.1.12",
     "@deck.gl/mapbox": "^9.1.12",
-    "@sqlrooms/annotation": "workspace:*",
+    "@sqlrooms/discussion": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",

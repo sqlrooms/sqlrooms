@@ -1,42 +1,42 @@
 import {Button, cn} from '@sqlrooms/ui';
 import {forwardRef} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import type {CommentSchema} from '../AnnotationSlice';
-import {useStoreWithAnnotation} from '../AnnotationSlice';
+import type {CommentSchema} from '../DiscussionSlice';
+import {useStoreWithDiscussion} from '../DiscussionSlice';
 
 export type CommentItemProps = {
-  annotationId: string;
+  discussionId: string;
   comment: CommentSchema;
   className?: string;
 };
 
 export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
-  ({annotationId, comment, className}, ref) => {
-    const userId = useStoreWithAnnotation((state) => state.annotation.userId);
-    const getUserName = useStoreWithAnnotation(
-      (state) => state.annotation.getUserName,
+  ({discussionId, comment, className}, ref) => {
+    const userId = useStoreWithDiscussion((state) => state.discussion.userId);
+    const getUserName = useStoreWithDiscussion(
+      (state) => state.discussion.getUserName,
     );
-    const setReplyToItem = useStoreWithAnnotation(
-      (state) => state.annotation.setReplyToItem,
+    const setReplyToItem = useStoreWithDiscussion(
+      (state) => state.discussion.setReplyToItem,
     );
-    const setEditingItem = useStoreWithAnnotation(
-      (state) => state.annotation.setEditingItem,
+    const setEditingItem = useStoreWithDiscussion(
+      (state) => state.discussion.setEditingItem,
     );
-    const setItemToDelete = useStoreWithAnnotation(
-      (state) => state.annotation.setItemToDelete,
+    const setItemToDelete = useStoreWithDiscussion(
+      (state) => state.discussion.setItemToDelete,
     );
 
     const handleReply = () => {
-      setReplyToItem({annotationId, commentId: comment.id});
+      setReplyToItem({discussionId, commentId: comment.id});
     };
 
     const handleEdit = () => {
-      setEditingItem({annotationId, commentId: comment.id});
+      setEditingItem({discussionId, commentId: comment.id});
     };
 
     const handleDelete = () => {
       setItemToDelete({
-        annotationId,
+        discussionId,
         commentId: comment.id,
         itemType: 'Comment',
       });

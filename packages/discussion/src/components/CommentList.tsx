@@ -1,16 +1,16 @@
 import {cn} from '@sqlrooms/ui';
 import {forwardRef} from 'react';
 import {CommentItem} from './CommentItem';
-import {CommentSchema} from '../AnnotationSlice';
+import {CommentSchema} from '../DiscussionSlice';
 
 export type CommentListProps = {
-  annotationId: string;
+  discussionId: string;
   comments: CommentSchema[];
   className?: string;
 };
 
 export const CommentList = forwardRef<HTMLDivElement, CommentListProps>(
-  ({annotationId, comments, className}, ref) => {
+  ({discussionId, comments, className}, ref) => {
     if (comments.length === 0) return null;
 
     return (
@@ -21,7 +21,7 @@ export const CommentList = forwardRef<HTMLDivElement, CommentListProps>(
         {comments.map((comment) => (
           <CommentItem
             key={comment.id}
-            annotationId={annotationId}
+            discussionId={discussionId}
             comment={comment}
           />
         ))}

@@ -1,7 +1,7 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {forwardRef, useState, useEffect, ComponentPropsWithoutRef} from 'react';
 
-export type AnnotationFormProps = Omit<
+export type DiscussionFormProps = Omit<
   ComponentPropsWithoutRef<'div'>,
   'onSubmit'
 > & {
@@ -13,7 +13,7 @@ export type AnnotationFormProps = Omit<
   onCancel?: () => void;
 };
 
-export const AnnotationForm = forwardRef<HTMLDivElement, AnnotationFormProps>(
+export const DiscussionForm = forwardRef<HTMLDivElement, DiscussionFormProps>(
   (
     {
       onSubmit,
@@ -75,4 +75,4 @@ export const AnnotationForm = forwardRef<HTMLDivElement, AnnotationFormProps>(
     );
   },
 );
-AnnotationForm.displayName = 'AnnotationForm';
+DiscussionForm.displayName = 'DiscussionForm';
