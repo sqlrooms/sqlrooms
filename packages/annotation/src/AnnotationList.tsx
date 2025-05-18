@@ -1,5 +1,5 @@
 import {cn} from '@sqlrooms/ui';
-import {ComponentPropsWithoutRef, forwardRef, useState} from 'react';
+import {ComponentPropsWithoutRef, forwardRef} from 'react';
 import {useStoreWithAnnotation} from './AnnotationSlice';
 import {AnnotationForm} from './components/AnnotationForm';
 import {AnnotationItem} from './components/AnnotationItem';
@@ -7,124 +7,40 @@ import {CommentList} from './components/CommentList';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 
 // Main AnnotationList component
-type AnnotationListProps = ComponentPropsWithoutRef<'div'> & {
-  getUserName: (userId: string) => string;
-};
+type AnnotationListProps = ComponentPropsWithoutRef<'div'>;
 
 export const AnnotationList = forwardRef<HTMLDivElement, AnnotationListProps>(
-  ({className, getUserName, ...props}, ref) => {
-    const annotations = useStoreWithAnnotation((s) => s.annotation.annotations);
-    const userId = useStoreWithAnnotation((s) => s.annotation.userId);
-    const addAnnotation = useStoreWithAnnotation(
-      (s) => s.annotation.addAnnotation,
+  ({className, ...props}, ref) => {
+    const annotations = useStoreWithAnnotation(
+      (state) => state.annotation.annotations,
     );
-    const editAnnotation = useStoreWithAnnotation(
-      (s) => s.annotation.editAnnotation,
+    const replyToItem = useStoreWithAnnotation(
+      (state) => state.annotation.replyToItem,
     );
-    const removeAnnotation = useStoreWithAnnotation(
-      (s) => s.annotation.removeAnnotation,
+    const editingItem = useStoreWithAnnotation(
+      (state) => state.annotation.editingItem,
     );
-    const addComment = useStoreWithAnnotation((s) => s.annotation.addComment);
-    const editComment = useStoreWithAnnotation((s) => s.annotation.editComment);
-    const removeComment = useStoreWithAnnotation(
-      (s) => s.annotation.removeComment,
+    const itemToDelete = useStoreWithAnnotation(
+      (state) => state.annotation.itemToDelete,
     );
-
-    const [replyTo, setReplyTo] = useState<
-      {annotationId: string; commentId?: string} | undefined
-    >(undefined);
-    const [editing, setEditing] = useState<
-      {annotationId: string; commentId?: string} | undefined
-    >(undefined);
-    const [itemToDelete, setItemToDelete] = useState<
-      {annotationId: string; commentId?: string; itemType: string} | undefined
-    >(undefined);
-
-    // Handler functions
-    const handleAnnotationReply = (annotationId: string) => {
-      setReplyTo({annotationId});
-      setEditing(undefined);
-    };
-
-    const handleCommentReply = (annotationId: string, commentId: string) => {
-      setReplyTo({annotationId, commentId});
-      setEditing(undefined);
-    };
-
-    const handleAnnotationEdit = (annotationId: string, text: string) => {
-      setEditing({annotationId});
-      setReplyTo(undefined);
-    };
-
-    const handleCommentEdit = (
-      annotationId: string,
-      commentId: string,
-      text: string,
-    ) => {
-      setEditing({annotationId, commentId});
-      setReplyTo(undefined);
-    };
-
-    const handleAnnotationDelete = (annotationId: string) => {
-      setItemToDelete({annotationId, itemType: 'Annotation'});
-    };
-
-    const handleCommentDelete = (annotationId: string, commentId: string) => {
-      setItemToDelete({annotationId, commentId, itemType: 'Comment'});
-    };
-
-    const handleFormSubmit = (text: string) => {
-      if (editing) {
-        if (editing.commentId) {
-          editComment(editing.annotationId, editing.commentId, text);
-        } else {
-          editAnnotation(editing.annotationId, text);
-        }
-        setEditing(undefined);
-      } else if (replyTo) {
-        if (replyTo.commentId) {
-          addComment(replyTo.annotationId, text, replyTo.commentId);
-        } else {
-          addComment(replyTo.annotationId, text);
-        }
-        setReplyTo(undefined);
-      } else {
-        addAnnotation(text);
-      }
-    };
-
-    const handleDeleteConfirm = () => {
-      if (itemToDelete) {
-        if (itemToDelete.commentId) {
-          removeComment(itemToDelete.annotationId, itemToDelete.commentId);
-        } else {
-          removeAnnotation(itemToDelete.annotationId);
-        }
-      }
-    };
-
-    // Get the name of user being replied to
-    const getReplyingToName = () => {
-      if (!replyTo) return '';
-
-      if (replyTo.commentId) {
-        const annotation = annotations.find(
-          (a) => a.id === replyTo.annotationId,
-        );
-        if (annotation) {
-          const comment = annotation.comments.find(
-            (c) => c.id === replyTo.commentId,
-          );
-          if (comment) return getUserName(comment.userId);
-        }
-      } else {
-        const annotation = annotations.find(
-          (a) => a.id === replyTo.annotationId,
-        );
-        if (annotation) return getUserName(annotation.userId);
-      }
-      return 'unknown';
-    };
+    const setReplyToItem = useStoreWithAnnotation(
+      (state) => state.annotation.setReplyToItem,
+    );
+    const setEditingItem = useStoreWithAnnotation(
+      (state) => state.annotation.setEditingItem,
+    );
+    const setItemToDelete = useStoreWithAnnotation(
+      (state) => state.annotation.setItemToDelete,
+    );
+    const submitEdit = useStoreWithAnnotation(
+      (state) => state.annotation.submitEdit,
+    );
+    const handleDeleteConfirm = useStoreWithAnnotation(
+      (state) => state.annotation.handleDeleteConfirm,
+    );
+    const getReplyingToName = useStoreWithAnnotation(
+      (state) => state.annotation.getReplyingToName,
+    );
 
     return (
       <div
@@ -137,23 +53,11 @@ export const AnnotationList = forwardRef<HTMLDivElement, AnnotationListProps>(
             key={annotation.id}
             className="flex flex-col gap-4 rounded border p-2"
           >
-            <AnnotationItem
-              annotation={annotation}
-              userId={userId}
-              getUserName={getUserName}
-              onReply={handleAnnotationReply}
-              onEdit={handleAnnotationEdit}
-              onDelete={handleAnnotationDelete}
-            />
+            <AnnotationItem annotation={annotation} />
 
             <CommentList
               annotationId={annotation.id}
               comments={annotation.comments}
-              userId={userId}
-              getUserName={getUserName}
-              onReply={handleCommentReply}
-              onEdit={handleCommentEdit}
-              onDelete={handleCommentDelete}
             />
           </div>
         ))}
@@ -168,15 +72,19 @@ export const AnnotationList = forwardRef<HTMLDivElement, AnnotationListProps>(
         />
 
         <AnnotationForm
-          onSubmit={handleFormSubmit}
-          submitLabel={editing ? 'Save' : replyTo ? 'Reply' : 'Add'}
-          replyingTo={replyTo ? getReplyingToName() : undefined}
+          onSubmit={submitEdit}
+          submitLabel={editingItem ? 'Save' : replyToItem ? 'Reply' : 'Add'}
+          replyingTo={replyToItem ? getReplyingToName() : undefined}
           editingType={
-            editing ? (editing.commentId ? 'comment' : 'annotation') : undefined
+            editingItem
+              ? editingItem.commentId
+                ? 'comment'
+                : 'annotation'
+              : undefined
           }
           onCancel={() => {
-            setReplyTo(undefined);
-            setEditing(undefined);
+            setReplyToItem(undefined);
+            setEditingItem(undefined);
           }}
         />
       </div>
