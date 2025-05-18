@@ -233,6 +233,19 @@ function YourComponent() {
 - Extensible project configuration with Zod schemas
 - Type-safe state management
 
+## Try the Minimal Example
+
+To quickly start exploring SQLRooms, clone the minimal example:
+
+```bash
+npx degit https://github.com/sqlrooms/examples/minimal myapp
+cd myapp
+npm install
+npm run dev
+```
+
+This basic Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`.
+
 ## Need Help?
 
 - Check our [documentation](https://github.com/sqlrooms/sqlrooms)
