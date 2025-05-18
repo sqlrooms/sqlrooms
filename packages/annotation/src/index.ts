@@ -6,7 +6,7 @@
 export {AnnotationList} from './AnnotationList.js';
 export {
   Annotation,
-  AnnotationThread,
+  Comment,
   createAnnotationSlice,
   useStoreWithAnnotation,
   type AnnotationSliceState,

@@ -9,30 +9,43 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
-export const Annotation = z.object({
+// Base type with common fields
+export const CommentBase = z.object({
   id: z.string().cuid2(),
   userId: z.string(),
-  targetId: z.string().optional(),
   text: z.string(),
   timestamp: z.date(),
 });
-export type Annotation = z.infer<typeof Annotation>;
+export type CommentBase = z.infer<typeof CommentBase>;
 
-export const AnnotationThread = z.object({
-  id: z.string().cuid2(),
-  annotations: z.array(Annotation),
+// Comment type extends base with parentId
+export const Comment = CommentBase.extend({
+  parentId: z.string().optional(),
 });
-export type AnnotationThread = z.infer<typeof AnnotationThread>;
+export type Comment = z.infer<typeof Comment>;
+
+// Annotation extends base with targetId and contains comments
+export const Annotation = CommentBase.extend({
+  targetId: z.string().optional(),
+  comments: z.array(Comment),
+});
+export type Annotation = z.infer<typeof Annotation>;
 
 export type AnnotationSliceState = {
   annotation: {
     userId: string;
     getUserName: (userId: string) => string;
-    threads: AnnotationThread[];
+    annotations: Annotation[];
     addAnnotation: (text: string, targetId?: string) => void;
     editAnnotation: (id: string, text: string) => void;
     removeAnnotation: (id: string) => void;
-    replyToAnnotation: (targetId: string, text: string) => void;
+    addComment: (annotationId: string, text: string, parentId?: string) => void;
+    editComment: (
+      annotationId: string,
+      commentId: string,
+      text: string,
+    ) => void;
+    removeComment: (annotationId: string, commentId: string) => void;
   };
 };
 
@@ -50,7 +63,7 @@ export function createAnnotationSlice({
     annotation: {
       userId,
       getUserName,
-      threads: [],
+      annotations: [],
 
       addAnnotation: (text, targetId) => {
         const newAnnotation: Annotation = {
@@ -59,23 +72,12 @@ export function createAnnotationSlice({
           targetId,
           text,
           timestamp: new Date(),
+          comments: [],
         };
 
         set((state) =>
           produce(state, (draft) => {
-            if (targetId) {
-              const thread = draft.annotation.threads.find((t) =>
-                t.annotations.some((a) => a.id === targetId),
-              );
-              if (thread) {
-                thread.annotations.push(newAnnotation);
-                return;
-              }
-            }
-            draft.annotation.threads.push({
-              id: createId(),
-              annotations: [newAnnotation],
-            });
+            draft.annotation.annotations.push(newAnnotation);
           }),
         );
       },
@@ -83,16 +85,11 @@ export function createAnnotationSlice({
       removeAnnotation: (id) => {
         set((state) =>
           produce(state, (draft) => {
-            for (let i = 0; i < draft.annotation.threads.length; i++) {
-              const thread = draft.annotation.threads[i]!;
-              const index = thread.annotations.findIndex((a) => a.id === id);
-              if (index !== -1) {
-                thread.annotations.splice(index, 1);
-                if (thread.annotations.length === 0) {
-                  draft.annotation.threads.splice(i, 1);
-                }
-                break;
-              }
+            const index = draft.annotation.annotations.findIndex(
+              (a) => a.id === id,
+            );
+            if (index !== -1) {
+              draft.annotation.annotations.splice(index, 1);
             }
           }),
         );
@@ -101,19 +98,71 @@ export function createAnnotationSlice({
       editAnnotation: (id, text) => {
         set((state) =>
           produce(state, (draft) => {
-            for (const thread of draft.annotation.threads) {
-              const ann = thread.annotations.find((a) => a.id === id);
-              if (ann) {
-                ann.text = text;
-                break;
+            const annotation = draft.annotation.annotations.find(
+              (a) => a.id === id,
+            );
+            if (annotation) {
+              annotation.text = text;
+            }
+          }),
+        );
+      },
+
+      addComment: (annotationId, text, parentId) => {
+        const newComment: Comment = {
+          id: createId(),
+          userId,
+          text,
+          timestamp: new Date(),
+          parentId,
+        };
+
+        set((state) =>
+          produce(state, (draft) => {
+            const annotation = draft.annotation.annotations.find(
+              (a) => a.id === annotationId,
+            );
+            if (annotation) {
+              annotation.comments.push(newComment);
+            }
+          }),
+        );
+      },
+
+      editComment: (annotationId, commentId, text) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const annotation = draft.annotation.annotations.find(
+              (a) => a.id === annotationId,
+            );
+            if (annotation) {
+              const comment = annotation.comments.find(
+                (c) => c.id === commentId,
+              );
+              if (comment) {
+                comment.text = text;
               }
             }
           }),
         );
       },
 
-      replyToAnnotation: (targetId, text) => {
-        get().annotation.addAnnotation(text, targetId);
+      removeComment: (annotationId, commentId) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const annotation = draft.annotation.annotations.find(
+              (a) => a.id === annotationId,
+            );
+            if (annotation) {
+              const index = annotation.comments.findIndex(
+                (c) => c.id === commentId,
+              );
+              if (index !== -1) {
+                annotation.comments.splice(index, 1);
+              }
+            }
+          }),
+        );
       },
     },
   }));
