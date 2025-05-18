@@ -1,11 +1,13 @@
-import {Button, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {useState} from 'react';
 import {useStoreWithAnnotation} from './AnnotationSlice.js';
 
-export const AnnotationList: React.FC = () => {
+export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
   const threads = useStoreWithAnnotation((s) => s.annotation.threads);
   const userId = useStoreWithAnnotation((s) => s.annotation.userId);
-  const addAnnotation = useStoreWithAnnotation((s) => s.annotation.addAnnotation);
+  const addAnnotation = useStoreWithAnnotation(
+    (s) => s.annotation.addAnnotation,
+  );
   const editAnnotation = useStoreWithAnnotation(
     (s) => s.annotation.editAnnotation,
   );
@@ -30,19 +32,19 @@ export const AnnotationList: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className={cn('flex flex-col gap-2', className)}>
       {threads.map((thread) => (
-        <div key={thread.annotations[0].id} className="rounded border p-2">
+        <div key={thread.annotations[0]?.id} className="rounded border p-2">
           {thread.annotations.map((a) => (
             <div key={a.id} className="mb-2">
-              <div className="text-xs text-muted-foreground">
+              <div className="text-muted-foreground text-xs">
                 {a.userId} - {a.timestamp.toLocaleString()}
               </div>
               <div className="whitespace-pre-wrap">{a.text}</div>
               <div className="mt-1 flex gap-2 text-xs">
                 <Button
                   variant="ghost"
-                  size="sm"
+                  size="xs"
                   onClick={() => setReplyTo(a.id)}
                 >
                   Reply
@@ -51,7 +53,7 @@ export const AnnotationList: React.FC = () => {
                   <>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="xs"
                       onClick={() => {
                         setEditId(a.id);
                         setText(a.text);
@@ -61,7 +63,7 @@ export const AnnotationList: React.FC = () => {
                     </Button>
                     <Button
                       variant="ghost"
-                      size="sm"
+                      size="xs"
                       onClick={() => removeAnnotation(a.id)}
                     >
                       Delete
@@ -76,7 +78,7 @@ export const AnnotationList: React.FC = () => {
 
       <div className="mt-2 flex flex-col gap-2">
         {replyTo && (
-          <div className="text-xs text-muted-foreground">
+          <div className="text-muted-foreground text-xs">
             Replying to {replyTo}
             <Button
               variant="ghost"

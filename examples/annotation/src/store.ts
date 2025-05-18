@@ -5,10 +5,12 @@ import {
   BaseProjectConfig,
 } from '@sqlrooms/project-builder';
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
-import {createAnnotationSlice, AnnotationSliceState} from '@sqlrooms/annotation';
+import {
+  createAnnotationSlice,
+  AnnotationSliceState,
+} from '@sqlrooms/annotation';
 import {DatabaseIcon, MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import DataSourcesPanel from './components/DataSourcesPanel.js';
 import {MainView} from './components/MainView.js';
 import AnnotationPanel from './components/AnnotationPanel.js';
 
@@ -34,14 +36,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         type: LayoutTypes.enum.mosaic,
         nodes: {
           direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
-          second: {
-            direction: 'row',
-            first: MAIN_VIEW,
-            second: ProjectPanelTypes.enum['annotations'],
-            splitPercentage: 70,
-          },
-          splitPercentage: 20,
+          first: ProjectPanelTypes.enum['annotations'],
+          second: ProjectPanelTypes.enum['main'],
+          splitPercentage: 30,
         },
       },
       dataSources: [
@@ -54,12 +51,6 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
     },
     project: {
       panels: {
-        [ProjectPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
         [ProjectPanelTypes.enum['annotations']]: {
           title: 'Annotations',
           icon: MessageCircleIcon,

@@ -4,7 +4,7 @@ import {ProjectPanelTypes} from '../store.js';
 
 const AnnotationPanel = () => (
   <ProjectBuilderPanel type={ProjectPanelTypes.enum['annotations']}>
-    <AnnotationList />
+    <AnnotationList className="p-2" />
   </ProjectBuilderPanel>
 );
 

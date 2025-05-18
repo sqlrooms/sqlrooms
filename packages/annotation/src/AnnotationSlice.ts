@@ -19,6 +19,7 @@ export const Annotation = z.object({
 export type Annotation = z.infer<typeof Annotation>;
 
 export const AnnotationThread = z.object({
+  id: z.string().cuid2(),
   annotations: z.array(Annotation),
 });
 export type AnnotationThread = z.infer<typeof AnnotationThread>;
@@ -34,8 +35,8 @@ export type AnnotationSliceState = {
   };
 };
 
-export type ProjectStateWithAnnotation = ProjectBuilderState<BaseProjectConfig> &
-  AnnotationSliceState;
+export type ProjectStateWithAnnotation =
+  ProjectBuilderState<BaseProjectConfig> & AnnotationSliceState;
 
 export function createAnnotationSlice({
   userId,
@@ -67,7 +68,10 @@ export function createAnnotationSlice({
                 return;
               }
             }
-            draft.annotation.threads.push({annotations: [newAnnotation]});
+            draft.annotation.threads.push({
+              id: createId(),
+              annotations: [newAnnotation],
+            });
           }),
         );
       },
@@ -76,7 +80,7 @@ export function createAnnotationSlice({
         set((state) =>
           produce(state, (draft) => {
             for (let i = 0; i < draft.annotation.threads.length; i++) {
-              const thread = draft.annotation.threads[i];
+              const thread = draft.annotation.threads[i]!;
               const index = thread.annotations.findIndex((a) => a.id === id);
               if (index !== -1) {
                 thread.annotations.splice(index, 1);
