@@ -6,7 +6,22 @@ outline: deep
 
 SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
 
-## Prerequisites
+## Try the Minimal Example
+
+To quickly explore SQLRooms without any setup, clone the minimal example:
+
+```bash
+npx degit https://github.com/sqlrooms/examples/minimal myapp
+cd myapp
+npm install
+npm run dev
+```
+
+This basic Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`.
+
+## Manual Setup
+
+### Prerequisites
 
 Your application should have the following dependencies:
 
@@ -16,7 +31,7 @@ Your application should have the following dependencies:
 - [Zod](https://zod.dev) for schema validation
 - [Node.js](https://nodejs.org/) >= 20
 
-## Installation
+### Installation
 
 Install the required SQLRooms packages:
 
@@ -36,7 +51,7 @@ yarn add @sqlrooms/project-builder @sqlrooms/project-config @sqlrooms/layout @sq
 
 :::
 
-## Configure Tailwind CSS
+### Configure Tailwind CSS
 
 SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
 
@@ -71,7 +86,7 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 @import '@sqlrooms/ui/tailwind-preset.css';
 ```
 
-## Setting Up the Project Store
+### Setting Up the Project Store
 
 1. First, define your panel types and project configuration:
 
@@ -194,7 +209,7 @@ export const {projectStore, useProjectStore} = createProjectStore<
 );
 ```
 
-## Using the Project Store
+### Using the Project Store
 
 Wrap your application with the project store provider:
 
@@ -232,6 +247,7 @@ function YourComponent() {
 - Built-in data source management
 - Extensible project configuration with Zod schemas
 - Type-safe state management
+
 
 ## Need Help?
 
