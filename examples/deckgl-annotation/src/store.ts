@@ -17,7 +17,7 @@ import DiscussionPanel from './components/DiscussionPanel';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
-  'discussion',
+  'discuss',
   MAIN_VIEW,
 ] as const);
 export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
@@ -40,7 +40,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         type: LayoutTypes.enum.mosaic,
         nodes: {
           direction: 'row',
-          first: ProjectPanelTypes.enum['discussion'],
+          first: ProjectPanelTypes.enum['discuss'],
           second: ProjectPanelTypes.enum['main'],
           splitPercentage: 30,
         },
@@ -59,8 +59,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
     },
     project: {
       panels: {
-        [ProjectPanelTypes.enum['discussion']]: {
-          title: 'Discussion',
+        [ProjectPanelTypes.enum['discuss']]: {
+          title: 'Discuss',
           icon: MessageCircleIcon,
           component: DiscussionPanel,
           placement: 'sidebar',

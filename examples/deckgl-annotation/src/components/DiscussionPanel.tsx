@@ -8,7 +8,7 @@ import {ProjectPanelTypes} from '../store';
  */
 const DiscussionPanel = () => {
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['discussion']}>
+    <ProjectBuilderPanel type={ProjectPanelTypes.enum['discuss']}>
       <DiscussionList className="p-2" />
     </ProjectBuilderPanel>
   );
