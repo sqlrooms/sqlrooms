@@ -24,9 +24,9 @@ export const CommentSchema = CommentBaseSchema.extend({
 });
 export type CommentSchema = z.infer<typeof CommentSchema>;
 
-// Discussion extends base with targetId and contains comments
+// Discussion extends base with anchorId and contains comments
 export const DiscussionSchema = CommentBaseSchema.extend({
-  targetId: z.string().optional(),
+  anchorId: z.string().optional(),
   comments: z.array(CommentSchema),
 });
 export type DiscussionSchema = z.infer<typeof DiscussionSchema>;
@@ -111,7 +111,7 @@ export type DiscussionSliceState = {
 
     // Direct CRUD operations - use these only for custom integrations
     // that don't use the built-in UI state management
-    addDiscussion: (text: string, targetId?: string) => void;
+    addDiscussion: (text: string, anchorId?: string) => void;
     editDiscussion: (id: string, text: string) => void;
     removeDiscussion: (id: string) => void;
     addComment: (discussionId: string, text: string, parentId?: string) => void;
@@ -147,11 +147,11 @@ export function createDiscussionSlice({
        * Directly adds a new discussion without managing UI state.
        * For UI-integrated usage, prefer submitEdit.
        */
-      addDiscussion: (text, targetId) => {
+      addDiscussion: (text, anchorId) => {
         const newDiscussion: DiscussionSchema = {
           id: createId(),
           userId,
-          targetId,
+          anchorId,
           text,
           timestamp: new Date(),
           comments: [],
