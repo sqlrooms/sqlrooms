@@ -6,7 +6,6 @@ import {GeoJsonLayer} from 'deck.gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
-import {useProjectStore} from '../store';
 
 const INITIAL_VIEW_STATE = {
   latitude: 51.47,
@@ -38,7 +37,7 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
       data: features,
       filled: true,
       pointRadiusMinPixels: 2,
-      pointRadiusScale: 2000,
+      pointRadiusScale: 4000,
       getPointRadius: (f) => 11 - f.properties.scalerank,
       getFillColor: [200, 0, 80, 180],
       pickable: true,
