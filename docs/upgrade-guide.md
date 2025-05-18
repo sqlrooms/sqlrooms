@@ -20,7 +20,7 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
-- A number of project store props amnd moved from `.project` to `.db`:
+- A number of project store props and moved from `.project` to `.db`:
 
   - `.tables`
   - `.addTable`
