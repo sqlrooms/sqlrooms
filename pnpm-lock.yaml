@@ -422,7 +422,7 @@ importers:
         specifier: ^6.2.0
         version: 6.2.0(@types/node@22.13.9)(jiti@2.4.2)(lightningcss@1.29.2)(terser@5.37.0)(yaml@2.7.0)
 
-  examples/deckgl-annotation:
+  examples/deckgl-discuss:
     dependencies:
       '@deck.gl/mapbox':
         specifier: ^9.1.12
