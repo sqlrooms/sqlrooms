@@ -12,7 +12,7 @@ import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
 import AnnotationPanel from './components/AnnotationPanel';
-import {MainView} from './components/MainView';
+import {MapView} from './components/MapView';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
@@ -60,7 +60,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         main: {
           title: 'Main view',
           icon: () => null,
-          component: MainView,
+          component: MapView,
           placement: 'main',
         },
       },

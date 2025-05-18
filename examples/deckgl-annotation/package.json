@@ -1,5 +1,5 @@
 {
-  "name": "sqlrooms-annotation",
+  "name": "sqlrooms-deckgl-annotation",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -10,14 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "deck.gl": "^9.1.12",
+    "@deck.gl/mapbox": "^9.1.12",
     "@sqlrooms/annotation": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "maplibre-gl": "^5.5.0",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "react": "^18.3.1",
+    "react-map-gl": "^8.0.4",
     "react-dom": "^18.3.1",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
