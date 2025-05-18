@@ -12,7 +12,8 @@ import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
 import AnnotationPanel from './components/AnnotationPanel';
-import {MapView} from './components/MapView';
+import {MainView} from './components/MainView';
+import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
@@ -31,6 +32,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
   AppState
 >((set, get, store) => ({
   ...createProjectBuilderSlice<AppConfig>({
+    connector: new WasmDuckDbConnector({
+      initializationQuery: 'LOAD spatial',
+    }),
     config: {
       layout: {
         type: LayoutTypes.enum.mosaic,
@@ -44,8 +48,12 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       dataSources: [
         {
           type: 'url',
-          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-          tableName: 'earthquakes',
+          // source: Natural Earth http://www.naturalearthdata.com/ via geojson.xyz
+          url: 'https://d2ad6b4ur7yvpq.cloudfront.net/naturalearth-3.3.0/ne_10m_airports.geojson',
+          tableName: 'airports',
+          loadOptions: {
+            method: 'st_read',
+          },
         },
       ],
     },
@@ -60,7 +68,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         main: {
           title: 'Main view',
           icon: () => null,
-          component: MapView,
+          component: MainView,
           placement: 'main',
         },
       },

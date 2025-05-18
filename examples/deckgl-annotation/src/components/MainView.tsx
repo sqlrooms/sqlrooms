@@ -1,41 +1,50 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {TableCard} from '@sqlrooms/project-builder';
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-  SpinnerPane,
-} from '@sqlrooms/ui';
+import {SpinnerPane} from '@sqlrooms/ui';
+import {useMemo} from 'react';
 import {useProjectStore} from '../store';
+import {AirportFeature, MapView} from './MapView';
 
 export const MainView: React.FC = () => {
-  const table = useProjectStore((s) => s.db.findTableByName('earthquakes'));
-  const {data, isLoading, error} = useSql<{count: number; maxMag: number}>({
-    query: `SELECT COUNT(*) AS count, MAX(Magnitude) AS maxMag FROM earthquakes`,
+  const table = useProjectStore((s) => s.db.findTableByName('airports'));
+  const {data, isLoading, error} = useSql<{
+    name: string;
+    abbrev: string;
+    scalerank: number;
+    geometry: string;
+  }>({
+    query: `
+      SELECT 
+        name,
+        abbrev,
+        scalerank,
+        ST_AsGeoJSON(geom) AS geometry
+      FROM airports`,
     enabled: Boolean(table),
   });
 
-  if (!table) return null;
+  const features = useMemo(
+    () =>
+      data?.toArray().map(
+        ({geometry, ...properties}) =>
+          ({
+            type: 'Feature',
+            geometry: JSON.parse(geometry),
+            properties,
+          }) satisfies AirportFeature,
+      ),
+    [data],
+  );
 
+  if (!table) return null;
   return (
-    <div className="flex h-full w-full items-center justify-center p-4">
+    <div className="flex h-full w-full items-center justify-center">
       {isLoading ? (
         <SpinnerPane className="h-full w-full" />
       ) : error ? (
         <div>Error: {error.message}</div>
-      ) : (
-        <Card className="w-[300px]">
-          <CardHeader>
-            <CardTitle>Earthquakes</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2">
-            <TableCard value={table} isReadOnly className="p-2" />
-            <div>Total records: {data?.getRow(0).count}</div>
-            <div>Max magnitude: {data?.getRow(0).maxMag}</div>
-          </CardContent>
-        </Card>
-      )}
+      ) : features ? (
+        <MapView features={features} />
+      ) : null}
     </div>
   );
 };
