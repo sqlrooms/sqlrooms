@@ -27,6 +27,7 @@ export type AnnotationThread = z.infer<typeof AnnotationThread>;
 export type AnnotationSliceState = {
   annotation: {
     userId: string;
+    getUserName: (userId: string) => string;
     threads: AnnotationThread[];
     addAnnotation: (text: string, targetId?: string) => void;
     editAnnotation: (id: string, text: string) => void;
@@ -40,12 +41,15 @@ export type ProjectStateWithAnnotation =
 
 export function createAnnotationSlice({
   userId,
+  getUserName,
 }: {
   userId: string;
+  getUserName: (userId: string) => string;
 }): StateCreator<AnnotationSliceState> {
   return createSlice<BaseProjectConfig, AnnotationSliceState>((set, get) => ({
     annotation: {
       userId,
+      getUserName,
       threads: [],
 
       addAnnotation: (text, targetId) => {

@@ -11,7 +11,10 @@ import {useState} from 'react';
 import {useStoreWithAnnotation} from './AnnotationSlice.js';
 import {formatTimeRelative} from '@sqlrooms/utils';
 
-export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
+export const AnnotationList: React.FC<{
+  className?: string;
+  getUserName: (userId: string) => string;
+}> = ({className, getUserName}) => {
   const threads = useStoreWithAnnotation((s) => s.annotation.threads);
   const userId = useStoreWithAnnotation((s) => s.annotation.userId);
   const addAnnotation = useStoreWithAnnotation(
@@ -46,11 +49,14 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
   return (
     <div className={cn('flex flex-col gap-2', className)}>
       {threads.map((thread) => (
-        <div key={thread.annotations[0]?.id} className="rounded border p-2">
+        <div
+          key={thread.annotations[0]?.id}
+          className="flex flex-col gap-4 rounded border p-2"
+        >
           {thread.annotations.map((a) => (
-            <div key={a.id}>
+            <div key={a.id} className="flex flex-col gap-2">
               <div className="text-muted-foreground text-xs">
-                {a.userId} - {formatTimeRelative(a.timestamp)}
+                {getUserName(a.userId)} - {formatTimeRelative(a.timestamp)}
               </div>
               <div className="whitespace-pre-wrap">{a.text}</div>
               <div className="mt-1 flex justify-end gap-1 text-xs">
@@ -126,7 +132,14 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
       <div className="mt-2 flex flex-col gap-2">
         {replyTo && (
           <div className="text-muted-foreground text-xs">
-            Replying to {replyTo}
+            Replying to{' '}
+            {(() => {
+              for (const thread of threads) {
+                const ann = thread.annotations.find((a) => a.id === replyTo);
+                if (ann) return getUserName(ann.userId);
+              }
+              return replyTo;
+            })()}
             <Button
               variant="ghost"
               size="sm"

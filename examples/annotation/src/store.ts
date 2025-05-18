@@ -1,18 +1,18 @@
 import {
+  AnnotationSliceState,
+  createAnnotationSlice,
+} from '@sqlrooms/annotation';
+import {
+  BaseProjectConfig,
   createProjectBuilderSlice,
   createProjectBuilderStore,
   ProjectBuilderState,
-  BaseProjectConfig,
 } from '@sqlrooms/project-builder';
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
-import {
-  createAnnotationSlice,
-  AnnotationSliceState,
-} from '@sqlrooms/annotation';
-import {DatabaseIcon, MessageCircleIcon} from 'lucide-react';
+import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import {MainView} from './components/MainView.js';
 import AnnotationPanel from './components/AnnotationPanel.js';
+import {MainView} from './components/MainView.js';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
@@ -66,5 +66,13 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       },
     },
   })(set, get, store),
-  ...createAnnotationSlice({userId: 'user1'})(set, get, store),
+  ...createAnnotationSlice({
+    userId: 'user1',
+    getUserName: (userId: string) => {
+      // Implement your own logic to get the user name from the user id
+      // For example, you can use a database or an API to get the user name
+      // For now, we'll just return a static user name
+      return 'Anonymous';
+    },
+  })(set, get, store),
 }));
