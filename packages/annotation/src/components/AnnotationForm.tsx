@@ -1,5 +1,5 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
-import {forwardRef, useState, ComponentPropsWithoutRef} from 'react';
+import {forwardRef, useState, useEffect, ComponentPropsWithoutRef} from 'react';
 
 export type AnnotationFormProps = Omit<
   ComponentPropsWithoutRef<'div'>,
@@ -28,6 +28,11 @@ export const AnnotationForm = forwardRef<HTMLDivElement, AnnotationFormProps>(
     ref,
   ) => {
     const [text, setText] = useState(initialText);
+
+    // Update text state when initialText changes
+    useEffect(() => {
+      setText(initialText);
+    }, [initialText]);
 
     const handleSubmit = () => {
       if (!text.trim()) return;

@@ -42,6 +42,28 @@ export const AnnotationList = forwardRef<HTMLDivElement, AnnotationListProps>(
       (state) => state.annotation.getReplyingToName,
     );
 
+    // Get the text of the item being edited
+    const getEditingItemText = () => {
+      if (!editingItem) return '';
+
+      // Look for the annotation
+      const annotation = annotations.find(
+        (a) => a.id === editingItem.annotationId,
+      );
+      if (!annotation) return '';
+
+      // If editing a comment, find the comment
+      if (editingItem.commentId) {
+        const comment = annotation.comments.find(
+          (c) => c.id === editingItem.commentId,
+        );
+        return comment ? comment.text : '';
+      }
+
+      // If editing the annotation itself
+      return annotation.text;
+    };
+
     return (
       <div
         ref={ref}
@@ -73,6 +95,7 @@ export const AnnotationList = forwardRef<HTMLDivElement, AnnotationListProps>(
 
         <AnnotationForm
           onSubmit={submitEdit}
+          initialText={editingItem ? getEditingItemText() : ''}
           submitLabel={editingItem ? 'Save' : replyToItem ? 'Reply' : 'Add'}
           replyingTo={replyToItem ? getReplyingToName() : undefined}
           editingType={
