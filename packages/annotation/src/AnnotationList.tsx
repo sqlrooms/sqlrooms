@@ -1,6 +1,15 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from '@sqlrooms/ui';
 import {useState} from 'react';
 import {useStoreWithAnnotation} from './AnnotationSlice.js';
+import {formatTimeRelative} from '@sqlrooms/utils';
 
 export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
   const threads = useStoreWithAnnotation((s) => s.annotation.threads);
@@ -18,6 +27,9 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<string | undefined>(undefined);
   const [editId, setEditId] = useState<string | undefined>(undefined);
+  const [annotationToDelete, setAnnotationToDelete] = useState<
+    string | undefined
+  >(undefined);
 
   const handleSubmit = () => {
     if (!text.trim()) return;
@@ -36,12 +48,12 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
       {threads.map((thread) => (
         <div key={thread.annotations[0]?.id} className="rounded border p-2">
           {thread.annotations.map((a) => (
-            <div key={a.id} className="mb-2">
+            <div key={a.id}>
               <div className="text-muted-foreground text-xs">
-                {a.userId} - {a.timestamp.toLocaleString()}
+                {a.userId} - {formatTimeRelative(a.timestamp)}
               </div>
               <div className="whitespace-pre-wrap">{a.text}</div>
-              <div className="mt-1 flex gap-2 text-xs">
+              <div className="mt-1 flex justify-end gap-1 text-xs">
                 <Button
                   variant="ghost"
                   size="xs"
@@ -64,7 +76,7 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
                     <Button
                       variant="ghost"
                       size="xs"
-                      onClick={() => removeAnnotation(a.id)}
+                      onClick={() => setAnnotationToDelete(a.id)}
                     >
                       Delete
                     </Button>
@@ -75,6 +87,41 @@ export const AnnotationList: React.FC<{className?: string}> = ({className}) => {
           ))}
         </div>
       ))}
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={!!annotationToDelete}
+        onOpenChange={(open) => {
+          if (!open) setAnnotationToDelete(undefined);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Annotation</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to delete this annotation? This action
+              cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAnnotationToDelete(undefined)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                if (annotationToDelete) removeAnnotation(annotationToDelete);
+                setAnnotationToDelete(undefined);
+              }}
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <div className="mt-2 flex flex-col gap-2">
         {replyTo && (
