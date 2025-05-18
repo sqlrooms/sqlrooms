@@ -7,7 +7,7 @@ import {
   CardTitle,
   SpinnerPane,
 } from '@sqlrooms/ui';
-import {useProjectStore} from '../store.js';
+import {useProjectStore} from '../store';
 
 export const MainView: React.FC = () => {
   const table = useProjectStore((s) => s.db.findTableByName('earthquakes'));

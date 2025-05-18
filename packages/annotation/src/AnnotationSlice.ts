@@ -10,32 +10,32 @@ import {produce} from 'immer';
 import {z} from 'zod';
 
 // Base type with common fields
-export const CommentBase = z.object({
+export const CommentBaseSchema = z.object({
   id: z.string().cuid2(),
   userId: z.string(),
   text: z.string(),
   timestamp: z.date(),
 });
-export type CommentBase = z.infer<typeof CommentBase>;
+export type CommentBaseSchema = z.infer<typeof CommentBaseSchema>;
 
 // Comment type extends base with parentId
-export const Comment = CommentBase.extend({
+export const CommentSchema = CommentBaseSchema.extend({
   parentId: z.string().optional(),
 });
-export type Comment = z.infer<typeof Comment>;
+export type CommentSchema = z.infer<typeof CommentSchema>;
 
 // Annotation extends base with targetId and contains comments
-export const Annotation = CommentBase.extend({
+export const AnnotationSchema = CommentBaseSchema.extend({
   targetId: z.string().optional(),
-  comments: z.array(Comment),
+  comments: z.array(CommentSchema),
 });
-export type Annotation = z.infer<typeof Annotation>;
+export type AnnotationSchema = z.infer<typeof AnnotationSchema>;
 
 export type AnnotationSliceState = {
   annotation: {
     userId: string;
     getUserName: (userId: string) => string;
-    annotations: Annotation[];
+    annotations: AnnotationSchema[];
     addAnnotation: (text: string, targetId?: string) => void;
     editAnnotation: (id: string, text: string) => void;
     removeAnnotation: (id: string) => void;
@@ -66,7 +66,7 @@ export function createAnnotationSlice({
       annotations: [],
 
       addAnnotation: (text, targetId) => {
-        const newAnnotation: Annotation = {
+        const newAnnotation: AnnotationSchema = {
           id: createId(),
           userId,
           targetId,
@@ -109,7 +109,7 @@ export function createAnnotationSlice({
       },
 
       addComment: (annotationId, text, parentId) => {
-        const newComment: Comment = {
+        const newComment: CommentSchema = {
           id: createId(),
           userId,
           text,

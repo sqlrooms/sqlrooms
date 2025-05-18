@@ -3,12 +3,18 @@
  * @packageDocumentation
  */
 
-export {AnnotationList} from './AnnotationList.js';
+export {AnnotationList} from './AnnotationList';
 export {
-  Annotation,
-  Comment,
+  AnnotationSchema,
+  CommentSchema,
   createAnnotationSlice,
   useStoreWithAnnotation,
   type AnnotationSliceState,
   type ProjectStateWithAnnotation,
-} from './AnnotationSlice.js';
+} from './AnnotationSlice';
+
+export {AnnotationItem} from './components/AnnotationItem';
+export {CommentItem} from './components/CommentItem';
+export {CommentList} from './components/CommentList';
+export {AnnotationForm} from './components/AnnotationForm';
+export {DeleteConfirmDialog} from './components/DeleteConfirmDialog';

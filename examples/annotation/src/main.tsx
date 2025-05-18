@@ -2,9 +2,9 @@ import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
 import {ThemeProvider} from '@sqlrooms/ui';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
-import {App} from './app.js';
+import {App} from './app';
 import './index.css';
-import {projectStore} from './store.js';
+import {projectStore} from './store';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

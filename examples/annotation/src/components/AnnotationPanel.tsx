@@ -1,7 +1,7 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {AnnotationList} from '@sqlrooms/annotation';
-import {ProjectPanelTypes} from '../store.js';
-import {useProjectStore} from '../store.js';
+import {ProjectPanelTypes} from '../store';
+import {useProjectStore} from '../store';
 
 const AnnotationPanel = () => {
   const getUserName = useProjectStore((s) => s.annotation.getUserName);

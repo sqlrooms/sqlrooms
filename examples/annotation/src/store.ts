@@ -11,8 +11,8 @@ import {
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import AnnotationPanel from './components/AnnotationPanel.js';
-import {MainView} from './components/MainView.js';
+import AnnotationPanel from './components/AnnotationPanel';
+import {MainView} from './components/MainView';
 
 export const ProjectPanelTypes = z.enum([
   'data-sources',
