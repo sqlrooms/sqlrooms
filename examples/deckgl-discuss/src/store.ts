@@ -76,11 +76,5 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
   })(set, get, store),
   ...createDiscussionSlice({
     userId: 'user1',
-    getUserName: (userId: string) => {
-      // Implement your own logic to get the user name from the user id
-      // For example, you can use a database or an API to get the user name
-      // For now, we'll just return a static user name
-      return 'Anonymous';
-    },
   })(set, get, store),
 }));
