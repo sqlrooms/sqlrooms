@@ -52,6 +52,11 @@ export type DataTablePaginatedProps<Data extends object> = {
   onSortingChange?: (sorting: SortingState) => void;
 };
 
+/**
+ * Data table with pagination, sorting, and custom actions.
+ * @param props
+ * @returns
+ */
 export default function DataTablePaginated<Data extends object>({
   className,
   fontSize = 'text-base',

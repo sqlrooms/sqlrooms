@@ -2,7 +2,7 @@ import {escapeId, useExportToCsv, useSql} from '@sqlrooms/duckdb';
 import {Button} from '@sqlrooms/ui';
 import {genRandomStr} from '@sqlrooms/utils';
 import {PaginationState, SortingState} from '@tanstack/table-core';
-import {ArrowDownIcon} from 'lucide-react';
+import {ArrowDownIcon, DownloadIcon} from 'lucide-react';
 import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
   DataTablePaginatedProps,
@@ -56,8 +56,8 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
       OFFSET ${pagination.pageIndex * pagination.pageSize}
       LIMIT ${pagination.pageSize}`,
   });
-  const countQueryResult = useSql({
-    query: `SELECT COUNT(*)::int FROM (${sanitizedQuery})`,
+  const countQueryResult = useSql<{count: number}>({
+    query: `SELECT COUNT(*)::int AS count FROM (${sanitizedQuery})`,
   });
 
   const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable);
@@ -83,7 +83,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   }
 
   const numRows = countQueryResult.data
-    ? Number(countQueryResult.data?.length)
+    ? (countQueryResult.data.toArray()[0]?.count ?? 0)
     : undefined;
 
   const pageCount =
@@ -101,9 +101,8 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
       {isExporting ? (
         <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
       ) : (
-        <ArrowDownIcon className="h-4 w-4" />
+        <DownloadIcon className="h-4 w-4" />
       )}
-      Export CSV
     </Button>
   );
 

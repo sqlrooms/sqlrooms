@@ -16,8 +16,7 @@ export interface TableStructurePanelProps {
 
 export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   className,
-  schema = 'main',
-  onTableSelect,
+  schema = '*',
 }) => {
   // Get state from store
   const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);

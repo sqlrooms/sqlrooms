@@ -192,7 +192,6 @@ export function createSqlEditorSlice<
             await get().db.sqlSelectToJson(lastStatement);
 
           const isValidSelectQuery = !parsedLastStatement.error;
-
           if (isValidSelectQuery) {
             queryResult = {
               status: 'success',
@@ -223,7 +222,11 @@ export function createSqlEditorSlice<
               isSelect: false,
             };
           }
-          get().db.refreshTableSchemas();
+          // Refresh table schemas if there are multiple statements or if the
+          // last statement is not a select query
+          if (statements.length > 1 || !isValidSelectQuery) {
+            get().db.refreshTableSchemas();
+          }
         } catch (e) {
           console.error(e);
           const errorMessage = e instanceof Error ? e.message : String(e);

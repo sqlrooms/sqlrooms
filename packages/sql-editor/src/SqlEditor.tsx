@@ -25,7 +25,7 @@ export type SqlEditorProps = {
 };
 
 const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
-  const {schema = 'main', documentationPanel} = props;
+  const {schema = '*', documentationPanel} = props;
 
   // Store access
   const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
