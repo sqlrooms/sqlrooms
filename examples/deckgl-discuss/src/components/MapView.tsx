@@ -7,7 +7,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useState, useEffect, useMemo} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
 import {useProjectStore} from '../store';
-import {PlusCircle, MessageCircle} from 'lucide-react';
+import {PlusCircle, MessageCircle, Send} from 'lucide-react';
 import {createId} from '@paralleldrive/cuid2';
 
 const INITIAL_VIEW_STATE = {
@@ -37,10 +37,15 @@ type PopupInfo = {
   latitude: number;
   name: string;
   discussionCount: number;
+  rootDiscussionText: string;
 };
 
 export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   const [selected, setSelected] = useState<AirportFeature>();
+  const [commentText, setCommentText] = useState('');
+  const [airportCommentText, setAirportCommentText] = useState<
+    Record<string, string>
+  >({});
 
   // Get state from store
   const discussions = useProjectStore((state) => state.discussion.discussions);
@@ -51,17 +56,20 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
     (state) => state.discussion.setReplyToItem,
   );
 
-  // Create a map of airport abbrev -> discussion counts
+  // Create a map of airport abbrev -> discussions
   const discussionsByAirport = useMemo(() => {
     // Group discussions by anchorId (which is the airport abbreviation)
     return discussions.reduce(
       (acc, discussion) => {
         if (discussion.anchorId) {
-          acc[discussion.anchorId] = (acc[discussion.anchorId] || 0) + 1;
+          if (!acc[discussion.anchorId]) {
+            acc[discussion.anchorId] = [];
+          }
+          acc[discussion.anchorId].push(discussion);
         }
         return acc;
       },
-      {} as Record<string, number>,
+      {} as Record<string, typeof discussions>,
     );
   }, [discussions]);
 
@@ -71,12 +79,18 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
       .filter((feature) => discussionsByAirport[feature.properties.abbrev])
       .map((feature) => {
         const [longitude, latitude] = feature.geometry.coordinates;
+        const airportDiscussions =
+          discussionsByAirport[feature.properties.abbrev] || [];
+        const firstDiscussion = airportDiscussions[0];
         return {
           featureId: feature.properties.abbrev,
           longitude,
           latitude,
           name: feature.properties.name,
-          discussionCount: discussionsByAirport[feature.properties.abbrev] || 0,
+          discussionCount: airportDiscussions.length,
+          rootDiscussionText: firstDiscussion
+            ? firstDiscussion.rootComment.text
+            : '',
         } satisfies PopupInfo;
       });
   }, [features, discussionsByAirport]);
@@ -93,11 +107,15 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
     // Use the airport abbrev as the anchorId
     const anchorId = selected.properties.abbrev;
 
+    // Get the comment text and reset input
+    const text = commentText;
+    setCommentText('');
+
     // Close the feature popup to avoid UI clutter
     setSelected(undefined);
 
     // Add a new discussion with the anchorId
-    addDiscussion('', anchorId);
+    addDiscussion(text, anchorId);
 
     // Set UI to reply to the new discussion
     setTimeout(() => {
@@ -158,13 +176,23 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
             <div className="mb-2 text-sm text-gray-600">
               {selected.properties.abbrev}
             </div>
-            <button
-              onClick={handleAddDiscussion}
-              className="mt-1 flex items-center gap-1 rounded-md bg-blue-500 px-2 py-1 text-sm text-white hover:bg-blue-600"
-            >
-              <PlusCircle size={14} />
-              Comment
-            </button>
+            <div className="flex flex-col gap-2">
+              <textarea
+                value={commentText}
+                onChange={(e) => setCommentText(e.target.value)}
+                placeholder="Add a comment..."
+                className="w-full min-w-[200px] rounded border border-gray-300 p-2 text-sm"
+                rows={2}
+              />
+              <button
+                onClick={handleAddDiscussion}
+                disabled={!commentText.trim()}
+                className="mt-1 flex items-center justify-center gap-1 rounded-md bg-blue-500 px-2 py-1 text-sm text-white hover:bg-blue-600 disabled:bg-blue-300"
+              >
+                <PlusCircle size={14} />
+                Add Comment
+              </button>
+            </div>
           </div>
         </Popup>
       )}
@@ -181,9 +209,14 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
           closeButton={false}
         >
           <div className="text-sm font-medium">{airport.name}</div>
+          {airport.rootDiscussionText && (
+            <div className="mt-1 max-w-[200px] truncate text-sm text-gray-600">
+              {airport.rootDiscussionText}
+            </div>
+          )}
           <button
             onClick={() => handleViewDiscussions(airport.featureId)}
-            className="mt-1 flex items-center gap-1 rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
+            className="mt-2 flex items-center gap-1 rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
           >
             <MessageCircle size={14} />
             {airport.discussionCount}{' '}

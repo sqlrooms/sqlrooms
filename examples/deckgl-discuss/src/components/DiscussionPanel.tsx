@@ -18,7 +18,7 @@ const DiscussionPanel = () => {
         <DiscussionList
           className="p-2"
           renderUser={() => {
-            return 'Anonymous user';
+            return 'Anonymous';
           }}
         />
       )}
