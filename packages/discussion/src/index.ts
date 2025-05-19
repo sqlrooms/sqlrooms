@@ -15,6 +15,4 @@ export {
 
 export {DiscussionItem} from './components/DiscussionItem';
 export {CommentItem} from './components/CommentItem';
-export {CommentList} from './components/CommentList';
-export {DiscussionForm} from './components/DiscussionForm';
 export {DeleteConfirmDialog} from './components/DeleteConfirmDialog';

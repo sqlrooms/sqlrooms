@@ -7,11 +7,12 @@ import {useStoreWithDiscussion} from '../DiscussionSlice';
 export type CommentItemProps = {
   discussionId: string;
   comment: CommentSchema;
+  isRootComment?: boolean;
   className?: string;
 };
 
 export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
-  ({discussionId, comment, className}, ref) => {
+  ({discussionId, comment, isRootComment = false, className}, ref) => {
     const userId = useStoreWithDiscussion((state) => state.discussion.userId);
     const getUserName = useStoreWithDiscussion(
       (state) => state.discussion.getUserName,
@@ -27,23 +28,42 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     );
 
     const handleReply = () => {
-      setReplyToItem({discussionId, commentId: comment.id});
+      if (isRootComment) {
+        setReplyToItem({discussionId});
+      } else {
+        setReplyToItem({discussionId, commentId: comment.id});
+      }
     };
 
     const handleEdit = () => {
-      setEditingItem({discussionId, commentId: comment.id});
+      if (isRootComment) {
+        setEditingItem({discussionId});
+      } else {
+        setEditingItem({discussionId, commentId: comment.id});
+      }
     };
 
     const handleDelete = () => {
-      setItemToDelete({
-        discussionId,
-        commentId: comment.id,
-        itemType: 'Comment',
-      });
+      if (isRootComment) {
+        setItemToDelete({discussionId, itemType: 'Discussion'});
+      } else {
+        setItemToDelete({
+          discussionId,
+          commentId: comment.id,
+          itemType: 'Comment',
+        });
+      }
     };
 
     return (
-      <div ref={ref} className={cn('flex flex-col gap-2', className)}>
+      <div
+        ref={ref}
+        className={cn(
+          'flex flex-col gap-2',
+          isRootComment ? 'mb-4' : '',
+          className,
+        )}
+      >
         <div className="text-muted-foreground text-xs">
           {getUserName(comment.userId)} -{' '}
           {formatTimeRelative(comment.timestamp)}

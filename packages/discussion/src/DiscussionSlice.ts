@@ -24,15 +24,17 @@ export const CommentSchema = CommentBaseSchema.extend({
 });
 export type CommentSchema = z.infer<typeof CommentSchema>;
 
-// Discussion extends base with anchorId and contains comments
-export const DiscussionSchema = CommentBaseSchema.extend({
+// Discussion is a container with a rootComment and collection of reply comments
+export const DiscussionSchema = z.object({
+  id: z.string().cuid2(),
   anchorId: z.string().optional(),
+  rootComment: CommentSchema,
   comments: z.array(CommentSchema),
 });
 export type DiscussionSchema = z.infer<typeof DiscussionSchema>;
 
 // UI state for discussions
-export type ReplyTo = {
+export type ReplyToItem = {
   discussionId: string;
   commentId?: string;
 };
@@ -66,12 +68,12 @@ export type DiscussionSliceState = {
      * Current discussion or comment being replied to.
      * Used by the form to determine context when submitting.
      */
-    replyToItem: ReplyTo | undefined;
+    replyToItem: ReplyToItem | undefined;
     /**
      * Sets the discussion or comment being replied to.
      * Will clear editing state if set.
      */
-    setReplyToItem: (replyToItem: ReplyTo | undefined) => void;
+    setReplyToItem: (replyToItem: ReplyToItem | undefined) => void;
 
     /**
      * Current discussion or comment being edited.
@@ -148,12 +150,18 @@ export function createDiscussionSlice({
        * For UI-integrated usage, prefer submitEdit.
        */
       addDiscussion: (text, anchorId) => {
-        const newDiscussion: DiscussionSchema = {
+        const id = createId();
+        const rootComment: CommentSchema = {
           id: createId(),
           userId,
-          anchorId,
           text,
           timestamp: new Date(),
+        };
+
+        const newDiscussion: DiscussionSchema = {
+          id,
+          anchorId,
+          rootComment,
           comments: [],
         };
 
@@ -192,7 +200,7 @@ export function createDiscussionSlice({
               (a) => a.id === id,
             );
             if (discussion) {
-              discussion.text = text;
+              discussion.rootComment.text = text;
             }
           }),
         );
@@ -234,11 +242,15 @@ export function createDiscussionSlice({
               (a) => a.id === discussionId,
             );
             if (discussion) {
-              const comment = discussion.comments.find(
-                (c) => c.id === commentId,
-              );
-              if (comment) {
-                comment.text = text;
+              if (discussion.rootComment.id === commentId) {
+                discussion.rootComment.text = text;
+              } else {
+                const comment = discussion.comments.find(
+                  (c) => c.id === commentId,
+                );
+                if (comment) {
+                  comment.text = text;
+                }
               }
             }
           }),
@@ -256,11 +268,14 @@ export function createDiscussionSlice({
               (a) => a.id === discussionId,
             );
             if (discussion) {
-              const index = discussion.comments.findIndex(
-                (c) => c.id === commentId,
-              );
-              if (index !== -1) {
-                discussion.comments.splice(index, 1);
+              // Cannot remove the root comment
+              if (discussion.rootComment.id !== commentId) {
+                const index = discussion.comments.findIndex(
+                  (c) => c.id === commentId,
+                );
+                if (index !== -1) {
+                  discussion.comments.splice(index, 1);
+                }
               }
             }
           }),
@@ -400,6 +415,9 @@ export function createDiscussionSlice({
             (a) => a.id === replyToItem.discussionId,
           );
           if (discussion) {
+            if (discussion.rootComment.id === replyToItem.commentId) {
+              return getUserName(discussion.rootComment.userId);
+            }
             const comment = discussion.comments.find(
               (c) => c.id === replyToItem.commentId,
             );
@@ -409,7 +427,7 @@ export function createDiscussionSlice({
           const discussion = discussions.find(
             (a) => a.id === replyToItem.discussionId,
           );
-          if (discussion) return getUserName(discussion.userId);
+          if (discussion) return getUserName(discussion.rootComment.userId);
         }
 
         return 'unknown';

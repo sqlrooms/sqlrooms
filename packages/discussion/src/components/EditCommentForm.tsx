@@ -1,7 +1,7 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {forwardRef, useState, useEffect, ComponentPropsWithoutRef} from 'react';
 
-export type DiscussionFormProps = Omit<
+export type EditCommentFormProps = Omit<
   ComponentPropsWithoutRef<'div'>,
   'onSubmit'
 > & {
@@ -13,7 +13,7 @@ export type DiscussionFormProps = Omit<
   onCancel?: () => void;
 };
 
-export const DiscussionForm = forwardRef<HTMLDivElement, DiscussionFormProps>(
+export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
   (
     {
       onSubmit,
@@ -75,4 +75,4 @@ export const DiscussionForm = forwardRef<HTMLDivElement, DiscussionFormProps>(
     );
   },
 );
-DiscussionForm.displayName = 'DiscussionForm';
+EditCommentForm.displayName = 'EditCommentForm';

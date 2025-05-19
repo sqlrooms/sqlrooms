@@ -1,9 +1,8 @@
 import {cn} from '@sqlrooms/ui';
 import {ComponentPropsWithoutRef, forwardRef} from 'react';
 import {useStoreWithDiscussion} from './DiscussionSlice';
-import {DiscussionForm} from './components/DiscussionForm';
+import {EditCommentForm} from './components/EditCommentForm';
 import {DiscussionItem} from './components/DiscussionItem';
-import {CommentList} from './components/CommentList';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 
 // Main DiscussionList component
@@ -61,7 +60,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       }
 
       // If editing the discussion itself
-      return discussion.text;
+      return discussion.rootComment.text;
     };
 
     return (
@@ -76,11 +75,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
             className="flex flex-col gap-4 rounded border p-2"
           >
             <DiscussionItem discussion={discussion} />
-
-            <CommentList
-              discussionId={discussion.id}
-              comments={discussion.comments}
-            />
           </div>
         ))}
 
@@ -93,7 +87,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           itemType={itemToDelete?.itemType || 'Item'}
         />
 
-        <DiscussionForm
+        <EditCommentForm
           onSubmit={submitEdit}
           initialText={editingItem ? getEditingItemText() : ''}
           submitLabel={editingItem ? 'Save' : replyToItem ? 'Reply' : 'Add'}
