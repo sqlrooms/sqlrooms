@@ -15,6 +15,7 @@ export const TableTreeNode: FC<{
   additionalMenuItems?: React.ReactNode;
 }> = (props) => {
   const {className, nodeData, additionalMenuItems} = props;
+  const {database, schema, name} = nodeData;
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
@@ -36,15 +37,16 @@ export const TableTreeNode: FC<{
         </TreeNodeActionsMenuItem>
 
         <TreeNodeActionsMenuItem
-          onClick={() =>
+          onClick={() => {
             navigator.clipboard.writeText(
-              `SELECT * FROM ${
-                nodeData.schema === 'main'
-                  ? nodeData.name
-                  : `${nodeData.schema}.${nodeData.name}`
-              }`,
-            )
-          }
+              [
+                `SELECT * FROM `,
+                database === 'memory' ? '' : `${database}.`,
+                schema === 'main' ? '' : `${schema}.`,
+                name,
+              ].join(''),
+            );
+          }}
         >
           <CopyIcon width="15px" />
           Copy SELECT query

@@ -47,6 +47,7 @@ export type ColumnNodeData = BaseNodeData & {
 export type TableNodeData = BaseNodeData & {
   type: 'table';
   schema: string;
+  database: string;
 };
 
 export type SchemaNodeData = BaseNodeData & {
