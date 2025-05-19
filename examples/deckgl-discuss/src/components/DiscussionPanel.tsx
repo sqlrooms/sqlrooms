@@ -9,7 +9,12 @@ import {ProjectPanelTypes} from '../store';
 const DiscussionPanel = () => {
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['discuss']}>
-      <DiscussionList className="p-2" />
+      <DiscussionList
+        className="p-2"
+        renderUser={() => {
+          return 'Anonymous user';
+        }}
+      />
     </ProjectBuilderPanel>
   );
 };
