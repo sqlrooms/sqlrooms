@@ -4,6 +4,7 @@ export type TableColumn = {
 };
 
 export type DataTable = {
+  database: string;
   tableName: string;
   schema: string;
   columns: TableColumn[];
@@ -27,7 +28,11 @@ export type DbSchemaNode = {
   isOpen?: boolean;
 };
 
-export type NodeData = ColumnNodeData | TableNodeData | SchemaNodeData;
+export type NodeData =
+  | ColumnNodeData
+  | TableNodeData
+  | SchemaNodeData
+  | DatabaseNodeData;
 
 type BaseNodeData = {
   name: string;
@@ -46,4 +51,8 @@ export type TableNodeData = BaseNodeData & {
 
 export type SchemaNodeData = BaseNodeData & {
   type: 'schema';
+};
+
+export type DatabaseNodeData = BaseNodeData & {
+  type: 'database';
 };

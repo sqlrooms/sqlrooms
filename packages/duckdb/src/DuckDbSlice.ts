@@ -257,12 +257,13 @@ export function createDuckDbSlice({
         async getTableSchemas(schema = 'main'): Promise<DataTable[]> {
           const connector = await get().db.getConnector();
           const describeResults = await connector.query(
-            `FROM (DESCRIBE) SELECT schema, name, column_names, column_types
+            `FROM (DESCRIBE) SELECT database, schema, name, column_names, column_types
             ${schema === '*' ? '' : `WHERE schema = '${schema}'`}`,
           );
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
+            const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
             const tableName = describeResults.getChild('name')?.get(i);
             const columnNames = describeResults
@@ -278,7 +279,7 @@ export function createDuckDbSlice({
                 type: columnTypes.get(di),
               });
             }
-            newTables.push({schema, tableName, columns});
+            newTables.push({database, schema, tableName, columns});
           }
           return newTables;
         },

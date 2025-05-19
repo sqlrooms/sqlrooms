@@ -2,12 +2,15 @@ import {DbSchemaNode} from '@sqlrooms/duckdb';
 import {cn, Tree} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {ColumnTreeNode} from './nodes/ColumnTreeNode';
+import {DatabaseTreeNode} from './nodes/DatabaseTreeNode';
 import {SchemaTreeNode} from './nodes/SchemaTreeNode';
 import {TableTreeNode} from './nodes/TableTreeNode';
 
 export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
   const {object: nodeData} = node;
   switch (nodeData.type) {
+    case 'database':
+      return <DatabaseTreeNode nodeData={nodeData} />;
     case 'schema':
       return <SchemaTreeNode nodeData={nodeData} />;
     case 'table':
@@ -21,14 +24,17 @@ export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
 
 export const TableSchemaTree: FC<{
   className?: string;
-  schemaTrees: DbSchemaNode[];
+  schemaTrees: DbSchemaNode | DbSchemaNode[];
   renderNode?: (node: DbSchemaNode, isOpen: boolean) => React.ReactNode;
 }> = ({className, schemaTrees, renderNode = defaultRenderTableSchemaNode}) => {
+  // Handle either a single database node or an array of schema nodes
+  const trees = Array.isArray(schemaTrees) ? schemaTrees : [schemaTrees];
+
   return (
     <div
       className={cn('flex h-full flex-col gap-2 overflow-auto p-2', className)}
     >
-      {schemaTrees?.map((subtree) => (
+      {trees?.map((subtree) => (
         <Tree
           key={subtree.object.name}
           treeData={subtree}

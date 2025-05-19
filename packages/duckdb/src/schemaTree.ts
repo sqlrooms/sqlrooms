@@ -2,11 +2,15 @@ import {getDuckDbTypeCategory} from './typeCategories';
 import {DbSchemaNode, DataTable} from './types';
 
 /**
- * Group tables by schema and create a tree of schemas, tables, and columns.
+ * Group tables by schema and create a tree of databases, schemas, tables, and columns.
  * @param tables - The tables to group
- * @returns A map of schemas to their tables
+ * @param databaseName - The database name (defaults to 'default')
+ * @returns A database node containing schemas, tables and columns
  */
-export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
+export function createDbSchemaTrees(
+  tables: DataTable[],
+  databaseName = 'default',
+): DbSchemaNode {
   const schemaMap = new Map<string, DbSchemaNode[]>();
 
   for (const table of tables) {
@@ -25,9 +29,11 @@ export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
     schemaMap.get(schema)?.push(tableNode);
   }
 
-  return Array.from(schemaMap.entries()).map(([schema, tables]) =>
+  const schemaNodes = Array.from(schemaMap.entries()).map(([schema, tables]) =>
     createSchemaTreeNode(schema, tables),
   );
+
+  return createDatabaseTreeNode(databaseName, schemaNodes);
 }
 
 function createColumnNode(
@@ -76,5 +82,20 @@ function createSchemaTreeNode(
     },
     isOpen: true,
     children: tables,
+  };
+}
+
+function createDatabaseTreeNode(
+  database: string,
+  schemas: DbSchemaNode[],
+): DbSchemaNode {
+  return {
+    key: database,
+    object: {
+      type: 'database',
+      name: database,
+    },
+    isOpen: true,
+    children: schemas,
   };
 }
