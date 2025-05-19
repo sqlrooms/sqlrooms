@@ -110,6 +110,12 @@ export type DiscussionSliceState = {
      */
     getReplyToUserId: () => string;
 
+    /**
+     * Helper function to get the text of the item being edited.
+     * Returns '' if no editing context is set, or the text content if a valid editing context exists.
+     */
+    getEditingItemText: () => string;
+
     // Direct CRUD operations - use these only for custom integrations
     // that don't use the built-in UI state management
     addDiscussion: (text: string, anchorId?: string) => void;
@@ -428,6 +434,34 @@ export function createDiscussionSlice({
         }
 
         return '';
+      },
+
+      /**
+       * Helper function to get the text of the item being edited.
+       * Returns '' if no editing context is set, or the text content if a valid editing context exists.
+       */
+      getEditingItemText: () => {
+        const state = get();
+        const {editingItem, discussions} = state.discussion;
+
+        if (!editingItem) return '';
+
+        // Look for the discussion
+        const discussion = discussions.find(
+          (a) => a.id === editingItem.discussionId,
+        );
+        if (!discussion) return '';
+
+        // If editing a comment, find the comment
+        if (editingItem.commentId) {
+          const comment = discussion.comments.find(
+            (c) => c.id === editingItem.commentId,
+          );
+          return comment ? comment.text : '';
+        }
+
+        // If editing the discussion itself
+        return discussion.rootComment.text;
       },
     },
   }));

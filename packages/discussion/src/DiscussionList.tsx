@@ -51,28 +51,9 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     const getReplyToUserId = useStoreWithDiscussion(
       (state) => state.discussion.getReplyToUserId,
     );
-
-    // Get the text of the item being edited
-    const getEditingItemText = () => {
-      if (!editingItem) return '';
-
-      // Look for the discussion
-      const discussion = discussions.find(
-        (a) => a.id === editingItem.discussionId,
-      );
-      if (!discussion) return '';
-
-      // If editing a comment, find the comment
-      if (editingItem.commentId) {
-        const comment = discussion.comments.find(
-          (c) => c.id === editingItem.commentId,
-        );
-        return comment ? comment.text : '';
-      }
-
-      // If editing the discussion itself
-      return discussion.rootComment.text;
-    };
+    const getEditingItemText = useStoreWithDiscussion(
+      (state) => state.discussion.getEditingItemText,
+    );
 
     // Get the rendered representation of the user being replied to
     const getReplyingToUserNode = (): ReactNode => {
