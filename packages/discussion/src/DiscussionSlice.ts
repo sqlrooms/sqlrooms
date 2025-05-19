@@ -96,6 +96,16 @@ export type DiscussionSliceState = {
      */
     setItemToDelete: (item: DeleteItem | undefined) => void;
 
+    /**
+     * Currently highlighted discussion.
+     * Used to visually highlight a discussion in the UI.
+     */
+    highlightedDiscussionId: string | undefined;
+    /**
+     * Sets the highlighted discussion.
+     */
+    setHighlightedDiscussionId: (discussionId: string | undefined) => void;
+
     // Delete confirmation handler
     /**
      * Handles the confirmation of a delete operation.
@@ -338,6 +348,22 @@ export function createDiscussionSlice({
         set((state) =>
           produce(state, (draft) => {
             draft.discussion.itemToDelete = item;
+          }),
+        );
+      },
+
+      /**
+       * Currently highlighted discussion.
+       * Used to visually highlight a discussion in the UI.
+       */
+      highlightedDiscussionId: undefined,
+      /**
+       * Sets the highlighted discussion.
+       */
+      setHighlightedDiscussionId: (discussionId) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.discussion.highlightedDiscussionId = discussionId;
           }),
         );
       },

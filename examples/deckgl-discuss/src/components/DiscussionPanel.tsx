@@ -1,13 +1,18 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {DiscussionList} from '@sqlrooms/discussion';
 import {ProjectPanelTypes, useProjectStore} from '../store';
+import {useEffect} from 'react';
 
 /**
- * The DiscussionList component no longer requires getUserName as a prop since
- * components now retrieve this directly from the store.
+ * The DiscussionPanel component displays a list of discussions
+ * with highlighting functionality.
  */
 const DiscussionPanel = () => {
   const discussions = useProjectStore((state) => state.discussion.discussions);
+  const highlightedDiscussionId = useProjectStore(
+    (state) => state.discussion.highlightedDiscussionId,
+  );
+
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['discuss']}>
       {discussions.length === 0 ? (
@@ -15,12 +20,13 @@ const DiscussionPanel = () => {
           <p>No comments yet. Click on an airport to add one.</p>
         </div>
       ) : (
-        <DiscussionList
-          className="p-2"
-          renderUser={() => {
-            return 'Anonymous';
-          }}
-        />
+        <div className="p-2">
+          <DiscussionList
+            className="flex flex-col gap-4"
+            renderUser={() => 'Anonymous user'}
+            highlightedDiscussionId={highlightedDiscussionId}
+          />
+        </div>
       )}
     </ProjectBuilderPanel>
   );

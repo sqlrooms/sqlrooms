@@ -43,9 +43,6 @@ type PopupInfo = {
 export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   const [selected, setSelected] = useState<AirportFeature>();
   const [commentText, setCommentText] = useState('');
-  const [airportCommentText, setAirportCommentText] = useState<
-    Record<string, string>
-  >({});
 
   // Get state from store
   const discussions = useProjectStore((state) => state.discussion.discussions);
@@ -54,6 +51,9 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   );
   const setReplyToItem = useProjectStore(
     (state) => state.discussion.setReplyToItem,
+  );
+  const setHighlightedDiscussionId = useProjectStore(
+    (state) => state.discussion.setHighlightedDiscussionId,
   );
 
   // Create a map of airport abbrev -> discussions
@@ -137,6 +137,10 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
       (d) => d.anchorId === airportId,
     );
     if (discussionWithAnchor) {
+      // Set the highlighted discussion ID
+      setHighlightedDiscussionId(discussionWithAnchor.id);
+
+      // Also set reply to item to open the discussion panel
       setReplyToItem({
         discussionId: discussionWithAnchor.id,
       });

@@ -1,5 +1,11 @@
 import {cn} from '@sqlrooms/ui';
-import {ComponentPropsWithoutRef, forwardRef, ReactNode} from 'react';
+import {
+  ComponentPropsWithoutRef,
+  forwardRef,
+  ReactNode,
+  useEffect,
+  useRef,
+} from 'react';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 import {DiscussionItem} from './components/DiscussionItem';
 import {EditCommentForm} from './components/EditCommentForm';
@@ -14,11 +20,18 @@ type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
     comment: CommentSchema;
     renderUser: (userId: string) => ReactNode;
   }) => ReactNode;
+  highlightedDiscussionId?: string;
 };
 
 export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
   (
-    {className, renderUser = defaultRenderUser, renderComment, ...props},
+    {
+      className,
+      renderUser = defaultRenderUser,
+      renderComment,
+      highlightedDiscussionId,
+      ...props
+    },
     ref,
   ) => {
     const discussions = useStoreWithDiscussion(
@@ -55,6 +68,19 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       (state) => state.discussion.getEditingItemText,
     );
 
+    // Reference to highlighted discussion
+    const highlightedRef = useRef<HTMLDivElement>(null);
+
+    // Scroll to highlighted discussion
+    useEffect(() => {
+      if (highlightedDiscussionId && highlightedRef.current) {
+        highlightedRef.current.scrollIntoView({
+          behavior: 'smooth',
+          block: 'start',
+        });
+      }
+    }, [highlightedDiscussionId]);
+
     // Get the rendered representation of the user being replied to
     const getReplyingToUserNode = (): ReactNode => {
       if (!replyToItem) return null;
@@ -75,7 +101,17 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
         {discussions.map((discussion) => (
           <div
             key={discussion.id}
-            className="flex flex-col gap-4 rounded border p-2"
+            data-discussion-id={discussion.id}
+            ref={
+              highlightedDiscussionId === discussion.id
+                ? highlightedRef
+                : undefined
+            }
+            className={cn(
+              'flex flex-col gap-4 rounded border p-2',
+              highlightedDiscussionId === discussion.id &&
+                'border-blue-300 shadow-md transition-all duration-500',
+            )}
           >
             {editingItem &&
             !editingItem.commentId &&
