@@ -1,5 +1,11 @@
 import {escapeId, useExportToCsv, useSql} from '@sqlrooms/duckdb';
-import {Button} from '@sqlrooms/ui';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@sqlrooms/ui';
 import {genRandomStr} from '@sqlrooms/utils';
 import {PaginationState, SortingState} from '@tanstack/table-core';
 import {ArrowDownIcon, DownloadIcon} from 'lucide-react';
@@ -92,18 +98,20 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
       : undefined;
 
   const exportAction = (
-    <Button
-      variant="outline"
-      size="xs"
-      onClick={handleExport}
-      disabled={isExporting}
-    >
-      {isExporting ? (
-        <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-      ) : (
-        <DownloadIcon className="h-4 w-4" />
-      )}
-    </Button>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="outline" size="xs" disabled={isExporting}>
+          {isExporting ? (
+            <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+          ) : (
+            <DownloadIcon className="h-4 w-4" />
+          )}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem onClick={handleExport}>Export CSV</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 
   return (
