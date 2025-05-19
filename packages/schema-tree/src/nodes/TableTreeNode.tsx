@@ -19,7 +19,7 @@ export const TableTreeNode: FC<{
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
-        <TableIcon size="16px" className="min-w-[16px] text-green-500" />
+        <TableIcon size="16px" className="shrink-0 text-green-500" />
         <span className="text-sm">{nodeData.name}</span>
       </div>
       <TreeNodeActionsMenu>

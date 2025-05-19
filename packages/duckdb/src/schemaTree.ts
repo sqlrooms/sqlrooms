@@ -10,15 +10,15 @@ export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
   const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 
   for (const table of tables) {
-    const database = table.database || 'default';
-    const schema = table.schema || 'main';
+    const database = table.database;
+    const schema = table.schema;
     const tableName = table.tableName;
 
     const columnNodes = table.columns.map((column) =>
       createColumnNode(schema, tableName, column.name, column.type),
     );
 
-    const tableNode = createTableNode(schema, tableName, columnNodes);
+    const tableNode = createTableNode(database, schema, tableName, columnNodes);
 
     if (!databaseMap.has(database)) {
       databaseMap.set(database, new Map<string, DbSchemaNode[]>());
@@ -61,6 +61,7 @@ function createColumnNode(
 }
 
 function createTableNode(
+  database: string,
   schema: string,
   tableName: string,
   columnNodes: DbSchemaNode[],
@@ -70,9 +71,10 @@ function createTableNode(
     object: {
       type: 'table',
       schema,
+      database,
       name: tableName,
     },
-    isOpen: true,
+    isInitialOpen: false,
     children: columnNodes,
   };
 }
@@ -87,7 +89,7 @@ function createSchemaTreeNode(
       type: 'schema',
       name: schema,
     },
-    isOpen: true,
+    isInitialOpen: true,
     children: tables,
   };
 }
@@ -102,7 +104,7 @@ function createDatabaseTreeNode(
       type: 'database',
       name: database,
     },
-    isOpen: true,
+    isInitialOpen: true,
     children: schemas,
   };
 }

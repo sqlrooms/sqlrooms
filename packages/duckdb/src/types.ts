@@ -25,7 +25,7 @@ export type DbSchemaNode = {
   key: string;
   object: NodeData;
   children?: DbSchemaNode[];
-  isOpen?: boolean;
+  isInitialOpen?: boolean;
 };
 
 export type NodeData =

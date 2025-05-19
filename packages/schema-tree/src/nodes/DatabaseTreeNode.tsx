@@ -18,7 +18,7 @@ export const DatabaseTreeNode: FC<{
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
-        <DatabaseIcon size="16px" className="min-w-[16px] text-blue-500" />
+        <DatabaseIcon size="16px" className="shrink-0 text-blue-500" />
         <span className="text-sm">{nodeData.name}</span>
       </div>
       <TreeNodeActionsMenu>

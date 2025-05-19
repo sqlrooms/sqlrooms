@@ -18,7 +18,7 @@ export const SchemaTreeNode: FC<{
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
-        <FolderIcon size="16px" className="min-w-[16px] text-yellow-500" />
+        <FolderIcon size="16px" className="shrink-0 text-yellow-500" />
         <span className="text-sm">{nodeData.name}</span>
       </div>
       <TreeNodeActionsMenu>
