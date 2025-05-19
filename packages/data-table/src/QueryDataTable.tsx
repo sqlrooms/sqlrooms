@@ -8,7 +8,7 @@ import {
 } from '@sqlrooms/ui';
 import {genRandomStr} from '@sqlrooms/utils';
 import {PaginationState, SortingState} from '@tanstack/table-core';
-import {ArrowDownIcon, DownloadIcon} from 'lucide-react';
+import {DownloadIcon} from 'lucide-react';
 import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
   DataTablePaginatedProps,
