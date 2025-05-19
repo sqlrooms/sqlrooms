@@ -2,18 +2,15 @@ import {getDuckDbTypeCategory} from './typeCategories';
 import {DbSchemaNode, DataTable} from './types';
 
 /**
- * Group tables by schema and create a tree of databases, schemas, tables, and columns.
+ * Group tables by database, schema and create a tree of databases, schemas, tables, and columns.
  * @param tables - The tables to group
- * @param databaseName - The database name (defaults to 'default')
- * @returns A database node containing schemas, tables and columns
+ * @returns An array of database nodes containing schemas, tables and columns
  */
-export function createDbSchemaTrees(
-  tables: DataTable[],
-  databaseName = 'default',
-): DbSchemaNode {
-  const schemaMap = new Map<string, DbSchemaNode[]>();
+export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
+  const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 
   for (const table of tables) {
+    const database = table.database || 'default';
     const schema = table.schema || 'main';
     const tableName = table.tableName;
 
@@ -23,17 +20,27 @@ export function createDbSchemaTrees(
 
     const tableNode = createTableNode(schema, tableName, columnNodes);
 
+    if (!databaseMap.has(database)) {
+      databaseMap.set(database, new Map<string, DbSchemaNode[]>());
+    }
+
+    const schemaMap = databaseMap.get(database)!;
+
     if (!schemaMap.has(schema)) {
       schemaMap.set(schema, []);
     }
+
     schemaMap.get(schema)?.push(tableNode);
   }
 
-  const schemaNodes = Array.from(schemaMap.entries()).map(([schema, tables]) =>
-    createSchemaTreeNode(schema, tables),
-  );
+  // Create database nodes
+  return Array.from(databaseMap.entries()).map(([database, schemaMap]) => {
+    const schemaNodes = Array.from(schemaMap.entries()).map(
+      ([schema, tables]) => createSchemaTreeNode(schema, tables),
+    );
 
-  return createDatabaseTreeNode(databaseName, schemaNodes);
+    return createDatabaseTreeNode(database, schemaNodes);
+  });
 }
 
 function createColumnNode(

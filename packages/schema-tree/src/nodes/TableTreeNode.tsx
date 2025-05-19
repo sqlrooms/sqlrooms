@@ -1,7 +1,7 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {TableNodeData} from '@sqlrooms/duckdb';
-import {CopyIcon} from 'lucide-react';
+import {CopyIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
 import {
@@ -18,6 +18,7 @@ export const TableTreeNode: FC<{
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
+        <TableIcon size="16px" className="min-w-[16px] text-green-500" />
         <span className="text-sm">{nodeData.name}</span>
       </div>
       <TreeNodeActionsMenu>
