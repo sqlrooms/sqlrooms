@@ -77,11 +77,29 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
             key={discussion.id}
             className="flex flex-col gap-4 rounded border p-2"
           >
-            <DiscussionItem
-              discussion={discussion}
-              renderUser={renderUser}
-              renderComment={renderComment}
-            />
+            {editingItem &&
+            !editingItem.commentId &&
+            editingItem.discussionId === discussion.id ? (
+              <EditCommentForm
+                onSubmit={submitEdit}
+                initialText={getEditingItemText()}
+                submitLabel="Save"
+                editingType="discussion"
+                onCancel={() => {
+                  setEditingItem(undefined);
+                }}
+              />
+            ) : (
+              <DiscussionItem
+                discussion={discussion}
+                renderUser={renderUser}
+                renderComment={renderComment}
+                editingItem={editingItem}
+                submitEdit={submitEdit}
+                getEditingItemText={getEditingItemText}
+                setEditingItem={setEditingItem}
+              />
+            )}
           </div>
         ))}
 
@@ -94,23 +112,18 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           itemType={itemToDelete?.itemType || 'Item'}
         />
 
-        <EditCommentForm
-          onSubmit={submitEdit}
-          initialText={editingItem ? getEditingItemText() : ''}
-          submitLabel={editingItem ? 'Save' : replyToItem ? 'Reply' : 'Add'}
-          replyingTo={replyToItem ? getReplyingToUserNode() : undefined}
-          editingType={
-            editingItem
-              ? editingItem.commentId
-                ? 'comment'
-                : 'discussion'
-              : undefined
-          }
-          onCancel={() => {
-            setReplyToItem(undefined);
-            setEditingItem(undefined);
-          }}
-        />
+        {/* Only show EditCommentForm at the bottom for new comments/replies, not for edits */}
+        {!editingItem && (
+          <EditCommentForm
+            onSubmit={submitEdit}
+            initialText=""
+            submitLabel={replyToItem ? 'Reply' : 'Add'}
+            replyingTo={replyToItem ? getReplyingToUserNode() : undefined}
+            onCancel={() => {
+              setReplyToItem(undefined);
+            }}
+          />
+        )}
       </div>
     );
   },
