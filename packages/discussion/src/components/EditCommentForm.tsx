@@ -1,5 +1,11 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
-import {forwardRef, useState, useEffect, ComponentPropsWithoutRef} from 'react';
+import {
+  forwardRef,
+  useState,
+  useEffect,
+  ComponentPropsWithoutRef,
+  ReactNode,
+} from 'react';
 
 export type EditCommentFormProps = Omit<
   ComponentPropsWithoutRef<'div'>,
@@ -8,7 +14,7 @@ export type EditCommentFormProps = Omit<
   onSubmit: (text: string) => void;
   initialText?: string;
   submitLabel?: string;
-  replyingTo?: string;
+  replyingTo?: ReactNode;
   editingType?: string;
   onCancel?: () => void;
 };
@@ -48,7 +54,12 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
       >
         {(replyingTo || editingType) && (
           <div className="text-muted-foreground text-xs">
-            {replyingTo && `Replying to ${replyingTo}`}
+            {replyingTo && (
+              <span>
+                Replying to{' '}
+                <span className="inline-flex items-center">{replyingTo}</span>
+              </span>
+            )}
             {editingType && `Editing ${editingType}`}
             {onCancel && (
               <Button variant="ghost" size="sm" onClick={onCancel}>

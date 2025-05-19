@@ -1,15 +1,23 @@
 import {cn} from '@sqlrooms/ui';
-import {forwardRef} from 'react';
-import type {DiscussionSchema} from '../DiscussionSlice';
-import {CommentItem} from './CommentItem';
+import {forwardRef, ReactNode} from 'react';
+import type {DiscussionSchema, CommentSchema} from '../DiscussionSlice';
+import {CommentItem, defaultRenderUser} from './CommentItem';
 
 export type DiscussionItemProps = {
   discussion: DiscussionSchema;
   className?: string;
+  renderUser?: (userId: string) => ReactNode;
+  renderComment?: (props: {
+    comment: CommentSchema;
+    renderUser: (userId: string) => ReactNode;
+  }) => ReactNode;
 };
 
 export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
-  ({discussion, className}, ref) => {
+  (
+    {discussion, className, renderUser = defaultRenderUser, renderComment},
+    ref,
+  ) => {
     return (
       <div ref={ref} className={cn('flex flex-col gap-4', className)}>
         {/* Root comment (the discussion itself) */}
@@ -17,6 +25,8 @@ export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
           discussionId={discussion.id}
           comment={discussion.rootComment}
           isRootComment={true}
+          renderUser={renderUser}
+          renderComment={renderComment}
         />
 
         {/* Replies */}
@@ -27,6 +37,8 @@ export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
                 key={comment.id}
                 discussionId={discussion.id}
                 comment={comment}
+                renderUser={renderUser}
+                renderComment={renderComment}
               />
             ))}
           </div>

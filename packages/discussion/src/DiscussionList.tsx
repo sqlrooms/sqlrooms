@@ -1,15 +1,26 @@
 import {cn} from '@sqlrooms/ui';
-import {ComponentPropsWithoutRef, forwardRef} from 'react';
-import {useStoreWithDiscussion} from './DiscussionSlice';
-import {EditCommentForm} from './components/EditCommentForm';
-import {DiscussionItem} from './components/DiscussionItem';
+import {ComponentPropsWithoutRef, forwardRef, ReactNode} from 'react';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
+import {DiscussionItem} from './components/DiscussionItem';
+import {EditCommentForm} from './components/EditCommentForm';
+import type {CommentSchema} from './DiscussionSlice';
+import {useStoreWithDiscussion} from './DiscussionSlice';
+import {defaultRenderUser} from './components/CommentItem';
 
 // Main DiscussionList component
-type DiscussionListProps = ComponentPropsWithoutRef<'div'>;
+type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
+  renderUser?: (userId: string) => ReactNode;
+  renderComment?: (props: {
+    comment: CommentSchema;
+    renderUser: (userId: string) => ReactNode;
+  }) => ReactNode;
+};
 
 export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
-  ({className, ...props}, ref) => {
+  (
+    {className, renderUser = defaultRenderUser, renderComment, ...props},
+    ref,
+  ) => {
     const discussions = useStoreWithDiscussion(
       (state) => state.discussion.discussions,
     );
@@ -37,8 +48,8 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     const handleDeleteConfirm = useStoreWithDiscussion(
       (state) => state.discussion.handleDeleteConfirm,
     );
-    const getReplyingToName = useStoreWithDiscussion(
-      (state) => state.discussion.getReplyingToName,
+    const getReplyToUserId = useStoreWithDiscussion(
+      (state) => state.discussion.getReplyToUserId,
     );
 
     // Get the text of the item being edited
@@ -63,6 +74,17 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       return discussion.rootComment.text;
     };
 
+    // Get the rendered representation of the user being replied to
+    const getReplyingToUserNode = (): ReactNode => {
+      if (!replyToItem) return null;
+
+      const userId = getReplyToUserId();
+      if (!userId) return 'Anonymous';
+
+      // Return the full ReactNode from renderUser
+      return renderUser(userId);
+    };
+
     return (
       <div
         ref={ref}
@@ -74,7 +96,11 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
             key={discussion.id}
             className="flex flex-col gap-4 rounded border p-2"
           >
-            <DiscussionItem discussion={discussion} />
+            <DiscussionItem
+              discussion={discussion}
+              renderUser={renderUser}
+              renderComment={renderComment}
+            />
           </div>
         ))}
 
@@ -91,7 +117,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           onSubmit={submitEdit}
           initialText={editingItem ? getEditingItemText() : ''}
           submitLabel={editingItem ? 'Save' : replyToItem ? 'Reply' : 'Add'}
-          replyingTo={replyToItem ? getReplyingToName() : undefined}
+          replyingTo={replyToItem ? getReplyingToUserNode() : undefined}
           editingType={
             editingItem
               ? editingItem.commentId

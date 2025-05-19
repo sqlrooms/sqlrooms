@@ -53,7 +53,6 @@ export type DeleteItem = {
 export type DiscussionSliceState = {
   discussion: {
     userId: string;
-    getUserName: (userId: string) => string;
     discussions: DiscussionSchema[];
 
     // UI-connected actions - preferred API for most use cases
@@ -106,10 +105,10 @@ export type DiscussionSliceState = {
 
     // Helpers
     /**
-     * Helper function to get the name of the user being replied to.
-     * Used by the form to display context about the reply.
+     * Helper function to get the user ID of the entity being replied to.
+     * Returns '' if no reply context is set, or the user ID if a valid reply context exists.
      */
-    getReplyingToName: () => string;
+    getReplyToUserId: () => string;
 
     // Direct CRUD operations - use these only for custom integrations
     // that don't use the built-in UI state management
@@ -131,15 +130,12 @@ export type ProjectStateWithDiscussion =
 
 export function createDiscussionSlice({
   userId,
-  getUserName,
 }: {
   userId: string;
-  getUserName: (userId: string) => string;
 }): StateCreator<DiscussionSliceState> {
   return createSlice<BaseProjectConfig, DiscussionSliceState>((set, get) => ({
     discussion: {
       userId,
-      getUserName,
       discussions: [],
 
       // Direct CRUD operations - These are exposed for advanced use cases
@@ -403,34 +399,35 @@ export function createDiscussionSlice({
         }
       },
 
-      // Helper function to get the name of the user being replied to
-      getReplyingToName: () => {
+      /**
+       * Helper function to get the user ID of the entity being replied to.
+       * Returns '' if no reply context is set, or the user ID if a valid reply context exists.
+       */
+      getReplyToUserId: () => {
         const state = get();
-        const {replyToItem, discussions, getUserName} = state.discussion;
+        const {replyToItem, discussions} = state.discussion;
 
         if (!replyToItem) return '';
 
-        if (replyToItem.commentId) {
-          const discussion = discussions.find(
-            (a) => a.id === replyToItem.discussionId,
-          );
-          if (discussion) {
+        const discussion = discussions.find(
+          (a) => a.id === replyToItem.discussionId,
+        );
+
+        if (discussion) {
+          if (replyToItem.commentId) {
             if (discussion.rootComment.id === replyToItem.commentId) {
-              return getUserName(discussion.rootComment.userId);
+              return discussion.rootComment.userId;
             }
             const comment = discussion.comments.find(
               (c) => c.id === replyToItem.commentId,
             );
-            if (comment) return getUserName(comment.userId);
+            if (comment) return comment.userId;
+          } else {
+            return discussion.rootComment.userId;
           }
-        } else {
-          const discussion = discussions.find(
-            (a) => a.id === replyToItem.discussionId,
-          );
-          if (discussion) return getUserName(discussion.rootComment.userId);
         }
 
-        return 'unknown';
+        return '';
       },
     },
   }));

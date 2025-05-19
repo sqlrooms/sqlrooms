@@ -1,22 +1,49 @@
 import {Button, cn} from '@sqlrooms/ui';
-import {forwardRef} from 'react';
+import {forwardRef, ReactNode} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import type {CommentSchema} from '../DiscussionSlice';
 import {useStoreWithDiscussion} from '../DiscussionSlice';
+
+// Default implementation for rendering a user
+export const defaultRenderUser = (): ReactNode => {
+  return 'Anonymous';
+};
 
 export type CommentItemProps = {
   discussionId: string;
   comment: CommentSchema;
   isRootComment?: boolean;
   className?: string;
+  renderUser?: (userId: string) => ReactNode;
+  renderComment?: (props: {
+    comment: CommentSchema;
+    renderUser: (userId: string) => ReactNode;
+  }) => ReactNode;
+};
+
+// Default implementation for rendering a comment's content
+const defaultRenderComment = ({
+  comment,
+}: {
+  comment: CommentSchema;
+  renderUser: (userId: string) => ReactNode;
+}): ReactNode => {
+  return <div className="whitespace-pre-wrap text-sm">{comment.text}</div>;
 };
 
 export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
-  ({discussionId, comment, isRootComment = false, className}, ref) => {
+  (
+    {
+      discussionId,
+      comment,
+      isRootComment = false,
+      className,
+      renderUser = defaultRenderUser,
+      renderComment = defaultRenderComment,
+    },
+    ref,
+  ) => {
     const userId = useStoreWithDiscussion((state) => state.discussion.userId);
-    const getUserName = useStoreWithDiscussion(
-      (state) => state.discussion.getUserName,
-    );
     const setReplyToItem = useStoreWithDiscussion(
       (state) => state.discussion.setReplyToItem,
     );
@@ -56,20 +83,12 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     };
 
     return (
-      <div
-        ref={ref}
-        className={cn(
-          'flex flex-col gap-2',
-          isRootComment ? 'mb-4' : '',
-          className,
-        )}
-      >
+      <div ref={ref} className={cn('flex flex-col gap-2', className)}>
         <div className="text-muted-foreground text-xs">
-          {getUserName(comment.userId)} -{' '}
-          {formatTimeRelative(comment.timestamp)}
+          {renderUser(comment.userId)} - {formatTimeRelative(comment.timestamp)}
           {comment.parentId && ' (reply)'}
         </div>
-        <div className="whitespace-pre-wrap">{comment.text}</div>
+        {renderComment({comment, renderUser})}
         <div className="mt-1 flex justify-end gap-1 text-xs">
           <Button variant="ghost" size="xs" onClick={handleReply}>
             Reply
