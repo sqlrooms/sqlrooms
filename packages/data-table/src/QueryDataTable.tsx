@@ -24,7 +24,7 @@ export type QueryDataTableProps = {
   renderActions?: (query: string) => React.ReactNode;
 };
 
-export const defaultRenderQueryDataTableActions = (query: string) => {
+const QueryDataTableActions: FC<{query: string}> = ({query}) => {
   const {exportToCsv} = useExportToCsv();
   const [isExporting, setIsExporting] = useState(false);
   const handleExport = async () => {
@@ -58,7 +58,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   className,
   fontSize = 'text-base',
   query,
-  renderActions = defaultRenderQueryDataTableActions,
+  renderActions = (query) => <QueryDataTableActions query={query} />,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
