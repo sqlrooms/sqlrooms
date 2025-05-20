@@ -110,19 +110,11 @@ export type DuckDbSliceState = {
     checkTableExists: (tableName: string, schema?: string) => Promise<boolean>;
 
     /**
-     * Drop a table
-     */
-    dropTable: (
-      tableName: string,
-      options?: {schema?: string; database?: string},
-    ) => Promise<void>;
-
-    /**
      * Delete a table with optional schema and database
      * @param tableName - The name of the table to delete
      * @param options - Optional parameters including schema and database
      */
-    deleteTable: (
+    dropTable: (
       tableName: string,
       options?: {schema?: string; database?: string},
     ) => Promise<void>;
