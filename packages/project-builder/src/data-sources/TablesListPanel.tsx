@@ -5,10 +5,10 @@ import {FC, useState} from 'react';
 import {useBaseProjectBuilderStore} from '../ProjectBuilderStore';
 import {TableCard} from './TableCard';
 
-const TablesListPanel: FC<{className?: string; isReadOnly?: boolean}> = ({
-  className,
-  isReadOnly,
-}) => {
+const TablesListPanel: FC<{
+  className?: string;
+  isReadOnly?: boolean;
+}> = ({className, isReadOnly}) => {
   const tables = useBaseProjectBuilderStore((state) => state.db.tables);
   const tableRowCounts = useBaseProjectBuilderStore(
     (state) => state.db.tableRowCounts,
