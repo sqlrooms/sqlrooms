@@ -38,7 +38,7 @@ export type DuckDbSliceState = {
     isRefreshingTableSchemas: boolean;
     tables: DataTable[];
     tableRowCounts: {[tableName: string]: number};
-    schemaTrees?: DbSchemaNode[];
+    databaseTrees?: DbSchemaNode[];
 
     /**
      * Set a new DuckDB connector
@@ -387,7 +387,7 @@ export function createDuckDbSlice({
               set((state) =>
                 produce(state, (draft) => {
                   draft.db.tables = newTables;
-                  draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                  draft.db.databaseTrees = createDbSchemaTrees(newTables);
                 }),
               );
             }

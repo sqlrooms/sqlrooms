@@ -19,16 +19,16 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   schema = '*',
 }) => {
   // Get state from store
-  const schemaTrees = useStoreWithSqlEditor((s) => s.db.schemaTrees);
+  const databaseTrees = useStoreWithSqlEditor((s) => s.db.databaseTrees);
   const filteredSchemaTrees = useMemo(() => {
     if (schema === '*') {
-      return schemaTrees;
+      return databaseTrees;
     }
     if (typeof schema === 'function') {
-      return schemaTrees?.filter((tree) => schema(tree.object.name));
+      return databaseTrees?.filter((tree) => schema(tree.object.name));
     }
-    return schemaTrees?.filter((tree) => tree.object.name === schema);
-  }, [schema, schemaTrees]);
+    return databaseTrees?.filter((tree) => tree.object.name === schema);
+  }, [schema, databaseTrees]);
 
   const isRefreshing = useStoreWithSqlEditor(
     (s) => s.db.isRefreshingTableSchemas,
@@ -42,7 +42,7 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
       )}
     >
       {filteredSchemaTrees && (
-        <TableSchemaTree schemaTrees={filteredSchemaTrees} />
+        <TableSchemaTree databaseTrees={filteredSchemaTrees} />
       )}
       {isRefreshing && (
         <SpinnerPane className="bg-background/80 absolute inset-0 h-full" />

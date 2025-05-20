@@ -20,6 +20,7 @@ export const ColumnTreeNode: FC<{
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
         <ColumnTypeBadge
+          className="opacity-50"
           columnType={nodeData.columnType}
           typeCategory={nodeData.columnTypeCategory}
         />
