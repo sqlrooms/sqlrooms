@@ -9,10 +9,14 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
 import {MoreVerticalIcon, PlayIcon, PlusIcon} from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import React, {useCallback} from 'react';
+import {isMacOS} from '@sqlrooms/utils';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {SqlMonacoEditor} from '../SqlMonacoEditor';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
@@ -69,6 +73,9 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   const editorRef = React.useRef<{
     [key: string]: EditorInstance;
   }>({});
+
+  // Use the function from utils
+  const isMac = isMacOS();
 
   // Handle query text update
   const handleUpdateQuery = useCallback(
@@ -145,15 +152,22 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         onValueChange={setSelectedQueryId}
         className={cn('flex h-full flex-col overflow-hidden', className)}
       >
-        <div className="border-border flex items-center gap-2 border-b">
-          <Button
-            size="xs"
-            onClick={() => runCurrentQuery()}
-            className="uppercase"
-          >
-            <PlayIcon className="mr-2 h-4 w-4" />
-            Run
-          </Button>
+        <div className="border-border flex items-center border-b">
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="xs"
+                onClick={() => runCurrentQuery()}
+                className="gap-1 uppercase"
+              >
+                <PlayIcon className="h-3 w-3" />
+                Run {isMac ? '⌘↵' : 'Ctrl+↵'}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>
+              Use {isMac ? 'Cmd' : 'Ctrl'}+Enter to run query or selected text
+            </TooltipContent>
+          </Tooltip>
           <TabsList className="h-auto flex-1 flex-wrap">
             {queries.map((q) => (
               <div key={q.id} className="relative">
