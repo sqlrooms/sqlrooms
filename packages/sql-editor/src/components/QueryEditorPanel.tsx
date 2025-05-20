@@ -158,10 +158,11 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
               <Button
                 size="xs"
                 onClick={() => runCurrentQuery()}
-                className="gap-1 uppercase"
+                className="gap-2 uppercase"
               >
                 <PlayIcon className="h-3 w-3" />
-                Run {isMac ? '⌘↵' : 'Ctrl+↵'}
+                <span>Run</span>
+                <span>{isMac ? '⌘↵' : '⌃↵'}</span>
               </Button>
             </TooltipTrigger>
             <TooltipContent>
