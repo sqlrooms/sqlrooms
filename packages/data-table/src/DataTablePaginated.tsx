@@ -124,7 +124,11 @@ export default function DataTablePaginated<Data extends object>({
                       <TableHead
                         key={header.id}
                         colSpan={header.colSpan}
-                        className={`bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2 ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                        className={cn(
+                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2',
+                          meta?.isNumeric ? 'text-right' : 'text-left',
+                          fontSize,
+                        )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div className="flex items-center gap-2">
@@ -173,7 +177,11 @@ export default function DataTablePaginated<Data extends object>({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`max-w-[500px] overflow-hidden truncate border-r px-7 ${fontSize} ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                        className={cn(
+                          'max-w-[500px] overflow-hidden truncate border-r px-7',
+                          fontSize,
+                          meta?.isNumeric ? 'text-right' : 'text-left',
+                        )}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,

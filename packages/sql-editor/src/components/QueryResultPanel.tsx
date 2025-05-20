@@ -1,4 +1,4 @@
-import {QueryDataTable} from '@sqlrooms/data-table';
+import {DataTablePaginatedProps, QueryDataTable} from '@sqlrooms/data-table';
 import {escapeId} from '@sqlrooms/duckdb';
 import {cn, SpinnerPane} from '@sqlrooms/ui';
 import React from 'react';
@@ -9,11 +9,14 @@ export interface QueryResultPanelProps {
   className?: string;
   /** Custom actions to render in the query result panel */
   customActions?: React.ReactNode;
+  /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
+  fontSize?: DataTablePaginatedProps<any>['fontSize'];
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
   customActions,
+  fontSize = 'text-xs',
 }) => {
   // Get state and methods from the store
   const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
@@ -27,7 +30,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     return (
       <QueryDataTable
         className={className}
-        fontSize="text-xs"
+        fontSize={fontSize}
         query={`SELECT * FROM ${escapeId(selectedTable)}`}
       />
     );
@@ -53,7 +56,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       >
         {queryResult.isSelect ? (
           <QueryDataTable
-            fontSize="text-xs"
+            fontSize={fontSize}
             className={cn('overflow-hidden', className)}
             query={queryResult.lastQueryStatement}
             customActions={customActions}

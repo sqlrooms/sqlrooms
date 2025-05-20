@@ -14,3 +14,6 @@ export {
 export type {SqlEditorSliceState} from './SqlEditorSlice';
 export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 export {SqlMonacoEditor} from './SqlMonacoEditor';
+export {TableStructurePanel} from './components/TableStructurePanel';
+export {QueryResultPanel} from './components/QueryResultPanel';
+export {QueryEditorPanel} from './components/QueryEditorPanel';

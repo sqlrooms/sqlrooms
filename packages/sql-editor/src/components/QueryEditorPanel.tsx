@@ -69,11 +69,6 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     name: string;
   } | null>(null);
 
-  // Track which dropdown is open
-  const [openDropdownId, setOpenDropdownId] = React.useState<string | null>(
-    null,
-  );
-
   // Editor instance ref for keyboard shortcuts
   const editorRef = React.useRef<{
     [key: string]: EditorInstance;
@@ -155,13 +150,14 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         onValueChange={setSelectedQueryId}
         className={cn('flex h-full flex-col overflow-hidden', className)}
       >
-        <div className="border-border flex items-center border-b">
+        <div className="border-border flex items-center border-b p-1">
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
+                variant="default"
                 size="xs"
                 onClick={() => runCurrentQuery()}
-                className="gap-2 uppercase"
+                className="gap-2"
               >
                 <PlayIcon className="h-3 w-3" />
                 <span>Run</span>
@@ -179,7 +175,7 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
                   value={q.id}
                   className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 pr-8"
                 >
-                  <div className="truncate">{q.name}</div>
+                  <div className="truncate text-sm">{q.name}</div>
                 </TabsTrigger>
                 <DropdownMenu>
                   <DropdownMenuTrigger>
