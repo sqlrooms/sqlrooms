@@ -8,14 +8,14 @@ export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
   /** Custom actions to render in the query result panel */
-  customActions?: React.ReactNode;
+  renderActions?: (query: string) => React.ReactNode;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
   fontSize?: DataTablePaginatedProps<any>['fontSize'];
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
-  customActions,
+  renderActions,
   fontSize = 'text-xs',
 }) => {
   // Get state and methods from the store
@@ -59,7 +59,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
             fontSize={fontSize}
             className={cn('overflow-hidden', className)}
             query={queryResult.lastQueryStatement}
-            customActions={customActions}
+            renderActions={renderActions}
           />
         ) : (
           <pre className="p-4 text-xs leading-tight text-green-500">

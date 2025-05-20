@@ -112,7 +112,7 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
 
   // Handle rename query
   const handleStartRename = useCallback(
-    (queryId: string, currentName: string, event: React.MouseEvent) => {
+    (queryId: string, currentName: string) => {
       setQueryToRename({id: queryId, name: currentName});
     },
     [],
@@ -129,12 +129,9 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   );
 
   // Handle delete query
-  const handleDeleteQuery = useCallback(
-    (queryId: string, event: React.MouseEvent) => {
-      setQueryToDelete(queryId);
-    },
-    [],
-  );
+  const handleDeleteQuery = useCallback((queryId: string) => {
+    setQueryToDelete(queryId);
+  }, []);
 
   const handleConfirmDeleteQuery = useCallback(() => {
     if (queryToDelete) {

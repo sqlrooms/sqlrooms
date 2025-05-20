@@ -47,7 +47,7 @@ export type DataTablePaginatedProps<Data extends object> = {
   isFetching?: boolean;
   pagination: PaginationState;
   sorting?: SortingState;
-  customActions?: React.ReactNode;
+  actions?: React.ReactNode;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
 };
@@ -68,7 +68,7 @@ export default function DataTablePaginated<Data extends object>({
   sorting,
   onPaginationChange,
   onSortingChange,
-  customActions,
+  actions,
   isFetching,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
@@ -282,7 +282,7 @@ export default function DataTablePaginated<Data extends object>({
           </div>
         ) : null}
 
-        {customActions}
+        {actions}
       </div>
       {isFetching ? (
         <div className="bg-background/80 absolute inset-0 animate-pulse" />

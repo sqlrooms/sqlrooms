@@ -53,14 +53,14 @@ export const MainView: FC = () => {
             <ResizableHandle withHandle />
             <ResizablePanel defaultSize={50}>
               <QueryResultPanel
-                customActions={
+                renderActions={() => (
                   <div className="flex gap-2">
                     <Button size="xs" onClick={createTableModal.onToggle}>
                       <PlusIcon className="h-4 w-4" />
                       New table
                     </Button>
                   </div>
-                }
+                )}
               />
             </ResizablePanel>
           </ResizablePanelGroup>

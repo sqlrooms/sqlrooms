@@ -80,7 +80,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={50}>
                 <QueryResultPanel
-                  customActions={
+                  renderActions={
                     <div className="flex gap-2">
                       <Button size="xs" onClick={handleCreateTable}>
                         <PlusIcon className="h-4 w-4" />
