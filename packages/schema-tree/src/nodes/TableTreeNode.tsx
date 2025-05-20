@@ -14,20 +14,22 @@ export const defaultRenderMenuItems = (nodeData: TableNodeData) => {
   return (
     <>
       <TreeNodeActionsMenuItem
-        onClick={() =>
+        onClick={(evt) => {
+          evt.stopPropagation();
           navigator.clipboard.writeText(
             nodeData.schema == 'main'
               ? nodeData.name
               : `${nodeData.schema}.${nodeData.name}`,
-          )
-        }
+          );
+        }}
       >
         <CopyIcon width="15px" />
         Copy table name
       </TreeNodeActionsMenuItem>
 
       <TreeNodeActionsMenuItem
-        onClick={() => {
+        onClick={(evt) => {
+          evt.stopPropagation();
           navigator.clipboard.writeText(
             [
               `SELECT * FROM `,
