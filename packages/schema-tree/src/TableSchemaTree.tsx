@@ -24,22 +24,22 @@ export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
 
 export const TableSchemaTree: FC<{
   className?: string;
-  databaseTrees: DbSchemaNode[];
+  schemaTrees: DbSchemaNode[];
   renderNode?: (node: DbSchemaNode, isOpen: boolean) => React.ReactNode;
   skipSingleDatabaseOrSchema?: boolean;
 }> = ({
   className,
-  databaseTrees,
+  schemaTrees,
   renderNode = defaultRenderTableSchemaNode,
   skipSingleDatabaseOrSchema = false,
 }) => {
   const trees = skipSingleDatabaseOrSchema
-    ? databaseTrees.length > 1
-      ? databaseTrees
-      : databaseTrees[0]?.children && databaseTrees[0]?.children?.length > 1
-        ? databaseTrees[0].children
-        : databaseTrees[0]?.children?.[0]?.children
-    : databaseTrees;
+    ? schemaTrees.length > 1
+      ? schemaTrees
+      : schemaTrees[0]?.children && schemaTrees[0]?.children?.length > 1
+        ? schemaTrees[0].children
+        : schemaTrees[0]?.children?.[0]?.children
+    : schemaTrees;
 
   return (
     <div
