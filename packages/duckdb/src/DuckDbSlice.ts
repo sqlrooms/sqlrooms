@@ -112,7 +112,20 @@ export type DuckDbSliceState = {
     /**
      * Drop a table
      */
-    dropTable: (tableName: string) => Promise<void>;
+    dropTable: (
+      tableName: string,
+      options?: {schema?: string; database?: string},
+    ) => Promise<void>;
+
+    /**
+     * Delete a table with optional schema and database
+     * @param tableName - The name of the table to delete
+     * @param options - Optional parameters including schema and database
+     */
+    deleteTable: (
+      tableName: string,
+      options?: {schema?: string; database?: string},
+    ) => Promise<void>;
 
     /**
      * Create a table from a query.
@@ -313,9 +326,14 @@ export function createDuckDbSlice({
           return getColValAsNumber(res) > 0;
         },
 
-        async dropTable(tableName: string): Promise<void> {
+        async dropTable(tableName, options): Promise<void> {
+          const schema = options?.schema || 'main';
+          const database = options?.database;
           const connector = await get().db.getConnector();
-          await connector.query(`DROP TABLE IF EXISTS ${tableName};`);
+          const qualifiedTable = database
+            ? `${database}.${schema}.${tableName}`
+            : `${schema}.${tableName}`;
+          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
         },
 
         async addTable(tableName, data) {

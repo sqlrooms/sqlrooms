@@ -17,6 +17,7 @@ export {
   createDefaultDuckDbConfig,
   DuckDbSliceConfig,
   type DuckDbSliceState,
+  useStoreWithDuckDb,
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/BaseDuckDbConnector';
