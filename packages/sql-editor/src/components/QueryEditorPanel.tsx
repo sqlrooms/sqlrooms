@@ -69,6 +69,11 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     name: string;
   } | null>(null);
 
+  // Track which dropdown is open
+  const [openDropdownId, setOpenDropdownId] = React.useState<string | null>(
+    null,
+  );
+
   // Editor instance ref for keyboard shortcuts
   const editorRef = React.useRef<{
     [key: string]: EditorInstance;
@@ -113,7 +118,6 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   // Handle rename query
   const handleStartRename = useCallback(
     (queryId: string, currentName: string, event: React.MouseEvent) => {
-      event.preventDefault();
       setQueryToRename({id: queryId, name: currentName});
     },
     [],
@@ -132,7 +136,6 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   // Handle delete query
   const handleDeleteQuery = useCallback(
     (queryId: string, event: React.MouseEvent) => {
-      event.stopPropagation();
       setQueryToDelete(queryId);
     },
     [],
@@ -179,18 +182,14 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
                   <div className="truncate">{q.name}</div>
                 </TabsTrigger>
                 <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <div
-                      className="hover:bg-accent absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                  <DropdownMenuTrigger>
+                    <div className="hover:bg-accent absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm">
                       <MoreVerticalIcon className="h-3 w-3" />
                     </div>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent>
                     <DropdownMenuItem
                       onClick={(e) => {
-                        e.stopPropagation();
                         handleStartRename(q.id, q.name, e);
                       }}
                     >
@@ -199,7 +198,6 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
                     {queries.length > 1 && (
                       <DropdownMenuItem
                         onClick={(e) => {
-                          e.stopPropagation();
                           handleDeleteQuery(q.id, e);
                         }}
                         className="text-red-500"
