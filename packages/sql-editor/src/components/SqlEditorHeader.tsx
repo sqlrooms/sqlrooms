@@ -1,6 +1,9 @@
-import React, {PropsWithChildren} from 'react';
 import {Button, cn} from '@sqlrooms/ui';
-import {BookOpenIcon} from 'lucide-react';
+import React, {PropsWithChildren} from 'react';
+import {
+  SqlReferenceButton,
+  SqlReferenceButtonContent,
+} from './SqlReferenceButton';
 
 export type SqlEditorHeaderProps = PropsWithChildren<{
   /** Custom class name for styling */
@@ -23,13 +26,6 @@ export const SqlEditorHeader: React.FC<SqlEditorHeaderProps> = ({
   onToggleDocs,
   children,
 }) => {
-  const buttonContent = (
-    <div className="flex items-center gap-2">
-      <BookOpenIcon />
-      <span className="text-xs">SQL reference</span>
-    </div>
-  );
-
   return (
     <div className={cn('flex w-full items-center gap-2 px-2 py-1', className)}>
       {title && <h2 className="text-md ml-1 font-semibold">{title}</h2>}
@@ -41,18 +37,10 @@ export const SqlEditorHeader: React.FC<SqlEditorHeaderProps> = ({
           variant={showDocs ? 'secondary' : 'outline'}
           onClick={() => onToggleDocs?.(!showDocs)}
         >
-          {buttonContent}
+          <SqlReferenceButtonContent />
         </Button>
       ) : (
-        <Button asChild size="sm" variant="outline">
-          <a
-            href="https://duckdb.org/docs/sql/introduction"
-            target="_blank"
-            rel="noreferrer"
-          >
-            {buttonContent}
-          </a>
-        </Button>
+        <SqlReferenceButton />
       )}
     </div>
   );

@@ -2,6 +2,7 @@ import {
   CreateTableModal,
   QueryEditorPanel,
   QueryResultPanel,
+  SqlReferenceButton,
   TableStructurePanel,
 } from '@sqlrooms/sql-editor';
 import {useStoreWithSqlEditor} from '@sqlrooms/sql-editor/dist/SqlEditorSlice';
@@ -31,9 +32,10 @@ export const MainView: FC = () => {
   return (
     <>
       <div className="bg-muted flex h-full flex-col">
-        <div className="flex items-center justify-stretch border-b p-2">
+        <div className="flex items-center justify-stretch gap-2 border-b p-2">
           <div className="text-md font-bold">SQL Editor</div>
           <div className="flex-1" />
+          <SqlReferenceButton text="SQL docs" className="text-xs" />
           <ThemeSwitch />
         </div>
 

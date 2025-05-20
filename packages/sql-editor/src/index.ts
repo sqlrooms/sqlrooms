@@ -16,4 +16,12 @@ export {SqlQueryDataSourcesPanel} from './components/SqlQueryDataSourcesPanel';
 export {SqlMonacoEditor} from './SqlMonacoEditor';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';
+export {SqlEditorHeader} from './components/SqlEditorHeader';
+export {
+  SqlReferenceButton,
+  SqlReferenceButtonContent,
+} from './components/SqlReferenceButton';
 export {QueryEditorPanel} from './components/QueryEditorPanel';
+export {QueryEditorPanelActions} from './components/QueryEditorPanelActions';
+export {QueryEditorPanelTabsList} from './components/QueryEditorPanelTabsList';
+export {QueryEditorPanelEditor} from './components/QueryEditorPanelEditor';
