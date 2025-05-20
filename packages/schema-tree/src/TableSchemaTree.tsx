@@ -32,7 +32,7 @@ export const TableSchemaTree: FC<{
 
   return (
     <div
-      className={cn('flex h-full flex-col gap-2 overflow-auto p-2', className)}
+      className={cn('flex h-full flex-col gap-2 overflow-auto p-0', className)}
     >
       {trees?.map((subtree) => (
         <Tree

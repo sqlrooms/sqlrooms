@@ -80,7 +80,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
-        {/* @ts-ignore */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -98,14 +97,13 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
 
             {form.formState.errors.root && (
               <Alert variant="destructive">
-                <AlertDescription>
+                <AlertDescription className="whitespace-pre-wrap font-mono text-xs">
                   {form.formState.errors.root.message}
                 </AlertDescription>
               </Alert>
             )}
 
             <FormField
-              // @ts-ignore
               control={form.control}
               name="tableName"
               render={({field}) => (
@@ -120,7 +118,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
             />
 
             <FormField
-              // @ts-ignore
               control={form.control}
               name="query"
               render={({field}) => (

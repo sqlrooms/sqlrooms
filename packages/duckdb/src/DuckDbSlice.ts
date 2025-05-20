@@ -10,7 +10,7 @@ import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
-import {escapeVal, getColValAsNumber} from './duckdb-utils';
+import {escapeVal, getColValAsNumber, splitSqlStatements} from './duckdb-utils';
 import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
 import {DataTable, TableColumn, DbSchemaNode} from './types';
 
@@ -141,7 +141,14 @@ export type DuckDbSliceState = {
       | {
           error: false;
           statements: {
-            node: Record<string, unknown>;
+            node: {
+              from_table: {
+                alias: string;
+                show_type: string;
+                table_name: string;
+              };
+              select_list: Record<string, unknown>[];
+            };
           }[];
         }
     >;
@@ -196,10 +203,22 @@ export function createDuckDbSlice({
 
         async createTableFromQuery(tableName: string, query: string) {
           const connector = await get().db.getConnector();
+
+          const statements = splitSqlStatements(query);
+          if (statements.length !== 1) {
+            throw new Error('Query must contain exactly one statement');
+          }
+          const statement = statements[0] as string;
+          const parsedQuery = await get().db.sqlSelectToJson(statement);
+          console.log(parsedQuery);
+          if (parsedQuery.error) {
+            throw new Error('Query is not a valid SELECT statement');
+          }
+
           const rowCount = getColValAsNumber(
             await connector.query(
               `CREATE OR REPLACE TABLE main.${tableName} AS (
-              ${query}
+              ${statements[0]}
             )`,
             ),
           );

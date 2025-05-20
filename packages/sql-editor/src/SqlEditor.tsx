@@ -83,8 +83,8 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                   customActions={
                     <div className="flex gap-2">
                       <Button size="xs" onClick={handleCreateTable}>
-                        <PlusIcon className="mr-2 h-4 w-4" />
-                        Create table
+                        <PlusIcon className="h-4 w-4" />
+                        New table
                       </Button>
                     </div>
                   }

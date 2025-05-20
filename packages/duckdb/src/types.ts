@@ -4,7 +4,7 @@ export type TableColumn = {
 };
 
 export type DataTable = {
-  database: string;
+  database?: string;
   tableName: string;
   schema: string;
   columns: TableColumn[];

@@ -10,7 +10,7 @@ export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
   const databaseMap = new Map<string, Map<string, DbSchemaNode[]>>();
 
   for (const table of tables) {
-    const database = table.database;
+    const database = table.database ?? 'default';
     const schema = table.schema;
     const tableName = table.tableName;
 

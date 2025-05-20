@@ -147,18 +147,21 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
       >
         <div className="border-border flex items-center gap-2 border-b">
           <Button
-            size="sm"
+            size="xs"
             onClick={() => runCurrentQuery()}
             className="uppercase"
           >
             <PlayIcon className="mr-2 h-4 w-4" />
             Run
           </Button>
-          <TabsList className="flex-1">
+          <TabsList className="h-auto flex-1 flex-wrap">
             {queries.map((q) => (
               <div key={q.id} className="relative">
-                <TabsTrigger value={q.id} className="min-w-[60px] px-6 pr-8">
-                  {q.name}
+                <TabsTrigger
+                  value={q.id}
+                  className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 pr-8"
+                >
+                  <div className="truncate">{q.name}</div>
                 </TabsTrigger>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>

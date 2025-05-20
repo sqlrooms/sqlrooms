@@ -1,7 +1,7 @@
-import {cn, SpinnerPane} from '@sqlrooms/ui';
-import React, {useCallback, useMemo} from 'react';
-import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {TableSchemaTree} from '@sqlrooms/schema-tree';
+import {cn, SpinnerPane} from '@sqlrooms/ui';
+import React, {useMemo} from 'react';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 export interface TableStructurePanelProps {
   /** Custom class name for styling */
@@ -34,28 +34,10 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
     (s) => s.db.isRefreshingTableSchemas,
   );
 
-  // Get methods from store
-  // const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
-  // const selectTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectTable);
-  // // Memoize the table selection handler
-  // const handleTableSelect = useCallback(
-  //   (table: string | undefined) => {
-  //     selectTable(table);
-  //     onTableSelect?.(table);
-  //   },
-  //   [selectTable, onTableSelect],
-  // );
-
-  // if (error) {
-  //   return (
-  //     <div className="p-4 text-red-500">Error loading tables: {error}</div>
-  //   );
-  // }
-
   return (
     <div
       className={cn(
-        'relative flex h-full flex-col gap-2 overflow-auto p-2',
+        'relative flex h-full flex-col gap-2 overflow-auto px-1 py-2',
         className,
       )}
     >
