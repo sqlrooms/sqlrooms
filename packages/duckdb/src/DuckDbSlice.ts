@@ -210,7 +210,6 @@ export function createDuckDbSlice({
           }
           const statement = statements[0] as string;
           const parsedQuery = await get().db.sqlSelectToJson(statement);
-          console.log(parsedQuery);
           if (parsedQuery.error) {
             throw new Error('Query is not a valid SELECT statement');
           }
