@@ -1,12 +1,11 @@
 import {
   ChevronDownIcon,
   ChevronUpIcon,
-  ArrowDownIcon,
-  ChevronDoubleLeftIcon,
-  ChevronDoubleRightIcon,
+  ChevronsLeftIcon as ChevronDoubleLeftIcon,
+  ChevronsRightIcon as ChevronDoubleRightIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-} from '@heroicons/react/24/solid';
+} from 'lucide-react';
 import {
   Button,
   Input,
@@ -22,6 +21,7 @@ import {
   TableHeader,
   TableRow,
   Badge,
+  cn,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
@@ -37,20 +37,29 @@ import {useEffect, useMemo, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
 
 export type DataTablePaginatedProps<Data extends object> = {
+  className?: string;
+  /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
+  fontSize?: string;
   data?: ArrayLike<Data> | undefined;
   columns?: ColumnDef<Data, any>[] | undefined;
   pageCount?: number | undefined;
   numRows?: number | undefined;
   isFetching?: boolean;
-  isExporting?: boolean;
-  pagination?: PaginationState;
+  pagination: PaginationState;
   sorting?: SortingState;
+  actions?: React.ReactNode;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
-  onExport?: () => void;
 };
 
+/**
+ * Data table with pagination, sorting, and custom actions.
+ * @param props
+ * @returns
+ */
 export default function DataTablePaginated<Data extends object>({
+  className,
+  fontSize = 'text-base',
   data,
   columns,
   pageCount,
@@ -59,8 +68,7 @@ export default function DataTablePaginated<Data extends object>({
   sorting,
   onPaginationChange,
   onSortingChange,
-  onExport,
-  isExporting,
+  actions,
   isFetching,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
@@ -75,7 +83,7 @@ export default function DataTablePaginated<Data extends object>({
       }
     },
     onPaginationChange: (update) => {
-      if (onPaginationChange && pagination && typeof update === 'function') {
+      if (onPaginationChange && typeof update === 'function') {
         onPaginationChange(update(pagination));
       }
     },
@@ -88,14 +96,14 @@ export default function DataTablePaginated<Data extends object>({
   });
 
   const [internalPageIndex, setInternalPageIndex] = useState(
-    pagination?.pageIndex ?? 0,
+    pagination.pageIndex ?? 0,
   );
   useEffect(() => {
-    setInternalPageIndex(pagination?.pageIndex ?? 0);
-  }, [pagination?.pageIndex]);
+    setInternalPageIndex(pagination.pageIndex ?? 0);
+  }, [pagination.pageIndex]);
 
   return (
-    <div className="relative flex h-full w-full flex-col">
+    <div className={cn(`relative flex h-full w-full flex-col`, className)}>
       <div className="border-border flex-1 overflow-hidden border font-mono">
         <div className="h-full overflow-auto">
           <Table disableWrapper>
@@ -116,7 +124,11 @@ export default function DataTablePaginated<Data extends object>({
                       <TableHead
                         key={header.id}
                         colSpan={header.colSpan}
-                        className={`bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2 ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                        className={cn(
+                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2',
+                          meta?.isNumeric ? 'text-right' : 'text-left',
+                          fontSize,
+                        )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
                         <div className="flex items-center gap-2">
@@ -138,7 +150,7 @@ export default function DataTablePaginated<Data extends object>({
                           <div className="flex-1" />
                           <Badge
                             variant="outline"
-                            className="max-w-[400px] truncate text-xs opacity-30"
+                            className={`max-w-[400px] truncate text-xs opacity-30`}
                           >
                             {String(meta?.type)}
                           </Badge>
@@ -153,7 +165,9 @@ export default function DataTablePaginated<Data extends object>({
             <TableBody>
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow key={row.id} className="hover:bg-muted bg-background">
-                  <TableCell className="bg-background text-muted-foreground sticky left-0 border-r text-center text-xs">
+                  <TableCell
+                    className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSize}`}
+                  >
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
                       : ''}
@@ -163,7 +177,11 @@ export default function DataTablePaginated<Data extends object>({
                     return (
                       <TableCell
                         key={cell.id}
-                        className={`max-w-[500px] overflow-hidden truncate border-r px-7 text-xs ${meta?.isNumeric ? 'text-right' : 'text-left'} `}
+                        className={cn(
+                          'max-w-[500px] overflow-hidden truncate border-r px-7',
+                          fontSize,
+                          meta?.isNumeric ? 'text-right' : 'text-left',
+                        )}
                       >
                         {flexRender(
                           cell.column.columnDef.cell,
@@ -180,103 +198,91 @@ export default function DataTablePaginated<Data extends object>({
         </div>
       </div>
       <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.setPageIndex(0)}
-          disabled={!table.getCanPreviousPage()}
-        >
-          <ChevronDoubleLeftIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.previousPage()}
-          disabled={!table.getCanPreviousPage()}
-        >
-          <ChevronLeftIcon className="h-4 w-4" />
-        </Button>
-        <div className="ml-1 flex items-center gap-1 text-sm">
-          <div>Page</div>
-          <Input
-            type="number"
-            min={1}
-            max={table.getPageCount()}
-            className="h-8 w-16"
-            value={internalPageIndex + 1}
-            onChange={(e) => {
-              const value = e.target.value;
-              if (value) {
-                const page = Math.max(
-                  0,
-                  Math.min(table.getPageCount() - 1, Number(value) - 1),
-                );
-                setInternalPageIndex(page);
-              }
-            }}
-            onBlur={() => {
-              if (internalPageIndex !== pagination?.pageIndex) {
-                table.setPageIndex(internalPageIndex);
-              }
-            }}
-          />
-          <div>{`of ${formatCount(table.getPageCount())}`}</div>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => table.setPageIndex(0)}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronDoubleLeftIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => table.previousPage()}
+            disabled={!table.getCanPreviousPage()}
+          >
+            <ChevronLeftIcon className="h-4 w-4" />
+          </Button>
+          <div className={`ml-1 flex items-center gap-1 ${fontSize}`}>
+            <div>Page</div>
+            <Input
+              type="number"
+              min={1}
+              max={table.getPageCount()}
+              className="h-8 w-16"
+              value={internalPageIndex + 1}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value) {
+                  const page = Math.max(
+                    0,
+                    Math.min(table.getPageCount() - 1, Number(value) - 1),
+                  );
+                  setInternalPageIndex(page);
+                }
+              }}
+              onBlur={() => {
+                if (internalPageIndex !== pagination.pageIndex) {
+                  table.setPageIndex(internalPageIndex);
+                }
+              }}
+            />
+            <div>{`of ${formatCount(table.getPageCount())}`}</div>
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => table.nextPage()}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronRightIcon className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+            disabled={!table.getCanNextPage()}
+          >
+            <ChevronDoubleRightIcon className="h-4 w-4" />
+          </Button>
+          <Select
+            value={String(table.getState().pagination.pageSize)}
+            onValueChange={(value) => table.setPageSize(Number(value))}
+          >
+            <SelectTrigger className="h-8 w-[110px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {[10, 50, 100, 500, 1000].map((pageSize) => (
+                <SelectItem key={pageSize} value={String(pageSize)}>
+                  {`${pageSize} rows`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.nextPage()}
-          disabled={!table.getCanNextPage()}
-        >
-          <ChevronRightIcon className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          disabled={!table.getCanNextPage()}
-        >
-          <ChevronDoubleRightIcon className="h-4 w-4" />
-        </Button>
-        <Select
-          value={String(table.getState().pagination.pageSize)}
-          onValueChange={(value) => table.setPageSize(Number(value))}
-        >
-          <SelectTrigger className="h-8 w-[110px]">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {[10, 50, 100, 500, 1000].map((pageSize) => (
-              <SelectItem key={pageSize} value={String(pageSize)}>
-                {`${pageSize} rows`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
 
         <div className="flex-1" />
 
         {numRows !== undefined && isFinite(numRows) ? (
-          <div className="text-sm font-normal">
+          <div className={`font-normal ${fontSize}`}>
             {`${formatCount(numRows)} rows`}
           </div>
         ) : null}
 
-        {onExport ? (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onExport}
-            disabled={isExporting}
-          >
-            {isExporting ? (
-              <div className="border-primary mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-            ) : (
-              <ArrowDownIcon className="mr-2 h-4 w-4" />
-            )}
-            Export CSV
-          </Button>
-        ) : null}
+        {actions}
       </div>
       {isFetching ? (
         <div className="bg-background/80 absolute inset-0 animate-pulse" />

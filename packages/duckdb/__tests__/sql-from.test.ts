@@ -12,6 +12,7 @@ describe('sql-from', () => {
     it('should convert strings correctly', () => {
       expect(literalToSQL('hello')).toBe("'hello'");
       expect(literalToSQL("O'Neil")).toBe("'O''Neil'"); // Escapes single quotes
+      expect(literalToSQL("a'b'c")).toBe("'a''b''c'");
     });
 
     it('should convert booleans correctly', () => {

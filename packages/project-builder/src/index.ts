@@ -22,6 +22,7 @@ export {ProjectBuilder} from './ProjectBuilder';
 
 export {
   type TaskProgress,
+  type Slice,
   createProjectStore as createProjectBuilderStore,
 } from '@sqlrooms/project';
 

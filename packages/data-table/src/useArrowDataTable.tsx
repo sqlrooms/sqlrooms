@@ -1,5 +1,5 @@
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
-import {ClipboardIcon} from '@heroicons/react/24/outline';
+import {ClipboardIcon} from 'lucide-react';
 import {shorten} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
@@ -54,7 +54,12 @@ function valueToString(type: arrow.DataType, value: unknown): string {
 // Only use for small tables or in combination with pagination
 export default function useArrowDataTable(
   table: arrow.Table | undefined,
+  options: {
+    /** Custom font size for the table e.g. xs, sm, md, lg, base */
+    fontSize?: string;
+  } = {},
 ): UseArrowDataTableResult | undefined {
+  const {fontSize = 'base'} = options ?? {};
   const data = useMemo(() => ({length: table?.numRows ?? 0}), [table]);
   const columns = useMemo(() => {
     if (!table) return undefined;
@@ -73,20 +78,27 @@ export default function useArrowDataTable(
                     {shorten(`${valueStr}`, MAX_VALUE_LENGTH)}
                   </span>
                 </PopoverTrigger>
-                <PopoverContent className="w-auto overflow-hidden">
+                <PopoverContent
+                  className={`w-auto max-w-[500px] text-${fontSize}`}
+                >
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
                       <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
-                      <Button                        
+                      <Button
                         variant="ghost"
                         size="xs"
                         onClick={() => navigator.clipboard.writeText(valueStr)}
-                        >
+                      >
                         <ClipboardIcon className="h-3 w-3" />
                       </Button>
                     </div>
-                    <div className="w-full h-full overflow-auto" style={{maxHeight: '200px', maxWidth: '500px'}}>
-                      <div className="font-mono text-xs whitespace-pre-wrap">{valueStr}</div>
+                    <div
+                      className="h-full w-full overflow-auto"
+                      style={{maxHeight: '200px', maxWidth: '500px'}}
+                    >
+                      <div className="whitespace-pre-wrap font-mono text-xs">
+                        {valueStr}
+                      </div>
                     </div>
                   </div>
                 </PopoverContent>
@@ -107,7 +119,7 @@ export default function useArrowDataTable(
       );
     }
     return columns;
-  }, [table]);
+  }, [table, fontSize]);
 
   return data && columns ? {data, columns} : undefined;
 }
