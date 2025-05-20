@@ -1,18 +1,24 @@
-import {DuckDbSliceConfig} from '@sqlrooms/duckdb';
 import {
+  DuckDbSliceConfig,
+  getSqlErrorWithPointer,
+  splitSqlStatements,
+} from '@sqlrooms/duckdb';
+import {
+  BaseProjectConfig,
   createSlice,
   ProjectBuilderState,
+  type Slice,
   StateCreator,
   useBaseProjectBuilderStore,
-  BaseProjectConfig,
 } from '@sqlrooms/project-builder';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
-import {Table} from 'apache-arrow';
+import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
 import {z} from 'zod';
 
+// Saved state (persisted)
 export const SqlEditorSliceConfig = z.object({
   sqlEditor: z.object({
     queries: z.array(
@@ -26,6 +32,7 @@ export const SqlEditorSliceConfig = z.object({
       .string()
       .default('default')
       .describe('The id of the currently selected query.'),
+    lastExecutedQuery: z.string().optional().describe('Last executed query'),
   }),
 });
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
@@ -39,25 +46,58 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   };
 }
 
-export type SqlEditorSliceState = {
+export type QueryResult =
+  | {status: 'loading'}
+  | {status: 'error'; error: string}
+  | {
+      status: 'success';
+      isSelect: true;
+      resultPreview: arrow.Table | undefined;
+      lastQueryStatement: string;
+    }
+  | {
+      status: 'success';
+      isSelect: false;
+      lastQueryStatement: string;
+    };
+
+export type RunQueryOptions = {
+  limit?: number;
+  skipExecutingLastSelect?: boolean;
+};
+
+export type SqlEditorSliceState = Slice & {
   sqlEditor: {
+    // Runtime state
+    queryResult?: QueryResult;
+    selectedTable?: string;
+    /** @deprecated Use `useStoreWithSqlEditor((s) => s.db.isRefreshingTableSchemas)` instead. */
+    isTablesLoading: boolean;
+    /** @deprecated */
+    tablesError?: string;
+
     /**
      * Execute a SQL query and return the results.
      * @param query - The SQL query to execute.
+     * @deprecated Use `runQuery` instead.
      */
-    executeQuery(
-      query: string,
-    ): Promise<{
-      results?: Table;
-      error?: string;
-    }>;
+    executeQuery(query: string): Promise<QueryResult>;
+
+    /**
+     * Run the currently selected query.
+     */
+    runQuery(query: string, options?: RunQueryOptions): Promise<QueryResult>;
+
+    /**
+     * Run the currently selected query.
+     */
+    runCurrentQuery(options?: RunQueryOptions): Promise<QueryResult>;
 
     /**
      * Export query results to CSV.
-     * @param results - The query results to export.
-     * @param filename - Optional filename (default is generated).
+     * @deprecated Use `useExportToCsv` from `@sqlrooms/duckdb` instead.
      */
-    exportResultsToCsv(results: Table, filename?: string): void;
+    exportResultsToCsv(results: arrow.Table, filename?: string): void;
 
     /**
      * Create a new query tab.
@@ -97,9 +137,12 @@ export type SqlEditorSliceState = {
 
     /**
      * Get the currently selected query's SQL text.
-     * @param defaultQuery - Optional default query text to return if no query is found.
      */
-    getCurrentQuery(defaultQuery?: string): string;
+    getCurrentQuery(): string;
+
+    selectTable(table: string | undefined): void;
+
+    clearQueryResults(): void;
   };
 };
 
@@ -108,25 +151,98 @@ export function createSqlEditorSlice<
 >(): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => ({
     sqlEditor: {
-      executeQuery: async (query) => {
-        const connector = await get().db.getConnector();
+      // Initialize runtime state
+      isTablesLoading: false,
 
+      executeQuery: async (query): Promise<QueryResult> =>
+        get().sqlEditor.runQuery(query),
+
+      runCurrentQuery: async (options): Promise<QueryResult> =>
+        get().sqlEditor.runQuery(get().sqlEditor.getCurrentQuery(), options),
+
+      runQuery: async (query, options): Promise<QueryResult> => {
+        const {limit, skipExecutingLastSelect = false} = options || {};
+        if (!query.trim()) {
+          return {
+            status: 'error',
+            error: 'Empty query',
+          };
+        }
+        // First update loading state and clear results
+        set((state) =>
+          produce(state, (draft) => {
+            draft.sqlEditor.selectedTable = undefined;
+            draft.sqlEditor.queryResult = {status: 'loading'};
+            draft.config.sqlEditor.lastExecutedQuery = query;
+          }),
+        );
+
+        let queryResult: QueryResult;
         try {
-          const results = await connector.query(query);
-          // Refresh table schemas after query execution
-          try {
-            // Trigger refreshTableSchemas, but don't wait for it
-            get().db.refreshTableSchemas();
-          } catch (e) {
-            console.error(e);
+          const connector = await get().db.getConnector();
+
+          const statements = splitSqlStatements(query);
+          const allButLastStatements = statements.slice(0, -1);
+          const lastStatement = statements[statements.length - 1] as string;
+
+          for (const statement of allButLastStatements) {
+            await connector.query(statement);
           }
 
-          return {results};
+          const parsedLastStatement =
+            await get().db.sqlSelectToJson(lastStatement);
+
+          const isValidSelectQuery = !parsedLastStatement.error;
+          if (isValidSelectQuery) {
+            queryResult = {
+              status: 'success',
+              lastQueryStatement: lastStatement,
+              isSelect: true,
+              resultPreview: skipExecutingLastSelect
+                ? undefined
+                : limit
+                  ? await connector.query(
+                      `SELECT * FROM (${lastStatement}) LIMIT ${limit}`,
+                    )
+                  : await connector.query(lastStatement),
+            };
+          } else {
+            if (
+              parsedLastStatement.error &&
+              parsedLastStatement.error_type !== 'not implemented'
+            ) {
+              throw (
+                `${parsedLastStatement.error_type} ${parsedLastStatement.error_subtype}: ${parsedLastStatement.error_message}` +
+                `\n${getSqlErrorWithPointer(lastStatement, Number(parsedLastStatement.position)).formatted}`
+              );
+            }
+            await connector.query(lastStatement);
+            queryResult = {
+              status: 'success',
+              lastQueryStatement: lastStatement,
+              isSelect: false,
+            };
+          }
+          // Refresh table schemas if there are multiple statements or if the
+          // last statement is not a select query
+          if (statements.length > 1 || !isValidSelectQuery) {
+            get().db.refreshTableSchemas();
+          }
         } catch (e) {
           console.error(e);
           const errorMessage = e instanceof Error ? e.message : String(e);
-          return {error: errorMessage || String(e)};
+
+          queryResult = {
+            status: 'error',
+            error: errorMessage,
+          };
         }
+
+        set((state) => ({
+          ...state,
+          sqlEditor: {...state.sqlEditor, queryResult},
+        }));
+        return queryResult;
       },
 
       exportResultsToCsv: (results, filename) => {
@@ -225,13 +341,31 @@ export function createSqlEditorSlice<
         );
       },
 
-      getCurrentQuery: (defaultQuery = '') => {
+      getCurrentQuery: () => {
         const sqlEditorConfig = get().config.sqlEditor;
         const selectedId = sqlEditorConfig.selectedQueryId;
-        // Find query by ID
         const query = sqlEditorConfig.queries.find((q) => q.id === selectedId);
-        // If found, return its query text, otherwise default
-        return query?.query || defaultQuery;
+        return query?.query || '';
+      },
+
+      selectTable: (table) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.sqlEditor.selectedTable = table;
+          }),
+        );
+      },
+
+      clearQueryResults: () => {
+        // Update state without using Immer for the Table type
+        set((state) => ({
+          ...state,
+          sqlEditor: {
+            ...state.sqlEditor,
+            queryResults: null,
+            queryError: undefined,
+          },
+        }));
       },
     },
   }));

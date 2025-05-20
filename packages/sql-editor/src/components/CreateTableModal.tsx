@@ -21,7 +21,7 @@ import {
 import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
-import {SqlMonacoEditor} from './SqlMonacoEditor';
+import {SqlMonacoEditor} from '../SqlMonacoEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -80,7 +80,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
-        {/* @ts-ignore */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -98,14 +97,13 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
 
             {form.formState.errors.root && (
               <Alert variant="destructive">
-                <AlertDescription>
+                <AlertDescription className="whitespace-pre-wrap font-mono text-xs">
                   {form.formState.errors.root.message}
                 </AlertDescription>
               </Alert>
             )}
 
             <FormField
-              // @ts-ignore
               control={form.control}
               name="tableName"
               render={({field}) => (
@@ -118,11 +116,10 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                 </FormItem>
               )}
             />
+
             <FormField
-              // @ts-ignore
               control={form.control}
               name="query"
-              
               render={({field}) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>SQL query:</FormLabel>
@@ -130,7 +127,7 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                     <SqlMonacoEditor
                       value={field.value}
                       onChange={field.onChange}
-                      className="w-full h-[200px]"
+                      className="h-[200px] w-full"
                       options={{
                         scrollBeyondLastLine: false,
                         automaticLayout: true,
@@ -143,12 +140,13 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                 </FormItem>
               )}
             />
+
             <DialogFooter>
               <Button type="button" variant="outline" onClick={onClose}>
                 Cancel
               </Button>
               <Button type="submit" disabled={form.formState.isSubmitting}>
-                {editDataSource ? 'Update' : 'Create and Add to Map'}
+                {editDataSource ? 'Update' : 'Create'}
               </Button>
             </DialogFooter>
           </form>

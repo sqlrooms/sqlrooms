@@ -118,7 +118,7 @@ export function createProjectSlice<PC>(props: {
             }),
           );
         },
-        
+
         setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
@@ -140,10 +140,9 @@ export function createProjectSlice<PC>(props: {
   return slice;
 }
 
-export type Slice = {
+export interface Slice {
   initialize?: () => Promise<void>;
-};
-
+}
 
 export function createBaseSlice<PC, S extends Slice>(
   sliceCreator: (...args: Parameters<StateCreator<S & ProjectState<PC>>>) => S,
@@ -156,8 +155,9 @@ export function createBaseSlice<PC, S extends Slice>(
     );
 }
 
-
-function isSliceWithInitialize(slice: unknown): slice is Slice & Required<Pick<Slice, 'initialize'>> {
+function isSliceWithInitialize(
+  slice: unknown,
+): slice is Slice & Required<Pick<Slice, 'initialize'>> {
   return typeof slice === 'object' && slice !== null && 'initialize' in slice;
 }
 
@@ -192,9 +192,11 @@ export function createProjectStore<PC, AppState extends ProjectState<PC>>(
           }
         } catch (error) {
           state.project.captureException(error);
-          state.project.setProjectError(new Error('Error saving project config', {cause: error}));
+          state.project.setProjectError(
+            new Error('Error saving project config', {cause: error}),
+          );
         }
-      });      
+      });
       projectStore.setState((state) =>
         produce(state, (draft) => {
           draft.project.initialized = true;

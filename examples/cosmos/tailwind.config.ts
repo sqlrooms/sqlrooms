@@ -4,7 +4,7 @@ import type {Config} from 'tailwindcss';
 const preset = sqlroomsTailwindPreset({prefix: ''});
 const config = {
   ...preset,
-  content: ['src/**/*.{ts,tsx}', './node_modules/@sqlrooms/*/dist/**/*.js'],
+  content: ['src/**/*.{ts,tsx}', '**/node_modules/@sqlrooms/*/dist/**/*.js'],
   theme: {
     ...preset.theme,
     extend: {

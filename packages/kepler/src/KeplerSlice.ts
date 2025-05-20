@@ -25,12 +25,18 @@ import {
   createSlice,
   ProjectBuilderState,
   useBaseProjectBuilderStore,
+  type Slice,
   type StateCreator,
 } from '@sqlrooms/project-builder';
 import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
-import type {Action, AnyAction, MiddlewareAPI, Store as ReduxStore} from 'redux';
+import type {
+  Action,
+  AnyAction,
+  MiddlewareAPI,
+  Store as ReduxStore,
+} from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
 import {z} from 'zod';
@@ -112,18 +118,21 @@ export type KeplerAction = {
 };
 
 export function hasMapId(action: KeplerAction): action is KeplerAction & {
- payload: {meta: {_id_: string}}
+  payload: {meta: {_id_: string}};
 } {
-  return typeof action.payload === 'object' && action.payload !== null &&
+  return (
+    typeof action.payload === 'object' &&
+    action.payload !== null &&
     'meta' in action.payload &&
     typeof action.payload.meta === 'object' &&
     action.payload.meta !== null &&
     '_id_' in action.payload.meta
+  );
 }
 
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
-export type KeplerSliceState<PC extends ProjectConfigWithKepler> = {
+export type KeplerSliceState<PC extends ProjectConfigWithKepler> = Slice & {
   kepler: {
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
@@ -528,7 +537,10 @@ export function createKeplerSlice<
 
     function getForwardDispatch(mapId: string): Dispatch<KeplerAction> {
       /** Adapted from  applyMiddleware in redux */
-      let wrapDispatch: ((action: KeplerAction, ...args: any) => KeplerAction) = () => {
+      let wrapDispatch: (
+        action: KeplerAction,
+        ...args: any
+      ) => KeplerAction = () => {
         throw new Error(
           'Dispatching while constructing your middleware is not allowed. ' +
             'Other middleware would not be applied to this dispatch.',

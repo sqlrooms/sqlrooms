@@ -11,7 +11,7 @@ export type TreeNodeData<T> = {
   key: string;
   object: T;
   children?: TreeNodeData<T>[];
-  isOpen?: boolean;
+  isInitialOpen?: boolean;
 };
 
 type TreeProps<T> = {
@@ -45,10 +45,10 @@ type TreeNodeProps<T> = {
 function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   const {treeData, renderNode} = props;
   const {children} = treeData;
-  const [isOpen, setIsOpen] = useState(Boolean(treeData.isOpen));
+  const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
   useEffect(() => {
-    setIsOpen(Boolean(treeData.isOpen));
-  }, [treeData.isOpen]);
+    setIsOpen(Boolean(treeData.isInitialOpen));
+  }, [treeData.isInitialOpen]);
   if (!children) {
     return <>{renderNode(treeData, isOpen)}</>;
   }
