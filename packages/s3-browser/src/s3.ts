@@ -7,11 +7,21 @@ import {
 } from '@aws-sdk/client-s3';
 import {S3FileOrDirectory} from './S3FileOrDirectory';
 
+export interface ListFilesOptions {
+  /**
+   * Whether to keep the prefix in the returned file keys
+   * Default: false (for backward compatibility)
+   */
+  keepPrefix?: boolean;
+}
+
 export async function listFilesAndDirectoriesWithPrefix(
   S3: S3Client,
   bucket: string,
   prefix?: string,
+  options?: ListFilesOptions
 ): Promise<S3FileOrDirectory[]> {
+  const keepPrefix = options?.keepPrefix ?? false;
   const command = new ListObjectsV2Command({
     Bucket: bucket,
     Prefix: prefix ? `${prefix}${prefix.endsWith('/') ? '' : '/'}` : '',
@@ -22,8 +32,8 @@ export async function listFilesAndDirectoriesWithPrefix(
 
   const objects: S3FileOrDirectory[] = [];
 
-  const removePrefix = (key: string) => {
-    if (!prefix) {
+  const formatKey = (key: string) => {
+    if (keepPrefix || !prefix) {
       return key;
     }
     return key.replace(prefix ?? '', '');
@@ -33,8 +43,10 @@ export async function listFilesAndDirectoriesWithPrefix(
     for (const commonPrefix of response.CommonPrefixes) {
       if (commonPrefix.Prefix) {
         // Extract the directory name from the CommonPrefixes
-        const directoryName = removePrefix(commonPrefix.Prefix).slice(0, -1);
-        objects.push({key: directoryName, isDirectory: true});
+        const directoryKey = keepPrefix 
+          ? commonPrefix.Prefix.slice(0, -1) // Remove trailing slash but keep prefix
+          : formatKey(commonPrefix.Prefix).slice(0, -1); // Remove prefix and trailing slash
+        objects.push({key: directoryKey, isDirectory: true});
       }
     }
   }
@@ -45,7 +57,7 @@ export async function listFilesAndDirectoriesWithPrefix(
       if (key) {
         // Exclude subdirectories by checking if the Key ends with '/'
         if (!key.endsWith('/')) {
-          const fileName = removePrefix(key);
+          const fileName = formatKey(key);
 
           const headCommand = new HeadObjectCommand({
             Bucket: bucket,
@@ -87,17 +99,17 @@ export async function listFilesAndDirectoriesWithPrefix(
  * Delete all files with the given prefix
  * @param prefix
  */
-export async function deleteS3Files(
-  S3: S3Client,
-  bucket: string,
-  prefix: string,
-) {
-  const data = await S3.send(
-    new ListObjectsCommand({Bucket: bucket, Prefix: `${prefix}/`}),
-  );
-  if (data.Contents?.length) {
-    for (const obj of data.Contents) {
-      await S3.send(new DeleteObjectCommand({Bucket: bucket, Key: obj.Key}));
-    }
-  }
-}
+// export async function deleteS3Files(
+//   S3: S3Client,
+//   bucket: string,
+//   prefix: string,
+// ) {
+//   const data = await S3.send(
+//     new ListObjectsCommand({Bucket: bucket, Prefix: `${prefix}/`}),
+//   );
+//   if (data.Contents?.length) {
+//     for (const obj of data.Contents) {
+//       await S3.send(new DeleteObjectCommand({Bucket: bucket, Key: obj.Key}));
+//     }
+//   }
+// }
