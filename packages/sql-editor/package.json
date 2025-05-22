@@ -42,7 +42,7 @@
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "monaco-editor": "^0.52.2",
-    "react-hook-form": "^7.54.2",
+    "react-hook-form": "^7.56.4",
     "zod": "^3.24.1",
     "zustand": "^5.0.3"
   },
