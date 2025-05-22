@@ -14,6 +14,7 @@ import {
   ProjectStateContext,
   ProjectStateProps,
   createProjectSlice,
+  type Slice,
 } from '@sqlrooms/project';
 import {
   DEFAULT_MOSAIC_LAYOUT,
@@ -30,7 +31,7 @@ import {ErrorBoundary} from '@sqlrooms/ui';
 import {castDraft, produce} from 'immer';
 import {ReactNode, useContext} from 'react';
 import {StateCreator, StoreApi, useStore} from 'zustand';
-import {BaseProjectConfig} from '@sqlrooms/project-config/src/BaseProjectConfig';
+import {BaseProjectConfig} from '@sqlrooms/project-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -49,8 +50,8 @@ export type ProjectBuilderStore<PC extends BaseProjectConfig> = StoreApi<
 >;
 
 export type ProjectPanelInfo = {
-  title: string;
-  icon: React.ComponentType<{className?: string}>;
+  title?: string;
+  icon?: React.ComponentType<{className?: string}>;
   component: React.ComponentType;
   placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
@@ -66,7 +67,7 @@ export const INITIAL_BASE_PROJECT_CONFIG: BaseProjectConfig &
 
 export type ProjectBuilderStateProps<PC extends BaseProjectConfig> =
   ProjectStateProps<PC> & {
-    initialized: boolean;
+    autoDownloadDataSources: boolean;
     projectFiles: ProjectFileInfo[];
     projectFilesProgress: {[pathname: string]: ProjectFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
@@ -172,6 +173,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
     } as PC;
     const initialProjectState = {
       initialized: false,
+      autoDownloadDataSources: true,
       CustomErrorBoundary: ErrorBoundary,
       projectFiles: [],
       projectFilesProgress: {},
@@ -191,29 +193,33 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
         ...initialProjectState,
         ...projectSliceState.project,
         async initialize() {
-          projectSliceState.project.initialize();
-
           const {setTaskProgress} = get().project;
-          setTaskProgress(INIT_DB_TASK, {
-            message: 'Initializing database…',
-            progress: undefined,
-          });
-          await get().db.initialize();
-          setTaskProgress(INIT_DB_TASK, undefined);
+          try {
+            await projectSliceState.project.initialize();
+            setTaskProgress(INIT_DB_TASK, {
+              message: 'Initializing database…',
+              progress: undefined,
+            });
+            await get().db.initialize();
+            setTaskProgress(INIT_DB_TASK, undefined);
 
-          setTaskProgress(INIT_PROJECT_TASK, {
-            message: 'Loading data sources…',
-            progress: undefined,
-          });
-          await updateReadyDataSources();
-          await maybeDownloadDataSources();
-          setTaskProgress(INIT_PROJECT_TASK, undefined);
-
-          set((state) =>
-            produce(state, (draft) => {
-              draft.project.initialized = true;
-            }),
-          );
+            setTaskProgress(INIT_PROJECT_TASK, {
+              message: 'Loading data sources…',
+              progress: undefined,
+            });
+            await updateReadyDataSources();
+            await maybeDownloadDataSources();
+            setTaskProgress(INIT_PROJECT_TASK, undefined);
+          } catch (error) {
+            setTaskProgress(INIT_DB_TASK, undefined);
+            get().project.captureException(error);
+            get().project.setProjectError(
+              new Error(`Error initializing database: ${error}`, {
+                cause: error,
+              }),
+            );
+            return;
+          }
         },
 
         setProjectConfig: (config) =>
@@ -542,6 +548,7 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
     }
 
     async function maybeDownloadDataSources() {
+      if (!get().project.autoDownloadDataSources) return;
       const {projectFilesProgress, dataSourceStates} = get().project;
       const {dataSources} = get().config;
       const pendingDataSources = dataSources.filter(
@@ -742,7 +749,7 @@ export function useBaseProjectBuilderStore<
   return useStore(store as unknown as StoreApi<PS>, selector);
 }
 
-export function createSlice<PC extends BaseProjectConfig, S>(
+export function createSlice<PC extends BaseProjectConfig, S extends Slice>(
   sliceCreator: (
     ...args: Parameters<StateCreator<S & ProjectBuilderState<PC>>>
   ) => S,

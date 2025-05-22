@@ -1,0 +1,63 @@
+{
+  "name": "@sqlrooms/kepler",
+  "version": "0.8.1",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@kepler.gl/actions": "^3.1.7",
+    "@kepler.gl/components": "^3.1.7",
+    "@kepler.gl/constants": "^3.1.7",
+    "@kepler.gl/localization": "3.1.7",
+    "@kepler.gl/processors": "3.1.7",
+    "@kepler.gl/reducers": "^3.1.7",
+    "@kepler.gl/schemas": "3.1.7",
+    "@kepler.gl/styles": "^3.1.7",
+    "@kepler.gl/table": "3.1.7",
+    "@kepler.gl/types": "3.1.7",
+    "@kepler.gl/utils": "3.1.7",
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^10.1.1",
+    "lucide-react": "^0.475.0",
+    "mapbox-gl": "^1.13.1",
+    "maplibre-gl": "^3.6.2",
+    "react-intl": "^6.3.0",
+    "react-palm": "^3.3.8",
+    "react-redux": "^8.0.5",
+    "redux": "^4.2.1",
+    "redux-logger": "^3.0.6",
+    "styled-components": "6.1.8",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.3"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typedoc": "typedoc"
+  },
+  "devDependencies": {
+    "@types/redux-logger": "^3.0.13",
+    "typescript": "^5.8.3"
+  }
+}

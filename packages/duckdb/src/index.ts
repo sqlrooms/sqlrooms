@@ -6,13 +6,18 @@
 export * from './types';
 export * from './useDuckDb';
 export * from './exportToCsv';
-export * from './arrow-utils';
+export {arrowTableToJson} from './arrow-utils';
+export {
+  getDuckDbTypeCategory,
+  getArrowColumnTypeCategory,
+} from './typeCategories';
 export * from './useSql';
 export {
   createDuckDbSlice,
   createDefaultDuckDbConfig,
   DuckDbSliceConfig,
   type DuckDbSliceState,
+  useStoreWithDuckDb,
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/BaseDuckDbConnector';

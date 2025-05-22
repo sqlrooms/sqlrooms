@@ -12,8 +12,9 @@ import {
   FormLabel,
   FormMessage,
   Input,
+  DialogDescription,
 } from '@sqlrooms/ui';
-import React from 'react';
+import React, {useEffect} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {zodResolver} from '@hookform/resolvers/zod';
@@ -37,6 +38,12 @@ const RenameSqlQueryModal: React.FC<{
     },
   });
 
+  useEffect(() => {
+    if (isOpen) {
+      form.reset({queryName: initialName});
+    }
+  }, [isOpen, initialName, form]);
+
   function onSubmit(values: FormData) {
     onRename(values.queryName);
     onClose();
@@ -46,13 +53,12 @@ const RenameSqlQueryModal: React.FC<{
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Rename Query</DialogTitle>
+          <DialogTitle>Rename</DialogTitle>
+          <DialogDescription>Rename the query to a new name.</DialogDescription>
         </DialogHeader>
-        {/* @ts-ignore */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              // @ts-ignore
               control={form.control}
               name="queryName"
               render={({field}) => (

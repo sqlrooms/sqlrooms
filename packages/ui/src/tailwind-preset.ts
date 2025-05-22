@@ -2,12 +2,9 @@ import {Config} from 'tailwindcss';
 import tailwindAnimate from 'tailwindcss-animate';
 import typography from '@tailwindcss/typography';
 
-export const sqlroomsTailwindPreset = ({
-  prefix = '',
-}: {
-  prefix?: string;
-}): Partial<Config> => ({
-  prefix,
+export const sqlroomsTailwindPreset = (
+  options?: Record<string, unknown>,
+): Partial<Config> => ({
   darkMode: ['class'],
   theme: {
     extend: {

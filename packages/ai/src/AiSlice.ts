@@ -5,6 +5,7 @@ import {
   createSlice,
   ProjectBuilderState,
   useBaseProjectBuilderStore,
+  type Slice,
   type StateCreator,
   BaseProjectConfig,
 } from '@sqlrooms/project-builder';
@@ -49,7 +50,7 @@ export function createDefaultAiConfig(
 
 export type AiSliceTool = ExtendedTool<any>;
 
-export type AiSliceState = {
+export type AiSliceState = Slice & {
   ai: {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
