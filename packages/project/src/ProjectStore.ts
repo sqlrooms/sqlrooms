@@ -42,7 +42,7 @@ export type ProjectStateActions<PC> = {
    * save to update the last saved config.
    * @param config - The project config to save.
    */
-  onSaveConfig?: (config: PC) => Promise<void>;
+  onSaveConfig?: (config: PC) => Promise<void> | undefined;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
