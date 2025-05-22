@@ -66,7 +66,7 @@ export type RunQueryOptions = {
   skipExecutingLastSelect?: boolean;
 };
 
-export type SqlEditorSliceState = {
+export type SqlEditorSliceState = Slice & {
   sqlEditor: {
     // Runtime state
     queryResult?: QueryResult;
