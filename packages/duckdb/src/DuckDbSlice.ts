@@ -260,9 +260,10 @@ export function createDuckDbSlice({
             columns.push({name: columnName, type: columnType});
           }
           return {
+            database: undefined,
+            schema,
             tableName,
             columns,
-            schema,
           };
         },
 
