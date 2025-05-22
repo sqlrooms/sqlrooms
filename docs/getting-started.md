@@ -44,7 +44,7 @@ SQLRooms provides a Tailwind preset that includes all the necessary styles. Upda
 import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-const preset = sqlroomsTailwindPreset({prefix: ''});
+const preset = sqlroomsTailwindPreset();
 const config = {
   ...preset,
   content: [
