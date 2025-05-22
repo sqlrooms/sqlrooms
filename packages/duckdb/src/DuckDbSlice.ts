@@ -265,7 +265,6 @@ export function createDuckDbSlice({
             schema,
             tableName,
             columns,
-            schema,
           };
         },
 
