@@ -5,7 +5,6 @@
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {

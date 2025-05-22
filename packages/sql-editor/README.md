@@ -215,14 +215,14 @@ export const {projectStore, useProjectStore} = createProjectStore<
 // 4. Use the store in components
 function MyComponent() {
   // Access SQL editor state and actions
-  const executeQuery = useProjectStore((state) => state.sqlEditor.executeQuery);
+  const runQuery = useProjectStore((state) => state.sqlEditor.runQuery);
   const createQueryTab = useProjectStore(
     (state) => state.sqlEditor.createQueryTab,
   );
 
   // Use actions
   const handleExecute = () => {
-    executeQuery('SELECT * FROM users LIMIT 10');
+    runQuery('SELECT * FROM users LIMIT 10');
   };
 
   return (
@@ -238,8 +238,7 @@ function MyComponent() {
 
 ### Available State Actions
 
-- `sqlEditor.executeQuery(query: string, schema?: string)`: Execute a SQL query
-- `sqlEditor.exportResultsToCsv(results: Table, filename?: string)`: Export results to CSV
+- `sqlEditor.runQuery(query: string)`: Execute a SQL query
 - `sqlEditor.createQueryTab(initialQuery?: string)`: Create a new query tab
 - `sqlEditor.deleteQueryTab(queryId: string)`: Delete a query tab
 - `sqlEditor.renameQueryTab(queryId: string, newName: string)`: Rename a query tab

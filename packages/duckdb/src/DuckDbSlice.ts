@@ -4,14 +4,15 @@ import {
   useBaseProjectStore,
 } from '@sqlrooms/project';
 import * as arrow from 'apache-arrow';
-import {produce} from 'immer';
 import deepEquals from 'fast-deep-equal';
+import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
-import {getColValAsNumber} from './duckdb-utils';
-import {DataTable, TableColumn} from './types';
+import {escapeVal, getColValAsNumber, splitSqlStatements} from './duckdb-utils';
+import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
+import {DataTable, TableColumn, DbSchemaNode} from './types';
 
 export const DuckDbSliceConfig = z.object({
   // nothing yet
@@ -34,9 +35,10 @@ export type DuckDbSliceState = {
      */
     connector: DuckDbConnector;
     schema: string;
-
+    isRefreshingTableSchemas: boolean;
     tables: DataTable[];
     tableRowCounts: {[tableName: string]: number};
+    schemaTrees?: DbSchemaNode[];
 
     /**
      * Set a new DuckDB connector
@@ -108,9 +110,14 @@ export type DuckDbSliceState = {
     checkTableExists: (tableName: string, schema?: string) => Promise<boolean>;
 
     /**
-     * Drop a table
+     * Delete a table with optional schema and database
+     * @param tableName - The name of the table to delete
+     * @param options - Optional parameters including schema and database
      */
-    dropTable: (tableName: string) => Promise<void>;
+    dropTable: (
+      tableName: string,
+      options?: {schema?: string; database?: string},
+    ) => Promise<void>;
 
     /**
      * Create a table from a query.
@@ -122,6 +129,34 @@ export type DuckDbSliceState = {
       tableName: string,
       query: string,
     ) => Promise<{tableName: string; rowCount: number}>;
+
+    /**
+     * Parse a SQL SELECT statement to JSON
+     * @param sql - The SQL SELECT statement to parse.
+     * @returns A promise that resolves to the parsed JSON.
+     */
+    sqlSelectToJson: (sql: string) => Promise<
+      | {
+          error: true;
+          error_type: string;
+          error_message: string;
+          error_subtype: string;
+          position: string;
+        }
+      | {
+          error: false;
+          statements: {
+            node: {
+              from_table: {
+                alias: string;
+                show_type: string;
+                table_name: string;
+              };
+              select_list: Record<string, unknown>[];
+            };
+          }[];
+        }
+    >;
   };
 };
 
@@ -138,8 +173,10 @@ export function createDuckDbSlice({
       db: {
         connector, // Will be initialized during init
         schema: 'main',
+        isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
+        schemaTree: undefined,
 
         setConnector: (connector: DuckDbConnector) => {
           set(
@@ -171,10 +208,21 @@ export function createDuckDbSlice({
 
         async createTableFromQuery(tableName: string, query: string) {
           const connector = await get().db.getConnector();
+
+          const statements = splitSqlStatements(query);
+          if (statements.length !== 1) {
+            throw new Error('Query must contain exactly one statement');
+          }
+          const statement = statements[0] as string;
+          const parsedQuery = await get().db.sqlSelectToJson(statement);
+          if (parsedQuery.error) {
+            throw new Error('Query is not a valid SELECT statement');
+          }
+
           const rowCount = getColValAsNumber(
             await connector.query(
               `CREATE OR REPLACE TABLE main.${tableName} AS (
-              ${query}
+              ${statements[0]}
             )`,
             ),
           );
@@ -214,6 +262,7 @@ export function createDuckDbSlice({
           return {
             tableName,
             columns,
+            schema,
           };
         },
 
@@ -229,12 +278,33 @@ export function createDuckDbSlice({
         },
 
         async getTableSchemas(schema = 'main'): Promise<DataTable[]> {
-          const tableNames = await get().db.getTables(schema);
-          const tablesInfo: DataTable[] = [];
-          for (const tableName of tableNames) {
-            tablesInfo.push(await get().db.getTableSchema(tableName, schema));
+          const connector = await get().db.getConnector();
+          const describeResults = await connector.query(
+            `FROM (DESCRIBE) SELECT database, schema, name, column_names, column_types
+            ${schema === '*' ? '' : `WHERE schema = '${schema}'`}`,
+          );
+
+          const newTables: DataTable[] = [];
+          for (let i = 0; i < describeResults.numRows; i++) {
+            const database = describeResults.getChild('database')?.get(i);
+            const schema = describeResults.getChild('schema')?.get(i);
+            const tableName = describeResults.getChild('name')?.get(i);
+            const columnNames = describeResults
+              .getChild('column_names')
+              ?.get(i);
+            const columnTypes = describeResults
+              .getChild('column_types')
+              ?.get(i);
+            const columns: TableColumn[] = [];
+            for (let di = 0; di < columnNames.length; di++) {
+              columns.push({
+                name: columnNames.get(di),
+                type: columnTypes.get(di),
+              });
+            }
+            newTables.push({database, schema, tableName, columns});
           }
-          return tablesInfo;
+          return newTables;
         },
 
         async checkTableExists(
@@ -248,9 +318,14 @@ export function createDuckDbSlice({
           return getColValAsNumber(res) > 0;
         },
 
-        async dropTable(tableName: string): Promise<void> {
+        async dropTable(tableName, options): Promise<void> {
+          const schema = options?.schema || 'main';
+          const database = options?.database;
           const connector = await get().db.getConnector();
-          await connector.query(`DROP TABLE IF EXISTS ${tableName};`);
+          const qualifiedTable = database
+            ? `${database}.${schema}.${tableName}`
+            : `${schema}.${tableName}`;
+          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
         },
 
         async addTable(tableName, data) {
@@ -292,18 +367,45 @@ export function createDuckDbSlice({
         },
 
         async refreshTableSchemas(): Promise<DataTable[]> {
-          const newTables = await get().db.getTableSchemas();
-          const currentTables = get().db.tables;
-
-          // Only update if there's an actual change in the schemas
-          if (!deepEquals(newTables, currentTables)) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.db.isRefreshingTableSchemas = true;
+            }),
+          );
+          try {
+            const newTables = await get().db.getTableSchemas('*');
+            // Only update if there's an actual change in the schemas
+            if (!deepEquals(newTables, get().db.tables)) {
+              set((state) =>
+                produce(state, (draft) => {
+                  draft.db.tables = newTables;
+                  draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                }),
+              );
+            }
+            return newTables;
+          } catch (err) {
+            get().project.captureException(err);
+            return [];
+          } finally {
             set((state) =>
               produce(state, (draft) => {
-                draft.db.tables = newTables;
+                draft.db.isRefreshingTableSchemas = false;
               }),
             );
           }
-          return newTables;
+        },
+
+        async sqlSelectToJson(sql: string) {
+          const connector = await get().db.getConnector();
+          const parsedQuery = (
+            await connector.query(
+              `SELECT json_serialize_sql(${escapeVal(sql)})`,
+            )
+          )
+            .getChildAt(0)
+            ?.get(0);
+          return JSON.parse(parsedQuery);
         },
       },
     };

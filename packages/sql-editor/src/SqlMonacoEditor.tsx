@@ -9,6 +9,7 @@ import {
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
 import type {DataTable} from '@sqlrooms/duckdb';
+import {cn} from '@sqlrooms/ui';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
@@ -274,7 +275,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     <MonacoEditor
       language="sql"
       onMount={handleEditorDidMount}
-      className={className}
+      className={cn('h-full', className)}
       options={{
         formatOnPaste: true,
         formatOnType: true,
