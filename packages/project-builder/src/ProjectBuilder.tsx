@@ -78,7 +78,7 @@ const ProjectBuilder: React.FC = () => {
           isOpen={loadingProgress !== undefined}
           title="Loading"
           loadingStage={loadingProgress?.message}
-          progress={undefined}
+          indeterminate={true}
           // progress={loadingProgress?.progress}
         />
       </Suspense>
