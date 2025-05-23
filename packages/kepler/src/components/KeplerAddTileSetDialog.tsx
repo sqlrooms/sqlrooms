@@ -19,7 +19,7 @@ const LoadTileSet = KeplerInjector.get(LoadTileSetFactory);
 export type LoadTileSet = (args: {
   tileset: {name: string; type: string; metadata: Record<string, any>};
   metadata?: Record<string, any>;
-}) => void;
+}) => Promise<void>;
 
 function LoadTileSetContent({
   loadTileSet,
