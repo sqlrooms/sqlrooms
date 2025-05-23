@@ -9,7 +9,7 @@ import {
   TreeNodeActionsMenuItem,
 } from './TreeNodeActionsMenu';
 
-export const defaultRenderMenuItems = (nodeData: TableNodeData) => {
+export const defaultRenderTableNodeMenuItems = (nodeData: TableNodeData) => {
   const {database, schema, name} = nodeData;
   return (
     <>
@@ -52,7 +52,11 @@ export const TableTreeNode: FC<{
   nodeData: TableNodeData;
   renderMenuItems?: (nodeData: TableNodeData) => React.ReactNode;
 }> = (props) => {
-  const {className, nodeData, renderMenuItems = defaultRenderMenuItems} = props;
+  const {
+    className,
+    nodeData,
+    renderMenuItems = defaultRenderTableNodeMenuItems,
+  } = props;
   return (
     <BaseTreeNode asChild className={className} nodeData={nodeData}>
       <div className="flex w-full items-center space-x-2">
