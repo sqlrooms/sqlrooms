@@ -111,7 +111,7 @@ export default function DataTablePaginated<Data extends object>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`bg-background sticky left-0 top-[-1px] z-20 w-auto whitespace-nowrap border-r py-2 text-center`}
+                    className={`bg-background sticky left-0 top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2 text-center`}
                   >
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
