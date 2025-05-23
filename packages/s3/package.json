@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/s3-browser",
+  "name": "@sqlrooms/s3",
   "version": "0.13.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,14 +18,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.474.0",
-    "react-hook-form": "^7.54.2",
-    "zod": "^3.24.1"  
-  },
-  "peerDependencies": {
-    "react": "*"
+    "@aws-sdk/client-s3": "^3.726.1",
+    "zod": "^3.24.1"
   },
   "scripts": {
     "dev": "tsc -w",

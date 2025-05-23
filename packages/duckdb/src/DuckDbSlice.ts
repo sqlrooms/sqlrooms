@@ -320,7 +320,10 @@ export function createDuckDbSlice({
           return getColValAsNumber(res) > 0;
         },
 
-        async dropTable(tableName, options): Promise<void> {
+        async dropTable(
+          tableName: string,
+          options: {schema?: string; database?: string},
+        ): Promise<void> {
           const schema = options?.schema || 'main';
           const database = options?.database;
           const connector = await get().db.getConnector();
