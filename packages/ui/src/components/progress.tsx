@@ -25,7 +25,7 @@ const Progress = React.forwardRef<
     <ProgressPrimitive.Indicator
       className={cn(
         'bg-primary h-full w-full flex-1 transition-all',
-        indeterminate && 'animate-progress origin-left',
+        indeterminate && 'animate-sqlrooms-progress origin-left',
       )}
       style={{transform: `translateX(-${100 - (value || 0)}%)`}}
     />
