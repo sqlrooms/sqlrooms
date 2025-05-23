@@ -1,15 +1,14 @@
 import {Slot} from '@radix-ui/react-slot';
-import {NodeData} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-import {FC, PropsWithChildren} from 'react';
+import {PropsWithChildren} from 'react';
 
-export const BaseTreeNode: FC<
-  PropsWithChildren<{
+export function BaseTreeNode<T>(
+  props: PropsWithChildren<{
     className?: string;
-    nodeData: NodeData;
+    nodeData: T;
     asChild?: boolean;
-  }>
-> = (props) => {
+  }>,
+) {
   const {className, asChild, children} = props;
   const Comp = asChild ? Slot : 'div';
   return (
@@ -29,4 +28,4 @@ export const BaseTreeNode: FC<
       </div>
     </Comp>
   );
-};
+}
