@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/project-builder",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
