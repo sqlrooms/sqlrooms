@@ -21,9 +21,9 @@ export type ColumnTypeCategory =
   | 'struct'
   | 'geometry';
 
-export type DbSchemaNode = {
+export type DbSchemaNode<T extends NodeData = NodeData> = {
   key: string;
-  object: NodeData;
+  object: T;
   children?: DbSchemaNode[];
   isInitialOpen?: boolean;
 };
