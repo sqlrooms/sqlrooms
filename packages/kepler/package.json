@@ -18,6 +18,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.815.0",
     "@kepler.gl/actions": "^3.1.7",
     "@kepler.gl/components": "^3.1.7",
     "@kepler.gl/constants": "^3.1.7",
