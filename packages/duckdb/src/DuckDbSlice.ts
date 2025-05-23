@@ -328,6 +328,7 @@ export function createDuckDbSlice({
             ? `${database}.${schema}.${tableName}`
             : `${schema}.${tableName}`;
           await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
+          await get().db.refreshTableSchemas();
         },
 
         async addTable(tableName, data) {
@@ -350,6 +351,7 @@ export function createDuckDbSlice({
               draft.db.tables.push(newTable);
             }),
           );
+          await get().db.refreshTableSchemas();
           return newTable;
         },
 
