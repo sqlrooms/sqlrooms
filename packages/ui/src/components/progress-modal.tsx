@@ -27,7 +27,7 @@ const ProgressModal: FC<{
         <div className="flex flex-col gap-2">
           <Progress
             value={progress}
-            className="w-full"
+            className="h-2 w-full"
             indeterminate={indeterminate}
           />
           <DialogDescription className="text-muted-foreground flex justify-between text-sm">
