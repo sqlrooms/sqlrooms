@@ -1,10 +1,11 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
+import {SendHorizonalIcon} from 'lucide-react';
 import {
-  forwardRef,
-  useState,
-  useEffect,
   ComponentPropsWithoutRef,
+  forwardRef,
   ReactNode,
+  useEffect,
+  useState,
 } from 'react';
 
 export type EditCommentFormProps = Omit<
@@ -81,6 +82,7 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
             </Button>
           )}
           <Button onClick={handleSubmit} variant="outline" size="xs">
+            <SendHorizonalIcon className="h-4 w-4" />
             {submitLabel}
           </Button>
         </div>
