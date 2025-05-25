@@ -1,5 +1,5 @@
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
-import {DiscussionList} from '@sqlrooms/discussion';
+import {DiscussionList} from '@sqlrooms/discuss';
 import {ProjectPanelTypes, useProjectStore} from '../store';
 import {useEffect} from 'react';
 

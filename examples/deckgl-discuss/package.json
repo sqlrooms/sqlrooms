@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@deck.gl/mapbox": "^9.1.12",
-    "@sqlrooms/discussion": "workspace:*",
+    "@sqlrooms/discuss": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project-config": "workspace:*",

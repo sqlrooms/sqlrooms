@@ -1,7 +1,4 @@
-import {
-  DiscussionSliceState,
-  createDiscussionSlice,
-} from '@sqlrooms/discussion';
+import {DiscussionSliceState, createDiscussionSlice} from '@sqlrooms/discuss';
 import {
   BaseProjectConfig,
   createProjectBuilderSlice,
