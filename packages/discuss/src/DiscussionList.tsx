@@ -134,10 +134,40 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
                 submitEdit={submitEdit}
                 getEditingItemText={getEditingItemText}
                 setEditingItem={setEditingItem}
+                replyToItem={replyToItem}
+                setReplyToItem={setReplyToItem}
+                getReplyingToUserNode={getReplyingToUserNode}
               />
             )}
+
+            {/* Show reply form after discussion if replying to the root discussion */}
+            {replyToItem &&
+              !replyToItem.commentId &&
+              replyToItem.discussionId === discussion.id && (
+                <EditCommentForm
+                  onSubmit={submitEdit}
+                  initialText=""
+                  submitLabel="Reply"
+                  replyingTo={getReplyingToUserNode()}
+                  onCancel={() => {
+                    setReplyToItem(undefined);
+                  }}
+                />
+              )}
           </div>
         ))}
+
+        {/* Show form for new discussions only when not replying or editing */}
+        {!editingItem && !replyToItem && (
+          <EditCommentForm
+            onSubmit={submitEdit}
+            initialText=""
+            submitLabel="Post"
+            onCancel={() => {
+              // No cancel action needed for new discussions
+            }}
+          />
+        )}
 
         <DeleteConfirmDialog
           open={!!itemToDelete}
@@ -147,19 +177,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           onConfirm={handleDeleteConfirm}
           itemType={itemToDelete?.itemType || 'Item'}
         />
-
-        {/* Only show EditCommentForm at the bottom for new comments/replies, not for edits */}
-        {!editingItem && (
-          <EditCommentForm
-            onSubmit={submitEdit}
-            initialText=""
-            submitLabel={replyToItem ? 'Reply' : 'Post'}
-            replyingTo={replyToItem ? getReplyingToUserNode() : undefined}
-            onCancel={() => {
-              setReplyToItem(undefined);
-            }}
-          />
-        )}
       </div>
     );
   },

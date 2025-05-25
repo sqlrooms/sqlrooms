@@ -3,12 +3,11 @@ import {
   MapboxOverlayProps,
 } from '@deck.gl/mapbox';
 import {GeoJsonLayer} from 'deck.gl';
+import {MessageCircle, PlusCircle} from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
-import {FC, useState, useEffect, useMemo} from 'react';
+import {FC, useMemo, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
 import {useProjectStore} from '../store';
-import {PlusCircle, MessageCircle, Send} from 'lucide-react';
-import {createId} from '@paralleldrive/cuid2';
 
 const INITIAL_VIEW_STATE = {
   latitude: 51.47,
