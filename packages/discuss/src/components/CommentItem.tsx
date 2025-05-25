@@ -3,12 +3,12 @@ import {
   cn,
   Tooltip,
   TooltipContent,
-  TooltipTrigger,
   TooltipProvider,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
-import {forwardRef, ReactNode} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import {Reply, Edit, Trash2, MessageSquareReply} from 'lucide-react';
+import {Edit, MessageSquareReply, Trash2} from 'lucide-react';
+import {forwardRef, ReactNode} from 'react';
 import type {CommentSchema} from '../DiscussionSlice';
 import {useStoreWithDiscussion} from '../DiscussionSlice';
 
