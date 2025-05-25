@@ -1,6 +1,14 @@
-import {Button, cn} from '@sqlrooms/ui';
+import {
+  Button,
+  cn,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+  TooltipProvider,
+} from '@sqlrooms/ui';
 import {forwardRef, ReactNode} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
+import {Reply, Edit, Trash2, MessageSquareReply} from 'lucide-react';
 import type {CommentSchema} from '../DiscussionSlice';
 import {useStoreWithDiscussion} from '../DiscussionSlice';
 
@@ -83,28 +91,52 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     };
 
     return (
-      <div ref={ref} className={cn('flex flex-col gap-2', className)}>
-        <div className="text-muted-foreground text-xs">
-          {renderUser(comment.userId)} - {formatTimeRelative(comment.timestamp)}
-          {comment.parentId && ' (reply)'}
+      <TooltipProvider>
+        <div ref={ref} className={cn('flex flex-col gap-2', className)}>
+          <div className="text-muted-foreground text-xs">
+            {renderUser(comment.userId)} -{' '}
+            {formatTimeRelative(comment.timestamp)}
+            {comment.parentId && ' (reply)'}
+          </div>
+          {renderComment({comment, renderUser})}
+          <div className="mt-1 flex justify-end gap-1 text-xs">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button variant="ghost" size="xs" onClick={handleReply}>
+                  <MessageSquareReply className="h-3 w-3" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Reply</p>
+              </TooltipContent>
+            </Tooltip>
+            {comment.userId === userId && (
+              <>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="xs" onClick={handleEdit}>
+                      <Edit className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Edit</p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button variant="ghost" size="xs" onClick={handleDelete}>
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>Delete</p>
+                  </TooltipContent>
+                </Tooltip>
+              </>
+            )}
+          </div>
         </div>
-        {renderComment({comment, renderUser})}
-        <div className="mt-1 flex justify-end gap-1 text-xs">
-          <Button variant="ghost" size="xs" onClick={handleReply}>
-            Reply
-          </Button>
-          {comment.userId === userId && (
-            <>
-              <Button variant="ghost" size="xs" onClick={handleEdit}>
-                Edit
-              </Button>
-              <Button variant="ghost" size="xs" onClick={handleDelete}>
-                Delete
-              </Button>
-            </>
-          )}
-        </div>
-      </div>
+      </TooltipProvider>
     );
   },
 );

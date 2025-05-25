@@ -61,11 +61,6 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
               </span>
             )}
             {editingType && `Editing ${editingType}`}
-            {onCancel && (
-              <Button variant="ghost" size="sm" onClick={onCancel}>
-                Cancel
-              </Button>
-            )}
           </div>
         )}
         <Textarea
@@ -79,9 +74,16 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
             }
           }}
         />
-        <Button onClick={handleSubmit} className="self-end">
-          {submitLabel}
-        </Button>
+        <div className="flex items-center gap-2 self-end">
+          {(replyingTo || editingType) && onCancel && (
+            <Button variant="ghost" size="xs" onClick={onCancel}>
+              Cancel
+            </Button>
+          )}
+          <Button onClick={handleSubmit} variant="outline" size="xs">
+            {submitLabel}
+          </Button>
+        </div>
       </div>
     );
   },

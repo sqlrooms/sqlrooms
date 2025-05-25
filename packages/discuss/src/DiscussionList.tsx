@@ -153,7 +153,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           <EditCommentForm
             onSubmit={submitEdit}
             initialText=""
-            submitLabel={replyToItem ? 'Reply' : 'Add'}
+            submitLabel={replyToItem ? 'Reply' : 'Post'}
             replyingTo={replyToItem ? getReplyingToUserNode() : undefined}
             onCancel={() => {
               setReplyToItem(undefined);

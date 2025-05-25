@@ -19,15 +19,14 @@ const DiscussionPanel = () => {
         <div className="py-10 text-center text-gray-400">
           <p>No comments yet. Click on an airport to add one.</p>
         </div>
-      ) : (
-        <div className="p-2">
-          <DiscussionList
-            className="flex flex-col gap-4"
-            renderUser={() => 'Anonymous user'}
-            highlightedDiscussionId={highlightedDiscussionId}
-          />
-        </div>
-      )}
+      ) : null}
+      <div className="p-2">
+        <DiscussionList
+          className="flex flex-col gap-4"
+          renderUser={() => 'Anonymous user'}
+          highlightedDiscussionId={highlightedDiscussionId}
+        />
+      </div>
     </ProjectBuilderPanel>
   );
 };
