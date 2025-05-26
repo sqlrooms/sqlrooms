@@ -9,10 +9,9 @@ import {
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
-  constructST_asWKBQuery,
+  castDuckDBTypesForKepler,
   getDuckDBColumnTypes,
   getDuckDBColumnTypesMap,
-  getGeometryColumns,
   restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
 } from '@kepler.gl/duckdb';
@@ -303,10 +302,9 @@ export function createKeplerSlice<
             tableName,
           );
           const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
-          const columnsToConvertToWKB = getGeometryColumns(duckDbColumns);
-          const adjustedQuery = constructST_asWKBQuery(
+          const adjustedQuery = castDuckDBTypesForKepler(
             tableName,
-            columnsToConvertToWKB,
+            duckDbColumns,
           );
           const arrowResult = await connector.query(adjustedQuery);
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
