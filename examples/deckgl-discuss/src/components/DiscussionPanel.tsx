@@ -14,9 +14,6 @@ const DiscussionPanel = () => {
   const discussions = useProjectStore(
     (state) => state.config.discuss.discussions,
   );
-  const highlightedDiscussionId = useProjectStore(
-    (state) => state.discuss.highlightedDiscussionId,
-  );
 
   const table = useProjectStore((s) => s.db.findTableByName('airports'));
   const {data} = useSql<{name: string; abbrev: string}>({
@@ -41,12 +38,11 @@ const DiscussionPanel = () => {
       <div className="h-full py-2">
         <DiscussionList
           className="flex flex-col gap-4"
-          renderDiscussion={(props) => (
-            <DiscussionItem
-              {...props}
-              className="border border-transparent hover:border-blue-300"
-            />
-          )}
+          // renderDiscussion={(props) => (
+          //   <DiscussionItem
+          //     {...props}
+          //   />
+          // )}
           renderComment={(props) => {
             const {comment, discussion} = props;
             const {anchorId} = discussion;
@@ -70,7 +66,6 @@ const DiscussionPanel = () => {
               </CommentItem>
             );
           }}
-          highlightedDiscussionId={highlightedDiscussionId}
         />
       </div>
     </ProjectBuilderPanel>

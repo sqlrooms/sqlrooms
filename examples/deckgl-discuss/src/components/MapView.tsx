@@ -8,6 +8,7 @@ import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useMemo, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
 import {useProjectStore} from '../store';
+import {cn} from '@sqlrooms/ui';
 
 const INITIAL_VIEW_STATE = {
   latitude: 51.47,
@@ -53,6 +54,11 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   );
   const setHighlightedDiscussionId = useProjectStore(
     (state) => state.discuss.setHighlightedDiscussionId,
+  );
+  const highlightedDiscussion = useProjectStore((state) =>
+    state.config.discuss.discussions.find(
+      (d) => d.id === state.discuss.highlightedDiscussionId,
+    ),
   );
 
   // Create a map of airport abbrev -> discussions
@@ -138,11 +144,6 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
     if (discussionWithAnchor) {
       // Set the highlighted discussion ID
       setHighlightedDiscussionId(discussionWithAnchor.id);
-
-      // Also set reply to item to open the discussion panel
-      setReplyToItem({
-        discussionId: discussionWithAnchor.id,
-      });
     }
   };
 
@@ -205,26 +206,39 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
         <Popup
           key={`discussion-${airport.featureId}`}
           anchor="bottom"
-          style={{zIndex: 5, color: '#000'}}
           longitude={airport.longitude}
           latitude={airport.latitude}
           closeOnClick={false}
           closeButton={false}
-        >
-          <div className="text-sm font-medium">{airport.name}</div>
-          {airport.rootDiscussionText && (
-            <div className="mt-1 max-w-[200px] truncate text-sm text-gray-600">
-              {airport.rootDiscussionText}
-            </div>
+          className={cn(
+            'z-10 text-black',
+            '[&_.maplibregl-popup-close-button]:p-2 [&_.maplibregl-popup-content]:p-0',
+            'cursor-pointer',
           )}
-          <button
-            onClick={() => handleViewDiscussions(airport.featureId)}
-            className="mt-2 flex items-center gap-1 rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50"
+        >
+          <div
+            className={cn(
+              'duration-50 rounded bg-white p-2 transition-all hover:bg-blue-200',
+              highlightedDiscussion?.anchorId === airport.featureId &&
+                'border-2 border-blue-500',
+            )}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleViewDiscussions(airport.featureId);
+            }}
           >
-            <MessageCircle size={14} />
-            {airport.discussionCount}{' '}
-            {airport.discussionCount === 1 ? 'Comment' : 'Comments'}
-          </button>
+            <div className="text-sm font-medium">{airport.name}</div>
+            {airport.rootDiscussionText && (
+              <div className="mt-1 max-w-[200px] truncate text-sm text-gray-600">
+                {airport.rootDiscussionText}
+              </div>
+            )}
+            <div className="mt-2 flex items-center gap-1 rounded-md px-2 py-1 text-sm text-blue-600 hover:bg-blue-50">
+              <MessageCircle size={14} />
+              {airport.discussionCount}{' '}
+              {airport.discussionCount === 1 ? 'Comment' : 'Comments'}
+            </div>
+          </div>
         </Popup>
       ))}
 

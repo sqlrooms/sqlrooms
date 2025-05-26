@@ -1,9 +1,9 @@
 import {cn} from '@sqlrooms/ui';
-import React, {forwardRef, ReactNode} from 'react';
-import type {Discussion} from '../DiscussSlice';
+import React, {ComponentPropsWithRef, forwardRef, ReactNode} from 'react';
+import {useStoreWithDiscussion, type Discussion} from '../DiscussSlice';
 import {CommentItemProps, defaultRenderComment} from './CommentItem';
 
-export type DiscussionItemProps = {
+export type DiscussionItemProps = ComponentPropsWithRef<'div'> & {
   discussion: Discussion;
   className?: string;
   renderComment?: (props: CommentItemProps) => ReactNode;
@@ -11,8 +11,22 @@ export type DiscussionItemProps = {
 
 export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
   ({discussion, className, renderComment = defaultRenderComment}, ref) => {
+    const setHighlightedDiscussionId = useStoreWithDiscussion(
+      (state) => state.discuss.setHighlightedDiscussionId,
+    );
+
     return (
-      <div ref={ref} className={cn('flex flex-col gap-4', className)}>
+      <div
+        ref={ref}
+        className={cn(
+          'flex flex-col gap-4 rounded border p-2 shadow-md',
+          'transition-all duration-200 hover:border-blue-300',
+          className,
+        )}
+        onClick={() => {
+          setHighlightedDiscussionId(discussion.id);
+        }}
+      >
         {/* Root comment (the discussion itself) */}
         {renderComment({
           discussion,

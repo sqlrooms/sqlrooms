@@ -8,17 +8,16 @@ import {
 } from '@sqlrooms/ui';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {Edit, MessageSquareReply, Trash2} from 'lucide-react';
-import {forwardRef, PropsWithChildren, ReactNode} from 'react';
+import {ComponentPropsWithRef, forwardRef, ReactNode} from 'react';
 import type {Comment, Discussion} from '../DiscussSlice';
 import {useStoreWithDiscussion} from '../DiscussSlice';
 
-export type CommentItemProps = PropsWithChildren<{
+export type CommentItemProps = ComponentPropsWithRef<'div'> & {
   discussion: Discussion;
   comment: Comment;
   isRootComment?: boolean;
   className?: string;
-  children?: ReactNode;
-}>;
+};
 
 // Default implementation for rendering a comment's content
 export const defaultRenderComment = (props: CommentItemProps): ReactNode => {

@@ -2,6 +2,7 @@ import {cn} from '@sqlrooms/ui';
 import {
   ComponentPropsWithoutRef,
   forwardRef,
+  Fragment,
   ReactNode,
   useEffect,
   useRef,
@@ -16,7 +17,6 @@ import {useStoreWithDiscussion} from './DiscussSlice';
 type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
   renderDiscussion?: (props: DiscussionItemProps) => ReactNode;
   renderComment?: (props: CommentItemProps) => ReactNode;
-  highlightedDiscussionId?: string;
 };
 
 const defaultRenderDiscussion = (props: DiscussionItemProps) => (
@@ -29,11 +29,14 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       className,
       renderComment = defaultRenderComment,
       renderDiscussion = defaultRenderDiscussion,
-      highlightedDiscussionId,
+
       ...props
     },
     ref,
   ) => {
+    const highlightedDiscussionId = useStoreWithDiscussion(
+      (state) => state.discuss.highlightedDiscussionId,
+    );
     const discussions = useStoreWithDiscussion(
       (state) => state.config.discuss.discussions,
     );
@@ -141,24 +144,23 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       >
         {/* Scrollable discussion list */}
         <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-2 py-2">
+          <div className="flex flex-col gap-4 p-2">
             {discussions.map((discussion) => (
-              <div
-                key={discussion.id}
-                data-discussion-id={discussion.id}
-                ref={
-                  highlightedDiscussionId === discussion.id
-                    ? highlightedRef
-                    : undefined
-                }
-                className={cn(
-                  'flex flex-col gap-4 rounded border p-2',
-                  highlightedDiscussionId === discussion.id &&
-                    'border-blue-300 shadow-md transition-all duration-500',
-                )}
-              >
-                {renderDiscussion({discussion, renderComment})}
-              </div>
+              <Fragment key={discussion.id}>
+                {renderDiscussion({
+                  discussion,
+                  renderComment,
+                  ref:
+                    highlightedDiscussionId === discussion.id
+                      ? highlightedRef
+                      : undefined,
+                  className: cn(
+                    'flex flex-col gap-4 rounded border p-2',
+                    highlightedDiscussionId === discussion.id &&
+                      'border-blue-500 shadow-md transition-all duration-500',
+                  ),
+                })}
+              </Fragment>
             ))}
 
             {/* Add padding at the bottom to prevent content from being hidden behind sticky form */}

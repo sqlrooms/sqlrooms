@@ -1,5 +1,1 @@
 @import '@sqlrooms/ui/tailwind-preset.css';
-
-.maplibregl-popup-close-button {
-  padding: 5px 10px;
-}
