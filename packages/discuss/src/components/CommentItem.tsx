@@ -9,7 +9,7 @@ import {
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {Edit, MessageSquareReply, Trash2} from 'lucide-react';
 import {forwardRef, ReactNode} from 'react';
-import type {Comment} from '../DiscussSlice';
+import type {Comment, Discussion} from '../DiscussSlice';
 import {useStoreWithDiscussion} from '../DiscussSlice';
 
 // Default implementation for rendering a user
@@ -26,16 +26,18 @@ export type CommentItemProps = {
   renderComment?: (props: {
     comment: Comment;
     renderUser: (userId: string) => ReactNode;
+    discussion?: Discussion;
   }) => ReactNode;
 };
 
 // Default implementation for rendering a comment's content
-const defaultRenderComment = ({
+export const defaultRenderComment = ({
   comment,
   renderUser,
 }: {
   comment: Comment;
   renderUser: (userId: string) => ReactNode;
+  discussion?: Discussion;
 }): ReactNode => {
   return (
     <div className="flex flex-col gap-1">

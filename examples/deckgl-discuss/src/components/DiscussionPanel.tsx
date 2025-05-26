@@ -1,6 +1,10 @@
 import {DiscussionList} from '@sqlrooms/discuss';
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
+import {formatTimeRelative} from '@sqlrooms/utils';
 import {ProjectPanelTypes, useProjectStore} from '../store';
+import {useSql} from '@sqlrooms/duckdb';
+import {useMemo} from 'react';
+import {PlaneIcon} from 'lucide-react';
 
 /**
  * The DiscussionPanel component displays a list of discussions
@@ -14,6 +18,26 @@ const DiscussionPanel = () => {
     (state) => state.discuss.highlightedDiscussionId,
   );
 
+  const table = useProjectStore((s) => s.db.findTableByName('airports'));
+  const {data, isLoading, error} = useSql<{
+    name: string;
+    abbrev: string;
+  }>({
+    query: `SELECT name, abbrev FROM airports`,
+    enabled: Boolean(table),
+  });
+  const airportsByCode = useMemo(
+    () =>
+      data?.toArray().reduce(
+        (acc, row) => {
+          acc[row.abbrev] = row;
+          return acc;
+        },
+        {} as Record<string, {name: string; abbrev: string}>,
+      ),
+    [data],
+  );
+
   return (
     <ProjectBuilderPanel type={ProjectPanelTypes.enum['discuss']}>
       {discussions.length === 0 ? (
@@ -24,12 +48,22 @@ const DiscussionPanel = () => {
       <div className="h-full py-2">
         <DiscussionList
           className="flex flex-col gap-4"
-          // renderComment={({comment, renderUser}) => (
-          //   <div>
-          //     <p>{renderUser(comment.userId)}</p>
-          //     <p>{comment.text}</p>
-          //   </div>
-          // )}
+          renderComment={({comment, renderUser, discussion}) => (
+            <div className="flex flex-col gap-1">
+              {discussion?.anchorId ? (
+                <div className="text-md flex items-center gap-2 font-medium">
+                  <PlaneIcon size="20px" />
+                  {airportsByCode?.[discussion.anchorId]?.name} (
+                  {discussion.anchorId})
+                </div>
+              ) : null}
+              <div className="text-muted-foreground text-xs">
+                {renderUser(comment.userId)} -{' '}
+                {formatTimeRelative(comment.timestamp)}
+              </div>
+              <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
+            </div>
+          )}
           highlightedDiscussionId={highlightedDiscussionId}
         />
       </div>

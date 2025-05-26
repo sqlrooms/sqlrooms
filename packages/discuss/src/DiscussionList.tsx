@@ -10,7 +10,7 @@ import {defaultRenderUser} from './components/CommentItem';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 import {DiscussionItem} from './components/DiscussionItem';
 import {EditCommentForm} from './components/EditCommentForm';
-import type {Comment} from './DiscussSlice';
+import type {Comment, Discussion} from './DiscussSlice';
 import {useStoreWithDiscussion} from './DiscussSlice';
 
 // Main DiscussionList component
@@ -19,6 +19,7 @@ type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
   renderComment?: (props: {
     comment: Comment;
     renderUser: (userId: string) => ReactNode;
+    discussion?: Discussion;
   }) => ReactNode;
   highlightedDiscussionId?: string;
 };

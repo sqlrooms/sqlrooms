@@ -1,23 +1,15 @@
 import {cn} from '@sqlrooms/ui';
 import {forwardRef, ReactNode} from 'react';
-import type {
-  Discussion,
-  Comment,
-  EditingItem,
-  ReplyToItem,
-} from '../DiscussSlice';
-import {CommentItem, defaultRenderUser} from './CommentItem';
-import {EditCommentForm} from './EditCommentForm';
+import type {Discussion, EditingItem, ReplyToItem} from '../DiscussSlice';
 import {useStoreWithDiscussion} from '../DiscussSlice';
+import {CommentItem, CommentItemProps, defaultRenderUser} from './CommentItem';
+import {EditCommentForm} from './EditCommentForm';
 
 export type DiscussionItemProps = {
   discussion: Discussion;
   className?: string;
   renderUser?: (userId: string) => ReactNode;
-  renderComment?: (props: {
-    comment: Comment;
-    renderUser: (userId: string) => ReactNode;
-  }) => ReactNode;
+  renderComment?: CommentItemProps['renderComment'];
   editingItem?: EditingItem;
   submitEdit?: (text: string) => void;
   getEditingItemText?: () => string;
@@ -54,7 +46,11 @@ export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
           comment={discussion.rootComment}
           isRootComment={true}
           renderUser={renderUser}
-          renderComment={renderComment}
+          renderComment={
+            renderComment
+              ? (props) => renderComment({...props, discussion})
+              : undefined
+          }
         />
 
         {/* Replies */}
