@@ -8,6 +8,7 @@ import type {
 } from '../DiscussSlice';
 import {CommentItem, defaultRenderUser} from './CommentItem';
 import {EditCommentForm} from './EditCommentForm';
+import {useStoreWithDiscussion} from '../DiscussSlice';
 
 export type DiscussionItemProps = {
   discussion: Discussion;
@@ -43,6 +44,8 @@ export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
     },
     ref,
   ) => {
+    const userId = useStoreWithDiscussion((state) => state.discuss.userId);
+
     return (
       <div ref={ref} className={cn('flex flex-col gap-4', className)}>
         {/* Root comment (the discussion itself) */}
@@ -62,6 +65,7 @@ export const DiscussionItem = forwardRef<HTMLDivElement, DiscussionItemProps>(
                 {editingItem &&
                 editingItem.commentId === comment.id &&
                 editingItem.discussionId === discussion.id &&
+                comment.userId === userId &&
                 submitEdit &&
                 getEditingItemText &&
                 setEditingItem ? (

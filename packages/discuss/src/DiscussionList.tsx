@@ -37,6 +37,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     const discussions = useStoreWithDiscussion(
       (state) => state.config.discuss.discussions,
     );
+    const userId = useStoreWithDiscussion((state) => state.discuss.userId);
     const replyToItem = useStoreWithDiscussion(
       (state) => state.discuss.replyToItem,
     );
@@ -118,7 +119,8 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
               >
                 {editingItem &&
                 !editingItem.commentId &&
-                editingItem.discussionId === discussion.id ? (
+                editingItem.discussionId === discussion.id &&
+                discussion.rootComment.userId === userId ? (
                   <EditCommentForm
                     onSubmit={submitEdit}
                     initialText={getEditingItemText()}

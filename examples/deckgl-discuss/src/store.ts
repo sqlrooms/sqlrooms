@@ -37,6 +37,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
 >(
   persist(
     (set, get, store) => ({
+      ...createDiscussSlice({userId: 'user1'})(set, get, store),
+
       ...createProjectBuilderSlice<AppConfig>({
         connector: new WasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
@@ -81,8 +83,6 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           },
         },
       })(set, get, store),
-
-      ...createDiscussSlice({userId: 'user1'})(set, get, store),
     }),
 
     // Persist settings
