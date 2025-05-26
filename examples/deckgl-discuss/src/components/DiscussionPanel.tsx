@@ -1,4 +1,4 @@
-import {CommentItem, DiscussionItem, DiscussionList} from '@sqlrooms/discuss';
+import {CommentItem, DiscussionList} from '@sqlrooms/discuss';
 import {useSql} from '@sqlrooms/duckdb';
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {formatTimeRelative} from '@sqlrooms/utils';
