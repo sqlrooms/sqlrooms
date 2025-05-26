@@ -1,20 +1,20 @@
 import {cn} from '@sqlrooms/ui';
 import {forwardRef, ReactNode} from 'react';
 import type {
-  DiscussionSchema,
-  CommentSchema,
+  Discussion,
+  Comment,
   EditingItem,
   ReplyToItem,
-} from '../DiscussionSlice';
+} from '../DiscussSlice';
 import {CommentItem, defaultRenderUser} from './CommentItem';
 import {EditCommentForm} from './EditCommentForm';
 
 export type DiscussionItemProps = {
-  discussion: DiscussionSchema;
+  discussion: Discussion;
   className?: string;
   renderUser?: (userId: string) => ReactNode;
   renderComment?: (props: {
-    comment: CommentSchema;
+    comment: Comment;
     renderUser: (userId: string) => ReactNode;
   }) => ReactNode;
   editingItem?: EditingItem;

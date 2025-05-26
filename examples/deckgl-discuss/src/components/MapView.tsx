@@ -44,15 +44,15 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   const [commentText, setCommentText] = useState('');
 
   // Get state from store
-  const discussions = useProjectStore((state) => state.discussion.discussions);
-  const addDiscussion = useProjectStore(
-    (state) => state.discussion.addDiscussion,
+  const discussions = useProjectStore(
+    (state) => state.config.discuss.discussions,
   );
+  const addDiscussion = useProjectStore((state) => state.discuss.addDiscussion);
   const setReplyToItem = useProjectStore(
-    (state) => state.discussion.setReplyToItem,
+    (state) => state.discuss.setReplyToItem,
   );
   const setHighlightedDiscussionId = useProjectStore(
-    (state) => state.discussion.setHighlightedDiscussionId,
+    (state) => state.discuss.setHighlightedDiscussionId,
   );
 
   // Create a map of airport abbrev -> discussions

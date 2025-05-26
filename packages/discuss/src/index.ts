@@ -5,14 +5,16 @@
 
 export {DiscussionList} from './DiscussionList';
 export {
-  DiscussionSchema,
-  CommentSchema,
-  createDiscussionSlice,
+  Comment,
+  createDefaultDiscussConfig,
+  createDiscussSlice,
+  Discussion,
+  DiscussSliceConfig,
   useStoreWithDiscussion,
-  type DiscussionSliceState,
+  type DiscussSliceState,
   type ProjectStateWithDiscussion,
-} from './DiscussionSlice';
+} from './DiscussSlice';
 
-export {DiscussionItem} from './components/DiscussionItem';
 export {CommentItem} from './components/CommentItem';
 export {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
+export {DiscussionItem} from './components/DiscussionItem';

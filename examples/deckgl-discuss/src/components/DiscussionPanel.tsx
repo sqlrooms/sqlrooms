@@ -1,16 +1,17 @@
-import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {DiscussionList} from '@sqlrooms/discuss';
+import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {ProjectPanelTypes, useProjectStore} from '../store';
-import {useEffect} from 'react';
 
 /**
  * The DiscussionPanel component displays a list of discussions
  * with highlighting functionality.
  */
 const DiscussionPanel = () => {
-  const discussions = useProjectStore((state) => state.discussion.discussions);
+  const discussions = useProjectStore(
+    (state) => state.config.discuss.discussions,
+  );
   const highlightedDiscussionId = useProjectStore(
-    (state) => state.discussion.highlightedDiscussionId,
+    (state) => state.discuss.highlightedDiscussionId,
   );
 
   return (
@@ -20,7 +21,7 @@ const DiscussionPanel = () => {
           <p>No comments yet. Click on an airport to add one.</p>
         </div>
       ) : null}
-      <div className="p-2">
+      <div className="h-full p-2">
         <DiscussionList
           className="flex flex-col gap-4"
           renderUser={() => 'Anonymous user'}

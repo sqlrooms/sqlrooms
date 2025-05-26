@@ -9,8 +9,8 @@ import {
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {Edit, MessageSquareReply, Trash2} from 'lucide-react';
 import {forwardRef, ReactNode} from 'react';
-import type {CommentSchema} from '../DiscussionSlice';
-import {useStoreWithDiscussion} from '../DiscussionSlice';
+import type {Comment} from '../DiscussSlice';
+import {useStoreWithDiscussion} from '../DiscussSlice';
 
 // Default implementation for rendering a user
 export const defaultRenderUser = (): ReactNode => {
@@ -19,12 +19,12 @@ export const defaultRenderUser = (): ReactNode => {
 
 export type CommentItemProps = {
   discussionId: string;
-  comment: CommentSchema;
+  comment: Comment;
   isRootComment?: boolean;
   className?: string;
   renderUser?: (userId: string) => ReactNode;
   renderComment?: (props: {
-    comment: CommentSchema;
+    comment: Comment;
     renderUser: (userId: string) => ReactNode;
   }) => ReactNode;
 };
@@ -33,7 +33,7 @@ export type CommentItemProps = {
 const defaultRenderComment = ({
   comment,
 }: {
-  comment: CommentSchema;
+  comment: Comment;
   renderUser: (userId: string) => ReactNode;
 }): ReactNode => {
   return <div className="whitespace-pre-wrap text-sm">{comment.text}</div>;
@@ -51,15 +51,15 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     },
     ref,
   ) => {
-    const userId = useStoreWithDiscussion((state) => state.discussion.userId);
+    const userId = useStoreWithDiscussion((state) => state.discuss.userId);
     const setReplyToItem = useStoreWithDiscussion(
-      (state) => state.discussion.setReplyToItem,
+      (state) => state.discuss.setReplyToItem,
     );
     const setEditingItem = useStoreWithDiscussion(
-      (state) => state.discussion.setEditingItem,
+      (state) => state.discuss.setEditingItem,
     );
     const setItemToDelete = useStoreWithDiscussion(
-      (state) => state.discussion.setItemToDelete,
+      (state) => state.discuss.setItemToDelete,
     );
 
     const handleReply = () => {

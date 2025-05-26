@@ -6,18 +6,18 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import {defaultRenderUser} from './components/CommentItem';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 import {DiscussionItem} from './components/DiscussionItem';
 import {EditCommentForm} from './components/EditCommentForm';
-import type {CommentSchema} from './DiscussionSlice';
-import {useStoreWithDiscussion} from './DiscussionSlice';
-import {defaultRenderUser} from './components/CommentItem';
+import type {Comment} from './DiscussSlice';
+import {useStoreWithDiscussion} from './DiscussSlice';
 
 // Main DiscussionList component
 type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
   renderUser?: (userId: string) => ReactNode;
   renderComment?: (props: {
-    comment: CommentSchema;
+    comment: Comment;
     renderUser: (userId: string) => ReactNode;
   }) => ReactNode;
   highlightedDiscussionId?: string;
@@ -35,37 +35,37 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     ref,
   ) => {
     const discussions = useStoreWithDiscussion(
-      (state) => state.discussion.discussions,
+      (state) => state.config.discuss.discussions,
     );
     const replyToItem = useStoreWithDiscussion(
-      (state) => state.discussion.replyToItem,
+      (state) => state.discuss.replyToItem,
     );
     const editingItem = useStoreWithDiscussion(
-      (state) => state.discussion.editingItem,
+      (state) => state.discuss.editingItem,
     );
     const itemToDelete = useStoreWithDiscussion(
-      (state) => state.discussion.itemToDelete,
+      (state) => state.discuss.itemToDelete,
     );
     const setReplyToItem = useStoreWithDiscussion(
-      (state) => state.discussion.setReplyToItem,
+      (state) => state.discuss.setReplyToItem,
     );
     const setEditingItem = useStoreWithDiscussion(
-      (state) => state.discussion.setEditingItem,
+      (state) => state.discuss.setEditingItem,
     );
     const setItemToDelete = useStoreWithDiscussion(
-      (state) => state.discussion.setItemToDelete,
+      (state) => state.discuss.setItemToDelete,
     );
     const submitEdit = useStoreWithDiscussion(
-      (state) => state.discussion.submitEdit,
+      (state) => state.discuss.submitEdit,
     );
     const handleDeleteConfirm = useStoreWithDiscussion(
-      (state) => state.discussion.handleDeleteConfirm,
+      (state) => state.discuss.handleDeleteConfirm,
     );
     const getReplyToUserId = useStoreWithDiscussion(
-      (state) => state.discussion.getReplyToUserId,
+      (state) => state.discuss.getReplyToUserId,
     );
     const getEditingItemText = useStoreWithDiscussion(
-      (state) => state.discussion.getEditingItemText,
+      (state) => state.discuss.getEditingItemText,
     );
 
     // Reference to highlighted discussion
@@ -95,79 +95,90 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     return (
       <div
         ref={ref}
-        className={cn('flex flex-col gap-2', className)}
+        className={cn('flex h-full flex-col overflow-hidden', className)}
         {...props}
       >
-        {discussions.map((discussion) => (
-          <div
-            key={discussion.id}
-            data-discussion-id={discussion.id}
-            ref={
-              highlightedDiscussionId === discussion.id
-                ? highlightedRef
-                : undefined
-            }
-            className={cn(
-              'flex flex-col gap-4 rounded border p-2',
-              highlightedDiscussionId === discussion.id &&
-                'border-blue-300 shadow-md transition-all duration-500',
-            )}
-          >
-            {editingItem &&
-            !editingItem.commentId &&
-            editingItem.discussionId === discussion.id ? (
-              <EditCommentForm
-                onSubmit={submitEdit}
-                initialText={getEditingItemText()}
-                submitLabel="Save"
-                editingType="discussion"
-                onCancel={() => {
-                  setEditingItem(undefined);
-                }}
-              />
-            ) : (
-              <DiscussionItem
-                discussion={discussion}
-                renderUser={renderUser}
-                renderComment={renderComment}
-                editingItem={editingItem}
-                submitEdit={submitEdit}
-                getEditingItemText={getEditingItemText}
-                setEditingItem={setEditingItem}
-                replyToItem={replyToItem}
-                setReplyToItem={setReplyToItem}
-                getReplyingToUserNode={getReplyingToUserNode}
-              />
-            )}
+        {/* Scrollable discussion list */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="flex flex-col gap-2 p-2">
+            {discussions.map((discussion) => (
+              <div
+                key={discussion.id}
+                data-discussion-id={discussion.id}
+                ref={
+                  highlightedDiscussionId === discussion.id
+                    ? highlightedRef
+                    : undefined
+                }
+                className={cn(
+                  'flex flex-col gap-4 rounded border p-2',
+                  highlightedDiscussionId === discussion.id &&
+                    'border-blue-300 shadow-md transition-all duration-500',
+                )}
+              >
+                {editingItem &&
+                !editingItem.commentId &&
+                editingItem.discussionId === discussion.id ? (
+                  <EditCommentForm
+                    onSubmit={submitEdit}
+                    initialText={getEditingItemText()}
+                    submitLabel="Save"
+                    editingType="discussion"
+                    onCancel={() => {
+                      setEditingItem(undefined);
+                    }}
+                  />
+                ) : (
+                  <DiscussionItem
+                    discussion={discussion}
+                    renderUser={renderUser}
+                    renderComment={renderComment}
+                    editingItem={editingItem}
+                    submitEdit={submitEdit}
+                    getEditingItemText={getEditingItemText}
+                    setEditingItem={setEditingItem}
+                    replyToItem={replyToItem}
+                    setReplyToItem={setReplyToItem}
+                    getReplyingToUserNode={getReplyingToUserNode}
+                  />
+                )}
 
-            {/* Show reply form after discussion if replying to the root discussion */}
-            {replyToItem &&
-              !replyToItem.commentId &&
-              replyToItem.discussionId === discussion.id && (
-                <EditCommentForm
-                  onSubmit={submitEdit}
-                  initialText=""
-                  submitLabel="Reply"
-                  replyingTo={getReplyingToUserNode()}
-                  onCancel={() => {
-                    setReplyToItem(undefined);
-                  }}
-                />
-              )}
+                {/* Show reply form after discussion if replying to the root discussion */}
+                {replyToItem &&
+                  !replyToItem.commentId &&
+                  replyToItem.discussionId === discussion.id && (
+                    <EditCommentForm
+                      onSubmit={submitEdit}
+                      initialText=""
+                      submitLabel="Reply"
+                      replyingTo={getReplyingToUserNode()}
+                      onCancel={() => {
+                        setReplyToItem(undefined);
+                      }}
+                    />
+                  )}
+              </div>
+            ))}
+
+            {/* Add padding at the bottom to prevent content from being hidden behind sticky form */}
+            <div className="h-20" />
           </div>
-        ))}
+        </div>
 
-        {/* Show form for new discussions only when not replying or editing */}
-        {!editingItem && !replyToItem && (
-          <EditCommentForm
-            onSubmit={submitEdit}
-            initialText=""
-            submitLabel="Post"
-            onCancel={() => {
-              // No cancel action needed for new discussions
-            }}
-          />
-        )}
+        {/* Sticky form at the bottom */}
+        <div className="bg-background sticky bottom-0 border-t p-2 shadow-lg">
+          {/* Show form for new discussions only when not replying or editing */}
+          {!editingItem && !replyToItem && (
+            <EditCommentForm
+              onSubmit={submitEdit}
+              initialText=""
+              submitLabel="Post"
+              onCancel={() => {
+                // No cancel action needed for new discussions
+              }}
+            />
+          )}
+        </div>
 
         <DeleteConfirmDialog
           open={!!itemToDelete}

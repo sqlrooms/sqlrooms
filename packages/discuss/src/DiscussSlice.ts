@@ -10,28 +10,43 @@ import {produce} from 'immer';
 import {z} from 'zod';
 
 // Base type with common fields
-export const CommentBaseSchema = z.object({
+export const CommentBase = z.object({
   id: z.string().cuid2(),
   userId: z.string(),
   text: z.string(),
-  timestamp: z.date(),
+  timestamp: z.coerce.date(),
 });
-export type CommentBaseSchema = z.infer<typeof CommentBaseSchema>;
+export type CommentBase = z.infer<typeof CommentBase>;
 
 // Comment type extends base with parentId
-export const CommentSchema = CommentBaseSchema.extend({
+export const Comment = CommentBase.extend({
   parentId: z.string().optional(),
 });
-export type CommentSchema = z.infer<typeof CommentSchema>;
+export type Comment = z.infer<typeof Comment>;
 
 // Discussion is a container with a rootComment and collection of reply comments
-export const DiscussionSchema = z.object({
+export const Discussion = z.object({
   id: z.string().cuid2(),
   anchorId: z.string().optional(),
-  rootComment: CommentSchema,
-  comments: z.array(CommentSchema),
+  rootComment: Comment,
+  comments: z.array(Comment),
 });
-export type DiscussionSchema = z.infer<typeof DiscussionSchema>;
+export type Discussion = z.infer<typeof Discussion>;
+
+export const DiscussSliceConfig = z.object({
+  discuss: z.object({
+    discussions: z.array(Discussion),
+  }),
+});
+export type DiscussSliceConfig = z.infer<typeof DiscussSliceConfig>;
+
+export function createDefaultDiscussConfig(): DiscussSliceConfig {
+  return {
+    discuss: {
+      discussions: [],
+    },
+  };
+}
 
 // UI state for discussions
 export type ReplyToItem = {
@@ -50,10 +65,9 @@ export type DeleteItem = {
   itemType: string;
 };
 
-export type DiscussionSliceState = {
-  discussion: {
+export type DiscussSliceState = {
+  discuss: {
     userId: string;
-    discussions: DiscussionSchema[];
 
     // UI-connected actions - preferred API for most use cases
     /**
@@ -142,17 +156,14 @@ export type DiscussionSliceState = {
 };
 
 export type ProjectStateWithDiscussion =
-  ProjectBuilderState<BaseProjectConfig> & DiscussionSliceState;
+  ProjectBuilderState<BaseProjectConfig> & DiscussSliceState;
 
-export function createDiscussionSlice({
-  userId,
-}: {
-  userId: string;
-}): StateCreator<DiscussionSliceState> {
-  return createSlice<BaseProjectConfig, DiscussionSliceState>((set, get) => ({
-    discussion: {
+export function createDiscussSlice<
+  PC extends BaseProjectConfig & DiscussSliceConfig,
+>({userId}: {userId: string}): StateCreator<DiscussSliceState> {
+  return createSlice<PC, DiscussSliceState>((set, get) => ({
+    discuss: {
       userId,
-      discussions: [],
 
       // Direct CRUD operations - These are exposed for advanced use cases
       // For normal usage with UI integration, prefer submitEdit
@@ -163,14 +174,14 @@ export function createDiscussionSlice({
        */
       addDiscussion: (text, anchorId) => {
         const id = createId();
-        const rootComment: CommentSchema = {
+        const rootComment: Comment = {
           id: createId(),
           userId,
           text,
           timestamp: new Date(),
         };
 
-        const newDiscussion: DiscussionSchema = {
+        const newDiscussion: Discussion = {
           id,
           anchorId,
           rootComment,
@@ -179,7 +190,7 @@ export function createDiscussionSlice({
 
         set((state) =>
           produce(state, (draft) => {
-            draft.discussion.discussions.push(newDiscussion);
+            draft.config.discuss.discussions.push(newDiscussion);
           }),
         );
       },
@@ -191,11 +202,11 @@ export function createDiscussionSlice({
       removeDiscussion: (id) => {
         set((state) =>
           produce(state, (draft) => {
-            const index = draft.discussion.discussions.findIndex(
+            const index = draft.config.discuss.discussions.findIndex(
               (a) => a.id === id,
             );
             if (index !== -1) {
-              draft.discussion.discussions.splice(index, 1);
+              draft.config.discuss.discussions.splice(index, 1);
             }
           }),
         );
@@ -208,7 +219,7 @@ export function createDiscussionSlice({
       editDiscussion: (id, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.discussion.discussions.find(
+            const discussion = draft.config.discuss.discussions.find(
               (a) => a.id === id,
             );
             if (discussion) {
@@ -223,7 +234,7 @@ export function createDiscussionSlice({
        * For UI-integrated usage, prefer submitEdit.
        */
       addComment: (discussionId, text, parentId) => {
-        const newComment: CommentSchema = {
+        const newComment: Comment = {
           id: createId(),
           userId,
           text,
@@ -233,7 +244,7 @@ export function createDiscussionSlice({
 
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.discussion.discussions.find(
+            const discussion = draft.config.discuss.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -250,7 +261,7 @@ export function createDiscussionSlice({
       editComment: (discussionId, commentId, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.discussion.discussions.find(
+            const discussion = draft.config.discuss.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -276,7 +287,7 @@ export function createDiscussionSlice({
       removeComment: (discussionId, commentId) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.discussion.discussions.find(
+            const discussion = draft.config.discuss.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -307,9 +318,9 @@ export function createDiscussionSlice({
       setReplyToItem: (replyToItem) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.discussion.replyToItem = replyToItem;
+            draft.discuss.replyToItem = replyToItem;
             if (replyToItem) {
-              draft.discussion.editingItem = undefined;
+              draft.discuss.editingItem = undefined;
             }
           }),
         );
@@ -327,9 +338,9 @@ export function createDiscussionSlice({
       setEditingItem: (editingItem) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.discussion.editingItem = editingItem;
+            draft.discuss.editingItem = editingItem;
             if (editingItem) {
-              draft.discussion.replyToItem = undefined;
+              draft.discuss.replyToItem = undefined;
             }
           }),
         );
@@ -347,7 +358,7 @@ export function createDiscussionSlice({
       setItemToDelete: (item) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.discussion.itemToDelete = item;
+            draft.discuss.itemToDelete = item;
           }),
         );
       },
@@ -363,7 +374,7 @@ export function createDiscussionSlice({
       setHighlightedDiscussionId: (discussionId) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.discussion.highlightedDiscussionId = discussionId;
+            draft.discuss.highlightedDiscussionId = discussionId;
           }),
         );
       },
@@ -387,7 +398,7 @@ export function createDiscussionSlice({
           editDiscussion,
           editComment,
           addComment,
-        } = state.discussion;
+        } = state.discuss;
 
         if (editingItem) {
           if (editingItem.commentId) {
@@ -395,14 +406,14 @@ export function createDiscussionSlice({
           } else {
             editDiscussion(editingItem.discussionId, text);
           }
-          state.discussion.setEditingItem(undefined);
+          state.discuss.setEditingItem(undefined);
         } else if (replyToItem) {
           if (replyToItem.commentId) {
             addComment(replyToItem.discussionId, text, replyToItem.commentId);
           } else {
             addComment(replyToItem.discussionId, text);
           }
-          state.discussion.setReplyToItem(undefined);
+          state.discuss.setReplyToItem(undefined);
         } else {
           addDiscussion(text);
         }
@@ -418,8 +429,7 @@ export function createDiscussionSlice({
        */
       handleDeleteConfirm: () => {
         const state = get();
-        const {itemToDelete, removeComment, removeDiscussion} =
-          state.discussion;
+        const {itemToDelete, removeComment, removeDiscussion} = state.discuss;
 
         if (itemToDelete) {
           if (itemToDelete.commentId) {
@@ -427,7 +437,7 @@ export function createDiscussionSlice({
           } else {
             removeDiscussion(itemToDelete.discussionId);
           }
-          state.discussion.setItemToDelete(undefined);
+          state.discuss.setItemToDelete(undefined);
         }
       },
 
@@ -437,7 +447,8 @@ export function createDiscussionSlice({
        */
       getReplyToUserId: () => {
         const state = get();
-        const {replyToItem, discussions} = state.discussion;
+        const {replyToItem} = state.discuss;
+        const {discussions} = state.config.discuss;
 
         if (!replyToItem) return '';
 
@@ -468,7 +479,8 @@ export function createDiscussionSlice({
        */
       getEditingItemText: () => {
         const state = get();
-        const {editingItem, discussions} = state.discussion;
+        const {editingItem} = state.discuss;
+        const {discussions} = state.config.discuss;
 
         if (!editingItem) return '';
 
@@ -493,12 +505,16 @@ export function createDiscussionSlice({
   }));
 }
 
+type ProjectConfigWithDiscuss = BaseProjectConfig & DiscussSliceConfig;
+type ProjectStateWithDiscuss = ProjectBuilderState<ProjectConfigWithDiscuss> &
+  DiscussSliceState;
+
 export function useStoreWithDiscussion<T>(
-  selector: (state: ProjectStateWithDiscussion) => T,
+  selector: (state: ProjectStateWithDiscuss) => T,
 ): T {
   return useBaseProjectBuilderStore<
-    BaseProjectConfig,
-    ProjectStateWithDiscussion,
+    BaseProjectConfig & DiscussSliceConfig,
+    ProjectStateWithDiscuss,
     T
-  >((state) => selector(state as ProjectStateWithDiscussion));
+  >((state) => selector(state as ProjectStateWithDiscuss));
 }
