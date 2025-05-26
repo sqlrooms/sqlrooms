@@ -1,10 +1,10 @@
-import {DiscussionList} from '@sqlrooms/discuss';
+import {CommentItem, DiscussionItem, DiscussionList} from '@sqlrooms/discuss';
+import {useSql} from '@sqlrooms/duckdb';
 import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import {ProjectPanelTypes, useProjectStore} from '../store';
-import {useSql} from '@sqlrooms/duckdb';
-import {useMemo} from 'react';
 import {PlaneIcon} from 'lucide-react';
+import {useMemo} from 'react';
+import {ProjectPanelTypes, useProjectStore} from '../store';
 
 /**
  * The DiscussionPanel component displays a list of discussions
@@ -19,21 +19,14 @@ const DiscussionPanel = () => {
   );
 
   const table = useProjectStore((s) => s.db.findTableByName('airports'));
-  const {data, isLoading, error} = useSql<{
-    name: string;
-    abbrev: string;
-  }>({
+  const {data} = useSql<{name: string; abbrev: string}>({
     query: `SELECT name, abbrev FROM airports`,
     enabled: Boolean(table),
   });
-  const airportsByCode = useMemo(
+  const airportNamesByCode = useMemo(
     () =>
-      data?.toArray().reduce(
-        (acc, row) => {
-          acc[row.abbrev] = row;
-          return acc;
-        },
-        {} as Record<string, {name: string; abbrev: string}>,
+      new Map<string, string>(
+        data?.toArray().map((row) => [row.abbrev, row.name]),
       ),
     [data],
   );
@@ -48,21 +41,35 @@ const DiscussionPanel = () => {
       <div className="h-full py-2">
         <DiscussionList
           className="flex flex-col gap-4"
-          renderComment={({comment, discussion}) => (
-            <div className="flex flex-col gap-1">
-              {discussion?.anchorId ? (
-                <div className="text-md flex items-center gap-2 font-medium">
-                  <PlaneIcon size="20px" />
-                  {airportsByCode?.[discussion.anchorId]?.name} (
-                  {discussion.anchorId})
-                </div>
-              ) : null}
-              <div className="text-muted-foreground text-xs">
-                {comment.userId} - {formatTimeRelative(comment.timestamp)}
-              </div>
-              <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
-            </div>
+          renderDiscussion={(props) => (
+            <DiscussionItem
+              {...props}
+              className="border border-transparent hover:border-blue-300"
+            />
           )}
+          renderComment={(props) => {
+            const {comment, discussion} = props;
+            const {anchorId} = discussion;
+            const isRootComment = comment.id === discussion.rootComment.id;
+            return (
+              <CommentItem {...props}>
+                <div className="flex flex-col gap-1">
+                  {anchorId && isRootComment ? (
+                    <div className="text-md flex items-center gap-2 font-medium">
+                      <PlaneIcon size="20px" />
+                      {airportNamesByCode?.get(anchorId)} ({anchorId})
+                    </div>
+                  ) : null}
+                  <div className="text-muted-foreground text-xs">
+                    {comment.userId} - {formatTimeRelative(comment.timestamp)}
+                  </div>
+                  <div className="whitespace-pre-wrap text-sm">
+                    {comment.text}
+                  </div>
+                </div>
+              </CommentItem>
+            );
+          }}
           highlightedDiscussionId={highlightedDiscussionId}
         />
       </div>

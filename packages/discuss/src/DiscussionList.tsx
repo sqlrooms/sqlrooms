@@ -6,27 +6,29 @@ import {
   useEffect,
   useRef,
 } from 'react';
+import {CommentItemProps, defaultRenderComment} from './components/CommentItem';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
-import {DiscussionItem} from './components/DiscussionItem';
+import {DiscussionItem, DiscussionItemProps} from './components/DiscussionItem';
 import {EditCommentForm} from './components/EditCommentForm';
-import type {Comment, Discussion} from './DiscussSlice';
 import {useStoreWithDiscussion} from './DiscussSlice';
-import {defaultRenderComment} from './components/CommentItem';
 
 // Main DiscussionList component
 type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
-  renderComment?: (props: {
-    comment: Comment;
-    discussion?: Discussion;
-  }) => ReactNode;
+  renderDiscussion?: (props: DiscussionItemProps) => ReactNode;
+  renderComment?: (props: CommentItemProps) => ReactNode;
   highlightedDiscussionId?: string;
 };
+
+const defaultRenderDiscussion = (props: DiscussionItemProps) => (
+  <DiscussionItem {...props} />
+);
 
 export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
   (
     {
       className,
       renderComment = defaultRenderComment,
+      renderDiscussion = defaultRenderDiscussion,
       highlightedDiscussionId,
       ...props
     },
@@ -58,9 +60,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     );
     const handleDeleteConfirm = useStoreWithDiscussion(
       (state) => state.discuss.handleDeleteConfirm,
-    );
-    const getReplyToUserId = useStoreWithDiscussion(
-      (state) => state.discuss.getReplyToUserId,
     );
     const getEditingItemText = useStoreWithDiscussion(
       (state) => state.discuss.getEditingItemText,
@@ -158,10 +157,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
                     'border-blue-300 shadow-md transition-all duration-500',
                 )}
               >
-                <DiscussionItem
-                  discussion={discussion}
-                  renderComment={renderComment}
-                />
+                {renderDiscussion({discussion, renderComment})}
               </div>
             ))}
 

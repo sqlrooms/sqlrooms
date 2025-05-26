@@ -8,50 +8,37 @@ import {
 } from '@sqlrooms/ui';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {Edit, MessageSquareReply, Trash2} from 'lucide-react';
-import {forwardRef, ReactNode} from 'react';
+import {forwardRef, PropsWithChildren, ReactNode} from 'react';
 import type {Comment, Discussion} from '../DiscussSlice';
 import {useStoreWithDiscussion} from '../DiscussSlice';
 
-export type CommentItemProps = {
-  discussionId: string;
+export type CommentItemProps = PropsWithChildren<{
+  discussion: Discussion;
   comment: Comment;
   isRootComment?: boolean;
   className?: string;
-  renderComment?: (props: {
-    comment: Comment;
-    discussion?: Discussion;
-  }) => ReactNode;
-};
+  children?: ReactNode;
+}>;
 
 // Default implementation for rendering a comment's content
-export const defaultRenderComment = ({
-  comment,
-}: {
-  comment: Comment;
-  discussion?: Discussion;
-}): ReactNode => {
+export const defaultRenderComment = (props: CommentItemProps): ReactNode => {
+  const {comment} = props;
   return (
-    <div className="flex flex-col gap-1">
-      <div className="text-muted-foreground text-xs">
-        Anonymous - {formatTimeRelative(comment.timestamp)}
+    <CommentItem {...props}>
+      <div className="flex flex-col gap-1">
+        <div className="text-muted-foreground text-xs">
+          Anonymous - {formatTimeRelative(comment.timestamp)}
+        </div>
+        <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
       </div>
-      <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
-    </div>
+    </CommentItem>
   );
 };
 
 export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
-  (
-    {
-      discussionId,
-      comment,
-      isRootComment = false,
-      className,
-      renderComment = defaultRenderComment,
-    },
-    ref,
-  ) => {
+  ({discussion, comment, isRootComment = false, className, children}, ref) => {
     const userId = useStoreWithDiscussion((state) => state.discuss.userId);
+    const discussionId = discussion.id;
     const setReplyToItem = useStoreWithDiscussion(
       (state) => state.discuss.setReplyToItem,
     );
@@ -93,7 +80,7 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     return (
       <TooltipProvider>
         <div ref={ref} className={cn('flex flex-col gap-2', className)}>
-          {renderComment({comment})}
+          {children}
           <div className="mt-1 flex justify-end gap-1 text-xs">
             <Tooltip>
               <TooltipTrigger asChild>
