@@ -12,20 +12,13 @@ import {forwardRef, ReactNode} from 'react';
 import type {Comment, Discussion} from '../DiscussSlice';
 import {useStoreWithDiscussion} from '../DiscussSlice';
 
-// Default implementation for rendering a user
-export const defaultRenderUser = (): ReactNode => {
-  return 'Anonymous';
-};
-
 export type CommentItemProps = {
   discussionId: string;
   comment: Comment;
   isRootComment?: boolean;
   className?: string;
-  renderUser?: (userId: string) => ReactNode;
   renderComment?: (props: {
     comment: Comment;
-    renderUser: (userId: string) => ReactNode;
     discussion?: Discussion;
   }) => ReactNode;
 };
@@ -33,16 +26,14 @@ export type CommentItemProps = {
 // Default implementation for rendering a comment's content
 export const defaultRenderComment = ({
   comment,
-  renderUser,
 }: {
   comment: Comment;
-  renderUser: (userId: string) => ReactNode;
   discussion?: Discussion;
 }): ReactNode => {
   return (
     <div className="flex flex-col gap-1">
       <div className="text-muted-foreground text-xs">
-        {renderUser(comment.userId)} - {formatTimeRelative(comment.timestamp)}
+        Anonymous - {formatTimeRelative(comment.timestamp)}
       </div>
       <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
     </div>
@@ -56,7 +47,6 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
       comment,
       isRootComment = false,
       className,
-      renderUser = defaultRenderUser,
       renderComment = defaultRenderComment,
     },
     ref,
@@ -103,7 +93,7 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     return (
       <TooltipProvider>
         <div ref={ref} className={cn('flex flex-col gap-2', className)}>
-          {renderComment({comment, renderUser})}
+          {renderComment({comment})}
           <div className="mt-1 flex justify-end gap-1 text-xs">
             <Tooltip>
               <TooltipTrigger asChild>

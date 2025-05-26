@@ -6,19 +6,17 @@ import {
   useEffect,
   useRef,
 } from 'react';
-import {defaultRenderUser} from './components/CommentItem';
 import {DeleteConfirmDialog} from './components/DeleteConfirmDialog';
 import {DiscussionItem} from './components/DiscussionItem';
 import {EditCommentForm} from './components/EditCommentForm';
 import type {Comment, Discussion} from './DiscussSlice';
 import {useStoreWithDiscussion} from './DiscussSlice';
+import {defaultRenderComment} from './components/CommentItem';
 
 // Main DiscussionList component
 type DiscussionListProps = ComponentPropsWithoutRef<'div'> & {
-  renderUser?: (userId: string) => ReactNode;
   renderComment?: (props: {
     comment: Comment;
-    renderUser: (userId: string) => ReactNode;
     discussion?: Discussion;
   }) => ReactNode;
   highlightedDiscussionId?: string;
@@ -28,8 +26,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
   (
     {
       className,
-      renderUser = defaultRenderUser,
-      renderComment,
+      renderComment = defaultRenderComment,
       highlightedDiscussionId,
       ...props
     },
@@ -82,17 +79,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       }
     }, [highlightedDiscussionId]);
 
-    // Get the rendered representation of the user being replied to
-    const getReplyingToUserNode = (): ReactNode => {
-      if (!replyToItem) return null;
-
-      const userId = getReplyToUserId();
-      if (!userId) return 'Anonymous';
-
-      // Return the full ReactNode from renderUser
-      return renderUser(userId);
-    };
-
     // Get the context content (the post being replied to or edited)
     const getContextContent = (): ReactNode => {
       if (editingItem) {
@@ -109,22 +95,13 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           );
           if (!comment) return null;
 
-          return renderComment ? (
-            renderComment({comment, renderUser, discussion})
-          ) : (
-            <div className="text-sm">{comment.text}</div>
-          );
+          return renderComment({comment, discussion});
         } else {
           // Editing the root discussion
-          return renderComment ? (
-            renderComment({
-              comment: discussion.rootComment,
-              renderUser,
-              discussion,
-            })
-          ) : (
-            <div className="text-sm">{discussion.rootComment.text}</div>
-          );
+          return renderComment({
+            comment: discussion.rootComment,
+            discussion,
+          });
         }
       }
 
@@ -142,37 +119,20 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
           );
           if (!comment) return null;
 
-          return renderComment ? (
-            renderComment({comment, renderUser, discussion})
-          ) : (
-            <div className="text-sm">{comment.text}</div>
-          );
+          return renderComment({comment, discussion});
         } else {
           // Replying to the root discussion
-          return renderComment ? (
-            renderComment({
-              comment: discussion.rootComment,
-              renderUser,
-              discussion,
-            })
-          ) : (
-            <div className="text-sm">{discussion.rootComment.text}</div>
-          );
+          return renderComment({
+            comment: discussion.rootComment,
+            discussion,
+          });
         }
       }
 
       return null;
     };
 
-    const contextContent = getContextContent();
-    const editingContext = contextContent ? (
-      <div className="bg-muted rounded border p-2">
-        <div className="text-muted-foreground mb-2 text-xs">
-          {replyToItem ? 'Replying to:' : 'Editing:'}
-        </div>
-        {contextContent}
-      </div>
-    ) : null;
+    const editingContext = getContextContent();
 
     return (
       <div
@@ -200,7 +160,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
               >
                 <DiscussionItem
                   discussion={discussion}
-                  renderUser={renderUser}
                   renderComment={renderComment}
                 />
               </div>
@@ -213,7 +172,16 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
 
         {/* Sticky form at the bottom */}
         <div className="bg-background sticky bottom-0 border-t p-2 shadow-lg">
-          {editingContext}
+          {editingContext ? (
+            <div className="flex flex-col gap-2 p-1">
+              <div className="text-muted-foreground text-xs">
+                {replyToItem ? 'Replying to:' : 'Editing:'}
+              </div>
+              <div className="bg-muted rounded border p-2">
+                {editingContext}
+              </div>
+            </div>
+          ) : null}
           {/* Show editing form when editing */}
           {editingItem && (
             <EditCommentForm

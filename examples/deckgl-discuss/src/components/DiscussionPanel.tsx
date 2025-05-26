@@ -48,7 +48,7 @@ const DiscussionPanel = () => {
       <div className="h-full py-2">
         <DiscussionList
           className="flex flex-col gap-4"
-          renderComment={({comment, renderUser, discussion}) => (
+          renderComment={({comment, discussion}) => (
             <div className="flex flex-col gap-1">
               {discussion?.anchorId ? (
                 <div className="text-md flex items-center gap-2 font-medium">
@@ -58,8 +58,7 @@ const DiscussionPanel = () => {
                 </div>
               ) : null}
               <div className="text-muted-foreground text-xs">
-                {renderUser(comment.userId)} -{' '}
-                {formatTimeRelative(comment.timestamp)}
+                {comment.userId} - {formatTimeRelative(comment.timestamp)}
               </div>
               <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
             </div>
