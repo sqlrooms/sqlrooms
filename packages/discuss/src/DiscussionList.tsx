@@ -101,7 +101,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       >
         {/* Scrollable discussion list */}
         <div className="flex-1 overflow-y-auto">
-          <div className="flex flex-col gap-2 p-2">
+          <div className="flex flex-col gap-2 py-2">
             {discussions.map((discussion) => (
               <div
                 key={discussion.id}

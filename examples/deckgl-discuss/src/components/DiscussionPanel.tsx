@@ -21,10 +21,15 @@ const DiscussionPanel = () => {
           <p>No comments yet. Click on an airport to add one.</p>
         </div>
       ) : null}
-      <div className="h-full p-2">
+      <div className="h-full py-2">
         <DiscussionList
           className="flex flex-col gap-4"
-          renderUser={() => 'Anonymous user'}
+          // renderComment={({comment, renderUser}) => (
+          //   <div>
+          //     <p>{renderUser(comment.userId)}</p>
+          //     <p>{comment.text}</p>
+          //   </div>
+          // )}
           highlightedDiscussionId={highlightedDiscussionId}
         />
       </div>

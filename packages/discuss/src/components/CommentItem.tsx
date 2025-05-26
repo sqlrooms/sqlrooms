@@ -32,11 +32,19 @@ export type CommentItemProps = {
 // Default implementation for rendering a comment's content
 const defaultRenderComment = ({
   comment,
+  renderUser,
 }: {
   comment: Comment;
   renderUser: (userId: string) => ReactNode;
 }): ReactNode => {
-  return <div className="whitespace-pre-wrap text-sm">{comment.text}</div>;
+  return (
+    <div className="flex flex-col gap-1">
+      <div className="text-muted-foreground text-xs">
+        {renderUser(comment.userId)} - {formatTimeRelative(comment.timestamp)}
+      </div>
+      <div className="whitespace-pre-wrap text-sm">{comment.text}</div>
+    </div>
+  );
 };
 
 export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
@@ -93,11 +101,6 @@ export const CommentItem = forwardRef<HTMLDivElement, CommentItemProps>(
     return (
       <TooltipProvider>
         <div ref={ref} className={cn('flex flex-col gap-2', className)}>
-          <div className="text-muted-foreground text-xs">
-            {renderUser(comment.userId)} -{' '}
-            {formatTimeRelative(comment.timestamp)}
-            {comment.parentId && ' (reply)'}
-          </div>
           {renderComment({comment, renderUser})}
           <div className="mt-1 flex justify-end gap-1 text-xs">
             <Tooltip>

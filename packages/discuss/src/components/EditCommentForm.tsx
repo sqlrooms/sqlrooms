@@ -6,6 +6,7 @@ import {
   ReactNode,
   useEffect,
   useState,
+  useRef,
 } from 'react';
 
 export type EditCommentFormProps = Omit<
@@ -35,11 +36,17 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
     ref,
   ) => {
     const [text, setText] = useState(initialText);
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
 
     // Update text state when initialText changes
     useEffect(() => {
       setText(initialText);
     }, [initialText]);
+
+    // Focus textarea when mounted
+    useEffect(() => {
+      textareaRef.current?.focus();
+    }, []);
 
     const handleSubmit = () => {
       if (!text.trim()) return;
@@ -65,6 +72,7 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
           </div>
         )}
         <Textarea
+          ref={textareaRef}
           className="min-h-[60px]"
           value={text}
           onChange={(e) => setText(e.target.value)}
@@ -72,6 +80,9 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               handleSubmit();
+            } else if (e.key === 'Escape' && onCancel) {
+              e.preventDefault();
+              onCancel();
             }
           }}
         />
