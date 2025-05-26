@@ -3,10 +3,9 @@ import {SendHorizonalIcon} from 'lucide-react';
 import {
   ComponentPropsWithoutRef,
   forwardRef,
-  ReactNode,
   useEffect,
-  useState,
   useRef,
+  useState,
 } from 'react';
 
 export type EditCommentFormProps = Omit<
@@ -16,8 +15,6 @@ export type EditCommentFormProps = Omit<
   onSubmit: (text: string) => void;
   initialText?: string;
   submitLabel?: string;
-  replyingTo?: ReactNode;
-  editingType?: string;
   onCancel?: () => void;
 };
 
@@ -26,9 +23,7 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
     {
       onSubmit,
       initialText = '',
-      submitLabel = 'Add',
-      replyingTo,
-      editingType,
+      submitLabel = 'Post',
       onCancel,
       className,
       ...props
@@ -60,17 +55,6 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
         className={cn('mt-2 flex flex-col gap-2', className)}
         {...props}
       >
-        {(replyingTo || editingType) && (
-          <div className="text-muted-foreground text-xs">
-            {replyingTo && (
-              <span>
-                Replying to{' '}
-                <span className="inline-flex items-center">{replyingTo}</span>
-              </span>
-            )}
-            {editingType && `Editing ${editingType}`}
-          </div>
-        )}
         <Textarea
           ref={textareaRef}
           className="min-h-[60px]"
@@ -87,7 +71,7 @@ export const EditCommentForm = forwardRef<HTMLDivElement, EditCommentFormProps>(
           }}
         />
         <div className="flex items-center gap-2 self-end">
-          {(replyingTo || editingType) && onCancel && (
+          {onCancel && (
             <Button variant="ghost" size="xs" onClick={onCancel}>
               Cancel
             </Button>

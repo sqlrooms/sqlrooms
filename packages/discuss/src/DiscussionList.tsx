@@ -38,7 +38,6 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
     const discussions = useStoreWithDiscussion(
       (state) => state.config.discuss.discussions,
     );
-    const userId = useStoreWithDiscussion((state) => state.discuss.userId);
     const replyToItem = useStoreWithDiscussion(
       (state) => state.discuss.replyToItem,
     );
@@ -94,6 +93,87 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       return renderUser(userId);
     };
 
+    // Get the context content (the post being replied to or edited)
+    const getContextContent = (): ReactNode => {
+      if (editingItem) {
+        // When editing, show the original content
+        const discussion = discussions.find(
+          (d) => d.id === editingItem.discussionId,
+        );
+        if (!discussion) return null;
+
+        if (editingItem.commentId) {
+          // Editing a comment
+          const comment = discussion.comments.find(
+            (c) => c.id === editingItem.commentId,
+          );
+          if (!comment) return null;
+
+          return renderComment ? (
+            renderComment({comment, renderUser, discussion})
+          ) : (
+            <div className="text-sm">{comment.text}</div>
+          );
+        } else {
+          // Editing the root discussion
+          return renderComment ? (
+            renderComment({
+              comment: discussion.rootComment,
+              renderUser,
+              discussion,
+            })
+          ) : (
+            <div className="text-sm">{discussion.rootComment.text}</div>
+          );
+        }
+      }
+
+      if (replyToItem) {
+        // When replying, show what we're replying to
+        const discussion = discussions.find(
+          (d) => d.id === replyToItem.discussionId,
+        );
+        if (!discussion) return null;
+
+        if (replyToItem.commentId) {
+          // Replying to a comment
+          const comment = discussion.comments.find(
+            (c) => c.id === replyToItem.commentId,
+          );
+          if (!comment) return null;
+
+          return renderComment ? (
+            renderComment({comment, renderUser, discussion})
+          ) : (
+            <div className="text-sm">{comment.text}</div>
+          );
+        } else {
+          // Replying to the root discussion
+          return renderComment ? (
+            renderComment({
+              comment: discussion.rootComment,
+              renderUser,
+              discussion,
+            })
+          ) : (
+            <div className="text-sm">{discussion.rootComment.text}</div>
+          );
+        }
+      }
+
+      return null;
+    };
+
+    const contextContent = getContextContent();
+    const editingContext = contextContent ? (
+      <div className="bg-muted rounded border p-2">
+        <div className="text-muted-foreground mb-2 text-xs">
+          {replyToItem ? 'Replying to:' : 'Editing:'}
+        </div>
+        {contextContent}
+      </div>
+    ) : null;
+
     return (
       <div
         ref={ref}
@@ -118,48 +198,11 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
                     'border-blue-300 shadow-md transition-all duration-500',
                 )}
               >
-                {editingItem &&
-                !editingItem.commentId &&
-                editingItem.discussionId === discussion.id &&
-                discussion.rootComment.userId === userId ? (
-                  <EditCommentForm
-                    onSubmit={submitEdit}
-                    initialText={getEditingItemText()}
-                    submitLabel="Save"
-                    editingType="discussion"
-                    onCancel={() => {
-                      setEditingItem(undefined);
-                    }}
-                  />
-                ) : (
-                  <DiscussionItem
-                    discussion={discussion}
-                    renderUser={renderUser}
-                    renderComment={renderComment}
-                    editingItem={editingItem}
-                    submitEdit={submitEdit}
-                    getEditingItemText={getEditingItemText}
-                    setEditingItem={setEditingItem}
-                    replyToItem={replyToItem}
-                    setReplyToItem={setReplyToItem}
-                    getReplyingToUserNode={getReplyingToUserNode}
-                  />
-                )}
-
-                {/* Show reply form after discussion if replying to the root discussion */}
-                {replyToItem &&
-                  !replyToItem.commentId &&
-                  replyToItem.discussionId === discussion.id && (
-                    <EditCommentForm
-                      onSubmit={submitEdit}
-                      initialText=""
-                      submitLabel="Reply"
-                      replyingTo={getReplyingToUserNode()}
-                      onCancel={() => {
-                        setReplyToItem(undefined);
-                      }}
-                    />
-                  )}
+                <DiscussionItem
+                  discussion={discussion}
+                  renderUser={renderUser}
+                  renderComment={renderComment}
+                />
               </div>
             ))}
 
@@ -170,15 +213,37 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
 
         {/* Sticky form at the bottom */}
         <div className="bg-background sticky bottom-0 border-t p-2 shadow-lg">
+          {editingContext}
+          {/* Show editing form when editing */}
+          {editingItem && (
+            <EditCommentForm
+              onSubmit={submitEdit}
+              initialText={getEditingItemText()}
+              submitLabel="Save"
+              onCancel={() => {
+                setEditingItem(undefined);
+              }}
+            />
+          )}
+
+          {/* Show reply form when replying */}
+          {!editingItem && replyToItem && (
+            <EditCommentForm
+              onSubmit={submitEdit}
+              initialText=""
+              submitLabel="Reply"
+              onCancel={() => {
+                setReplyToItem(undefined);
+              }}
+            />
+          )}
+
           {/* Show form for new discussions only when not replying or editing */}
           {!editingItem && !replyToItem && (
             <EditCommentForm
               onSubmit={submitEdit}
               initialText=""
               submitLabel="Post"
-              onCancel={() => {
-                // No cancel action needed for new discussions
-              }}
             />
           )}
         </div>
