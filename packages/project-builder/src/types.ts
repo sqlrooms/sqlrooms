@@ -33,8 +33,10 @@ export type DataSourceState = {
 
 export type ColumnSpec = {
   name: string;
-  type: 'string' | 'number' | 'datetime';
+  type: ColumnType | ColumnType[]
   comment?: string;
   required?: boolean;
   nameVariants?: string[];
 };
+
+export type ColumnType =  "string" | "numeric" | "date" | "boolean"

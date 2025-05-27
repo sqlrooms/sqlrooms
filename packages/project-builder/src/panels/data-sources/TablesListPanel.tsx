@@ -42,7 +42,8 @@ const TablesListPanel: FC<Props> = (props) => {
         //height={'100%'}
         flexGrow={1}
         alignItems={'stretch'}
-        //overflow="auto"
+        width="100%"
+        minW={0}
         position="relative"
       >
         {/* <Flex

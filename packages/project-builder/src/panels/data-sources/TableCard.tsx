@@ -4,12 +4,13 @@ import {
   Flex,
   FlexProps,
   HStack,
+  Button,
   Table,
   Tbody,
   Td,
   Text,
-  Thead,
   Tr,
+  Switch,
 } from '@chakra-ui/react';
 import { DataTable } from '@sqlrooms/duckdb';
 import { formatNumber } from '@sqlrooms/utils';
@@ -21,9 +22,22 @@ export type Props = {
   rowCount?: number;
   onReset?: () => void;
   onClick?: () => void;
+  showSwitches?: boolean;
+  selectedColumns?: Record<string, string>;
+  onColumnToggle?: (columnName: string, isSelected: boolean) => void;
 } & FlexProps;
 
-const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, ...rest }) => {
+const TableCard: FC<Props> = ({ 
+  isReadOnly, 
+  value, 
+  rowCount, 
+  onReset, 
+  showSwitches = false, 
+  onClick, 
+  selectedColumns = {}, 
+  onColumnToggle,
+  ...rest 
+}) => {
   if (!value) return null;
 
   return (
@@ -35,126 +49,92 @@ const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, .
       borderRadius="sm"
       py={2}
       px={2}
+      maxHeight={'400px'}
+      overflow="hidden"
       alignItems="center"
       justifyContent="center"
       position={`relative`}
-      cursor="pointer"
-      onClick={onClick}
       transition={'border-color 0.2s ease-in-out'}
       _hover={{ borderColor: 'gray.100' }}
       {...rest}
     >
-      {/* <Box position="absolute" top={1} right={2}>
-        <Menu placement={'bottom-end'}>
-          <MenuButton
-            mt={'6px'}
-            size="xs"
-            as={IconButton}
-            aria-label="Options"
-            icon={<EllipsisHorizontalIcon width="18px" />}
-            variant="ghost"
-            color={'gray.400'}
-          />
-          <Portal>
-            <MenuList>
-              <MenuItem
-                isDisabled={true}
-                fontSize={'sm'}
-                icon={<TableCellsIcon width="15px" />}
-              >
-                View data
-              </MenuItem>
-
-              {!isReadOnly ? (
-                <>
-                  <MenuItem
-                    isDisabled={true}
-                    fontSize={'sm'}
-                    icon={<PencilIcon width="15px" />}
-                  >
-                    Rename table
-                  </MenuItem>
-                  <MenuItem
-                    isDisabled={true}
-                    fontSize={'sm'}
-                    icon={<TrashIcon width="15px" />}
-                    // onClick={deleteDatasetModal.onOpen}
-                  >
-                    Delete table
-                  </MenuItem>
-                  <MenuItem
-                    fontSize={'sm'}
-                    icon={<ArrowDownTrayIcon width="15px" />}
-                    onClick={console.log}
-                    isDisabled
-                  >
-                    Download
-                  </MenuItem>
-                </>
-              ) : null}
-            </MenuList>
-          </Portal>
-        </Menu>
-      </Box> */}
-
-      <Flex gap={2} px={2} mt={0} direction={'column'} width={'100%'}>
-        <Box overflow={'auto'}>
-          <Table size="xs">
-            <Thead>
-              <Tr>
-                <Td pr={6}>
-                  <Box
-                    height={'30px'}
-                    overflow={'hidden'}
-                    position={'relative'}
-                  >
-                    <Box
-                      fontSize="sm"
-                      fontWeight={'bold'}
-                      position={'absolute'}
-                      width={'100%'}
-                      color={'gray.100'}
-                      mb={1}
-                      py={1}
-                      // fontFamily={"monospace"}
-                      // maxWidth="230px"
-                      whiteSpace={'nowrap'}
-                      textOverflow={'ellipsis'}
-                      overflow={'hidden'}
-                    // textTransform={'lowercase'}
-                    >
-                      {value.tableName}
-                    </Box>
-                  </Box>
-                </Td>
-              </Tr>
-            </Thead>
+      <Flex px={2} mt={0} direction={'column'} width={'100%'} height="100%">
+        <Flex 
+          width={'100%'}
+          pb={1}
+          justifyContent={'space-between'}
+          borderBottom={'0.5px solid'}
+          borderColor={'gray.700'}
+          gap={2}
+        >
+          <Text
+            flex={1}
+            minW={0}
+            fontSize="sm"
+            fontWeight="bold"
+            color="gray.100"
+            py={1}
+            isTruncated
+          >
+            {value.tableName}
+          </Text>
+          <Flex>
+            <Button
+              size="xs"
+              borderRadius="sm"
+              colorScheme={'blue'}
+              onClick={onClick}
+            >
+              View data
+             </Button>
+          </Flex>
+        </Flex>
+        <Box flex={1} overflowY="auto">
+          <Table size="xs" width="100%" sx={{ tableLayout: 'fixed' }}>
             <Tbody>
               {value.columns?.map((row, i) => {
+                const isSelected = Object.values(selectedColumns).includes(row.name);
                 return (
                   <Tr key={i}>
-                    <Td>
-                      <HStack>
-                        <Box width="70px">
+                    <Td overflow="hidden">
+                      <HStack justifyContent={'space-between'}>
+                        <HStack cursor={'pointer'} alignItems={'center'} as="label" htmlFor={`${row.name}-switch`} flex={1} minW={0} gap={2}>
+                        <Flex>
                           <Badge
+                            my={1}
+                            width='70px'
                             colorScheme="blue"
                             opacity="0.5"
-                            fontSize={'xx-small'}
+                            fontSize={'x-small'}
                             variant="outline"
                             overflow='hidden'
-                            width='100%'
                             textAlign="center"
                           >
                             {row.type}
                           </Badge>
-                        </Box>
-                        <Flex
+                        </Flex>
+                        <Text
                           color="gray.300"
-                          fontSize={'x-small'}
-                          maxWidth={'100px'}
+                          fontSize="11px"
+                          flex={1}
+                          minW={0}
+                          isTruncated
                         >
                           {row.name}
-                        </Flex>
+                        </Text>
+                        </HStack>
+                        {showSwitches && <Switch
+                          id={`${row.name}-switch`}
+                          size="sm"
+                          transform={'scale(0.8)'}
+                          colorScheme="blue"
+                          isChecked={isSelected}
+                          onChange={(e) => {
+                            if (onColumnToggle) {
+                              onColumnToggle(row.name, e.target.checked);
+                            }
+                          }}
+                        />}
                       </HStack>
                     </Td>
                   </Tr>
@@ -162,10 +142,10 @@ const TableCard: FC<Props> = ({ isReadOnly, value, rowCount, onReset, onClick, .
               })}
             </Tbody>
           </Table>
-          <Text fontSize="xs" textAlign={'right'} mt={1}>
-            {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
-          </Text>
         </Box>
+        <Text fontSize="2xs" textAlign={'right'} mt={1}>
+          {`${formatNumber(value.rowCount ?? rowCount ?? NaN)} rows`}
+        </Text>
       </Flex>
     </Flex>
   );
