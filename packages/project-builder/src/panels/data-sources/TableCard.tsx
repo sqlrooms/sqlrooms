@@ -39,6 +39,9 @@ const TableCard: FC<Props> = ({
   ...rest 
 }) => {
   if (!value) return null;
+  const allSelected = value.columns?.every(col => 
+    Object.values(selectedColumns).includes(col.name)
+  ) ?? false;
 
   return (
     <Flex
@@ -66,6 +69,7 @@ const TableCard: FC<Props> = ({
           borderBottom={'0.5px solid'}
           borderColor={'gray.700'}
           gap={2}
+          alignItems={'center'}
         >
           <Text
             flex={1}
@@ -78,15 +82,23 @@ const TableCard: FC<Props> = ({
           >
             {value.tableName}
           </Text>
-          <Flex>
+          <Flex gap={2} py={1} alignItems={'center'}>
             <Button
               size="xs"
-              borderRadius="sm"
+              borderRadius="md"
+              lineHeight={'0'}
+              height={'20px'}
               colorScheme={'blue'}
               onClick={onClick}
             >
               View data
              </Button>
+             <Switch
+                  size="sm"
+                  colorScheme="blue"
+                  isChecked={allSelected}
+                  onChange={() => onReset && onReset()}
+                /> 
           </Flex>
         </Flex>
         <Box flex={1} overflowY="auto">
