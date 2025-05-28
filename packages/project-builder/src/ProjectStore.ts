@@ -323,7 +323,7 @@ export function createProjectSlice<PC extends BaseProjectConfig>(
 
       hasUnsavedChanges: () => {
         const {projectConfig, lastSavedConfig} = get();
-        return projectConfig !== lastSavedConfig;
+        return !!(lastSavedConfig && (projectConfig !== lastSavedConfig));
       },
 
       addDataSource: async (dataSource, status = DataSourceStatus.PENDING) => {
