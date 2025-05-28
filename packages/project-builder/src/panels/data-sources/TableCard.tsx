@@ -90,15 +90,16 @@ const TableCard: FC<Props> = ({
               height={'20px'}
               colorScheme={'blue'}
               onClick={onClick}
+              fontWeight="300"
             >
-              View data
-             </Button>
-             <Switch
-                  size="sm"
-                  colorScheme="blue"
-                  isChecked={allSelected}
-                  onChange={() => onReset && onReset()}
-                /> 
+              view data
+            </Button>
+            {showSwitches && <Switch
+              size="sm"
+              colorScheme="blue"
+              isChecked={allSelected}
+              onChange={() => onReset && onReset()}
+            />}
           </Flex>
         </Flex>
         <Box flex={1} overflowY="auto">
