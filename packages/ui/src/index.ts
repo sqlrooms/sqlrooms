@@ -22,6 +22,7 @@ export * from './components/error-pane';
 export * from './components/form';
 export * from './components/input';
 export * from './components/label';
+export * from './components/pagination';
 export * from './components/popover';
 export * from './components/progress-modal';
 export * from './components/progress';
