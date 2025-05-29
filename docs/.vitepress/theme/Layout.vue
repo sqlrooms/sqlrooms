@@ -91,6 +91,10 @@ html:not(.dark) .video.dark {
   text-decoration: underline;
 }
 
+html:not(.dark) .foursquare-footer img {
+  filter: invert(1);
+}
+
 @media (min-width: 640px) {
   .video {
     max-height: 256px;
