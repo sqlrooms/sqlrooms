@@ -60,36 +60,6 @@ function MyS3Browser() {
 }
 ```
 
-### S3 Utility Functions
-
-The package also provides utility functions for working with S3:
-
-```tsx
-import {S3Client} from '@aws-sdk/client-s3';
-import {
-  listFilesAndDirectoriesWithPrefix,
-  deleteS3Files,
-} from '@sqlrooms/s3-browser';
-
-// Initialize S3 client
-const s3Client = new S3Client({region: 'us-east-1'});
-
-// List files and directories
-async function listFiles() {
-  const files = await listFilesAndDirectoriesWithPrefix(
-    s3Client,
-    'my-bucket',
-    'path/to/directory',
-  );
-  console.log(files);
-}
-
-// Delete files with a prefix
-async function deleteFiles() {
-  await deleteS3Files(s3Client, 'my-bucket', 'path/to/delete');
-}
-```
-
 ## API Reference
 
 ### S3FileBrowser

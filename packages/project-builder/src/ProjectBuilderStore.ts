@@ -119,7 +119,10 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
       query: string,
       oldTableName?: string,
     ): Promise<void>;
-    removeSqlQueryDataSource(tableName: string): Promise<void>;
+    removeSqlQueryDataSource(
+      tableName: string,
+      options: {schema?: string; database?: string},
+    ): Promise<void>;
     areDatasetsReady(): boolean;
 
     addProjectFile(
@@ -401,9 +404,9 @@ export function createProjectBuilderSlice<PC extends BaseProjectConfig>(
           await get().db.refreshTableSchemas();
         },
 
-        removeSqlQueryDataSource: async (tableName) => {
+        removeSqlQueryDataSource: async (tableName, options) => {
           const {db} = get();
-          await db.dropTable(tableName);
+          await db.dropTable(tableName, options);
           set((state) =>
             produce(state, (draft) => {
               draft.config.dataSources = draft.config.dataSources.filter(
