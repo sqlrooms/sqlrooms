@@ -124,14 +124,47 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
   }
 
-  async query<T extends arrow.TypeMap = any>(
+  protected async executeQueryWithSignal<T extends arrow.TypeMap = any>(
     query: string,
+    signal: AbortSignal,
   ): Promise<arrow.Table<T>> {
     await this.ensureInitialized();
     if (!this.conn) {
       throw new Error('DuckDB connection not initialized');
     }
-    return await this.conn.query(query);
+
+    if (signal.aborted) {
+      throw new Error('Query aborted before execution');
+    }
+
+    // Create a promise that rejects if the signal is aborted
+    let abortHandler: (() => void) | undefined;
+    const abortPromise = new Promise<never>((_, reject) => {
+      abortHandler = () => reject(new Error('Query cancelled'));
+      signal.addEventListener('abort', abortHandler);
+    });
+
+    try {
+      const queryPromise = this.conn.query(query);
+
+      // Race between the query and the abort signal
+      const result = await Promise.race([queryPromise, abortPromise]);
+      return result as arrow.Table<T>;
+    } finally {
+      // Clean up the abort listener
+      if (abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+    }
+  }
+
+  async cancelQuery(queryId: string): Promise<void> {
+    // Call parent's cancel logic first (handles AbortController cleanup)
+    await super.cancelQuery(queryId);
+
+    // Note: DuckDB WASM doesn't currently support query cancellation at the DB level
+    // The cancellation works through AbortSignal/Promise.race approach above
+    // If DuckDB WASM adds query cancellation support in the future, we can implement it here
   }
 
   async loadFile(
@@ -140,7 +173,7 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     opts?: LoadFileOptions,
   ) {
     await this.withTempRegisteredFile(file, async (fileName) => {
-      super.loadFile(fileName, tableName, opts);
+      await super.loadFile(fileName, tableName, opts);
     });
   }
 

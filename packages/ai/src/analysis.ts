@@ -91,7 +91,7 @@ async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
   try {
     const viewName = `temp_result_${Date.now()}`; // unique view name to avoid conflicts
     await connector.query(`CREATE TEMPORARY VIEW ${viewName} AS ${sqlQuery}`);
-    const summaryResult = await connector.query(`SUMMARIZE ${viewName}`);
+    const summaryResult = await connector.query(`SUMMARIZE ${viewName}`).result;
     const summaryData = arrowTableToJson(summaryResult);
     await connector.query(`DROP VIEW IF EXISTS ${viewName}`);
     return summaryData;
@@ -226,7 +226,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
         try {
           const connector = await store.getState().db.getConnector();
           // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-          const result = await connector.query(sqlQuery);
+          const result = await connector.query(sqlQuery).result;
           // Only get summary if the query isn't already a SUMMARIZE query
           const summaryData = sqlQuery.toLowerCase().includes('summarize')
             ? arrowTableToJson(result)

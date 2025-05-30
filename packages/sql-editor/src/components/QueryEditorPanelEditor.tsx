@@ -13,6 +13,9 @@ export const QueryEditorPanelEditor: React.FC<{
 }> = ({className, queryId}) => {
   const tableSchemas = useStoreWithSqlEditor((s) => s.db.tables);
   const runQuery = useStoreWithSqlEditor((s) => s.sqlEditor.runQuery);
+  const queryStatus = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.queryResult?.status,
+  );
 
   const queryText = useStoreWithSqlEditor(
     (s) => s.config.sqlEditor.queries.find((q) => q.id === queryId)?.query,
@@ -38,7 +41,6 @@ export const QueryEditorPanelEditor: React.FC<{
   const handleEditorMount = useCallback(
     (editor: EditorInstance, monaco: MonacoInstance, queryId: string) => {
       editorRef.current[queryId] = editor;
-
       // Add keyboard shortcut for running query
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
         const model = editor.getModel();

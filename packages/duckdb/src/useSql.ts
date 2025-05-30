@@ -214,7 +214,7 @@ export function useSql<
 
       try {
         const connector = await getConnector();
-        const result = await connector.query(options.query);
+        const result = await connector.query(options.query).result;
 
         // Create a row accessor that optionally validates with the schema
         const rowAccessor = createTypedRowAccessor<Row>({

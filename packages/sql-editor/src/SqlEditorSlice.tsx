@@ -46,7 +46,8 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
 }
 
 export type QueryResult =
-  | {status: 'loading'}
+  | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
+  | {status: 'aborted'}
   | {status: 'error'; error: string}
   | {
       status: 'success';
@@ -91,6 +92,11 @@ export type SqlEditorSliceState = {
      * Run the currently selected query.
      */
     runCurrentQuery(options?: RunQueryOptions): Promise<QueryResult>;
+
+    /**
+     * Abort the currently running query.
+     */
+    abortCurrentQuery(): void;
 
     /**
      * Export query results to CSV.
@@ -159,7 +165,26 @@ export function createSqlEditorSlice<
       runCurrentQuery: async (options): Promise<QueryResult> =>
         get().sqlEditor.runQuery(get().sqlEditor.getCurrentQuery(), options),
 
+      abortCurrentQuery: () => {
+        const currentResult = get().sqlEditor.queryResult;
+        if (currentResult?.status === 'loading' && currentResult.controller) {
+          currentResult.controller.abort();
+        }
+
+        set((state) =>
+          produce(state, (draft) => {
+            if (draft.sqlEditor.queryResult?.status === 'loading') {
+              draft.sqlEditor.queryResult.isBeingAborted = true;
+            }
+          }),
+        );
+      },
+
       runQuery: async (query, options): Promise<QueryResult> => {
+        if (get().sqlEditor.queryResult?.status === 'loading') {
+          throw new Error('Query already running');
+        }
+
         const {limit, skipExecutingLastSelect = false} = options || {};
         if (!query.trim()) {
           return {
@@ -167,11 +192,19 @@ export function createSqlEditorSlice<
             error: 'Empty query',
           };
         }
+
+        // Create abort controller for this query execution
+        const queryController = new AbortController();
+
         // First update loading state and clear results
         set((state) =>
           produce(state, (draft) => {
             draft.sqlEditor.selectedTable = undefined;
-            draft.sqlEditor.queryResult = {status: 'loading'};
+            draft.sqlEditor.queryResult = {
+              status: 'loading',
+              isBeingAborted: false,
+              controller: queryController,
+            };
             draft.config.sqlEditor.lastExecutedQuery = query;
           }),
         );
@@ -179,31 +212,53 @@ export function createSqlEditorSlice<
         let queryResult: QueryResult;
         try {
           const connector = await get().db.getConnector();
+          const signal = queryController.signal;
 
           const statements = splitSqlStatements(query);
           const allButLastStatements = statements.slice(0, -1);
           const lastStatement = statements[statements.length - 1] as string;
 
+          // Execute all but the last statements with cancellation support
           for (const statement of allButLastStatements) {
-            await connector.query(statement);
+            if (signal.aborted) {
+              throw new Error('Query aborted');
+            }
+            await connector.query(statement, {signal}).result;
+          }
+
+          if (signal.aborted) {
+            throw new Error('Query aborted');
           }
 
           const parsedLastStatement =
             await get().db.sqlSelectToJson(lastStatement);
 
+          if (signal.aborted) {
+            throw new Error('Query aborted');
+          }
+
           const isValidSelectQuery = !parsedLastStatement.error;
           if (isValidSelectQuery) {
+            let resultPreview: arrow.Table | undefined = undefined;
+
+            if (!skipExecutingLastSelect) {
+              if (signal.aborted) {
+                throw new Error('Query aborted');
+              }
+
+              const finalQuery = limit
+                ? `SELECT * FROM (${lastStatement}) LIMIT ${limit}`
+                : lastStatement;
+
+              resultPreview = await connector.query(finalQuery, {signal})
+                .result;
+            }
+
             queryResult = {
               status: 'success',
               lastQueryStatement: lastStatement,
               isSelect: true,
-              resultPreview: skipExecutingLastSelect
-                ? undefined
-                : limit
-                  ? await connector.query(
-                      `SELECT * FROM (${lastStatement}) LIMIT ${limit}`,
-                    )
-                  : await connector.query(lastStatement),
+              resultPreview,
             };
           } else {
             if (
@@ -215,26 +270,43 @@ export function createSqlEditorSlice<
                 `\n${getSqlErrorWithPointer(lastStatement, Number(parsedLastStatement.position)).formatted}`
               );
             }
-            await connector.query(lastStatement);
+
+            if (signal.aborted) {
+              throw new Error('Query aborted');
+            }
+
+            await connector.query(lastStatement, {signal}).result;
             queryResult = {
               status: 'success',
               lastQueryStatement: lastStatement,
               isSelect: false,
             };
           }
+
           // Refresh table schemas if there are multiple statements or if the
           // last statement is not a select query
           if (statements.length > 1 || !isValidSelectQuery) {
             get().db.refreshTableSchemas();
           }
+
+          if (signal.aborted) {
+            throw new Error('Query aborted');
+          }
         } catch (e) {
           console.error(e);
           const errorMessage = e instanceof Error ? e.message : String(e);
 
-          queryResult = {
-            status: 'error',
-            error: errorMessage,
-          };
+          if (
+            errorMessage === 'Query aborted' ||
+            queryController.signal.aborted
+          ) {
+            queryResult = {status: 'aborted'};
+          } else {
+            queryResult = {
+              status: 'error',
+              error: errorMessage,
+            };
+          }
         }
 
         set((state) => ({

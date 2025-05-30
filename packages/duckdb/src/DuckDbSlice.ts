@@ -224,7 +224,7 @@ export function createDuckDbSlice({
               `CREATE OR REPLACE TABLE main.${tableName} AS (
               ${statements[0]}
             )`,
-            ),
+            ).result,
           );
           return {tableName, rowCount};
         },
@@ -235,7 +235,7 @@ export function createDuckDbSlice({
             `SELECT * FROM information_schema.tables 
            ${schema === '*' ? '' : `WHERE table_schema = '${schema}'`}
            ORDER BY table_name`,
-          );
+          ).result;
           const tableNames: string[] = [];
           for (let i = 0; i < tablesResults.numRows; i++) {
             tableNames.push(tablesResults.getChild('table_name')?.get(i));
@@ -250,7 +250,7 @@ export function createDuckDbSlice({
           const connector = await get().db.getConnector();
           const describeResults = await connector.query(
             `DESCRIBE ${schema}.${tableName}`,
-          );
+          ).result;
           const columnNames = describeResults.getChild('column_name');
           const columnTypes = describeResults.getChild('column_type');
           const columns: TableColumn[] = [];
@@ -274,7 +274,7 @@ export function createDuckDbSlice({
           const connector = await get().db.getConnector();
           const result = await connector.query(
             `SELECT COUNT(*) FROM ${schema}.${tableName}`,
-          );
+          ).result;
           return getColValAsNumber(result);
         },
 
@@ -283,7 +283,7 @@ export function createDuckDbSlice({
           const describeResults = await connector.query(
             `FROM (DESCRIBE) SELECT database, schema, name, column_names, column_types
             ${schema === '*' ? '' : `WHERE schema = '${schema}'`}`,
-          );
+          ).result;
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
@@ -315,7 +315,7 @@ export function createDuckDbSlice({
           const connector = await get().db.getConnector();
           const res = await connector.query(
             `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = '${tableName}'`,
-          );
+          ).result;
           return getColValAsNumber(res) > 0;
         },
 
@@ -326,7 +326,8 @@ export function createDuckDbSlice({
           const qualifiedTable = database
             ? `${database}.${schema}.${tableName}`
             : `${schema}.${tableName}`;
-          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
+          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`)
+            .result;
           await get().db.refreshTableSchemas();
         },
 
@@ -404,7 +405,7 @@ export function createDuckDbSlice({
           const parsedQuery = (
             await connector.query(
               `SELECT json_serialize_sql(${escapeVal(sql)})`,
-            )
+            ).result
           )
             .getChildAt(0)
             ?.get(0);
