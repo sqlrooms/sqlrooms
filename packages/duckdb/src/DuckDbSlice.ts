@@ -322,7 +322,7 @@ export function createDuckDbSlice({
 
         async dropTable(
           tableName: string,
-          options: {schema?: string; database?: string},
+          options?: {schema?: string; database?: string},
         ): Promise<void> {
           const schema = options?.schema || 'main';
           const database = options?.database;
