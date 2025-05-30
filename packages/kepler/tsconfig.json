@@ -3,6 +3,6 @@
   "compilerOptions": {
     "outDir": "dist"
   },
-  "include": ["src", "../s3-browser/src/S3CredentialForm.tsx"],
+  "include": ["src"],
   "exclude": ["node_modules", "dist"]
 }
