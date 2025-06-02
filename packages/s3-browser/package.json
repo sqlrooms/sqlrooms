@@ -21,7 +21,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.474.0",
-    "react-hook-form": "^7.54.2",
+    "react-hook-form": "^7.56.4",
     "zod": "^3.24.1"  
   },
   "peerDependencies": {

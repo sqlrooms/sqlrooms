@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {useForm, SubmitHandler, Resolver} from 'react-hook-form';
+import {useForm, SubmitHandler} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
@@ -152,7 +152,6 @@ export function S3CredentialForm({
       // You can await here
       const response = await loadS3Connections();
       if (response && response.length > 0 && isMounted) {
-        console.log(response);
         // Assuming loadS3Connections returns an array of connections
         setSavedConnections(response);
       }
@@ -163,9 +162,9 @@ export function S3CredentialForm({
     };
   }, []);
 
+  // @ts-expect-error zodResolver expects a Resolver type
   const resolver = zodResolver(formSchema);
   const form = useForm<FormData>({
-    // @ts-expect-error zodResolver expects a Resolver type
     resolver,
     defaultValues: {
       accessKeyId: '',
@@ -290,7 +289,7 @@ export function S3CredentialForm({
         </TabsTrigger>
       </TabsList>
       <TabsContent value="new" className="mt-0 w-full">
-        <Form {...form}>
+        <Form<FormData> {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="w-full">
             <div className="grid h-full w-full grid-cols-[240px_1fr] gap-8">
               <div className="flex flex-col gap-4">
