@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {useForm} from 'react-hook-form';
+import {useForm, SubmitHandler, Resolver} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
@@ -50,14 +50,16 @@ const S3_REGIONS = [
 ];
 
 const formSchema = z.object({
-  accessKeyId: z.string().optional(),
-  secretAccessKey: z.string().optional(),
+  accessKeyId: z.string().min(1, 'Required'),
+  secretAccessKey: z.string().min(1, 'Required'),
   sessionToken: z.string().optional(),
   region: z.string().min(1, 'Required'),
   bucket: z.string().min(1, 'Required'),
   name: z.string().max(100, 'Max 100 characters').optional(),
-  saveConnection: z.boolean().default(false),
+  saveConnection: z.boolean().default(false).optional(),
 });
+
+type FormData = z.infer<typeof formSchema>;
 
 type ParsedType = {
   accessKeyId?: string;
@@ -116,7 +118,7 @@ const parseCredentialProcess = (text: string): ParsedType => {
 };
 
 export type S3CredentialFormProps = {
-  onConnect: (data: z.infer<typeof formSchema>) => void;
+  onConnect: (data: FormData) => void;
   isLoading?: boolean;
   saveS3Connection: (data: S3Config) => Promise<void>;
   loadS3Connections: () => Promise<S3Connection[]>;
@@ -161,8 +163,10 @@ export function S3CredentialForm({
     };
   }, []);
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
+  const resolver = zodResolver(formSchema);
+  const form = useForm<FormData>({
+    // @ts-expect-error zodResolver expects a Resolver type
+    resolver,
     defaultValues: {
       accessKeyId: '',
       secretAccessKey: '',
@@ -228,15 +232,15 @@ export function S3CredentialForm({
     }
   }, [pasteText, form, showNotification]);
 
-  const handleSubmit = useCallback(
-    async (data: z.infer<typeof formSchema>) => {
+  const handleSubmit: SubmitHandler<FormData> = useCallback(
+    async (data: FormData) => {
       onConnect(data);
       if (data.saveConnection) {
         try {
           await saveS3Connection({
             accessKeyId: data.accessKeyId,
             secretAccessKey: data.secretAccessKey,
-            sessionToken: data.sessionToken,
+            sessionToken: data.sessionToken || undefined,
             region: data.region,
             bucket: data.bucket,
             name: data.name || `${data.bucket}-${data.region}`,
@@ -252,9 +256,11 @@ export function S3CredentialForm({
 
   const deleteConnection = useCallback(
     async (id: string) => {
-      await deleteS3Connection(id);
-      const connections = await loadS3Connections();
-      setSavedConnections(connections);
+      if (deleteS3Connection) {
+        await deleteS3Connection(id);
+        const connections = await loadS3Connections();
+        setSavedConnections(connections);
+      }
     },
     [deleteS3Connection, setSavedConnections, loadS3Connections],
   );
@@ -288,7 +294,7 @@ export function S3CredentialForm({
           <form onSubmit={form.handleSubmit(handleSubmit)} className="w-full">
             <div className="grid h-full w-full grid-cols-[240px_1fr] gap-8">
               <div className="flex flex-col gap-4">
-                <FormField
+                <FormField<FormData, 'bucket'>
                   control={form.control}
                   name="bucket"
                   render={({field}) => (
@@ -305,7 +311,7 @@ export function S3CredentialForm({
                     </FormItem>
                   )}
                 />
-                <FormField
+                <FormField<FormData, 'region'>
                   control={form.control}
                   name="region"
                   render={({field}) => (
@@ -335,7 +341,7 @@ export function S3CredentialForm({
                     </FormItem>
                   )}
                 />
-                <FormField
+                <FormField<FormData, 'name'>
                   control={form.control}
                   name="name"
                   render={({field}) => (
@@ -352,7 +358,7 @@ export function S3CredentialForm({
                     </FormItem>
                   )}
                 />
-                <FormField
+                <FormField<FormData, 'saveConnection'>
                   control={form.control}
                   name="saveConnection"
                   render={({field}) => (
@@ -432,7 +438,7 @@ export function S3CredentialForm({
                     Clear
                   </Button>
                 </div>
-                <FormField
+                <FormField<FormData, 'accessKeyId'>
                   control={form.control}
                   name="accessKeyId"
                   render={({field}) => (
@@ -450,7 +456,7 @@ export function S3CredentialForm({
                     </FormItem>
                   )}
                 />
-                <FormField
+                <FormField<FormData, 'secretAccessKey'>
                   control={form.control}
                   name="secretAccessKey"
                   render={({field}) => (
@@ -488,7 +494,7 @@ export function S3CredentialForm({
                   )}
                 />
 
-                <FormField
+                <FormField<FormData, 'sessionToken'>
                   control={form.control}
                   name="sessionToken"
                   render={({field}) => (
@@ -577,12 +583,14 @@ export function S3CredentialForm({
                       >
                         Connect
                       </button>
-                      <button
-                        onClick={() => deleteConnection(connection.id)}
-                        className="rounded-md bg-red-100 px-3 py-1 text-sm text-red-700 hover:bg-red-200"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
+                      {deleteConnection ? (
+                        <button
+                          onClick={() => deleteConnection(connection.id)}
+                          className="rounded-md bg-red-100 px-3 py-1 text-sm text-red-700 hover:bg-red-200"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      ) : null}
                     </div>
                   </div>
                 </div>
