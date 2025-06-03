@@ -839,6 +839,9 @@ importers:
       '@cosmograph/cosmos':
         specifier: 2.0.0-beta.22
         version: 2.0.0-beta.22
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
       '@sqlrooms/project-builder':
         specifier: workspace:*
         version: link:../project-builder
@@ -2452,27 +2455,51 @@ importers:
 
   packages/s3-browser:
     dependencies:
+      '@hookform/resolvers':
+        specifier: ^3.10.0
+        version: 3.10.0(react-hook-form@7.56.4(react@18.3.1))
+      '@sqlrooms/project':
+        specifier: workspace:*
+        version: link:../project
+      '@sqlrooms/project-builder':
+        specifier: workspace:*
+        version: link:../project-builder
+      '@sqlrooms/s3':
+        specifier: workspace:*
+        version: link:../s3
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       lucide-react:
         specifier: ^0.474.0
         version: 0.474.0(react@18.3.1)
       react:
         specifier: '*'
         version: 18.3.1
+      react-dom:
+        specifier: '*'
+        version: 18.3.1(react@18.3.1)
       react-hook-form:
         specifier: ^7.56.4
         version: 7.56.4(react@18.3.1)
       zod:
         specifier: ^3.24.1
         version: 3.24.2
+      zustand:
+        specifier: ^5.0.3
+        version: 5.0.3(@types/react@18.3.18)(immer@10.1.1)(react@18.3.1)(use-sync-external-store@1.4.0(react@18.3.1))
 
   packages/schema-tree:
     dependencies:
+      '@radix-ui/react-slot':
+        specifier: ^1.1.1
+        version: 1.2.0(@types/react@18.3.18)(react@18.3.1)
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -5675,7 +5702,7 @@ packages:
         optional: true
 
   '@radix-ui/react-compose-refs@1.1.2':
-    resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==}
+    resolution: {integrity: sha512-z4eqJvfiNnFMHIIvXP3CY57y2WJs5g2v3X0zm9mEJkrkNv4rDxu+sg9Jh8EkXyeqBkB7SOcboo9dMVqhyrACIg==, tarball: https://registry.npmjs.org/@radix-ui/react-compose-refs/-/react-compose-refs-1.1.2.tgz}
     peerDependencies:
       '@types/react': 18.3.18
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
@@ -5994,7 +6021,7 @@ packages:
         optional: true
 
   '@radix-ui/react-slot@1.1.2':
-    resolution: {integrity: sha512-YAKxaiGsSQJ38VzKH86/BPRC4rh+b1Jpa+JneA5LRE7skmLPNAyeG8kPJj/oo4STLvlrs8vkf/iYyc3A5stYCQ==}
+    resolution: {integrity: sha512-YAKxaiGsSQJ38VzKH86/BPRC4rh+b1Jpa+JneA5LRE7skmLPNAyeG8kPJj/oo4STLvlrs8vkf/iYyc3A5stYCQ==, tarball: https://registry.npmjs.org/@radix-ui/react-slot/-/react-slot-1.1.2.tgz}
     peerDependencies:
       '@types/react': 18.3.18
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
@@ -6003,7 +6030,7 @@ packages:
         optional: true
 
   '@radix-ui/react-slot@1.2.0':
-    resolution: {integrity: sha512-ujc+V6r0HNDviYqIK3rW4ffgYiZ8g5DEHrGJVk4x7kTlLXRDILnKX9vAUYeIsLOoDpDJ0ujpqMkjH4w2ofuo6w==}
+    resolution: {integrity: sha512-ujc+V6r0HNDviYqIK3rW4ffgYiZ8g5DEHrGJVk4x7kTlLXRDILnKX9vAUYeIsLOoDpDJ0ujpqMkjH4w2ofuo6w==, tarball: https://registry.npmjs.org/@radix-ui/react-slot/-/react-slot-1.2.0.tgz}
     peerDependencies:
       '@types/react': 18.3.18
       react: ^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc
@@ -21710,6 +21737,12 @@ snapshots:
     optionalDependencies:
       '@types/react': 18.3.18
 
+  '@radix-ui/react-compose-refs@1.1.2(@types/react@18.3.18)(react@18.3.1)':
+    dependencies:
+      react: 18.3.1
+    optionalDependencies:
+      '@types/react': 18.3.18
+
   '@radix-ui/react-compose-refs@1.1.2(@types/react@18.3.18)(react@19.0.0)':
     dependencies:
       react: 19.0.0
@@ -22098,6 +22131,13 @@ snapshots:
     dependencies:
       '@radix-ui/react-compose-refs': 1.1.1(@types/react@18.3.18)(react@19.0.0)
       react: 19.0.0
+    optionalDependencies:
+      '@types/react': 18.3.18
+
+  '@radix-ui/react-slot@1.2.0(@types/react@18.3.18)(react@18.3.1)':
+    dependencies:
+      '@radix-ui/react-compose-refs': 1.1.2(@types/react@18.3.18)(react@18.3.1)
+      react: 18.3.1
     optionalDependencies:
       '@types/react': 18.3.18
 

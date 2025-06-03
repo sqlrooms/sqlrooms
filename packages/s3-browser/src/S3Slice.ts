@@ -1,10 +1,10 @@
-import * as z from 'zod';
 import {StateCreator} from 'zustand';
 import {produce} from 'immer';
 import {BaseProjectConfig, createSlice} from '@sqlrooms/project-builder';
 import {S3Config} from '@sqlrooms/s3';
+import {type Slice} from '@sqlrooms/project';
 
-export type S3State = {
+export type S3State = Slice & {
   s3: {
     // current in credential form
     currentS3Config: S3Config | null;

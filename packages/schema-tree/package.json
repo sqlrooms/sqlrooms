@@ -24,6 +24,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@radix-ui/react-slot": "^1.1.1",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

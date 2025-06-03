@@ -162,7 +162,6 @@ export function S3CredentialForm({
     };
   }, []);
 
-  // @ts-expect-error zodResolver expects a Resolver type
   const resolver = zodResolver(formSchema);
   const form = useForm<FormData>({
     resolver,
