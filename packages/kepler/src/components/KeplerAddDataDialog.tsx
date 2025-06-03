@@ -20,7 +20,7 @@ import {KeplerS3Browser} from './KeplerS3Browser';
 import type {KeplerS3BrowserProps} from '../index';
 import {useIntl} from 'react-intl';
 
-const ACCEPTED_FORMATS = [
+const DEFAULT_ACCEPTED_FORMATS = [
   'csv',
   'tsv',
   'parquet',
@@ -82,6 +82,7 @@ export type KeplerAddDataDialogProps = {
   loadTileSet: LoadTileSet;
   loadFiles: (files: FileList | string[]) => Promise<void>;
   method?: AddDataMethods;
+  acceptedFormats?: string[];
 } & KeplerS3BrowserProps;
 
 export const KeplerAddDataDialog = ({
@@ -95,6 +96,7 @@ export const KeplerAddDataDialog = ({
   deleteS3Credential,
   s3Browser,
   method = AddDataMethods.Upload,
+  acceptedFormats = DEFAULT_ACCEPTED_FORMATS,
 }: KeplerAddDataDialogProps) => {
   const [currentMethod, selectCurrentMethod] = useState<AddDataMethods>(method);
   const onFileDrop = useCallback(
@@ -151,9 +153,9 @@ export const KeplerAddDataDialog = ({
             >
               <div className="h-min-[200px] flex h-full w-full items-center justify-center">
                 <FileDropInput onFileDrop={onFileDrop}>
-                  {ACCEPTED_FORMATS ? (
+                  {acceptedFormats ? (
                     <div className="text-muted-foreground flex flex-wrap justify-center gap-2 opacity-80">
-                      {ACCEPTED_FORMATS.map((ext) => (
+                      {acceptedFormats.map((ext) => (
                         <Icons.FileType
                           key={ext}
                           ext={ext}
