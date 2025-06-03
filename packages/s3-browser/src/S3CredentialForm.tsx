@@ -117,6 +117,48 @@ const parseCredentialProcess = (text: string): ParsedType => {
   return {};
 };
 
+/**
+ * A form component for managing S3 credentials and connections.
+ * 
+ * This component provides:
+ * - Input fields for S3 credentials (access key, secret key, region, bucket)
+ * - Option to save connections for later use
+ * - Ability to paste AWS credentials export format
+ * - Management of saved connections
+ * 
+ * @example
+ * ```tsx
+ * const handleConnect = async (credentials) => {
+ *   // Handle the connection
+ *   console.log('Connecting with:', credentials);
+ * };
+ * 
+ * const handleSaveConnection = async (config) => {
+ *   // Save the connection to your storage
+ *   await saveToStorage(config);
+ * };
+ * 
+ * const handleLoadConnections = async () => {
+ *   // Load saved connections from your storage
+ *   return await loadFromStorage();
+ * };
+ * 
+ * const handleDeleteConnection = async (id) => {
+ *   // Delete a saved connection
+ *   await deleteFromStorage(id);
+ * };
+ * 
+ * return (
+ *   <S3CredentialForm
+ *     onConnect={handleConnect}
+ *     isLoading={false}
+ *     saveS3Connection={handleSaveConnection}
+ *     loadS3Connections={handleLoadConnections}
+ *     deleteS3Connection={handleDeleteConnection}
+ *   />
+ * );
+ * ```
+ */
 export type S3CredentialFormProps = {
   onConnect: (data: FormData) => void;
   isLoading?: boolean;

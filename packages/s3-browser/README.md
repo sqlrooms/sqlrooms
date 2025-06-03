@@ -24,6 +24,117 @@ yarn add @sqlrooms/s3-browser
 
 ## Usage
 
+### Complete Example
+
+```tsx
+import {useState} from 'react';
+import {S3FileBrowser, S3CredentialForm, S3State} from '@sqlrooms/s3-browser';
+import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3';
+
+type S3BrowserProps = {
+  listS3Files: (args: {
+    s3Config: S3Config;
+    prefix: string;
+  }) => Promise<S3FileOrDirectory[]>;
+  loadS3Files: (args: {
+    s3Config: S3Config;
+    prefix: string;
+    files: string[];
+  }) => Promise<void>;
+  s3: S3State['s3'];
+  saveS3Connection: (s3Config: S3Config) => Promise<void>;
+  loadS3Connections: () => Promise<S3Connection[]>;
+  deleteS3Connection: (id: string) => Promise<void>;
+};
+
+export const S3Browser = ({
+  listS3Files,
+  s3,
+  loadS3Files,
+  saveS3Connection,
+  loadS3Connections,
+  deleteS3Connection,
+}: S3BrowserProps) => {
+  const [isConnecting, setIsConnecting] = useState(false);
+  const [error, setError] = useState('');
+  const [files, setFiles] = useState<S3FileOrDirectory[] | null>(null);
+  const [selectedDirectory, onChangeSelectedDirectory] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const {setCurrentS3Config, clearCurrentS3Config, currentS3Config} = s3;
+
+  const listFiles = async (s3Config: S3Config, prefix: string) => {
+    try {
+      const files = await listS3Files({
+        s3Config,
+        prefix,
+      });
+      setCurrentS3Config(s3Config);
+      setFiles(files);
+      setError('');
+      onChangeSelectedDirectory(prefix);
+    } catch (error) {
+      setError((error as Error).message);
+    }
+    setIsConnecting(false);
+  };
+
+  const handleLoadFiles = async () => {
+    if (!currentS3Config) return;
+    await loadS3Files({
+      s3Config: currentS3Config,
+      prefix: selectedDirectory,
+      files: selectedFiles,
+    });
+  };
+
+  return (
+    <div className="flex h-full flex-col items-center gap-4">
+      {/* Connection Panel */}
+      {!files ? (
+        <S3CredentialForm
+          onConnect={(values) => {
+            setIsConnecting(true);
+            listFiles(values, '');
+          }}
+          isLoading={isConnecting}
+          saveS3Connection={saveS3Connection}
+          loadS3Connections={loadS3Connections}
+          deleteS3Connection={deleteS3Connection}
+        />
+      ) : (
+        <div className="flex h-full w-full flex-col items-start justify-start gap-2">
+          <S3FileBrowser
+            files={files}
+            selectedFiles={selectedFiles}
+            selectedDirectory={selectedDirectory}
+            onChangeSelectedFiles={setSelectedFiles}
+            onChangeSelectedDirectory={(directory) => {
+              setIsConnecting(true);
+              if (!currentS3Config) return;
+              listFiles(currentS3Config, directory);
+            }}
+            onCanConfirmChange={() => {}}
+          />
+          <button
+            disabled={!selectedFiles.length}
+            onClick={handleLoadFiles}
+          >
+            Add Selected
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+```
+
+This example demonstrates:
+- Integrating both `S3FileBrowser` and `S3CredentialForm` components
+- Managing S3 connection state
+- Handling file listing and selection
+- Error handling and loading states
+- File loading functionality
+
 ### S3FileBrowser Component
 
 The `S3FileBrowser` component provides a familiar file explorer interface for navigating and selecting files from an S3-like storage.
@@ -57,6 +168,110 @@ function MyS3Browser() {
       onChangeSelectedFiles={setSelectedFiles}
     />
   );
+}
+```
+
+### S3CredentialForm Component
+
+The `S3CredentialForm` component provides a form interface for managing S3 credentials and saved connections.
+
+```tsx
+import {S3CredentialForm} from '@sqlrooms/s3-browser';
+import {S3Config, S3Connection} from '@sqlrooms/s3';
+
+function MyS3ConnectionManager() {
+  const handleConnect = async (credentials: S3Config) => {
+    try {
+      // Use the credentials to establish connection
+      console.log('Connecting with:', credentials);
+      // Example: initializeS3Client(credentials);
+    } catch (error) {
+      console.error('Connection failed:', error);
+    }
+  };
+
+  const handleSaveConnection = async (config: S3Config) => {
+    try {
+      // Save connection to your storage (e.g., local storage, database)
+      const savedConnection = await saveToStorage({
+        ...config,
+        id: generateId(),
+        createdAt: new Date().toISOString()
+      });
+      return savedConnection;
+    } catch (error) {
+      console.error('Failed to save connection:', error);
+    }
+  };
+
+  const handleLoadConnections = async (): Promise<S3Connection[]> => {
+    try {
+      // Load saved connections from your storage
+      const connections = await loadFromStorage();
+      return connections;
+    } catch (error) {
+      console.error('Failed to load connections:', error);
+      return [];
+    }
+  };
+
+  const handleDeleteConnection = async (id: string) => {
+    try {
+      // Delete connection from your storage
+      await deleteFromStorage(id);
+    } catch (error) {
+      console.error('Failed to delete connection:', error);
+    }
+  };
+
+  return (
+    <S3CredentialForm
+      onConnect={handleConnect}
+      isLoading={false}
+      saveS3Connection={handleSaveConnection}
+      loadS3Connections={handleLoadConnections}
+      deleteS3Connection={handleDeleteConnection}
+    />
+  );
+}
+```
+
+Features:
+- Input fields for S3 credentials (access key, secret key, region, bucket)
+- Option to save connections for later use
+- Auto-fill from AWS CLI exports or credential process output
+- Management of saved connections (view, connect, delete)
+- Secure handling of sensitive credentials
+- Support for session tokens (temporary credentials)
+
+#### Props
+
+```tsx
+interface S3CredentialFormProps {
+  /**
+   * Callback fired when the connect button is clicked
+   */
+  onConnect: (data: S3Config) => void;
+
+  /**
+   * Loading state for the connect button
+   */
+  isLoading?: boolean;
+
+  /**
+   * Callback to save a new S3 connection
+   */
+  saveS3Connection: (data: S3Config) => Promise<void>;
+
+  /**
+   * Callback to load saved S3 connections
+   */
+  loadS3Connections: () => Promise<S3Connection[]>;
+
+  /**
+   * Optional callback to delete a saved connection
+   */
+  deleteS3Connection?: (id: string) => Promise<void>;
 }
 ```
 
@@ -98,49 +313,17 @@ interface S3FileBrowserProps {
 }
 ```
 
-### S3FileOrDirectory
-
-```tsx
-type S3FileOrDirectory =
-  | {
-      key: string;
-      isDirectory: true;
-    }
-  | {
-      key: string;
-      isDirectory: false;
-      lastModified?: Date;
-      size?: number;
-      contentType?: string;
-    };
-```
-
-### Utility Functions
-
-```tsx
-/**
- * Lists files and directories with a given prefix
- */
-function listFilesAndDirectoriesWithPrefix(
-  S3: S3Client,
-  bucket: string,
-  prefix?: string,
-): Promise<S3FileOrDirectory[]>;
-
-/**
- * Delete all files with the given prefix
- */
-function deleteS3Files(
-  S3: S3Client,
-  bucket: string,
-  prefix: string,
-): Promise<void>;
-```
-
 ## Dependencies
 
-- @aws-sdk/client-s3
-- React
-- @sqlrooms/ui (for UI components)
-- @sqlrooms/utils (for formatting utilities)
-- zod (for type validation)
+- `react` ^18.0.0
+- `react-dom` ^18.0.0
+- `@sqlrooms/ui` - UI component library
+- `@sqlrooms/utils` - Utility functions
+- `@sqlrooms/s3` - S3 client and types
+- `@hookform/resolvers` - Form validation resolvers
+- `react-hook-form` - Form handling
+- `zod` - Runtime type checking and validation
+- `lucide-react` - Icon components
+- `class-variance-authority` - Utility for managing component variants
+- `clsx` - Utility for constructing className strings
+- `tailwindcss` - CSS framework
