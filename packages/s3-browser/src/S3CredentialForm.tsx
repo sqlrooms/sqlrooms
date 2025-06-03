@@ -56,7 +56,7 @@ const formSchema = z.object({
   region: z.string().min(1, 'Required'),
   bucket: z.string().min(1, 'Required'),
   name: z.string().max(100, 'Max 100 characters').optional(),
-  saveConnection: z.boolean().default(false).optional(),
+  saveCredential: z.boolean().default(false).optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -185,7 +185,7 @@ export function S3CredentialForm({
     message: '',
     type: 'success',
   });
-  const [savedConnections, setSavedConnections] = useState<S3Credential[]>([]);
+  const [savedCredentials, setSavedCredentials] = useState<S3Credential[]>([]);
   const [tab, setTab] = useState('new');
 
   // Load saved connections on component mount
@@ -196,7 +196,7 @@ export function S3CredentialForm({
       const response = await loadS3Credentials();
       if (response && response.length > 0 && isMounted) {
         // Assuming loadS3Credentials returns an array of connections
-        setSavedConnections(response);
+        setSavedCredentials(response);
       }
     }
     fetchConnections();
@@ -214,7 +214,7 @@ export function S3CredentialForm({
       sessionToken: '',
       region: 'us-east-1',
       bucket: '',
-      saveConnection: false,
+      saveCredential: false,
     },
   });
   const toggleVisibility = useCallback(
@@ -277,7 +277,7 @@ export function S3CredentialForm({
   const handleSubmit: SubmitHandler<FormData> = useCallback(
     async (data: FormData) => {
       onConnect(data);
-      if (data.saveConnection) {
+      if (data.saveCredential) {
         try {
           await saveS3Credential({
             accessKeyId: data.accessKeyId,
@@ -296,15 +296,15 @@ export function S3CredentialForm({
     [onConnect, saveS3Credential, showNotification],
   );
 
-  const deleteConnection = useCallback(
+  const deleteCredential = useCallback(
     async (id: string) => {
       if (deleteS3Credential) {
         await deleteS3Credential(id);
-        const connections = await loadS3Credentials();
-        setSavedConnections(connections);
+        const credentials = await loadS3Credentials();
+        setSavedCredentials(credentials);
       }
     },
-    [deleteS3Credential, setSavedConnections, loadS3Credentials],
+    [deleteS3Credential, setSavedCredentials, loadS3Credentials],
   );
 
   return (
@@ -321,14 +321,14 @@ export function S3CredentialForm({
           className="data-[state=active]:border-primary data-[state=active]:text-primary rounded-md border px-4 py-2 data-[state=active]:shadow-none"
         >
           <PlusIcon size={16} className="mr-2" />
-          New Connection
+          New Credential
         </TabsTrigger>
         <TabsTrigger
           value="saved"
           className="data-[state=active]:border-primary data-[state=active]:text-primary rounded-md border px-4 py-2 data-[state=active]:shadow-none"
         >
           <Database size={16} className="mr-2" />
-          Saved Connections
+          Saved Credential
         </TabsTrigger>
       </TabsList>
       <TabsContent value="new" className="mt-0 w-full">
@@ -404,10 +404,10 @@ export function S3CredentialForm({
                     </FormItem>
                   )}
                 />
-                <FormField<FormData, 'saveConnection'>
+                <FormField<FormData, 'saveCredential'>
                   // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
-                  name="saveConnection"
+                  name="saveCredential"
                   render={({field}) => (
                     <FormItem className="flex items-center space-x-2 space-y-0">
                       <FormControl>
@@ -417,7 +417,7 @@ export function S3CredentialForm({
                           className="h-4 w-4"
                         />
                       </FormControl>
-                      <FormLabel>Save this connection</FormLabel>
+                      <FormLabel>Save credential</FormLabel>
                       <Tooltip>
                         <TooltipTrigger asChild>
                           <Info
@@ -427,7 +427,7 @@ export function S3CredentialForm({
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
                           <pre className="w-[300px] text-wrap break-words text-xs">
-                            Save this connection securely on your computer for
+                            Save this credential securely on your computer for
                             future use. Credentials will be encrypted and stored
                             locally
                           </pre>
@@ -597,45 +597,45 @@ export function S3CredentialForm({
       </TabsContent>
       <TabsContent value="saved" className="mt-0 w-full">
         <div className="space-y-4">
-          {savedConnections.length === 0 ? (
+          {savedCredentials.length === 0 ? (
             <div className="flex flex-col items-center justify-between py-12">
               <Database className="text-muted-foreground mx-auto mb-4 h-8 w-8" />
-              <h3 className="mb-2 text-lg font-medium">No saved connections</h3>
+              <h3 className="mb-2 text-lg font-medium">No saved credentials</h3>
               <p className="text-muted-foreground">
-                Create your first connection to get started
+                Create your first credential to get started
               </p>
             </div>
           ) : (
             <div className="grid gap-4">
-              {savedConnections.map((connection) => (
+              {savedCredentials.map((credential) => (
                 <div
-                  key={connection.id}
+                  key={credential.id}
                   className="rounded-lg border p-4 transition-shadow hover:cursor-pointer hover:shadow-sm"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
-                      <h3 className="mb-1 font-semibold">{connection.name}</h3>
+                      <h3 className="mb-1 font-semibold">{credential.name}</h3>
                       <p className="text-muted-foreground mb-2 text-sm">
-                        {connection.bucket}
+                        {credential.bucket}
                       </p>
                       <div className="text-muted-foreground flex items-center space-x-4 text-xs">
-                        <span>Region: {connection.region}</span>
+                        <span>Region: {credential.region}</span>
                         <span>
                           Created:{' '}
-                          {new Date(connection.createdAt).toLocaleDateString()}
+                          {new Date(credential.createdAt).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
                     <div className="flex space-x-2">
                       <button
-                        onClick={() => onConnect(connection)}
+                        onClick={() => onConnect(credential)}
                         className="text-primary rounded-md bg-blue-100 px-3 py-1 text-sm hover:bg-blue-200"
                       >
                         Connect
                       </button>
-                      {deleteConnection ? (
+                      {deleteCredential ? (
                         <button
-                          onClick={() => deleteConnection(connection.id)}
+                          onClick={() => deleteCredential(credential.id)}
                           className="rounded-md bg-red-100 px-3 py-1 text-sm text-red-700 hover:bg-red-200"
                         >
                           <Trash2 className="h-4 w-4" />
