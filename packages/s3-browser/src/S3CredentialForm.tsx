@@ -166,6 +166,7 @@ export type S3CredentialFormProps = {
   saveS3Credential: (data: S3Config) => Promise<void>;
   loadS3Credentials: () => Promise<S3Credential[]>;
   deleteS3Credential?: (id: string) => Promise<void>;
+  onInputChange?: () => void;
 };
 
 export function S3CredentialForm({
@@ -174,6 +175,7 @@ export function S3CredentialForm({
   saveS3Credential,
   loadS3Credentials,
   deleteS3Credential,
+  onInputChange,
 }: S3CredentialFormProps) {
   const [showSecrets, setShowSecrets] = useState({
     secretAccessKey: false,
@@ -266,13 +268,14 @@ export function S3CredentialForm({
 
       showNotification('Credentials auto-filled successfully!');
       setPasteText('');
+      onInputChange?.();
     } else {
       showNotification(
         'Could not parse credentials. Please check the format.',
         'error',
       );
     }
-  }, [pasteText, form, showNotification]);
+  }, [pasteText, form, showNotification, onInputChange]);
 
   const handleSubmit: SubmitHandler<FormData> = useCallback(
     async (data: FormData) => {
@@ -306,6 +309,11 @@ export function S3CredentialForm({
     },
     [deleteS3Credential, setSavedCredentials, loadS3Credentials],
   );
+
+  // Add a handler for input changes
+  const handleInputChange = useCallback(() => {
+    onInputChange?.();
+  }, [onInputChange]);
 
   return (
     <Tabs
@@ -347,6 +355,10 @@ export function S3CredentialForm({
                           {...field}
                           type="text"
                           placeholder="my-bucket-name"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleInputChange();
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -361,7 +373,10 @@ export function S3CredentialForm({
                       <FormLabel>Region</FormLabel>
                       <FormControl>
                         <Select
-                          onValueChange={field.onChange}
+                          onValueChange={(e) => {
+                            field.onChange(e);
+                            handleInputChange();
+                          }}
                           defaultValue={field.value}
                         >
                           <SelectTrigger>
@@ -492,6 +507,10 @@ export function S3CredentialForm({
                           type="text"
                           className="w-full rounded-md border px-3 py-2"
                           placeholder="AKIAXXXXXXXXXXXXXXXX"
+                          onChange={(e) => {
+                            field.onChange(e);
+                            handleInputChange();
+                          }}
                         />
                       </FormControl>
                       <FormMessage />
@@ -513,6 +532,10 @@ export function S3CredentialForm({
                             }
                             placeholder="••••••••••••••••••••••••"
                             className="pr-8"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleInputChange();
+                            }}
                           />
                           <div className="text-muted-foreground absolute right-3 top-0 flex h-9 gap-1">
                             <button
@@ -553,6 +576,10 @@ export function S3CredentialForm({
                             }
                             placeholder="••••••••••••••••••••••••"
                             className="pr-8"
+                            onChange={(e) => {
+                              field.onChange(e);
+                              handleInputChange();
+                            }}
                           />
                           <div className="text-muted-foreground absolute right-3 top-0 flex h-9 gap-1">
                             <button

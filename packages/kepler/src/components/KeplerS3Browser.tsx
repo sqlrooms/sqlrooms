@@ -126,6 +126,7 @@ export const KeplerS3Browser = ({
             saveS3Credential={saveS3Credential}
             loadS3Credentials={loadS3Credentials}
             deleteS3Credential={deleteS3Credential}
+            onInputChange={() => setError('')}
           />
         </>
       ) : files.length ? (
