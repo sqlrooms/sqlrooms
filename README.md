@@ -34,6 +34,7 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 - **[@sqlrooms/data-table](/packages/data-table/)**: Interactive data grid for query result visualization
 - **[@sqlrooms/sql-editor](/packages/sql-editor/)**: SQL query editor with syntax highlighting and auto-completion
 - **[@sqlrooms/layout](/packages/layout/)**: Flexible panel management system
+- **[@sqlrooms/s3](/packages/s3/)**: S3-compatible utils for data management
 - **[@sqlrooms/s3-browser](/packages/s3-browser/)**: S3-compatible storage browser for data management
 - **[@sqlrooms/vega](/packages/vega/)**: Data visualization integration with Vega-Lite
 - **[@sqlrooms/ai](/packages/ai/)**: Optional AI integration for natural language querying

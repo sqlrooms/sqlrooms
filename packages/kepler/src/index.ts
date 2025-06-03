@@ -9,9 +9,22 @@ export {
   useStoreWithKepler,
   createDefaultKeplerConfig,
   KeplerMapSchema,
-  type KeplerSliceState
+  type KeplerSliceState,
 } from './KeplerSlice';
 
 export {KeplerMapContainer} from './components/KeplerMapContainer';
 export {KeplerSidePanels} from './components/KeplerSidePanels';
-export {KeplerAddTileSetDialog, type LoadTileSet} from './components/KeplerAddTileSetDialog';
+export {
+  KeplerAddTileSetDialog,
+  type LoadTileSet,
+} from './components/KeplerAddTileSetDialog';
+export {
+  KeplerAddDataDialog,
+  type KeplerAddDataDialogProps,
+  type AddDataMethods,
+} from './components/KeplerAddDataDialog';
+export {FileDropInput} from './components/FileDropInput';
+export {
+  KeplerS3Browser,
+  type KeplerS3BrowserProps,
+} from './components/KeplerS3Browser';
