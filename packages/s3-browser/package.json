@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",
-    "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/project": "workspace:*",
+    "@sqlrooms/project-builder": "workspace:*",
     "@sqlrooms/s3": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
