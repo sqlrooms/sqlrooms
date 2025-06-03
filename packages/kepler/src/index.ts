@@ -20,3 +20,4 @@ export {
 } from './components/KeplerAddTileSetDialog';
 export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
 export {FileDropInput} from './components/FileDropInput';
+export {KeplerS3Browser} from './components/KeplerS3Browser';

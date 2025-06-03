@@ -16,7 +16,7 @@ import {LoadTileSetFactory, Icons} from '@kepler.gl/components';
 import {FileDropInput} from './FileDropInput';
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
-import {S3Browser, S3BrowserProps} from './S3Browser';
+import {KeplerS3Browser, KeplerS3BrowserProps} from './KeplerS3Browser';
 import {useIntl} from 'react-intl';
 
 const ACCEPTED_FORMATS = [
@@ -81,7 +81,7 @@ export type KeplerAddDataDialogProps = {
   loadTileSet: LoadTileSet;
   loadFiles: (files: FileList | string[]) => Promise<void>;
   method?: AddDataMethods;
-} & S3BrowserProps;
+} & KeplerS3BrowserProps;
 
 export const KeplerAddDataDialog = ({
   addDataModal,
@@ -89,9 +89,9 @@ export const KeplerAddDataDialog = ({
   loadFiles,
   listS3Files,
   loadS3Files,
-  saveS3Connection,
-  loadS3Connections,
-  deleteS3Connection,
+  saveS3Credential,
+  loadS3Credentials,
+  deleteS3Credential,
   s3,
   method = AddDataMethods.Upload,
 }: KeplerAddDataDialogProps) => {
@@ -104,7 +104,7 @@ export const KeplerAddDataDialog = ({
     [loadFiles, addDataModal],
   );
   const onLoadS3Files = useCallback(
-    async (...args: Parameters<S3BrowserProps['loadS3Files']>) => {
+    async (...args: Parameters<KeplerS3BrowserProps['loadS3Files']>) => {
       await loadS3Files(...args);
       addDataModal.onClose();
     },
@@ -181,13 +181,13 @@ export const KeplerAddDataDialog = ({
               value={AddDataMethods.S3}
               className="h-full w-full data-[state=inactive]:hidden"
             >
-              <S3Browser
+              <KeplerS3Browser
                 listS3Files={listS3Files}
                 s3={s3}
                 loadS3Files={onLoadS3Files}
-                saveS3Connection={saveS3Connection}
-                loadS3Connections={loadS3Connections}
-                deleteS3Connection={deleteS3Connection}
+                saveS3Credential={saveS3Credential}
+                loadS3Credentials={loadS3Credentials}
+                deleteS3Credential={deleteS3Credential}
               />
             </TabsContent>
           </Tabs>

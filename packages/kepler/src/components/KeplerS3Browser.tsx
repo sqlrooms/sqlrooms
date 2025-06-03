@@ -1,7 +1,7 @@
 import React, {useState, useEffect, useCallback} from 'react';
 
 import {S3FileBrowser, S3CredentialForm, S3State} from '@sqlrooms/s3-browser';
-import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3';
+import {S3FileOrDirectory, S3Config, S3Credential} from '@sqlrooms/s3';
 import {ChevronLeft} from 'lucide-react';
 import {
   DialogFooter,
@@ -11,7 +11,7 @@ import {
   AlertDescription,
 } from '@sqlrooms/ui';
 
-export type S3BrowserProps = {
+export type KeplerS3BrowserProps = {
   listS3Files: (args: {
     s3Config: S3Config;
     prefix: string;
@@ -22,18 +22,18 @@ export type S3BrowserProps = {
     files: string[];
   }) => Promise<void>;
   s3: S3State['s3'];
-  saveS3Connection: (s3Config: S3Config) => Promise<void>;
-  loadS3Connections: () => Promise<S3Connection[]>;
-  deleteS3Connection: (id: string) => Promise<void>;
+  saveS3Credential: (s3Config: S3Config) => Promise<void>;
+  loadS3Credentials: () => Promise<S3Credential[]>;
+  deleteS3Credential: (id: string) => Promise<void>;
 };
-export const S3Browser = ({
+export const KeplerS3Browser = ({
   listS3Files,
   s3,
   loadS3Files,
-  saveS3Connection,
-  loadS3Connections,
-  deleteS3Connection,
-}: S3BrowserProps) => {
+  saveS3Credential,
+  loadS3Credentials,
+  deleteS3Credential,
+}: KeplerS3BrowserProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
   const [files, setFiles] = useState<S3FileOrDirectory[] | null>(null);
@@ -119,9 +119,9 @@ export const S3Browser = ({
           <S3CredentialForm
             onConnect={onConnect}
             isLoading={isConnecting}
-            saveS3Connection={saveS3Connection}
-            loadS3Connections={loadS3Connections}
-            deleteS3Connection={deleteS3Connection}
+            saveS3Credential={saveS3Credential}
+            loadS3Credentials={loadS3Credentials}
+            deleteS3Credential={deleteS3Credential}
           />
         </>
       ) : files.length ? (

@@ -3,7 +3,7 @@ import {useForm, SubmitHandler} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
-import {S3Config, S3Connection} from '@sqlrooms/s3';
+import {S3Config, S3Credential} from '@sqlrooms/s3';
 
 import {
   Input,
@@ -67,6 +67,7 @@ type ParsedType = {
   sessionToken?: string;
   region?: string;
 };
+
 const parseAWSExport = (text: string): ParsedType => {
   const lines = text.split('\n');
   const parsed = {} as Record<string, string>;
@@ -119,42 +120,42 @@ const parseCredentialProcess = (text: string): ParsedType => {
 
 /**
  * A form component for managing S3 credentials and connections.
- * 
+ *
  * This component provides:
  * - Input fields for S3 credentials (access key, secret key, region, bucket)
- * - Option to save connections for later use
+ * - Option to save credentials for later use
  * - Ability to paste AWS credentials export format
- * - Management of saved connections
- * 
+ * - Management of saved credentials
+ *
  * @example
  * ```tsx
  * const handleConnect = async (credentials) => {
  *   // Handle the connection
  *   console.log('Connecting with:', credentials);
  * };
- * 
- * const handleSaveConnection = async (config) => {
- *   // Save the connection to your storage
+ *
+ * const handleSaveCredential = async (config) => {
+ *   // Save the credential to your storage
  *   await saveToStorage(config);
  * };
- * 
- * const handleLoadConnections = async () => {
- *   // Load saved connections from your storage
+ *
+ * const handleLoadCredentials = async () => {
+ *   // Load saved credentials from your storage
  *   return await loadFromStorage();
  * };
- * 
- * const handleDeleteConnection = async (id) => {
- *   // Delete a saved connection
+ *
+ * const handleDeleteCredential = async (id) => {
+ *   // Delete a saved credential
  *   await deleteFromStorage(id);
  * };
- * 
+ *
  * return (
  *   <S3CredentialForm
  *     onConnect={handleConnect}
  *     isLoading={false}
- *     saveS3Connection={handleSaveConnection}
- *     loadS3Connections={handleLoadConnections}
- *     deleteS3Connection={handleDeleteConnection}
+ *     saveS3Credential={handleSaveCredential}
+ *     loadS3Credentials={handleLoadCredentials}
+ *     deleteS3Credential={handleDeleteCredential}
  *   />
  * );
  * ```
@@ -162,17 +163,17 @@ const parseCredentialProcess = (text: string): ParsedType => {
 export type S3CredentialFormProps = {
   onConnect: (data: FormData) => void;
   isLoading?: boolean;
-  saveS3Connection: (data: S3Config) => Promise<void>;
-  loadS3Connections: () => Promise<S3Connection[]>;
-  deleteS3Connection?: (id: string) => Promise<void>;
+  saveS3Credential: (data: S3Config) => Promise<void>;
+  loadS3Credentials: () => Promise<S3Credential[]>;
+  deleteS3Credential?: (id: string) => Promise<void>;
 };
 
 export function S3CredentialForm({
   onConnect,
   isLoading,
-  saveS3Connection,
-  loadS3Connections,
-  deleteS3Connection,
+  saveS3Credential,
+  loadS3Credentials,
+  deleteS3Credential,
 }: S3CredentialFormProps) {
   const [showSecrets, setShowSecrets] = useState({
     secretAccessKey: false,
@@ -184,7 +185,7 @@ export function S3CredentialForm({
     message: '',
     type: 'success',
   });
-  const [savedConnections, setSavedConnections] = useState<S3Connection[]>([]);
+  const [savedConnections, setSavedConnections] = useState<S3Credential[]>([]);
   const [tab, setTab] = useState('new');
 
   // Load saved connections on component mount
@@ -192,9 +193,9 @@ export function S3CredentialForm({
     let isMounted = true;
     async function fetchConnections() {
       // You can await here
-      const response = await loadS3Connections();
+      const response = await loadS3Credentials();
       if (response && response.length > 0 && isMounted) {
-        // Assuming loadS3Connections returns an array of connections
+        // Assuming loadS3Credentials returns an array of connections
         setSavedConnections(response);
       }
     }
@@ -277,7 +278,7 @@ export function S3CredentialForm({
       onConnect(data);
       if (data.saveConnection) {
         try {
-          await saveS3Connection({
+          await saveS3Credential({
             accessKeyId: data.accessKeyId,
             secretAccessKey: data.secretAccessKey,
             sessionToken: data.sessionToken || undefined,
@@ -291,18 +292,18 @@ export function S3CredentialForm({
         }
       }
     },
-    [onConnect, saveS3Connection, showNotification],
+    [onConnect, saveS3Credential, showNotification],
   );
 
   const deleteConnection = useCallback(
     async (id: string) => {
-      if (deleteS3Connection) {
-        await deleteS3Connection(id);
-        const connections = await loadS3Connections();
+      if (deleteS3Credential) {
+        await deleteS3Credential(id);
+        const connections = await loadS3Credentials();
         setSavedConnections(connections);
       }
     },
-    [deleteS3Connection, setSavedConnections, loadS3Connections],
+    [deleteS3Credential, setSavedConnections, loadS3Credentials],
   );
 
   return (

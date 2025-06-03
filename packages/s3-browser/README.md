@@ -42,18 +42,18 @@ type S3BrowserProps = {
     files: string[];
   }) => Promise<void>;
   s3: S3State['s3'];
-  saveS3Connection: (s3Config: S3Config) => Promise<void>;
-  loadS3Connections: () => Promise<S3Connection[]>;
-  deleteS3Connection: (id: string) => Promise<void>;
+  saveS3Credential: (s3Config: S3Config) => Promise<void>;
+  loadS3Credentials: () => Promise<S3Connection[]>;
+  deleteS3Credential: (id: string) => Promise<void>;
 };
 
 export const S3Browser = ({
   listS3Files,
   s3,
   loadS3Files,
-  saveS3Connection,
-  loadS3Connections,
-  deleteS3Connection,
+  saveS3Credential,
+  loadS3Credentials,
+  deleteS3Credential,
 }: S3BrowserProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
@@ -97,9 +97,9 @@ export const S3Browser = ({
             listFiles(values, '');
           }}
           isLoading={isConnecting}
-          saveS3Connection={saveS3Connection}
-          loadS3Connections={loadS3Connections}
-          deleteS3Connection={deleteS3Connection}
+          saveS3Credential={saveS3Credential}
+          loadS3Credentials={loadS3Credentials}
+          deleteS3Credential={deleteS3Credential}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-start justify-start gap-2">
@@ -115,10 +115,7 @@ export const S3Browser = ({
             }}
             onCanConfirmChange={() => {}}
           />
-          <button
-            disabled={!selectedFiles.length}
-            onClick={handleLoadFiles}
-          >
+          <button disabled={!selectedFiles.length} onClick={handleLoadFiles}>
             Add Selected
           </button>
         </div>
@@ -129,6 +126,7 @@ export const S3Browser = ({
 ```
 
 This example demonstrates:
+
 - Integrating both `S3FileBrowser` and `S3CredentialForm` components
 - Managing S3 connection state
 - Handling file listing and selection
@@ -190,37 +188,37 @@ function MyS3ConnectionManager() {
     }
   };
 
-  const handleSaveConnection = async (config: S3Config) => {
+  const handleSaveCredential = async (config: S3Config) => {
     try {
-      // Save connection to your storage (e.g., local storage, database)
-      const savedConnection = await saveToStorage({
+      // Save credential to your storage (e.g., local storage, database)
+      const savedCredential = await saveToStorage({
         ...config,
         id: generateId(),
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
       });
-      return savedConnection;
+      return savedCredential;
     } catch (error) {
-      console.error('Failed to save connection:', error);
+      console.error('Failed to save credential:', error);
     }
   };
 
-  const handleLoadConnections = async (): Promise<S3Connection[]> => {
+  const handleLoadCredentials = async (): Promise<S3Connection[]> => {
     try {
-      // Load saved connections from your storage
-      const connections = await loadFromStorage();
-      return connections;
+      // Load saved credentials from your storage
+      const credentials = await loadFromStorage();
+      return credentials;
     } catch (error) {
-      console.error('Failed to load connections:', error);
+      console.error('Failed to load credentials:', error);
       return [];
     }
   };
 
-  const handleDeleteConnection = async (id: string) => {
+  const handleDeleteCredential = async (id: string) => {
     try {
-      // Delete connection from your storage
+      // Delete credential from your storage
       await deleteFromStorage(id);
     } catch (error) {
-      console.error('Failed to delete connection:', error);
+      console.error('Failed to delete credential:', error);
     }
   };
 
@@ -228,15 +226,16 @@ function MyS3ConnectionManager() {
     <S3CredentialForm
       onConnect={handleConnect}
       isLoading={false}
-      saveS3Connection={handleSaveConnection}
-      loadS3Connections={handleLoadConnections}
-      deleteS3Connection={handleDeleteConnection}
+      saveS3Credential={handleSaveCredential}
+      loadS3Credentials={handleLoadCredentials}
+      deleteS3Credential={handleDeleteCredential}
     />
   );
 }
 ```
 
 Features:
+
 - Input fields for S3 credentials (access key, secret key, region, bucket)
 - Option to save connections for later use
 - Auto-fill from AWS CLI exports or credential process output
@@ -259,19 +258,19 @@ interface S3CredentialFormProps {
   isLoading?: boolean;
 
   /**
-   * Callback to save a new S3 connection
+   * Callback to save a new S3 credential
    */
-  saveS3Connection: (data: S3Config) => Promise<void>;
+  saveS3Credential: (data: S3Config) => Promise<void>;
 
   /**
-   * Callback to load saved S3 connections
+   * Callback to load saved S3 credentials
    */
-  loadS3Connections: () => Promise<S3Connection[]>;
+  loadS3Credentials: () => Promise<S3Connection[]>;
 
   /**
-   * Optional callback to delete a saved connection
+   * Optional callback to delete a saved credential
    */
-  deleteS3Connection?: (id: string) => Promise<void>;
+  deleteS3Credential?: (id: string) => Promise<void>;
 }
 ```
 
