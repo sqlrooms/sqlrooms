@@ -18,8 +18,5 @@ export {
   KeplerAddTileSetDialog,
   type LoadTileSet,
 } from './components/KeplerAddTileSetDialog';
-export {
-  KeplerAddDataDialog,
-  type LoadTileSet,
-} from './components/KeplerAddDataDialog';
+export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
 export {FileDropInput} from './components/FileDropInput';

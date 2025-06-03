@@ -38,7 +38,7 @@ export const S3Browser = ({
   const [error, setError] = useState('');
   const [files, setFiles] = useState<S3FileOrDirectory[] | null>(null);
   const [selectedDirectory, onChangeSelectedDirectory] = useState('');
-  const [selectedFiles, setSelectedFiles] = useState([]);
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const {setCurrentS3Config, clearCurrentS3Config, currentS3Config} = s3;
 
   const listFiles = useCallback(
@@ -49,7 +49,6 @@ export const S3Browser = ({
           prefix,
         });
         setCurrentS3Config(s3Config);
-        console.log('prefix', prefix);
         setFiles(files);
         setError('');
         onChangeSelectedDirectory(prefix);
@@ -60,8 +59,8 @@ export const S3Browser = ({
     },
     [listS3Files, setCurrentS3Config, setFiles, setIsConnecting, setError],
   );
-  console.log('selectedDirectory', selectedDirectory);
   const handleLoadFiles = useCallback(async () => {
+    if (!currentS3Config) return;
     await loadS3Files({
       s3Config: currentS3Config,
       prefix: selectedDirectory,
@@ -78,6 +77,7 @@ export const S3Browser = ({
 
   const onSelectDirectory = useCallback(
     (directory: string) => {
+      if (!currentS3Config) return;
       setIsConnecting(true);
       listFiles(currentS3Config, directory);
     },
@@ -128,7 +128,6 @@ export const S3Browser = ({
         <div className="flex h-full w-full flex-col items-start justify-start gap-2">
           <S3FileBrowser
             files={files}
-            isLoading={isConnecting}
             selectedFiles={selectedFiles}
             selectedDirectory={selectedDirectory}
             onChangeSelectedFiles={setSelectedFiles}
@@ -153,7 +152,7 @@ export const S3Browser = ({
                     <div className="text-muted-foreground">Connected to</div>
                   )}
 
-                  <b>{currentS3Config.bucket}</b>
+                  <b>{currentS3Config?.bucket}</b>
                 </div>
               </div>
             )}

@@ -1029,6 +1029,9 @@ importers:
       '@kepler.gl/constants':
         specifier: ^3.1.8
         version: 3.1.8
+      '@kepler.gl/duckdb':
+        specifier: 3.1.8
+        version: 3.1.8(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.3)(@loaders.gl/images@4.3.3(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(gl-matrix@3.4.3)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@16.14.0(react@18.3.1))(react@18.3.1)(typescript@5.8.3)
       '@kepler.gl/localization':
         specifier: 3.1.8
         version: 3.1.8(typescript@5.8.3)
@@ -1062,6 +1065,12 @@ importers:
       '@sqlrooms/project-config':
         specifier: workspace:*
         version: link:../project-config
+      '@sqlrooms/s3':
+        specifier: workspace:*
+        version: link:../s3
+      '@sqlrooms/s3-browser':
+        specifier: workspace:*
+        version: link:../s3-browser
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -2457,7 +2466,7 @@ importers:
     dependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
-        version: 3.10.0(react-hook-form@7.56.4(react@18.3.1))
+        version: 3.10.0(react-hook-form@7.57.0(react@18.3.1))
       '@sqlrooms/project':
         specifier: workspace:*
         version: link:../project
@@ -2486,8 +2495,8 @@ importers:
         specifier: '*'
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.56.4
-        version: 7.56.4(react@18.3.1)
+        specifier: ^7.57.0
+        version: 7.57.0(react@18.3.1)
       zod:
         specifier: ^3.24.1
         version: 3.24.2
@@ -2530,7 +2539,7 @@ importers:
     dependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
-        version: 3.10.0(react-hook-form@7.56.4(react@18.3.1))
+        version: 3.10.0(react-hook-form@7.57.0(react@18.3.1))
       '@monaco-editor/react':
         specifier: ^4.7.0
         version: 4.7.0(monaco-editor@0.52.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -2586,8 +2595,8 @@ importers:
         specifier: '*'
         version: 18.3.1(react@18.3.1)
       react-hook-form:
-        specifier: ^7.56.4
-        version: 7.56.4(react@18.3.1)
+        specifier: ^7.57.0
+        version: 7.57.0(react@18.3.1)
       zod:
         specifier: ^3.24.1
         version: 3.24.2
@@ -2630,7 +2639,7 @@ importers:
     dependencies:
       '@hookform/resolvers':
         specifier: ^3.10.0
-        version: 3.10.0(react-hook-form@7.56.4(react@19.0.0))
+        version: 3.10.0(react-hook-form@7.57.0(react@19.0.0))
       '@radix-ui/react-accordion':
         specifier: ^1.2.2
         version: 1.2.3(@types/react-dom@19.1.1(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -2710,8 +2719,8 @@ importers:
         specifier: ^8.10.1
         version: 8.10.1(date-fns@4.1.0)(react@19.0.0)
       react-hook-form:
-        specifier: ^7.56.4
-        version: 7.56.4(react@19.0.0)
+        specifier: ^7.57.0
+        version: 7.57.0(react@19.0.0)
       react-resizable-panels:
         specifier: ^2.1.7
         version: 2.1.7(react-dom@19.0.0(react@19.0.0))(react@19.0.0)
@@ -12564,8 +12573,8 @@ packages:
       '@types/react-dom':
         optional: true
 
-  react-hook-form@7.56.4:
-    resolution: {integrity: sha512-Rob7Ftz2vyZ/ZGsQZPaRdIefkgOSrQSPXfqBdvOPwJfoGnjwRJUs7EM7Kc1mcoDv3NOtqBzPGbcMB8CGn9CKgw==, tarball: https://registry.npmjs.org/react-hook-form/-/react-hook-form-7.56.4.tgz}
+  react-hook-form@7.57.0:
+    resolution: {integrity: sha512-RbEks3+cbvTP84l/VXGUZ+JMrKOS8ykQCRYdm5aYsxnDquL0vspsyNhGRO7pcH6hsZqWlPOjLye7rJqdtdAmlg==, tarball: https://registry.npmjs.org/react-hook-form/-/react-hook-form-7.57.0.tgz}
     engines: {node: '>=18.0.0'}
     peerDependencies:
       react: ^16.8.0 || ^17 || ^18 || ^19
@@ -16264,13 +16273,13 @@ snapshots:
       '@shikijs/types': 1.29.2
       '@shikijs/vscode-textmate': 10.0.2
 
-  '@hookform/resolvers@3.10.0(react-hook-form@7.56.4(react@18.3.1))':
+  '@hookform/resolvers@3.10.0(react-hook-form@7.57.0(react@18.3.1))':
     dependencies:
-      react-hook-form: 7.56.4(react@18.3.1)
+      react-hook-form: 7.57.0(react@18.3.1)
 
-  '@hookform/resolvers@3.10.0(react-hook-form@7.56.4(react@19.0.0))':
+  '@hookform/resolvers@3.10.0(react-hook-form@7.57.0(react@19.0.0))':
     dependencies:
-      react-hook-form: 7.56.4(react@19.0.0)
+      react-hook-form: 7.57.0(react@19.0.0)
 
   '@humanfs/core@0.19.1': {}
 
@@ -17497,6 +17506,43 @@ snapshots:
       - '@luma.gl/shadertools'
       - '@luma.gl/webgl'
       - react-dom
+
+  '@kepler.gl/duckdb@3.1.8(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.3)(@loaders.gl/images@4.3.3(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(gl-matrix@3.4.3)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@16.14.0(react@18.3.1))(react@18.3.1)(typescript@5.8.3)':
+    dependencies:
+      '@duckdb/duckdb-wasm': 1.29.0
+      '@kepler.gl/common-utils': 3.1.8
+      '@kepler.gl/constants': 3.1.8
+      '@kepler.gl/processors': 3.1.8(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/images@4.3.3(@loaders.gl/core@4.3.3))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(gl-matrix@3.4.3)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@16.14.0(react@18.3.1))(react@18.3.1)(typescript@5.8.3)
+      '@kepler.gl/table': 3.1.8(@loaders.gl/core@4.3.3)(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@16.14.0(react@18.3.1))(react@18.3.1)
+      '@kepler.gl/types': 3.1.8
+      '@monaco-editor/react': 4.7.0(monaco-editor@0.52.2)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      '@radix-ui/react-collapsible': 1.1.3(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+      apache-arrow: 18.1.0
+      monaco-editor: 0.52.2
+      react-resizable-panels: 2.1.7(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
+    transitivePeerDependencies:
+      - '@deck.gl/aggregation-layers'
+      - '@loaders.gl/core'
+      - '@loaders.gl/images'
+      - '@luma.gl/core'
+      - '@luma.gl/engine'
+      - '@luma.gl/gltools'
+      - '@luma.gl/shadertools'
+      - '@luma.gl/webgl'
+      - '@math.gl/core'
+      - '@math.gl/web-mercator'
+      - '@types/react'
+      - '@types/react-dom'
+      - bufferutil
+      - enzyme
+      - enzyme-adapter-utils
+      - gl-matrix
+      - react
+      - react-dom
+      - react-test-renderer
+      - supports-color
+      - typescript
+      - utf-8-validate
 
   '@kepler.gl/duckdb@3.1.8(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.3)(@luma.gl/core@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@18.3.5(@types/react@18.3.18))(@types/react@18.3.18)(enzyme-adapter-utils@1.14.2(react@18.3.1))(enzyme@3.11.0)(gl-matrix@3.4.3)(react-dom@18.3.1(react@18.3.1))(react-test-renderer@16.14.0(react@18.3.1))(react@18.3.1)(typescript@5.8.3)':
     dependencies:
@@ -30486,11 +30532,11 @@ snapshots:
       '@types/react': 18.3.18
       '@types/react-dom': 18.3.5(@types/react@18.3.18)
 
-  react-hook-form@7.56.4(react@18.3.1):
+  react-hook-form@7.57.0(react@18.3.1):
     dependencies:
       react: 18.3.1
 
-  react-hook-form@7.56.4(react@19.0.0):
+  react-hook-form@7.57.0(react@19.0.0):
     dependencies:
       react: 19.0.0
 

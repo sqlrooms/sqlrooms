@@ -127,7 +127,9 @@ export const KeplerAddDataDialog = ({
           <Tabs
             defaultValue={currentMethod}
             className="flex h-full w-full flex-col gap-4"
-            onValueChange={selectCurrentMethod}
+            onValueChange={(value) =>
+              selectCurrentMethod(value as AddDataMethods)
+            }
           >
             <TabsList className="flex h-10 items-center justify-start gap-1">
               {ADD_DATA_METHODS.map(({value, label}) => (

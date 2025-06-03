@@ -288,11 +288,13 @@ export function S3CredentialForm({
         </TabsTrigger>
       </TabsList>
       <TabsContent value="new" className="mt-0 w-full">
+        {/* @ts-expect-error react-hook-form type are incompatible */}
         <Form<FormData> {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="w-full">
             <div className="grid h-full w-full grid-cols-[240px_1fr] gap-8">
               <div className="flex flex-col gap-4">
                 <FormField<FormData, 'bucket'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="bucket"
                   render={({field}) => (
@@ -310,6 +312,7 @@ export function S3CredentialForm({
                   )}
                 />
                 <FormField<FormData, 'region'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="region"
                   render={({field}) => (
@@ -340,6 +343,7 @@ export function S3CredentialForm({
                   )}
                 />
                 <FormField<FormData, 'name'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="name"
                   render={({field}) => (
@@ -357,6 +361,7 @@ export function S3CredentialForm({
                   )}
                 />
                 <FormField<FormData, 'saveConnection'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="saveConnection"
                   render={({field}) => (
@@ -437,6 +442,7 @@ export function S3CredentialForm({
                   </Button>
                 </div>
                 <FormField<FormData, 'accessKeyId'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="accessKeyId"
                   render={({field}) => (
@@ -455,6 +461,7 @@ export function S3CredentialForm({
                   )}
                 />
                 <FormField<FormData, 'secretAccessKey'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="secretAccessKey"
                   render={({field}) => (
@@ -493,6 +500,7 @@ export function S3CredentialForm({
                 />
 
                 <FormField<FormData, 'sessionToken'>
+                  // @ts-expect-error react-hook-form type are incompatible
                   control={form.control}
                   name="sessionToken"
                   render={({field}) => (

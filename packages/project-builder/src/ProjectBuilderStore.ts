@@ -121,7 +121,7 @@ export type ProjectBuilderStateActions<PC extends BaseProjectConfig> =
     ): Promise<void>;
     removeSqlQueryDataSource(
       tableName: string,
-      options: {schema?: string; database?: string},
+      options?: {schema?: string; database?: string},
     ): Promise<void>;
     areDatasetsReady(): boolean;
 
