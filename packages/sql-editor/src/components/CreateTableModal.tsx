@@ -80,7 +80,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
-        {/* @ts-expect-error react-hook-form type are incompatible between react versions */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -105,7 +104,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
             )}
 
             <FormField
-              // @ts-expect-error react-hook-form type are incompatible between react versions
               control={form.control}
               name="tableName"
               render={({field}) => (
@@ -120,7 +118,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
             />
 
             <FormField
-              // @ts-expect-error react-hook-form type are incompatible between react versions
               control={form.control}
               name="query"
               render={({field}) => (

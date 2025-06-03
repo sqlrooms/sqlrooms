@@ -56,11 +56,9 @@ const RenameSqlQueryModal: React.FC<{
           <DialogTitle>Rename</DialogTitle>
           <DialogDescription>Rename the query to a new name.</DialogDescription>
         </DialogHeader>
-        {/* @ts-expect-error react-hook-form type are incompatible between react versions */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              // @ts-expect-error react-hook-form type are incompatible between react versions
               control={form.control}
               name="queryName"
               render={({field}) => (
