@@ -1,6 +1,10 @@
 import React, {useState, useEffect, useCallback} from 'react';
 
-import {S3FileBrowser, S3CredentialForm, S3State} from '@sqlrooms/s3-browser';
+import {
+  S3FileBrowser,
+  S3CredentialForm,
+  S3BrowserState,
+} from '@sqlrooms/s3-browser';
 import {S3FileOrDirectory, S3Config, S3Credential} from '@sqlrooms/s3';
 import {ChevronLeft} from 'lucide-react';
 import {
@@ -21,14 +25,14 @@ export type KeplerS3BrowserProps = {
     prefix: string;
     files: string[];
   }) => Promise<void>;
-  s3: S3State['s3'];
+  s3Browser: S3BrowserState['s3Browser'];
   saveS3Credential: (s3Config: S3Config) => Promise<void>;
   loadS3Credentials: () => Promise<S3Credential[]>;
   deleteS3Credential: (id: string) => Promise<void>;
 };
 export const KeplerS3Browser = ({
   listS3Files,
-  s3,
+  s3Browser,
   loadS3Files,
   saveS3Credential,
   loadS3Credentials,
@@ -39,7 +43,7 @@ export const KeplerS3Browser = ({
   const [files, setFiles] = useState<S3FileOrDirectory[] | null>(null);
   const [selectedDirectory, onChangeSelectedDirectory] = useState('');
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
-  const {setCurrentS3Config, clearCurrentS3Config, currentS3Config} = s3;
+  const {setCurrentS3Config, clearCurrentS3Config, currentS3Config} = s3Browser;
 
   const listFiles = useCallback(
     async (s3Config: S3Config, prefix: string) => {

@@ -18,6 +18,13 @@ export {
   KeplerAddTileSetDialog,
   type LoadTileSet,
 } from './components/KeplerAddTileSetDialog';
-export {KeplerAddDataDialog} from './components/KeplerAddDataDialog';
+export {
+  KeplerAddDataDialog,
+  type KeplerAddDataDialogProps,
+  type AddDataMethods,
+} from './components/KeplerAddDataDialog';
 export {FileDropInput} from './components/FileDropInput';
-export {KeplerS3Browser} from './components/KeplerS3Browser';
+export {
+  KeplerS3Browser,
+  type KeplerS3BrowserProps,
+} from './components/KeplerS3Browser';

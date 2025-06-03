@@ -16,7 +16,8 @@ import {LoadTileSetFactory, Icons} from '@kepler.gl/components';
 import {FileDropInput} from './FileDropInput';
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
-import {KeplerS3Browser, KeplerS3BrowserProps} from './KeplerS3Browser';
+import {KeplerS3Browser} from './KeplerS3Browser';
+import type {KeplerS3BrowserProps} from '../index';
 import {useIntl} from 'react-intl';
 
 const ACCEPTED_FORMATS = [
@@ -92,7 +93,7 @@ export const KeplerAddDataDialog = ({
   saveS3Credential,
   loadS3Credentials,
   deleteS3Credential,
-  s3,
+  s3Browser,
   method = AddDataMethods.Upload,
 }: KeplerAddDataDialogProps) => {
   const [currentMethod, selectCurrentMethod] = useState<AddDataMethods>(method);
@@ -183,7 +184,7 @@ export const KeplerAddDataDialog = ({
             >
               <KeplerS3Browser
                 listS3Files={listS3Files}
-                s3={s3}
+                s3Browser={s3Browser}
                 loadS3Files={onLoadS3Files}
                 saveS3Credential={saveS3Credential}
                 loadS3Credentials={loadS3Credentials}

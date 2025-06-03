@@ -4,4 +4,4 @@
  */
 export {default as S3FileBrowser} from './S3FileBrowser';
 export {S3CredentialForm} from './S3CredentialForm';
-export {createS3Slice, type S3State} from './S3Slice';
+export {createS3BrowserSlice, type S3BrowserState} from './S3BrowserSlice';

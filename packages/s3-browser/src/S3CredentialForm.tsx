@@ -214,6 +214,7 @@ export function S3CredentialForm({
       sessionToken: '',
       region: 'us-east-1',
       bucket: '',
+      saveConnection: false,
     },
   });
   const toggleVisibility = useCallback(
