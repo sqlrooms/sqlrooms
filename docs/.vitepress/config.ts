@@ -6,7 +6,7 @@ const CORE_PACKAGES = ['project-builder', 'project-config', 'duckdb', 'ui'];
 export default defineConfig({
   ignoreDeadLinks: true,
   title: 'SQLRooms',
-  description: 'Build powerful analytics apps with DuckDB in browser',
+  description: 'Build powerful analytics apps with DuckDB',
   base: '/',
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
@@ -110,12 +110,12 @@ export default defineConfig({
   transformPageData(pageData) {
     const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
       .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html')
+      .replace(/\.md$/, '.html');
 
-    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push([
       'link',
-      { rel: 'canonical', href: canonicalUrl }
-    ])
-  }
+      {rel: 'canonical', href: canonicalUrl},
+    ]);
+  },
 });
