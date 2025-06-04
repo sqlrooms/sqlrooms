@@ -84,7 +84,9 @@ export default function useArrowDataTable(
                   <div className="space-y-2">
                     <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
                     <div className="relative">
-                      {valueStr}
+                      <pre className="whitespace-pre-wrap text-xs">
+                        {valueStr}
+                      </pre>
                       <Button
                         variant="ghost"
                         size="icon"

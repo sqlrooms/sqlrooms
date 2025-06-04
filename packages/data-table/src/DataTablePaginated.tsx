@@ -62,7 +62,6 @@ export default function DataTablePaginated<Data extends object>({
   fontSize = 'text-base',
   data,
   columns,
-  pageCount,
   numRows,
   pagination,
   sorting,
@@ -72,10 +71,15 @@ export default function DataTablePaginated<Data extends object>({
   isFetching,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const pageCount =
+    numRows !== undefined
+      ? Math.ceil(numRows / pagination.pageSize)
+      : undefined;
+
   const table = useReactTable({
     data: (data ?? defaultData) as any[],
     columns: columns ?? [],
-    pageCount: pageCount ?? -1,
+    pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {

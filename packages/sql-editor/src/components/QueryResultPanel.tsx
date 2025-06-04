@@ -1,8 +1,8 @@
-import {DataTablePaginatedProps, QueryDataTable} from '@sqlrooms/data-table';
-import {escapeId} from '@sqlrooms/duckdb';
+import {DataTableArrow, DataTablePaginatedProps} from '@sqlrooms/data-table';
 import {cn, SpinnerPane} from '@sqlrooms/ui';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {QueryResultTable} from './QueryResultTable';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -18,22 +18,14 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   renderActions,
   fontSize = 'text-xs',
 }) => {
-  // Get state and methods from the store
-  const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+
+  if (!queryResult) {
+    return null;
+  }
 
   if (queryResult?.status === 'loading') {
     return <SpinnerPane h="100%" />;
-  }
-
-  if (selectedTable) {
-    return (
-      <QueryDataTable
-        className={className}
-        fontSize={fontSize}
-        query={`SELECT * FROM ${escapeId(selectedTable)}`}
-      />
-    );
   }
 
   if (queryResult?.status === 'error') {
@@ -54,13 +46,15 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           className,
         )}
       >
-        {queryResult.isSelect ? (
-          <QueryDataTable
-            fontSize={fontSize}
+        {queryResult.type === 'select' ? (
+          <QueryResultTable
             className={cn('overflow-hidden', className)}
-            query={queryResult.lastQueryStatement}
+            fontSize={fontSize}
+            queryResult={queryResult}
             renderActions={renderActions}
           />
+        ) : queryResult.type === 'pragma' || queryResult.type === 'explain' ? (
+          <DataTableArrow table={queryResult.result} />
         ) : (
           <pre className="p-4 text-xs leading-tight text-green-500">
             Successfully executed query

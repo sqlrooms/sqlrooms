@@ -8,7 +8,7 @@ import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
-import {DuckDbConnector} from './connectors/DuckDbConnector';
+import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
 import {escapeVal, getColValAsNumber, splitSqlStatements} from './duckdb-utils';
 import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
@@ -39,6 +39,7 @@ export type DuckDbSliceState = {
     tables: DataTable[];
     tableRowCounts: {[tableName: string]: number};
     schemaTrees?: DbSchemaNode[];
+    queryCache: {[key: string]: QueryHandle};
 
     /**
      * Set a new DuckDB connector
@@ -90,6 +91,13 @@ export type DuckDbSliceState = {
      * Get the row count of a table
      */
     getTableRowCount: (tableName: string, schema?: string) => Promise<number>;
+
+    /**
+     * Execute a query with query handle (not result) caching and deduplication
+     * @param query - The SQL query to execute
+     * @returns The QueryHandle for the query or null if disabled
+     */
+    executeSql: (query: string) => Promise<QueryHandle | null>;
 
     /**
      * Get the schema of a table
@@ -177,6 +185,7 @@ export function createDuckDbSlice({
         tables: [],
         tableRowCounts: {},
         schemaTree: undefined,
+        queryCache: {},
 
         setConnector: (connector: DuckDbConnector) => {
           set(
@@ -410,6 +419,37 @@ export function createDuckDbSlice({
             .getChildAt(0)
             ?.get(0);
           return JSON.parse(parsedQuery);
+        },
+
+        async executeSql(query: string): Promise<QueryHandle | null> {
+          // Create a unique key for this query
+          const queryKey = `${query}`;
+          const connector = await get().db.getConnector();
+
+          // Check if we already have a cached query for this key
+          const existingQuery = get().db.queryCache[queryKey];
+          if (existingQuery) {
+            return existingQuery;
+          }
+
+          const queryHandle = connector.query(query);
+          // Cache the query handle immediately
+          set((state) =>
+            produce(state, (draft) => {
+              draft.db.queryCache[queryKey] = queryHandle;
+            }),
+          );
+
+          queryHandle.result.finally(() => {
+            // remove from cache after completion
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.db.queryCache[queryKey];
+              }),
+            );
+          });
+
+          return queryHandle;
         },
       },
     };

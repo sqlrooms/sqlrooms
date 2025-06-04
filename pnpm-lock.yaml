@@ -673,9 +673,6 @@ importers:
       '@ai-sdk/provider':
         specifier: ^1.0.7
         version: 1.0.10
-      '@duckdb/duckdb-wasm':
-        specifier: 1.29.0
-        version: 1.29.0
       '@openassistant/core':
         specifier: ^0.2.7
         version: 0.2.7(@ai-sdk/anthropic@1.2.1(zod@3.24.2))(@ai-sdk/google@1.2.3(zod@3.24.2))(openai@4.89.0(encoding@0.1.13)(ws@8.18.1)(zod@3.24.2))(react@19.0.0)
@@ -806,8 +803,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.0
-        version: 1.29.0
+        specifier: 1.29.1-dev204.0
+        version: 1.29.1-dev204.0
       '@sqlrooms/project':
         specifier: workspace:*
         version: link:../project
@@ -980,9 +977,6 @@ importers:
 
   packages/project-builder:
     dependencies:
-      '@duckdb/duckdb-wasm':
-        specifier: ^1.29.1-dev68.0
-        version: 1.29.1-dev9.0
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1894,8 +1888,8 @@ packages:
   '@duckdb/duckdb-wasm@1.29.0':
     resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==}
 
-  '@duckdb/duckdb-wasm@1.29.1-dev9.0':
-    resolution: {integrity: sha512-OguW37uPSVDfWY13RQPiBt1fZaX2Qn1iCXL9YGhl1/+e1gcOlzT4HFMsvODjv2sXC0GgGClU/e1iYnmn1C74EQ==}
+  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
+    resolution: {integrity: sha512-AgGQFCmPFbdCw6imPrCJECUK6v+VkSa0evmrFuqrFDMsL7/X6vKGDa5fx9NMtxiULBUUEQPnBteRHqX7LdamIw==}
 
   '@emnapi/runtime@1.4.0':
     resolution: {integrity: sha512-64WYIf4UYcdLnbKn/umDlNjQDSS8AgZrI/R9+x5ilkUVFxXcA1Ebl+gQLc/6mERA4407Xof0R7wEyEuj091CVw==}
@@ -10180,7 +10174,7 @@ snapshots:
     dependencies:
       apache-arrow: 18.1.0
 
-  '@duckdb/duckdb-wasm@1.29.1-dev9.0':
+  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
     dependencies:
       apache-arrow: 18.1.0
 

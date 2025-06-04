@@ -3,6 +3,7 @@ import {useEffect, useState} from 'react';
 import {z} from 'zod';
 import {useStoreWithDuckDb} from './DuckDbSlice';
 import {createTypedRowAccessor, TypedRowAccessor} from './typedRowAccessor';
+import {QueryHandle} from './connectors/DuckDbConnector';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,
@@ -200,7 +201,8 @@ export function useSql<
   const [error, setError] = useState<Error | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const getConnector = useStoreWithDuckDb((state) => state.db.getConnector);
+  const executeSql = useStoreWithDuckDb((state) => state.db.executeSql);
+
   useEffect(() => {
     let isMounted = true;
 
@@ -213,8 +215,15 @@ export function useSql<
       setError(null);
 
       try {
-        const connector = await getConnector();
-        const result = await connector.query(options.query).result;
+        const queryHandle = await executeSql(options.query);
+        if (!queryHandle || !isMounted) {
+          return;
+        }
+
+        const result = await queryHandle.result;
+        if (!isMounted) {
+          return;
+        }
 
         // Create a row accessor that optionally validates with the schema
         const rowAccessor = createTypedRowAccessor<Row>({
@@ -222,9 +231,7 @@ export function useSql<
           validate: schema ? (row: unknown) => schema.parse(row) : undefined,
         });
 
-        if (isMounted) {
-          setData({...rowAccessor, arrowTable: result});
-        }
+        setData({...rowAccessor, arrowTable: result});
       } catch (err) {
         if (isMounted) {
           setError(err instanceof Error ? err : new Error(String(err)));
@@ -241,7 +248,7 @@ export function useSql<
     return () => {
       isMounted = false;
     };
-  }, [options.query, options.enabled]);
+  }, [options.query, options.enabled, executeSql]);
 
   return {
     data,

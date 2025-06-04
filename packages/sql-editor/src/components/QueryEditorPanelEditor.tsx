@@ -13,9 +13,6 @@ export const QueryEditorPanelEditor: React.FC<{
 }> = ({className, queryId}) => {
   const tableSchemas = useStoreWithSqlEditor((s) => s.db.tables);
   const runQuery = useStoreWithSqlEditor((s) => s.sqlEditor.runQuery);
-  const queryStatus = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.queryResult?.status,
-  );
 
   const queryText = useStoreWithSqlEditor(
     (s) => s.config.sqlEditor.queries.find((q) => q.id === queryId)?.query,

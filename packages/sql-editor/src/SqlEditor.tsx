@@ -33,7 +33,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   );
   const lastQueryStatement = useStoreWithSqlEditor((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
-    s.sqlEditor.queryResult?.isSelect
+    s.sqlEditor.queryResult?.type === 'select'
       ? s.sqlEditor.queryResult.lastQueryStatement
       : '',
   );

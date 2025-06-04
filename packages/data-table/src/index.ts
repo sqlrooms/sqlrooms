@@ -10,3 +10,6 @@ export {default as DataTableVirtualized} from './DataTableVirtualized';
 export {default as QueryDataTable} from './QueryDataTable';
 export {default as useArrowDataTable} from './useArrowDataTable';
 export {ColumnTypeBadge} from './ColumnTypeBadge';
+export {DataTableArrow} from './DataTableArrow';
+export {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
+export {makePagedQuery} from './utils';

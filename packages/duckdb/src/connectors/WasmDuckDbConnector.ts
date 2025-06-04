@@ -128,30 +128,54 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     query: string,
     signal: AbortSignal,
   ): Promise<arrow.Table<T>> {
+    // console.log('executeQueryWithSignal', query);
     await this.ensureInitialized();
     if (!this.conn) {
       throw new Error('DuckDB connection not initialized');
     }
 
     if (signal.aborted) {
+      // Fast‑path: request was already cancelled
+      await this.conn.cancelSent().catch(() => {});
       throw new Error('Query aborted before execution');
     }
 
-    // Create a promise that rejects if the signal is aborted
+    // // 1️⃣ Kick‑off the statement using the *cancellable* streaming API
+    // const streamPromise = this.conn.send<T>(
+    //   query,
+    //   /* allowStreamResult */ true,
+    // );
+    // // 2️⃣ Helper to materialise all batches into a single Arrow Table
+    // const buildTable = async () => {
+    //   const reader = await streamPromise;
+    //   const batches: arrow.RecordBatch<T>[] = [];
+    //   for await (const batch of reader) {
+    //     batches.push(batch);
+    //   }
+    //   return new arrow.Table(batches);
+    // };
+
+    const buildTable = async () => {
+      return await this.conn!.query(query);
+    };
+
+    // 3️⃣ AbortSignal → DuckDB interrupt wiring
     let abortHandler: (() => void) | undefined;
     const abortPromise = new Promise<never>((_, reject) => {
-      abortHandler = () => reject(new Error('Query cancelled'));
+      abortHandler = () => {
+        // Interrupt the currently running statement inside DuckDB
+        this.conn!.cancelSent().catch(() => {
+          /* ignore failure if nothing to cancel */
+        });
+        reject(new Error('Query cancelled'));
+      };
       signal.addEventListener('abort', abortHandler);
     });
 
     try {
-      const queryPromise = this.conn.query(query);
-
-      // Race between the query and the abort signal
-      const result = await Promise.race([queryPromise, abortPromise]);
-      return result as arrow.Table<T>;
+      // Whichever finishes first (query or cancel) wins
+      return await Promise.race([buildTable(), abortPromise]);
     } finally {
-      // Clean up the abort listener
       if (abortHandler) {
         signal.removeEventListener('abort', abortHandler);
       }
@@ -159,12 +183,18 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
   }
 
   async cancelQuery(queryId: string): Promise<void> {
-    // Call parent's cancel logic first (handles AbortController cleanup)
+    // First, invoke the base‑class logic (removes AbortController listeners, etc.)
     await super.cancelQuery(queryId);
 
-    // Note: DuckDB WASM doesn't currently support query cancellation at the DB level
-    // The cancellation works through AbortSignal/Promise.race approach above
-    // If DuckDB WASM adds query cancellation support in the future, we can implement it here
+    // Then, interrupt the running statement on the DuckDB side.
+    if (this.conn) {
+      try {
+        await this.conn.cancelSent();
+      } catch (err) {
+        // If no statement is active or interrupt fails, just log and move on.
+        console.warn('DuckDB cancelSent failed:', err);
+      }
+    }
   }
 
   async loadFile(
