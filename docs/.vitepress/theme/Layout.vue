@@ -27,7 +27,7 @@ import DefaultTheme from 'vitepress/theme';
       <div class="foursquare-footer">
         Supported by
         <a
-          href="https://foursquare.com"
+          href="https://location.foursquare.com"
           target="_blank"
           rel="noopener noreferrer"
         >

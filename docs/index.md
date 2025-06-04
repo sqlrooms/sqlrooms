@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: 'SQLRooms'
-  text: 'Build powerful analytics apps with DuckDB in browser'
-  tagline: React app framework for small to mid-sized data analytics powered by DuckDB-WASM
+  text: 'Build data-centric apps with DuckDB'
+  tagline: Modular React framework for data analytics powered by DuckDB – in browser or backend
   actions:
     - theme: brand
       text: What is SQLRooms?
@@ -22,16 +22,16 @@ hero:
     alt: SQLRooms AI
 
 features:
-  - title: DuckDB-WASM Integration
-    details: Leverage DuckDB's powerful SQL capabilities directly in the browser with WebAssembly, enabling fast data processing without a backend
+  - title: DuckDB Integration
+    details: Leverage DuckDB's powerful SQL capabilities, enabling fast data processing with or without a backend
+  - title: Modular Architecture
+    details: Pick and choose exactly the functionality you need for composable, extensible applications
+  - title: AI Integration
+    details: Build AI-powered analytics workflows with interactive agents that can write and execute SQL queries, and generate insights
   - title: Interactive SQL Editor
     details: Built-in SQL editor with syntax highlighting, query history, and real-time results visualization
-  - title: Modern UI Components
-    details: Comprehensive set of React components including data tables, layouts, and visualization tools for building beautiful analytics interfaces
-  - title: Project Builder
-    details: Intuitive tools for structuring and managing your analytics projects, with support for multiple data sources and queries
   - title: Flexible Layouts
     details: Customizable mosaic-style layouts for creating responsive and user-friendly analytics dashboards
-  - title: Developer-Friendly
-    details: Built with TypeScript, React, and modern tooling for a great developer experience
+  - title: Modern UI Components
+    details: Comprehensive set of React components including data tables, layouts, and visualization tools for building beautiful analytics interfaces
 ---
