@@ -4,7 +4,7 @@ import DataTablePaginated from './DataTablePaginated';
 import useArrowDataTable from './useArrowDataTable';
 import {PaginationState} from '@tanstack/react-table';
 
-export const DataTableArrow: FC<{
+export const DataTableArrowPaginated: FC<{
   className?: string;
   table: arrow.Table | undefined;
 }> = ({className, table}) => {

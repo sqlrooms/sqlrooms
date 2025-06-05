@@ -1,4 +1,7 @@
-import {DataTableArrow, DataTablePaginatedProps} from '@sqlrooms/data-table';
+import {
+  DataTableArrowPaginated,
+  DataTablePaginatedProps,
+} from '@sqlrooms/data-table';
 import {cn, SpinnerPane} from '@sqlrooms/ui';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
@@ -54,7 +57,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
             renderActions={renderActions}
           />
         ) : queryResult.type === 'pragma' || queryResult.type === 'explain' ? (
-          <DataTableArrow table={queryResult.result} />
+          <DataTableArrowPaginated table={queryResult.result} />
         ) : (
           <pre className="p-4 text-xs leading-tight text-green-500">
             Successfully executed query

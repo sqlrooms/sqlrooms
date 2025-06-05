@@ -1,6 +1,6 @@
+import {makeLimitQuery, makePagedQuery} from '@sqlrooms/data-table';
 import {
   DuckDbSliceConfig,
-  escapeId,
   getSqlErrorWithPointer,
   splitSqlStatements,
 } from '@sqlrooms/duckdb';
@@ -12,13 +12,12 @@ import {
   useBaseProjectBuilderStore,
 } from '@sqlrooms/project-builder';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
+import {PaginationState, SortingState} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {PaginationState, SortingState} from '@tanstack/table-core';
-import {makePagedQuery} from '@sqlrooms/data-table';
 
 // Saved state (persisted)
 export const SqlEditorSliceConfig = z.object({
@@ -52,12 +51,7 @@ export type SelectQueryResult = {
   status: 'success';
   type: 'select';
   lastQueryStatement: string;
-  pagination: PaginationState;
-  sorting: SortingState;
-  numRows: number | undefined;
-  pageData: arrow.Table | undefined;
-  /** Whether the data for a page is currently being fetched. */
-  isPageLoading: boolean;
+  data: arrow.Table | undefined;
 };
 
 export type QueryResult =
@@ -77,6 +71,12 @@ export type QueryResult =
       lastQueryStatement: string;
     };
 
+export function isSelectQueryResult(
+  queryResult: QueryResult | undefined,
+): queryResult is SelectQueryResult {
+  return queryResult?.status === 'success' && queryResult.type === 'select';
+}
+
 export type SqlEditorSliceState = {
   sqlEditor: {
     // Runtime state
@@ -91,12 +91,12 @@ export type SqlEditorSliceState = {
     /**
      * Run the currently selected query.
      */
-    runQuery(query: string): Promise<void>;
+    parseAndRunQuery(query: string): Promise<void>;
 
     /**
      * Run the currently selected query.
      */
-    runCurrentQuery(): Promise<void>;
+    parseAndRunCurrentQuery(): Promise<void>;
 
     /**
      * Abort the currently running query.
@@ -293,8 +293,8 @@ export function createSqlEditorSlice<
           }));
         },
 
-        runCurrentQuery: async (): Promise<void> =>
-          get().sqlEditor.runQuery(get().sqlEditor.getCurrentQuery()),
+        parseAndRunCurrentQuery: async (): Promise<void> =>
+          get().sqlEditor.parseAndRunQuery(get().sqlEditor.getCurrentQuery()),
 
         abortCurrentQuery: () => {
           const currentResult = get().sqlEditor.queryResult;
@@ -311,7 +311,7 @@ export function createSqlEditorSlice<
           );
         },
 
-        runQuery: async (query): Promise<void> => {
+        parseAndRunQuery: async (query): Promise<void> => {
           if (get().sqlEditor.queryResult?.status === 'loading') {
             throw new Error('Query already running');
           }
@@ -372,24 +372,15 @@ export function createSqlEditorSlice<
             const isValidSelectQuery = !parsedLastStatement.error;
 
             if (isValidSelectQuery) {
-              const sorting: SortingState = [];
-              const pagination: PaginationState = {
-                pageIndex: 0,
-                pageSize: 100,
-              };
               const result = await connector.query(
-                makePagedQuery(lastQueryStatement, sorting, pagination),
+                makeLimitQuery(lastQueryStatement),
                 {signal},
               ).result;
               queryResult = {
                 status: 'success',
                 lastQueryStatement,
                 type: 'select',
-                pagination,
-                sorting,
-                numRows: undefined,
-                pageData: result,
-                isPageLoading: true,
+                data: result,
               };
             } else {
               if (
@@ -469,17 +460,6 @@ export function createSqlEditorSlice<
         },
       },
     };
-
-    // async function updatePagedQueryResult(): Promise<QueryResult> {
-    //   const {queryResult} = get().sqlEditor;
-    //   if (queryResult?.status !== 'success' || queryResult.type !== 'select') {
-    //     throw new Error('No query result or not a select query');
-    //   }
-
-    //   const {sorting, pagination} = queryResult;
-    //   const pagedQuery = makePagedQuery(query, sorting, pagination);
-    //   return ;
-    // }
   });
 }
 

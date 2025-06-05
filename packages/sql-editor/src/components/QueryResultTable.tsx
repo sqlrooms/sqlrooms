@@ -4,7 +4,7 @@ import {
   useArrowDataTable,
 } from '@sqlrooms/data-table';
 import {FC} from 'react';
-import {SelectQueryResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {SelectQueryResult} from '../SqlEditorSlice';
 
 export type QueryResultTableProps = {
   className?: string;
@@ -19,24 +19,19 @@ export const QueryResultTable: FC<QueryResultTableProps> = ({
   renderActions,
   queryResult,
 }) => {
-  // const queryResult = useSql({query: pagedQuery});
-  // const countQueryResult = useSql<{count: number}>({
-  //   query: `SELECT COUNT(*)::int AS count FROM (${query})`,
-  // });
-
-  const arrowTableData = useArrowDataTable(queryResult.pageData);
+  const arrowTableData = useArrowDataTable(queryResult.data);
 
   return (
     <DataTablePaginated
       {...arrowTableData}
       className={className}
       fontSize={fontSize}
-      numRows={queryResult.numRows}
-      isFetching={queryResult.isPageLoading}
-      pagination={queryResult.pagination}
+      numRows={0}
+      isFetching={false}
+      pagination={{pageIndex: 0, pageSize: 100}}
       onPaginationChange={() => {}}
-      sorting={queryResult.sorting}
       onSortingChange={() => {}}
+      sorting={[]}
       actions={
         renderActions ? renderActions(queryResult.lastQueryStatement) : null
       }

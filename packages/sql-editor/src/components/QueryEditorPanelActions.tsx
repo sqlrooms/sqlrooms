@@ -14,7 +14,7 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
   className,
 }) => {
   const runCurrentQuery = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.runCurrentQuery,
+    (s) => s.sqlEditor.parseAndRunCurrentQuery,
   );
   const abortCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.abortCurrentQuery,
