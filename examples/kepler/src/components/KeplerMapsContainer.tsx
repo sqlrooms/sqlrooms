@@ -15,7 +15,7 @@ import {
 import {useProjectStore} from '../store';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
 import {useState} from 'react';
-import {KeplerMapContainer} from '@sqlrooms/kepler';
+import {KeplerMapContainer, KeplerPlotContainer} from '@sqlrooms/kepler';
 
 export function KeplerMapsContainer() {
   const maps = useProjectStore((state) => state.config.kepler.maps);
@@ -95,7 +95,7 @@ export function KeplerMapsContainer() {
           </TabsContent>
         ))}
       </Tabs>
-
+      <KeplerPlotContainer mapId={currentMap?.id} />
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

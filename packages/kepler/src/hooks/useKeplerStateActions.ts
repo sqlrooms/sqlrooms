@@ -23,6 +23,7 @@ export function useKeplerStateActions({mapId}: {mapId: string}): {
     () => (action: KeplerAction) => dispatchAction(mapId, action),
     [mapId, dispatchAction],
   );
+
   const keplerState = useStoreWithKepler((state) => {
     return state.kepler.map[mapId];
   });
