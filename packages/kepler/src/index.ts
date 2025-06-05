@@ -31,3 +31,4 @@ export {
 export {KeplerProvider} from './components/KeplerProvider';
 export {useKeplerStateActions} from './hooks/useKeplerStateActions';
 export {KeplerPlotContainer} from './components/KeplerPlotContainer';
+export {KeplerImageExport} from './components/KeplerImageExport';
