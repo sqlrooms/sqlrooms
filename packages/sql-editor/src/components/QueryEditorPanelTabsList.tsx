@@ -29,6 +29,14 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     id: string;
     name: string;
   } | null>(null);
+
+  const createQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.createQueryTab,
+  );
+  const deleteQueryTab = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.deleteQueryTab,
+  );
+
   // Handle rename query
   const handleStartRename = useCallback(
     (queryId: string, currentName: string) => {
@@ -48,14 +56,20 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   );
 
   // Handle delete query
-  const handleDeleteQuery = useCallback((queryId: string) => {
-    setQueryToDelete(queryId);
-  }, []);
-  const createQueryTab = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.createQueryTab,
-  );
-  const deleteQueryTab = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.deleteQueryTab,
+  const handleDeleteQuery = useCallback(
+    (queryId: string) => {
+      // Find the query to check if it's empty
+      const queryToDelete = queries.find((q) => q.id === queryId);
+
+      // If query is empty (no content), delete immediately without confirmation
+      if (queryToDelete && queryToDelete.query.trim() === '') {
+        deleteQueryTab(queryId);
+      } else {
+        // Otherwise, show confirmation modal
+        setQueryToDelete(queryId);
+      }
+    },
+    [queries, deleteQueryTab],
   );
 
   // Handle new query creation
