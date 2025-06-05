@@ -1,18 +1,25 @@
 import * as arrow from 'apache-arrow';
 import {FC, useState} from 'react';
-import DataTablePaginated from './DataTablePaginated';
+import DataTablePaginated, {
+  DataTablePaginatedProps,
+} from './DataTablePaginated';
 import useArrowDataTable from './useArrowDataTable';
 import {PaginationState} from '@tanstack/react-table';
 
 export const DataTableArrowPaginated: FC<{
   className?: string;
   table: arrow.Table | undefined;
-}> = ({className, table}) => {
+  fontSize?: DataTablePaginatedProps<any>['fontSize'];
+  footerActions?: DataTablePaginatedProps<any>['footerActions'];
+  pageSize?: number;
+}> = ({className, table, fontSize, footerActions, pageSize = 100}) => {
   const adt = useArrowDataTable(table);
-  const [pagination, setPagination] = useState<PaginationState>({
-    pageIndex: 0,
-    pageSize: 100,
-  });
+  const [pagination, setPagination] = useState<PaginationState | undefined>(
+    // If the table has less than pageSize rows, don't show pagination.
+    table?.numRows && table.numRows <= pageSize
+      ? undefined
+      : {pageIndex: 0, pageSize},
+  );
   if (!adt) {
     return <div className="p-4 text-xs">No data</div>;
   }
@@ -24,6 +31,8 @@ export const DataTableArrowPaginated: FC<{
       numRows={table?.numRows}
       pagination={pagination}
       onPaginationChange={setPagination}
+      fontSize={fontSize}
+      footerActions={footerActions}
     />
   );
 };

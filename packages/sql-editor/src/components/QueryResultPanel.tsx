@@ -1,11 +1,19 @@
 import {
-  DataTableArrowPaginated,
+  DataTablePaginated,
   DataTablePaginatedProps,
+  useArrowDataTable,
 } from '@sqlrooms/data-table';
-import {cn, SpinnerPane} from '@sqlrooms/ui';
+import {
+  cn,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SpinnerPane,
+} from '@sqlrooms/ui';
+import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
-import {useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {QueryResultTable} from './QueryResultTable';
+import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -22,6 +30,15 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   fontSize = 'text-xs',
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const setQueryResultLimit = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setQueryResultLimit,
+  );
+  const queryResultLimit = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.queryResultLimit,
+  );
+  const arrowTableData = useArrowDataTable(
+    isQueryWithResult(queryResult) ? queryResult.result : undefined,
+  );
 
   if (!queryResult) {
     return null;
@@ -49,15 +66,48 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           className,
         )}
       >
-        {queryResult.type === 'select' ? (
-          <QueryResultTable
-            className={cn('overflow-hidden', className)}
-            fontSize={fontSize}
-            queryResult={queryResult}
-            renderActions={renderActions}
-          />
-        ) : queryResult.type === 'pragma' || queryResult.type === 'explain' ? (
-          <DataTableArrowPaginated table={queryResult.result} />
+        {isQueryWithResult(queryResult) ? (
+          <div className="flex h-full w-full flex-col">
+            <DataTablePaginated
+              {...arrowTableData}
+              className="flex-grow overflow-hidden"
+              fontSize={fontSize}
+              isFetching={false}
+            />
+            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+              {queryResult.result ? (
+                <>
+                  <div className="font-mono text-xs">
+                    {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
+                  </div>
+
+                  <Select
+                    value={queryResultLimit.toString()}
+                    onValueChange={(value) =>
+                      setQueryResultLimit(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger className="h-6 w-fit">
+                      <div className="text-xs text-gray-500">
+                        {`Limit results to ${formatCount(queryResultLimit)} rows`}
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[100, 500, 1000].map((limit) => (
+                        <SelectItem key={limit} value={limit.toString()}>
+                          {`${formatCount(limit)} rows`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : null}
+              <div className="flex-1" />
+              {renderActions
+                ? renderActions(queryResult.lastQueryStatement)
+                : undefined}
+            </div>
+          </div>
         ) : (
           <pre className="p-4 text-xs leading-tight text-green-500">
             Successfully executed query

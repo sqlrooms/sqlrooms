@@ -1,4 +1,4 @@
-import {useSql} from '@sqlrooms/duckdb';
+import {sanitizeQuery, useSql} from '@sqlrooms/duckdb';
 import {PaginationState, SortingState} from '@tanstack/table-core';
 import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
@@ -63,21 +63,9 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
       onPaginationChange={setPagination}
       sorting={sorting}
       onSortingChange={setSorting}
-      actions={renderActions ? renderActions(sanitizedQuery) : null}
+      footerActions={renderActions ? renderActions(sanitizedQuery) : null}
     />
   );
 };
-
-/**
- * Sanitizes a SQL query by removing trailing semicolons, comments, and normalizing whitespace
- */
-function sanitizeQuery(query: string): string {
-  return query
-    .trim() // Remove leading/trailing whitespace
-    .replace(/;+$/, '') // Remove all trailing semicolons
-    .replace(/--.*$/gm, '') // Remove single-line comments
-    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
-    .replace(/\s+/g, ' '); // Normalize whitespace to single spaces
-}
 
 export default QueryDataTable;

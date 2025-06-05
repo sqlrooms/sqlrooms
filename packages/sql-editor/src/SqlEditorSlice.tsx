@@ -1,8 +1,8 @@
-import {makeLimitQuery, makePagedQuery} from '@sqlrooms/data-table';
 import {
   DuckDbSliceConfig,
   getSqlErrorWithPointer,
   splitSqlStatements,
+  makeLimitQuery,
 } from '@sqlrooms/duckdb';
 import {
   BaseProjectConfig,
@@ -12,7 +12,6 @@ import {
   useBaseProjectBuilderStore,
 } from '@sqlrooms/project-builder';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
-import {PaginationState, SortingState} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
@@ -47,21 +46,13 @@ export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   };
 }
 
-export type SelectQueryResult = {
-  status: 'success';
-  type: 'select';
-  lastQueryStatement: string;
-  data: arrow.Table | undefined;
-};
-
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
   | {status: 'aborted'}
   | {status: 'error'; error: string}
-  | SelectQueryResult
   | {
       status: 'success';
-      type: 'pragma' | 'explain';
+      type: 'pragma' | 'explain' | 'select';
       result: arrow.Table | undefined;
       lastQueryStatement: string;
     }
@@ -71,10 +62,18 @@ export type QueryResult =
       lastQueryStatement: string;
     };
 
-export function isSelectQueryResult(
+export function isQueryWithResult(
   queryResult: QueryResult | undefined,
-): queryResult is SelectQueryResult {
-  return queryResult?.status === 'success' && queryResult.type === 'select';
+): queryResult is QueryResult & {
+  status: 'success';
+  type: 'pragma' | 'explain' | 'select';
+} {
+  return (
+    queryResult?.status === 'success' &&
+    (queryResult.type === 'pragma' ||
+      queryResult.type === 'explain' ||
+      queryResult.type === 'select')
+  );
 }
 
 export type SqlEditorSliceState = {
@@ -87,6 +86,8 @@ export type SqlEditorSliceState = {
     isTablesLoading: boolean;
     /** @deprecated */
     tablesError?: string;
+
+    queryResultLimit: number;
 
     /**
      * Run the currently selected query.
@@ -154,17 +155,24 @@ export type SqlEditorSliceState = {
     selectTable(table: string | undefined): void;
 
     clearQueryResults(): void;
+
+    setQueryResultLimit(limit: number): void;
   };
 };
 
 export function createSqlEditorSlice<
   PC extends BaseProjectConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
->(): StateCreator<SqlEditorSliceState> {
+>({
+  queryResultLimit = 100,
+}: {
+  queryResultLimit?: number;
+} = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => {
     return {
       sqlEditor: {
         // Initialize runtime state
         isTablesLoading: false,
+        queryResultLimit,
 
         exportResultsToCsv: (results, filename) => {
           if (!results) return;
@@ -311,6 +319,14 @@ export function createSqlEditorSlice<
           );
         },
 
+        setQueryResultLimit: (limit) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.sqlEditor.queryResultLimit = limit;
+            }),
+          );
+        },
+
         parseAndRunQuery: async (query): Promise<void> => {
           if (get().sqlEditor.queryResult?.status === 'loading') {
             throw new Error('Query already running');
@@ -373,14 +389,17 @@ export function createSqlEditorSlice<
 
             if (isValidSelectQuery) {
               const result = await connector.query(
-                makeLimitQuery(lastQueryStatement),
+                makeLimitQuery(lastQueryStatement, {
+                  sanitize: false, // should already be sanitized
+                  limit: get().sqlEditor.queryResultLimit,
+                }),
                 {signal},
               ).result;
               queryResult = {
                 status: 'success',
-                lastQueryStatement,
                 type: 'select',
-                data: result,
+                lastQueryStatement,
+                result,
               };
             } else {
               if (

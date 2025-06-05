@@ -25,15 +25,3 @@ export function makePagedQuery(
     OFFSET ${pagination.pageIndex * pagination.pageSize}
     LIMIT ${pagination.pageSize}`;
 }
-
-/**
- * Make a limit query from a query and a limit.
- * @param query - The SELECT query to make limited.
- * @param limit - The number of rows to limit the query to.
- * @returns The limited query.
- */
-export function makeLimitQuery(query: string, limit: number = 100) {
-  return `SELECT * FROM (
-    ${query}
-  ) LIMIT ${limit}`;
-}

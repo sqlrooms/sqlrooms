@@ -240,3 +240,41 @@ export function splitSqlStatements(input: string): string[] {
 
   return queries;
 }
+
+/**
+ * Sanitizes a SQL query by removing trailing semicolons, comments, and normalizing whitespace
+ */
+export function sanitizeQuery(query: string): string {
+  return query
+    .trim() // Remove leading/trailing whitespace
+    .replace(/;+$/, '') // Remove all trailing semicolons
+    .replace(/--.*$/gm, '') // Remove single-line comments
+    .replace(/\/\*[\s\S]*?\*\//g, '') // Remove multi-line comments
+    .replace(/\s+/g, ' '); // Normalize whitespace to single spaces
+}
+
+/**
+ * Make a limit query from a query and a limit.
+ * @param query - The SELECT query to make limited.
+ * @param options - The options for the limit query.
+ * @param options.limit - The number of rows to limit the query to.
+ * @param options.offset - The number of rows to offset the query by.
+ * @param options.sanitize - Whether to sanitize the query.
+ * @returns The limited query.
+ */
+export function makeLimitQuery(
+  query: string,
+  {
+    limit = 100,
+    offset = 0,
+    sanitize = true,
+  }: {
+    limit?: number;
+    offset?: number;
+    sanitize?: boolean;
+  } = {},
+) {
+  return `SELECT * FROM (
+    ${sanitize ? sanitizeQuery(query) : query}
+  ) LIMIT ${limit} OFFSET ${offset}`;
+}

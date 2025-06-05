@@ -12,4 +12,4 @@ export {default as useArrowDataTable} from './useArrowDataTable';
 export {ColumnTypeBadge} from './ColumnTypeBadge';
 export {DataTableArrowPaginated} from './DataTableArrowPaginated';
 export {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
-export {makePagedQuery, makeLimitQuery} from './utils';
+export {makePagedQuery} from './utils';

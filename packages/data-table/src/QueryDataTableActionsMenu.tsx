@@ -6,9 +6,13 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@sqlrooms/ui';
-import {genRandomStr} from '@sqlrooms/utils';
+import {formatTimestampForFilename} from '@sqlrooms/utils';
 import {DownloadIcon} from 'lucide-react';
 import {FC, useState} from 'react';
+
+const makeExportFilename = (extension: string) => {
+  return `export-${formatTimestampForFilename()}.${extension}`;
+};
 
 export const QueryDataTableActionsMenu: FC<{
   query: string;
@@ -19,7 +23,7 @@ export const QueryDataTableActionsMenu: FC<{
     if (!query) return;
     try {
       setIsExporting(true);
-      await exportToCsv(query, `export-${genRandomStr(5)}.csv`);
+      await exportToCsv(query, makeExportFilename('csv'));
     } finally {
       setIsExporting(false);
     }
