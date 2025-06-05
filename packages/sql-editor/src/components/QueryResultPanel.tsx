@@ -48,6 +48,13 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     return <SpinnerPane h="100%" />;
   }
 
+  if (queryResult?.status === 'aborted') {
+    return (
+      <div className="p-5 font-mono text-xs leading-tight text-red-500">
+        Query was aborted
+      </div>
+    );
+  }
   if (queryResult?.status === 'error') {
     return (
       <div className="h-full w-full overflow-auto p-5">

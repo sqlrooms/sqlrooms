@@ -140,24 +140,24 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
       throw new Error('Query aborted before execution');
     }
 
-    // // 1️⃣ Kick‑off the statement using the *cancellable* streaming API
-    // const streamPromise = this.conn.send<T>(
-    //   query,
-    //   /* allowStreamResult */ true,
-    // );
-    // // 2️⃣ Helper to materialise all batches into a single Arrow Table
-    // const buildTable = async () => {
-    //   const reader = await streamPromise;
-    //   const batches: arrow.RecordBatch<T>[] = [];
-    //   for await (const batch of reader) {
-    //     batches.push(batch);
-    //   }
-    //   return new arrow.Table(batches);
-    // };
-
+    // 1️⃣ Kick‑off the statement using the *cancellable* streaming API
+    const streamPromise = this.conn.send<T>(
+      query,
+      /* allowStreamResult */ true,
+    );
+    // 2️⃣ Helper to materialise all batches into a single Arrow Table
     const buildTable = async () => {
-      return await this.conn!.query(query);
+      const reader = await streamPromise;
+      const batches: arrow.RecordBatch<T>[] = [];
+      for await (const batch of reader) {
+        batches.push(batch);
+      }
+      return new arrow.Table(batches);
     };
+
+    // const buildTable = async () => {
+    //   return await this.conn!.query(query);
+    // };
 
     // 3️⃣ AbortSignal → DuckDB interrupt wiring
     let abortHandler: (() => void) | undefined;
