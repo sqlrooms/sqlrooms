@@ -8,10 +8,10 @@ SQLRooms is a powerful framework and a set of building blocks for creating DuckD
 
 ## Try the Minimal Example
 
-To quickly explore SQLRooms without any setup, clone the minimal example:
+To create a new project from the get-started example run this:
 
 ```bash
-npx degit https://github.com/sqlrooms/examples/minimal myapp
+npx degit sqlrooms/examples/get-started myapp/
 cd myapp
 npm install
 npm run dev
@@ -247,7 +247,6 @@ function YourComponent() {
 - Built-in data source management
 - Extensible project configuration with Zod schemas
 - Type-safe state management
-
 
 ## Need Help?
 

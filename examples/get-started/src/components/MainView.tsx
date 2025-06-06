@@ -1,5 +1,11 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {Card, CardContent, CardHeader, CardTitle} from '@sqlrooms/ui';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  SpinnerPane,
+} from '@sqlrooms/ui';
 import {useProjectStore} from '../store.js';
 
 export function MainView() {
@@ -31,10 +37,10 @@ export function MainView() {
   });
 
   if (!tableReady) {
-    return <div className="p-4">Loading data...</div>;
+    return null;
   }
   if (isLoading) {
-    return <div className="p-4">Querying...</div>;
+    return <SpinnerPane />;
   }
   if (error) {
     return (
