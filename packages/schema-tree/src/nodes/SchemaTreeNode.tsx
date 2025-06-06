@@ -1,6 +1,6 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {SchemaNodeData} from '@sqlrooms/duckdb';
+import {SchemaNodeObject} from '@sqlrooms/duckdb';
 import {CopyIcon, FolderIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -11,19 +11,19 @@ import {
 
 export const SchemaTreeNode: FC<{
   className?: string;
-  nodeData: SchemaNodeData;
+  nodeObject: SchemaNodeObject;
   additionalMenuItems?: React.ReactNode;
 }> = (props) => {
-  const {className, nodeData, additionalMenuItems} = props;
+  const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode asChild className={className} nodeData={nodeData}>
+    <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
       <div className="flex w-full items-center space-x-2">
         <FolderIcon size="16px" className="shrink-0 text-yellow-500" />
-        <span className="text-sm">{nodeData.name}</span>
+        <span className="text-sm">{nodeObject.name}</span>
       </div>
       <TreeNodeActionsMenu>
         <TreeNodeActionsMenuItem
-          onClick={() => navigator.clipboard.writeText(nodeData.name)}
+          onClick={() => navigator.clipboard.writeText(nodeObject.name)}
         >
           <CopyIcon width="15px" />
           Copy schema name

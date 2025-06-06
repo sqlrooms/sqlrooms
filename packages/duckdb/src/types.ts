@@ -21,39 +21,39 @@ export type ColumnTypeCategory =
   | 'struct'
   | 'geometry';
 
-export type DbSchemaNode<T extends NodeData = NodeData> = {
+export type DbSchemaNode<T extends NodeObject = NodeObject> = {
   key: string;
   object: T;
   children?: DbSchemaNode[];
   isInitialOpen?: boolean;
 };
 
-export type NodeData =
-  | ColumnNodeData
-  | TableNodeData
-  | SchemaNodeData
-  | DatabaseNodeData;
+export type NodeObject =
+  | ColumnNodeObject
+  | TableNodeObject
+  | SchemaNodeObject
+  | DatabaseNodeObject;
 
-type BaseNodeData = {
+type BaseNodeObject = {
   name: string;
 };
 
-export type ColumnNodeData = BaseNodeData & {
+export type ColumnNodeObject = BaseNodeObject & {
   type: 'column';
   columnType: string;
   columnTypeCategory?: ColumnTypeCategory;
 };
 
-export type TableNodeData = BaseNodeData & {
+export type TableNodeObject = BaseNodeObject & {
   type: 'table';
   schema: string;
   database: string;
 };
 
-export type SchemaNodeData = BaseNodeData & {
+export type SchemaNodeObject = BaseNodeObject & {
   type: 'schema';
 };
 
-export type DatabaseNodeData = BaseNodeData & {
+export type DatabaseNodeObject = BaseNodeObject & {
   type: 'database';
 };

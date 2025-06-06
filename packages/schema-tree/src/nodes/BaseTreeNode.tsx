@@ -5,7 +5,7 @@ import {PropsWithChildren} from 'react';
 export function BaseTreeNode<T>(
   props: PropsWithChildren<{
     className?: string;
-    nodeData: T;
+    nodeObject: T;
     asChild?: boolean;
   }>,
 ) {

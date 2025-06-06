@@ -1,6 +1,6 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {TableNodeData} from '@sqlrooms/duckdb';
+import {TableNodeObject} from '@sqlrooms/duckdb';
 import {CopyIcon, SquareTerminalIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -9,17 +9,19 @@ import {
   TreeNodeActionsMenuItem,
 } from './TreeNodeActionsMenu';
 
-export const defaultRenderTableNodeMenuItems = (nodeData: TableNodeData) => {
-  const {database, schema, name} = nodeData;
+export const defaultRenderTableNodeMenuItems = (
+  nodeObject: TableNodeObject,
+) => {
+  const {database, schema, name} = nodeObject;
   return (
     <>
       <TreeNodeActionsMenuItem
         onClick={(evt) => {
           evt.stopPropagation();
           navigator.clipboard.writeText(
-            nodeData.schema == 'main'
-              ? nodeData.name
-              : `${nodeData.schema}.${nodeData.name}`,
+            nodeObject.schema == 'main'
+              ? nodeObject.name
+              : `${nodeObject.schema}.${nodeObject.name}`,
           );
         }}
       >
@@ -49,21 +51,21 @@ export const defaultRenderTableNodeMenuItems = (nodeData: TableNodeData) => {
 
 export const TableTreeNode: FC<{
   className?: string;
-  nodeData: TableNodeData;
-  renderMenuItems?: (nodeData: TableNodeData) => React.ReactNode;
+  nodeObject: TableNodeObject;
+  renderMenuItems?: (nodeObject: TableNodeObject) => React.ReactNode;
 }> = (props) => {
   const {
     className,
-    nodeData,
+    nodeObject,
     renderMenuItems = defaultRenderTableNodeMenuItems,
   } = props;
   return (
-    <BaseTreeNode asChild className={className} nodeData={nodeData}>
+    <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
       <div className="flex w-full items-center space-x-2">
         <TableIcon size="16px" className="shrink-0 text-blue-500" />
-        <span className="text-sm">{nodeData.name}</span>
+        <span className="text-sm">{nodeObject.name}</span>
       </div>
-      <TreeNodeActionsMenu>{renderMenuItems(nodeData)}</TreeNodeActionsMenu>
+      <TreeNodeActionsMenu>{renderMenuItems(nodeObject)}</TreeNodeActionsMenu>
     </BaseTreeNode>
   );
 };
