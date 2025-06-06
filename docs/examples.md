@@ -6,6 +6,25 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
+## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
+
+[Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
+
+<!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
+
+A minimal Vite application demonstrating the basic usage of SQLRooms. Features include:
+
+- Sets up an app store and a single main panel using SQLRooms' project builder utilities
+- Loads a CSV file of California earthquakes as a data source
+- Runs a SQL query in the browser (DuckDB WASM) to show summary statistics
+- Simple UI with loading, error, and result states
+
+```bash
+# To create a new project from the get-started example run this:
+npx degit sqlrooms/examples/get-started my-new-app/
+```
+
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
 [Try live](https://sqlrooms-ai.netlify.app/)
