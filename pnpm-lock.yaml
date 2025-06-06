@@ -781,10 +781,14 @@ importers:
     dependencies:
       '@ai-sdk/provider':
         specifier: ^1.0.7
+<<<<<<< HEAD
         version: 1.1.3
       '@duckdb/duckdb-wasm':
         specifier: 1.29.0
         version: 1.29.0
+=======
+        version: 1.0.10
+>>>>>>> b9c8ea56f5b15fb0ed1945d49dd5bbbbe10f0337
       '@openassistant/core':
         specifier: ^0.2.7
         version: 0.2.7(@ai-sdk/anthropic@1.2.12(zod@3.25.50))(@ai-sdk/google@1.2.19(zod@3.25.50))(@ai-sdk/xai@1.2.16(zod@3.25.50))(ollama-ai-provider@1.2.0(zod@3.25.50))(openai@4.104.0(encoding@0.1.13)(ws@8.18.2)(zod@3.25.50))(react@18.3.1)
@@ -918,8 +922,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.0
-        version: 1.29.0
+        specifier: 1.29.1-dev204.0
+        version: 1.29.1-dev204.0
       '@sqlrooms/project':
         specifier: workspace:*
         version: link:../project
@@ -2383,9 +2387,6 @@ importers:
 
   packages/project-builder:
     dependencies:
-      '@duckdb/duckdb-wasm':
-        specifier: ^1.29.1-dev68.0
-        version: 1.29.1-dev9.0
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -3400,8 +3401,13 @@ packages:
   '@duckdb/duckdb-wasm@1.29.0':
     resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==, tarball: https://registry.npmjs.org/@duckdb/duckdb-wasm/-/duckdb-wasm-1.29.0.tgz}
 
+<<<<<<< HEAD
   '@duckdb/duckdb-wasm@1.29.1-dev9.0':
     resolution: {integrity: sha512-OguW37uPSVDfWY13RQPiBt1fZaX2Qn1iCXL9YGhl1/+e1gcOlzT4HFMsvODjv2sXC0GgGClU/e1iYnmn1C74EQ==, tarball: https://registry.npmjs.org/@duckdb/duckdb-wasm/-/duckdb-wasm-1.29.1-dev9.0.tgz}
+=======
+  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
+    resolution: {integrity: sha512-AgGQFCmPFbdCw6imPrCJECUK6v+VkSa0evmrFuqrFDMsL7/X6vKGDa5fx9NMtxiULBUUEQPnBteRHqX7LdamIw==}
+>>>>>>> b9c8ea56f5b15fb0ed1945d49dd5bbbbe10f0337
 
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==, tarball: https://registry.npmjs.org/@emnapi/runtime/-/runtime-1.4.3.tgz}
@@ -15177,7 +15183,7 @@ snapshots:
     dependencies:
       apache-arrow: 18.1.0
 
-  '@duckdb/duckdb-wasm@1.29.1-dev9.0':
+  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
     dependencies:
       apache-arrow: 18.1.0
 

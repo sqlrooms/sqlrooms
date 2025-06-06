@@ -7,16 +7,16 @@ import {SchemaTreeNode} from './nodes/SchemaTreeNode';
 import {TableTreeNode} from './nodes/TableTreeNode';
 
 export const defaultRenderTableSchemaNode = (node: DbSchemaNode) => {
-  const {object: nodeData} = node;
-  switch (nodeData.type) {
+  const {object: nodeObject} = node;
+  switch (nodeObject.type) {
     case 'database':
-      return <DatabaseTreeNode nodeData={nodeData} />;
+      return <DatabaseTreeNode nodeObject={nodeObject} />;
     case 'schema':
-      return <SchemaTreeNode nodeData={nodeData} />;
+      return <SchemaTreeNode nodeObject={nodeObject} />;
     case 'table':
-      return <TableTreeNode nodeData={nodeData} />;
+      return <TableTreeNode nodeObject={nodeObject} />;
     case 'column':
-      return <ColumnTreeNode nodeData={nodeData} />;
+      return <ColumnTreeNode nodeObject={nodeObject} />;
     default:
       return null;
   }

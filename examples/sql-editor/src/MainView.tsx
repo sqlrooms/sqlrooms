@@ -22,7 +22,7 @@ export const MainView: FC = () => {
   const createTableModal = useDisclosure();
   const lastQueryStatement = useProjectStore((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
-    s.sqlEditor.queryResult?.isSelect
+    s.sqlEditor.queryResult?.type === 'select'
       ? s.sqlEditor.queryResult.lastQueryStatement
       : '',
   );

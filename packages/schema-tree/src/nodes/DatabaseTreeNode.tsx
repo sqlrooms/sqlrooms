@@ -1,6 +1,6 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {DatabaseNodeData} from '@sqlrooms/duckdb';
+import {DatabaseNodeObject} from '@sqlrooms/duckdb';
 import {CopyIcon, DatabaseIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -11,19 +11,19 @@ import {
 
 export const DatabaseTreeNode: FC<{
   className?: string;
-  nodeData: DatabaseNodeData;
+  nodeObject: DatabaseNodeObject;
   additionalMenuItems?: React.ReactNode;
 }> = (props) => {
-  const {className, nodeData, additionalMenuItems} = props;
+  const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode asChild className={className} nodeData={nodeData}>
+    <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
       <div className="flex w-full items-center space-x-2">
         <DatabaseIcon size="16px" className="shrink-0 text-green-500" />
-        <span className="text-sm">{nodeData.name}</span>
+        <span className="text-sm">{nodeObject.name}</span>
       </div>
       <TreeNodeActionsMenu>
         <TreeNodeActionsMenuItem
-          onClick={() => navigator.clipboard.writeText(nodeData.name)}
+          onClick={() => navigator.clipboard.writeText(nodeObject.name)}
         >
           <CopyIcon width="15px" />
           Copy database name

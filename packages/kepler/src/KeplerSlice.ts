@@ -298,7 +298,9 @@ export function createKeplerSlice<
         addTableToMap: async (mapId, tableName, options = {}) => {
           const connector = await get().db.getConnector();
           const duckDbColumns = await getDuckDBColumnTypes(
-            connector as unknown as DatabaseConnection,
+            {
+              query: (query: string) => connector.query(query).result,
+            } as DatabaseConnection,
             tableName,
           );
           const tableDuckDBTypes = getDuckDBColumnTypesMap(duckDbColumns);
@@ -306,7 +308,7 @@ export function createKeplerSlice<
             tableName,
             duckDbColumns,
           );
-          const arrowResult = await connector.query(adjustedQuery);
+          const arrowResult = await connector.query(adjustedQuery).result;
           setGeoArrowWKBExtension(arrowResult, duckDbColumns);
           // TODO remove once DuckDB doesn't drop geoarrow metadata
           restoreGeoarrowMetadata(arrowResult, {});

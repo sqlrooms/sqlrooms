@@ -45,9 +45,9 @@ export type DataTablePaginatedProps<Data extends object> = {
   pageCount?: number | undefined;
   numRows?: number | undefined;
   isFetching?: boolean;
-  pagination: PaginationState;
+  pagination?: PaginationState | undefined;
   sorting?: SortingState;
-  actions?: React.ReactNode;
+  footerActions?: React.ReactNode;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
 };
@@ -62,20 +62,24 @@ export default function DataTablePaginated<Data extends object>({
   fontSize = 'text-base',
   data,
   columns,
-  pageCount,
   numRows,
   pagination,
   sorting,
   onPaginationChange,
   onSortingChange,
-  actions,
+  footerActions,
   isFetching,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const pageCount =
+    pagination && numRows !== undefined
+      ? Math.ceil(numRows / pagination.pageSize)
+      : undefined;
+
   const table = useReactTable({
     data: (data ?? defaultData) as any[],
     columns: columns ?? [],
-    pageCount: pageCount ?? -1,
+    pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {
@@ -83,7 +87,7 @@ export default function DataTablePaginated<Data extends object>({
       }
     },
     onPaginationChange: (update) => {
-      if (onPaginationChange && typeof update === 'function') {
+      if (pagination && onPaginationChange && typeof update === 'function') {
         onPaginationChange(update(pagination));
       }
     },
@@ -96,11 +100,11 @@ export default function DataTablePaginated<Data extends object>({
   });
 
   const [internalPageIndex, setInternalPageIndex] = useState(
-    pagination.pageIndex ?? 0,
+    pagination?.pageIndex ?? 0,
   );
   useEffect(() => {
-    setInternalPageIndex(pagination.pageIndex ?? 0);
-  }, [pagination.pageIndex]);
+    setInternalPageIndex(pagination?.pageIndex ?? 0);
+  }, [pagination?.pageIndex]);
 
   return (
     <div className={cn(`relative flex h-full w-full flex-col`, className)}>
@@ -125,7 +129,8 @@ export default function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto cursor-pointer whitespace-nowrap border-r py-2',
+                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2',
+                          pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
                           fontSize,
                         )}
@@ -170,7 +175,7 @@ export default function DataTablePaginated<Data extends object>({
                   >
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
-                      : ''}
+                      : `${i + 1}`}
                   </TableCell>
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as ArrowColumnMeta;
@@ -197,93 +202,100 @@ export default function DataTablePaginated<Data extends object>({
           </Table>
         </div>
       </div>
-      <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => table.setPageIndex(0)}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronDoubleLeftIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-          >
-            <ChevronLeftIcon className="h-4 w-4" />
-          </Button>
-          <div className={`ml-1 flex items-center gap-1 ${fontSize}`}>
-            <div>Page</div>
-            <Input
-              type="number"
-              min={1}
-              max={table.getPageCount()}
-              className="h-8 w-16"
-              value={internalPageIndex + 1}
-              onChange={(e) => {
-                const value = e.target.value;
-                if (value) {
-                  const page = Math.max(
-                    0,
-                    Math.min(table.getPageCount() - 1, Number(value) - 1),
-                  );
-                  setInternalPageIndex(page);
-                }
-              }}
-              onBlur={() => {
-                if (internalPageIndex !== pagination.pageIndex) {
-                  table.setPageIndex(internalPageIndex);
-                }
-              }}
-            />
-            <div>{`of ${formatCount(table.getPageCount())}`}</div>
-          </div>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronRightIcon className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-            disabled={!table.getCanNextPage()}
-          >
-            <ChevronDoubleRightIcon className="h-4 w-4" />
-          </Button>
-          <Select
-            value={String(table.getState().pagination.pageSize)}
-            onValueChange={(value) => table.setPageSize(Number(value))}
-          >
-            <SelectTrigger className="h-8 w-[110px]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[10, 50, 100, 500, 1000].map((pageSize) => (
-                <SelectItem key={pageSize} value={String(pageSize)}>
-                  {`${pageSize} rows`}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+      {pagination || footerActions ? (
+        <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
+          {pagination ? (
+            <>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.setPageIndex(0)}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronDoubleLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <div className={`ml-1 flex items-center gap-1 ${fontSize}`}>
+                  <div>Page</div>
+                  <Input
+                    type="number"
+                    min={1}
+                    max={table.getPageCount()}
+                    className="h-8 w-16"
+                    value={internalPageIndex + 1}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (value) {
+                        const page = Math.max(
+                          0,
+                          Math.min(table.getPageCount() - 1, Number(value) - 1),
+                        );
+                        setInternalPageIndex(page);
+                      }
+                    }}
+                    onBlur={() => {
+                      if (internalPageIndex !== pagination?.pageIndex) {
+                        table.setPageIndex(internalPageIndex);
+                      }
+                    }}
+                  />
+                  <div>{`of ${formatCount(table.getPageCount())}`}</div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                  disabled={!table.getCanNextPage()}
+                >
+                  <ChevronDoubleRightIcon className="h-4 w-4" />
+                </Button>
+                <Select
+                  value={String(table.getState().pagination.pageSize)}
+                  onValueChange={(value) => table.setPageSize(Number(value))}
+                >
+                  <SelectTrigger className="h-8 w-[110px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {[10, 50, 100, 500, 1000].map((pageSize) => (
+                      <SelectItem key={pageSize} value={String(pageSize)}>
+                        {`${pageSize} rows`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex-1" />
+            </>
+          ) : null}
+
+          <>
+            {numRows !== undefined && isFinite(numRows) ? (
+              <div className={`font-normal ${fontSize}`}>
+                {`${formatCount(numRows)} rows`}
+              </div>
+            ) : null}
+          </>
+          {footerActions}
         </div>
+      ) : null}
 
-        <div className="flex-1" />
-
-        {numRows !== undefined && isFinite(numRows) ? (
-          <div className={`font-normal ${fontSize}`}>
-            {`${formatCount(numRows)} rows`}
-          </div>
-        ) : null}
-
-        {actions}
-      </div>
       {isFetching ? (
         <div className="bg-background/80 absolute inset-0 animate-pulse" />
       ) : null}

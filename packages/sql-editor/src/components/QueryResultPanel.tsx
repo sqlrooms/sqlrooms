@@ -1,8 +1,19 @@
-import {DataTablePaginatedProps, QueryDataTable} from '@sqlrooms/data-table';
-import {escapeId} from '@sqlrooms/duckdb';
-import {cn, SpinnerPane} from '@sqlrooms/ui';
+import {
+  DataTablePaginated,
+  DataTablePaginatedProps,
+  useArrowDataTable,
+} from '@sqlrooms/data-table';
+import {
+  cn,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SpinnerPane,
+} from '@sqlrooms/ui';
+import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
-import {useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -18,24 +29,32 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   renderActions,
   fontSize = 'text-xs',
 }) => {
-  // Get state and methods from the store
-  const selectedTable = useStoreWithSqlEditor((s) => s.sqlEditor.selectedTable);
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const setQueryResultLimit = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setQueryResultLimit,
+  );
+  const queryResultLimit = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.queryResultLimit,
+  );
+  const arrowTableData = useArrowDataTable(
+    isQueryWithResult(queryResult) ? queryResult.result : undefined,
+  );
+
+  if (!queryResult) {
+    return null;
+  }
 
   if (queryResult?.status === 'loading') {
     return <SpinnerPane h="100%" />;
   }
 
-  if (selectedTable) {
+  if (queryResult?.status === 'aborted') {
     return (
-      <QueryDataTable
-        className={className}
-        fontSize={fontSize}
-        query={`SELECT * FROM ${escapeId(selectedTable)}`}
-      />
+      <div className="p-5 font-mono text-xs leading-tight text-red-500">
+        Query was aborted
+      </div>
     );
   }
-
   if (queryResult?.status === 'error') {
     return (
       <div className="h-full w-full overflow-auto p-5">
@@ -54,13 +73,48 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           className,
         )}
       >
-        {queryResult.isSelect ? (
-          <QueryDataTable
-            fontSize={fontSize}
-            className={cn('overflow-hidden', className)}
-            query={queryResult.lastQueryStatement}
-            renderActions={renderActions}
-          />
+        {isQueryWithResult(queryResult) ? (
+          <div className="flex h-full w-full flex-col">
+            <DataTablePaginated
+              {...arrowTableData}
+              className="flex-grow overflow-hidden"
+              fontSize={fontSize}
+              isFetching={false}
+            />
+            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+              {queryResult.result ? (
+                <>
+                  <div className="font-mono text-xs">
+                    {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
+                  </div>
+
+                  <Select
+                    value={queryResultLimit.toString()}
+                    onValueChange={(value) =>
+                      setQueryResultLimit(parseInt(value))
+                    }
+                  >
+                    <SelectTrigger className="h-6 w-fit">
+                      <div className="text-xs text-gray-500">
+                        {`Limit results to ${formatCount(queryResultLimit)} rows`}
+                      </div>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[100, 500, 1000].map((limit) => (
+                        <SelectItem key={limit} value={limit.toString()}>
+                          {`${formatCount(limit)} rows`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </>
+              ) : null}
+              <div className="flex-1" />
+              {renderActions
+                ? renderActions(queryResult.lastQueryStatement)
+                : undefined}
+            </div>
+          </div>
         ) : (
           <pre className="p-4 text-xs leading-tight text-green-500">
             Successfully executed query

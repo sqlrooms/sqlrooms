@@ -5,6 +5,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  EditableText,
   TabsList,
   TabsTrigger,
 } from '@sqlrooms/ui';
@@ -12,7 +13,6 @@ import {MoreVerticalIcon, PlusIcon} from 'lucide-react';
 import React, {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
-import RenameSqlQueryModal from './RenameSqlQueryModal';
 
 export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
@@ -23,39 +23,51 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     (s) => s.sqlEditor.renameQueryTab,
   );
 
-  // Local state for modals
+  // Local state for modals and editing
   const [queryToDelete, setQueryToDelete] = React.useState<string | null>(null);
-  const [queryToRename, setQueryToRename] = React.useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-  // Handle rename query
-  const handleStartRename = useCallback(
-    (queryId: string, currentName: string) => {
-      setQueryToRename({id: queryId, name: currentName});
-    },
-    [],
+  const [editingQueryId, setEditingQueryId] = React.useState<string | null>(
+    null,
   );
 
-  const handleFinishRename = useCallback(
-    (newName: string) => {
-      if (queryToRename) {
-        renameQueryTab(queryToRename.id, newName);
-      }
-      setQueryToRename(null);
-    },
-    [queryToRename, renameQueryTab],
-  );
-
-  // Handle delete query
-  const handleDeleteQuery = useCallback((queryId: string) => {
-    setQueryToDelete(queryId);
-  }, []);
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
   );
   const deleteQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.deleteQueryTab,
+  );
+
+  // Handle rename query
+  const handleRename = useCallback(
+    (queryId: string, newName: string) => {
+      if (newName.trim() !== '') {
+        renameQueryTab(queryId, newName.trim());
+      }
+      setEditingQueryId(null);
+    },
+    [renameQueryTab],
+  );
+
+  // Handle double click to start editing
+  const handleDoubleClick = useCallback((queryId: string) => {
+    console.log('handleDoubleClick');
+    setEditingQueryId(queryId);
+  }, []);
+
+  // Handle delete query
+  const handleDeleteQuery = useCallback(
+    (queryId: string) => {
+      // Find the query to check if it's empty
+      const queryToDelete = queries.find((q) => q.id === queryId);
+
+      // If query is empty (no content), delete immediately without confirmation
+      if (queryToDelete && queryToDelete.query.trim() === '') {
+        deleteQueryTab(queryId);
+      } else {
+        // Otherwise, show confirmation modal
+        setQueryToDelete(queryId);
+      }
+    },
+    [queries, deleteQueryTab],
   );
 
   // Handle new query creation
@@ -77,9 +89,28 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
           <div key={q.id} className="relative">
             <TabsTrigger
               value={q.id}
-              className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 pr-8"
+              className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 py-0 pr-8"
             >
-              <div className="truncate text-sm">{q.name}</div>
+              <div
+                className="flex h-6 items-center"
+                onDoubleClick={() => handleDoubleClick(q.id)}
+              >
+                {editingQueryId !== q.id ? (
+                  <div>{q.name}</div>
+                ) : (
+                  <EditableText
+                    value={q.name}
+                    onChange={(newName: string) => handleRename(q.id, newName)}
+                    className="h-6 truncate text-sm"
+                    isEditing={editingQueryId === q.id}
+                    onEditingChange={(isEditing) => {
+                      if (!isEditing) {
+                        setEditingQueryId(null);
+                      }
+                    }}
+                  />
+                )}
+              </div>
             </TabsTrigger>
             <DropdownMenu>
               <DropdownMenuTrigger>
@@ -88,13 +119,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleStartRename(q.id, q.name);
-                  }}
-                >
-                  Rename
-                </DropdownMenuItem>
                 {queries.length > 1 && (
                   <DropdownMenuItem
                     onClick={() => {
@@ -122,12 +146,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}
         onConfirm={handleConfirmDeleteQuery}
-      />
-      <RenameSqlQueryModal
-        isOpen={queryToRename !== null}
-        onClose={() => setQueryToRename(null)}
-        initialName={queryToRename?.name ?? ''}
-        onRename={handleFinishRename}
       />
     </>
   );

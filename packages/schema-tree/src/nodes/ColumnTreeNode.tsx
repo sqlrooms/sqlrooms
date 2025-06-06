@@ -1,7 +1,7 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {ColumnTypeBadge} from '@sqlrooms/data-table';
-import {ColumnNodeData} from '@sqlrooms/duckdb';
+import {ColumnNodeObject} from '@sqlrooms/duckdb';
 import {CopyIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -12,23 +12,23 @@ import {
 
 export const ColumnTreeNode: FC<{
   className?: string;
-  nodeData: ColumnNodeData;
+  nodeObject: ColumnNodeObject;
   additionalMenuItems?: React.ReactNode;
 }> = (props) => {
-  const {className, nodeData, additionalMenuItems} = props;
+  const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode asChild className={className} nodeData={nodeData}>
+    <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
       <div className="flex w-full items-center space-x-2">
         <ColumnTypeBadge
           className="opacity-50"
-          columnType={nodeData.columnType}
-          typeCategory={nodeData.columnTypeCategory}
+          columnType={nodeObject.columnType}
+          typeCategory={nodeObject.columnTypeCategory}
         />
-        <span className="text-xs">{nodeData.name}</span>
+        <span className="text-xs">{nodeObject.name}</span>
       </div>
       <TreeNodeActionsMenu>
         <TreeNodeActionsMenuItem
-          onClick={() => navigator.clipboard.writeText(nodeData.name)}
+          onClick={() => navigator.clipboard.writeText(nodeObject.name)}
         >
           <CopyIcon width="15px" />
           Copy column name

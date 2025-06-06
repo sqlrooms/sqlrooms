@@ -24,7 +24,6 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.1-dev68.0",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
