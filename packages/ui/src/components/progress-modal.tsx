@@ -15,19 +15,26 @@ const ProgressModal: FC<{
   title?: string;
   loadingStage?: string;
   progress?: number;
+  indeterminate?: boolean;
 }> = (props) => {
-  const {isOpen, title, loadingStage, progress} = props;
-
+  const {isOpen, title, loadingStage, progress, indeterminate} = props;
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent
+        className="rounded-md border-none focus:outline-none sm:max-w-[425px]"
+        showCloseButton={false}
+      >
         <DialogHeader>
           <DialogTitle>{title ?? ''}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-2">
-          <Progress value={progress} className="w-full" />
+          <Progress
+            value={progress}
+            className="h-2 w-full"
+            indeterminate={indeterminate}
+          />
           <DialogDescription className="text-muted-foreground flex justify-between text-sm">
-            <span>{loadingStage ?? ''}</span>
+            <span className="text-sm">{loadingStage ?? ''}</span>
             {progress ? <span>{progress}%</span> : null}
           </DialogDescription>
         </div>

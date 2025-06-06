@@ -77,11 +77,15 @@ These packages provide specific functionality that can be added as needed:
 
 - **[@sqlrooms/cosmos](https://sqlrooms.github.io/api/cosmos/)**: A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks.
 
+- **[@sqlrooms/discuss](https://sqlrooms.github.io/api/discuss/)**: A discussion system for collaborative analytics applications. It provides threaded conversations, anchor-based discussions linked to data points, real-time state management, and customizable rendering components. The package includes built-in forms for adding, editing, and replying to comments with delete confirmation dialogs.
+
 - **[@sqlrooms/dropzone](https://sqlrooms.github.io/api/dropzone/)**: A comprehensive file upload solution that implements drag-and-drop functionality. It provides sophisticated file upload handling with built-in file type validation and upload progress tracking to enhance the user experience.
 
 - **[@sqlrooms/mosaic](https://sqlrooms.github.io/api/mosaic/)**: A visualization package that integrates with [UW Interactive Data Lab's Mosaic library](https://idl.uw.edu/mosaic/). It provides declarative chart specifications and interactive visualization capabilities for data analysis.
 
 - **[@sqlrooms/monaco-editor](https://sqlrooms.github.io/api/monaco-editor/)**: A powerful code editing package that integrates [Monaco Editor](https://microsoft.github.io/monaco-editor/) (the editor that powers VS Code). It provides customizable text editing components with features like syntax highlighting, code completion, and theming. The package includes specialized editors for JSON with schema validation support.
+
+- **[@sqlrooms/recharts](https://sqlrooms.github.io/api/recharts/)**: A charting package that integrates [Recharts](https://recharts.org/) for creating responsive and customizable data visualizations. It provides React components for rendering various chart types including line charts, bar charts, pie charts, and more with built-in interactivity and animation support.
 
 ### Utility Packages
 

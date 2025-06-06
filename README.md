@@ -38,9 +38,11 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 - **[@sqlrooms/vega](/packages/vega/)**: Data visualization integration with Vega-Lite
 - **[@sqlrooms/ai](/packages/ai/)**: Optional AI integration for natural language querying
 - **[@sqlrooms/cosmos](/packages/cosmos/)**: Graph visualization capabilities
+- **[@sqlrooms/discuss](/packages/discuss/)**: Commenting and annotation
 - **[@sqlrooms/dropzone](/packages/dropzone/)**: Drag-and-drop file upload functionality
 - **[@sqlrooms/mosaic](/packages/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
 - **[@sqlrooms/monaco-editor](/packages/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
+- **[@sqlrooms/recharts](/packages/recharts/)**: A collection of chart components based on recharts
 - **[@sqlrooms/utils](/packages/utils/)**: Shared helper functions for various operations
 
 ### Use Cases

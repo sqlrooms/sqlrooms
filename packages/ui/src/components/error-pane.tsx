@@ -20,8 +20,7 @@ const ErrorPane = React.forwardRef<HTMLDivElement, ErrorPaneProps>(
       className,
       embed,
       title = 'Something went wrong',
-      text = `We are sorry, but something unexpected happened. We were notified
-              and will be working on resolving the issue as soon as possible.`,
+      text = `We are sorry, but something unexpected happened.`,
       onRetry,
       actions = false,
       onGoToStart,
