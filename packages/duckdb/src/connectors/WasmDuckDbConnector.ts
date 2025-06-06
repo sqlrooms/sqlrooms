@@ -128,7 +128,6 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     query: string,
     signal: AbortSignal,
   ): Promise<arrow.Table<T>> {
-    // console.log('executeQueryWithSignal', query);
     await this.ensureInitialized();
     if (!this.conn) {
       throw new Error('DuckDB connection not initialized');
