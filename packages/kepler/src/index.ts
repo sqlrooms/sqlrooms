@@ -28,3 +28,7 @@ export {
   KeplerS3Browser,
   type KeplerS3BrowserProps,
 } from './components/KeplerS3Browser';
+export {KeplerProvider} from './components/KeplerProvider';
+export {useKeplerStateActions} from './hooks/useKeplerStateActions';
+export {KeplerPlotContainer} from './components/KeplerPlotContainer';
+export {KeplerImageExport} from './components/KeplerImageExport';
