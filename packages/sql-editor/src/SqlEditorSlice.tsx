@@ -413,10 +413,6 @@ export function createSqlEditorSlice<
                 );
               }
 
-              if (signal.aborted) {
-                throw new Error('Query aborted');
-              }
-
               const result = await connector.query(lastQueryStatement, {signal})
                 .result;
 

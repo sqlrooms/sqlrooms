@@ -51,8 +51,8 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
   }
 
   protected async ensureInitialized(): Promise<void> {
-    if (!this.initialized) {
-      await this.initialize();
+    if (!this.initialized && this.initializing) {
+      await this.initializing;
     }
   }
 
@@ -72,6 +72,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
   protected abstract executeQueryWithSignal<T extends TypeMap = any>(
     query: string,
     signal: AbortSignal,
+    queryId?: string,
   ): Promise<arrow.Table<T>>;
 
   /**
@@ -79,7 +80,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
    * This method handles the AbortController setup, signal chaining, and cleanup.
    */
   protected createQueryHandle<T>(
-    queryPromiseFactory: (signal: AbortSignal) => Promise<T>,
+    queryPromiseFactory: (signal: AbortSignal, queryId: string) => Promise<T>,
     options?: QueryOptions,
   ): QueryHandle<T> {
     const abortController = new AbortController();
@@ -100,7 +101,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     this.activeQueries.set(queryId, abortController);
 
     // Execute the query with abort signal support
-    const resultPromise = queryPromiseFactory(abortController.signal).finally(
+    const resultPromise = queryPromiseFactory(abortController.signal, queryId).finally(
       () => {
         this.activeQueries.delete(queryId);
       },
@@ -117,7 +118,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
 
   execute(sql: string, options?: QueryOptions): QueryHandle {
     return this.createQueryHandle(
-      (signal) => this.executeQueryWithSignal(sql, signal),
+      (signal, queryId) => this.executeQueryWithSignal(sql, signal, queryId),
       options,
     );
   }
@@ -127,7 +128,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>> {
     return this.createQueryHandle(
-      (signal) => this.executeQueryWithSignal<T>(query, signal),
+      (signal, queryId) => this.executeQueryWithSignal<T>(query, signal, queryId),
       options,
     );
   }
@@ -136,8 +137,8 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     query: string,
     options?: QueryOptions,
   ): QueryHandle<Iterable<T>> {
-    return this.createQueryHandle(async (signal) => {
-      const table = await this.executeQueryWithSignal(query, signal);
+    return this.createQueryHandle(async (signal, queryId) => {
+      const table = await this.executeQueryWithSignal(query, signal, queryId);
       return createTypedRowAccessor({arrowTable: table});
     }, options);
   }
