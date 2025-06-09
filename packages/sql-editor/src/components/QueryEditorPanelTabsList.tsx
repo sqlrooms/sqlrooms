@@ -13,6 +13,7 @@ import {MoreVerticalIcon, PlusIcon} from 'lucide-react';
 import React, {useCallback} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
+import RenameSqlQueryModal from './RenameSqlQueryModal';
 
 export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
@@ -28,6 +29,10 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const [editingQueryId, setEditingQueryId] = React.useState<string | null>(
     null,
   );
+  const [queryToRename, setQueryToRename] = React.useState<{
+    id: string;
+    name: string;
+  } | null>(null);
 
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
@@ -36,6 +41,23 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     (s) => s.sqlEditor.deleteQueryTab,
   );
 
+  // Handle rename query
+  const handleStartRename = useCallback(
+    (queryId: string, currentName: string) => {
+      setQueryToRename({id: queryId, name: currentName});
+    },
+    [],
+  );
+
+  const handleFinishRename = useCallback(
+    (newName: string) => {
+      if (queryToRename) {
+        renameQueryTab(queryToRename.id, newName);
+      }
+      setQueryToRename(null);
+    },
+    [queryToRename, renameQueryTab],
+  );
   // Handle rename query
   const handleRename = useCallback(
     (queryId: string, newName: string) => {
@@ -118,6 +140,13 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                 </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent>
+                <DropdownMenuItem
+                  onClick={() => {
+                    handleStartRename(q.id, q.name);
+                  }}
+                >
+                  Rename
+                </DropdownMenuItem>
                 {queries.length > 1 && (
                   <DropdownMenuItem
                     onClick={() => {
@@ -145,6 +174,12 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}
         onConfirm={handleConfirmDeleteQuery}
+      />
+      <RenameSqlQueryModal
+        isOpen={queryToRename !== null}
+        onClose={() => setQueryToRename(null)}
+        initialName={queryToRename?.name ?? ''}
+        onRename={handleFinishRename}
       />
     </>
   );
