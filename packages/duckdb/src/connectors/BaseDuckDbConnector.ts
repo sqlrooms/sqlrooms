@@ -56,7 +56,11 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     }
   }
 
-  async cancelQuery(queryId: string): Promise<void> {
+  /**
+   * Cancel a query by its internal ID
+   * @param queryId Internal query ID to cancel
+   */
+  protected async cancelQueryInternal(queryId: string): Promise<void> {
     const abortController = this.activeQueries.get(queryId);
     if (abortController) {
       abortController.abort();
@@ -69,7 +73,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
    * Abstract method for executing a query with abort signal support.
    * Subclasses must implement this to handle the actual query execution.
    */
-  protected abstract executeQueryWithSignal<T extends TypeMap = any>(
+  protected abstract executeQueryInternal<T extends TypeMap = any>(
     query: string,
     signal: AbortSignal,
     queryId?: string,
@@ -79,7 +83,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
    * Creates a QueryHandle with common signal handling logic.
    * This method handles the AbortController setup, signal chaining, and cleanup.
    */
-  protected createQueryHandle<T>(
+  protected createQueryHandleInternal<T>(
     queryPromiseFactory: (signal: AbortSignal, queryId: string) => Promise<T>,
     options?: QueryOptions,
   ): QueryHandle<T> {
@@ -111,14 +115,14 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
       result: resultPromise,
       signal: abortController.signal,
       cancel: async () => {
-        await this.cancelQuery(queryId);
+        await this.cancelQueryInternal(queryId);
       },
     };
   }
 
   execute(sql: string, options?: QueryOptions): QueryHandle {
-    return this.createQueryHandle(
-      (signal, queryId) => this.executeQueryWithSignal(sql, signal, queryId),
+    return this.createQueryHandleInternal(
+      (signal, queryId) => this.executeQueryInternal(sql, signal, queryId),
       options,
     );
   }
@@ -127,8 +131,8 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     query: string,
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>> {
-    return this.createQueryHandle(
-      (signal, queryId) => this.executeQueryWithSignal<T>(query, signal, queryId),
+    return this.createQueryHandleInternal(
+      (signal, queryId) => this.executeQueryInternal<T>(query, signal, queryId),
       options,
     );
   }
@@ -137,8 +141,8 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     query: string,
     options?: QueryOptions,
   ): QueryHandle<Iterable<T>> {
-    return this.createQueryHandle(async (signal, queryId) => {
-      const table = await this.executeQueryWithSignal(query, signal, queryId);
+    return this.createQueryHandleInternal(async (signal, queryId) => {
+      const table = await this.executeQueryInternal(query, signal, queryId);
       return createTypedRowAccessor({arrowTable: table});
     }, options);
   }
@@ -166,10 +170,9 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
   async loadArrow(
     file: arrow.Table | Uint8Array,
     tableName: string,
-    opts?: {schema?: string},
-  ) {
-    // To be implemented by subclasses
-    throw new Error('Not implemented', {cause: {file, tableName, opts}});
+    opts?: {schema?: string}
+  ): Promise<void> {
+    throw new Error('Not implemented');
   }
 
   async loadObjects(

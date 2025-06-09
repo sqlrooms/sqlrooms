@@ -275,14 +275,6 @@ export interface DuckDbConnector {
   ): QueryHandle<Iterable<T>>;
 
   /**
-   * Cancel a running query by its internal ID
-   *
-   * @param queryId Internal query ID to cancel
-   * @deprecated Prefer using QueryHandle.cancel() or external AbortController for better composability
-   */
-  cancelQuery(queryId: string): Promise<void>;
-
-  /**
    * Load a file into DuckDB and create a table
    * @param fileName - Path to the file to load
    * @param tableName - Name of the table to create

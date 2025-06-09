@@ -124,7 +124,7 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
   }
 
-  protected async executeQueryWithSignal<T extends arrow.TypeMap = any>(
+  protected async executeQueryInternal<T extends arrow.TypeMap = any>(
     query: string,
     signal: AbortSignal,
   ): Promise<arrow.Table<T>> {
@@ -181,9 +181,9 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
   }
 
-  async cancelQuery(queryId: string): Promise<void> {
+  protected async cancelQueryInternal(queryId: string): Promise<void> {
     // First, invoke the base‑class logic (removes AbortController listeners, etc.)
-    await super.cancelQuery(queryId);
+    await super.cancelQueryInternal(queryId);
 
     // Then, interrupt the running statement on the DuckDB side.
     if (this.conn) {
