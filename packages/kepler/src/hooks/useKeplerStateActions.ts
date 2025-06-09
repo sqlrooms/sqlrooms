@@ -19,10 +19,12 @@ export function useKeplerStateActions({mapId}: {mapId: string}): {
   const dispatchAction = useStoreWithKepler(
     (state) => state.kepler.dispatchAction,
   );
+
   const forwardToDispatch = useMemo(
     () => (action: KeplerAction) => dispatchAction(mapId, action),
     [mapId, dispatchAction],
   );
+
   const keplerState = useStoreWithKepler((state) => {
     return state.kepler.map[mapId];
   });

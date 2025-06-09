@@ -1,4 +1,4 @@
-import {FC, useMemo, useRef} from 'react';
+import {FC, useMemo, useRef, useEffect} from 'react';
 
 import {
   MapContainerFactory,
@@ -59,6 +59,17 @@ const KeplerGl: FC<{
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
+
+  // Update export image settings when size changes
+  useEffect(() => {
+    if (size?.width && size?.height) {
+      keplerActions.uiStateActions.setExportImageSetting({
+        mapW: size.width,
+        mapH: size.height,
+      });
+    }
+  }, [size?.width, size?.height, keplerActions.uiStateActions]);
+
   const mergedKeplerProps = useMemo(() => {
     return {
       ...KEPLER_PROPS,
@@ -74,9 +85,10 @@ const KeplerGl: FC<{
         size || DEFAULT_DIMENSIONS,
       )
     : null;
-  const mapFields = keplerState?.visState
-    ? mapFieldsSelector(mergedKeplerProps)
-    : null;
+  const mapFields = useMemo(
+    () => (keplerState?.visState ? mapFieldsSelector(mergedKeplerProps) : null),
+    [keplerState, mergedKeplerProps],
+  );
 
   const bottomWidgetFields = keplerState?.visState.filters?.length
     ? bottomWidgetSelector(mergedKeplerProps, theme)
