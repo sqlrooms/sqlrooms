@@ -49,7 +49,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   // Handle double click to start editing
   const handleDoubleClick = useCallback((queryId: string) => {
-    console.log('handleDoubleClick');
     setEditingQueryId(queryId);
   }, []);
 
