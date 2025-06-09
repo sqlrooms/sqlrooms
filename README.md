@@ -42,7 +42,7 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 - **[@sqlrooms/dropzone](/packages/dropzone/)**: Drag-and-drop file upload functionality
 - **[@sqlrooms/mosaic](/packages/mosaic/)**: Integration with UW Interactive Data Lab's Mosaic library
 - **[@sqlrooms/monaco-editor](/packages/monaco-editor/)**: Monaco Editor integration with specialized JSON editing support
-- **[@sqlrooms/recharts](/packages/recharts/)**: A collection of chart components based on recharts
+- **[@sqlrooms/schema-tree](/packages/schema-tree/)**: Visualizes and explores database schemas as interactive trees
 - **[@sqlrooms/utils](/packages/utils/)**: Shared helper functions for various operations
 
 ### Use Cases
