@@ -11,9 +11,12 @@ import {StateCreator} from 'zustand';
 import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
 import {
+  escapeId,
   escapeVal,
   getColValAsNumber,
+  isQualifiedTableName,
   makeQualifiedTableName,
+  QualifiedTableName,
   splitSqlStatements,
 } from './duckdb-utils';
 import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
@@ -48,11 +51,27 @@ export type DuckDbSliceState = {
      * @deprecated We shouldn't limit the schema to a single one.
      */
     schema: string;
-    isRefreshingTableSchemas: boolean;
+
+    /**
+     * Cache of refreshed table schemas
+     */
     tables: DataTable[];
+    /**
+     * Cache of row counts for tables
+     */
     tableRowCounts: {[tableName: string]: number};
+    /**
+     * Cache of schema trees for tables
+     */
     schemaTrees?: DbSchemaNode[];
+    /**
+     * Cache of currently running query handles
+     */
     queryCache: {[key: string]: QueryHandle};
+    /**
+     * Whether the table schemas are being refreshed
+     */
+    isRefreshingTableSchemas: boolean;
 
     /**
      * Set a new DuckDB connector
@@ -76,12 +95,39 @@ export type DuckDbSliceState = {
      * @returns A promise that resolves to the table that was added.
      */
     addTable(
-      tableName: string,
+      tableName: string | QualifiedTableName,
       data: arrow.Table | Record<string, unknown>[],
     ): Promise<DataTable>;
+
+    /**
+     * Load the schemas of the tables in the database.
+     */
+    loadTableSchemas(
+      filter?: SchemaAndDatabase & {table?: string},
+    ): Promise<DataTable[]>;
+
+    /**
+     * @deprecated Use findTableByName instead
+     */
     getTable(tableName: string): DataTable | undefined;
-    setTableRowCount(tableName: string, rowCount: number): void;
-    findTableByName(tableName: string): DataTable | undefined;
+
+    /**
+     * @internal Avoid using this directly, it's for internal use.
+     */
+    setTableRowCount(
+      tableName: string | QualifiedTableName,
+      rowCount: number,
+    ): void;
+
+    /**
+     * Find a table by name in the last refreshed table schemas
+     * @param tableName - The name of the table to find or a qualified table name.
+     * @returns The table or undefined if not found.
+     */
+    findTableByName(
+      tableName: string | QualifiedTableName,
+    ): DataTable | undefined;
+
     /**
      * Refresh table schemas from the database.
      * @returns A promise that resolves to the updated tables.
@@ -93,21 +139,16 @@ export type DuckDbSliceState = {
     getConnector: () => Promise<DuckDbConnector>;
 
     /**
-     * Get the tables in the database
-     *
-     * @param schema - The schema to get the tables from. Defaults to 'main'. Pass '*' to get all tables.
-     * @returns The tables in the database.
+     * @deprecated Use .loadTableRowCount() instead
      */
-    getTables: (
-      options?:
-        | SchemaAndDatabase
-        | string /** string is deprecated, kept for backwards compatibility */,
-    ) => Promise<string[]>;
+    getTableRowCount: (table: string, schema?: string) => Promise<number>;
 
     /**
-     * Get the row count of a table
+     * Load the row count of a table
      */
-    getTableRowCount: (tableName: string, schema?: string) => Promise<number>;
+    loadTableRowCount: (
+      tableName: string | QualifiedTableName,
+    ) => Promise<number>;
 
     /**
      * Execute a query with query handle (not result) caching and deduplication
@@ -117,33 +158,28 @@ export type DuckDbSliceState = {
     executeSql: (query: string) => Promise<QueryHandle | null>;
 
     /**
-     * Get the schema of a table
+     * @deprecated Use .tables or .loadTableSchemas() instead
+     */
+    getTables: (schema?: string) => Promise<string[]>;
+
+    /**
+     * @deprecated Use .loadTableSchemas() instead
      */
     getTableSchema: (
       tableName: string,
-      options?: SchemaAndDatabase | string,
-    ) => Promise<DataTable>;
+      schema?: string,
+    ) => Promise<DataTable | undefined>;
 
     /**
-     * Get the schemas of all tables in the database.
-     *
-     * @param schema - The schema to get the tables from. Defaults to 'main'. Pass '*' to get all schemas.
-     * @returns The schemas of all tables in the database.
+     * @deprecated Use .tables or .loadTableSchemas() instead
      */
-    getTableSchemas: (
-      options?:
-        | SchemaAndDatabase
-        | string /** string is deprecated, kept for backwards compatibility */,
-    ) => Promise<DataTable[]>;
+    getTableSchemas: (schema?: string) => Promise<DataTable[]>;
 
     /**
      * Check if a table exists
      */
     checkTableExists: (
-      tableName: string,
-      options?:
-        | SchemaAndDatabase
-        | string /** string is deprecated, kept for backwards compatibility */,
+      tableName: string | QualifiedTableName,
     ) => Promise<boolean>;
 
     /**
@@ -151,10 +187,7 @@ export type DuckDbSliceState = {
      * @param tableName - The name of the table to delete
      * @param options - Optional parameters including schema and database
      */
-    dropTable: (
-      tableName: string,
-      options?: SchemaAndDatabase,
-    ) => Promise<void>;
+    dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
 
     /**
      * Create a table from a query.
@@ -163,9 +196,9 @@ export type DuckDbSliceState = {
      * @returns The table that was created.
      */
     createTableFromQuery: (
-      tableName: string,
+      tableName: string | QualifiedTableName,
       query: string,
-    ) => Promise<{tableName: string; rowCount: number}>;
+    ) => Promise<{tableName: string | QualifiedTableName; rowCount: number}>;
 
     /**
      * Parse a SQL SELECT statement to JSON
@@ -209,7 +242,7 @@ export function createDuckDbSlice({
     return {
       db: {
         connector, // Will be initialized during init
-        schema: 'main',
+        schema: 'main', // TODO: remove schema, we should not limit the schema to a single one.
         isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
@@ -245,10 +278,13 @@ export function createDuckDbSlice({
         },
 
         async createTableFromQuery(
-          tableName: string,
+          tableName: string | QualifiedTableName,
           query: string,
-          options?: {schema?: string; database?: string},
         ) {
+          const qualifiedName = isQualifiedTableName(tableName)
+            ? tableName
+            : makeQualifiedTableName({table: tableName});
+
           const connector = await get().db.getConnector();
 
           const statements = splitSqlStatements(query);
@@ -263,7 +299,7 @@ export function createDuckDbSlice({
 
           const rowCount = getColValAsNumber(
             await connector.query(
-              `CREATE OR REPLACE TABLE main.${tableName} AS (
+              `CREATE OR REPLACE TABLE ${qualifiedName} AS (
               ${statements[0]}
             )`,
             ).result,
@@ -271,77 +307,80 @@ export function createDuckDbSlice({
           return {tableName, rowCount};
         },
 
-        async getTables(
-          options?: SchemaAndDatabase | string,
-        ): Promise<string[]> {
-          // const connector = await get().db.getConnector();
-          // const {schema = 'main', database} =
-          //   typeof options === 'string' ? {schema: options} : options || {};
-          // const tablesResults = await connector.query(
-          //   `SELECT * FROM information_schema.tables
-          //   ${schema === '*' ? '' : `WHERE table_schema = '${schema}' ${database ? `AND table_catalog = '${database}'` : ''}`}
-          //   ORDER BY table_name`,
-          // ).result;
-          // const tableNames: string[] = [];
-          // for (let i = 0; i < tablesResults.numRows; i++) {
-          //   tableNames.push(tablesResults.getChild('table_name')?.get(i));
-          // }
-          // return tableNames;
+        /**
+         * @deprecated Use .tables or .loadTableSchemas() instead
+         */
+        async getTables(schema) {
+          const tableSchemas = await get().db.loadTableSchemas({schema});
+          return tableSchemas.map((t) => t.table.table);
         },
 
-        async getTableSchema(
-          tableName: string,
-          options?: SchemaAndDatabase | string,
-        ): Promise<DataTable> {
-          const connector = await get().db.getConnector();
-          const {schema = 'main', database} =
-            typeof options === 'string' ? {schema: options} : options || {};
-          const describeResults = await connector.query(
-            `DESCRIBE ${makeQualifiedTableName({schema, database, tableName})}`,
-          ).result;
-          const columnNames = describeResults.getChild('column_name');
-          const columnTypes = describeResults.getChild('column_type');
-          const columns: TableColumn[] = [];
-          for (let di = 0; di < describeResults.numRows; di++) {
-            const columnName = columnNames?.get(di);
-            const columnType = columnTypes?.get(di);
-            columns.push({name: columnName, type: columnType});
-          }
-          return {
-            database: undefined,
+        /**
+         * @deprecated Use .loadTableSchemas() instead
+         */
+        async getTableSchema(tableName: string, schema = 'main') {
+          const newLocal = await get().db.loadTableSchemas({
             schema,
-            tableName,
-            columns,
-          };
+            table: tableName,
+          });
+          return newLocal[0];
         },
 
-        async getTableRowCount(
-          tableName: string,
-          schema = 'main',
-        ): Promise<number> {
+        /**
+         * @deprecated Use .loadTableRowCount() instead
+         */
+        async getTableRowCount(table, schema = 'main') {
+          return get().db.loadTableRowCount({table, schema});
+        },
+
+        async loadTableRowCount(tableName: string | QualifiedTableName) {
+          const {schema, database, table} =
+            typeof tableName === 'string'
+              ? {table: tableName}
+              : tableName || {};
           const connector = await get().db.getConnector();
           const result = await connector.query(
-            `SELECT COUNT(*) FROM ${schema}.${tableName}`,
+            `SELECT COUNT(*) FROM ${makeQualifiedTableName({
+              schema,
+              database,
+              table,
+            })}`,
           ).result;
           return getColValAsNumber(result);
         },
 
-        async getTableSchemas(
-          options?: SchemaAndDatabase | string,
+        /**
+         * @deprecated Use .loadTableSchemas() instead
+         */
+        async getTableSchemas(schema) {
+          return await get().db.loadTableSchemas({schema});
+        },
+
+        async loadTableSchemas(
+          filter?: SchemaAndDatabase & {table?: string},
         ): Promise<DataTable[]> {
-          const connector = await get().db.getConnector();
-          const {schema = 'main', database} =
-            typeof options === 'string' ? {schema: options} : options || {};
+          const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
-            `FROM (DESCRIBE) SELECT database, schema, name, column_names, column_types
-            ${schema || database ? `WHERE ${schema ? `schema = '${schema}'` : ''} ${database ? `AND database = '${database}'` : ''}` : ''}`,
+            `FROM (DESCRIBE)
+             SELECT database, schema, name, column_names, column_types
+            ${
+              schema || database || table
+                ? `WHERE ${[
+                    schema ? `schema = '${escapeId(schema)}'` : '',
+                    database ? `database = '${escapeId(database)}'` : '',
+                    table ? `name = '${escapeId(table)}'` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' AND ')}`
+                : ''
+            }`,
           ).result;
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
             const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
-            const tableName = describeResults.getChild('name')?.get(i);
+            const table = describeResults.getChild('name')?.get(i);
             const columnNames = describeResults
               .getChild('column_names')
               ?.get(i);
@@ -355,52 +394,56 @@ export function createDuckDbSlice({
                 type: columnTypes.get(di),
               });
             }
-            newTables.push({database, schema, tableName, columns});
+            newTables.push({
+              table: makeQualifiedTableName({database, schema, table}),
+              database,
+              schema,
+              tableName: table,
+              columns,
+            });
           }
           return newTables;
         },
 
-        async checkTableExists(tableName, options): Promise<boolean> {
-          const connector = await get().db.getConnector();
-          const {schema = 'main', database} =
-            typeof options === 'string' ? {schema: options} : options || {};
-          const res = await connector.query(
-            `SELECT
-               COUNT(*) FROM information_schema.tables
-             WHERE
-               table_schema = '${schema}'
-               ${database ? `AND table_catalog = '${database}'` : ''}
-               AND table_name = '${tableName}'`,
-          ).result;
-          return getColValAsNumber(res) > 0;
+        async checkTableExists(tableName: string | QualifiedTableName) {
+          const qualifiedName = isQualifiedTableName(tableName)
+            ? tableName
+            : makeQualifiedTableName({table: tableName});
+          const table = (await get().db.loadTableSchemas(qualifiedName))[0];
+          if (!table) {
+            return false;
+          }
+          return true;
         },
 
-        async dropTable(tableName, options): Promise<void> {
+        async dropTable(tableName): Promise<void> {
           const connector = await get().db.getConnector();
-          const qualifiedTable = makeQualifiedTableName({
-            ...options,
-            tableName,
-          });
+          const qualifiedTable = isQualifiedTableName(tableName)
+            ? tableName
+            : makeQualifiedTableName({table: tableName});
           await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`)
             .result;
           await get().db.refreshTableSchemas();
         },
 
         async addTable(tableName, data) {
-          const {tables} = get().db;
-          const table = tables.find((t) => t.tableName === tableName);
-          if (table) {
-            return table;
-          }
+          const qualifiedName = isQualifiedTableName(tableName)
+            ? tableName
+            : makeQualifiedTableName({table: tableName});
 
           const {db} = get();
           if (data instanceof arrow.Table) {
-            await db.connector.loadArrow(data, tableName);
+            // TODO: make sure the table is replaced
+            await db.connector.loadArrow(data, qualifiedName.toString());
           } else {
-            await db.connector.loadObjects(data, tableName);
+            await db.connector.loadObjects(data, qualifiedName.toString(), {
+              replace: true,
+            });
           }
-          const newTable = await db.getTableSchema(tableName);
-
+          const newTable = (await db.loadTableSchemas(qualifiedName))[0];
+          if (!newTable) {
+            throw new Error('Failed to add table');
+          }
           set((state) =>
             produce(state, (draft) => {
               draft.db.tables.push(newTable);
@@ -410,19 +453,30 @@ export function createDuckDbSlice({
           return newTable;
         },
 
-        setTableRowCount: (tableName, rowCount) =>
+        async setTableRowCount(tableName, rowCount) {
+          const qualifiedName = isQualifiedTableName(tableName)
+            ? tableName
+            : makeQualifiedTableName({table: tableName});
           set((state) =>
             produce(state, (draft) => {
-              draft.db.tableRowCounts[tableName] = rowCount;
+              draft.db.tableRowCounts[qualifiedName.toString()] = rowCount;
             }),
-          ),
-
-        getTable(tableName) {
-          return get().db.tables.find((t) => t.tableName === tableName);
+          );
         },
 
-        findTableByName(tableName: string) {
-          return get().db.tables.find((t) => t.tableName === tableName);
+        getTable(tableName) {
+          return get().db.findTableByName(tableName);
+        },
+
+        findTableByName(tableName: string | QualifiedTableName) {
+          const qualifiedName = (
+            isQualifiedTableName(tableName)
+              ? tableName
+              : makeQualifiedTableName({table: tableName})
+          ).toString();
+          return get().db.tables.find(
+            (t) => t.table.toString() === qualifiedName,
+          );
         },
 
         async refreshTableSchemas(): Promise<DataTable[]> {
@@ -432,7 +486,7 @@ export function createDuckDbSlice({
             }),
           );
           try {
-            const newTables = await get().db.getTableSchemas('*');
+            const newTables = await get().db.loadTableSchemas();
             // Only update if there's an actual change in the schemas
             if (!deepEquals(newTables, get().db.tables)) {
               set((state) =>

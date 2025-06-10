@@ -1,22 +1,40 @@
 import * as arrow from 'apache-arrow';
 
+export type QualifiedTableName = {
+  database?: string;
+  schema?: string;
+  table: string;
+  toString: () => string;
+};
+
+export function isQualifiedTableName(
+  tableName: string | QualifiedTableName,
+): tableName is QualifiedTableName {
+  return typeof tableName === 'object' && 'toString' in tableName;
+}
+
 /**
  * Get a qualified table name from a table name, schema, and database.
- * @param tableName - The name of the table.
+ * @param table - The name of the table.
  * @param schema - The schema of the table.
  * @param database - The database of the table.
  * @returns The qualified table name.
  */
 export function makeQualifiedTableName({
-  tableName,
-  schema,
   database,
-}: {
-  tableName: string;
-  schema?: string;
-  database?: string;
-}) {
-  return [database, schema, tableName].filter(Boolean).join('.');
+  schema,
+  table,
+}: QualifiedTableName) {
+  const qualifiedTableName = [database, schema, table]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeId(id))
+    .join('.');
+  return {
+    database,
+    schema,
+    table,
+    toString: () => qualifiedTableName,
+  };
 }
 
 /**
