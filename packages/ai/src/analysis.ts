@@ -9,7 +9,6 @@ import {
   DataTable,
   DuckDbConnector,
   DuckDbSliceState,
-  DuckQueryError,
 } from '@sqlrooms/duckdb';
 
 import type {StoreApi} from '@sqlrooms/project-builder';
@@ -256,11 +255,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
               success: false,
               details: 'Query execution failed.',
               errorMessage:
-                error instanceof DuckQueryError
-                  ? error.getMessageForUser()
-                  : error instanceof Error
-                    ? error.message
-                    : 'Unknown error',
+                error instanceof Error ? error.message : 'Unknown error',
             },
           };
         }
