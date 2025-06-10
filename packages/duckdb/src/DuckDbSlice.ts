@@ -52,9 +52,6 @@ export type DuckDbSliceState = {
      */
     schema: string;
 
-    currentSchema: string | undefined;
-    currentDatabase: string | undefined;
-
     /**
      * Cache of refreshed table schemas
      */
@@ -230,11 +227,6 @@ export type DuckDbSliceState = {
           }[];
         }
     >;
-
-    loadCurrentSchemaAndDatabase: () => Promise<{
-      currentSchema: string;
-      currentDatabase: string;
-    }>;
   };
 };
 
@@ -251,8 +243,6 @@ export function createDuckDbSlice({
       db: {
         connector, // Will be initialized during init
         schema: 'main', // TODO: remove schema, we should not limit the schema to a single one.
-        currentSchema: undefined,
-        currentDatabase: undefined,
         isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
@@ -372,7 +362,10 @@ export function createDuckDbSlice({
           const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
             `FROM (DESCRIBE)
-             SELECT database, schema, name, column_names, column_types
+             SELECT 
+                (CASE WHEN database = current_database() THEN NULL ELSE database END) AS database,
+                (CASE WHEN schema = current_schema() THEN NULL ELSE schema END) AS schema,
+                name, column_names, column_types
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -482,26 +475,11 @@ export function createDuckDbSlice({
           const qualifiedName = (
             isQualifiedTableName(tableName)
               ? tableName
-              : makeQualifiedTableName({
-                  table: tableName,
-                  schema: get().db.currentSchema,
-                  database: get().db.currentDatabase,
-                })
+              : makeQualifiedTableName({table: tableName})
           ).toString();
           return get().db.tables.find(
             (t) => t.table.toString() === qualifiedName,
           );
-        },
-
-        async loadCurrentSchemaAndDatabase() {
-          const connector = await get().db.getConnector();
-          const result = await connector.query(
-            `SELECT current_schema() AS schema, current_database() AS database`,
-          ).result;
-          return {
-            currentSchema: result.getChild('schema')?.get(0),
-            currentDatabase: result.getChild('database')?.get(0),
-          };
         },
 
         async refreshTableSchemas(): Promise<DataTable[]> {
@@ -511,14 +489,6 @@ export function createDuckDbSlice({
             }),
           );
           try {
-            const {currentSchema, currentDatabase} =
-              await get().db.loadCurrentSchemaAndDatabase();
-            set((state) =>
-              produce(state, (draft) => {
-                draft.db.currentSchema = currentSchema;
-                draft.db.currentDatabase = currentDatabase;
-              }),
-            );
             const newTables = await get().db.loadTableSchemas();
             // Only update if there's an actual change in the schemas
             if (!deepEquals(newTables, get().db.tables)) {
