@@ -36,15 +36,15 @@
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "apache-arrow": "^18.1.0",
+    "apache-arrow": "18.1.0",
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "monaco-editor": "^0.52.2",
-    "react-hook-form": "^7.56.4",
-    "zod": "^3.24.1",
-    "zustand": "^5.0.3"
+    "react-hook-form": "^7.57.0",
+    "zod": "^3.25.57",
+    "zustand": "^5.0.5"
   },
   "peerDependencies": {
     "react": "*",
@@ -53,7 +53,7 @@
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",
     "@types/file-saver": "^2.0.7",
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18"
+    "@types/react": "18.3.18",
+    "@types/react-dom": "^18.3.7"
   }
 }
