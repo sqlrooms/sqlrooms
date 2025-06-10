@@ -35,11 +35,8 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   const queryResult = useSql({query: pagedQuery});
   const countQueryResult = useSql<{count: number}>({
     query: `SELECT COUNT(*)::int AS count FROM (${sanitizedQuery})`,
-    // enabled: queryResult.data?.arrowTable !== undefined,
   });
   const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable);
-
-  console.log('arrowTableData', arrowTableData);
 
   if (queryResult.error) {
     return (
