@@ -46,7 +46,7 @@ import {useCallback} from 'react';
  * ```
  */
 export const useRelativeCoordinates = (
-  containerRef: React.RefObject<HTMLElement>,
+  containerRef: React.RefObject<HTMLElement | null>,
 ) => {
   return useCallback(
     (x: number, y: number): [number, number] => {

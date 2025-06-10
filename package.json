@@ -51,8 +51,8 @@
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.14",
     "@types/mocha": "^10.0.10",
-    "@types/react": "18.3.18",
-    "@types/react-dom": "18.3.5",
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6",
     "apache-arrow": "18.1.0",
     "concurrently": "^9.1.2",
     "eslint": "^9.28.0",
@@ -63,8 +63,8 @@
     "lint-staged": "^15.5.2",
     "prettier": "^3.5.3",
     "prettier-plugin-tailwindcss": "^0.6.12",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
     "turbo": "^2.5.4",
@@ -75,8 +75,9 @@
   "pnpm": {
     "overrides": {
       "apache-arrow": "18.1.0",
-      "@types/react": "18.3.18",
-      "typescript": "5.8.3"
+      "typescript": "5.8.3",
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

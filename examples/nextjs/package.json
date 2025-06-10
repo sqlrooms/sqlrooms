@@ -27,7 +27,7 @@
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",
     "@types/node": "^20.19.0",
-    "@types/react": "18.3.18",
+    "@types/react": "19.1.7",
     "@types/react-dom": "^19.1.6",
     "tailwindcss": "^4.1.8",
     "tw-animate-css": "^1.3.4",
