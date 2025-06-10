@@ -2,7 +2,6 @@
   "name": "@sqlrooms/dropzone",
   "version": "0.15.0",
   "type": "module",
-  "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -34,6 +33,6 @@
   "dependencies": {
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0",
-    "react-dropzone": "^14.3.5"
+    "react-dropzone": "^14.3.8"
   }
 }

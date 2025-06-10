@@ -1,4 +1,4 @@
-import {useMemo} from 'react';
+import {RefObject, useMemo} from 'react';
 import {useResizeObserver} from 'usehooks-ts';
 
 /**
@@ -24,7 +24,7 @@ export interface UseAspectRatioDimensionsProps {
   width: number | 'auto';
   height: number | 'auto';
   aspectRatio: number;
-  containerRef: React.RefObject<HTMLElement>;
+  containerRef: React.RefObject<HTMLElement | null>;
 }
 
 /**
@@ -58,7 +58,7 @@ export function useAspectRatioDimensions({
   containerRef,
 }: UseAspectRatioDimensionsProps): Dimensions {
   const {width: containerWidth = 0} = useResizeObserver({
-    ref: containerRef,
+    ref: containerRef as RefObject<HTMLElement>,
     box: 'border-box',
   });
 

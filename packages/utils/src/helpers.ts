@@ -83,6 +83,18 @@ export const formatTimeRelative = (d: ConfigType) => {
 };
 
 /**
+ * Formats the current timestamp for use in filenames (filesystem-safe)
+ * @returns Timestamp string in YYYY-MM-DDTHH-mm-ss format
+ * @example
+ * ```ts
+ * formatTimestampForFilename(); // "2024-03-13T14-30-25"
+ * ```
+ */
+export const formatTimestampForFilename = () => {
+  return dayjs().format('YYYY-MM-DDTHH-mm-ss');
+};
+
+/**
  * Extracts and formats an error message for display, removing common prefixes and truncating at first newline
  * @param e - Error object or any other value that can be converted to string
  * @returns Cleaned up error message string

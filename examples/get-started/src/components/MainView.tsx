@@ -36,9 +36,6 @@ export function MainView() {
     enabled: Boolean(tableReady),
   });
 
-  if (!tableReady) {
-    return null;
-  }
   if (isLoading) {
     return <SpinnerPane />;
   }
@@ -70,7 +67,11 @@ export function MainView() {
             </div>
             <div>Avg depth: {row.avgDepth.toFixed(2)}</div>
           </CardContent>
-        ) : null}
+        ) : (
+          <CardContent>
+            <div>No data loaded</div>
+          </CardContent>
+        )}
       </Card>
     </div>
   );

@@ -71,19 +71,7 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
         query: this.queryConfig,
       });
 
-      const conn = await db.connect();
-
-      // Add error handling to conn.query
-      const originalQuery = conn.query;
-      conn.query = (async (q: string) => {
-        const stack = new Error().stack;
-        try {
-          return await originalQuery.call(conn, q);
-        } catch (err) {
-          throw new DuckQueryError(err, q, stack);
-        }
-      }) as typeof conn.query;
-
+      const conn = augmentConnectionQueryError(await db.connect());
       if (this.initializationQuery) {
         await conn.query(this.initializationQuery);
       }
@@ -124,14 +112,91 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
   }
 
-  async query<T extends arrow.TypeMap = any>(
+  protected async executeQueryInternal<T extends arrow.TypeMap = any>(
     query: string,
+    signal: AbortSignal,
   ): Promise<arrow.Table<T>> {
+    // Make sure the WASM runtime is ready.
     await this.ensureInitialized();
-    if (!this.conn) {
-      throw new Error('DuckDB connection not initialized');
+    if (!this.db) {
+      throw new Error('DuckDB not initialized');
     }
-    return await this.conn.query(query);
+
+    // Short‑circuit if the caller already aborted.
+    if (signal.aborted) {
+      throw new Error('Query aborted before execution');
+    }
+
+    // 👉  Open a *fresh* connection dedicated to this request.
+    const conn = augmentConnectionQueryError(await this.db.connect());
+
+    // 1️⃣ Kick‑off the statement using the *cancellable* streaming API
+    const streamPromise = conn.send<T>(query, /* allowStreamResult */ true);
+
+    // Handle to the Arrow reader so we can cancel it later.
+    let reader: arrow.RecordBatchReader<T> | null = null;
+
+    // 2️⃣ Helper to materialise all batches into one Arrow Table.
+    const buildTable = async () => {
+      reader = await streamPromise;
+
+      const batches: arrow.RecordBatch<T>[] = [];
+      let rowCount = 0;
+
+      for await (const batch of reader) {
+        // DuckDB‑wasm may emit an empty placeholder batch when connections
+        // race.  Ignore any batch whose `numRows` is zero.
+        if (batch.numRows === 0) continue;
+
+        batches.push(batch);
+        rowCount += batch.numRows;
+      }
+
+      if (rowCount === 0) {
+        return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
+      }
+      return new arrow.Table(batches);
+    };
+
+    // 3️⃣ Wire the AbortSignal → DuckDB interrupt.
+    let abortHandler: (() => void) | undefined;
+    const abortPromise = new Promise<never>((_, reject) => {
+      abortHandler = () => {
+        // Interrupt DuckDB *and* stop the Arrow stream
+        conn.cancelSent().catch(() => {
+          /* ignore if nothing to cancel */
+        });
+        reader?.cancel?.();
+        reject(new Error('Query cancelled'));
+      };
+      signal.addEventListener('abort', abortHandler);
+    });
+
+    try {
+      // Whichever finishes first (query or cancel) wins.
+      return await Promise.race([buildTable(), abortPromise]);
+    } finally {
+      if (abortHandler) {
+        signal.removeEventListener('abort', abortHandler);
+      }
+      // Always close the per‑query connection.
+      await conn.close();
+    }
+  }
+
+  protected async cancelQueryInternal(queryId: string): Promise<void> {
+    // First, invoke the base‑class logic (removes AbortController listeners, etc.)
+    await super.cancelQueryInternal(queryId);
+
+    // Then, interrupt the running statement on the DuckDB side.
+    if (this.conn) {
+      try {
+        await this.conn.cancelSent();
+      } catch (err) {
+        // If no statement is active or interrupt fails, just log and move on.
+        console.warn('DuckDB cancelSent failed:', err);
+      }
+    }
   }
 
   async loadFile(
@@ -140,7 +205,7 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     opts?: LoadFileOptions,
   ) {
     await this.withTempRegisteredFile(file, async (fileName) => {
-      super.loadFile(fileName, tableName, opts);
+      await super.loadFile(fileName, tableName, opts);
     });
   }
 
@@ -222,6 +287,24 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
     return this.conn;
   }
+}
+
+/**
+ * Augment the connection query method to include the full query and stack trace in the error.
+ * @param conn - The connection to augment.
+ * @returns The augmented connection.
+ */
+function augmentConnectionQueryError(conn: duckdb.AsyncDuckDBConnection) {
+  const originalQuery = conn.query;
+  conn.query = (async (q: string) => {
+    const stack = new Error().stack;
+    try {
+      return await originalQuery.call(conn, q);
+    } catch (err) {
+      throw new DuckQueryError(err, q, stack);
+    }
+  }) as typeof conn.query;
+  return conn;
 }
 
 export class DuckQueryError extends Error {

@@ -5,7 +5,6 @@
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -38,7 +37,10 @@
     "@types/d3-format": "^3.0.4",
     "@types/d3-time-format": "^4.0.3",
     "@types/seedrandom": "^3.0.8",
-    "react": "^19.0.0",
     "usehooks-ts": "^3.1.1"
+  },
+  "peerDependencies": {
+    "react": "*",
+    "react-dom": "*"
   }
 }

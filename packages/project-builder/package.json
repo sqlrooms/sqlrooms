@@ -5,7 +5,6 @@
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -25,7 +24,6 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "^1.29.1-dev68.0",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
@@ -33,12 +31,12 @@
     "@sqlrooms/project-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "apache-arrow": "^18.1.0",
+    "apache-arrow": "18.1.0",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "react-mosaic-component": "5.3.0",
-    "zod": "^3.24.1",
-    "zustand": "^5.0.3"
+    "zod": "^3.25.57",
+    "zustand": "^5.0.5"
   },
   "peerDependencies": {
     "react": "*"

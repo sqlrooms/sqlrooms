@@ -1,6 +1,6 @@
 import {useEffect, useRef, type RefObject, useState, useCallback} from 'react';
 
-interface ScrollToBottomResult<T extends HTMLElement> {
+interface ScrollToBottomResult<T extends HTMLElement | null> {
   showScrollButton: boolean;
   scrollToBottom: () => void;
 }
@@ -70,7 +70,7 @@ const AT_BOTTOM_TOLERANCE = 100;
  * }
  * ```
  */
-export function useScrollToBottom<T extends HTMLElement>({
+export function useScrollToBottom<T extends HTMLElement | null>({
   /**
    * The data to observe. Can be an array of items or a single item.
    * When the data changes, the hook will scroll to the bottom of the container.
@@ -85,8 +85,8 @@ export function useScrollToBottom<T extends HTMLElement>({
   scrollOnInitialLoad = false,
 }: {
   dataToObserve: unknown;
-  containerRef: RefObject<T>;
-  endRef: RefObject<T>;
+  containerRef: RefObject<T | null>;
+  endRef: RefObject<T | null>;
   scrollOnInitialLoad?: boolean;
 }): ScrollToBottomResult<T> {
   const [showScrollButton, setShowButton] = useState(false);
@@ -99,6 +99,7 @@ export function useScrollToBottom<T extends HTMLElement>({
 
   // Check if the container is scrolled to the bottom
   const checkIfAtBottom = useCallback((container: T) => {
+    if (!container) return false;
     const {scrollTop, scrollHeight, clientHeight} = container;
     return scrollHeight - scrollTop - clientHeight <= AT_BOTTOM_TOLERANCE;
   }, []);
