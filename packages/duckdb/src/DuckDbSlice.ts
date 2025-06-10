@@ -10,7 +10,12 @@ import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
-import {escapeVal, getColValAsNumber, splitSqlStatements} from './duckdb-utils';
+import {
+  escapeVal,
+  getColValAsNumber,
+  makeQualifiedTableName,
+  splitSqlStatements,
+} from './duckdb-utils';
 import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
 import {DataTable, TableColumn, DbSchemaNode} from './types';
 
@@ -18,6 +23,11 @@ export const DuckDbSliceConfig = z.object({
   // nothing yet
 });
 export type DuckDbSliceConfig = z.infer<typeof DuckDbSliceConfig>;
+
+export type SchemaAndDatabase = {
+  schema?: string;
+  database?: string;
+};
 
 export function createDefaultDuckDbConfig(): DuckDbSliceConfig {
   return {
@@ -34,6 +44,9 @@ export type DuckDbSliceState = {
      * The DuckDB connector instance
      */
     connector: DuckDbConnector;
+    /**
+     * @deprecated We shouldn't limit the schema to a single one.
+     */
     schema: string;
     isRefreshingTableSchemas: boolean;
     tables: DataTable[];
@@ -85,7 +98,11 @@ export type DuckDbSliceState = {
      * @param schema - The schema to get the tables from. Defaults to 'main'. Pass '*' to get all tables.
      * @returns The tables in the database.
      */
-    getTables: (schema?: string) => Promise<string[]>;
+    getTables: (
+      options?:
+        | SchemaAndDatabase
+        | string /** string is deprecated, kept for backwards compatibility */,
+    ) => Promise<string[]>;
 
     /**
      * Get the row count of a table
@@ -102,7 +119,10 @@ export type DuckDbSliceState = {
     /**
      * Get the schema of a table
      */
-    getTableSchema: (tableName: string, schema?: string) => Promise<DataTable>;
+    getTableSchema: (
+      tableName: string,
+      options?: SchemaAndDatabase | string,
+    ) => Promise<DataTable>;
 
     /**
      * Get the schemas of all tables in the database.
@@ -110,12 +130,21 @@ export type DuckDbSliceState = {
      * @param schema - The schema to get the tables from. Defaults to 'main'. Pass '*' to get all schemas.
      * @returns The schemas of all tables in the database.
      */
-    getTableSchemas: (schema?: string) => Promise<DataTable[]>;
+    getTableSchemas: (
+      options?:
+        | SchemaAndDatabase
+        | string /** string is deprecated, kept for backwards compatibility */,
+    ) => Promise<DataTable[]>;
 
     /**
      * Check if a table exists
      */
-    checkTableExists: (tableName: string, schema?: string) => Promise<boolean>;
+    checkTableExists: (
+      tableName: string,
+      options?:
+        | SchemaAndDatabase
+        | string /** string is deprecated, kept for backwards compatibility */,
+    ) => Promise<boolean>;
 
     /**
      * Delete a table with optional schema and database
@@ -124,7 +153,7 @@ export type DuckDbSliceState = {
      */
     dropTable: (
       tableName: string,
-      options?: {schema?: string; database?: string},
+      options?: SchemaAndDatabase,
     ) => Promise<void>;
 
     /**
@@ -215,7 +244,11 @@ export function createDuckDbSlice({
           }
         },
 
-        async createTableFromQuery(tableName: string, query: string) {
+        async createTableFromQuery(
+          tableName: string,
+          query: string,
+          options?: {schema?: string; database?: string},
+        ) {
           const connector = await get().db.getConnector();
 
           const statements = splitSqlStatements(query);
@@ -238,27 +271,33 @@ export function createDuckDbSlice({
           return {tableName, rowCount};
         },
 
-        async getTables(schema = 'main'): Promise<string[]> {
-          const connector = await get().db.getConnector();
-          const tablesResults = await connector.query(
-            `SELECT * FROM information_schema.tables 
-           ${schema === '*' ? '' : `WHERE table_schema = '${schema}'`}
-           ORDER BY table_name`,
-          ).result;
-          const tableNames: string[] = [];
-          for (let i = 0; i < tablesResults.numRows; i++) {
-            tableNames.push(tablesResults.getChild('table_name')?.get(i));
-          }
-          return tableNames;
+        async getTables(
+          options?: SchemaAndDatabase | string,
+        ): Promise<string[]> {
+          // const connector = await get().db.getConnector();
+          // const {schema = 'main', database} =
+          //   typeof options === 'string' ? {schema: options} : options || {};
+          // const tablesResults = await connector.query(
+          //   `SELECT * FROM information_schema.tables
+          //   ${schema === '*' ? '' : `WHERE table_schema = '${schema}' ${database ? `AND table_catalog = '${database}'` : ''}`}
+          //   ORDER BY table_name`,
+          // ).result;
+          // const tableNames: string[] = [];
+          // for (let i = 0; i < tablesResults.numRows; i++) {
+          //   tableNames.push(tablesResults.getChild('table_name')?.get(i));
+          // }
+          // return tableNames;
         },
 
         async getTableSchema(
           tableName: string,
-          schema = 'main',
+          options?: SchemaAndDatabase | string,
         ): Promise<DataTable> {
           const connector = await get().db.getConnector();
+          const {schema = 'main', database} =
+            typeof options === 'string' ? {schema: options} : options || {};
           const describeResults = await connector.query(
-            `DESCRIBE ${schema}.${tableName}`,
+            `DESCRIBE ${makeQualifiedTableName({schema, database, tableName})}`,
           ).result;
           const columnNames = describeResults.getChild('column_name');
           const columnTypes = describeResults.getChild('column_type');
@@ -287,11 +326,15 @@ export function createDuckDbSlice({
           return getColValAsNumber(result);
         },
 
-        async getTableSchemas(schema = 'main'): Promise<DataTable[]> {
+        async getTableSchemas(
+          options?: SchemaAndDatabase | string,
+        ): Promise<DataTable[]> {
           const connector = await get().db.getConnector();
+          const {schema = 'main', database} =
+            typeof options === 'string' ? {schema: options} : options || {};
           const describeResults = await connector.query(
             `FROM (DESCRIBE) SELECT database, schema, name, column_names, column_types
-            ${schema === '*' ? '' : `WHERE schema = '${schema}'`}`,
+            ${schema || database ? `WHERE ${schema ? `schema = '${schema}'` : ''} ${database ? `AND database = '${database}'` : ''}` : ''}`,
           ).result;
 
           const newTables: DataTable[] = [];
@@ -317,24 +360,27 @@ export function createDuckDbSlice({
           return newTables;
         },
 
-        async checkTableExists(
-          tableName: string,
-          schema = 'main',
-        ): Promise<boolean> {
+        async checkTableExists(tableName, options): Promise<boolean> {
           const connector = await get().db.getConnector();
+          const {schema = 'main', database} =
+            typeof options === 'string' ? {schema: options} : options || {};
           const res = await connector.query(
-            `SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${schema}' AND table_name = '${tableName}'`,
+            `SELECT
+               COUNT(*) FROM information_schema.tables
+             WHERE
+               table_schema = '${schema}'
+               ${database ? `AND table_catalog = '${database}'` : ''}
+               AND table_name = '${tableName}'`,
           ).result;
           return getColValAsNumber(res) > 0;
         },
 
         async dropTable(tableName, options): Promise<void> {
-          const schema = options?.schema || 'main';
-          const database = options?.database;
           const connector = await get().db.getConnector();
-          const qualifiedTable = database
-            ? `${database}.${schema}.${tableName}`
-            : `${schema}.${tableName}`;
+          const qualifiedTable = makeQualifiedTableName({
+            ...options,
+            tableName,
+          });
           await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`)
             .result;
           await get().db.refreshTableSchemas();
