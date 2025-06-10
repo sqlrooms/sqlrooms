@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/recharts",
-  "version": "0.15.0",
+  "version": "0.16.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
