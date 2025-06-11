@@ -52,8 +52,9 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   const {editDataSource, isOpen, onClose, onAddOrUpdateSqlQuery} = props;
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    values: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(formSchema as any),
+    defaultValues: {
       tableName: editDataSource?.tableName ?? '',
       query: editDataSource?.sqlQuery ?? props.query.trim(),
     },
