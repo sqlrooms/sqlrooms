@@ -34,7 +34,7 @@
     "react-dom": ">=18"
   },
   "devDependencies": {
-    "@types/react": "19.1.7",
-    "@types/react-dom": "^18.3.7"
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6"
   }
 }

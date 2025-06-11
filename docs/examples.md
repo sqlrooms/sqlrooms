@@ -20,8 +20,9 @@ A minimal Vite application demonstrating the basic usage of SQLRooms. Features i
 - Runs a SQL query in the browser (DuckDB WASM) to show summary statistics
 - Simple UI with loading, error, and result states
 
+To create a new project from the get-started example run this:
+
 ```bash
-# To create a new project from the get-started example run this:
 npx degit sqlrooms/examples/get-started my-new-app/
 ```
 

@@ -53,7 +53,7 @@
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",
     "@types/file-saver": "^2.0.7",
-    "@types/react": "19.1.7",
-    "@types/react-dom": "^18.3.7"
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6"
   }
 }
