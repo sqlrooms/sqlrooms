@@ -21,7 +21,7 @@
     "zod": "^3.25.57"
   },
   "peerDependencies": {
-    "react": "*"
+    "react": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",

@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  apache-arrow: 18.1.0
   typescript: 5.8.3
   react: 19.1.0
   react-dom: 19.1.0
@@ -53,9 +52,6 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.6
         version: 19.1.6(@types/react@19.1.7)
-      apache-arrow:
-        specifier: 18.1.0
-        version: 18.1.0
       concurrently:
         specifier: ^9.1.2
         version: 9.1.2
@@ -175,17 +171,17 @@ importers:
         version: 3.25.57
       zustand:
         specifier: ^5.0.5
-        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+        version: 5.0.5(@types/react@18.3.18)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
       '@eslint/js':
         specifier: ^9.28.0
         version: 9.28.0
       '@types/react':
-        specifier: 19.1.7
-        version: 19.1.7
+        specifier: 18.3.18
+        version: 18.3.18
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@18.3.18)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -284,8 +280,8 @@ importers:
         specifier: 19.1.7
         version: 19.1.7
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@19.1.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -384,8 +380,8 @@ importers:
         specifier: 19.1.7
         version: 19.1.7
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@19.1.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -475,8 +471,8 @@ importers:
         specifier: 19.1.7
         version: 19.1.7
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@19.1.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -539,8 +535,8 @@ importers:
         specifier: 19.1.7
         version: 19.1.7
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@19.1.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -639,8 +635,8 @@ importers:
         specifier: 19.1.7
         version: 19.1.7
       '@types/react-dom':
-        specifier: ^19.1.6
-        version: 19.1.6(@types/react@19.1.7)
+        specifier: ^18.3.7
+        version: 18.3.7(@types/react@19.1.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
@@ -926,8 +922,8 @@ importers:
         specifier: ^8.21.3
         version: 8.21.3
       apache-arrow:
-        specifier: 18.1.0
-        version: 18.1.0
+        specifier: '>=17'
+        version: 17.0.0
       lucide-react:
         specifier: ^0.503.0
         version: 0.503.0(react@19.1.0)
@@ -992,8 +988,8 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: 18.1.0
-        version: 18.1.0
+        specifier: '>=17'
+        version: 17.0.0
       fast-deep-equal:
         specifier: ^3.1.3
         version: 3.1.3
@@ -1179,8 +1175,8 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: 18.1.0
-        version: 18.1.0
+        specifier: '>=17'
+        version: 17.0.0
       immer:
         specifier: ^10.1.1
         version: 10.1.1
@@ -1309,8 +1305,8 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: 18.1.0
-        version: 18.1.0
+        specifier: '>=17'
+        version: 17.0.0
       d3-dsv:
         specifier: ^3.0.1
         version: 3.0.1
@@ -4702,6 +4698,9 @@ packages:
   '@types/pbf@3.0.5':
     resolution: {integrity: sha512-j3pOPiEcWZ34R6a6mN07mUkM4o4Lwf6hPNt8eilOeZhTFbxFXmKhvXl9Y28jotFPaI1bpPDJsbCprUoNke6OrA==}
 
+  '@types/prop-types@15.7.15':
+    resolution: {integrity: sha512-F6bEyamV9jKGAFBEmlQnesRPGOQqS2+Uwi0Em15xenOxHaf2hv6L8YCVn3rPdPJOiJfPiCnLIRyvwVaqMY3MIw==}
+
   '@types/react-dom@18.3.7':
     resolution: {integrity: sha512-MEe3UeoENYVFXzoXEWsvcpg6ZvlrFNlOQ7EOsvhI3CfAXwzPfO8Qwuxd40nepsYKqyyVQnTdEfv68q91yLcKrQ==}
     peerDependencies:
@@ -4711,6 +4710,9 @@ packages:
     resolution: {integrity: sha512-4hOiT/dwO8Ko0gV1m/TJZYk3y0KBnY9vzDh7W+DH17b2HFSOGgdj33dhihPeuy3l0q23+4e+hoXHV6hCC4dCXw==}
     peerDependencies:
       '@types/react': ^19.0.0
+
+  '@types/react@18.3.18':
+    resolution: {integrity: sha512-t4yC+vtgnkYjNSKlFx1jkAhH8LgTo2N/7Qvi83kdEaUtMDiwpbLAktKDaAMlRcJ5eSxZkH74eEGt1ky31d7kfQ==}
 
   '@types/react@19.1.7':
     resolution: {integrity: sha512-BnsPLV43ddr05N71gaGzyZ5hzkCmGwhMvYc8zmvI8Ci1bRkkDSzDDVfAXfN2tk748OwI7ediiPX6PfT9p0QGVg==}
@@ -5112,8 +5114,8 @@ packages:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
 
-  apache-arrow@18.1.0:
-    resolution: {integrity: sha512-v/ShMp57iBnBp4lDgV8Jx3d3Q5/Hac25FWmQ98eMahUiHPXcvwIMKJD0hBIgclm/FCG+LwPkAKtkRO1O/W0YGg==}
+  apache-arrow@17.0.0:
+    resolution: {integrity: sha512-X0p7auzdnGuhYMVKYINdQssS4EcKec9TCXyez/qtJt32DrIMGbzqiaMiQ0X6fQlQpw8Fl0Qygcv4dfRAr5Gu9Q==}
     hasBin: true
 
   aproba@2.0.0:
@@ -11200,11 +11202,11 @@ snapshots:
 
   '@duckdb/duckdb-wasm@1.29.0':
     dependencies:
-      apache-arrow: 18.1.0
+      apache-arrow: 17.0.0
 
   '@duckdb/duckdb-wasm@1.29.1-dev204.0':
     dependencies:
-      apache-arrow: 18.1.0
+      apache-arrow: 17.0.0
 
   '@emnapi/runtime@1.4.3':
     dependencies:
@@ -14192,6 +14194,12 @@ snapshots:
 
   '@types/pbf@3.0.5': {}
 
+  '@types/prop-types@15.7.15': {}
+
+  '@types/react-dom@18.3.7(@types/react@18.3.18)':
+    dependencies:
+      '@types/react': 18.3.18
+
   '@types/react-dom@18.3.7(@types/react@19.1.7)':
     dependencies:
       '@types/react': 19.1.7
@@ -14199,6 +14207,11 @@ snapshots:
   '@types/react-dom@19.1.6(@types/react@19.1.7)':
     dependencies:
       '@types/react': 19.1.7
+
+  '@types/react@18.3.18':
+    dependencies:
+      '@types/prop-types': 15.7.15
+      csstype: 3.1.3
 
   '@types/react@19.1.7':
     dependencies:
@@ -14718,7 +14731,7 @@ snapshots:
       normalize-path: 3.0.0
       picomatch: 2.3.1
 
-  apache-arrow@18.1.0:
+  apache-arrow@17.0.0:
     dependencies:
       '@swc/helpers': 0.5.17
       '@types/command-line-args': 5.2.3
@@ -20615,6 +20628,13 @@ snapshots:
 
   zstd-codec@0.1.5:
     optional: true
+
+  zustand@5.0.5(@types/react@18.3.18)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
+    optionalDependencies:
+      '@types/react': 18.3.18
+      immer: 10.1.1
+      react: 19.1.0
+      use-sync-external-store: 1.5.0(react@19.1.0)
 
   zustand@5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
     optionalDependencies:

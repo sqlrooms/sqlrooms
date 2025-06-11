@@ -23,7 +23,7 @@
     "zustand": "^5.0.5"
   },
   "peerDependencies": {
-    "react": "*"
+    "react": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",

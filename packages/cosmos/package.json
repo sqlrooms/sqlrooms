@@ -28,8 +28,8 @@
     "zustand": "^5.0.5"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",
