@@ -22,7 +22,7 @@
     "@sqlrooms/ui": "workspace:*"
   },
   "peerDependencies": {
-    "react": "*",
+    "react": ">=18",
     "react-mosaic-component": "5.3.0"
   },
   "scripts": {

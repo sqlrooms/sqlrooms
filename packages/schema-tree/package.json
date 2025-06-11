@@ -30,8 +30,8 @@
     "lucide-react": "^0.474.0"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
     "@types/react": "19.1.7",

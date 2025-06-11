@@ -36,7 +36,6 @@
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "apache-arrow": "18.1.0",
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
     "immer": "^10.1.1",
@@ -47,8 +46,9 @@
     "zustand": "^5.0.5"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18",
+    "apache-arrow": ">=17"
   },
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",
