@@ -922,7 +922,7 @@ importers:
         specifier: ^8.21.3
         version: 8.21.3
       apache-arrow:
-        specifier: '>=17'
+        specifier: 17.0.0
         version: 17.0.0
       lucide-react:
         specifier: ^0.503.0
@@ -988,7 +988,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: '>=17'
+        specifier: 17.0.0
         version: 17.0.0
       fast-deep-equal:
         specifier: ^3.1.3
@@ -1175,7 +1175,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: '>=17'
+        specifier: 17.0.0
         version: 17.0.0
       immer:
         specifier: ^10.1.1
@@ -1305,7 +1305,7 @@ importers:
         specifier: workspace:*
         version: link:../utils
       apache-arrow:
-        specifier: '>=17'
+        specifier: 17.0.0
         version: 17.0.0
       d3-dsv:
         specifier: ^3.0.1
