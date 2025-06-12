@@ -31,7 +31,7 @@ import SqlEditor, {SqlEditorProps} from './SqlEditor';
  *
  * @see {@link SqlEditor} for detailed documentation of all available props
  *
- * @props {@link SqlEditorProps}
+ * @see {@link SqlEditorProps}
  * The component accepts all props from SqlEditorProps:
  * - `isOpen` - Whether the SQL editor modal is currently visible
  * - `onClose` - Callback fired when the modal should be closed

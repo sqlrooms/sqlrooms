@@ -8,21 +8,41 @@ When upgrading, please follow the version-specific instructions below that apply
 
 This release focuses on standardizing terminology across the codebase and improving the developer experience for new users. We are replacing the concept of "project" with "room" to better align with the SQLRooms name. "Room" is an established concept in collaborative apps and fits well with the overall vision of the project.
 
-### @sqlrooms/project -> renamed to @sqlrooms/core
+### Package name changes
 
-### @sqlrooms/project-config -> renamed to @sqlrooms/room-config
+- `@sqlrooms/project` renamed to `@sqlrooms/core`
+- `@sqlrooms/project-config` renamed to `@sqlrooms/room-config`
+- `@sqlrooms/project-builder` renamed to `@sqlrooms/room-shell`
 
-### @sqlrooms/project-builder -> renamed to @sqlrooms/room-shell
+### Component name changes
 
 - `ProjectBuilder` is replaced by `RoomShell`
 - `ProjectBuilderProvider` is replaced by `RoomShellProvider`, but it's now embedded in `RoomShell`, so it should be considered internal.
 
-```
+```tsx
     <RoomShell className="h-screen" roomStore={roomStore}>
       <RoomShell.Sidebar />
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
     </RoomShell>
+```
+
+## 0.16.0
+
+### @sqlrooms/duckdb
+
+The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://github.com/sqlrooms/sqlrooms/blob/main/packages/duckdb/README_query_cancellation.md)
+
+#### Before
+
+```
+const result = await connector.query('SELECT * FROM some_table');
+```
+
+#### After
+
+```
+const result = await connector.query('SELECT * FROM some_table').result;
 ```
 
 ## 0.14.0
