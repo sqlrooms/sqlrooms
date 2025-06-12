@@ -8,6 +8,7 @@ import {
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
 import {useBaseProjectBuilderStore} from './ProjectBuilderStore';
+
 const SidebarButton: FC<{
   title: string;
   isSelected: boolean;
@@ -68,11 +69,13 @@ const ProjectBuilderSidebarButton: FC<{projectPanelType: string}> = ({
   );
 };
 
-const ProjectBuilderSidebarButtons: FC = () => {
+const ProjectBuilderSidebarButtons: FC<{className?: string}> = ({
+  className,
+}) => {
   const panels = useBaseProjectBuilderStore((state) => state.project.panels);
 
   return (
-    <div className="flex h-full grow flex-col">
+    <div className={cn('flex h-full grow flex-col', className)}>
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)

@@ -46,3 +46,4 @@ export {
 
 // Re-export all project-config types
 export * from '@sqlrooms/project-config';
+export {RoomShell} from './RoomShell';
