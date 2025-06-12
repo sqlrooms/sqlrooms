@@ -1008,6 +1008,9 @@ importers:
       '@sqlrooms/core':
         specifier: workspace:*
         version: link:../core
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
@@ -1027,9 +1030,6 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
