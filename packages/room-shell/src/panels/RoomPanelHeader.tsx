@@ -3,7 +3,7 @@ import {FC, useMemo} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellStore';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
-const RoomShellPanelHeader: FC<{
+const RoomPanelHeader: FC<{
   panelKey: string;
   showHeader?: boolean;
   children?: React.ReactNode;
@@ -59,4 +59,4 @@ const RoomShellPanelHeader: FC<{
   );
 };
 
-export {RoomShellPanelHeader};
+export {RoomPanelHeader};

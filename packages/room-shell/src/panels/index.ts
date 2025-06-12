@@ -1,3 +1,3 @@
-export * from './RoomShellPanel';
-export * from './RoomShellPanelHeader';
+export * from './RoomPanel';
+export * from './RoomPanelHeader';
 export * from './RoomHeaderButton';

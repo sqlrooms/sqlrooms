@@ -3,7 +3,7 @@ import {MainView} from '@/components/main-view';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
 } from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
@@ -27,30 +27,29 @@ export type AppState = RoomShellState<AppConfig> & {
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  ...createRoomShellSlice<AppConfig>({
-    config: {
-      title: 'Demo App Room',
-      dataSources: [
-        {
-          tableName: 'earthquakes',
-          type: 'url',
-          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-        },
-      ],
-    },
-    room: {
-      panels: {
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice<AppConfig>({
+      config: {
+        title: 'Demo App Room',
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+          },
+        ],
+      },
+      room: {
+        panels: {
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-    },
-  })(set, get, store),
-}));
+    })(set, get, store),
+  }),
+);

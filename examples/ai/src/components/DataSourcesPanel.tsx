@@ -2,7 +2,7 @@
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
-  RoomBuilderPanel,
+  RoomPanel,
   TablesListPanel,
 } from '@sqlrooms/room-shell';
 import {
@@ -19,7 +19,7 @@ const DataSourcesPanel: FC = () => {
   const addRoomFile = useRoomStore((state) => state.room.addRoomFile);
 
   return (
-    <RoomBuilderPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       <FileDropzone
         className="h-[200px] p-5"
         acceptedFormats={{
@@ -78,7 +78,7 @@ const DataSourcesPanel: FC = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </RoomBuilderPanel>
+    </RoomPanel>
   );
 };
 

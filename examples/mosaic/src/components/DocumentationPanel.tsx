@@ -1,4 +1,4 @@
-import {RoomBuilderPanel} from '@sqlrooms/room-shell';
+import {RoomPanel} from '@sqlrooms/room-shell';
 import {SkeletonPane, cn} from '@sqlrooms/ui';
 import React, {FC, useEffect} from 'react';
 import {RoomPanelTypes} from '../store';
@@ -26,7 +26,7 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
   }, []);
 
   return (
-    <RoomBuilderPanel type={RoomPanelTypes.enum['docs']} showHeader={true}>
+    <RoomPanel type={RoomPanelTypes.enum['docs']} showHeader={true}>
       <div className="relative flex-grow">
         <div
           ref={containerRef}
@@ -40,7 +40,7 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
           </div>
         )}
       </div>
-    </RoomBuilderPanel>
+    </RoomPanel>
   );
 };
 

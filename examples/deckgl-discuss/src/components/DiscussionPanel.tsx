@@ -1,6 +1,6 @@
 import {CommentItem, DiscussionList} from '@sqlrooms/discuss';
 import {useSql} from '@sqlrooms/duckdb';
-import {RoomBuilderPanel} from '@sqlrooms/room-shell';
+import {RoomPanel} from '@sqlrooms/room-shell';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {PlaneIcon} from 'lucide-react';
 import {useMemo} from 'react';
@@ -27,7 +27,7 @@ const DiscussionPanel = () => {
   );
 
   return (
-    <RoomBuilderPanel type={RoomPanelTypes.enum['discuss']}>
+    <RoomPanel type={RoomPanelTypes.enum['discuss']}>
       {discussions.length === 0 ? (
         <div className="py-10 text-center text-gray-400">
           <p>No comments yet. Click on an airport to add one.</p>
@@ -66,7 +66,7 @@ const DiscussionPanel = () => {
           }}
         />
       </div>
-    </RoomBuilderPanel>
+    </RoomPanel>
   );
 };
 

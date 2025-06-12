@@ -1,6 +1,6 @@
 import {
   FileDataSourcesPanel,
-  RoomBuilderPanel,
+  RoomPanel,
   TablesListPanel,
 } from '@sqlrooms/room-shell';
 import {
@@ -18,7 +18,7 @@ const DataSourcesPanel: FC = () => {
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomBuilderPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       {isRoomEmpty ? (
         <></>
       ) : (
@@ -59,7 +59,7 @@ const DataSourcesPanel: FC = () => {
       {/* {AddDataModal ? (
         <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
       ) : null} */}
-    </RoomBuilderPanel>
+    </RoomPanel>
   );
 };
 

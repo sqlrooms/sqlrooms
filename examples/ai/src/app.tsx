@@ -7,7 +7,7 @@ import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 
-export const AppShell = () => {
+export const App = () => {
   const sqlEditor = useDisclosure();
   return (
     <div className="flex h-full w-full">

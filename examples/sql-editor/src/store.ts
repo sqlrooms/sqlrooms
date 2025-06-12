@@ -1,7 +1,7 @@
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   LayoutTypes,
   MAIN_VIEW,
   RoomShellState,
@@ -15,6 +15,7 @@ import {
 } from '@sqlrooms/sql-editor';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
+import {MainView} from './MainView';
 
 /**
  * Room config for saving
@@ -34,10 +35,7 @@ export type AppState = RoomShellState<AppConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   persist(
     (set, get, store) => ({
       // Base room slice
@@ -58,10 +56,10 @@ export const {roomStore, useRoomStore} = createRoomShellStore<
         },
         room: {
           panels: {
-            // main: {
-            //   component: MainView,
-            //   placement: 'main',
-            // },
+            main: {
+              component: MainView,
+              placement: 'main',
+            },
           },
         },
       })(set, get, store),

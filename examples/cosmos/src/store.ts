@@ -1,6 +1,6 @@
 import {
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
@@ -44,48 +44,47 @@ export type AppState = RoomShellState<AppConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base room slice
-  ...createRoomShellSlice<AppConfig>({
-    config: {
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: MAIN_VIEW,
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomShellSlice<AppConfig>({
+      config: {
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: MAIN_VIEW,
+        },
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
+            tableName: 'mammals',
+          },
+        ],
+        ...createDefaultSqlEditorConfig(),
+        ...createDefaultCosmosConfig(),
       },
-      dataSources: [
-        {
-          type: 'url',
-          url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
-          tableName: 'mammals',
-        },
-      ],
-      ...createDefaultSqlEditorConfig(),
-      ...createDefaultCosmosConfig(),
-    },
-    room: {
-      panels: {
-        [RoomPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
+      room: {
+        panels: {
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
 
-  // Cosmos slice
-  ...createCosmosSlice()(set, get, store),
-}));
+    // Cosmos slice
+    ...createCosmosSlice()(set, get, store),
+  }),
+);

@@ -41,7 +41,7 @@ const MosaicTile: FC<{
           <div />
         ) : (
           <div style={{display: 'flex', width: '100%', height: '100%'}}>
-            {/* <RoomShellPanelHeader panelKey={id as RoomPanelTypes} /> */}
+            {/* <RoomPanelHeader panelKey={id as RoomPanelTypes} /> */}
           </div>
         )
       }

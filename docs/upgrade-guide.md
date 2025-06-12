@@ -18,6 +18,10 @@ This release focuses on standardizing terminology across the codebase and improv
 
 - `ProjectBuilder` is replaced by `RoomShell`
 - `ProjectBuilderProvider` is replaced by `RoomShellProvider`, but it's now embedded in `RoomShell`, so it should be considered internal.
+- `createProjectBuilderStore` renamed to `createRoomStore`
+- `createProjectBuilderSlice` renamed to `createRoomShellSlice`
+- `ProjectBuilderPanel` renamed to `RoomPanel`
+- `ProjectBuilderPanelHeader` renamed to `RoomPanelHeader`
 
 ```tsx
     <RoomShell className="h-screen" roomStore={roomStore}>

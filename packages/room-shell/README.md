@@ -274,14 +274,14 @@ function DataSourcesSection() {
 ### Creating Custom Panels
 
 ```tsx
-import {RoomShellPanel, RoomShellPanelHeader} from '@sqlrooms/room-shell';
+import {RoomPanel, RoomPanelHeader} from '@sqlrooms/room-shell';
 
 function CustomPanel({title, children}) {
   return (
-    <RoomShellPanel>
-      <RoomShellPanelHeader title={title} />
+    <RoomPanel>
+      <RoomPanelHeader title={title} />
       <div className="p-4">{children}</div>
-    </RoomShellPanel>
+    </RoomPanel>
   );
 }
 ```

@@ -9,8 +9,8 @@ export {TableCard} from './data-sources/TableCard';
 export {TablesListPanel} from './data-sources/TablesListPanel';
 
 export {PanelHeaderButton} from './panels/RoomHeaderButton';
-export {RoomShellPanel} from './panels/RoomShellPanel';
-export {RoomShellPanelHeader} from './panels/RoomShellPanelHeader';
+export {RoomPanel} from './panels/RoomPanel';
+export {RoomPanelHeader} from './panels/RoomPanelHeader';
 
 export {
   RoomShellSidebarButton,
@@ -18,10 +18,7 @@ export {
   SidebarButton,
 } from './RoomShellSidebarButtons';
 
-export {
-  type TaskProgress,
-  createRoomStore as createRoomShellStore,
-} from '@sqlrooms/core';
+export {type TaskProgress, createRoomStore} from '@sqlrooms/core';
 
 export {RoomShellProvider} from './RoomShellProvider';
 

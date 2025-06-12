@@ -1,7 +1,7 @@
 import {
   DataSourceTypes,
   FileDataSourcesPanel,
-  RoomShellPanel,
+  RoomPanel,
   TablesListPanel,
 } from '@sqlrooms/room-shell';
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
@@ -26,7 +26,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <RoomShellPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       {isRoomEmpty ? (
         <></>
       ) : (
@@ -83,7 +83,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
       {/* {AddDataModal ? (
         <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
       ) : null} */}
-    </RoomShellPanel>
+    </RoomPanel>
   );
 };
 

@@ -1,4 +1,4 @@
-import {DEFAULT_ROOM_TITLE, RoomShellPanel} from '@sqlrooms/room-shell';
+import {DEFAULT_ROOM_TITLE, RoomPanel} from '@sqlrooms/room-shell';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
 import {RoomPanelTypes, useRoomStore} from '../store';
@@ -19,7 +19,7 @@ export default function RoomDetailsPanel() {
   );
 
   return (
-    <RoomShellPanel type={RoomPanelTypes.enum['room-details']}>
+    <RoomPanel type={RoomPanelTypes.enum['room-details']}>
       <div className="flex flex-grow flex-col gap-3">
         <div className="flex flex-grow flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -53,6 +53,6 @@ export default function RoomDetailsPanel() {
           </div>
         </div>
       </div>
-    </RoomShellPanel>
+    </RoomPanel>
   );
 }

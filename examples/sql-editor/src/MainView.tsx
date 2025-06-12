@@ -10,7 +10,6 @@ import {
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
-  ThemeSwitch,
   useDisclosure,
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
@@ -35,9 +34,7 @@ export const MainView: FC = () => {
           <div className="text-md font-bold">SQL Editor</div>
           <div className="flex-1" />
           <SqlReferenceButton text="SQL docs" className="text-xs" />
-          <ThemeSwitch />
         </div>
-
         <ResizablePanelGroup direction="horizontal" className="flex-grow">
           <ResizablePanelGroup direction="vertical">
             <ResizablePanel defaultSize={50} className="flex flex-row">

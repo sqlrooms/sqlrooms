@@ -1,6 +1,6 @@
 import {
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
@@ -41,56 +41,55 @@ export type AppState = RoomShellState<AppConfig> & SqlEditorSliceState;
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base room slice
-  ...createRoomShellSlice<AppConfig>({
-    config: {
-      title: 'Demo App Room',
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: RoomPanelTypes.enum['data-sources'],
-          second: MAIN_VIEW,
-          splitPercentage: 30,
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomShellSlice<AppConfig>({
+      config: {
+        title: 'Demo App Room',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+            tableName: 'latency',
+          },
+        ],
+        ...createDefaultSqlEditorConfig(),
+      },
+      room: {
+        panels: {
+          [RoomPanelTypes.enum['room-details']]: {
+            title: 'Room Details',
+            icon: InfoIcon,
+            component: RoomDetailsPanel,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-      dataSources: [
-        {
-          type: 'url',
-          url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
-          tableName: 'latency',
-        },
-      ],
-      ...createDefaultSqlEditorConfig(),
-    },
-    room: {
-      panels: {
-        [RoomPanelTypes.enum['room-details']]: {
-          title: 'Room Details',
-          icon: InfoIcon,
-          component: RoomDetailsPanel,
-          placement: 'sidebar',
-        },
-        [RoomPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
-        },
-      },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-}));
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
+  }),
+);

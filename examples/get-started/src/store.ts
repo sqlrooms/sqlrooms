@@ -1,7 +1,7 @@
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
 } from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
@@ -27,31 +27,30 @@ export type AppState = RoomShellState<AppConfig> & {
  * Create the room store. You can combine your custom state and logic
  * with the slices from the SQLRooms modules.
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  ...createRoomShellSlice<AppConfig>({
-    config: {
-      title: 'Minimal SQLRooms App',
-      dataSources: [
-        {
-          tableName: 'earthquakes',
-          type: 'url',
-          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-        },
-      ],
-    },
-    room: {
-      panels: {
-        // For the minimal example we only define the main panel, no side panels
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice<AppConfig>({
+      config: {
+        title: 'Minimal SQLRooms App',
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+          },
+        ],
+      },
+      room: {
+        panels: {
+          // For the minimal example we only define the main panel, no side panels
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-    },
-  })(set, get, store),
-}));
+    })(set, get, store),
+  }),
+);

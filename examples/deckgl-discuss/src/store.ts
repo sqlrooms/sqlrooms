@@ -8,7 +8,7 @@ import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -31,10 +31,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 
 export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
 
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   persist(
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),

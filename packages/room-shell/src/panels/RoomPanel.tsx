@@ -1,8 +1,8 @@
 import {cn} from '@sqlrooms/ui';
 import {FC, PropsWithChildren} from 'react';
-import {RoomShellPanelHeader} from './RoomShellPanelHeader';
+import {RoomPanelHeader} from './RoomPanelHeader';
 
-const RoomShellPanel: FC<
+const RoomPanel: FC<
   PropsWithChildren<{
     className?: string;
     type: string;
@@ -11,7 +11,7 @@ const RoomShellPanel: FC<
 > = ({type: roomPanelType, children, className, showHeader = true}) => {
   return (
     <div className={cn('flex h-full flex-grow flex-col gap-3', className)}>
-      {showHeader && <RoomShellPanelHeader panelKey={roomPanelType} />}
+      {showHeader && <RoomPanelHeader panelKey={roomPanelType} />}
       <div className="flex h-full flex-grow flex-col gap-3 overflow-auto">
         {children}
       </div>
@@ -19,4 +19,4 @@ const RoomShellPanel: FC<
   );
 };
 
-export {RoomShellPanel};
+export {RoomPanel};

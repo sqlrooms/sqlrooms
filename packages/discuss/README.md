@@ -76,7 +76,7 @@ import {
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
 } from '@sqlrooms/room-shell';
 import {z} from 'zod';
@@ -89,32 +89,31 @@ export type AppConfig = z.infer<typeof AppConfig>;
 export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
 
 // 3. Create the store with discuss slice
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Add the discuss slice with a user ID
-  ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    // Add the discuss slice with a user ID
+    ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
 
-  // Add your room shell slice
-  ...createRoomShellSlice<AppConfig>({
-    connector: yourDatabaseConnector,
-    config: {
-      // Include default discuss config
-      ...createDefaultDiscussConfig(),
-      // Your other config...
-      layout: {
-        /* your layout */
+    // Add your room shell slice
+    ...createRoomShellSlice<AppConfig>({
+      connector: yourDatabaseConnector,
+      config: {
+        // Include default discuss config
+        ...createDefaultDiscussConfig(),
+        // Your other config...
+        layout: {
+          /* your layout */
+        },
+        dataSources: [
+          /* your data sources */
+        ],
       },
-      dataSources: [
-        /* your data sources */
-      ],
-    },
-    room: {
-      // Your room configuration
-    },
-  })(set, get, store),
-}));
+      room: {
+        // Your room configuration
+      },
+    })(set, get, store),
+  }),
+);
 ```
 
 #### Using the Store Hook

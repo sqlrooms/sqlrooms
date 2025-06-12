@@ -1,12 +1,18 @@
-import {getVisibleMosaicLayoutPanels, MosaicLayout} from '@sqlrooms/layout';
-import {RoomStateProvider} from '@sqlrooms/core';
+import {RoomStateProvider, RoomStore} from '@sqlrooms/core';
+import {MosaicLayout} from '@sqlrooms/layout';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
-import {RoomStore} from '@sqlrooms/core';
-import {cn, ErrorBoundary, ProgressModal, SpinnerPane} from '@sqlrooms/ui';
-import {FC, PropsWithChildren, Suspense, useCallback, useMemo} from 'react';
+import {
+  cn,
+  ErrorBoundary,
+  ProgressModal,
+  SpinnerPane,
+  Toaster,
+  TooltipProvider,
+} from '@sqlrooms/ui';
+import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
-import {useBaseRoomShellStore} from './RoomShellStore';
 import {RoomShellSidebarButtons} from './RoomShellSidebarButtons';
+import {useBaseRoomShellStore} from './RoomShellStore';
 
 export function RoomShellBase<PC extends BaseRoomConfig>({
   className,
@@ -20,7 +26,10 @@ export function RoomShellBase<PC extends BaseRoomConfig>({
     <RoomStateProvider roomStore={roomStore}>
       <div className={cn('flex h-full w-full', className)}>
         <ErrorBoundary>
-          <Suspense fallback={<SpinnerPane h="100%" />}>{children}</Suspense>
+          <Suspense fallback={<SpinnerPane h="100%" />}>
+            <TooltipProvider>{children}</TooltipProvider>
+            <Toaster />
+          </Suspense>
         </ErrorBoundary>
       </div>
     </RoomStateProvider>
@@ -34,7 +43,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   return (
     <div
       className={cn(
-        'bg-muted/50 flex h-full w-16 flex-col px-1 py-2',
+        'bg-muted/70 flex h-full w-16 flex-col items-center px-1 py-4',
         className,
       )}
     >
@@ -52,11 +61,6 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
     (state) => state.room.CustomErrorBoundary,
   );
 
-  const visibleRoomPanels = useMemo(
-    () => getVisibleMosaicLayoutPanels(layout?.nodes),
-    [layout],
-  );
-
   const handleLayoutChange = useCallback(
     (nodes: MosaicNode<string> | null) => {
       // Keep layout properties, e.g. 'pinned' and 'fixed'
@@ -64,20 +68,24 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
     },
     [setLayout, layout],
   );
-  const renderedPanels: Map<string, React.ReactNode> = useMemo(() => {
-    return Array.from(visibleRoomPanels).reduce((acc, id: string) => {
-      const PanelComp = panels[id]?.component;
-      if (PanelComp) {
-        acc.set(
-          id,
-          <ErrorBoundary>
-            <PanelComp />
-          </ErrorBoundary>,
-        );
-      }
-      return acc;
-    }, new Map<string, React.ReactNode>());
-  }, [ErrorBoundary, panels, visibleRoomPanels]);
+
+  // const visibleRoomPanels = useMemo(
+  //   () => getVisibleMosaicLayoutPanels(layout?.nodes),
+  //   [layout],
+  // );
+
+  const renderTile = (panelId: string) => {
+    // const panelId = visibleRoomPanels.find((p) => p === id);
+    const PanelComp = panelId && panels[panelId]?.component;
+    if (!PanelComp) {
+      return null;
+    }
+    return (
+      <ErrorBoundary key={panelId}>
+        <PanelComp />
+      </ErrorBoundary>
+    );
+  };
 
   return (
     <div
@@ -88,7 +96,7 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
     >
       {layout ? (
         <MosaicLayout
-          renderTile={(id) => <>{renderedPanels.get(id)}</>}
+          renderTile={renderTile}
           value={layout.nodes}
           onChange={handleLayoutChange}
         />

@@ -7,7 +7,7 @@ import {
 } from '@sqlrooms/ai';
 import {
   createRoomShellSlice,
-  createRoomShellStore,
+  createRoomStore,
   RoomShellState,
   StateCreator,
   BaseRoomConfig,
@@ -64,10 +64,7 @@ export type AppState = RoomShellState<AppConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomShellStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   persist(
     (set, get, store) => ({
       // Base room slice
