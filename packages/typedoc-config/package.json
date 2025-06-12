@@ -6,12 +6,10 @@
   "exports": {
     "default": "./typedoc-base-config.js"
   },
-  "devDependencies": {
-    "typedoc": "^0.28.5",
-    "typedoc-plugin-markdown": "^4.6.4",
-    "typedoc-vitepress-theme": "^1.1.2"
-  },
-  "dependencies": {
-    "typedoc-plugin-zod": "^1.4.1"
+  "peerDependencies": {
+    "typedoc": "*",
+    "typedoc-plugin-markdown": "*",
+    "typedoc-plugin-zod": "*",
+    "typedoc-vitepress-theme": "*"
   }
 }
