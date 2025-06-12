@@ -1,8 +1,8 @@
 import {
   FileDataSourcesPanel,
-  ProjectBuilderPanel,
+  RoomBuilderPanel,
   TablesListPanel,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {
   Accordion,
   AccordionContent,
@@ -11,15 +11,15 @@ import {
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
-  const projectFiles = useProjectStore((state) => state.project.projectFiles);
-  const isProjectEmpty = !projectFiles?.length;
+  const roomFiles = useRoomStore((state) => state.room.roomFiles);
+  const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>
-      {isProjectEmpty ? (
+    <RoomBuilderPanel type={RoomPanelTypes.enum['data-sources']}>
+      {isRoomEmpty ? (
         <></>
       ) : (
         <>
@@ -59,7 +59,7 @@ const DataSourcesPanel: FC = () => {
       {/* {AddDataModal ? (
         <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
       ) : null} */}
-    </ProjectBuilderPanel>
+    </RoomBuilderPanel>
   );
 };
 

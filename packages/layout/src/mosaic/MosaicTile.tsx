@@ -1,4 +1,4 @@
-import {MAIN_VIEW} from '@sqlrooms/project-config';
+import {MAIN_VIEW} from '../../../room-config/src';
 import {cn} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {MosaicBranch, MosaicWindow} from 'react-mosaic-component';
@@ -41,7 +41,7 @@ const MosaicTile: FC<{
           <div />
         ) : (
           <div style={{display: 'flex', width: '100%', height: '100%'}}>
-            {/* <ProjectBuilderPanelHeader panelKey={id as ProjectPanelTypes} /> */}
+            {/* <RoomShellPanelHeader panelKey={id as RoomPanelTypes} /> */}
           </div>
         )
       }

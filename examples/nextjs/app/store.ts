@@ -1,39 +1,39 @@
 // import {MainView} from '@/components/main-view';
 import {MainView} from '@/components/main-view';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomShellStore,
+  RoomShellState,
+} from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
 import {z} from 'zod';
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.extend({
+export const AppConfig = BaseRoomConfig.extend({
   // Add custom config here
 });
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
- * Project state
+ * Room state
  */
-export type AppState = ProjectBuilderState<AppConfig> & {
+export type AppState = RoomShellState<AppConfig> & {
   // Add custom state type definitions here (fields and methods)
 };
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
-  ...createProjectBuilderSlice<AppConfig>({
+  ...createRoomShellSlice<AppConfig>({
     config: {
-      title: 'Demo App Project',
+      title: 'Demo App Room',
       dataSources: [
         {
           tableName: 'earthquakes',
@@ -42,7 +42,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         },
       ],
     },
-    project: {
+    room: {
       panels: {
         main: {
           title: 'Main view',

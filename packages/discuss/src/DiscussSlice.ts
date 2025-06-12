@@ -1,11 +1,11 @@
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
-  useBaseProjectBuilderStore,
-  type ProjectBuilderState,
+  useBaseRoomShellStore,
+  type RoomShellState,
   type StateCreator,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {z} from 'zod';
 
@@ -155,11 +155,11 @@ export type DiscussSliceState = {
   };
 };
 
-export type ProjectStateWithDiscussion =
-  ProjectBuilderState<BaseProjectConfig> & DiscussSliceState;
+export type RoomStateWithDiscussion = RoomShellState<BaseRoomConfig> &
+  DiscussSliceState;
 
 export function createDiscussSlice<
-  PC extends BaseProjectConfig & DiscussSliceConfig,
+  PC extends BaseRoomConfig & DiscussSliceConfig,
 >({userId}: {userId: string}): StateCreator<DiscussSliceState> {
   return createSlice<PC, DiscussSliceState>((set, get) => ({
     discuss: {
@@ -505,16 +505,16 @@ export function createDiscussSlice<
   }));
 }
 
-type ProjectConfigWithDiscuss = BaseProjectConfig & DiscussSliceConfig;
-type ProjectStateWithDiscuss = ProjectBuilderState<ProjectConfigWithDiscuss> &
+type RoomConfigWithDiscuss = BaseRoomConfig & DiscussSliceConfig;
+type RoomStateWithDiscuss = RoomShellState<RoomConfigWithDiscuss> &
   DiscussSliceState;
 
 export function useStoreWithDiscussion<T>(
-  selector: (state: ProjectStateWithDiscuss) => T,
+  selector: (state: RoomStateWithDiscuss) => T,
 ): T {
-  return useBaseProjectBuilderStore<
-    BaseProjectConfig & DiscussSliceConfig,
-    ProjectStateWithDiscuss,
+  return useBaseRoomShellStore<
+    BaseRoomConfig & DiscussSliceConfig,
+    RoomStateWithDiscuss,
     T
-  >((state) => selector(state as ProjectStateWithDiscuss));
+  >((state) => selector(state as RoomStateWithDiscuss));
 }

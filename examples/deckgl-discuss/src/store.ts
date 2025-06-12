@@ -6,32 +6,32 @@ import {
 } from '@sqlrooms/discuss';
 import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomShellStore,
+  RoomShellState,
   StateCreator,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import DiscussionPanel from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
 
-export const ProjectPanelTypes = z.enum([
+export const RoomPanelTypes = z.enum([
   'data-sources',
   'discuss',
   MAIN_VIEW,
 ] as const);
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const AppConfig = BaseProjectConfig.merge(DiscussSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(DiscussSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
-export type AppState = ProjectBuilderState<AppConfig> & DiscussSliceState;
+export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
 
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >(
@@ -39,7 +39,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
 
-      ...createProjectBuilderSlice<AppConfig>({
+      ...createRoomShellSlice<AppConfig>({
         connector: new WasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
@@ -49,8 +49,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
-              first: ProjectPanelTypes.enum['discuss'],
-              second: ProjectPanelTypes.enum['main'],
+              first: RoomPanelTypes.enum['discuss'],
+              second: RoomPanelTypes.enum['main'],
               splitPercentage: 30,
             },
           },
@@ -66,9 +66,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
             },
           ],
         },
-        project: {
+        room: {
           panels: {
-            [ProjectPanelTypes.enum['discuss']]: {
+            [RoomPanelTypes.enum['discuss']]: {
               title: 'Discuss',
               icon: MessageCircleIcon,
               component: DiscussionPanel,

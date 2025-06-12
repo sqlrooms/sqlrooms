@@ -1,10 +1,10 @@
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+  createRoomShellSlice,
+  createRoomShellStore,
+  RoomShellState,
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -15,45 +15,45 @@ import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import ProjectDetailsPanel from './components/ProjectDetailsPanel';
+import RoomDetailsPanel from './components/RoomDetailsPanel';
 
-export const ProjectPanelTypes = z.enum([
-  'project-details',
+export const RoomPanelTypes = z.enum([
+  'room-details',
   'data-sources',
   'data-tables',
   'docs',
   MAIN_VIEW,
 ] as const);
 
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
- * Project state
+ * Room state
  */
-export type AppState = ProjectBuilderState<AppConfig> & SqlEditorSliceState;
+export type AppState = RoomShellState<AppConfig> & SqlEditorSliceState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
-  // Base project slice
-  ...createProjectBuilderSlice<AppConfig>({
+  // Base room slice
+  ...createRoomShellSlice<AppConfig>({
     config: {
-      title: 'Demo App Project',
+      title: 'Demo App Room',
       layout: {
         type: LayoutTypes.enum.mosaic,
         nodes: {
           direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
+          first: RoomPanelTypes.enum['data-sources'],
           second: MAIN_VIEW,
           splitPercentage: 30,
         },
@@ -67,15 +67,15 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       ],
       ...createDefaultSqlEditorConfig(),
     },
-    project: {
+    room: {
       panels: {
-        [ProjectPanelTypes.enum['project-details']]: {
-          title: 'Project Details',
+        [RoomPanelTypes.enum['room-details']]: {
+          title: 'Room Details',
           icon: InfoIcon,
-          component: ProjectDetailsPanel,
+          component: RoomDetailsPanel,
           placement: 'sidebar',
         },
-        [ProjectPanelTypes.enum['data-sources']]: {
+        [RoomPanelTypes.enum['data-sources']]: {
           title: 'Data Sources',
           icon: DatabaseIcon,
           component: DataSourcesPanel,

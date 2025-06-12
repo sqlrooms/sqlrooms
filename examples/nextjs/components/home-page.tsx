@@ -2,12 +2,12 @@
 
 import dynamic from 'next/dynamic';
 
-const ProjectShell = dynamic(() => import('./project-shell'), {
+const RoomShell = dynamic(() => import('./room-shell'), {
   ssr: false,
 });
 
 const HomePage = () => {
-  return <ProjectShell />;
+  return <RoomShell />;
 };
 
 export default HomePage;

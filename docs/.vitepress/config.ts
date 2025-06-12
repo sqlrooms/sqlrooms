@@ -1,7 +1,14 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = ['project-builder', 'project-config', 'duckdb', 'ui'];
+const CORE_PACKAGES = [
+  'core',
+  'room-shell',
+  'room-config',
+  'duckdb',
+  'ui',
+  'layout',
+];
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   ignoreDeadLinks: true,
@@ -51,7 +58,7 @@ export default defineConfig({
         text: 'Examples',
         items: [
           {
-            text: 'Example Projects',
+            text: 'Example Rooms',
             link: '/examples',
           },
           {

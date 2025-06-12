@@ -4,6 +4,27 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.17.0
+
+This release focuses on standardizing terminology across the codebase and improving the developer experience for new users. We are replacing the concept of "project" with "room" to better align with the SQLRooms name. "Room" is an established concept in collaborative apps and fits well with the overall vision of the project.
+
+### @sqlrooms/project -> renamed to @sqlrooms/core
+
+### @sqlrooms/project-config -> renamed to @sqlrooms/room-config
+
+### @sqlrooms/project-builder -> renamed to @sqlrooms/room-shell
+
+- `ProjectBuilder` is replaced by `RoomShell`
+- `ProjectBuilderProvider` is replaced by `RoomShellProvider`, but it's now embedded in `RoomShell`, so it should be considered internal.
+
+```
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar />
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+    </RoomShell>
+```
+
 ## 0.14.0
 
 ### @sqlrooms/ui
@@ -18,9 +39,7 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - `createProjectStore` renamed into `createProjectBuilderStore`
 
-- `ProjectState` renamed into `ProjectBuilderState`
-
-- `ProjectState` renamed into `ProjectBuilderState`
+- `ProjectState` renamed into `ProjectBuilderState`
 
 - `projectId` and `setProjectId` removed: add custom state if necessary
 

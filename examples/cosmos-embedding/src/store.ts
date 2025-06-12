@@ -1,10 +1,10 @@
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+  createRoomShellSlice,
+  createRoomShellStore,
+  RoomShellState,
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -22,34 +22,34 @@ import {
   createDefaultCosmosConfig,
 } from '@sqlrooms/cosmos';
 
-export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
 export const AppConfig =
-  BaseProjectConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
+  BaseRoomConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
 
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
- * Project state
+ * Room state
  */
-export type AppState = ProjectBuilderState<AppConfig> &
+export type AppState = RoomShellState<AppConfig> &
   SqlEditorSliceState &
   CosmosSliceState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
-  // Base project slice
-  ...createProjectBuilderSlice<AppConfig>({
+  // Base room slice
+  ...createRoomShellSlice<AppConfig>({
     config: {
       layout: {
         type: LayoutTypes.enum.mosaic,
@@ -65,9 +65,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       ...createDefaultSqlEditorConfig(),
       ...createDefaultCosmosConfig(),
     },
-    project: {
+    room: {
       panels: {
-        [ProjectPanelTypes.enum['data-sources']]: {
+        [RoomPanelTypes.enum['data-sources']]: {
           title: 'Data Sources',
           icon: DatabaseIcon,
           component: DataSourcesPanel,

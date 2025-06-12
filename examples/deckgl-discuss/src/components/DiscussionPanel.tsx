@@ -1,21 +1,19 @@
 import {CommentItem, DiscussionList} from '@sqlrooms/discuss';
 import {useSql} from '@sqlrooms/duckdb';
-import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
+import {RoomBuilderPanel} from '@sqlrooms/room-shell';
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {PlaneIcon} from 'lucide-react';
 import {useMemo} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
 /**
  * The DiscussionPanel component displays a list of discussions
  * with highlighting functionality.
  */
 const DiscussionPanel = () => {
-  const discussions = useProjectStore(
-    (state) => state.config.discuss.discussions,
-  );
+  const discussions = useRoomStore((state) => state.config.discuss.discussions);
 
-  const table = useProjectStore((s) => s.db.findTableByName('airports'));
+  const table = useRoomStore((s) => s.db.findTableByName('airports'));
   const {data} = useSql<{name: string; abbrev: string}>({
     query: `SELECT name, abbrev FROM airports`,
     enabled: Boolean(table),
@@ -29,7 +27,7 @@ const DiscussionPanel = () => {
   );
 
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['discuss']}>
+    <RoomBuilderPanel type={RoomPanelTypes.enum['discuss']}>
       {discussions.length === 0 ? (
         <div className="py-10 text-center text-gray-400">
           <p>No comments yet. Click on an airport to add one.</p>
@@ -68,7 +66,7 @@ const DiscussionPanel = () => {
           }}
         />
       </div>
-    </ProjectBuilderPanel>
+    </RoomBuilderPanel>
   );
 };
 

@@ -1,8 +1,8 @@
 import {
-  ProjectBuilder,
-  ProjectBuilderSidebarButtons,
+  RoomShell,
+  RoomShellSidebarButtons,
   SidebarButton,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
@@ -13,7 +13,7 @@ export const App = () => {
   return (
     <div className="flex h-screen w-full">
       <div className="flex w-[46px] flex-col items-center gap-5 pb-4 pt-10">
-        <ProjectBuilderSidebarButtons />
+        <RoomShellSidebarButtons />
         <SidebarButton
           title="SQL Editor"
           onClick={sqlEditor.onToggle}
@@ -24,7 +24,7 @@ export const App = () => {
         <ThemeSwitch />
       </div>
       <div className="flex flex-grow flex-col">
-        <ProjectBuilder />
+        <RoomShell />
       </div>
     </div>
   );

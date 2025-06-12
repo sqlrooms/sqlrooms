@@ -19,8 +19,8 @@
   },
   "dependencies": {
     "@cosmograph/cosmos": "2.0.0-beta.22",
-    "@sqlrooms/project-builder": "workspace:*",
-    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",

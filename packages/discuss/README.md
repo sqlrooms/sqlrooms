@@ -64,7 +64,7 @@ import {DiscussionItem} from '@sqlrooms/discuss';
 
 #### Store Setup with `createDiscussSlice`
 
-To use the discussion system, you need to integrate it with your project store using `createDiscussSlice`:
+To use the discussion system, you need to integrate it with your room store using `createDiscussSlice`:
 
 ```tsx
 import {
@@ -74,30 +74,30 @@ import {
   DiscussSliceState,
 } from '@sqlrooms/discuss';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomShellStore,
+  RoomShellState,
+} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
 // 1. Extend your app config with DiscussSliceConfig
-export const AppConfig = BaseProjectConfig.merge(DiscussSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(DiscussSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // 2. Extend your app state with DiscussSliceState
-export type AppState = ProjectBuilderState<AppConfig> & DiscussSliceState;
+export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
 
 // 3. Create the store with discuss slice
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >((set, get, store) => ({
   // Add the discuss slice with a user ID
   ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
 
-  // Add your project builder slice
-  ...createProjectBuilderSlice<AppConfig>({
+  // Add your room shell slice
+  ...createRoomShellSlice<AppConfig>({
     connector: yourDatabaseConnector,
     config: {
       // Include default discuss config
@@ -110,8 +110,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
         /* your data sources */
       ],
     },
-    project: {
-      // Your project configuration
+    room: {
+      // Your room configuration
     },
   })(set, get, store),
 }));

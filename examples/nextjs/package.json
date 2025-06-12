@@ -11,7 +11,7 @@
   "dependencies": {
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "class-variance-authority": "^0.7.1",

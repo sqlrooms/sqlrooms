@@ -1,6 +1,6 @@
-import {RoomShell} from '@sqlrooms/project-builder';
+import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeProvider} from '@sqlrooms/ui';
-import {projectStore as roomStore} from './store';
+import {roomStore as roomStore} from './store';
 
 export const App = () => (
   <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">

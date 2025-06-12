@@ -24,19 +24,19 @@ npm install @sqlrooms/sql-editor
 
 ### SqlEditor and SqlEditorModal Components
 
-These components must be used within a `ProjectBuilderProvider` context as they rely on the SQLRooms store:
+These components must be used within a `RoomShellProvider` context as they rely on the SQLRooms store:
 
 ```tsx
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
-import {projectStore} from './store';
+import {roomStore} from './store';
 
 function MyApp() {
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   return (
-    <ProjectBuilderProvider projectStore={projectStore}>
+    <RoomShellProvider roomStore={roomStore}>
       <div className="my-app">
         <button onClick={isOpen ? onClose : onOpen}>
           {isOpen ? 'Hide' : 'Show'} SQL Editor
@@ -44,7 +44,7 @@ function MyApp() {
 
         <SqlEditorModal isOpen={isOpen} onClose={onClose} />
       </div>
-    </ProjectBuilderProvider>
+    </RoomShellProvider>
   );
 }
 ```
@@ -55,11 +55,11 @@ The SQL Editor requires a properly configured store with the SQL Editor slice:
 
 ```tsx
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
-} from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+  createRoomSlice,
+  createRoomStore,
+  RoomState,
+} from '@sqlrooms/room-shell';
+import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -69,29 +69,28 @@ import {
 import {z} from 'zod';
 
 // Define combined config schema
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // Define combined state type
-export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+export type AppState = RoomState<AppConfig> & SqlEditorSliceState;
 
 // Create combined store
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectSlice<AppConfig>({
-    config: {
-      title: 'SQL Workspace',
-      // ... other project config
-      ...createDefaultSqlEditorConfig(),
-    },
-  })(set, get, store),
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomSlice<AppConfig>({
+      config: {
+        title: 'SQL Workspace',
+        // ... other room config
+        ...createDefaultSqlEditorConfig(),
+      },
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-}));
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
+  }),
+);
 ```
 
 ### Standalone SqlMonacoEditor Component
@@ -126,8 +125,8 @@ Adding a custom documentation panel to the SQL Editor:
 ```tsx
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
-import {projectStore} from './store';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
 function AdvancedSqlEditor() {
   const {isOpen, onOpen, onClose} = useDisclosure();
@@ -150,7 +149,7 @@ function AdvancedSqlEditor() {
   );
 
   return (
-    <ProjectBuilderProvider projectStore={projectStore}>
+    <RoomShellProvider roomStore={roomStore}>
       <button onClick={onOpen}>Open SQL Editor</button>
       <SqlEditorModal
         isOpen={isOpen}
@@ -158,7 +157,7 @@ function AdvancedSqlEditor() {
         schema="analytics"
         documentationPanel={<Documentation />}
       />
-    </ProjectBuilderProvider>
+    </RoomShellProvider>
   );
 }
 ```
@@ -179,44 +178,43 @@ import {
   SqlEditorSliceConfig,
 } from '@sqlrooms/sql-editor';
 import {
-  createProjectSlice,
-  createProjectStore,
-  ProjectState,
-  ProjectBuilderProvider,
-} from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+  createRoomSlice,
+  createRoomStore,
+  RoomState,
+  RoomShellProvider,
+} from '@sqlrooms/room-shell';
+import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {z} from 'zod';
 
 // 1. Define combined config schema
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // 2. Define combined state type
-export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+export type AppState = RoomState<AppConfig> & SqlEditorSliceState;
 
 // 3. Create combined store
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectSlice<AppConfig>({
-    config: {
-      title: 'SQL Workspace',
-      // ... other project config
-      ...createDefaultSqlEditorConfig(),
-    },
-  })(set, get, store),
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomSlice<AppConfig>({
+      config: {
+        title: 'SQL Workspace',
+        // ... other room config
+        ...createDefaultSqlEditorConfig(),
+      },
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-}));
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
+  }),
+);
 
 // 4. Use the store in components
 function MyComponent() {
   // Access SQL editor state and actions
-  const runQuery = useProjectStore((state) => state.sqlEditor.runQuery);
-  const createQueryTab = useProjectStore(
+  const runQuery = useRoomStore((state) => state.sqlEditor.runQuery);
+  const createQueryTab = useRoomStore(
     (state) => state.sqlEditor.createQueryTab,
   );
 
@@ -226,12 +224,12 @@ function MyComponent() {
   };
 
   return (
-    <ProjectBuilderProvider projectStore={projectStore}>
+    <RoomShellProvider roomStore={roomStore}>
       <div>
         <button onClick={handleExecute}>Run Query</button>
         <SqlEditorModal isOpen={true} onClose={() => {}} />
       </div>
-    </ProjectBuilderProvider>
+    </RoomShellProvider>
   );
 }
 ```
@@ -250,26 +248,26 @@ function MyComponent() {
 
 ### SqlEditor
 
-The main component providing a full-featured SQL editor interface. Must be used within a ProjectBuilderProvider.
+The main component providing a full-featured SQL editor interface. Must be used within a RoomShellProvider.
 
 ```tsx
 import {SqlEditor} from '@sqlrooms/sql-editor';
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
-import {projectStore} from './store';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
-<ProjectBuilderProvider projectStore={projectStore}>
+<RoomShellProvider roomStore={roomStore}>
   <SqlEditor
     isOpen={boolean}
     onClose={() => void}
     schema="main"
     documentationPanel={ReactNode}
   />
-</ProjectBuilderProvider>
+</RoomShellProvider>
 ```
 
 ### SqlMonacoEditor
 
-A standalone SQL-specific Monaco editor component. Can be used independently without ProjectBuilderProvider.
+A standalone SQL-specific Monaco editor component. Can be used independently without RoomShellProvider.
 
 ```tsx
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
@@ -294,45 +292,45 @@ function SimpleSqlEditor() {
 
 ### SqlEditorModal
 
-A modal wrapper around the SQL editor. Must be used within a ProjectBuilderProvider.
+A modal wrapper around the SQL editor. Must be used within a RoomShellProvider.
 
 ```tsx
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
-import {projectStore} from './store';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
 function EditorWithModal() {
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   return (
-    <ProjectBuilderProvider projectStore={projectStore}>
+    <RoomShellProvider roomStore={roomStore}>
       <button onClick={onOpen}>Open SQL Editor</button>
       <SqlEditorModal isOpen={isOpen} onClose={onClose} />
-    </ProjectBuilderProvider>
+    </RoomShellProvider>
   );
 }
 ```
 
 ### CreateTableModal
 
-A modal for creating new tables from SQL queries. Must be used within a ProjectBuilderProvider.
+A modal for creating new tables from SQL queries. Must be used within a RoomShellProvider.
 
 ```tsx
 import {CreateTableModal} from '@sqlrooms/sql-editor';
 import {useDisclosure} from '@sqlrooms/ui';
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
-import {projectStore} from './store';
-import {useProjectStore} from './store';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
+import {useRoomStore} from './store';
 
 function TableCreator() {
   const {isOpen, onOpen, onClose} = useDisclosure();
-  const addOrUpdateSqlQueryDataSource = useProjectStore(
-    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  const addOrUpdateSqlQueryDataSource = useRoomStore(
+    (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
 
   return (
-    <ProjectBuilderProvider projectStore={projectStore}>
+    <RoomShellProvider roomStore={roomStore}>
       <button onClick={onOpen}>Create Table from Results</button>
       <CreateTableModal
         isOpen={isOpen}
@@ -340,27 +338,27 @@ function TableCreator() {
         onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
         query="SELECT * FROM users"
       />
-    </ProjectBuilderProvider>
+    </RoomShellProvider>
   );
 }
 ```
 
 ### SqlQueryDataSourcesPanel
 
-A panel showing available data sources for SQL queries. Must be used within a ProjectBuilderProvider.
+A panel showing available data sources for SQL queries. Must be used within a RoomShellProvider.
 
 ```tsx
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
-import {projectStore} from './store';
+import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
-<ProjectBuilderProvider projectStore={projectStore}>
+<RoomShellProvider roomStore={roomStore}>
   <SqlQueryDataSourcesPanel
     onSelectTable={(tableName) => {
       console.log(`Selected table: ${tableName}`);
     }}
   />
-</ProjectBuilderProvider>;
+</RoomShellProvider>;
 ```
 
 ## Props
@@ -422,8 +420,8 @@ config.sqlEditor.queries = [
 config.sqlEditor.selectedQueryId = 'default';
 
 // Use in store creation
-const {projectStore} = createProjectStore({
-  ...createProjectSlice({
+const {roomStore} = createRoomStore({
+  ...createRoomSlice({
     config: {
       ...config,
       // other config options

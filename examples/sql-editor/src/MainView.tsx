@@ -5,7 +5,6 @@ import {
   SqlReferenceButton,
   TableStructurePanel,
 } from '@sqlrooms/sql-editor';
-import {useStoreWithSqlEditor} from '@sqlrooms/sql-editor/dist/SqlEditorSlice';
 import {
   Button,
   ResizableHandle,
@@ -16,18 +15,18 @@ import {
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 import {FC} from 'react';
-import {useProjectStore} from './store';
+import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
-  const lastQueryStatement = useProjectStore((s) =>
+  const lastQueryStatement = useRoomStore((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
     s.sqlEditor.queryResult?.type === 'select'
       ? s.sqlEditor.queryResult.lastQueryStatement
       : '',
   );
-  const addOrUpdateSqlQueryDataSource = useStoreWithSqlEditor(
-    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  const addOrUpdateSqlQueryDataSource = useRoomStore(
+    (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
   return (
     <>

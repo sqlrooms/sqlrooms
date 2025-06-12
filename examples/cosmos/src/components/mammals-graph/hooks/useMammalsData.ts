@@ -1,5 +1,5 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {useProjectStore} from '../../../store';
+import {useRoomStore} from '../../../store';
 import {useMemo} from 'react';
 
 interface Edge {
@@ -8,7 +8,7 @@ interface Edge {
 }
 
 export const useMammalsData = () => {
-  const isTableReady = useProjectStore((state) =>
+  const isTableReady = useRoomStore((state) =>
     Boolean(state.db.tables.find((t) => t.tableName === 'mammals')),
   );
 

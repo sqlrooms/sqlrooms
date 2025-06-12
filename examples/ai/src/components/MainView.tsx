@@ -6,25 +6,23 @@ import {
   QueryControls,
   ModelSelector,
 } from '@sqlrooms/ai';
-import {useProjectStore} from '../store';
+import {useRoomStore} from '../store';
 import {LLM_MODELS} from './constant';
 import {capitalize} from '@sqlrooms/utils';
 import {useMemo} from 'react';
 
 export const MainView: React.FC = () => {
-  const currentSessionId = useProjectStore((s) => s.config.ai.currentSessionId);
-  const currentSession = useProjectStore((s) => {
+  const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
+  const currentSession = useRoomStore((s) => {
     const sessions = s.config.ai.sessions;
     return sessions.find((session) => session.id === currentSessionId);
   });
 
   // Check if data is available
-  const isDataAvailable = useProjectStore(
-    (state) => state.project.isDataAvailable,
-  );
+  const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
-  const apiKeys = useProjectStore((s) => s.apiKeys);
-  const setProviderApiKey = useProjectStore((s) => s.setProviderApiKey);
+  const apiKeys = useRoomStore((s) => s.apiKeys);
+  const setProviderApiKey = useRoomStore((s) => s.setProviderApiKey);
 
   // The current model is from the session
   const currentModelProvider =

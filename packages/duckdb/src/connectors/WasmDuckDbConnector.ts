@@ -1,6 +1,6 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
-import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
+import {LoadFileOptions, StandardLoadOptions} from '../../../room-config/src';
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {BaseDuckDbConnector} from './BaseDuckDbConnector';

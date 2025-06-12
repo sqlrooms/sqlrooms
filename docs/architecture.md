@@ -16,18 +16,18 @@ The SQLRooms architecture follows these key principles:
 
 ## Core Components
 
-### ProjectStore
+### RoomStore
 
 The central state management system built on Zustand handles:
 
-- Project configuration and persistence
+- Room configuration and persistence
 - Data source management
 - DuckDB integration
 - Type-safe state management
 
-The ProjectStore can be extended with custom configuration and functionality specific to your needs.
+The RoomStore can be extended with custom configuration and functionality specific to your needs.
 
-### Project Builder
+### Room Builder
 
 Provides the application shell with:
 
@@ -51,9 +51,9 @@ SQLRooms is organized into several categories of packages:
 
 These packages form the foundation of any SQLRooms application:
 
-- **[@sqlrooms/project-builder](/api/project-builder/)**: The central package that provides the foundation for building analytics applications with Zustand-based state management. It handles project state management using a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the project.
+- **[@sqlrooms/room-shell](/api/room-shell/)**: The central package that provides the foundation for building analytics applications with Zustand-based state management. It handles room state management using a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the room.
 
-- **[@sqlrooms/project-config](/api/project-config/)**: Defines central configuration and type definitions using Zod schemas. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
+- **[@sqlrooms/room-config](/api/room-config/)**: Defines central configuration and type definitions using Zod schemas. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
 
 - **[@sqlrooms/duckdb](/api/duckdb/)**: Provides DuckDB integration for query execution and data source connections. It manages DuckDB-WASM instances and handles query execution with robust data source connection capabilities and ensures type-safe query results for reliable data operations.
 
@@ -97,9 +97,9 @@ These packages provide specific functionality that can be added as needed:
 
 The framework is designed to be highly extensible through:
 
-1. **Extended ProjectStore**
+1. **Extended RoomStore**
 
-   - Custom project configuration using Zod schemas
+   - Custom room configuration using Zod schemas
    - Additional state management
    - Integration with other services
 
@@ -113,7 +113,7 @@ The framework is designed to be highly extensible through:
 1. Data sources (CSV, Parquet) are loaded through the dropzone, the S3 browser or custom import methods
 2. DuckDB processes queries locally in the browser
 3. Results are displayed in the DataTable view or custom visualizations
-4. Project state can be saved and loaded for persistence
+4. Room state can be saved and loaded for persistence
 
 This extensibility allows you to customize the behavior of each slice to meet your specific requirements.
 

@@ -130,12 +130,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -227,12 +227,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -327,12 +327,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -427,12 +427,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -512,9 +512,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-builder
+        version: link:../../packages/room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -585,12 +585,12 @@ importers:
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -679,12 +679,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
-        specifier: workspace:*
-        version: link:../../packages/project-builder
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../../packages/recharts
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -740,9 +740,9 @@ importers:
 
   examples/sql-editor:
     dependencies:
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-builder
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -837,12 +837,12 @@ importers:
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -871,17 +871,32 @@ importers:
         specifier: ^3.25.57
         version: 3.25.57
 
+  packages/core:
+    dependencies:
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      zod:
+        specifier: ^3.25.57
+        version: 3.25.57
+      zustand:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+
   packages/cosmos:
     dependencies:
       '@cosmograph/cosmos':
         specifier: 2.0.0-beta.22
         version: 2.0.0-beta.22
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -942,9 +957,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-builder
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -981,9 +996,9 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.1-dev204.0
         version: 1.29.1-dev204.0
-      '@sqlrooms/project':
+      '@sqlrooms/core':
         specifier: workspace:*
-        version: link:../project
+        version: link:../core
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
@@ -1003,9 +1018,9 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
-      '@sqlrooms/project-config':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-config
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -1081,9 +1096,9 @@ importers:
 
   packages/layout:
     dependencies:
-      '@sqlrooms/project-config':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1136,23 +1151,35 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
 
-  packages/project:
+  packages/recharts:
     dependencies:
-      immer:
-        specifier: ^10.1.1
-        version: 10.1.1
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      recharts:
+        specifier: ^2.15.3
+        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+
+  packages/room-config:
+    dependencies:
       react:
         specifier: 19.1.0
         version: 19.1.0
       zod:
         specifier: ^3.25.57
         version: 3.25.57
-      zustand:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
 
-  packages/project-builder:
+  packages/room-shell:
     dependencies:
+      '@sqlrooms/core':
+        specifier: workspace:*
+        version: link:../core
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1162,12 +1189,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
-      '@sqlrooms/project':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project
-      '@sqlrooms/project-config':
-        specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1195,30 +1219,6 @@ importers:
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
-
-  packages/project-config:
-    dependencies:
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      zod:
-        specifier: ^3.25.57
-        version: 3.25.57
-
-  packages/recharts:
-    dependencies:
-      '@sqlrooms/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
-      recharts:
-        specifier: ^2.15.3
-        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
 
   packages/s3-browser:
     dependencies:
@@ -1289,12 +1289,12 @@ importers:
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/schema-tree':
         specifier: workspace:*
         version: link:../schema-tree

@@ -1,32 +1,25 @@
-import {
-  DEFAULT_PROJECT_TITLE,
-  ProjectBuilderPanel,
-} from '@sqlrooms/project-builder';
+import {DEFAULT_ROOM_TITLE, RoomShellPanel} from '@sqlrooms/room-shell';
 import {cn, EditableText, Label, Textarea} from '@sqlrooms/ui';
 import {useCallback} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
-export default function ProjectDetailsPanel() {
-  const title = useProjectStore((state) => state.config.title);
-  const setProjectTitle = useProjectStore(
-    (state) => state.project.setProjectTitle,
-  );
-  const description = useProjectStore((state) => state.config.description);
-  const setDescription = useProjectStore(
-    (state) => state.project.setDescription,
-  );
+export default function RoomDetailsPanel() {
+  const title = useRoomStore((state) => state.config.title);
+  const setRoomTitle = useRoomStore((state) => state.room.setRoomTitle);
+  const description = useRoomStore((state) => state.config.description);
+  const setDescription = useRoomStore((state) => state.room.setDescription);
 
-  const handleSetProjectTitle = useCallback(
+  const handleSetRoomTitle = useCallback(
     (title: string) => {
-      const nextTitle = title.trim() || 'Untitled project';
-      setProjectTitle(nextTitle);
+      const nextTitle = title.trim() || 'Untitled room';
+      setRoomTitle(nextTitle);
       return nextTitle;
     },
-    [setProjectTitle],
+    [setRoomTitle],
   );
 
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['project-details']}>
+    <RoomShellPanel type={RoomPanelTypes.enum['room-details']}>
       <div className="flex flex-grow flex-col gap-3">
         <div className="flex flex-grow flex-col gap-3">
           <div className="flex flex-col gap-1.5">
@@ -36,8 +29,8 @@ export default function ProjectDetailsPanel() {
             <div className="w-full overflow-hidden text-sm">
               <EditableText
                 value={title}
-                placeholder={DEFAULT_PROJECT_TITLE}
-                onChange={handleSetProjectTitle}
+                placeholder={DEFAULT_ROOM_TITLE}
+                onChange={handleSetRoomTitle}
               />
             </div>
           </div>
@@ -54,12 +47,12 @@ export default function ProjectDetailsPanel() {
                 'bg-secondary text-secondary-foreground flex-grow resize-none text-xs',
                 'placeholder:text-muted-foreground min-h-0 border-none',
               )}
-              placeholder="A story behind this project, what it represents"
+              placeholder="A story behind this room, what it represents"
               maxLength={4096}
             />
           </div>
         </div>
       </div>
-    </ProjectBuilderPanel>
+    </RoomShellPanel>
   );
 }

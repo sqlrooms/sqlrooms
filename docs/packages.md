@@ -8,13 +8,13 @@ SQLRooms is organized into several packages that work together to provide a comp
 
 ## Core Packages
 
-### [@sqlrooms/project-builder](./api/project-builder/index.md)
+### [@sqlrooms/room-shell](./api/room-shell/index.md)
 
 Core framework package that provides the foundation for building analytics applications. It handles project state management using [Zustand](https://github.com/pmndrs/zustand) with a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the project.
 
-### [@sqlrooms/project-config](./api/project-config/index.md)
+### [@sqlrooms/room-config](./api/room-config/index.md)
 
-A central configuration and type definitions package that maintains base project configuration schemas and [Zod](https://zod.dev/) schema definitions. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
+A central configuration and type definitions package that maintains base room configuration schemas and [Zod](https://zod.dev/) schema definitions. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
 
 ### [@sqlrooms/duckdb](./api/duckdb/index.md)
 

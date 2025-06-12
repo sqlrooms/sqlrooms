@@ -1,4 +1,4 @@
-import {useBaseProjectBuilderStore} from '@sqlrooms/project-builder';
+import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {
   Button,
   ResizableHandle,
@@ -28,8 +28,8 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = '*', documentationPanel} = props;
 
   // Store access
-  const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
-    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
+    (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
   const lastQueryStatement = useStoreWithSqlEditor((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&

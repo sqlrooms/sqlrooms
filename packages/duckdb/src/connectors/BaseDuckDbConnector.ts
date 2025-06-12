@@ -2,7 +2,7 @@ import {
   isSpatialLoadFileOptions,
   LoadFileOptions,
   StandardLoadOptions,
-} from '@sqlrooms/project-config';
+} from '../../../room-config/src';
 import * as arrow from 'apache-arrow';
 import {TypeMap} from 'apache-arrow';
 import {DuckDbConnector, QueryHandle, QueryOptions} from './DuckDbConnector';
@@ -101,11 +101,12 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
     this.activeQueries.set(queryId, abortController);
 
     // Execute the query with abort signal support
-    const resultPromise = queryPromiseFactory(abortController.signal, queryId).finally(
-      () => {
-        this.activeQueries.delete(queryId);
-      },
-    );
+    const resultPromise = queryPromiseFactory(
+      abortController.signal,
+      queryId,
+    ).finally(() => {
+      this.activeQueries.delete(queryId);
+    });
 
     return {
       result: resultPromise,
@@ -166,7 +167,7 @@ export abstract class BaseDuckDbConnector implements DuckDbConnector {
   async loadArrow(
     file: arrow.Table | Uint8Array,
     tableName: string,
-    opts?: {schema?: string}
+    opts?: {schema?: string},
   ): Promise<void> {
     throw new Error('Not implemented');
   }

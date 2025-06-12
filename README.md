@@ -17,15 +17,15 @@ Check out our [example projects](https://sqlrooms.org/examples.html) to see what
 - **Browser-Based Analytics Engine**: Leverages DuckDB-WASM to process data directly in the browser, enabling offline functionality and eliminating backend dependencies.
 - **Complete UI Framework**: Provides a rich set of React components including data tables, SQL editors, and visualization tools built with Tailwind CSS.
 - **Flexible Layout System**: Includes a mosaic-style panel system for creating customizable, responsive dashboards.
-- **Project Management**: Built-in state management for analytics projects with persistence capabilities.
+- **Room Management**: Built-in state management for analytics projects with persistence capabilities.
 - **Data Source Integration**: Support for various data sources including CSV, Parquet files, and S3-compatible storage.
 - **AI-Ready**: Optional AI integration for natural language querying and automated insights.
 - **Privacy-Focused**: All data processing happens client-side, keeping sensitive data local when needed.
 
 ### Core Packages
 
-- **[@sqlrooms/project-builder](/packages/project-builder/)**: Foundation for building analytics applications with Zustand-based state management
-- **[@sqlrooms/project-config](/packages/project-config/)**: Central configuration and type definitions using Zod schemas
+- **[@sqlrooms/room-shell](/packages/room-shell/)**: Foundation for building analytics applications with Zustand-based state management
+- **[@sqlrooms/room-config](/packages/room-config/)**: Central configuration and type definitions using Zod schemas
 - **[@sqlrooms/duckdb](/packages/duckdb/)**: DuckDB integration for query execution and data source connections
 - **[@sqlrooms/ui](/packages/ui/)**: Comprehensive UI toolkit based on shadcn/ui with Tailwind preset
 

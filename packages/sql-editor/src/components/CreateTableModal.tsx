@@ -1,5 +1,5 @@
 import {zodResolver} from '@hookform/resolvers/zod';
-import {SqlQueryDataSource} from '@sqlrooms/project-builder';
+import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Alert,
   AlertDescription,

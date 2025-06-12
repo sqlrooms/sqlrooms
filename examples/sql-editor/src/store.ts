@@ -1,12 +1,12 @@
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomShellStore,
   LayoutTypes,
   MAIN_VIEW,
-  ProjectBuilderState,
+  RoomShellState,
   StateCreator,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -17,31 +17,31 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
- * Project state
+ * Room state
  */
 
-export type AppState = ProjectBuilderState<AppConfig> &
+export type AppState = RoomShellState<AppConfig> &
   SqlEditorSliceState & {
     // Add your own state here
   };
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
+export const {roomStore, useRoomStore} = createRoomShellStore<
   AppConfig,
   AppState
 >(
   persist(
     (set, get, store) => ({
-      // Base project slice
-      ...createProjectBuilderSlice<AppConfig>({
+      // Base room slice
+      ...createRoomShellSlice<AppConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -56,7 +56,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           ],
           ...createDefaultSqlEditorConfig(),
         },
-        project: {
+        room: {
           panels: {
             // main: {
             //   component: MainView,
