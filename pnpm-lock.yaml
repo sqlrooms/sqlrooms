@@ -5,7 +5,6 @@ settings:
   excludeLinksFromLockfile: false
 
 overrides:
-  typedoc: 0.27.9
   typescript: 5.8.3
   react: 19.1.0
   react-dom: 19.1.0
@@ -99,14 +98,14 @@ importers:
         specifier: 0.27.9
         version: 0.27.9(typescript@5.8.3)
       typedoc-plugin-markdown:
-        specifier: ^4.6.4
-        version: 4.6.4(typedoc@0.27.9(typescript@5.8.3))
+        specifier: 4.4.2
+        version: 4.4.2(typedoc@0.27.9(typescript@5.8.3))
       typedoc-plugin-zod:
-        specifier: ^1.4.1
+        specifier: 1.4.1
         version: 1.4.1(typedoc@0.27.9(typescript@5.8.3))
       typedoc-vitepress-theme:
-        specifier: ^1.1.2
-        version: 1.1.2(typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)))
+        specifier: 1.1.2
+        version: 1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3)))
       typescript:
         specifier: 5.8.3
         version: 5.8.3
@@ -1364,17 +1363,17 @@ importers:
   packages/typedoc-config:
     dependencies:
       typedoc:
-        specifier: 0.27.9
-        version: 0.27.9(typescript@5.8.3)
+        specifier: 0.28.5
+        version: 0.28.5(typescript@5.8.3)
       typedoc-plugin-markdown:
-        specifier: '*'
-        version: 4.6.4(typedoc@0.27.9(typescript@5.8.3))
+        specifier: 4.4.2
+        version: 4.4.2(typedoc@0.28.5(typescript@5.8.3))
       typedoc-plugin-zod:
-        specifier: '*'
-        version: 1.4.1(typedoc@0.27.9(typescript@5.8.3))
+        specifier: 1.4.1
+        version: 1.4.1(typedoc@0.28.5(typescript@5.8.3))
       typedoc-vitepress-theme:
-        specifier: '*'
-        version: 1.1.2(typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)))
+        specifier: 1.1.2
+        version: 1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.28.5(typescript@5.8.3)))
 
   packages/typescript-config: {}
 
@@ -1712,14 +1711,14 @@ packages:
     resolution: {integrity: sha512-30iZtAPgz+LTIYoeivqYo853f02jBYSd5uGnGpkFV0M3xOt9aN73erkgYAmZU43x4VfqcnLxW9Kpg3R5LC4YYw==}
     engines: {node: '>=6.0.0'}
 
-  '@arcgis/components-utils@4.33.0-next.156':
-    resolution: {integrity: sha512-jFiKA4K6WDxQhbuBrj3nt4FFiwAIys7f+HIDQmrNNno95vLMeD9+plYCRnyGxnZ9eajhcWb6GIqw5XhHkKQK5w==}
+  '@arcgis/components-utils@4.33.0-next.158':
+    resolution: {integrity: sha512-EkfOQ9V7lvuCalY4ZniZ8bn/988HwAaIpaKiK5O+aqydUM9YhJh2UnHi5Cwx/izI1RsdZsvy7R6cWaBptqcK/A==}
 
   '@arcgis/core@4.32.10':
     resolution: {integrity: sha512-dcYbISxjsrBUBmrIx1dlTV4ynrl1CrvqLcd2fYtFgc0WNTqx3V7lFNmpBbT9wu15wqaTUA8kVXmN9HCoUppA4w==}
 
-  '@arcgis/lumina@4.33.0-next.156':
-    resolution: {integrity: sha512-dAwVBPWYAnFOKGyBXR2/31Mw90yn9W4BIwvbt35clO+CXuPKLl6AwC7pgw+CMKjuL7qF/HE4ZhxiOKm93KaVBA==}
+  '@arcgis/lumina@4.33.0-next.158':
+    resolution: {integrity: sha512-UM0+h+3CMvlN74EZr5bsbSTtluDICMfhtPEERj9TstH2Vk7YHXlkA7or4BUL3msSjEfqPftouDizvFmAHtVRnQ==}
 
   '@aws-crypto/crc32@5.2.0':
     resolution: {integrity: sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg==}
@@ -2540,6 +2539,9 @@ packages:
 
   '@gerrit0/mini-shiki@1.27.2':
     resolution: {integrity: sha512-GeWyHz8ao2gBiUW4OJnQDxXQnFgZQwwQk05t/CVVgNBN7/rK8XZ7xY6YhLVv9tH3VppWWmr9DCl3MwemB/i+Og==}
+
+  '@gerrit0/mini-shiki@3.6.0':
+    resolution: {integrity: sha512-KaeJvPNofTEZR9EzVNp/GQzbQqkGfjiu6k3CXKvhVTX+8OoAKSX/k7qxLKOX3B0yh2XqVAc93rsOu48CGt2Qug==}
 
   '@hookform/resolvers@3.10.0':
     resolution: {integrity: sha512-79Dv+3mDF7i+2ajj7SkypSKHhl1cbln1OGavqrsF7p6mbUv11xpqpacPsGDCTRvCSjEEIez2ef1NveSVL3b0Ag==}
@@ -4029,11 +4031,20 @@ packages:
   '@shikijs/engine-oniguruma@2.5.0':
     resolution: {integrity: sha512-pGd1wRATzbo/uatrCIILlAdFVKdxImWJGQ5rFiB5VZi2ve5xj3Ax9jny8QvkaV93btQEwR/rSz5ERFpC5mKNIw==}
 
+  '@shikijs/engine-oniguruma@3.6.0':
+    resolution: {integrity: sha512-nmOhIZ9yT3Grd+2plmW/d8+vZ2pcQmo/UnVwXMUXAKTXdi+LK0S08Ancrz5tQQPkxvjBalpMW2aKvwXfelauvA==}
+
   '@shikijs/langs@2.5.0':
     resolution: {integrity: sha512-Qfrrt5OsNH5R+5tJ/3uYBBZv3SuGmnRPejV9IlIbFH3HTGLDlkqgHymAlzklVmKBjAaVmkPkyikAV/sQ1wSL+w==}
 
+  '@shikijs/langs@3.6.0':
+    resolution: {integrity: sha512-IdZkQJaLBu1LCYCwkr30hNuSDfllOT8RWYVZK1tD2J03DkiagYKRxj/pDSl8Didml3xxuyzUjgtioInwEQM/TA==}
+
   '@shikijs/themes@2.5.0':
     resolution: {integrity: sha512-wGrk+R8tJnO0VMzmUExHR+QdSaPUl/NKs+a4cQQRWyoc3YFbUzuLEi/KWK1hj+8BfHRKm2jNhhJck1dfstJpiw==}
+
+  '@shikijs/themes@3.6.0':
+    resolution: {integrity: sha512-Fq2j4nWr1DF4drvmhqKq8x5vVQ27VncF8XZMBuHuQMZvUSS3NBgpqfwz/FoGe36+W6PvniZ1yDlg2d4kmYDU6w==}
 
   '@shikijs/transformers@2.5.0':
     resolution: {integrity: sha512-SI494W5X60CaUwgi8u4q4m4s3YAFSxln3tzNjOSYqq54wlVgz0/NbbXEb3mdLbqMBztcmS7bVTaEd2w0qMmfeg==}
@@ -4043,6 +4054,9 @@ packages:
 
   '@shikijs/types@2.5.0':
     resolution: {integrity: sha512-ygl5yhxki9ZLNuNpPitBWvcy9fsSKKaRuO4BAlMyagszQidxcpLAr0qiW/q43DtSIDxO6hEbtYLiFZNXO/hdGw==}
+
+  '@shikijs/types@3.6.0':
+    resolution: {integrity: sha512-cLWFiToxYu0aAzJqhXTQsFiJRTFDAGl93IrMSBNaGSzs7ixkLfdG6pH11HipuWFGW5vyx4X47W8HDQ7eSrmBUg==}
 
   '@shikijs/vscode-textmate@10.0.2':
     resolution: {integrity: sha512-83yeghZ2xxin3Nj8z1NMd/NCuca+gsYXswywDy5bHvwlWL8tpTQmzGeUuHd9FC3E/SBEMvzJRwWEOz5gGes9Qg==}
@@ -9464,16 +9478,16 @@ packages:
     resolution: {integrity: sha512-q7QNVDGTdl702bVFiI5eY4l/HkgCM6at9KhcFbgUAzezHFbOVy4+0O/lCjsABEQwbZPravVfBIiBVGo89yzHFg==}
     engines: {node: '>= 0.4'}
 
-  typedoc-plugin-markdown@4.6.4:
-    resolution: {integrity: sha512-AnbToFS1T1H+n40QbO2+i0wE6L+55rWnj7zxnM1r781+2gmhMF2dB6dzFpaylWLQYkbg4D1Y13sYnne/6qZwdw==}
+  typedoc-plugin-markdown@4.4.2:
+    resolution: {integrity: sha512-kJVkU2Wd+AXQpyL6DlYXXRrfNrHrEIUgiABWH8Z+2Lz5Sq6an4dQ/hfvP75bbokjNDUskOdFlEEm/0fSVyC7eg==}
     engines: {node: '>= 18'}
     peerDependencies:
-      typedoc: 0.27.9
+      typedoc: 0.27.x
 
   typedoc-plugin-zod@1.4.1:
     resolution: {integrity: sha512-D7+uhPFCyKMcKnUSZip/BldE08Jo/yykvbxlIcY11fI8dKyCe23/igOiZ7rPW2mXD5N9kHEA2he9LkCoU+6HtA==}
     peerDependencies:
-      typedoc: 0.27.9
+      typedoc: 0.23.x || 0.24.x || 0.25.x || 0.26.x || 0.27.x || 0.28.x
 
   typedoc-vitepress-theme@1.1.2:
     resolution: {integrity: sha512-hQvCZRr5uKDqY1bRuY1+eNTNn6d4TE4OP5pnw65Y7WGgajkJW9X1/lVJK2UJpcwCmwkdjw1QIO49H9JQlxWhhw==}
@@ -9483,6 +9497,13 @@ packages:
   typedoc@0.27.9:
     resolution: {integrity: sha512-/z585740YHURLl9DN2jCWe6OW7zKYm6VoQ93H0sxZ1cwHQEQrUn5BJrEnkWhfzUdyO+BLGjnKUZ9iz9hKloFDw==}
     engines: {node: '>= 18'}
+    hasBin: true
+    peerDependencies:
+      typescript: 5.8.3
+
+  typedoc@0.28.5:
+    resolution: {integrity: sha512-5PzUddaA9FbaarUzIsEc4wNXCiO4Ot3bJNeMF2qKpYlTmM9TTaSHQ7162w756ERCkXER/+o2purRG6YOAv6EMA==}
+    engines: {node: '>= 18', pnpm: '>= 10'}
     hasBin: true
     peerDependencies:
       typescript: 5.8.3
@@ -10283,7 +10304,7 @@ snapshots:
       '@jridgewell/gen-mapping': 0.3.8
       '@jridgewell/trace-mapping': 0.3.25
 
-  '@arcgis/components-utils@4.33.0-next.156':
+  '@arcgis/components-utils@4.33.0-next.158':
     dependencies:
       tslib: 2.8.1
 
@@ -10296,9 +10317,9 @@ snapshots:
       luxon: 3.5.0
       marked: 15.0.12
 
-  '@arcgis/lumina@4.33.0-next.156':
+  '@arcgis/lumina@4.33.0-next.158':
     dependencies:
-      '@arcgis/components-utils': 4.33.0-next.156
+      '@arcgis/components-utils': 4.33.0-next.158
       '@lit-labs/ssr': 3.3.1
       '@lit-labs/ssr-client': 1.1.7
       '@lit/context': 1.1.5
@@ -11405,8 +11426,8 @@ snapshots:
 
   '@esri/calcite-components@3.2.1':
     dependencies:
-      '@arcgis/components-utils': 4.33.0-next.156
-      '@arcgis/lumina': 4.33.0-next.156
+      '@arcgis/components-utils': 4.33.0-next.158
+      '@arcgis/lumina': 4.33.0-next.158
       '@esri/calcite-ui-icons': 4.2.0
       '@floating-ui/dom': 1.7.1
       '@floating-ui/utils': 0.2.9
@@ -11444,6 +11465,14 @@ snapshots:
     dependencies:
       '@shikijs/engine-oniguruma': 1.29.2
       '@shikijs/types': 1.29.2
+      '@shikijs/vscode-textmate': 10.0.2
+
+  '@gerrit0/mini-shiki@3.6.0':
+    dependencies:
+      '@shikijs/engine-oniguruma': 3.6.0
+      '@shikijs/langs': 3.6.0
+      '@shikijs/themes': 3.6.0
+      '@shikijs/types': 3.6.0
       '@shikijs/vscode-textmate': 10.0.2
 
   '@hookform/resolvers@3.10.0(react-hook-form@7.57.0(react@19.1.0))':
@@ -13299,13 +13328,26 @@ snapshots:
       '@shikijs/types': 2.5.0
       '@shikijs/vscode-textmate': 10.0.2
 
+  '@shikijs/engine-oniguruma@3.6.0':
+    dependencies:
+      '@shikijs/types': 3.6.0
+      '@shikijs/vscode-textmate': 10.0.2
+
   '@shikijs/langs@2.5.0':
     dependencies:
       '@shikijs/types': 2.5.0
 
+  '@shikijs/langs@3.6.0':
+    dependencies:
+      '@shikijs/types': 3.6.0
+
   '@shikijs/themes@2.5.0':
     dependencies:
       '@shikijs/types': 2.5.0
+
+  '@shikijs/themes@3.6.0':
+    dependencies:
+      '@shikijs/types': 3.6.0
 
   '@shikijs/transformers@2.5.0':
     dependencies:
@@ -13318,6 +13360,11 @@ snapshots:
       '@types/hast': 3.0.4
 
   '@shikijs/types@2.5.0':
+    dependencies:
+      '@shikijs/vscode-textmate': 10.0.2
+      '@types/hast': 3.0.4
+
+  '@shikijs/types@3.6.0':
     dependencies:
       '@shikijs/vscode-textmate': 10.0.2
       '@types/hast': 3.0.4
@@ -19874,21 +19921,42 @@ snapshots:
       typed-array-buffer: 1.0.3
       typed-array-byte-offset: 1.0.4
 
-  typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3)):
+  typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3)):
     dependencies:
       typedoc: 0.27.9(typescript@5.8.3)
+
+  typedoc-plugin-markdown@4.4.2(typedoc@0.28.5(typescript@5.8.3)):
+    dependencies:
+      typedoc: 0.28.5(typescript@5.8.3)
 
   typedoc-plugin-zod@1.4.1(typedoc@0.27.9(typescript@5.8.3)):
     dependencies:
       typedoc: 0.27.9(typescript@5.8.3)
 
-  typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.6.4(typedoc@0.27.9(typescript@5.8.3))):
+  typedoc-plugin-zod@1.4.1(typedoc@0.28.5(typescript@5.8.3)):
     dependencies:
-      typedoc-plugin-markdown: 4.6.4(typedoc@0.27.9(typescript@5.8.3))
+      typedoc: 0.28.5(typescript@5.8.3)
+
+  typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.27.9(typescript@5.8.3))):
+    dependencies:
+      typedoc-plugin-markdown: 4.4.2(typedoc@0.27.9(typescript@5.8.3))
+
+  typedoc-vitepress-theme@1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.28.5(typescript@5.8.3))):
+    dependencies:
+      typedoc-plugin-markdown: 4.4.2(typedoc@0.28.5(typescript@5.8.3))
 
   typedoc@0.27.9(typescript@5.8.3):
     dependencies:
       '@gerrit0/mini-shiki': 1.27.2
+      lunr: 2.3.9
+      markdown-it: 14.1.0
+      minimatch: 9.0.5
+      typescript: 5.8.3
+      yaml: 2.8.0
+
+  typedoc@0.28.5(typescript@5.8.3):
+    dependencies:
+      '@gerrit0/mini-shiki': 3.6.0
       lunr: 2.3.9
       markdown-it: 14.1.0
       minimatch: 9.0.5
