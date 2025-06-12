@@ -1,6 +1,5 @@
 name: Deploy docs
 
-# Commenting out the trigger section to temporarily disable the workflow
 on:
   push:
     branches:
@@ -11,7 +10,7 @@ on:
       - '.github/workflows/deploy-docs.yml'
   workflow_dispatch:
 
-Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
   pages: write
