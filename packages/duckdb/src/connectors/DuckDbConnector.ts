@@ -1,4 +1,4 @@
-import {LoadFileOptions, StandardLoadOptions} from '../../../room-config/src';
+import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
 import {TypeMap} from 'apache-arrow';
 
