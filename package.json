@@ -67,7 +67,7 @@
     "remove": "^0.1.5",
     "shx": "^0.3.4",
     "turbo": "^2.5.4",
-    "typedoc": "^0.27.9",
+    "typedoc": "^0.28.5",
     "typescript": "5.8.3",
     "vitepress": "^1.6.3"
   },
