@@ -14,8 +14,8 @@ on:
 # Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
 permissions:
   contents: read
-  pages: write
-  id-token: write
+  # pages: write
+  # id-token: write
 
 # Allow only one concurrent deployment
 concurrency:
@@ -63,21 +63,21 @@ jobs:
       - name: Build docs
         run: pnpm docs:build
 
-      - name: Create CNAME file
-        run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
+      # - name: Create CNAME file
+      #   run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          path: docs/.vitepress/dist
+      # - name: Upload artifact
+      #   uses: actions/upload-pages-artifact@v3
+      #   with:
+      #     path: docs/.vitepress/dist
 
-      - name: Deploy to GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
-          external_repository: sqlrooms/sqlrooms.github.io
-          publish_dir: docs/.vitepress/dist
-          publish_branch: main
-          force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+      # - name: Deploy to GitHub Pages
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     deploy_key: ${{ secrets.DOCS_DEPLOY_KEY }}
+      #     external_repository: sqlrooms/sqlrooms.github.io
+      #     publish_dir: docs/.vitepress/dist
+      #     publish_branch: main
+      #     force_orphan: true
+      #     user_name: 'github-actions[bot]'
+      #     user_email: 'github-actions[bot]@users.noreply.github.com'
