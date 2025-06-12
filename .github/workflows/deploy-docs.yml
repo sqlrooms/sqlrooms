@@ -50,6 +50,14 @@ jobs:
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist --no-frozen-lockfile
 
+      - name: Print TypeScript, TypeDoc, and plugin versions
+        run: |
+          pnpm list typescript typedoc typedoc-vitepress-theme typedoc-plugin-markdown typedoc-plugin-zod || true
+          npx tsc --version
+          npx typedoc --version
+
+      - name: List files in packages/duckdb/src
+        run: ls -l packages/duckdb/src
       - name: Build packages
         run: pnpm build
 
