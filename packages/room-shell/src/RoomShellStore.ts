@@ -45,7 +45,7 @@ import {
 } from '@sqlrooms/utils';
 
 export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
-  RoomShellState<PC>
+  RoomShellSliceState<PC>
 >;
 
 export type RoomPanelInfo = {
@@ -63,7 +63,7 @@ export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig & DuckDbSliceConfig = {
   ...createDefaultDuckDbConfig(),
 };
 
-export type RoomShellStateProps<PC extends BaseRoomConfig> =
+export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
   RoomStateProps<PC> & {
     initialized: boolean;
     roomFiles: RoomFileInfo[];
@@ -78,7 +78,7 @@ export type RoomShellStateProps<PC extends BaseRoomConfig> =
     }>;
   };
 
-export type RoomShellStateActions<PC extends BaseRoomConfig> =
+export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
   RoomStateActions<PC> & {
     /**
      * Initialize the room state.
@@ -134,9 +134,9 @@ export type RoomShellStateActions<PC extends BaseRoomConfig> =
     ) => Promise<void>;
   };
 
-export type RoomShellState<PC extends BaseRoomConfig> = RoomState<PC> & {
+export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
   config: PC;
-  room: RoomShellStateProps<PC> & RoomShellStateActions<PC>;
+  room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
 } & DuckDbSliceState;
 
 /**
@@ -145,8 +145,8 @@ export type RoomShellState<PC extends BaseRoomConfig> = RoomState<PC> & {
 type InitialState<PC extends BaseRoomConfig> = {
   connector?: DuckDbConnector;
   config: Partial<PC>;
-  room: Partial<Omit<RoomShellStateProps<PC>, 'config' | 'panels'>> & {
-    panels: RoomShellStateProps<PC>['panels'];
+  room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config' | 'panels'>> & {
+    panels: RoomShellSliceStateProps<PC>['panels'];
   };
 };
 
@@ -156,8 +156,8 @@ const INIT_ROOM_TASK = 'init-room';
 
 export function createRoomShellSlice<PC extends BaseRoomConfig>(
   props: InitialState<PC>,
-): StateCreator<RoomShellState<PC>> {
-  const slice: StateCreator<RoomShellState<PC>> = (set, get, store) => {
+): StateCreator<RoomShellSliceState<PC>> {
+  const slice: StateCreator<RoomShellSliceState<PC>> = (set, get, store) => {
     const {
       connector,
       config: configProps,
@@ -182,7 +182,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       room: initialRoomState,
     })(set, get, store);
 
-    const roomState: RoomShellState<PC> = {
+    const roomState: RoomShellSliceState<PC> = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       room: {
@@ -730,9 +730,9 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
 
 export function useBaseRoomShellStore<
   PC extends BaseRoomConfig,
-  PS extends RoomShellState<PC>,
+  PS extends RoomShellSliceState<PC>,
   T,
->(selector: (state: RoomShellState<PC>) => T): T {
+>(selector: (state: RoomShellSliceState<PC>) => T): T {
   const store = useContext(RoomStateContext);
   if (!store) {
     throw new Error('Missing RoomStateProvider in the tree');
@@ -742,13 +742,13 @@ export function useBaseRoomShellStore<
 
 export function createSlice<PC extends BaseRoomConfig, S>(
   sliceCreator: (
-    ...args: Parameters<StateCreator<S & RoomShellState<PC>>>
+    ...args: Parameters<StateCreator<S & RoomShellSliceState<PC>>>
   ) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
     sliceCreator(
       set,
-      get as () => S & RoomShellState<PC>,
-      store as StoreApi<S & RoomShellState<PC>>,
+      get as () => S & RoomShellSliceState<PC>,
+      store as StoreApi<S & RoomShellSliceState<PC>>,
     );
 }

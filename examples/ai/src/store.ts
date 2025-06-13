@@ -8,7 +8,7 @@ import {
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomShellState,
+  RoomShellSliceState,
   StateCreator,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
@@ -56,7 +56,7 @@ type CustomAppState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
-export type AppState = RoomShellState<AppConfig> &
+export type AppState = RoomShellSliceState<AppConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomAppState;

@@ -3,7 +3,7 @@ import {createId} from '@paralleldrive/cuid2';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
   createSlice,
-  RoomShellState,
+  RoomShellSliceState,
   useBaseRoomShellStore,
   type StateCreator,
   BaseRoomConfig,
@@ -353,7 +353,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
  * Helper function to get the current session from state
  */
 function getCurrentSessionFromState<PC extends BaseRoomConfig & AiSliceConfig>(
-  state: RoomShellState<PC> | WritableDraft<RoomShellState<PC>>,
+  state: RoomShellSliceState<PC> | WritableDraft<RoomShellSliceState<PC>>,
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.config.ai;
   return sessions.find(
@@ -387,7 +387,7 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
   errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
 }) {
-  return (state: RoomShellState<PC>) =>
+  return (state: RoomShellSliceState<PC>) =>
     produce(state, (draft) => {
       const currentSession = getCurrentSessionFromState(draft);
       if (!currentSession) {
@@ -443,14 +443,15 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
 }
 
 type RoomConfigWithAi = BaseRoomConfig & AiSliceConfig;
-type RoomShellStateWithAi = RoomShellState<RoomConfigWithAi> & AiSliceState;
+type RoomShellSliceStateWithAi = RoomShellSliceState<RoomConfigWithAi> &
+  AiSliceState;
 
 export function useStoreWithAi<T>(
-  selector: (state: RoomShellStateWithAi) => T,
+  selector: (state: RoomShellSliceStateWithAi) => T,
 ): T {
   return useBaseRoomShellStore<
     BaseRoomConfig & AiSliceConfig,
-    RoomShellState<RoomConfigWithAi>,
+    RoomShellSliceState<RoomConfigWithAi>,
     T
-  >((state) => selector(state as unknown as RoomShellStateWithAi));
+  >((state) => selector(state as unknown as RoomShellSliceStateWithAi));
 }

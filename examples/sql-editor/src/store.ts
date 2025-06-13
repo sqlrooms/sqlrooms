@@ -4,7 +4,7 @@ import {
   createRoomStore,
   LayoutTypes,
   MAIN_VIEW,
-  RoomShellState,
+  RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
 import {
@@ -27,7 +27,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
  * Room state
  */
 
-export type AppState = RoomShellState<AppConfig> &
+export type AppState = RoomShellSliceState<AppConfig> &
   SqlEditorSliceState & {
     // Add your own state here
   };

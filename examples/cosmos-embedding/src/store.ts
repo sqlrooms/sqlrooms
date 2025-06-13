@@ -1,7 +1,7 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomShellState,
+  RoomShellSliceState,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
@@ -37,7 +37,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Room state
  */
-export type AppState = RoomShellState<AppConfig> &
+export type AppState = RoomShellSliceState<AppConfig> &
   SqlEditorSliceState &
   CosmosSliceState;
 

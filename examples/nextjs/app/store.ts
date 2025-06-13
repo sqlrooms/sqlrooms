@@ -4,7 +4,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  RoomShellState,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -20,7 +20,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 /**
  * Room state
  */
-export type AppState = RoomShellState<AppConfig> & {
+export type AppState = RoomShellSliceState<AppConfig> & {
   // Add custom state type definitions here (fields and methods)
 };
 

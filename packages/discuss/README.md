@@ -77,7 +77,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  RoomShellState,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
@@ -86,7 +86,7 @@ export const AppConfig = BaseRoomConfig.merge(DiscussSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 // 2. Extend your app state with DiscussSliceState
-export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
+export type AppState = RoomShellSliceState<AppConfig> & DiscussSliceState;
 
 // 3. Create the store with discuss slice
 export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(

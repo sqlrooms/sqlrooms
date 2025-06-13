@@ -24,7 +24,7 @@ export {
   createRoomShellSlice,
   createSlice,
   useBaseRoomShellStore,
-  type RoomShellState,
+  type RoomShellSliceState,
   type RoomPanelInfo,
 } from './RoomShellStore';
 

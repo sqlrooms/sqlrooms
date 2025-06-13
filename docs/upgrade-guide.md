@@ -18,6 +18,7 @@ This release focuses on standardizing terminology across the codebase and improv
 
 - `ProjectBuilder` is replaced by `RoomShell`
 - `ProjectBuilderProvider` is removed (in favor of `RoomShell`)
+- `ProjectBuilderState` renamed to `RoomShellSliceState`
 - `createProjectBuilderStore` renamed to `createRoomStore`
 - `createProjectBuilderSlice` renamed to `createRoomShellSlice`
 - `ProjectBuilderPanel` renamed to `RoomPanel`

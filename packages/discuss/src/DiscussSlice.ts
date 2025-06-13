@@ -2,7 +2,7 @@ import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
   useBaseRoomShellStore,
-  type RoomShellState,
+  type RoomShellSliceState,
   type StateCreator,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
@@ -155,7 +155,7 @@ export type DiscussSliceState = {
   };
 };
 
-export type RoomStateWithDiscussion = RoomShellState<BaseRoomConfig> &
+export type RoomStateWithDiscussion = RoomShellSliceState<BaseRoomConfig> &
   DiscussSliceState;
 
 export function createDiscussSlice<
@@ -506,7 +506,7 @@ export function createDiscussSlice<
 }
 
 type RoomConfigWithDiscuss = BaseRoomConfig & DiscussSliceConfig;
-type RoomStateWithDiscuss = RoomShellState<RoomConfigWithDiscuss> &
+type RoomStateWithDiscuss = RoomShellSliceState<RoomConfigWithDiscuss> &
   DiscussSliceState;
 
 export function useStoreWithDiscussion<T>(

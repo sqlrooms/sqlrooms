@@ -7,7 +7,7 @@ import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   createSlice,
   useBaseRoomShellStore,
-  type RoomShellState,
+  type RoomShellSliceState,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
 import type {StateCreator} from 'zustand';
@@ -59,7 +59,7 @@ export type CosmosSliceState = {
  * Combined type representing the full room state including Cosmos functionality.
  * Merges the base room state with Cosmos-specific state and configuration.
  */
-export type RoomStateWithCosmos = RoomShellState<
+export type RoomStateWithCosmos = RoomShellSliceState<
   BaseRoomConfig & CosmosSliceConfig
 > &
   CosmosSliceState;

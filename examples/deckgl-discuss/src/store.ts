@@ -9,7 +9,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  RoomShellState,
+  RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
 import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
@@ -36,7 +36,7 @@ export const AppConfig =
   BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
-export type AppState = RoomShellState<AppConfig> &
+export type AppState = RoomShellSliceState<AppConfig> &
   DiscussSliceState &
   SqlEditorSliceState;
 

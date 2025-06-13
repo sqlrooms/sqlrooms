@@ -7,7 +7,7 @@ import {
 import {
   BaseRoomConfig,
   createSlice,
-  RoomShellState,
+  RoomShellSliceState,
   StateCreator,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
@@ -479,7 +479,7 @@ export function createSqlEditorSlice<
 }
 
 type RoomConfigWithSqlEditor = BaseRoomConfig & SqlEditorSliceConfig;
-type RoomStateWithSqlEditor = RoomShellState<RoomConfigWithSqlEditor> &
+type RoomStateWithSqlEditor = RoomShellSliceState<RoomConfigWithSqlEditor> &
   SqlEditorSliceState;
 
 export function useStoreWithSqlEditor<T>(
@@ -487,7 +487,7 @@ export function useStoreWithSqlEditor<T>(
 ): T {
   return useBaseRoomShellStore<
     BaseRoomConfig & SqlEditorSliceConfig,
-    RoomShellState<RoomConfigWithSqlEditor>,
+    RoomShellSliceState<RoomConfigWithSqlEditor>,
     T
   >((state) => selector(state as unknown as RoomStateWithSqlEditor));
 }
