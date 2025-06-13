@@ -4,9 +4,13 @@ outline: deep
 
 # What's SQLRooms?
 
-> "A room is where data lives, analysis happens, and (soon) collaborators meet."
+SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
+At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-SQLRooms provides a foundation and set of building blocks for creating data analytics applications that can run entirely in the browser.
+<a href="/examples">
+  <img src="/media/overview/collage.webp" alt="SQLRooms example apps" width=600>
+</a>
+
 The framework is designed for developers building innovative data tools **and** it tackles several common analytics challenges:
 
 - Interactive data analysis tools
@@ -14,13 +18,8 @@ The framework is designed for developers building innovative data tools **and** 
 - Data visualization applications
 - Internal analytics dashboards
 
-<a href="/examples">
-  <img src="/media/overview/collage.webp" alt="SQLRooms example apps" width=600>
-</a>
-
 ## Why SQLRooms?
 
-- **Developer Experience:** Batteries‑included state management and UI mean less boiler‑plate.
 - **Modular Architecture:** Mix-and-match packages and combine state _slices_ to include only the functionality you need. See the [Architecture Guide](/architecture) and [State Management](/state-management) docs for details.
 - **Performance & Scale:** Each user gets an in‑browser DuckDB instance with columnar speed and zero backend load.
 - **AI‑Powered Analytics:** Local SQL execution lets AI agents generate and run queries instantly.
@@ -28,34 +27,33 @@ The framework is designed for developers building innovative data tools **and** 
 
 ## Key Concepts
 
-At its core is the concept of a **Room** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
-
-### 1. What's a [Room](/architecture#room)
+### What's a Room
 
 A self‑contained workspace that you open to explore one or more datasets.  
-It owns its own layout, open panels, visualizations, and unsaved edits—and it's future‑ready for real‑time collaboration so multiple users can work in the same room.
+It owns its own configuration, layout, open panels, visualizations, and unsaved edits—and it's future‑ready for real‑time collaboration so multiple users can work in the same room.
 
-### 2. The [roomStore](/architecture#roomstore)
+### `roomStore`
 
-The single source of truth for a room's state.  
-It holds everything React shouldn't keep in local component state:
+The single source of truth for a room's state. It holds everything React shouldn't keep in local component state:
 
 - loaded tables / views
 - panel layout metadata
 - user preferences (theme, tab size, etc.)
 - transient UI flags (e.g. "query running")
 
+SQLRooms modules can add custom store state and functions via [slices](#4-roomslice), which are merged into the main roomStore.
+
 Exposed via `useRoomStore()` so any component can select or dispatch without prop‑drilling.
 
-### 3. The RoomSlice
-
-The core slice in the Zustand store that holds a room's runtime state and actions. Its **config** sub-object is expressed as a Zod schema so it can be validated and persisted, and the slice can be merged with others (SQL Editor, AI, etc.) to form a single store. Learn more in [State Management](/state-management).
-
-### 4. The [RoomShell](/architecture#roomshell)
+### `RoomShell`
 
 The UI scaffold that renders the sidebar chrome, main layout, and overlays; acts as a context bridge injecting `roomStore` into React context for descendants; and orchestrates slots so child components auto‑position without worrying about order.
 
-### 5. Why this structure?
+### `RoomSlice`s
+
+The core slice in the Zustand store that holds a room's runtime state and actions. Its **config** sub-object is expressed as a Zod schema so it can be validated and persisted, and the slice can be merged with others (SQL Editor, AI, etc.) to form a single store. Learn more in [State Management](/state-management).
+
+### Why this structure?
 
 - **Clear mental model:** "Open a room → explore your data."
 - **Composable:** Developers can swap out or extend the Sidebar, Layout, or overlays without touching the shell.
