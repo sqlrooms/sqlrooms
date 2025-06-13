@@ -46,7 +46,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   return (
     <div
       className={cn(
-        'bg-muted/70 flex h-full w-16 flex-col items-center px-1 py-4',
+        'bg-muted/70 flex h-full w-12 flex-col items-center px-1 py-4',
         className,
       )}
     >

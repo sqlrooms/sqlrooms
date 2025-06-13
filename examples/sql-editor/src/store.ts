@@ -3,7 +3,6 @@ import {
   createRoomShellSlice,
   createRoomStore,
   LayoutTypes,
-  MAIN_VIEW,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -13,9 +12,14 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
+import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
+
+export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
  * Room config for saving
@@ -43,22 +47,33 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
-            nodes: MAIN_VIEW,
+            nodes: {
+              first: RoomPanelTypes.enum['data'],
+              second: RoomPanelTypes.enum['main'],
+              direction: 'row',
+              splitPercentage: 30,
+            },
           },
           dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
+            // {
+            //   tableName: 'earthquakes',
+            //   type: 'url',
+            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            // },
           ],
           ...createDefaultSqlEditorConfig(),
         },
         room: {
           panels: {
-            main: {
+            [RoomPanelTypes.enum['main']]: {
               component: MainView,
               placement: 'main',
+            },
+            [RoomPanelTypes.enum['data']]: {
+              title: 'Data',
+              component: DataPanel,
+              icon: DatabaseIcon,
+              placement: 'sidebar',
             },
           },
         },

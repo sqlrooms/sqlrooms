@@ -32,7 +32,7 @@ The framework is designed for developers building innovative data tools **and** 
 A self‑contained workspace that you open to explore one or more datasets.  
 It owns its own configuration, layout, open panels, visualizations, and unsaved edits—and it's future‑ready for real‑time collaboration so multiple users can work in the same room.
 
-### `roomStore`
+### `RoomStore`
 
 The single source of truth for a room's state. It holds everything React shouldn't keep in local component state:
 
@@ -41,7 +41,7 @@ The single source of truth for a room's state. It holds everything React shouldn
 - user preferences (theme, tab size, etc.)
 - transient UI flags (e.g. "query running")
 
-SQLRooms modules can add custom store state and functions via [slices](#4-roomslice), which are merged into the main roomStore.
+SQLRooms modules can add custom store state and functions via [slices](#roomslice), which are merged into the main roomStore.
 
 Exposed via `useRoomStore()` so any component can select or dispatch without prop‑drilling.
 
@@ -49,9 +49,21 @@ Exposed via `useRoomStore()` so any component can select or dispatch without pro
 
 The UI scaffold that renders the sidebar chrome, main layout, and overlays; acts as a context bridge injecting `roomStore` into React context for descendants; and orchestrates slots so child components auto‑position without worrying about order.
 
-### `RoomSlice`s
+### `RoomShellSlice`
 
 The core slice in the Zustand store that holds a room's runtime state and actions. Its **config** sub-object is expressed as a Zod schema so it can be validated and persisted, and the slice can be merged with others (SQL Editor, AI, etc.) to form a single store. Learn more in [State Management](/state-management).
+
+## How create a custom module
+
+### Panels
+
+The UI
+
+### Slice
+
+State contains config (persistent state)
+
+### 
 
 ### Why this structure?
 

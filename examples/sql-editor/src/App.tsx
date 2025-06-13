@@ -10,7 +10,6 @@ export const App = () => {
           <ThemeSwitch />
         </RoomShell.Sidebar>
         <RoomShell.LayoutComposer />
-        <RoomShell.LoadingProgress />
       </RoomShell>
     </ThemeProvider>
   );
