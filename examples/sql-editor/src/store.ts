@@ -54,13 +54,6 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
               splitPercentage: 30,
             },
           },
-          dataSources: [
-            // {
-            //   tableName: 'earthquakes',
-            //   type: 'url',
-            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            // },
-          ],
           ...createDefaultSqlEditorConfig(),
         },
         room: {
