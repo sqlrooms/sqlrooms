@@ -11,11 +11,16 @@ import CreateTableModal from './components/CreateTableModal';
 import {QueryEditorPanel} from './components/QueryEditorPanel';
 import {QueryResultPanel} from './components/QueryResultPanel';
 import {SqlEditorHeader} from './components/SqlEditorHeader';
-import {TableStructurePanel} from './components/TableStructurePanel';
+import {
+  TableStructurePanel,
+  TableStructurePanelProps,
+} from './components/TableStructurePanel';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
 export type SqlEditorProps = {
-  /** The database schema to use for queries. Defaults to 'main' */
-  schema?: string;
+  /** The database schema to use. Defaults to '*'.
+   * If '*' is provided, all tables will be shown.
+   * If a function is provided, it will be used to filter the tables. */
+  schema?: TableStructurePanelProps['schema'];
   /** Whether the SQL editor is currently visible */
   isOpen: boolean;
   /** Optional component to render SQL documentation in the side panel */

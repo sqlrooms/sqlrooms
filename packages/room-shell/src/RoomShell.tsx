@@ -11,7 +11,10 @@ import {
 } from '@sqlrooms/ui';
 import {FC, PropsWithChildren, Suspense, useCallback} from 'react';
 import {MosaicNode} from 'react-mosaic-component';
-import {RoomShellSidebarButtons} from './RoomShellSidebarButtons';
+import {
+  RoomShellSidebarButtons,
+  SidebarButton,
+} from './RoomShellSidebarButtons';
 import {useBaseRoomShellStore} from './RoomShellStore';
 
 export function RoomShellBase<PC extends BaseRoomConfig>({
@@ -47,7 +50,7 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
         className,
       )}
     >
-      <RoomShellSidebarButtons className={className} />
+      <RoomShellSidebarButtons />
       {children}
     </div>
   );
@@ -123,6 +126,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
 
 export const RoomShell = Object.assign(RoomShellBase, {
   Sidebar: RoomSidebar,
+  SidebarButton: SidebarButton,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
 });

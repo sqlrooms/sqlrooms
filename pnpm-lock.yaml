@@ -442,6 +442,9 @@ importers:
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui

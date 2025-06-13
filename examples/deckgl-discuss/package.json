@@ -15,6 +15,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "deck.gl": "^9.1.12",
     "immer": "^10.1.1",

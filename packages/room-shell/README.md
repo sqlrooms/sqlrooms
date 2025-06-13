@@ -22,13 +22,15 @@ yarn add @sqlrooms/room-shell
 ### Creating a Room Builder
 
 ```tsx
-import {RoomShell, RoomShellProvider} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
 
 function MyApp() {
   return (
-    <RoomShellProvider>
-      <RoomShell>{/* Your room components */}</RoomShell>
-    </RoomShellProvider>
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar />
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+    </RoomShell>
   );
 }
 ```

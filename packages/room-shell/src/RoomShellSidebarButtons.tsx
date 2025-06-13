@@ -10,12 +10,20 @@ import React, {FC, useMemo} from 'react';
 import {useBaseRoomShellStore} from './RoomShellStore';
 
 const SidebarButton: FC<{
+  className?: string;
   title: string;
   isSelected: boolean;
   isDisabled?: boolean;
   icon: React.ComponentType<{className?: string}>;
   onClick: () => void;
-}> = ({title, isSelected, isDisabled = false, icon: Icon, onClick}) => {
+}> = ({
+  className,
+  title,
+  isSelected,
+  isDisabled = false,
+  icon: Icon,
+  onClick,
+}) => {
   return (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -26,6 +34,7 @@ const SidebarButton: FC<{
             'h-10 w-10 rounded-none',
             isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
             // isDisabled && 'opacity-50 cursor-not-allowed',
+            className,
           )}
           disabled={isDisabled}
           onClick={onClick}

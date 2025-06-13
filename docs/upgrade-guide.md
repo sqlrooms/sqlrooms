@@ -17,18 +17,18 @@ This release focuses on standardizing terminology across the codebase and improv
 ### Component name changes
 
 - `ProjectBuilder` is replaced by `RoomShell`
-- `ProjectBuilderProvider` is replaced by `RoomShellProvider`, but it's now embedded in `RoomShell`, so it should be considered internal.
+- `ProjectBuilderProvider` is removed (in favor of `RoomShell`)
 - `createProjectBuilderStore` renamed to `createRoomStore`
 - `createProjectBuilderSlice` renamed to `createRoomShellSlice`
 - `ProjectBuilderPanel` renamed to `RoomPanel`
 - `ProjectBuilderPanelHeader` renamed to `RoomPanelHeader`
 
 ```tsx
-    <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar />
-      <RoomShell.LayoutComposer />
-      <RoomShell.LoadingProgress />
-    </RoomShell>
+<RoomShell className="h-screen" roomStore={roomStore}>
+  <RoomShell.Sidebar />
+  <RoomShell.LayoutComposer />
+  <RoomShell.LoadingProgress />
+</RoomShell>
 ```
 
 ## 0.16.0

@@ -18,6 +18,12 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import DiscussionPanel from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
+import {
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceConfig,
+  SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
 
 export const RoomPanelTypes = z.enum([
   'data-sources',
@@ -26,16 +32,23 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const AppConfig = BaseRoomConfig.merge(DiscussSliceConfig);
+export const AppConfig =
+  BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
-export type AppState = RoomShellState<AppConfig> & DiscussSliceState;
+export type AppState = RoomShellState<AppConfig> &
+  DiscussSliceState &
+  SqlEditorSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   persist(
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
 
+      // Sql editor slice
+      ...createSqlEditorSlice()(set, get, store),
+
+      // Room shell slice
       ...createRoomShellSlice<AppConfig>({
         connector: new WasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
@@ -51,6 +64,7 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
               splitPercentage: 30,
             },
           },
+          ...createDefaultSqlEditorConfig(),
           dataSources: [
             {
               type: 'url',

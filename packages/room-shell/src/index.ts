@@ -20,8 +20,6 @@ export {
 
 export {type TaskProgress, createRoomStore} from '@sqlrooms/core';
 
-export {RoomShellProvider} from './RoomShellProvider';
-
 export {
   createRoomShellSlice,
   createSlice,

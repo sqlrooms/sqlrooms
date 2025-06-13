@@ -200,16 +200,19 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
 
 ### Using the Room Store
 
-Wrap your application with the room store provider:
+Wrap your application with a `RoomShell` which provides the room store context:
 
 ```typescript
-import {RoomShellProvider} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
 function App() {
   return (
-    <RoomShellProvider store={roomStore}>
-      <YourApp />
-    </RoomShellProvider>
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar/>
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+    </RoomShell>
   );
 }
 ```

@@ -1,18 +1,18 @@
 'use client';
 
 import {roomStore} from '@/app/store';
-import {RoomShell, RoomShellProvider} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
+import {ThemeSwitch} from '@sqlrooms/ui';
 
 const AppShell = () => {
-  if (!roomStore) {
-    return null;
-  }
   return (
-    <div className="absolute inset-0 flex h-[100vh] w-[100vw]">
-      <RoomShellProvider roomStore={roomStore}>
-        <RoomShell />
-      </RoomShellProvider>
-    </div>
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar>
+        <ThemeSwitch />
+      </RoomShell.Sidebar>
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+    </RoomShell>
   );
 };
 
