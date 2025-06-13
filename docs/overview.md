@@ -41,7 +41,7 @@ The single source of truth for a room's state. It holds everything React shouldn
 - user preferences (theme, tab size, etc.)
 - transient UI flags (e.g. "query running")
 
-SQLRooms modules can add custom store state and functions via [slices](#roomslice), which are merged into the main roomStore.
+SQLRooms modules can add custom store state and functions via [slices](/state-management#understanding-slices), which are merged into the main roomStore.
 
 The core slice in the Zustand store that holds a room's runtime state and actions. Its **config** sub-object is expressed as a Zod schema so it can be validated and persisted, and the slice can be merged with others (SQL Editor, AI, etc.) to form a single store. Learn more in [State Management](/state-management).
 

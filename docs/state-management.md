@@ -36,7 +36,7 @@ export type AppState = RoomState<AppConfig> &
 export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   (set, get, store) => ({
     // Base room state
-    ...createRoomSlice<AppConfig>({
+    ...createRoomShellSlice<AppConfig>({
       // Room configuration
       // ...
     })(set, get, store),
@@ -74,7 +74,7 @@ export const MyCustomView: React.FC = () => {
   // Access room slice data
   const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
-  // Access AI slice data
+  // Access AI slice config (persistable state)
   const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
 
   // Access custom app state
