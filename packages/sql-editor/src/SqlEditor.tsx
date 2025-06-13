@@ -78,7 +78,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={80}>
-                    <QueryEditorPanel schema={schema} />
+                    <QueryEditorPanel />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>
