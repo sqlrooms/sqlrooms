@@ -4,7 +4,7 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
-## 0.17.0
+## 0.16.3
 
 ### @sqlrooms/duckdb
 
