@@ -51,44 +51,47 @@ SQLRooms is organized into several categories of packages:
 
 These packages form the foundation of any SQLRooms application:
 
-- **[@sqlrooms/project-builder](https://sqlrooms.github.io/api/project-builder/)**: The central package that provides the foundation for building analytics applications with Zustand-based state management. It handles project state management using a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the project.
+- **[@sqlrooms/project-builder](/api/project-builder/)**: The central package that provides the foundation for building analytics applications with Zustand-based state management. It handles project state management using a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the project.
 
-- **[@sqlrooms/project-config](https://sqlrooms.github.io/api/project-config/)**: Defines central configuration and type definitions using Zod schemas. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
+- **[@sqlrooms/project-config](/api/project-config/)**: Defines central configuration and type definitions using Zod schemas. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
 
-- **[@sqlrooms/duckdb](https://sqlrooms.github.io/api/duckdb/)**: Provides DuckDB integration for query execution and data source connections. It manages DuckDB-WASM instances and handles query execution with robust data source connection capabilities and ensures type-safe query results for reliable data operations.
+- **[@sqlrooms/duckdb](/api/duckdb/)**: Provides DuckDB integration for query execution and data source connections. It manages DuckDB-WASM instances and handles query execution with robust data source connection capabilities and ensures type-safe query results for reliable data operations.
 
-- **[@sqlrooms/ui](https://sqlrooms.github.io/api/ui/)**: Offers a comprehensive UI toolkit based on shadcn/ui with Tailwind preset. It includes a carefully crafted Tailwind preset configuration, a library of common UI components, robust theme management capabilities, and a collection of icons and assets.
+- **[@sqlrooms/ui](/api/ui/)**: Offers a comprehensive UI toolkit based on shadcn/ui with Tailwind preset. It includes a carefully crafted Tailwind preset configuration, a library of common UI components, robust theme management capabilities, and a collection of icons and assets.
 
 ### Feature Packages
 
 These packages provide specific functionality that can be added as needed:
 
-- **[@sqlrooms/data-table](https://sqlrooms.github.io/api/data-table/)**: An advanced interactive data grid component designed for SQL query result visualization. The table supports dynamic column sorting and pagination features for efficient data exploration and analysis.
+- **[@sqlrooms/ai](/api/ai/)**: An AI integration package that enables natural language querying and analysis capabilities. It provides tools for query generation, result interpretation, and interactive AI-powered analytics workflows.
 
-- **[@sqlrooms/sql-editor](https://sqlrooms.github.io/api/sql-editor/)**: A powerful SQL query editor that enhances the development experience with syntax highlighting and intelligent auto-completion. It maintains a query history for easy reference and provides integrated result visualization capabilities.
+- **[@sqlrooms/cosmos](/api/cosmos/)**: A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks.
 
-- **[@sqlrooms/layout](https://sqlrooms.github.io/api/layout/)**: A sophisticated layout system and panel management solution based on [react-mosaic](https://nomcopter.github.io/react-mosaic/) that enables flexible panel layouts with intuitive sidebar and main view management. It supports smooth panel resize functionality and ensures layout persistence across sessions.
+- **[@sqlrooms/data-table](/api/data-table/)**: An advanced interactive data grid component designed for SQL query result visualization. The table supports dynamic column sorting and pagination features for efficient data exploration and analysis.
 
-- **[@sqlrooms/s3-browser](https://sqlrooms.github.io/api/s3-browser/)**: A feature-rich S3-compatible storage browser that provides an intuitive file browsing interface. It supports file upload and download operations, comprehensive directory management, and seamless S3 bucket integration.
+- **[@sqlrooms/discuss](/api/discuss/)**: A discussion system for collaborative analytics applications. It provides threaded conversations, anchor-based discussions linked to data points, real-time state management, and customizable rendering components. The package includes built-in forms for adding, editing, and replying to comments with delete confirmation dialogs.
 
-- **[@sqlrooms/vega](https://sqlrooms.github.io/api/vega/)**: A data visualization package that integrates [Vega-Lite](https://vega.github.io/vega-lite/) for creating sophisticated interactive visualizations. It provides React components for rendering Vega specifications and handling visualization interactions.
+- **[@sqlrooms/dropzone](/api/dropzone/)**: A comprehensive file upload solution that implements drag-and-drop functionality. It provides sophisticated file upload handling with built-in file type validation and upload progress tracking to enhance the user experience.
 
-- **[@sqlrooms/ai](https://sqlrooms.github.io/api/ai/)**: An AI integration package that enables natural language querying and analysis capabilities. It provides tools for query generation, result interpretation, and interactive AI-powered analytics workflows.
+- **[@sqlrooms/layout](/api/layout/)**: A sophisticated layout system and panel management solution based on [react-mosaic](https://nomcopter.github.io/react-mosaic/) that enables flexible panel layouts with intuitive sidebar and main view management. It supports smooth panel resize functionality and ensures layout persistence across sessions.
 
-- **[@sqlrooms/cosmos](https://sqlrooms.github.io/api/cosmos/)**: A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks.
+- **[@sqlrooms/monaco-editor](/api/monaco-editor/)**: A powerful code editing package that integrates [Monaco Editor](https://microsoft.github.io/monaco-editor/) (the editor that powers VS Code). It provides customizable text editing components with features like syntax highlighting, code completion, and theming. The package includes specialized editors for JSON with schema validation support.
 
-- **[@sqlrooms/dropzone](https://sqlrooms.github.io/api/dropzone/)**: A comprehensive file upload solution that implements drag-and-drop functionality. It provides sophisticated file upload handling with built-in file type validation and upload progress tracking to enhance the user experience.
+- **[@sqlrooms/mosaic](/api/mosaic/)**: A visualization package that integrates with [UW Interactive Data Lab's Mosaic library](https://idl.uw.edu/mosaic/). It provides declarative chart specifications and interactive visualization capabilities for data analysis.
 
-- **[@sqlrooms/mosaic](https://sqlrooms.github.io/api/mosaic/)**: A visualization package that integrates with [UW Interactive Data Lab's Mosaic library](https://idl.uw.edu/mosaic/). It provides declarative chart specifications and interactive visualization capabilities for data analysis.
+- **[@sqlrooms/recharts](/api/recharts/)**: A charting package that integrates [Recharts](https://recharts.org/) for creating responsive and customizable data visualizations. It provides React components for rendering various chart types including line charts, bar charts, pie charts, and more with built-in interactivity and animation support.
 
-- **[@sqlrooms/monaco-editor](https://sqlrooms.github.io/api/monaco-editor/)**: A powerful code editing package that integrates [Monaco Editor](https://microsoft.github.io/monaco-editor/) (the editor that powers VS Code). It provides customizable text editing components with features like syntax highlighting, code completion, and theming. The package includes specialized editors for JSON with schema validation support.
+- **[@sqlrooms/s3-browser](/api/s3-browser/)**: A feature-rich S3-compatible storage browser that provides an intuitive file browsing interface. It supports file upload and download operations, comprehensive directory management, and seamless S3 bucket integration.
+
+- **[@sqlrooms/schema-tree](/api/schema-tree/)**: Visualizes and explores database schemas as interactive trees.
+
+- **[@sqlrooms/sql-editor](/api/sql-editor/)**: A powerful SQL query editor that enhances the development experience with syntax highlighting and intelligent auto-completion. It maintains a query history for easy reference and provides integrated result visualization capabilities.
+
+- **[@sqlrooms/vega](/api/vega/)**: A data visualization package that integrates [Vega-Lite](https://vega.github.io/vega-lite/) for creating sophisticated interactive visualizations. It provides React components for rendering Vega specifications and handling visualization interactions.
 
 ### Utility Packages
 
-- **[@sqlrooms/utils](https://sqlrooms.github.io/api/utils/)**: A utility package providing shared helper functions for color manipulation, data formatting, random generation, and string operations used across the framework.
-- **[@sqlrooms/typescript-config](https://sqlrooms.github.io/api/typescript-config/)**: Shared TypeScript configuration
-- **[@sqlrooms/eslint-config](https://sqlrooms.github.io/api/eslint-config/)**: Shared ESLint configuration
-- **[@sqlrooms/typedoc-config](https://sqlrooms.github.io/api/typedoc-config/)**: Shared TypeDoc configuration
+- **[@sqlrooms/utils](/api/utils/)**: A utility package providing shared helper functions for color manipulation, data formatting, random generation, and string operations used across the framework.
 
 ## Extension Points
 

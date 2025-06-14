@@ -50,34 +50,6 @@ function MyDataTable() {
 }
 ```
 
-### Virtualized Data Table for Large Datasets
-
-```tsx
-import {DataTableVirtualized} from '@sqlrooms/data-table';
-
-function LargeDataTable() {
-  // Imagine this is a very large dataset
-  const largeDataset = generateLargeDataset(10000);
-
-  const columns = [
-    {accessorKey: 'id', header: 'ID'},
-    {accessorKey: 'name', header: 'Name'},
-    {accessorKey: 'email', header: 'Email'},
-    {accessorKey: 'status', header: 'Status'},
-    {accessorKey: 'lastActive', header: 'Last Active'},
-  ];
-
-  return (
-    <DataTableVirtualized
-      data={largeDataset}
-      columns={columns}
-      height={500}
-      width="100%"
-    />
-  );
-}
-```
-
 ### Working with SQL Query Results
 
 ```tsx

@@ -1,11 +1,10 @@
 {
   "name": "@sqlrooms/recharts",
-  "version": "0.13.1",
+  "version": "0.16.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -20,11 +19,11 @@
   },
   "dependencies": {
     "@sqlrooms/ui": "workspace:*",
-    "recharts": "^2.15.2"
+    "recharts": "^2.15.3"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",

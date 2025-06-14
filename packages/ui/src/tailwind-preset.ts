@@ -2,12 +2,10 @@ import {Config} from 'tailwindcss';
 import tailwindAnimate from 'tailwindcss-animate';
 import typography from '@tailwindcss/typography';
 
-export const sqlroomsTailwindPreset = ({
-  prefix = '',
-}: {
-  prefix?: string;
-}): Partial<Config> => ({
-  prefix,
+export const sqlroomsTailwindPreset = (
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  _options?: Record<string, unknown>,
+): Partial<Config> => ({
   darkMode: ['class'],
   theme: {
     extend: {
@@ -139,6 +137,16 @@ export const sqlroomsTailwindPreset = ({
             },
           },
         },
+      },
+      keyframes: {
+        'sqlrooms-progress': {
+          '0%': {transform: 'translateX(0) scaleX(0)'},
+          '40%': {transform: 'translateX(0) scaleX(0.4)'},
+          '100%': {transform: 'translateX(100%) scaleX(0.5)'},
+        },
+      },
+      animation: {
+        'sqlrooms-progress': 'sqlrooms-progress 1s infinite linear',
       },
     },
   },

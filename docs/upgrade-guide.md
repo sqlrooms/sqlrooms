@@ -4,6 +4,30 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.16.0
+
+### @sqlrooms/duckdb
+
+The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://github.com/sqlrooms/sqlrooms/blob/main/packages/duckdb/README_query_cancellation.md)
+
+#### Before
+
+```
+const result = await connector.query('SELECT * FROM some_table');
+```
+
+#### After
+
+```
+const result = await connector.query('SELECT * FROM some_table').result;
+```
+
+## 0.14.0
+
+### @sqlrooms/ui
+
+- `sqlroomsTailwindPreset` prefix parameter was removed
+
 ## 0.9.0
 
 ### @sqlrooms/project-builder

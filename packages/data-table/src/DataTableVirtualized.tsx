@@ -1,4 +1,4 @@
-import {ChevronDownIcon, ChevronUpIcon} from '@heroicons/react/24/solid';
+import {ChevronDownIcon, ChevronUpIcon} from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -161,6 +161,9 @@ const DataTableVirtualized = React.memo(function DataTableVirtualized<
   );
 });
 
+/**
+ * @deprecated Use `DataTablePaginated` instead.
+ */
 export default function DataTableWithLoader<Data extends object>(
   props: DataTableVirtualizedProps<Data>,
 ) {

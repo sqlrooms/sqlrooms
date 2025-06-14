@@ -21,7 +21,7 @@ import {
 import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
-import {SqlMonacoEditor} from './SqlMonacoEditor';
+import {SqlMonacoEditor} from '../SqlMonacoEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -52,8 +52,9 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   const {editDataSource, isOpen, onClose, onAddOrUpdateSqlQuery} = props;
 
   const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    values: {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    resolver: zodResolver(formSchema as any),
+    defaultValues: {
       tableName: editDataSource?.tableName ?? '',
       query: editDataSource?.sqlQuery ?? props.query.trim(),
     },
@@ -80,7 +81,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
-        {/* @ts-ignore */}
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <DialogHeader>
@@ -98,14 +98,13 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
 
             {form.formState.errors.root && (
               <Alert variant="destructive">
-                <AlertDescription>
+                <AlertDescription className="whitespace-pre-wrap font-mono text-xs">
                   {form.formState.errors.root.message}
                 </AlertDescription>
               </Alert>
             )}
 
             <FormField
-              // @ts-ignore
               control={form.control}
               name="tableName"
               render={({field}) => (
@@ -120,17 +119,16 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
             />
 
             <FormField
-              // @ts-ignore
               control={form.control}
               name="query"
               render={({field}) => (
-                <FormItem>
+                <FormItem className="flex flex-col">
                   <FormLabel>SQL query:</FormLabel>
                   <FormControl>
                     <SqlMonacoEditor
                       value={field.value}
                       onChange={field.onChange}
-                      className="min-h-[200px]"
+                      className="h-[200px] w-full"
                       options={{
                         scrollBeyondLastLine: false,
                         automaticLayout: true,

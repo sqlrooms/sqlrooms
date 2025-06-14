@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.10.0",
+  "packageManager": "pnpm@10.11.0",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -41,10 +41,10 @@
     "node": ">=22"
   },
   "devDependencies": {
-    "@eslint/js": "^9.21.0",
-    "@lerna-lite/cli": "^3.12.1",
-    "@lerna-lite/publish": "^3.12.1",
-    "@lerna-lite/version": "^3.12.1",
+    "@eslint/js": "^9.28.0",
+    "@lerna-lite/cli": "^3.12.3",
+    "@lerna-lite/publish": "^3.12.3",
+    "@lerna-lite/version": "^3.12.3",
     "@sqlrooms/eslint-config": "workspace:*",
     "@sqlrooms/jest-config": "workspace:*",
     "@sqlrooms/typedoc-config": "workspace:*",
@@ -52,33 +52,34 @@
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.14",
     "@types/mocha": "^10.0.10",
-    "@types/react": "18.3.18",
-    "@types/react-dom": "18.3.5",
-    "apache-arrow": "^18.1.0",
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6",
     "concurrently": "^9.1.2",
-    "eslint": "^9.21.0",
-    "framer-motion": "10.18.0",
-    "gh-pages": "^6.1.1",
-    "glob": "^11.0.1",
-    "husky": "^9.0.11",
+    "eslint": "^9.28.0",
+    "gh-pages": "^6.3.0",
+    "glob": "^11.0.2",
+    "husky": "^9.1.7",
     "jest": "^29.7.0",
-    "lint-staged": "^15.4.3",
-    "prettier": "^3.5.2",
-    "prettier-plugin-tailwindcss": "^0.6.11",
-    "react": "^18.0.0",
-    "react-dom": "^18.0.0",
+    "lint-staged": "^15.5.2",
+    "prettier": "^3.5.3",
+    "prettier-plugin-tailwindcss": "^0.6.12",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
-    "turbo": "^2.5.3",
-    "typedoc": "^0.27.9",
-    "typescript": "^5.8.2",
+    "turbo": "^2.5.4",
+    "typedoc": "0.27.9",
+    "typedoc-plugin-markdown": "4.4.2",
+    "typedoc-plugin-zod": "1.4.1",
+    "typedoc-vitepress-theme": "1.1.2",
+    "typescript": "^5.8.3",
     "vitepress": "^1.6.3"
   },
   "pnpm": {
     "overrides": {
-      "apache-arrow": "18.1.0",
-      "@types/react": "18.3.18",
-      "typescript": "5.8.2"
+      "typescript": "5.8.3",
+      "react": "19.1.0",
+      "react-dom": "19.1.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
@@ -86,6 +87,7 @@
       "msw"
     ],
     "ignoredBuiltDependencies": [
+      "@tailwindcss/oxide",
       "sharp"
     ]
   }

@@ -4,7 +4,7 @@ outline: deep
 
 # What is SQLRooms?
 
-SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools without a backend.
+SQLRooms provides a foundation and set of building blocks for creating data analytics applications that run entirely in the browser. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
 <a href="/examples">
   <img src="/media/overview/collage.webp" alt="SQLRooms example apps" width=600>
