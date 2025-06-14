@@ -9,7 +9,7 @@ import {produce} from 'immer';
 import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
-import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
+import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
   escapeId,
   escapeVal,
@@ -239,7 +239,7 @@ export type DuckDbSliceState = {
  * Create a DuckDB slice for managing the connector
  */
 export function createDuckDbSlice({
-  connector = new WasmDuckDbConnector(),
+  connector = createWasmDuckDbConnector(),
 }: {
   connector?: DuckDbConnector;
 }): StateCreator<DuckDbSliceState> {
