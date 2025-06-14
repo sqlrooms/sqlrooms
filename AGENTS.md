@@ -27,23 +27,13 @@ Node.js version **>=22** is required.
 To run an example application:
 
 ```bash
-pnpm build          # build all packages
+pnpm build          # build all sqlrooms packages
+pnpm build:examples # build all examples
+pnpm build:all      # build all sqlrooms packages and examples
 cd examples/ai      # or another example directory
 pnpm dev            # start the example
 ```
 
-## Git LFS for documentation media
-
-Media under `docs/media/` is stored using Git LFS. After cloning the repository run:
-
-```bash
-git lfs install
-git lfs pull
-```
-
-New files added to `docs/media/` will be tracked automatically.
-
 ## Contributing
 
 When adding features, update the relevant documentation and verify that example applications work with your changes. See `CONTRIBUTING.md` for full guidelines.
-
