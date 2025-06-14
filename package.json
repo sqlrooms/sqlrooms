@@ -22,6 +22,7 @@
     "prepare": "husky",
     "lint": "turbo lint --filter=@sqlrooms/* --",
     "typedoc": "turbo typedoc",
+    "typecheck": "turbo typecheck",
     "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
     "graph": "turbo run build --filter=@sqlrooms/* --graph | sed 's/\\[root\\] @sqlrooms\\///g' | sed 's/#build//g' | grep -v '___ROOT___'",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",

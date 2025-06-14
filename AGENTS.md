@@ -13,12 +13,12 @@ Each package under `packages/` contains its own `README.md` and `tsconfig.json` 
 The root `package.json` exposes several important scripts:
 
 - `pnpm build` – builds all packages via Turbo
+- `pnpm typecheck` - runs typescript --noEmit
 - `pnpm test` – runs Jest tests across packages
 - `pnpm lint` – checks code with ESLint
 - `pnpm format` – formats files using Prettier
 - `pnpm docs:dev` – starts local documentation with hot reload
 - `pnpm docs:build` – builds the documentation site
-- `pnpm docs:preview` – previews the built docs
 
 Node.js version **>=22** is required.
 
