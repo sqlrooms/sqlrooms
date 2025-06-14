@@ -1,13 +1,17 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
-import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
+import {
+  LoadFileOptions,
+  StandardLoadOptions,
+  isSpatialLoadFileOptions,
+} from '@sqlrooms/project-config';
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {
   createBaseDuckDbConnector,
   BaseDuckDbConnectorImpl,
 } from './BaseDuckDbConnector';
-import {loadObjects as loadObjectsSql} from './load/load';
+import {loadObjects as loadObjectsSql, load, loadSpatial} from './load/load';
 import {DuckDbConnector} from './DuckDbConnector';
 
 export interface WasmDuckDbConnectorOptions {
@@ -165,8 +169,17 @@ export function createWasmDuckDbConnector(
       tableName: string,
       opts?: LoadFileOptions,
     ) {
+      if (!conn) {
+        throw new Error('DuckDB connection not initialized');
+      }
       await withTempRegisteredFile(file, async (fileName) => {
-        await base.loadFile(fileName, tableName, opts);
+        if (opts && isSpatialLoadFileOptions(opts)) {
+          await conn!.query(loadSpatial(tableName, fileName, opts));
+        } else {
+          await conn!.query(
+            load(opts?.method ?? 'auto', tableName, fileName, opts),
+          );
+        }
       });
     },
 
