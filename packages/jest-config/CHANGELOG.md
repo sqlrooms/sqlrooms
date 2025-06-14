@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.16.4 (2025-06-14)
+
+**Note:** Version bump only for package @sqlrooms/jest-config
+
 ## 0.16.3 (2025-06-14)
 
 ### Bug Fixes
