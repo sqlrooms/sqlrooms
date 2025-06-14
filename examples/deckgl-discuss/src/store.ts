@@ -4,7 +4,7 @@ import {
   DiscussSliceConfig,
   DiscussSliceState,
 } from '@sqlrooms/discuss';
-import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseProjectConfig,
   createProjectBuilderSlice,
@@ -40,7 +40,7 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
 
       ...createProjectBuilderSlice<AppConfig>({
-        connector: new WasmDuckDbConnector({
+        connector: createWasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
         config: {

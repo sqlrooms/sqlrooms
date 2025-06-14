@@ -21,9 +21,9 @@ interface QueryHandle<T = any> {
 ### Basic Query with Cancellation
 
 ```typescript
-import {WasmDuckDbConnector} from './connectors/WasmDuckDbConnector';
+import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 
-const connector = new WasmDuckDbConnector();
+const connector = createWasmDuckDbConnector();
 await connector.initialize();
 
 // Start a query and get immediate access to cancellation

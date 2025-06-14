@@ -4,6 +4,28 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.17.0
+
+### @sqlrooms/duckdb
+
+The `BaseDuckDbConnector` and `WasmDuckDbConnector` are now provided as factory functions rather than classes. Use `createWasmDuckDbConnector()` or the generic `createDuckDbConnector({type: 'wasm'})` to obtain a connector instance.
+
+#### Before
+
+```typescript
+import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = new WasmDuckDbConnector();
+```
+
+#### After
+
+```typescript
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = createWasmDuckDbConnector();
+```
+
 ## 0.16.0
 
 ### @sqlrooms/duckdb
