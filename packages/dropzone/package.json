@@ -28,6 +28,7 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
   "dependencies": {
