@@ -1,5 +1,4 @@
-import {Slot} from '@radix-ui/react-slot';
-import {cn} from '@sqlrooms/ui';
+import {cn, Slot} from '@sqlrooms/ui';
 import {PropsWithChildren} from 'react';
 
 export function BaseTreeNode<T>(
@@ -14,7 +13,7 @@ export function BaseTreeNode<T>(
   return (
     <Comp
       className={cn(
-        'hover:bg-foreground/10 w-full flex-grow cursor-pointer select-none rounded-sm p-[1px]',
+        'hover:bg-foreground/10 w-full flex-grow cursor-pointer rounded-sm p-[1px] select-none',
         className,
       )}
     >

@@ -65,6 +65,28 @@ const dataSources = useProjectStore((state) => state.project.dataSources);
 const dataSources = useRoomStore((state) => state.room.dataSources);
 ```
 
+## 0.16.3
+
+### @sqlrooms/duckdb
+
+The `BaseDuckDbConnector` and `WasmDuckDbConnector` are now provided as factory functions rather than classes. Use `createWasmDuckDbConnector()` or the generic `createDuckDbConnector({type: 'wasm'})` to obtain a connector instance.
+
+#### Before
+
+```typescript
+import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = new WasmDuckDbConnector();
+```
+
+#### After
+
+```typescript
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = createWasmDuckDbConnector();
+```
+
 ## 0.16.0
 
 ### @sqlrooms/duckdb

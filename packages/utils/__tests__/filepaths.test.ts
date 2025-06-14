@@ -2,7 +2,7 @@ import {
   generateUniqueName,
   generateUniquePath,
   convertToUniqueS3ObjectName,
-} from './filepaths';
+} from '../src/filepaths';
 
 test('generateUniqueName generates unique table names', () => {
   expect(generateUniqueName('foo', [])).toBe('foo');

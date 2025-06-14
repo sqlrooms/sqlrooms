@@ -4,7 +4,7 @@ import {
   DiscussSliceConfig,
   DiscussSliceState,
 } from '@sqlrooms/discuss';
-import {WasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -50,7 +50,7 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
 
       // Room shell slice
       ...createRoomShellSlice<AppConfig>({
-        connector: new WasmDuckDbConnector({
+        connector: createWasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
         config: {

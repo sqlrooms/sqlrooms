@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/layout",
-  "version": "0.16.2",
+  "version": "0.16.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -29,6 +29,7 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   }
 }
