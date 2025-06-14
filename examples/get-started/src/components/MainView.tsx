@@ -6,12 +6,10 @@ import {
   CardTitle,
   SpinnerPane,
 } from '@sqlrooms/ui';
-import {useProjectStore} from '../store.js';
+import {useRoomStore} from '../store.js';
 
 export function MainView() {
-  const tableReady = useProjectStore((s) =>
-    s.db.findTableByName('earthquakes'),
-  );
+  const tableReady = useRoomStore((s) => s.db.findTableByName('earthquakes'));
   const {data, isLoading, error} = useSql<{
     count: number;
     maxMag: number;

@@ -2,7 +2,7 @@ import {
   isSpatialLoadFileOptions,
   LoadFileOptions,
   StandardLoadOptions,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
 import {TypeMap} from 'apache-arrow';
 import {DuckDbConnector, QueryHandle, QueryOptions} from './DuckDbConnector';

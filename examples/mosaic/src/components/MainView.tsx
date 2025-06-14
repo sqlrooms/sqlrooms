@@ -1,10 +1,10 @@
 import {Spec, VgPlotChart, useMosaic} from '@sqlrooms/mosaic';
 import {SpinnerPane} from '@sqlrooms/ui';
-import {useProjectStore} from '../store';
+import {useRoomStore} from '../store';
 export const MainView = () => {
   const {isMosaicLoading} = useMosaic();
 
-  const isTableReady = useProjectStore((state) =>
+  const isTableReady = useRoomStore((state) =>
     state.db.tables.find((t) => t.tableName === 'latency'),
   );
 

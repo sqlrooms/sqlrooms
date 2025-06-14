@@ -5,12 +5,12 @@ import {
   makeLimitQuery,
 } from '@sqlrooms/duckdb';
 import {
-  BaseProjectConfig,
+  BaseRoomConfig,
   createSlice,
-  ProjectBuilderState,
+  RoomShellSliceState,
   StateCreator,
-  useBaseProjectBuilderStore,
-} from '@sqlrooms/project-builder';
+  useBaseRoomShellStore,
+} from '@sqlrooms/room-shell';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
@@ -161,7 +161,7 @@ export type SqlEditorSliceState = {
 };
 
 export function createSqlEditorSlice<
-  PC extends BaseProjectConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
+  PC extends BaseRoomConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
 >({
   queryResultLimit = 100,
 }: {
@@ -478,16 +478,16 @@ export function createSqlEditorSlice<
   });
 }
 
-type ProjectConfigWithSqlEditor = BaseProjectConfig & SqlEditorSliceConfig;
-type ProjectStateWithSqlEditor =
-  ProjectBuilderState<ProjectConfigWithSqlEditor> & SqlEditorSliceState;
+type RoomConfigWithSqlEditor = BaseRoomConfig & SqlEditorSliceConfig;
+type RoomStateWithSqlEditor = RoomShellSliceState<RoomConfigWithSqlEditor> &
+  SqlEditorSliceState;
 
 export function useStoreWithSqlEditor<T>(
-  selector: (state: ProjectStateWithSqlEditor) => T,
+  selector: (state: RoomStateWithSqlEditor) => T,
 ): T {
-  return useBaseProjectBuilderStore<
-    BaseProjectConfig & SqlEditorSliceConfig,
-    ProjectBuilderState<ProjectConfigWithSqlEditor>,
+  return useBaseRoomShellStore<
+    BaseRoomConfig & SqlEditorSliceConfig,
+    RoomShellSliceState<RoomConfigWithSqlEditor>,
     T
-  >((state) => selector(state as unknown as ProjectStateWithSqlEditor));
+  >((state) => selector(state as unknown as RoomStateWithSqlEditor));
 }

@@ -5,7 +5,7 @@ import {
   LoadFile,
   SpatialLoadOptions,
   StandardLoadOptions,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 import {createSchema, createTable} from './create';
 import {sqlFrom} from './sql-from';
 

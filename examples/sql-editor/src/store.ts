@@ -1,67 +1,73 @@
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomStore,
   LayoutTypes,
-  MAIN_VIEW,
-  ProjectBuilderState,
+  RoomShellSliceState,
   StateCreator,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
+import {DataPanel} from './DataPanel';
+import {MainView} from './MainView';
+
+export const RoomPanelTypes = z.enum(['data', 'main'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
+export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type AppConfig = z.infer<typeof AppConfig>;
 
 /**
- * Project state
+ * Room state
  */
 
-export type AppState = ProjectBuilderState<AppConfig> &
+export type AppState = RoomShellSliceState<AppConfig> &
   SqlEditorSliceState & {
     // Add your own state here
   };
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
   persist(
     (set, get, store) => ({
-      // Base project slice
-      ...createProjectBuilderSlice<AppConfig>({
+      // Base room slice
+      ...createRoomShellSlice<AppConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
-            nodes: MAIN_VIEW,
-          },
-          dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            nodes: {
+              first: RoomPanelTypes.enum['data'],
+              second: RoomPanelTypes.enum['main'],
+              direction: 'row',
+              splitPercentage: 30,
             },
-          ],
+          },
           ...createDefaultSqlEditorConfig(),
         },
-        project: {
+        room: {
           panels: {
-            // main: {
-            //   component: MainView,
-            //   placement: 'main',
-            // },
+            [RoomPanelTypes.enum['main']]: {
+              component: MainView,
+              placement: 'main',
+            },
+            [RoomPanelTypes.enum['data']]: {
+              title: 'Data',
+              component: DataPanel,
+              icon: DatabaseIcon,
+              placement: 'sidebar',
+            },
           },
         },
       })(set, get, store),

@@ -16,7 +16,7 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
-    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "immer": "^10.1.1",

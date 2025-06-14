@@ -10,7 +10,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/dropzone": "^0.16.2",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.8",

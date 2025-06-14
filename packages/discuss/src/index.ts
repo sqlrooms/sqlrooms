@@ -12,7 +12,7 @@ export {
   DiscussSliceConfig,
   useStoreWithDiscussion,
   type DiscussSliceState,
-  type ProjectStateWithDiscussion,
+  type RoomStateWithDiscussion,
 } from './DiscussSlice';
 
 export {CommentItem} from './components/CommentItem';
