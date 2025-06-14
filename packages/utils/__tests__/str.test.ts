@@ -1,4 +1,4 @@
-import { camelCaseToTitle } from './str';
+import { camelCaseToTitle } from '../src/str';
 
 test('camelCaseToTitle works as expected', () => {
   expect(camelCaseToTitle('myVariableName')).toBe('My Variable Name');
