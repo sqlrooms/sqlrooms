@@ -24,6 +24,23 @@ This release focuses on standardizing terminology across the codebase and improv
 - `ProjectBuilderPanel` renamed to `RoomPanel`
 - `ProjectBuilderPanelHeader` renamed to `RoomPanelHeader`
 
+#### Old way to set up a project
+
+```tsx
+<ProjectBuilderProvider projectStore={projectStore}>
+  <div className="flex h-full w-full">
+    <div className="bg-muted/50 flex h-full flex-col px-1 py-2">
+      <ProjectBuilderSidebarButtons />
+    </div>
+    <div className="flex h-full w-full flex-col">
+      <ProjectBuilder />
+    </div>
+  </div>
+</ProjectBuilderProvider>
+```
+
+#### New
+
 ```tsx
 <RoomShell className="h-screen" roomStore={roomStore}>
   <RoomShell.Sidebar />
@@ -32,21 +49,37 @@ This release focuses on standardizing terminology across the codebase and improv
 </RoomShell>
 ```
 
+### State name changes
+
+- `state.project` namespace renamed to `state.room`
+
+#### Old
+
+```tsx
+const dataSources = useProjectStore((state) => state.project.dataSources);
+```
+
+#### New
+
+```tsx
+const dataSources = useRoomStore((state) => state.room.dataSources);
+```
+
 ## 0.16.0
 
 ### @sqlrooms/duckdb
 
 The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://github.com/sqlrooms/sqlrooms/blob/main/packages/duckdb/README_query_cancellation.md)
 
-#### Before
+#### Old
 
-```
+```tsx
 const result = await connector.query('SELECT * FROM some_table');
 ```
 
-#### After
+#### New
 
-```
+```tsx
 const result = await connector.query('SELECT * FROM some_table').result;
 ```
 
