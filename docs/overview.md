@@ -53,6 +53,45 @@ A Room consists of:
 The store can be extended with additional **slices**—either from core `@sqlrooms/*` packages or your own custom modules.  
 Learn more in [State Management](/state-management).
 
+```tsx
+import {RoomShell} from '@sqlrooms/room-shell';
+
+const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice<AppConfig>({
+      config: {
+      }
+    ),
+
+    // Store slices initialization
+    // ...
+  }),
+);
+
+export const App = () => {
+  return (
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <MyComponent />
+    </RoomShell>
+  );
+};
+
+function MyComponent = () => {
+  const queryResult = useSql<{maxMagnitude: number}>({
+    query: `
+      SELECT max(Magnitude) AS maxMagnitude
+      FROM 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet'
+    `
+  });
+  const row = data?.toArray()[0];
+  return (
+    <div className="w-full h-full align-center justify-center">
+     {row ? `Max earthquake magnitude: ${row.maxMagnitude}` : 'Loading…'}
+    </div>
+  )
+}
+```
+
 ---
 
 ### SQL and DuckDB Access

@@ -42,10 +42,10 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Overview',
+        text: 'Introduction',
         items: [
           {
-            text: 'Introduction',
+            text: 'Overview',
             link: '/overview',
           },
           {
