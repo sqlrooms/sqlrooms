@@ -27,63 +27,51 @@ The framework is designed for developers building innovative data tools **and** 
 
 ## Key Concepts
 
-### What's a Room
+### What's a Room?
 
-A self‑contained workspace that you open to explore one or more datasets.  
-It owns its own configuration, layout, open panels, visualizations, and unsaved edits—and it's future‑ready for real‑time collaboration so multiple users can work in the same room.
+A **Room** is a self-contained workspace where users can explore datasets, run queries, and view results.  
+The term comes from collaborative tools—where users work in shared spaces—and SQLRooms is built with future real-time collaboration in mind.
 
-### Room Store
+A Room consists of:
 
-The single source of truth for a room's state. It holds everything React shouldn't keep in local component state:
+- `roomStore`: a Zustand-based state store for the Room
+- `<RoomShell>`: a React component that renders the Room UI
 
-- loaded tables / views
-- panel layout metadata
-- user preferences (theme, tab size, etc.)
-- transient UI flags (e.g. "query running")
+---
 
-SQLRooms modules can add custom store state and functions via [slices](/state-management#understanding-slices), which are merged into the main roomStore.
+### RoomShell and Room Store
 
-The core slice in the Zustand store that holds a room's runtime state and actions. Its **config** sub-object is expressed as a Zod schema so it can be validated and persisted, and the slice can be merged with others (SQL Editor, AI, etc.) to form a single store. Learn more in [State Management](/state-management).
+- `<RoomShell>` is a React component that wraps your Room UI in a `RoomStateProvider`
+- It injects the `roomStore` into React context, accessible via the `useRoomStore()` hook
+- The `roomStore` is a Zustand store that holds:
+  - loaded DuckDB tables
+  - layout state
+  - user preferences
+  - transient UI flags (like "query running")
+  - `config`: the persistable slice of the store that captures a Room's saveable settings and can be serialized to JSON for storage or sharing
 
-The store is exposed via `useRoomStore()` so any component can select or dispatch without prop‑drilling.
+The store can be extended with additional **slices**—either from core `@sqlrooms/*` packages or your own custom modules.  
+Learn more in [State Management](/state-management).
 
-### Room Shell
+---
 
-`RoomShell` is the UI component that renders the whole room: the sidebar chrome, main layout, and overlays; acts as a context bridge injecting `roomStore` into React context for descendants; and orchestrates slots so child components auto‑position without worrying about order.
+### SQL and DuckDB Access
 
-### Layout
+SQLRooms includes a built-in DuckDB integration via the `DuckDbSlice`.  
+You can query your datasets using the `useSql(query)` hook and work directly with Arrow tables in React.
 
-The room's layout manager arranges all visible panels in a flexible grid (split-panes under the hood).  
-Its configuration – sizes, positions, and open/closed state – lives in the `roomStore` so it can be persisted, reset, or synchronized across clients.  
-Modules don't need to care how their UI is placed; they simply declare panels and the layout takes care of rendering them.
+---
 
-### Panels
+### Layout (Optional)
 
-A Panel is a self-contained React component (e.g. SQL editor, result table, chart) that plugs into the layout.  
-Each panel provides metadata (id, title, icon) and a React component to render.  
-Users can open, move, resize, and close panels at runtime; developers can create new panels to surface custom views or workflows.
+The `LayoutComposer` provides a flexible panel layout for your Room's UI.
 
-### Why this structure?
+- Panels are React components that can be plugged into the layout. They include metadata (`id`, `title`, `icon`) and a component to render.
+- Panels can be moved, resized, or hidden
+- Developers can add panels by registering them in the `roomStore`.
+- Layout state is persisted in the `roomStore`
 
-- **Clear mental model:** "Open a room → explore your data."
-- **Composable:** Developers can swap out or extend the Sidebar, Layout, or overlays without touching the shell.
-- **Collaboration‑ready:** The store abstraction and shell boundaries map cleanly to future multi‑user sync.
-
-## How create a custom module
-
-A custom module typically bundles **state** (via a slice) with **UI** (via one or more panels) so it can be plugged into any room.
-
-### Slice
-
-Create a Zustand slice (e.g. `createMyModuleSlice`) that adds new state, selectors, and actions to the Room Store.  
-Expose a `config` sub-object if you want part of that state to be persisted and validated.
-
-### Panels
-
-Build React components for the module's UI (tables, charts, wizards, etc.).  
-Register them with the module so the Layout can discover them and users can open them from the sidebar or programmatically.
-
-Combining the slice (logic/state) with the panels (presentation) lets you ship an encapsulated feature—like an AI assistant or advanced visualization toolkit—as a reusable package.
+---
 
 ## Next Steps
 

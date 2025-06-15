@@ -79,6 +79,10 @@ export default defineConfig({
             link: '/state-management',
           },
           {
+            text: 'How Create a Custom Slice',
+            link: '/custom-slice',
+          },
+          {
             text: 'Theming',
             link: '/theming',
           },
