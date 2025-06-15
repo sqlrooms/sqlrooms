@@ -35,7 +35,8 @@
     "version-minor": "lerna version minor --yes --sync-workspace-lock",
     "version-major": "lerna version major --yes --sync-workspace-lock",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
-    "publish-release": "turbo run publish && lerna publish from-package --yes"
+    "publish-release": "turbo run publish && lerna publish from-package --yes",
+    "update-readme": "node scripts/update-readme.mjs"
   },
   "engines": {
     "node": ">=22"

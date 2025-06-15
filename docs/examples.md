@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# Examples
+# Example Applications
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 

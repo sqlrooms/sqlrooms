@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# What's SQLRooms?
+# Overview
 
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
@@ -79,9 +79,3 @@ The `LayoutComposer` provides a flexible panel layout for your Room's UI.
 - **Dive into the [Architecture Guide](/architecture)** to see how it all fits together.
 - **Explore the [Examples](/examples)** gallery for real‑world setups.
 - **Read the [API reference](/api/room-shell/)** for deeper integration.
-
-## Conclusion
-
-SQLRooms provides a powerful foundation for building browser-based data analytics applications with no backend requirements. By combining DuckDB's SQL engine with modern web technologies, it enables developers to create performant, scalable, and privacy-focused data tools.
-
-Ready to dive deeper? Check out our [Architecture Guide](/architecture) to understand how SQLRooms components work together and how you can leverage them in your applications.

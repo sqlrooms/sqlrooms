@@ -58,7 +58,7 @@ export default defineConfig({
         text: 'Examples',
         items: [
           {
-            text: 'Example Rooms',
+            text: 'Example Apps',
             link: '/examples',
           },
           {
