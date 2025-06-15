@@ -2,7 +2,7 @@ import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {useRoomStore, RoomPanelTypes} from './store';
-import {convertToValidColumnOrTableName} from '../../../packages/utils/dist';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useToast} from '@sqlrooms/ui';
 
 export const DataPanel = () => {
