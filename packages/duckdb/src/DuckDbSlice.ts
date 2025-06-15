@@ -267,6 +267,7 @@ export function createDuckDbSlice({
         },
 
         getConnector: async () => {
+          await get().db.connector.initialize();
           return get().db.connector;
         },
 
