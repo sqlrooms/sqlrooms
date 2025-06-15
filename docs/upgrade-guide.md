@@ -91,7 +91,7 @@ const connector = createWasmDuckDbConnector();
 
 ### @sqlrooms/duckdb
 
-The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://github.com/sqlrooms/sqlrooms/blob/main/packages/duckdb/README_query_cancellation.md)
+The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://sqlrooms.org/query-cancellation)
 
 #### Old
 

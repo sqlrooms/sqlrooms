@@ -78,9 +78,13 @@ export default defineConfig({
             text: 'State Management',
             link: '/state-management',
           },
+          // {
+          //   text: 'How Create a Custom Slice',
+          //   link: '/custom-slice',
+          // },
           {
-            text: 'How Create a Custom Slice',
-            link: '/custom-slice',
+            text: 'Query Cancellation',
+            link: '/query-cancellation',
           },
           {
             text: 'Theming',
