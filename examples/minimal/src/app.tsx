@@ -6,7 +6,7 @@ import {
   RoomShell,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {Spinner, ThemeProvider} from '@sqlrooms/ui';
+import {Spinner} from '@sqlrooms/ui';
 import {z} from 'zod';
 
 /**
@@ -40,11 +40,12 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
 );
 
 export const App = () => (
-  <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
-    <RoomShell className="h-screen" roomStore={roomStore}>
-      <MyComponent />
-    </RoomShell>
-  </ThemeProvider>
+  <RoomShell
+    className="flex h-screen w-screen items-center justify-center"
+    roomStore={roomStore}
+  >
+    <MyComponent />
+  </RoomShell>
 );
 
 function MyComponent() {
@@ -54,16 +55,16 @@ function MyComponent() {
       FROM 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet'
     `,
   });
+  if (queryResult.error) {
+    return <div className="text-red-500">{queryResult.error.message}</div>;
+  }
+  if (queryResult.isLoading) {
+    return <Spinner />;
+  }
   const row = queryResult.data?.toArray()[0];
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      {queryResult.error ? (
-        <div className="text-red-500">{queryResult.error.message}</div>
-      ) : row ? (
-        `Max earthquake magnitude: ${row.maxMagnitude}`
-      ) : (
-        <Spinner />
-      )}
+    <div>
+      {row ? `Max earthquake magnitude: ${row.maxMagnitude}` : 'No data'}
     </div>
   );
 }
