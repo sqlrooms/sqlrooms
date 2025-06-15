@@ -1,30 +1,25 @@
-import {
-  ProjectBuilder,
-  ProjectBuilderSidebarButtons,
-  SidebarButton,
-} from '@sqlrooms/project-builder';
+import {RoomShell} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
+import {roomStore} from './store';
 
-export const AppShell = () => {
+export const App = () => {
   const sqlEditor = useDisclosure();
   return (
-    <div className="flex h-full w-full">
-      <div className="bg-muted/50 flex h-full flex-col px-1 py-2">
-        <ProjectBuilderSidebarButtons />
-        <SidebarButton
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar>
+        <RoomShell.SidebarButton
           title="SQL Editor"
           onClick={sqlEditor.onToggle}
           isSelected={false}
           icon={TerminalIcon}
         />
         <ThemeSwitch />
-      </div>
-      <div className="flex h-full w-full flex-col">
-        <ProjectBuilder />
-      </div>
+      </RoomShell.Sidebar>
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
       <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
-    </div>
+    </RoomShell>
   );
 };

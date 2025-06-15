@@ -1,4 +1,4 @@
-import {useBaseProjectBuilderStore} from '@sqlrooms/project-builder';
+import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {
   Button,
   ResizableHandle,
@@ -11,11 +11,16 @@ import CreateTableModal from './components/CreateTableModal';
 import {QueryEditorPanel} from './components/QueryEditorPanel';
 import {QueryResultPanel} from './components/QueryResultPanel';
 import {SqlEditorHeader} from './components/SqlEditorHeader';
-import {TableStructurePanel} from './components/TableStructurePanel';
+import {
+  TableStructurePanel,
+  TableStructurePanelProps,
+} from './components/TableStructurePanel';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
 export type SqlEditorProps = {
-  /** The database schema to use for queries. Defaults to 'main' */
-  schema?: string;
+  /** The database schema to use. Defaults to '*'.
+   * If '*' is provided, all tables will be shown.
+   * If a function is provided, it will be used to filter the tables. */
+  schema?: TableStructurePanelProps['schema'];
   /** Whether the SQL editor is currently visible */
   isOpen: boolean;
   /** Optional component to render SQL documentation in the side panel */
@@ -28,8 +33,8 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
   const {schema = '*', documentationPanel} = props;
 
   // Store access
-  const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
-    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
+    (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
   const lastQueryStatement = useStoreWithSqlEditor((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
@@ -73,7 +78,7 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                   </ResizablePanel>
                   <ResizableHandle withHandle />
                   <ResizablePanel defaultSize={80}>
-                    <QueryEditorPanel schema={schema} />
+                    <QueryEditorPanel />
                   </ResizablePanel>
                 </ResizablePanelGroup>
               </ResizablePanel>

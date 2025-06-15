@@ -1,0 +1,21 @@
+import {z} from 'zod';
+import {DataSource} from './DataSource';
+import LayoutConfig, {DEFAULT_MOSAIC_LAYOUT} from './LayoutConfig';
+
+export const DEFAULT_ROOM_TITLE = 'Untitled room';
+
+export const BaseRoomConfig = z
+  .object({
+    title: z.string().default(DEFAULT_ROOM_TITLE).describe('Room title.'),
+    description: z.string().nullable().optional().describe('Room description.'),
+    layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
+      'Layout specifies how views are arranged on the screen.',
+    ),
+    dataSources: z
+      .array(DataSource)
+      .default([])
+      .describe('Data sources. Each data source must have a unique tableName.'),
+  })
+  .describe('Room configuration.');
+
+export type BaseRoomConfig = z.infer<typeof BaseRoomConfig>;

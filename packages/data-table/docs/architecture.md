@@ -4,8 +4,8 @@ SQLRooms is organized into several key packages:
 
 ### Core Packages
 
-- `@sqlrooms/project-builder`: Core framework and UI components
-- `@sqlrooms/project-config`: Configuration and type definitions
+- `@sqlrooms/room-shell`: Core framework and UI components
+- `@sqlrooms/room-config`: Configuration and type definitions
 - `@sqlrooms/layout`: Layout system and panel management
 - `@sqlrooms/ui`: Shared UI components and styling
 

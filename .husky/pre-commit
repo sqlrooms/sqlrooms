@@ -1,1 +1,4 @@
 pnpx lint-staged
+
+# Update README with included content
+pnpm run update-readme

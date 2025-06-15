@@ -1,56 +1,55 @@
 // import {MainView} from '@/components/main-view';
 import {MainView} from '@/components/main-view';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
 import {z} from 'zod';
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.extend({
+export const RoomConfig = BaseRoomConfig.extend({
   // Add custom config here
 });
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
- * Project state
+ * Room state
  */
-export type AppState = ProjectBuilderState<AppConfig> & {
+export type RoomState = RoomShellSliceState<RoomConfig> & {
   // Add custom state type definitions here (fields and methods)
 };
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  ...createProjectBuilderSlice<AppConfig>({
-    config: {
-      title: 'Demo App Project',
-      dataSources: [
-        {
-          tableName: 'earthquakes',
-          type: 'url',
-          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-        },
-      ],
-    },
-    project: {
-      panels: {
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice<RoomConfig>({
+      config: {
+        title: 'Demo App Room',
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+          },
+        ],
+      },
+      room: {
+        panels: {
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-    },
-  })(set, get, store),
-}));
+    })(set, get, store),
+  }),
+);

@@ -1,7 +1,7 @@
-import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
+import {RoomPanel} from '@sqlrooms/room-shell';
 import {SkeletonPane, cn} from '@sqlrooms/ui';
 import React, {FC, useEffect} from 'react';
-import {ProjectPanelTypes} from '../store';
+import {RoomPanelTypes} from '../store';
 
 export type DocumentationPanelProps = {
   pageUrl?: string;
@@ -26,10 +26,7 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
   }, []);
 
   return (
-    <ProjectBuilderPanel
-      type={ProjectPanelTypes.enum['docs']}
-      showHeader={true}
-    >
+    <RoomPanel type={RoomPanelTypes.enum['docs']} showHeader={true}>
       <div className="relative flex-grow">
         <div
           ref={containerRef}
@@ -43,7 +40,7 @@ const DocumentationPanel: FC<DocumentationPanelProps> = ({
           </div>
         )}
       </div>
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 };
 

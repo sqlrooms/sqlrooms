@@ -1,8 +1,4 @@
-import {
-  createBaseSlice,
-  ProjectState,
-  useBaseProjectStore,
-} from '@sqlrooms/project';
+import {createBaseSlice, RoomState, useBaseRoomStore} from '@sqlrooms/core';
 import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
@@ -92,7 +88,7 @@ export type DuckDbSliceState = {
     destroy: () => Promise<void>;
 
     /**
-     * Add a table to the project.
+     * Add a table to the room.
      * @param tableName - The name of the table to add.
      * @param data - The data to add to the table: an arrow table or an array of records.
      * @returns A promise that resolves to the table that was added.
@@ -271,6 +267,7 @@ export function createDuckDbSlice({
         },
 
         getConnector: async () => {
+          await get().db.connector.initialize();
           return get().db.connector;
         },
 
@@ -520,7 +517,7 @@ export function createDuckDbSlice({
             }
             return newTables;
           } catch (err) {
-            get().project.captureException(err);
+            get().room.captureException(err);
             return [];
           } finally {
             set((state) =>
@@ -578,15 +575,12 @@ export function createDuckDbSlice({
   });
 }
 
-type ProjectStateWithDuckDb = ProjectState<DuckDbSliceConfig> &
-  DuckDbSliceState;
+type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> & DuckDbSliceState;
 
 export function useStoreWithDuckDb<T>(
-  selector: (state: ProjectStateWithDuckDb) => T,
+  selector: (state: RoomStateWithDuckDb) => T,
 ): T {
-  return useBaseProjectStore<
-    DuckDbSliceConfig,
-    ProjectState<DuckDbSliceConfig>,
-    T
-  >((state) => selector(state as unknown as ProjectStateWithDuckDb));
+  return useBaseRoomStore<DuckDbSliceConfig, RoomState<DuckDbSliceConfig>, T>(
+    (state) => selector(state as unknown as RoomStateWithDuckDb),
+  );
 }

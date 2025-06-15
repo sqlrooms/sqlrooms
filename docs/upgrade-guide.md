@@ -4,6 +4,67 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.17.0
+
+This release focuses on standardizing terminology across the codebase and improving the developer experience for new users. We are replacing the concept of "project" with "room" to better align with the SQLRooms name. "Room" is an established concept in collaborative apps and fits well with the overall vision of the project.
+
+### Package name changes
+
+- `@sqlrooms/project` renamed to `@sqlrooms/core`
+- `@sqlrooms/project-config` renamed to `@sqlrooms/room-config`
+- `@sqlrooms/project-builder` renamed to `@sqlrooms/room-shell`
+
+### Component name changes
+
+- `ProjectBuilder` is replaced by `RoomShell`
+- `ProjectBuilderProvider` is removed (in favor of `RoomShell`)
+- `ProjectBuilderState` renamed to `RoomShellSliceState`
+- `createProjectBuilderStore` renamed to `createRoomStore`
+- `createProjectBuilderSlice` renamed to `createRoomShellSlice`
+- `ProjectBuilderPanel` renamed to `RoomPanel`
+- `ProjectBuilderPanelHeader` renamed to `RoomPanelHeader`
+
+#### Old way to set up a project
+
+```tsx
+<ProjectBuilderProvider projectStore={projectStore}>
+  <div className="flex h-full w-full">
+    <div className="bg-muted/50 flex h-full flex-col px-1 py-2">
+      <ProjectBuilderSidebarButtons />
+    </div>
+    <div className="flex h-full w-full flex-col">
+      <ProjectBuilder />
+    </div>
+  </div>
+</ProjectBuilderProvider>
+```
+
+#### New
+
+```tsx
+<RoomShell className="h-screen" roomStore={roomStore}>
+  <RoomShell.Sidebar />
+  <RoomShell.LayoutComposer />
+  <RoomShell.LoadingProgress />
+</RoomShell>
+```
+
+### State name changes
+
+- `state.project` namespace renamed to `state.room`
+
+#### Old
+
+```tsx
+const dataSources = useProjectStore((state) => state.project.dataSources);
+```
+
+#### New
+
+```tsx
+const dataSources = useRoomStore((state) => state.room.dataSources);
+```
+
 ## 0.16.3
 
 ### @sqlrooms/duckdb
@@ -30,17 +91,17 @@ const connector = createWasmDuckDbConnector();
 
 ### @sqlrooms/duckdb
 
-The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://github.com/sqlrooms/sqlrooms/blob/main/packages/duckdb/README_query_cancellation.md)
+The DuckDbConnector now supports query cancellation through a unified `QueryHandle` interface with full composability support. All query methods (`execute`, `query`, `queryJson`) now return a `QueryHandle` that provides immediate access to cancellation functionality and signal composability. [Read more…](https://sqlrooms.org/query-cancellation)
 
-#### Before
+#### Old
 
-```
+```tsx
 const result = await connector.query('SELECT * FROM some_table');
 ```
 
-#### After
+#### New
 
-```
+```tsx
 const result = await connector.query('SELECT * FROM some_table').result;
 ```
 
@@ -58,9 +119,7 @@ const result = await connector.query('SELECT * FROM some_table').result;
 
 - `createProjectStore` renamed into `createProjectBuilderStore`
 
-- `ProjectState` renamed into `ProjectBuilderState`
-
-- `ProjectState` renamed into `ProjectBuilderState`
+- `ProjectState` renamed into `ProjectBuilderState`
 
 - `projectId` and `setProjectId` removed: add custom state if necessary
 
@@ -128,11 +187,11 @@ Before:
 
 ```typescript
 const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
+  RoomConfig,
+  RoomState
 >(
     (set, get, store) => ({
-      ...createProjectSlice<AppConfig>({
+      ...createProjectSlice<RoomConfig>({
         project: {
           config: {
             ...
@@ -148,11 +207,11 @@ After:
 
 ```typescript
 const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
+  RoomConfig,
+  RoomState
 >(
     (set, get, store) => ({
-      ...createProjectSlice<AppConfig>({
+      ...createProjectSlice<RoomConfig>({
         config: {
           ...
         },

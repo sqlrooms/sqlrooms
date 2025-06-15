@@ -4,7 +4,7 @@ import {
   LoadFileOptions,
   StandardLoadOptions,
   isSpatialLoadFileOptions,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {

@@ -18,7 +18,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
-  const isDataAvailable = useStoreWithAi((s) => s.project.isDataAvailable);
+  const isDataAvailable = useStoreWithAi((s) => s.room.isDataAvailable);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;

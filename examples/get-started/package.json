@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/project-builder": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0",
     "react": "^19.1.0",

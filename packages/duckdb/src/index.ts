@@ -33,7 +33,7 @@ export {
   LoadFileOptions,
   SpatialLoadFileOptions,
   isSpatialLoadFileOptions,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 export {
   type TypedRowAccessor,
   createTypedRowAccessor,
