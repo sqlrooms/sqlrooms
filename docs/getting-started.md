@@ -104,15 +104,15 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 // Define your room config
 // This holds all state necessary for persisting/saving the state of the app
-export const AppConfig = BaseRoomConfig;
+export const RoomConfig = BaseRoomConfig;
 // If using additional slices like SQL Editor:
-// export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+// export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // Define your application state type
-export type AppState = RoomState<AppConfig>;
+export type RoomState = RoomState<RoomConfig>;
 // If using additional slices:
-// export type AppState = RoomState<AppConfig> & SqlEditorSliceState;
+// export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 ```
 
 2. Create your room store:
@@ -121,10 +121,10 @@ export type AppState = RoomState<AppConfig>;
 import {createRoomSlice, createRoomStore} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<AppConfig>({
+    ...createRoomSlice<RoomConfig>({
       // config holds all state that should be persisted between sessions
       config: {
         title: 'My SQLRooms Room',
@@ -169,11 +169,11 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
 import {persist} from 'zustand/middleware';
 
 // The config is meant to be saved for persistence between sessions
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       // Store configuration as shown above
-      ...createRoomSlice<AppConfig>({
+      ...createRoomSlice<RoomConfig>({
         config: {
           title: 'My SQLRooms Room',
           // ...other configuration

@@ -187,11 +187,11 @@ Before:
 
 ```typescript
 const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
+  RoomConfig,
+  RoomState
 >(
     (set, get, store) => ({
-      ...createProjectSlice<AppConfig>({
+      ...createProjectSlice<RoomConfig>({
         project: {
           config: {
             ...
@@ -207,11 +207,11 @@ After:
 
 ```typescript
 const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
+  RoomConfig,
+  RoomState
 >(
     (set, get, store) => ({
-      ...createProjectSlice<AppConfig>({
+      ...createProjectSlice<RoomConfig>({
         config: {
           ...
         },

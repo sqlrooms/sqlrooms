@@ -7,20 +7,21 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {Spinner} from '@sqlrooms/ui';
+import {useEffect} from 'react';
 import {z} from 'zod';
 
 /**
  * Room config schema is the persistable part of the app state meant for saving.
  */
-export const AppConfig = BaseRoomConfig.extend({
+export const RoomConfig = BaseRoomConfig.extend({
   // Add your room config here
 });
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * The whole room state.
  */
-export type AppState = RoomShellSliceState<AppConfig> & {
+export type RoomState = RoomShellSliceState<RoomConfig> & {
   // Add your app state here
 };
 
@@ -28,10 +29,18 @@ export type AppState = RoomShellSliceState<AppConfig> & {
  * Create the room store. You can combine your custom state and logic
  * with the slices from the SQLRooms modules.
  */
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<AppConfig>({
-      config: {},
+    ...createRoomShellSlice<RoomConfig>({
+      config: {
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+            tableName: 'earthquakes',
+          },
+        ],
+      },
       room: {
         panels: {},
       },
@@ -49,22 +58,13 @@ export const App = () => (
 );
 
 function MyComponent() {
-  const queryResult = useSql<{maxMagnitude: number}>({
-    query: `
-      SELECT max(Magnitude) AS maxMagnitude
-      FROM 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet'
-    `,
-  });
-  if (queryResult.error) {
-    return <div className="text-red-500">{queryResult.error.message}</div>;
-  }
-  if (queryResult.isLoading) {
-    return <Spinner />;
-  }
-  const row = queryResult.data?.toArray()[0];
-  return (
-    <div>
-      {row ? `Max earthquake magnitude: ${row.maxMagnitude}` : 'No data'}
-    </div>
+  const isTableReady = useRoomStore((state) =>
+    Boolean(state.db.findTableByName('earthquakes')),
   );
+  const queryResult = useSql<{maxMagnitude: number}>({
+    query: `SELECT max(Magnitude) AS maxMagnitude FROM earthquakes`,
+    enabled: isTableReady,
+  });
+  const row = queryResult.data?.toArray()[0];
+  return row ? `Max earthquake magnitude: ${row.maxMagnitude}` : <Spinner />;
 }

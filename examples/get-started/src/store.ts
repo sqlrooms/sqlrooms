@@ -11,15 +11,15 @@ import {MainView} from './components/MainView';
 /**
  * Room config schema is the part of the app state meant for saving.
  */
-export const AppConfig = BaseRoomConfig.extend({
+export const RoomConfig = BaseRoomConfig.extend({
   // Add your room config here
 });
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * The whole app state.
  */
-export type AppState = RoomShellSliceState<AppConfig> & {
+export type RoomState = RoomShellSliceState<RoomConfig> & {
   // Add your app state here
 };
 
@@ -27,9 +27,9 @@ export type AppState = RoomShellSliceState<AppConfig> & {
  * Create the room store. You can combine your custom state and logic
  * with the slices from the SQLRooms modules.
  */
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<AppConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'Minimal SQLRooms App',
         dataSources: [

@@ -39,14 +39,14 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const AppConfig =
+export const RoomConfig =
   BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * Room state
  */
-type CustomAppState = {
+type CustomRoomState = {
   selectedModel: {
     model: string;
     provider: string;
@@ -56,19 +56,19 @@ type CustomAppState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
-export type AppState = RoomShellSliceState<AppConfig> &
+export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  CustomAppState;
+  CustomRoomState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<AppConfig>({
+      ...createRoomShellSlice<RoomConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -171,10 +171,10 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: AppConfig.parse(state.config),
+        config: RoomConfig.parse(state.config),
         selectedModel: state.selectedModel,
         apiKeys: state.apiKeys,
       }),
     },
-  ) as StateCreator<AppState>,
+  ) as StateCreator<RoomState>,
 );

@@ -12,24 +12,24 @@ import {z} from 'zod';
 /**
  * Room config for saving
  */
-export const AppConfig = BaseRoomConfig.extend({
+export const RoomConfig = BaseRoomConfig.extend({
   // Add custom config here
 });
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * Room state
  */
-export type AppState = RoomShellSliceState<AppConfig> & {
+export type RoomState = RoomShellSliceState<RoomConfig> & {
   // Add custom state type definitions here (fields and methods)
 };
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<AppConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'Demo App Room',
         dataSources: [

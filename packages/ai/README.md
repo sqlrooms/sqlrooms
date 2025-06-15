@@ -114,12 +114,12 @@ import {
 import {createRoomStore, createRoomSlice} from '@sqlrooms/room-shell';
 
 // Define your application state type
-export type AppState = RoomState<AppConfig> &
+export type RoomState = RoomState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState;
 
 // Create the store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
     ...createRoomSlice({

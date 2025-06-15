@@ -32,15 +32,15 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const AppConfig =
+export const RoomConfig =
   BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
-export type AppState = RoomShellSliceState<AppConfig> &
+export type RoomState = RoomShellSliceState<RoomConfig> &
   DiscussSliceState &
   SqlEditorSliceState;
 
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
@@ -49,7 +49,7 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
       ...createSqlEditorSlice()(set, get, store),
 
       // Room shell slice
-      ...createRoomShellSlice<AppConfig>({
+      ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
@@ -102,8 +102,8 @@ export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
       name: 'discuss-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: AppConfig.parse(state.config),
+        config: RoomConfig.parse(state.config),
       }),
     },
-  ) as StateCreator<AppState>,
+  ) as StateCreator<RoomState>,
 );

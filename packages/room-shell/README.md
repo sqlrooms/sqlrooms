@@ -49,13 +49,13 @@ import {
 import {z} from 'zod';
 
 // Define your custom config schema (optional)
-const MyAppConfig = BaseRoomConfig.extend({
+const MyRoomConfig = BaseRoomConfig.extend({
   myCustomSetting: z.string().default('default value'),
 });
-type MyAppConfig = z.infer<typeof MyAppConfig>;
+type MyRoomConfig = z.infer<typeof MyRoomConfig>;
 
 // Define your custom app state
-type MyAppState = RoomState<MyAppConfig> & {
+type MyRoomState = RoomState<MyRoomConfig> & {
   myFeatureData: any[];
   addItem: (item: any) => void;
   removeItem: (id: string) => void;
@@ -63,11 +63,11 @@ type MyAppState = RoomState<MyAppConfig> & {
 
 // Create a room store with custom state
 export const {roomStore, useRoomStore} = createRoomStore<
-  MyAppConfig,
-  MyAppState
+  MyRoomConfig,
+  MyRoomState
 >((set, get, store) => ({
   // Base room slice with initial configuration
-  ...createRoomSlice<MyAppConfig>({
+  ...createRoomSlice<MyRoomConfig>({
     config: {
       title: 'My Room',
       layout: {
@@ -128,26 +128,26 @@ import {
 import {z} from 'zod';
 
 // Define your custom config schema
-const MyAppConfig = BaseRoomConfig.extend({
+const MyRoomConfig = BaseRoomConfig.extend({
   myCustomSetting: z.string().default('default value'),
 });
-type MyAppConfig = z.infer<typeof MyAppConfig>;
+type MyRoomConfig = z.infer<typeof MyRoomConfig>;
 
 // Define your custom app state
-type MyAppState = RoomState<MyAppConfig> & {
+type MyRoomState = RoomState<MyRoomConfig> & {
   myFeatureData: any[];
   addItem: (item: any) => void;
 };
 
 // Create a store with persistence
 export const {roomStore, useRoomStore} = createRoomStore<
-  MyAppConfig,
-  MyAppState
+  MyRoomConfig,
+  MyRoomState
 >(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<MyAppConfig>({
+      ...createRoomSlice<MyRoomConfig>({
         config: {
           title: 'My Room',
           layout: {
@@ -198,31 +198,32 @@ import {
 } from './anotherFeatureSlice';
 
 // Combined app state type
-type AppState = RoomState<MyAppConfig> & MyFeatureState & AnotherFeatureState;
+type RoomState = RoomState<MyRoomConfig> & MyFeatureState & AnotherFeatureState;
 
 // Create a store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<MyAppConfig, AppState>(
-  (set, get, store) => ({
-    // Base room slice
-    ...createRoomSlice<MyAppConfig>({
-      config: {
-        /* initial config */
+export const {roomStore, useRoomStore} = createRoomStore<
+  MyRoomConfig,
+  RoomState
+>((set, get, store) => ({
+  // Base room slice
+  ...createRoomSlice<MyRoomConfig>({
+    config: {
+      /* initial config */
+    },
+    room: {
+      panels: {
+        /* panel definitions */
       },
-      room: {
-        panels: {
-          /* panel definitions */
-        },
-      },
-    })(set, get, store),
+    },
+  })(set, get, store),
 
-    // Feature slices
-    ...createMyFeatureSlice()(set, get, store),
-    ...createAnotherFeatureSlice({
-      // Feature-specific options
-      customOption: 'value',
-    })(set, get, store),
-  }),
-);
+  // Feature slices
+  ...createMyFeatureSlice()(set, get, store),
+  ...createAnotherFeatureSlice({
+    // Feature-specific options
+    customOption: 'value',
+  })(set, get, store),
+}));
 ```
 
 ### Managing Data Sources

@@ -30,21 +30,21 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * Room state
  */
-export type AppState = RoomShellSliceState<AppConfig> & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomShellSlice<AppConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'Demo App Room',
         layout: {

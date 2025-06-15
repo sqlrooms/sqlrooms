@@ -27,16 +27,16 @@ import {RoomState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
 // Combining multiple slices into a unified application state type
-export type AppState = RoomState<AppConfig> &
+export type RoomState = RoomState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  CustomAppState;
+  CustomRoomState;
 
 // Creating a store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room state
-    ...createRoomShellSlice<AppConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       // Room configuration
       // ...
     })(set, get, store),
@@ -103,14 +103,14 @@ import {z} from 'zod';
 /**
  * Room config for saving - combining multiple slice configs
  */
-export const AppConfig = BaseRoomConfig.merge(AiSliceConfig)
+export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
   .merge(SqlEditorSliceConfig)
   .merge(
     z.object({
       // Custom app config
     }),
   );
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 ```
 
 This approach offers several benefits:
@@ -123,8 +123,8 @@ This approach offers several benefits:
 When using the combined configuration type in your store, you can ensure that all required configuration properties from each slice are properly included:
 
 ```typescript
-// Using the combined AppConfig in the store
-...createRoomSlice<AppConfig>({
+// Using the combined RoomConfig in the store
+...createRoomSlice<RoomConfig>({
   config: {
     // AI slice configuration
     ...createDefaultAiConfig(),

@@ -82,20 +82,20 @@ import {
 import {z} from 'zod';
 
 // 1. Extend your app config with DiscussSliceConfig
-export const AppConfig = BaseRoomConfig.merge(DiscussSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(DiscussSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // 2. Extend your app state with DiscussSliceState
-export type AppState = RoomShellSliceState<AppConfig> & DiscussSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> & DiscussSliceState;
 
 // 3. Create the store with discuss slice
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Add the discuss slice with a user ID
     ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
 
     // Add your room shell slice
-    ...createRoomShellSlice<AppConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       connector: yourDatabaseConnector,
       config: {
         // Include default discuss config

@@ -77,17 +77,17 @@ import {
 import {z} from 'zod';
 
 // Define combined config schema
-export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // Define combined state type
-export type AppState = RoomState<AppConfig> & SqlEditorSliceState;
+export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 
 // Create combined store
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<AppConfig>({
+    ...createRoomSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
         // ... other room config
@@ -191,17 +191,17 @@ import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {z} from 'zod';
 
 // 1. Define combined config schema
-export const AppConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // 2. Define combined state type
-export type AppState = RoomState<AppConfig> & SqlEditorSliceState;
+export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 
 // 3. Create combined store
-export const {roomStore, useRoomStore} = createRoomStore<AppConfig, AppState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<AppConfig>({
+    ...createRoomSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
         // ... other room config
