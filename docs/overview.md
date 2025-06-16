@@ -128,9 +128,34 @@ For more details on DuckDB integration and available methods, see the [DuckDB AP
 
 ### Composing Store from Slices
 
-The store can be extended with additional **slices**—either from any of the `@sqlrooms/*` packages or your own custom ones. Learn more in [State Management](/state-management). A slice is a function that returns a partial state object and methods to update it.
+The store can be enhanced with **slices**—modular pieces of state and logic that can be added to your Room. You can use slices from the `@sqlrooms/*` packages or create your own custom slices. Each slice is a function that returns a partial state object along with methods to modify that state.
 
-You can create your own slices to add custom state and logic to your Room. Here's an example:
+Here's an example showing how to combine the default room shell with SQL editor functionality:
+
+```tsx
+const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>({
+  // Default slice
+  ...createRoomShellSlice<RoomConfig>({
+    config: {
+      // Add SQL editor slice persistable config
+      ...createDefaultSqlEditorConfig(),
+    },
+    room: {},
+  })(set, get, store),
+
+  // Mix in sql editor slice
+  ...createSqlEditorSlice()(set, get, store),
+});
+```
+
+You can access slices' namespaced config, state and functions in the store using selectors, for example:
+
+```tsx
+const queries = useRoomStore((state) => state.config.sqlEditor.queries);
+const runQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
+```
+
+Learn more about store and slices in [State Management](/state-management).
 
 ---
 
