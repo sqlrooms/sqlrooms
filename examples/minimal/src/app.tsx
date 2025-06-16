@@ -7,7 +7,6 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {Spinner} from '@sqlrooms/ui';
-import {useEffect} from 'react';
 import {z} from 'zod';
 
 /**
