@@ -146,7 +146,7 @@ type InitialState<PC extends BaseRoomConfig> = {
   connector?: DuckDbConnector;
   config: Partial<PC>;
   room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config' | 'panels'>> & {
-    panels: RoomShellSliceStateProps<PC>['panels'];
+    panels?: RoomShellSliceStateProps<PC>['panels'];
   };
 };
 

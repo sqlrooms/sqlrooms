@@ -133,10 +133,10 @@ export function createBaseSlice<PC, S>(
  * @param sliceCreators - The slices to add to the room store
  * @returns The room store and a hook for accessing the room store
  */
-export function createRoomStore<PC, RoomState extends RoomState<PC>>(
-  stateCreator: StateCreator<RoomState>,
+export function createRoomStore<PC, RS extends RoomState<PC>>(
+  stateCreator: StateCreator<RS>,
 ) {
-  const roomStore = createStore<RoomState>((set, get, store) => ({
+  const roomStore = createStore<RS>((set, get, store) => ({
     ...stateCreator(set, get, store),
   }));
 
@@ -148,9 +148,9 @@ export function createRoomStore<PC, RoomState extends RoomState<PC>>(
     );
   }
 
-  function useRoomStore<T>(selector: (state: RoomState) => T): T {
+  function useRoomStore<T>(selector: (state: RS) => T): T {
     // @ts-ignore TODO fix typing
-    return useBaseRoomStore(selector as (state: RoomState) => T);
+    return useBaseRoomStore(selector as (state: RS) => T);
   }
   return {roomStore, useRoomStore};
 }

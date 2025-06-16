@@ -41,9 +41,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         ],
       },
-      room: {
-        panels: {},
-      },
+      room: {},
     })(set, get, store),
   }),
 );
