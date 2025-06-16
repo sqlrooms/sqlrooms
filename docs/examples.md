@@ -2,7 +2,7 @@
 outline: deep
 ---
 
-# Examples
+# Example Applications
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
@@ -42,7 +42,7 @@ An advanced example showing how to build an AI-powered analytics application wit
 - AI-driven data analysis
 - Integration with [Vercel AI SDK](https://sdk.vercel.ai/docs/introduction)
 - Custom visualization components
-- Project state persistence
+- Room state persistence
 
 ## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
 

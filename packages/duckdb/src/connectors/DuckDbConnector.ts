@@ -1,4 +1,4 @@
-import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
+import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
 import {TypeMap} from 'apache-arrow';
 
@@ -156,7 +156,10 @@ export interface QueryHandle<T = any> {
  */
 export interface DuckDbConnector {
   /**
-   * Initialize the connector
+   * Initialize the connector.
+   * The function returns a promise that resolves when the connector is initialized.
+   * Calling the initialize() function multiple times should not restart the initialization.
+   * See BaseDuckDbConnector for an implementation example.
    */
   initialize(): Promise<void>;
 

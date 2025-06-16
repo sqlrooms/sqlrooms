@@ -6,40 +6,50 @@ import {
 } from '@sqlrooms/discuss';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
   StateCreator,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import DiscussionPanel from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
+import {
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceConfig,
+  SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
 
-export const ProjectPanelTypes = z.enum([
+export const RoomPanelTypes = z.enum([
   'data-sources',
   'discuss',
   MAIN_VIEW,
 ] as const);
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const AppConfig = BaseProjectConfig.merge(DiscussSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig =
+  BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
-export type AppState = ProjectBuilderState<AppConfig> & DiscussSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> &
+  DiscussSliceState &
+  SqlEditorSliceState;
 
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
 
-      ...createProjectBuilderSlice<AppConfig>({
+      // Sql editor slice
+      ...createSqlEditorSlice()(set, get, store),
+
+      // Room shell slice
+      ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
@@ -49,11 +59,12 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
-              first: ProjectPanelTypes.enum['discuss'],
-              second: ProjectPanelTypes.enum['main'],
+              first: RoomPanelTypes.enum['discuss'],
+              second: RoomPanelTypes.enum['main'],
               splitPercentage: 30,
             },
           },
+          ...createDefaultSqlEditorConfig(),
           dataSources: [
             {
               type: 'url',
@@ -66,9 +77,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
             },
           ],
         },
-        project: {
+        room: {
           panels: {
-            [ProjectPanelTypes.enum['discuss']]: {
+            [RoomPanelTypes.enum['discuss']]: {
               title: 'Discuss',
               icon: MessageCircleIcon,
               component: DiscussionPanel,
@@ -91,8 +102,8 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       name: 'discuss-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: AppConfig.parse(state.config),
+        config: RoomConfig.parse(state.config),
       }),
     },
-  ) as StateCreator<AppState>,
+  ) as StateCreator<RoomState>,
 );

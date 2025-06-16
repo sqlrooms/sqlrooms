@@ -6,10 +6,10 @@
 import {Graph, GraphConfigInterface} from '@cosmograph/cosmos';
 import {
   createSlice,
-  useBaseProjectBuilderStore,
-  type ProjectBuilderState,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
+  useBaseRoomShellStore,
+  type RoomShellSliceState,
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
 import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';
@@ -56,11 +56,11 @@ export type CosmosSliceState = {
 };
 
 /**
- * Combined type representing the full project state including Cosmos functionality.
- * Merges the base project state with Cosmos-specific state and configuration.
+ * Combined type representing the full room state including Cosmos functionality.
+ * Merges the base room state with Cosmos-specific state and configuration.
  */
-export type ProjectStateWithCosmos = ProjectBuilderState<
-  BaseProjectConfig & CosmosSliceConfig
+export type RoomStateWithCosmos = RoomShellSliceState<
+  BaseRoomConfig & CosmosSliceConfig
 > &
   CosmosSliceState;
 
@@ -71,7 +71,7 @@ export type ProjectStateWithCosmos = ProjectBuilderState<
  * @returns A state creator function for the Cosmos slice
  */
 export function createCosmosSlice(): StateCreator<CosmosSliceState> {
-  return createSlice<BaseProjectConfig & CosmosSliceConfig, CosmosSliceState>(
+  return createSlice<BaseRoomConfig & CosmosSliceConfig, CosmosSliceState>(
     (set, get) => ({
       cosmos: {
         graph: null,
@@ -222,7 +222,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 
 /**
  * Hook to access the Cosmos store with proper typing.
- * Provides type-safe access to the combined project and Cosmos state.
+ * Provides type-safe access to the combined room and Cosmos state.
  *
  * @template T The type of the selected state slice
  * @param selector A function that selects a portion of the state
@@ -235,11 +235,11 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
  * ```
  */
 export function useStoreWithCosmos<T>(
-  selector: (state: ProjectStateWithCosmos) => T,
+  selector: (state: RoomStateWithCosmos) => T,
 ): T {
-  return useBaseProjectBuilderStore<
-    BaseProjectConfig & CosmosSliceConfig,
-    ProjectStateWithCosmos,
+  return useBaseRoomShellStore<
+    BaseRoomConfig & CosmosSliceConfig,
+    RoomStateWithCosmos,
     T
-  >((state) => selector(state as ProjectStateWithCosmos));
+  >((state) => selector(state as RoomStateWithCosmos));
 }

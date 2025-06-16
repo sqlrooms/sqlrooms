@@ -139,12 +139,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -236,12 +236,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -336,12 +336,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -436,12 +436,15 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -521,9 +524,73 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-builder
+        version: link:../../packages/room-shell
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      lucide-react:
+        specifier: ^0.474.0
+        version: 0.474.0(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.28.0
+        version: 9.28.0
+      '@types/react':
+        specifier: ^19.1.7
+        version: 19.1.7
+      '@types/react-dom':
+        specifier: ^19.1.6
+        version: 19.1.6(@types/react@19.1.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.5.2
+        version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.21(postcss@8.5.4)
+      eslint:
+        specifier: ^9.28.0
+        version: 9.28.0(jiti@2.4.2)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.28.0(jiti@2.4.2))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.20
+        version: 0.4.20(eslint@9.28.0(jiti@2.4.2))
+      globals:
+        specifier: ^15.15.0
+        version: 15.15.0
+      postcss:
+        specifier: ^8.5.4
+        version: 8.5.4
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      typescript-eslint:
+        specifier: ^8.34.0
+        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
+      vite:
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0)
+
+  examples/minimal:
+    dependencies:
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -594,12 +661,12 @@ importers:
       '@sqlrooms/mosaic':
         specifier: workspace:*
         version: link:../../packages/mosaic
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../../packages/project-builder
-      '@sqlrooms/project-config':
+        version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-config
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -688,12 +755,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/project-builder':
-        specifier: workspace:*
-        version: link:../../packages/project-builder
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../../packages/recharts
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -747,11 +814,14 @@ importers:
         specifier: 5.8.3
         version: 5.8.3
 
-  examples/sql-editor:
+  examples/query:
     dependencies:
-      '@sqlrooms/project-builder':
+      '@sqlrooms/dropzone':
+        specifier: ^0.16.2
+        version: 0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.8)
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../../packages/project-builder
+        version: link:../../packages/room-shell
       '@sqlrooms/sql-editor':
         specifier: workspace:*
         version: link:../../packages/sql-editor
@@ -846,12 +916,12 @@ importers:
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -880,17 +950,32 @@ importers:
         specifier: ^3.25.57
         version: 3.25.57
 
+  packages/core:
+    dependencies:
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      zod:
+        specifier: ^3.25.57
+        version: 3.25.57
+      zustand:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+
   packages/cosmos:
     dependencies:
       '@cosmograph/cosmos':
         specifier: 2.0.0-beta.22
         version: 2.0.0-beta.22
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -951,9 +1036,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-builder
+        version: link:../room-shell
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -990,9 +1075,9 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.1-dev204.0
         version: 1.29.1-dev204.0
-      '@sqlrooms/project':
+      '@sqlrooms/core':
         specifier: workspace:*
-        version: link:../project
+        version: link:../core
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
@@ -1012,9 +1097,6 @@ importers:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
-      '@sqlrooms/project-config':
-        specifier: workspace:*
-        version: link:../project-config
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
@@ -1090,9 +1172,9 @@ importers:
 
   packages/layout:
     dependencies:
-      '@sqlrooms/project-config':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1145,23 +1227,35 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
 
-  packages/project:
+  packages/recharts:
     dependencies:
-      immer:
-        specifier: ^10.1.1
-        version: 10.1.1
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      recharts:
+        specifier: ^2.15.3
+        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+
+  packages/room-config:
+    dependencies:
       react:
         specifier: 19.1.0
         version: 19.1.0
       zod:
         specifier: ^3.25.57
         version: 3.25.57
-      zustand:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
 
-  packages/project-builder:
+  packages/room-shell:
     dependencies:
+      '@sqlrooms/core':
+        specifier: workspace:*
+        version: link:../core
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1171,12 +1265,9 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
-      '@sqlrooms/project':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project
-      '@sqlrooms/project-config':
-        specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1204,30 +1295,6 @@ importers:
       zustand:
         specifier: ^5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
-
-  packages/project-config:
-    dependencies:
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      zod:
-        specifier: ^3.25.57
-        version: 3.25.57
-
-  packages/recharts:
-    dependencies:
-      '@sqlrooms/ui':
-        specifier: workspace:*
-        version: link:../ui
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      react-dom:
-        specifier: 19.1.0
-        version: 19.1.0(react@19.1.0)
-      recharts:
-        specifier: ^2.15.3
-        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
 
   packages/s3-browser:
     dependencies:
@@ -1298,12 +1365,12 @@ importers:
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/project-builder':
+      '@sqlrooms/room-config':
         specifier: workspace:*
-        version: link:../project-builder
-      '@sqlrooms/project-config':
+        version: link:../room-config
+      '@sqlrooms/room-shell':
         specifier: workspace:*
-        version: link:../project-config
+        version: link:../room-shell
       '@sqlrooms/schema-tree':
         specifier: workspace:*
         version: link:../schema-tree
@@ -4305,6 +4372,15 @@ packages:
   '@smithy/util-waiter@4.0.5':
     resolution: {integrity: sha512-4QvC49HTteI1gfemu0I1syWovJgPvGn7CVUoN9ZFkdvr/cCFkrEL7qNCdx/2eICqDWEGnnr68oMdSIPCLAriSQ==}
     engines: {node: '>=18.0.0'}
+
+  '@sqlrooms/dropzone@0.16.2':
+    resolution: {integrity: sha512-Xy1/Nn7bhFyuDlCEdq/jdvOURVn7txzuLMSIvSPFyAu7WOV+m3keGQ5wl6lHiYlN3ddJT4ncyU4HK8QuwOD8sA==}
+
+  '@sqlrooms/ui@0.16.2':
+    resolution: {integrity: sha512-Q478wklCPUw/QUwx4gaesg1jxyJOpuVk0DTT3jYRpZWlkS4TdT8PhpJAOiELWWOlImS8ApyEI54syFvtA8eR5g==}
+    peerDependencies:
+      autoprefixer: ^10.4.20
+      tailwindcss: ^3.4.17
 
   '@swc/counter@0.1.3':
     resolution: {integrity: sha512-e2BR4lsJkkRlKZ/qCHPw9ZaSxc0MVUd7gtbtaB7aMvHeJVYe8sOB8DBZkP2DtISHGSku9sCK6T6cnY0CtXrOCQ==}
@@ -13746,6 +13822,66 @@ snapshots:
       '@smithy/types': 4.3.1
       tslib: 2.8.1
 
+  '@sqlrooms/dropzone@0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.8)':
+    dependencies:
+      '@sqlrooms/ui': 0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.8)
+      lucide-react: 0.474.0(react@19.1.0)
+      react-dropzone: 14.3.8(react@19.1.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - autoprefixer
+      - react
+      - react-dom
+      - tailwindcss
+
+  '@sqlrooms/ui@0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@4.1.8)':
+    dependencies:
+      '@hookform/resolvers': 3.10.0(react-hook-form@7.57.0(react@19.1.0))
+      '@radix-ui/react-accordion': 1.2.11(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-aspect-ratio': 1.1.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-checkbox': 1.3.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-collapsible': 1.1.11(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-context-menu': 2.2.15(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-dialog': 1.1.14(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-dropdown-menu': 2.1.15(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-label': 2.1.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-menubar': 1.1.15(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-popover': 1.1.14(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-progress': 1.1.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-radio-group': 1.3.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-scroll-area': 1.2.9(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-select': 2.2.5(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-separator': 1.1.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-slider': 1.3.5(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-slot': 1.2.3(@types/react@19.1.7)(react@19.1.0)
+      '@radix-ui/react-switch': 1.2.5(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-tabs': 1.1.12(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-toast': 1.2.14(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-toggle': 1.1.9(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-toggle-group': 1.1.10(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@radix-ui/react-tooltip': 1.2.7(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@tailwindcss/typography': 0.5.16(tailwindcss@4.1.8)
+      autoprefixer: 10.4.21(postcss@8.5.4)
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      cmdk: 1.1.1(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      date-fns: 4.1.0
+      lucide-react: 0.474.0(react@19.1.0)
+      react-day-picker: 8.10.1(date-fns@4.1.0)(react@19.1.0)
+      react-hook-form: 7.57.0(react@19.1.0)
+      react-resizable-panels: 2.1.9(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      tailwind-merge: 2.6.0
+      tailwindcss: 4.1.8
+      tailwindcss-animate: 1.0.7(tailwindcss@4.1.8)
+      usehooks-ts: 3.1.1(react@19.1.0)
+      zod: 3.25.57
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
+      - react
+      - react-dom
+
   '@swc/counter@0.1.3': {}
 
   '@swc/helpers@0.5.15':
@@ -13835,6 +13971,14 @@ snapshots:
       lodash.merge: 4.6.2
       postcss-selector-parser: 6.0.10
       tailwindcss: 3.4.17
+
+  '@tailwindcss/typography@0.5.16(tailwindcss@4.1.8)':
+    dependencies:
+      lodash.castarray: 4.4.0
+      lodash.isplainobject: 4.0.6
+      lodash.merge: 4.6.2
+      postcss-selector-parser: 6.0.10
+      tailwindcss: 4.1.8
 
   '@tailwindcss/vite@4.1.8(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))':
     dependencies:
@@ -19644,6 +19788,10 @@ snapshots:
   tailwindcss-animate@1.0.7(tailwindcss@3.4.17):
     dependencies:
       tailwindcss: 3.4.17
+
+  tailwindcss-animate@1.0.7(tailwindcss@4.1.8):
+    dependencies:
+      tailwindcss: 4.1.8
 
   tailwindcss@3.4.17:
     dependencies:

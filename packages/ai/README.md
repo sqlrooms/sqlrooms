@@ -59,14 +59,14 @@ npm install ollama-ai-provider
 
 ```tsx
 import {createAiSlice, createDefaultAiConfig} from '@sqlrooms/ai';
-import {createProjectStore} from '@sqlrooms/project-builder';
+import {createRoomStore} from '@sqlrooms/room-shell';
 
-// Create a project store with AI capabilities
-const {projectStore, useProjectStore} = createProjectStore({
-  // Base project configuration
-  ...createProjectSlice({
+// Create a room store with AI capabilities
+const {roomStore, useRoomStore} = createRoomStore({
+  // Base room configuration
+  ...createRoomSlice({
     config: {
-      // Your project configuration
+      // Your room configuration
       ...createDefaultAiConfig(), // Default AI configuration
     },
   }),
@@ -90,9 +90,9 @@ const {projectStore, useProjectStore} = createProjectStore({
 
 function MyApp() {
   return (
-    <ProjectStateProvider projectStore={projectStore}>
+    <RoomStateProvider roomStore={roomStore}>
       <MyDataApp />
-    </ProjectStateProvider>
+    </RoomStateProvider>
   );
 }
 ```
@@ -111,53 +111,49 @@ import {
   createSqlEditorSlice,
   createDefaultSqlEditorConfig,
 } from '@sqlrooms/sql-editor';
-import {
-  createProjectStore,
-  createProjectSlice,
-} from '@sqlrooms/project-builder';
+import {createRoomStore, createRoomSlice} from '@sqlrooms/room-shell';
 
 // Define your application state type
-export type AppState = ProjectState<AppConfig> &
+export type RoomState = RoomState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState;
 
 // Create the store with multiple slices
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectSlice({
-    config: {
-      // Your base configuration
-      ...createDefaultAiConfig({
-        // Optional: Pre-configured AI sessions
-        sessions: [
-          {
-            id: 'default-session',
-            name: 'Default Analysis',
-            modelProvider: 'openai',
-            model: 'gpt-4o',
-            analysisResults: [],
-            createdAt: new Date(),
-          },
-        ],
-        currentSessionId: 'default-session',
-      }),
-      ...createDefaultSqlEditorConfig(),
-    },
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomSlice({
+      config: {
+        // Your base configuration
+        ...createDefaultAiConfig({
+          // Optional: Pre-configured AI sessions
+          sessions: [
+            {
+              id: 'default-session',
+              name: 'Default Analysis',
+              modelProvider: 'openai',
+              model: 'gpt-4o',
+              analysisResults: [],
+              createdAt: new Date(),
+            },
+          ],
+          currentSessionId: 'default-session',
+        }),
+        ...createDefaultSqlEditorConfig(),
+      },
+    }),
+    // AI slice
+    ...createAiSlice({
+      getApiKey: (modelProvider) => {
+        // Return API key based on provider
+        return apiKeys[modelProvider] || '';
+      },
+      // Custom tools and instructions
+    }),
+    // SQL Editor slice
+    ...createSqlEditorSlice(),
   }),
-  // AI slice
-  ...createAiSlice({
-    getApiKey: (modelProvider) => {
-      // Return API key based on provider
-      return apiKeys[modelProvider] || '';
-    },
-    // Custom tools and instructions
-  }),
-  // SQL Editor slice
-  ...createSqlEditorSlice(),
-}));
+);
 ```
 
 ### Using AI Query Controls
@@ -185,9 +181,7 @@ import {AnalysisResultsContainer, AnalysisResult} from '@sqlrooms/ai';
 
 function AnalysisPanel() {
   // Get the current session and its analysis results
-  const currentSession = useProjectStore((state) =>
-    state.ai.getCurrentSession(),
-  );
+  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
   const analysisResults = currentSession?.analysisResults || [];
 
   return (
@@ -207,13 +201,9 @@ function AnalysisPanel() {
 
 ```tsx
 function AiStatusIndicator() {
-  const isRunningAnalysis = useProjectStore(
-    (state) => state.ai.isRunningAnalysis,
-  );
-  const analysisPrompt = useProjectStore((state) => state.ai.analysisPrompt);
-  const currentSession = useProjectStore((state) =>
-    state.ai.getCurrentSession(),
-  );
+  const isRunningAnalysis = useRoomStore((state) => state.ai.isRunningAnalysis);
+  const analysisPrompt = useRoomStore((state) => state.ai.analysisPrompt);
+  const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
   const lastResult =
     currentSession?.analysisResults[currentSession.analysisResults.length - 1];
 
@@ -244,7 +234,7 @@ The AiSlice provides a comprehensive set of state fields and methods for managin
 The current prompt text entered by the user for analysis.
 
 ```tsx
-const prompt = useProjectStore((state) => state.ai.analysisPrompt);
+const prompt = useRoomStore((state) => state.ai.analysisPrompt);
 ```
 
 #### `isRunningAnalysis`
@@ -252,7 +242,7 @@ const prompt = useProjectStore((state) => state.ai.analysisPrompt);
 Boolean flag indicating whether an analysis is currently in progress.
 
 ```tsx
-const isRunning = useProjectStore((state) => state.ai.isRunningAnalysis);
+const isRunning = useRoomStore((state) => state.ai.isRunningAnalysis);
 ```
 
 #### `tools`
@@ -260,7 +250,7 @@ const isRunning = useProjectStore((state) => state.ai.isRunningAnalysis);
 Record of available AI tools that can be used during analysis.
 
 ```tsx
-const availableTools = useProjectStore((state) => state.ai.tools);
+const availableTools = useRoomStore((state) => state.ai.tools);
 ```
 
 #### `analysisAbortController`
@@ -268,7 +258,7 @@ const availableTools = useProjectStore((state) => state.ai.tools);
 Optional AbortController instance that can be used to cancel an ongoing analysis.
 
 ```tsx
-const abortController = useProjectStore(
+const abortController = useRoomStore(
   (state) => state.ai.analysisAbortController,
 );
 ```
@@ -280,7 +270,7 @@ const abortController = useProjectStore(
 Sets the current analysis prompt text.
 
 ```tsx
-const setPrompt = useProjectStore((state) => state.ai.setAnalysisPrompt);
+const setPrompt = useRoomStore((state) => state.ai.setAnalysisPrompt);
 setPrompt('Analyze sales trends for the last quarter');
 ```
 
@@ -289,7 +279,7 @@ setPrompt('Analyze sales trends for the last quarter');
 Starts the analysis process using the current prompt.
 
 ```tsx
-const startAnalysis = useProjectStore((state) => state.ai.startAnalysis);
+const startAnalysis = useRoomStore((state) => state.ai.startAnalysis);
 await startAnalysis();
 ```
 
@@ -298,7 +288,7 @@ await startAnalysis();
 Cancels any ongoing analysis.
 
 ```tsx
-const cancelAnalysis = useProjectStore((state) => state.ai.cancelAnalysis);
+const cancelAnalysis = useRoomStore((state) => state.ai.cancelAnalysis);
 cancelAnalysis();
 ```
 
@@ -307,7 +297,7 @@ cancelAnalysis();
 Sets the AI model and provider for the current session.
 
 ```tsx
-const setModel = useProjectStore((state) => state.ai.setAiModel);
+const setModel = useRoomStore((state) => state.ai.setAiModel);
 setModel('openai', 'gpt-4o');
 ```
 
@@ -316,7 +306,7 @@ setModel('openai', 'gpt-4o');
 Creates a new analysis session with optional name and model settings.
 
 ```tsx
-const createSession = useProjectStore((state) => state.ai.createSession);
+const createSession = useRoomStore((state) => state.ai.createSession);
 createSession('Financial Analysis', 'openai', 'gpt-4o');
 ```
 
@@ -325,7 +315,7 @@ createSession('Financial Analysis', 'openai', 'gpt-4o');
 Switches to a different analysis session by ID.
 
 ```tsx
-const switchSession = useProjectStore((state) => state.ai.switchSession);
+const switchSession = useRoomStore((state) => state.ai.switchSession);
 switchSession('session-123');
 ```
 
@@ -334,7 +324,7 @@ switchSession('session-123');
 Renames an existing analysis session.
 
 ```tsx
-const renameSession = useProjectStore((state) => state.ai.renameSession);
+const renameSession = useRoomStore((state) => state.ai.renameSession);
 renameSession('session-123', 'Q4 Sales Analysis');
 ```
 
@@ -343,7 +333,7 @@ renameSession('session-123', 'Q4 Sales Analysis');
 Deletes an analysis session by ID.
 
 ```tsx
-const deleteSession = useProjectStore((state) => state.ai.deleteSession);
+const deleteSession = useRoomStore((state) => state.ai.deleteSession);
 deleteSession('session-123');
 ```
 
@@ -352,7 +342,7 @@ deleteSession('session-123');
 Returns the current active analysis session.
 
 ```tsx
-const currentSession = useProjectStore((state) => state.ai.getCurrentSession());
+const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
 ```
 
 #### `deleteAnalysisResult(sessionId: string, resultId: string)`
@@ -360,7 +350,7 @@ const currentSession = useProjectStore((state) => state.ai.getCurrentSession());
 Deletes a specific analysis result from a session.
 
 ```tsx
-const deleteResult = useProjectStore((state) => state.ai.deleteAnalysisResult);
+const deleteResult = useRoomStore((state) => state.ai.deleteAnalysisResult);
 deleteResult('session-123', 'result-456');
 ```
 
@@ -369,7 +359,7 @@ deleteResult('session-123', 'result-456');
 Finds the React component associated with a specific tool.
 
 ```tsx
-const ChartComponent = useProjectStore((state) =>
+const ChartComponent = useRoomStore((state) =>
   state.ai.findToolComponent('chart'),
 );
 ```

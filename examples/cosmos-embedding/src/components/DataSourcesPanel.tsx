@@ -1,9 +1,9 @@
 import {
+  DataSourceTypes,
   FileDataSourcesPanel,
-  ProjectBuilderPanel,
+  RoomPanel,
   TablesListPanel,
-} from '@sqlrooms/project-builder';
-import {DataSourceTypes} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-shell';
 import {SqlQueryDataSourcesPanel} from '@sqlrooms/sql-editor';
 import {
   Accordion,
@@ -13,21 +13,21 @@ import {
 } from '@sqlrooms/ui';
 import {FileTextIcon, FolderIcon, TableIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
 const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
-  const projectFiles = useProjectStore((state) => state.project.projectFiles);
-  const dataSources = useProjectStore((state) => state.config.dataSources);
+  const roomFiles = useRoomStore((state) => state.room.roomFiles);
+  const dataSources = useRoomStore((state) => state.config.dataSources);
   const queryDataSources = useMemo(
     () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
     [dataSources],
   );
 
-  const isProjectEmpty = !projectFiles?.length;
+  const isRoomEmpty = !roomFiles?.length;
 
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>
-      {isProjectEmpty ? (
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+      {isRoomEmpty ? (
         <></>
       ) : (
         <>
@@ -83,7 +83,7 @@ const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
       {/* {AddDataModal ? (
         <AddDataModal isOpen={isOpen} onClose={handleModalClose} />
       ) : null} */}
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 };
 

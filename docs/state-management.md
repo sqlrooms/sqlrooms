@@ -23,37 +23,36 @@ Slices are combined in the store creation process. Here's an example from the AI
 
 ```typescript
 import {AiSliceState} from '@sqlrooms/ai';
-import {ProjectState} from '@sqlrooms/project-builder';
+import {RoomState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
 // Combining multiple slices into a unified application state type
-export type AppState = ProjectState<AppConfig> &
+export type RoomState = RoomState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  CustomAppState;
+  CustomRoomState;
 
 // Creating a store with multiple slices
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project state
-  ...createProjectSlice<AppConfig>({
-    // Project configuration
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Base room state
+    ...createRoomShellSlice<RoomConfig>({
+      // Room configuration
+      // ...
+    })(set, get, store),
+
+    // SQL editor slice
+    ...createSqlEditorSlice()(set, get, store),
+
+    // AI slice with custom configuration
+    ...createAiSlice({
+      // AI slice configuration
+    })(set, get, store),
+
+    // Custom application state
     // ...
-  })(set, get, store),
-
-  // SQL editor slice
-  ...createSqlEditorSlice()(set, get, store),
-
-  // AI slice with custom configuration
-  ...createAiSlice({
-    // AI slice configuration
-  })(set, get, store),
-
-  // Custom application state
-  // ...
-}));
+  }),
+);
 ```
 
 This approach allows you to:
@@ -68,22 +67,20 @@ This approach allows you to:
 Once you've combined slices into a unified store, you can access different parts of the store using selectors. Here's an example:
 
 ```typescript
-// Import the store hook (returned from `createProjectStore`)
-import {useProjectStore} from '../store';
+// Import the store hook (returned from `createRoomStore`)
+import {useRoomStore} from '../store';
 
 export const MyCustomView: React.FC = () => {
-  // Access project slice data
-  const isDataAvailable = useProjectStore(
-    (state) => state.project.isDataAvailable,
-  );
+  // Access room slice data
+  const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
-  // Access AI slice data
-  const currentSessionId = useProjectStore((s) => s.config.ai.currentSessionId);
+  // Access AI slice config (persistable state)
+  const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
 
   // Access custom app state
-  const apiKey = useProjectStore((s) => s.apiKey);
+  const apiKey = useRoomStore((s) => s.apiKey);
   // Access actions from custom app state
-  const setApiKey = useProjectStore((s) => s.setApiKey);
+  const setApiKey = useRoomStore((s) => s.setApiKey);
 
   // Rest of component...
 };
@@ -99,21 +96,21 @@ Here's an example from the AI example application showing how to combine configu
 
 ```typescript
 import {AiSliceConfig} from '@sqlrooms/ai';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {z} from 'zod';
 
 /**
- * Project config for saving - combining multiple slice configs
+ * Room config for saving - combining multiple slice configs
  */
-export const AppConfig = BaseProjectConfig.merge(AiSliceConfig)
+export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
   .merge(SqlEditorSliceConfig)
   .merge(
     z.object({
       // Custom app config
     }),
   );
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomConfig = z.infer<typeof RoomConfig>;
 ```
 
 This approach offers several benefits:
@@ -126,8 +123,8 @@ This approach offers several benefits:
 When using the combined configuration type in your store, you can ensure that all required configuration properties from each slice are properly included:
 
 ```typescript
-// Using the combined AppConfig in the store
-...createProjectSlice<AppConfig>({
+// Using the combined RoomConfig in the store
+...createRoomSlice<RoomConfig>({
   config: {
     // AI slice configuration
     ...createDefaultAiConfig(),
@@ -135,7 +132,7 @@ When using the combined configuration type in your store, you can ensure that al
     ...createDefaultSqlEditorConfig(),
     // Other configuration properties...
   },
-  // Rest of project configuration...
+  // Rest of room configuration...
 })(set, get, store)
 ```
 

@@ -7,13 +7,13 @@ import {
 } from '@sqlrooms/cosmos';
 import {useMammalsData} from './hooks/useMammalsData';
 import {DownloadButton} from './components/DownloadButton';
-import {useProjectStore} from '../../store';
+import {useRoomStore} from '../../store';
 
 export const MammalsGraph: FC = () => {
   const {graphData} = useMammalsData();
   const [focusedPointIndex, setFocusedPointIndex] = useState<number>();
 
-  const updateGraphConfig = useProjectStore((s) => s.cosmos.updateGraphConfig);
+  const updateGraphConfig = useRoomStore((s) => s.cosmos.updateGraphConfig);
 
   const config = useMemo<GraphConfigInterface>(
     () => ({

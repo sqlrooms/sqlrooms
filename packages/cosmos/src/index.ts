@@ -19,7 +19,7 @@ export {
   createCosmosSlice,
   useStoreWithCosmos,
   type CosmosSliceState,
-  type ProjectStateWithCosmos,
+  type RoomStateWithCosmos,
 } from './CosmosSlice';
 export {
   CosmosSliceConfig,

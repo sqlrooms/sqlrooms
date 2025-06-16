@@ -64,7 +64,7 @@ import {DiscussionItem} from '@sqlrooms/discuss';
 
 #### Store Setup with `createDiscussSlice`
 
-To use the discussion system, you need to integrate it with your project store using `createDiscussSlice`:
+To use the discussion system, you need to integrate it with your room store using `createDiscussSlice`:
 
 ```tsx
 import {
@@ -74,47 +74,46 @@ import {
   DiscussSliceState,
 } from '@sqlrooms/discuss';
 import {
-  BaseProjectConfig,
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 import {z} from 'zod';
 
 // 1. Extend your app config with DiscussSliceConfig
-export const AppConfig = BaseProjectConfig.merge(DiscussSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(DiscussSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // 2. Extend your app state with DiscussSliceState
-export type AppState = ProjectBuilderState<AppConfig> & DiscussSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> & DiscussSliceState;
 
 // 3. Create the store with discuss slice
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Add the discuss slice with a user ID
-  ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Add the discuss slice with a user ID
+    ...createDiscussSlice({userId: 'current-user-id'})(set, get, store),
 
-  // Add your project builder slice
-  ...createProjectBuilderSlice<AppConfig>({
-    connector: yourDatabaseConnector,
-    config: {
-      // Include default discuss config
-      ...createDefaultDiscussConfig(),
-      // Your other config...
-      layout: {
-        /* your layout */
+    // Add your room shell slice
+    ...createRoomShellSlice<RoomConfig>({
+      connector: yourDatabaseConnector,
+      config: {
+        // Include default discuss config
+        ...createDefaultDiscussConfig(),
+        // Your other config...
+        layout: {
+          /* your layout */
+        },
+        dataSources: [
+          /* your data sources */
+        ],
       },
-      dataSources: [
-        /* your data sources */
-      ],
-    },
-    project: {
-      // Your project configuration
-    },
-  })(set, get, store),
-}));
+      room: {
+        // Your room configuration
+      },
+    })(set, get, store),
+  }),
+);
 ```
 
 #### Using the Store Hook

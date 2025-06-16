@@ -7,7 +7,7 @@ import {MessageCircle, PlusCircle} from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useMemo, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
-import {useProjectStore} from '../store';
+import {useRoomStore} from '../store';
 import {cn} from '@sqlrooms/ui';
 
 const INITIAL_VIEW_STATE = {
@@ -45,17 +45,13 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   const [commentText, setCommentText] = useState('');
 
   // Get state from store
-  const discussions = useProjectStore(
-    (state) => state.config.discuss.discussions,
-  );
-  const addDiscussion = useProjectStore((state) => state.discuss.addDiscussion);
-  const setReplyToItem = useProjectStore(
-    (state) => state.discuss.setReplyToItem,
-  );
-  const setHighlightedDiscussionId = useProjectStore(
+  const discussions = useRoomStore((state) => state.config.discuss.discussions);
+  const addDiscussion = useRoomStore((state) => state.discuss.addDiscussion);
+  const setReplyToItem = useRoomStore((state) => state.discuss.setReplyToItem);
+  const setHighlightedDiscussionId = useRoomStore(
     (state) => state.discuss.setHighlightedDiscussionId,
   );
-  const highlightedDiscussion = useProjectStore((state) =>
+  const highlightedDiscussion = useRoomStore((state) =>
     state.config.discuss.discussions.find(
       (d) => d.id === state.discuss.highlightedDiscussionId,
     ),
