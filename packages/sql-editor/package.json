@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/sql-editor",
-  "version": "0.16.4",
+  "version": "0.17.0",
   "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
@@ -32,8 +32,8 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/data-table",
-  "version": "0.16.4",
+  "version": "0.17.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
