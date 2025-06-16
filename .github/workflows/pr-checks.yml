@@ -61,7 +61,7 @@ jobs:
         run: pnpm install --shamefully-hoist
 
       - name: Build packages
-        run: pnpm build:all
+        run: pnpm build
 
       - name: Lint
         run: pnpm lint
