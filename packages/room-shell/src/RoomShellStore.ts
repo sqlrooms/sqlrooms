@@ -172,6 +172,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       initialized: false,
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],
+      panels: {},
       roomFilesProgress: {},
       isDataAvailable: false,
       dataSourceStates: {},
