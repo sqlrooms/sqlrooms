@@ -11,7 +11,7 @@ All example applications are available in our [Examples Repository](https://gith
 [Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
 
-<!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
+<img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450>
 
 A minimal Vite application demonstrating the basic usage of SQLRooms. Features include:
 
