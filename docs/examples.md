@@ -45,6 +45,12 @@ A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Fea
 - Query execution with results data table
 - Support for query cancellation
 
+To create a new project from the query example run this:
+
+```bash
+npx degit sqlrooms/examples/query my-new-app/
+```
+
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
 [Try live](https://sqlrooms-ai.netlify.app/)
@@ -63,6 +69,12 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Room state persistence
 
+To create a new project from the AI example run this:
+
+```bash
+npx degit sqlrooms/examples/ai my-new-app/
+```
+
 ## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
 
 [Try live](https://sqlrooms-nextjs.netlify.app/)
@@ -77,6 +89,12 @@ A minimalistic [Next.js](https://nextjs.org/) app example featuring:
 
 - [Recharts module](/api/recharts) for data visualization
 - [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+
+To create a new project from the Next.js example run this:
+
+```bash
+npx degit sqlrooms/examples/nextjs my-new-app/
+```
 
 ## [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
 
@@ -93,6 +111,12 @@ An example showcasing integration with [deck.gl](https://deck.gl/) for geospatia
 - High-performance WebGL-based geospatial visualizations
 - Real-time commenting and annotation system
 - Contextual discussions tied to specific data points
+
+To create a new project from the deckgl-discuss example run this:
+
+```bash
+npx degit sqlrooms/examples/deckgl-discuss my-new-app/
+```
 
 ## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
@@ -112,6 +136,12 @@ An example demonstrating integration with the [Cosmos](https://github.com/cosmog
 - Customizable visual attributes and physics parameters
 - Event handling for node/edge interactions
 
+To create a new project from the cosmos example run this:
+
+```bash
+npx degit sqlrooms/examples/cosmos my-new-app/
+```
+
 ## [Cosmos – 2D Embedding Visualization](http://sqlrooms-cosmos-embedding.netlify.app/)
 
 [Try live](http://sqlrooms-cosmos-embedding.netlify.app/)
@@ -129,6 +159,12 @@ An example showcasing integration with Cosmos for visualizing high-dimensional d
 - Dynamic mapping of data attributes to visual properties
 - Efficient handling of large-scale embedding datasets
 - Interactive exploration with pan, zoom, and filtering
+
+To create a new project from the cosmos-embedding example run this:
+
+```bash
+npx degit sqlrooms/examples/cosmos-embedding my-new-app/
+```
 
 ## [Mosaic Example](https://sqlrooms-mosaic.netlify.app/)
 
@@ -149,6 +185,12 @@ Features include:
 - Seamless integration with Mosaic for interactive visualizations
 - Real-time cross-filtering capabilities across multiple views
 - Example dashboards with common visualization types
+
+To create a new project from the mosaic example run this:
+
+```bash
+npx degit sqlrooms/examples/mosaic my-new-app/
+```
 
 ## Looking for More?
 
