@@ -26,6 +26,25 @@ To create a new project from the get-started example run this:
 npx degit sqlrooms/examples/get-started my-new-app/
 ```
 
+## [SQL Query Editor](https://query.sqlrooms.org/)
+
+[Try live](https://query.sqlrooms.org/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/query)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/query?embed=1)
+
+<a href="https://query.sqlrooms.org/" target="_blank">
+<img src="/media/examples/sqlrooms-query.webp" alt="SQLRooms SQL Query workbench example" width=450>
+</a>
+
+A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Features include:
+
+- Interactive SQL editor with syntax highlighting
+- File dropzone for adding data tables to DuckDB
+- Schema tree for browsing database tables and columns
+- Tabbed interface for working with multiple queries
+- Query execution with results data table
+- Support for query cancellation
+
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
 [Try live](https://sqlrooms-ai.netlify.app/)
