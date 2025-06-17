@@ -48,10 +48,10 @@ export default defineConfig({
             text: 'Overview',
             link: '/overview',
           },
-          {
-            text: 'Modular Architecture',
-            link: '/architecture',
-          },
+          // {
+          //   text: 'Modular Architecture',
+          //   link: '/architecture',
+          // },
         ],
       },
       {

@@ -31,6 +31,12 @@ Explore the [Examples](http://sqlrooms.org/examples) gallery or the [Case Studie
 - **AI‑Powered Analytics:** Local SQL execution lets AI agents generate and run queries instantly.
 - **Privacy & Security:** All data can stay client‑side for simplified compliance.
 
+## Modular Architecture
+
+SQLRooms is designed with a modular architecture that allows developers to pick and choose exactly the functionality they need for their data analytics applications. This approach enables you to build custom solutions tailored to your specific requirements.
+
+<img src="docs/media/overview/architecture.svg" alt="SQLRooms Architecture" width=600>
+
 ## Key Concepts
 
 ### What's a Room?
@@ -39,8 +45,8 @@ A **Room** is a self-contained workspace where users can explore datasets, run q
 
 A Room consists of:
 
-- `roomStore`: a Zustand-based state store for the Room
 - `<RoomShell>`: a React component that renders the Room UI
+- `roomStore`: a Zustand-based state store for the Room
 
 ---
 
@@ -230,8 +236,8 @@ For more details on layout configuration and customization, see the [Layout API 
 ## Next Steps
 
 - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
-- **Dive into the [Architecture Guide](http://sqlrooms.org/architecture)** to see how it all fits together.
-- **Read the [API reference](http://sqlrooms.org/api/room-shell/)** for deeper integration.
+<!-- - **Dive into the [Architecture Guide](http://sqlrooms.org/architecture)** to see how it all fits together. -->
+- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration.
 
 <!-- END:overview.md -->
 
@@ -467,17 +473,9 @@ function YourComponent() {
 }
 ```
 
-## Key Features
-
-- DuckDB integration for powerful data analytics
-- Customizable panel system with sidebar and main view layouts
-- Built-in data source management
-- Extensible room configuration with Zod schemas
-- Type-safe state management
-
 ## Need Help?
 
-- Check our [documentation](https://github.com/sqlrooms/sqlrooms)
+- Start or join a discussion on [GitHub Discussions](https://github.com/sqlrooms/sqlrooms/discussions)
 - File an issue on [GitHub](https://github.com/sqlrooms/sqlrooms/issues)
 
 <!-- END:getting-started.md -->

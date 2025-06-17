@@ -232,15 +232,7 @@ function YourComponent() {
 }
 ```
 
-## Key Features
-
-- DuckDB integration for powerful data analytics
-- Customizable panel system with sidebar and main view layouts
-- Built-in data source management
-- Extensible room configuration with Zod schemas
-- Type-safe state management
-
 ## Need Help?
 
-- Check our [documentation](https://github.com/sqlrooms/sqlrooms)
+- Start or join a discussion on [GitHub Discussions](https://github.com/sqlrooms/sqlrooms/discussions)
 - File an issue on [GitHub](https://github.com/sqlrooms/sqlrooms/issues)

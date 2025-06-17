@@ -27,6 +27,12 @@ Explore the [Examples](/examples) gallery or the [Case Studies](/case-studies) f
 - **AI‑Powered Analytics:** Local SQL execution lets AI agents generate and run queries instantly.
 - **Privacy & Security:** All data can stay client‑side for simplified compliance.
 
+## Modular Architecture
+
+SQLRooms is designed with a modular architecture that allows developers to pick and choose exactly the functionality they need for their data analytics applications. This approach enables you to build custom solutions tailored to your specific requirements.
+
+<img src="/media/overview/architecture.svg" alt="SQLRooms Architecture" width=600>
+
 ## Key Concepts
 
 ### What's a Room?
@@ -35,8 +41,8 @@ A **Room** is a self-contained workspace where users can explore datasets, run q
 
 A Room consists of:
 
-- `roomStore`: a Zustand-based state store for the Room
 - `<RoomShell>`: a React component that renders the Room UI
+- `roomStore`: a Zustand-based state store for the Room
 
 ---
 
@@ -226,5 +232,5 @@ For more details on layout configuration and customization, see the [Layout API 
 ## Next Steps
 
 - **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
-- **Dive into the [Architecture Guide](/architecture)** to see how it all fits together.
-- **Read the [API reference](/api/room-shell/)** for deeper integration.
+<!-- - **Dive into the [Architecture Guide](/architecture)** to see how it all fits together. -->
+- **Read the [API reference](/packages/)** for deeper integration.
