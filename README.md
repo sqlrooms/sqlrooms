@@ -249,7 +249,24 @@ SQLRooms is a powerful framework and a set of building blocks for creating DuckD
 
 ## Try the Minimal Example
 
-To create a new project from the get-started example run this:
+The [Minimal Example](https://github.com/sqlrooms/examples/tree/main/minimal) is the quickest way to see SQLRooms in action with the smallest possible setup. It demonstrates loading a CSV data source and running SQL queries with `useSql()` in a barebones Vite + React app.
+
+To create a new project from the minimal example, run:
+
+```bash
+npx degit sqlrooms/examples/minimal my-minimal-app/
+cd my-minimal-app
+npm install
+npm run dev
+```
+
+---
+
+## Try the Get Started Example
+
+The [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started) is a more feature-rich starter template that demonstrates a typical SQLRooms application structure, including panels, layout, and configuration.
+
+To create a new project from the get-started example, run:
 
 ```bash
 npx degit sqlrooms/examples/get-started myapp/
@@ -258,7 +275,7 @@ npm install
 npm run dev
 ```
 
-This basic Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`.
+This Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`, along with a more complete app shell and layout.
 
 ## Manual Setup
 
