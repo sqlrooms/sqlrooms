@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/jest-config",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "private": true,
   "main": "index.js",
   "type": "module",
