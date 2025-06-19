@@ -231,8 +231,7 @@ export interface DuckDbConnector {
    * @example
    * ```typescript
    * // Basic query
-   * const handle = connector.query('SELECT * FROM users WHERE active = true');
-   * const table = await handle.result;
+   * const handle = await connector.query('SELECT * FROM users WHERE active = true');
    * console.log(`Found ${table.numRows} active users`);
    *
    * // Query with timeout
@@ -244,7 +243,7 @@ export interface DuckDbConnector {
    * });
    *
    * try {
-   *   const result = await handle.result;
+   *   const result = await handle;
    *   console.log('Query completed within timeout');
    * } catch (error) {
    *   if (error.name === 'AbortError') {
@@ -271,8 +270,7 @@ export interface DuckDbConnector {
    * @example
    * ```typescript
    * // Simple JSON query
-   * const handle = connector.queryJson('SELECT name, email FROM users LIMIT 10');
-   * const users = await handle.result;
+   * const users = await connector.queryJson('SELECT name, email FROM users LIMIT 10');
    * for (const user of users) {
    *   console.log(`${user.name}: ${user.email}`);
    * }

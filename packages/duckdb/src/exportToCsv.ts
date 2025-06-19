@@ -15,7 +15,7 @@ export function useExportToCsv() {
         const currentQuery = `(
           ${query}
         ) LIMIT ${pageSize} OFFSET ${offset}`;
-        const results = await dbConnector.query(currentQuery).result;
+        const results = await dbConnector.query(currentQuery);
 
         // Check if we received any results; if not, we are done.
         if (results.numRows === 0) {

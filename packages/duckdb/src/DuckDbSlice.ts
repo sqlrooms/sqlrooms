@@ -306,7 +306,7 @@ export function createDuckDbSlice({
               `CREATE OR REPLACE TABLE ${qualifiedName} AS (
               ${statements[0]}
             )`,
-            ).result,
+            ),
           );
           return {tableName, rowCount};
         },
@@ -349,7 +349,7 @@ export function createDuckDbSlice({
               database,
               table,
             })}`,
-          ).result;
+          );
           return getColValAsNumber(result);
         },
 
@@ -380,7 +380,7 @@ export function createDuckDbSlice({
                     .join(' AND ')}`
                 : ''
             }`,
-          ).result;
+          );
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
@@ -427,8 +427,7 @@ export function createDuckDbSlice({
           const qualifiedTable = isQualifiedTableName(tableName)
             ? tableName
             : makeQualifiedTableName({table: tableName});
-          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`)
-            .result;
+          await connector.query(`DROP TABLE IF EXISTS ${qualifiedTable};`);
           await get().db.refreshTableSchemas();
         },
 
@@ -498,7 +497,7 @@ export function createDuckDbSlice({
             const connector = await get().db.getConnector();
             const result = await connector.query(
               `SELECT current_schema() AS schema, current_database() AS database`,
-            ).result;
+            );
             set((state) =>
               produce(state, (draft) => {
                 draft.db.currentSchema = result.getChild('schema')?.get(0);
@@ -533,7 +532,7 @@ export function createDuckDbSlice({
           const parsedQuery = (
             await connector.query(
               `SELECT json_serialize_sql(${escapeVal(sql)})`,
-            ).result
+            )
           )
             .getChildAt(0)
             ?.get(0);

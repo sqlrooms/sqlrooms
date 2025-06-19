@@ -220,7 +220,7 @@ export function useSql<
           return;
         }
 
-        const result = await queryHandle.result;
+        const result = await queryHandle;
         if (!isMounted) {
           return;
         }
