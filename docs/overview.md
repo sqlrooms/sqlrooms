@@ -231,6 +231,8 @@ For more details on layout configuration and customization, see the [Layout API 
 
 ## Next Steps
 
+- **Check the [Example applications](/examples)** to see what can be built with the framework.
+
 - **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
-<!-- - **Dive into the [Architecture Guide](/architecture)** to see how it all fits together. -->
+
 - **Read the [API reference](/packages/)** for deeper integration.

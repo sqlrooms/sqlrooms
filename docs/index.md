@@ -11,8 +11,8 @@ hero:
       text: What is SQLRooms?
       link: /overview
     - theme: alt
-      text: Get Started
-      link: /getting-started
+      text: Example Apps
+      link: /examples
     - theme: alt
       text: View on GitHub
       link: https://github.com/sqlrooms/sqlrooms

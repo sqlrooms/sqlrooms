@@ -235,8 +235,10 @@ For more details on layout configuration and customization, see the [Layout API 
 
 ## Next Steps
 
+- **Check the [Example applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+
 - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
-<!-- - **Dive into the [Architecture Guide](http://sqlrooms.org/architecture)** to see how it all fits together. -->
+
 - **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration.
 
 <!-- END:overview.md -->
@@ -505,7 +507,7 @@ function YourComponent() {
     pnpm build
     pnpm dev
 
-## Devel documentation locally
+## Develop documentation locally
 
 The documentation is built using [VitePress](https://vitepress.dev/) and [TypeDoc](https://typedoc.org/). To develop the documentation locally:
 

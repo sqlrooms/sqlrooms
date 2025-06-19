@@ -35,9 +35,9 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
+      {text: 'Examples', link: '/examples'},
       {text: 'Get started', link: '/getting-started'},
       {text: 'Reference', link: '/packages'},
-      {text: 'Examples', link: '/examples'},
     ],
 
     sidebar: [

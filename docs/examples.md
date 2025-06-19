@@ -6,7 +6,7 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
+<!-- ## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
 
 [Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
@@ -24,7 +24,7 @@ To create a new project from the get-started example run this:
 
 ```bash
 npx degit sqlrooms/examples/get-started my-new-app/
-```
+``` -->
 
 ## [SQL Query Editor](https://query.sqlrooms.org/)
 
@@ -71,31 +71,6 @@ An advanced example showing how to build an AI-powered analytics application wit
 
 To create a new project from the AI example run this:
 
-```bash
-npx degit sqlrooms/examples/ai my-new-app/
-```
-
-## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
-
-[Try live](https://sqlrooms-nextjs.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
-
-<a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
-  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
-</a>
-
-A minimalistic [Next.js](https://nextjs.org/) app example featuring:
-
-- [Recharts module](/api/recharts) for data visualization
-- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
-
-To create a new project from the Next.js example run this:
-
-```bash
-npx degit sqlrooms/examples/nextjs my-new-app/
-```
-
 ## [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
 
 [Try live](https://sqlrooms-deckgl-discuss.netlify.app/)
@@ -116,6 +91,31 @@ To create a new project from the deckgl-discuss example run this:
 
 ```bash
 npx degit sqlrooms/examples/deckgl-discuss my-new-app/
+```
+
+```bash
+npx degit sqlrooms/examples/ai my-new-app/
+```
+
+## [Next.js + Recharts Example](https://sqlrooms-nextjs.netlify.app/)
+
+[Try live](https://sqlrooms-nextjs.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
+
+<a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
+  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
+</a>
+
+A minimalistic [Next.js](https://nextjs.org/) app example featuring:
+
+- [Recharts module](/api/recharts) for data visualization
+- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+
+To create a new project from the Next.js example run this:
+
+```bash
+npx degit sqlrooms/examples/nextjs my-new-app/
 ```
 
 ## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
