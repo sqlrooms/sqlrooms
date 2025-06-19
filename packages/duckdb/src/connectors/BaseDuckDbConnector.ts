@@ -116,11 +116,15 @@ export function createBaseDuckDbConnector(
     ).finally(() => {
       state.activeQueries.delete(queryId);
     });
-    return {
+    const handle: QueryHandle<T> = {
       result: resultPromise,
       signal: abortController.signal,
       cancel: async () => cancelQuery(queryId),
-    };
+      then: resultPromise.then.bind(resultPromise),
+      catch: resultPromise.catch.bind(resultPromise),
+      finally: resultPromise.finally?.bind(resultPromise),
+    } as unknown as QueryHandle<T>;
+    return handle;
   };
 
   const execute = (sql: string, options?: QueryOptions): QueryHandle =>

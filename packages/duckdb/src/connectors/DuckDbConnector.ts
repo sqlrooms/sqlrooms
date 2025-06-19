@@ -16,26 +16,48 @@ export interface QueryOptions {
 }
 
 /**
- * Handle for managing query execution and cancellation
+ * Handle for managing query execution and cancellation.
+ *
+ * It is **Promise-like**, so you can either:
+ *
+ *  • `await handle` – the most ergonomic form, or
+ *  • `await handle.result` – kept for backwards-compatibility.
+ *
+ * Additional capabilities:
+ *  • `handle.cancel()` – cancel the running query.
+ *  • `handle.signal` – `AbortSignal` that fires when the query is cancelled.
  *
  * @example
  * ```typescript
  * // Simple usage
  * const handle = connector.query('SELECT * FROM table');
- * await handle.result;
+ * const table = await handle; // no .result needed
  *
  * // With cancellation
- * const handle = connector.query('SELECT * FROM large_table');
- * setTimeout(() => handle.cancel(), 5000);
- *
- * // Composable cancellation
  * const controller = new AbortController();
- * const handle1 = connector.query('SELECT * FROM table1', { signal: controller.signal });
- * const handle2 = connector.query('SELECT * FROM table2', { signal: controller.signal });
- * controller.abort(); // Cancels both queries
+ * const handle = connector.query('SELECT * FROM large_table', { signal: controller.signal });
+ * setTimeout(() => controller.abort(), 5000);
+ *
+ * // Manual cancel via the handle
+ * const h = connector.query('SELECT * FROM table');
+ * await someCondition;
+ * await h.cancel();
+ *
+ * // Composable cancellation (multiple queries, one controller)
+ * const controller = new AbortController();
+ * const h1 = connector.query('SELECT * FROM table1', { signal: controller.signal });
+ * const h2 = connector.query('SELECT * FROM table2', { signal: controller.signal });
+ * // Later...
+ * controller.abort(); // Cancels h1 and h2 together
+ *
+ * // Using Promise utilities
+ * const [t1, t2] = await Promise.all([
+ *   connector.query('select 1'),
+ *   connector.query('select 2')
+ * ]);
  * ```
  */
-export interface QueryHandle<T = any> {
+export type QueryHandle<T = any> = PromiseLike<T> & {
   /** Promise that resolves with query results */
   result: Promise<T>;
 
@@ -71,7 +93,7 @@ export interface QueryHandle<T = any> {
    * ```
    */
   signal: AbortSignal;
-}
+};
 
 /**
  * DuckDB connector interface with advanced query cancellation support
