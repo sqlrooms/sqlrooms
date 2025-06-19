@@ -4,6 +4,22 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.18.0
+
+`QueryHandle` returned from `.query()` is now implementing `PromiseLike` and can be awaited. So adding `.result`, which was introduced in [0.16.0](#_0-16-0), is not necessary anymore.
+
+### Old
+
+```tsx
+const result = await connector.query('SELECT * FROM some_table').result;
+```
+
+### New
+
+```tsx
+const result = await connector.query('SELECT * FROM some_table');
+```
+
 ## 0.17.0
 
 This release focuses on standardizing terminology across the codebase and improving the developer experience for new users. We are replacing the concept of "project" with "room" to better align with the SQLRooms name. "Room" is an established concept in collaborative apps and fits well with the overall vision of the project.
@@ -100,6 +116,10 @@ const result = await connector.query('SELECT * FROM some_table');
 ```
 
 #### New
+
+::: warning
+Since [0.18.0](#_0-18-0) `QueryHandle` returned from `.query()` is implementing `PromiseLike` and can be awaited. So adding `.result` is not necessary anymore.
+:::
 
 ```tsx
 const result = await connector.query('SELECT * FROM some_table').result;
