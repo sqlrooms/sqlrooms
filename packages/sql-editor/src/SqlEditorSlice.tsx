@@ -371,7 +371,7 @@ export function createSqlEditorSlice<
               if (signal.aborted) {
                 throw new Error('Query aborted');
               }
-              await connector.query(statement, {signal}).result;
+              await connector.query(statement, {signal});
             }
 
             if (signal.aborted) {
@@ -394,7 +394,7 @@ export function createSqlEditorSlice<
                   limit: get().sqlEditor.queryResultLimit,
                 }),
                 {signal},
-              ).result;
+              );
               queryResult = {
                 status: 'success',
                 type: 'select',
@@ -412,9 +412,9 @@ export function createSqlEditorSlice<
                 );
               }
 
-              const result = await connector.query(lastQueryStatement, {signal})
-                .result;
-
+              const result = await connector.query(lastQueryStatement, {
+                signal,
+              });
               // EXPLAIN and PRAGMA are not detected as select queries
               // and we cannot wrap them in a SELECT * FROM,
               // but we can still execute them and return the result

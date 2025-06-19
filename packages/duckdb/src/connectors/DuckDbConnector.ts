@@ -16,26 +16,49 @@ export interface QueryOptions {
 }
 
 /**
- * Handle for managing query execution and cancellation
+ * Handle for managing query execution and cancellation.
+ *
+ * It is **Promise-like**, so you can either:
+ *
+ *  • `await handle` – the most ergonomic form, or
+ *  • `await handle.result` – kept for backwards-compatibility.
+ *
+ * Additional capabilities:
+ *  • Standard Promise API: `.then()`, `.catch()`, `.finally()`
+ *  • `handle.cancel()` – cancel the running query.
+ *  • `handle.signal` – `AbortSignal` that fires when the query is cancelled.
  *
  * @example
  * ```typescript
  * // Simple usage
  * const handle = connector.query('SELECT * FROM table');
- * await handle.result;
+ * const table = await handle; // no .result needed
  *
  * // With cancellation
- * const handle = connector.query('SELECT * FROM large_table');
- * setTimeout(() => handle.cancel(), 5000);
- *
- * // Composable cancellation
  * const controller = new AbortController();
- * const handle1 = connector.query('SELECT * FROM table1', { signal: controller.signal });
- * const handle2 = connector.query('SELECT * FROM table2', { signal: controller.signal });
- * controller.abort(); // Cancels both queries
+ * const handle = connector.query('SELECT * FROM large_table', { signal: controller.signal });
+ * setTimeout(() => controller.abort(), 5000);
+ *
+ * // Manual cancel via the handle
+ * const h = connector.query('SELECT * FROM table');
+ * await someCondition;
+ * await h.cancel();
+ *
+ * // Composable cancellation (multiple queries, one controller)
+ * const controller = new AbortController();
+ * const h1 = connector.query('SELECT * FROM table1', { signal: controller.signal });
+ * const h2 = connector.query('SELECT * FROM table2', { signal: controller.signal });
+ * // Later...
+ * controller.abort(); // Cancels h1 and h2 together
+ *
+ * // Using Promise utilities
+ * const [t1, t2] = await Promise.all([
+ *   connector.query('select 1'),
+ *   connector.query('select 2')
+ * ]);
  * ```
  */
-export interface QueryHandle<T = any> {
+export type QueryHandle<T = any> = PromiseLike<T> & {
   /** Promise that resolves with query results */
   result: Promise<T>;
 
@@ -71,7 +94,13 @@ export interface QueryHandle<T = any> {
    * ```
    */
   signal: AbortSignal;
-}
+
+  /** Attach a callback for only the rejection of the Promise */
+  catch: Promise<T>['catch'];
+
+  /** Attach a callback that's invoked when the Promise is settled (fulfilled or rejected) */
+  finally: Promise<T>['finally'];
+};
 
 /**
  * DuckDB connector interface with advanced query cancellation support
@@ -209,8 +238,7 @@ export interface DuckDbConnector {
    * @example
    * ```typescript
    * // Basic query
-   * const handle = connector.query('SELECT * FROM users WHERE active = true');
-   * const table = await handle.result;
+   * const handle = await connector.query('SELECT * FROM users WHERE active = true');
    * console.log(`Found ${table.numRows} active users`);
    *
    * // Query with timeout
@@ -222,7 +250,7 @@ export interface DuckDbConnector {
    * });
    *
    * try {
-   *   const result = await handle.result;
+   *   const result = await handle;
    *   console.log('Query completed within timeout');
    * } catch (error) {
    *   if (error.name === 'AbortError') {
@@ -249,8 +277,7 @@ export interface DuckDbConnector {
    * @example
    * ```typescript
    * // Simple JSON query
-   * const handle = connector.queryJson('SELECT name, email FROM users LIMIT 10');
-   * const users = await handle.result;
+   * const users = await connector.queryJson('SELECT name, email FROM users LIMIT 10');
    * for (const user of users) {
    *   console.log(`${user.name}: ${user.email}`);
    * }

@@ -116,11 +116,15 @@ export function createBaseDuckDbConnector(
     ).finally(() => {
       state.activeQueries.delete(queryId);
     });
-    return {
+    const handle: QueryHandle<T> = {
       result: resultPromise,
       signal: abortController.signal,
       cancel: async () => cancelQuery(queryId),
-    };
+      then: resultPromise.then.bind(resultPromise),
+      catch: resultPromise.catch.bind(resultPromise),
+      finally: resultPromise.finally?.bind(resultPromise),
+    } as unknown as QueryHandle<T>;
+    return handle;
   };
 
   const execute = (sql: string, options?: QueryOptions): QueryHandle =>
@@ -161,10 +165,9 @@ export function createBaseDuckDbConnector(
     const fileName = file;
     await ensureInitialized();
     if (opts && isSpatialLoadFileOptions(opts)) {
-      await query(loadSpatial(tableName, fileName, opts)).result;
+      await query(loadSpatial(tableName, fileName, opts));
     } else {
-      await query(load(opts?.method ?? 'auto', tableName, fileName, opts))
-        .result;
+      await query(load(opts?.method ?? 'auto', tableName, fileName, opts));
     }
   };
 
@@ -188,7 +191,7 @@ export function createBaseDuckDbConnector(
       return impl.loadObjectsInternal(file, tableName, opts);
     }
     await ensureInitialized();
-    await query(loadObjectsSql(tableName, file, opts)).result;
+    await query(loadObjectsSql(tableName, file, opts));
   };
 
   return {

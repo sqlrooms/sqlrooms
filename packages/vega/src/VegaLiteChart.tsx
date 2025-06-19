@@ -99,7 +99,7 @@ export const VegaLiteChart: React.FC<{
 
   useEffect(() => {
     const fetchData = async () => {
-      const result = await connector.query(sqlQuery).result;
+      const result = await connector.query(sqlQuery);
       setData({[DATA_NAME]: arrowTableToJson(result)});
     };
     fetchData();
