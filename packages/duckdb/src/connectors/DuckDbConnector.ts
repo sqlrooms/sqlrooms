@@ -24,6 +24,7 @@ export interface QueryOptions {
  *  • `await handle.result` – kept for backwards-compatibility.
  *
  * Additional capabilities:
+ *  • Standard Promise API: `.then()`, `.catch()`, `.finally()`
  *  • `handle.cancel()` – cancel the running query.
  *  • `handle.signal` – `AbortSignal` that fires when the query is cancelled.
  *
@@ -93,6 +94,12 @@ export type QueryHandle<T = any> = PromiseLike<T> & {
    * ```
    */
   signal: AbortSignal;
+
+  /** Attach a callback for only the rejection of the Promise */
+  catch: Promise<T>['catch'];
+
+  /** Attach a callback that's invoked when the Promise is settled (fulfilled or rejected) */
+  finally: Promise<T>['finally'];
 };
 
 /**
