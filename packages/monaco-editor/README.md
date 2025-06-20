@@ -65,14 +65,23 @@ By default, the editor loads its sources from a CDN. You can change this
 behaviour using the `configureMonacoLoader` utility which is a thin wrapper
 around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config).
 This allows bundling `monaco-editor` with your application or using a different
-CDN path.
+CDN path. You can also pass worker constructors so that
+`self.MonacoEnvironment` is set up automatically.
 
 ```ts
 import {configureMonacoLoader} from '@sqlrooms/monaco-editor';
 import * as monaco from 'monaco-editor';
+import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
+import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 
 // Use the monaco-editor package instead of CDN
-configureMonacoLoader({monaco});
+configureMonacoLoader({
+  monaco,
+  workers: {
+    default: editorWorker,
+    json: jsonWorker,
+  },
+});
 
 // Or specify a custom path
 // configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
