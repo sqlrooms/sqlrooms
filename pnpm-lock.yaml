@@ -1072,6 +1072,9 @@ importers:
       '@sqlrooms/core':
         specifier: workspace:*
         version: link:../core
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
