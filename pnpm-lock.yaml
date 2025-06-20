@@ -819,6 +819,9 @@ importers:
       '@sqlrooms/dropzone':
         specifier: ^0.16.2
         version: 0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@3.4.17)
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -828,6 +831,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -837,6 +843,9 @@ importers:
       lucide-react:
         specifier: 0.501.0
         version: 0.501.0(react@19.1.0)
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -2121,6 +2130,7 @@ packages:
   '@cosmograph/cosmos@2.0.0-beta.22':
     resolution: {integrity: sha512-DzPk2m30nJyhwoVeNeTK+zzAmIpC/BQgHW5fBCmlbimrfbgWhXyOu6UEcrmjC32CVCyvgA+EEg2pUU7a/+UtEA==}
     engines: {node: '>=12.2.0', npm: '>=7.0.0'}
+    deprecated: This package has been moved to @cosmos.gl/graph. If you're using version >2, please update
 
   '@deck.gl/aggregation-layers@9.1.12':
     resolution: {integrity: sha512-41u5ZBnpIUzUQ+S8u/8JBWN9BHTerRUcOv+1QmjWsp8noNWZN69cvOy3/AaaPA8UgSEycdnv+y8GGIMspBLHZQ==}

@@ -59,6 +59,25 @@ function MyJsonEditor() {
 }
 ```
 
+### Configuring the loader
+
+By default, the editor loads its sources from a CDN. You can change this
+behaviour using the `configureMonacoLoader` utility which is a thin wrapper
+around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config).
+This allows bundling `monaco-editor` with your application or using a different
+CDN path.
+
+```ts
+import {configureMonacoLoader} from '@sqlrooms/monaco-editor';
+import * as monaco from 'monaco-editor';
+
+// Use the monaco-editor package instead of CDN
+configureMonacoLoader({monaco});
+
+// Or specify a custom path
+// configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
+```
+
 ## Props
 
 ### MonacoEditor Props
