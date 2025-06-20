@@ -1,14 +1,25 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = [
-  'core',
-  'room-shell',
-  'room-config',
-  'duckdb',
-  'ui',
-  'layout',
-];
+const PACKAGE_CATEGORIES = {
+  'Core Packages': ['ai', 'core', 'room-shell', 'duckdb', 'ui', 'layout'],
+  'Feature Packages': [
+    'cosmos',
+    'data-table',
+    'discuss',
+    'dropzone',
+    'monaco-editor',
+    'mosaic',
+    'recharts',
+    's3-browser',
+    'schema-tree',
+    'sql-editor',
+    'vega',
+  ],
+  'Utility Packages': ['utils'],
+  'Internal Packages': ['room-config'],
+};
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   ignoreDeadLinks: true,
@@ -99,22 +110,17 @@ export default defineConfig({
 
       {
         text: 'Reference',
-        items: [
-          {
-            text: 'Core Packages',
-            link: '/packages#core-packages',
-            items: apiSidebarConfig.filter((item) =>
-              CORE_PACKAGES.includes(item.text),
-            ),
+        items: Object.entries(PACKAGE_CATEGORIES).map(
+          ([category, packages]) => {
+            return {
+              text: category,
+              link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
+              items: apiSidebarConfig.filter((item) =>
+                packages.includes(item.text),
+              ),
+            };
           },
-          {
-            text: 'Feature Packages',
-            link: '/packages#feature-packages',
-            items: apiSidebarConfig.filter(
-              (item) => !CORE_PACKAGES.includes(item.text),
-            ),
-          },
-        ],
+        ),
       },
     ],
 

@@ -45,7 +45,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   }),
 );
 
-export const App = () => (
+export const Room = () => (
   <RoomShell
     className="flex h-screen w-screen items-center justify-center"
     roomStore={roomStore}

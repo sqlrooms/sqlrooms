@@ -4,7 +4,7 @@ import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 import {roomStore} from './store';
 
-export const App = () => {
+export const Room = () => {
   const sqlEditorDisclosure = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>

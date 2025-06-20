@@ -4,14 +4,14 @@ import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';
 import {roomStore} from './store';
 
-export const App = () => {
-  const sqlEditorDisclosure = useDisclosure();
+export const Room = () => {
+  const sqlEditor = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
       <RoomShell.Sidebar>
         <RoomShell.SidebarButton
           title="SQL Editor"
-          onClick={sqlEditorDisclosure.onToggle}
+          onClick={sqlEditor.onToggle}
           isSelected={false}
           icon={TerminalIcon}
         />
@@ -19,10 +19,7 @@ export const App = () => {
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
-      <SqlEditorModal
-        isOpen={sqlEditorDisclosure.isOpen}
-        onClose={sqlEditorDisclosure.onClose}
-      />
+      <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
     </RoomShell>
   );
 };
