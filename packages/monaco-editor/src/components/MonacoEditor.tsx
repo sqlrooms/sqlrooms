@@ -1,10 +1,5 @@
-import {
-  Editor,
-  EditorProps,
-  OnChange,
-  OnMount,
-  loader,
-} from '@monaco-editor/react';
+import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
+import {ensureMonacoLoaderConfigured} from '../loader';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
 import React, {useEffect, useRef} from 'react';
 import {
@@ -13,13 +8,6 @@ import {
   getMenuColors,
   getMonospaceFont,
 } from '../utils/color-utils';
-
-// Configure the Monaco loader
-loader.config({
-  paths: {
-    vs: 'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs',
-  },
-});
 
 export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   /**
@@ -75,6 +63,8 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   options = {},
   ...props
 }) => {
+  // Ensure the loader is configured before the editor mounts
+  ensureMonacoLoaderConfigured();
   // Get the app theme from the ThemeProvider
   const {theme: appTheme} = useTheme();
   const [renderKey, setRenderKey] = React.useState(0);
