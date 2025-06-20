@@ -13,6 +13,7 @@ import {
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
@@ -44,6 +45,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
+        connector: createWasmDuckDbConnector({useJsDelivrBundles: false}),
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
