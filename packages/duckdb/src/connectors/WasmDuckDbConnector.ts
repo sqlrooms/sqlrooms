@@ -14,11 +14,42 @@ import {
 import {loadObjects as loadObjectsSql, load, loadSpatial} from './load/load';
 import {DuckDbConnector} from './DuckDbConnector';
 
+// Local DuckDB bundle files for bundler environments
+import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
+import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
+import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
+import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
+import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
+import coi_pthread_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.pthread.worker.js?url';
+
+// Bundles used when not relying on jsDelivr CDN
+const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
+  mvp: {
+    mainModule: duckdb_wasm,
+    mainWorker: mvp_worker,
+  },
+  eh: {
+    mainModule: duckdb_wasm_eh,
+    mainWorker: eh_worker,
+  },
+  coi: {
+    mainModule: duckdb_wasm_coi,
+    mainWorker: coi_worker,
+    pthreadWorker: coi_pthread_worker,
+  },
+};
+
 export interface WasmDuckDbConnectorOptions {
   dbPath?: string;
   queryConfig?: DuckDBQueryConfig;
   initializationQuery?: string;
   logging?: boolean;
+  /**
+   * Whether to load DuckDB bundles from jsDelivr CDN. Set to false to
+   * use the locally bundled files instead.
+   */
+  useJsDelivrBundles?: boolean;
 }
 
 export interface WasmDuckDbConnector extends DuckDbConnector {
@@ -35,6 +66,7 @@ export function createWasmDuckDbConnector(
     initializationQuery = '',
     dbPath = ':memory:',
     queryConfig,
+    useJsDelivrBundles = true,
   } = options;
 
   let db: duckdb.AsyncDuckDB | null = null;
@@ -47,7 +79,9 @@ export function createWasmDuckDbConnector(
         throw new Error('No Worker support in this environment');
       }
       try {
-        const allBundles = duckdb.getJsDelivrBundles();
+        const allBundles = useJsDelivrBundles
+          ? duckdb.getJsDelivrBundles()
+          : MANUAL_BUNDLES;
         const bestBundle = await duckdb.selectBundle(allBundles);
         if (!bestBundle.mainWorker) {
           throw new Error('No best bundle found for DuckDB worker');

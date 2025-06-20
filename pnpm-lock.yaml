@@ -819,6 +819,9 @@ importers:
       '@sqlrooms/dropzone':
         specifier: ^0.16.2
         version: 0.16.2(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(autoprefixer@10.4.21(postcss@8.5.4))(react-dom@19.1.0(react@19.1.0))(react@19.1.0)(tailwindcss@3.4.17)
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -828,6 +831,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
       class-variance-authority:
         specifier: 0.7.1
         version: 0.7.1
@@ -1042,6 +1048,9 @@ importers:
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      lucide-react:
+        specifier: ^0.474.0
+        version: 0.474.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -1072,6 +1081,9 @@ importers:
       '@sqlrooms/core':
         specifier: workspace:*
         version: link:../core
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
