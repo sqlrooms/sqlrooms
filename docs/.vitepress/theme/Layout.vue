@@ -101,7 +101,13 @@ html:not(.dark) .foursquare-footer img {
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1000px) {
+  .video {
+    max-height: 300px;
+  }
+}
+
+@media (min-width: 1500px) {
   .video {
     max-height: 400px;
   }
