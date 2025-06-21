@@ -28,6 +28,9 @@
     "zod": "^3.25.57",
     "zustand": "^5.0.5"
   },
+  "overrides": {
+    "apache-arrow": "17.0.0"
+  },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
