@@ -5,22 +5,22 @@ import DefaultTheme from 'vitepress/theme';
 <template>
   <DefaultTheme.Layout>
     <template #home-hero-image>
-      <a href="./examples.html#ai-powered-analytics">
-        <video
-          autoplay
-          loop
-          muted
-          src="/media/examples/ai-example-light.mp4"
-          class="video light"
-        />
-        <video
-          autoplay
-          loop
-          muted
-          src="/media/examples/ai-example-dark.mp4"
-          class="video dark"
-        />
-      </a>
+      <video
+        autoplay
+        loop
+        muted
+        src="/media/sqlrooms.mp4"
+        class="video light"
+        controls
+      />
+      <video
+        autoplay
+        loop
+        muted
+        src="/media/sqlrooms.mp4"
+        class="video dark"
+        controls
+      />
     </template>
 
     <template #layout-bottom>
