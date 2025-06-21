@@ -5,29 +5,30 @@ import {
   createDefaultAiConfig,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
+import {createWasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
+  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   RoomShellSliceState,
   StateCreator,
-  BaseRoomConfig,
 } from '@sqlrooms/room-shell';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
-import {MainView} from './components/MainView';
-import {createVegaChartTool} from '@sqlrooms/vega';
-import {DataTable} from '@sqlrooms/duckdb';
-import exampleSessions from './example-sessions.json';
 import EchoToolResult from './components/EchoToolResult';
+import {MainView} from './components/MainView';
+import exampleSessions from './example-sessions.json';
+import {DEFAULT_MODEL} from './models';
 export const RoomPanelTypes = z.enum([
   'room-details',
   'data-sources',
@@ -69,6 +70,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
+        connector: createWasmDuckDbConnector({
+          // path: 'opfs://db.duckdb',
+          // accessMode: DuckDBAccessMode.READ_WRITE,
+        }),
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -80,14 +85,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           },
           dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
+            // {
+            //   tableName: 'earthquakes',
+            //   type: 'url',
+            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            // },
           ],
           ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
+            {},
+            // AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
         },
@@ -149,7 +155,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       })(set, get, store),
 
       selectedModel: {
-        model: 'gpt-4o-mini',
+        model: DEFAULT_MODEL,
         provider: 'openai',
       },
       setSelectedModel: (model: string, provider: string) => {

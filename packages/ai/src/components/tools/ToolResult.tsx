@@ -1,7 +1,7 @@
 import {ToolCallMessage} from '@openassistant/core';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, useDisclosure} from '@sqlrooms/ui';
-import {InfoIcon} from 'lucide-react';
+import {TriangleAlertIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
@@ -66,16 +66,16 @@ export const ToolResult: React.FC<ToolResultProps> = ({
       )}
       {isCompleted && (errorMessage || !isSuccess) && (
         <div className="flex flex-col gap-2">
-          <p className="text-sm font-bold text-red-500">Tool call failed</p>
-          <p className="text-xs">{errorMessage}</p>
           <Button
+            className="w-fit"
             variant="ghost"
             size="xs"
             onClick={() => toggleShowDetails()}
-            className="w-fit"
           >
-            <InfoIcon className="h-4 w-4" />
-            {showDetails ? 'Hide Details' : 'Show Details'}
+            <p className="flex items-center gap-2 text-xs text-orange-500">
+              <TriangleAlertIcon />
+              Tool call failed
+            </p>
           </Button>
           {showDetails && (
             <div className="h-[300px] w-full overflow-hidden rounded-md border">

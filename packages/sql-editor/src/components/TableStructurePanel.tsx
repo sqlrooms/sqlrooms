@@ -1,5 +1,5 @@
 import {TableSchemaTree} from '@sqlrooms/schema-tree';
-import {cn, SpinnerPane} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar, SpinnerPane} from '@sqlrooms/ui';
 import React, {useMemo} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
@@ -35,9 +35,9 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
   );
 
   return (
-    <div
+    <ScrollArea
       className={cn(
-        'relative flex h-full flex-col gap-2 overflow-auto px-1 py-2',
+        'relative flex h-full flex-col gap-2 overflow-auto p-2',
         className,
       )}
     >
@@ -47,6 +47,8 @@ export const TableStructurePanel: React.FC<TableStructurePanelProps> = ({
       {isRefreshing && (
         <SpinnerPane className="bg-background/80 absolute inset-0 h-full" />
       )}
-    </div>
+      <ScrollBar orientation="vertical" />
+      <ScrollBar orientation="horizontal" />
+    </ScrollArea>
   );
 };

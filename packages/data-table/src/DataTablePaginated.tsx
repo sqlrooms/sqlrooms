@@ -22,6 +22,8 @@ import {
   TableRow,
   Badge,
   cn,
+  ScrollArea,
+  ScrollBar,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
@@ -109,7 +111,7 @@ export default function DataTablePaginated<Data extends object>({
   return (
     <div className={cn(`relative flex h-full w-full flex-col`, className)}>
       <div className="border-border flex-1 overflow-hidden border font-mono">
-        <div className="h-full overflow-auto">
+        <ScrollArea className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
@@ -200,7 +202,9 @@ export default function DataTablePaginated<Data extends object>({
               ))}
             </TableBody>
           </Table>
-        </div>
+          <ScrollBar orientation="vertical" className="z-50" />
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
       </div>
       {pagination || footerActions ? (
         <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">

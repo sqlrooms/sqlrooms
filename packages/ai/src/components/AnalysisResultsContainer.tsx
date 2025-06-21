@@ -1,4 +1,4 @@
-import {cn, SkeletonPane} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar, SkeletonPane} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
 import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
@@ -28,9 +28,9 @@ export const AnalysisResultsContainer: React.FC<{
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
-      <div
+      <ScrollArea
         ref={containerRef}
-        className="flex w-full flex-grow flex-col gap-5 overflow-auto"
+        className="flex w-full flex-grow flex-col gap-5"
       >
         {currentSession?.analysisResults.map((result) => (
           <AnalysisResult
@@ -41,7 +41,9 @@ export const AnalysisResultsContainer: React.FC<{
         ))}
         {isRunningAnalysis && <SkeletonPane className="p-4" />}
         <div ref={endRef} className="h-10 w-full shrink-0" />
-      </div>
+        <ScrollBar orientation="vertical" />
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
           onClick={scrollToBottom}

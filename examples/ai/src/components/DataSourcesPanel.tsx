@@ -1,22 +1,16 @@
-'use client';
+import {RoomPanel} from '@sqlrooms/room-shell';
+import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
-import {
-  FileDataSourcesPanel,
-  RoomPanel,
-  TablesListPanel,
-} from '@sqlrooms/room-shell';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@sqlrooms/ui';
-import {FolderIcon, TableIcon} from 'lucide-react';
-import {FC} from 'react';
-import {RoomPanelTypes, useRoomStore} from '../store';
+import {useRoomStore, RoomPanelTypes} from '../store';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {useToast} from '@sqlrooms/ui';
 
-const DataSourcesPanel: FC = () => {
-  const addRoomFile = useRoomStore((state) => state.room.addRoomFile);
+export const DataSourcesPanel = () => {
+  const connector = useRoomStore((state) => state.db.connector);
+  const refreshTableSchemas = useRoomStore(
+    (state) => state.db.refreshTableSchemas,
+  );
+  const {toast} = useToast();
 
   return (
     <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
@@ -30,56 +24,30 @@ const DataSourcesPanel: FC = () => {
         }}
         onDrop={async (files) => {
           for (const file of files) {
-            await addRoomFile(file);
+            try {
+              const tableName = convertToValidColumnOrTableName(file.name);
+              await connector.loadFile(file, tableName);
+              toast({
+                variant: 'default',
+                title: 'Table created',
+                description: `File ${file.name} loaded as ${tableName}`,
+              });
+            } catch (error) {
+              toast({
+                variant: 'destructive',
+                title: 'Error',
+                description: `Error loading file ${file.name}: ${error}`,
+              });
+            }
           }
+          await refreshTableSchemas();
         }}
       >
         <div className="text-muted-foreground text-xs">
           Files you add will stay local to your browser.
         </div>
       </FileDropzone>
-
-      <Accordion type="multiple" defaultValue={['files', 'sql', 'tables']}>
-        <AccordionItem value="files">
-          <AccordionTrigger className="gap-1 px-0">
-            <div className="text-muted-foreground flex items-center">
-              <FolderIcon className="h-4 w-4" />
-              <h3 className="ml-1 text-xs uppercase">Files</h3>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-[5px] pb-5 pt-1">
-            <FileDataSourcesPanel />
-          </AccordionContent>
-        </AccordionItem>
-
-        {/* {!isReadOnly || queryDataSources.length > 0 ? (
-          <AccordionItem value="sql">
-            <AccordionTrigger className="px-0 gap-1">
-              <div className="flex items-center text-muted-foreground">
-                <FileTextIcon className="h-4 w-4" />
-                <h3 className="ml-1 text-xs uppercase">SQL Queries</h3>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="pb-5 pt-1 px-[5px]">
-              <SqlQueryDataSourcesPanel queryDataSources={queryDataSources} />
-            </AccordionContent>
-          </AccordionItem>
-        ) : null} */}
-
-        <AccordionItem value="tables">
-          <AccordionTrigger className="gap-1 px-0">
-            <div className="text-muted-foreground flex items-center">
-              <TableIcon className="h-4 w-4" />
-              <h3 className="ml-1 text-xs uppercase">Tables</h3>
-            </div>
-          </AccordionTrigger>
-          <AccordionContent className="px-[5px] pb-5 pt-1">
-            <TablesListPanel />
-          </AccordionContent>
-        </AccordionItem>
-      </Accordion>
+      <TableStructurePanel />
     </RoomPanel>
   );
 };
-
-export {DataSourcesPanel};

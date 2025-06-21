@@ -16,8 +16,7 @@ export const defaultRenderTableNodeMenuItems = (
   return (
     <>
       <TreeNodeActionsMenuItem
-        onClick={(evt) => {
-          evt.stopPropagation();
+        onClick={() => {
           navigator.clipboard.writeText(
             nodeObject.schema == 'main'
               ? nodeObject.name
@@ -30,8 +29,7 @@ export const defaultRenderTableNodeMenuItems = (
       </TreeNodeActionsMenuItem>
 
       <TreeNodeActionsMenuItem
-        onClick={(evt) => {
-          evt.stopPropagation();
+        onClick={() => {
           navigator.clipboard.writeText(
             [
               `SELECT * FROM `,
