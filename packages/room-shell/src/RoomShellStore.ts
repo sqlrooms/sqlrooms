@@ -14,7 +14,7 @@ import {
   RoomStateContext,
   RoomStateProps,
   createRoomSlice,
-} from '@sqlrooms/core';
+} from '../../room-store/dist';
 import {
   DEFAULT_MOSAIC_LAYOUT,
   DataSource,

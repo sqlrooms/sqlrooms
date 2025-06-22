@@ -1,4 +1,4 @@
-import {RoomStateProvider, RoomStore} from '@sqlrooms/core';
+import {RoomStateProvider, RoomStore} from '../../room-store/dist';
 import {MosaicLayout} from '@sqlrooms/layout';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {

@@ -1,4 +1,8 @@
-import {createBaseSlice, RoomState, useBaseRoomStore} from '@sqlrooms/core';
+import {
+  createBaseSlice,
+  RoomState,
+  useBaseRoomStore,
+} from '../../room-store/dist';
 import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';

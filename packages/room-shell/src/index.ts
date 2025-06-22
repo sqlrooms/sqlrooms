@@ -18,7 +18,7 @@ export {
   SidebarButton,
 } from './RoomShellSidebarButtons';
 
-export {type TaskProgress, createRoomStore} from '@sqlrooms/core';
+export {type TaskProgress, createRoomStore} from '../../room-store/dist';
 
 export {
   createRoomShellSlice,

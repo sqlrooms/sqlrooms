@@ -10,6 +10,8 @@ Each package can be installed independently via `pnpm add @sqlrooms/<name>` and 
 ### Core Packages
 
 - **[@sqlrooms/room-shell](/api/room-shell/)** — Central application shell and Zustand‑based state manager with panel system and DuckDB integration.
+- **[@sqlrooms/room-store](/api/core/)** — Core state management utilities, RoomStore, and React context providers.
+- **[@sqlrooms/room-config](/api/room-config/)** — Shared configuration schemas and TypeScript types powered by Zod.
 - **[@sqlrooms/duckdb](/api/duckdb/)** — WebAssembly build of DuckDB plus helper hooks for query execution and data import.
 - **[@sqlrooms/ui](/api/ui/)** — Tailwind‑powered component library and theme manager used across all other packages.
 - **[@sqlrooms/ai](/api/ai/)** — Natural‑language querying and AI‑assisted analytics tools.
@@ -28,11 +30,6 @@ Each package can be installed independently via `pnpm add @sqlrooms/<name>` and 
 - **[@sqlrooms/schema-tree](/api/schema-tree/)** — Interactive database‑schema explorer.
 - **[@sqlrooms/sql-editor](/api/sql-editor/)** — SQL editor with history, syntax highlighting, and result docking.
 - **[@sqlrooms/vega](/api/vega/)** — Vega‑Lite visualization components for sophisticated interactive charts.
-
-### Internal Packages
-
-- **[@sqlrooms/core](/api/core/)** — Core state management utilities, RoomStore, and React context providers.
-- **[@sqlrooms/room-config](/api/room-config/)** — Shared configuration schemas and TypeScript types powered by Zod.
 
 ### Utility Packages
 

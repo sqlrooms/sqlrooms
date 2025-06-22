@@ -944,21 +944,6 @@ importers:
         specifier: ^3.25.57
         version: 3.25.57
 
-  packages/core:
-    dependencies:
-      immer:
-        specifier: ^10.1.1
-        version: 10.1.1
-      react:
-        specifier: 19.1.0
-        version: 19.1.0
-      zod:
-        specifier: ^3.25.57
-        version: 3.25.57
-      zustand:
-        specifier: ^5.0.5
-        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
-
   packages/cosmos:
     dependencies:
       '@cosmograph/cosmos':
@@ -1069,12 +1054,12 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.29.1-dev204.0
         version: 1.29.1-dev204.0
-      '@sqlrooms/core':
-        specifier: workspace:*
-        version: link:../core
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
@@ -1250,9 +1235,6 @@ importers:
 
   packages/room-shell:
     dependencies:
-      '@sqlrooms/core':
-        specifier: workspace:*
-        version: link:../core
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1265,6 +1247,9 @@ importers:
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1286,6 +1271,21 @@ importers:
       react-mosaic-component:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      zod:
+        specifier: ^3.25.57
+        version: 3.25.57
+      zustand:
+        specifier: ^5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+
+  packages/room-store:
+    dependencies:
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
       zod:
         specifier: ^3.25.57
         version: 3.25.57

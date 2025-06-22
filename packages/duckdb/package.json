@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.29.1-dev204.0",
-    "@sqlrooms/core": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "fast-deep-equal": "^3.1.3",
