@@ -19,6 +19,7 @@
   },
   "dependencies": {
     "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*"
   },
   "peerDependencies": {

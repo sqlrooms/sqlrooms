@@ -7,60 +7,59 @@ import {
   createDefaultDuckDbConfig,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
-import {makeMosaicStack, removeMosaicNodeByKey} from '@sqlrooms/layout';
+import {
+  LayoutSliceConfig,
+  LayoutSliceState,
+  RoomPanelInfo,
+  createDefaultLayoutConfig,
+  createLayoutSlice,
+} from '@sqlrooms/layout';
+import {
+  BaseRoomConfig,
+  DataSource,
+  DataSourceTypes,
+  DEFAULT_MOSAIC_LAYOUT,
+  FileDataSource,
+  SqlQueryDataSource,
+  UrlDataSource,
+} from '@sqlrooms/room-config';
 import {
   RoomState,
   RoomStateActions,
   RoomStateContext,
   RoomStateProps,
   createRoomSlice,
-} from '../../room-store/dist';
-import {
-  DEFAULT_MOSAIC_LAYOUT,
-  DataSource,
-  DataSourceTypes,
-  FileDataSource,
-  LayoutConfig,
-  MAIN_VIEW,
-  SqlQueryDataSource,
-  UrlDataSource,
-  isMosaicLayoutParent,
-} from '@sqlrooms/room-config';
+} from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
+import {
+  ProgressInfo,
+  convertToUniqueColumnOrTableName,
+  convertToValidColumnOrTableName,
+  downloadFile,
+} from '@sqlrooms/utils';
 import {castDraft, produce} from 'immer';
 import {ReactNode, useContext} from 'react';
 import {StateCreator, StoreApi, useStore} from 'zustand';
-import {BaseRoomConfig} from '@sqlrooms/room-config/src/BaseRoomConfig';
 import {
   DataSourceState,
   DataSourceStatus,
   RoomFileInfo,
   RoomFileState,
 } from './types';
-import {
-  convertToUniqueColumnOrTableName,
-  convertToValidColumnOrTableName,
-  downloadFile,
-  ProgressInfo,
-} from '@sqlrooms/utils';
 
 export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
   RoomShellSliceState<PC>
 >;
 
-export type RoomPanelInfo = {
-  title?: string;
-  icon?: React.ComponentType<{className?: string}>;
-  component: React.ComponentType;
-  placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
-};
-
-export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig & DuckDbSliceConfig = {
+export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
+  DuckDbSliceConfig &
+  LayoutSliceConfig = {
   title: '',
-  description: '',
   layout: DEFAULT_MOSAIC_LAYOUT,
+  description: '',
   dataSources: [],
   ...createDefaultDuckDbConfig(),
+  ...createDefaultLayoutConfig(),
 };
 
 export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
@@ -71,7 +70,6 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
 
-    panels: Record<string, RoomPanelInfo>;
     CustomErrorBoundary: React.ComponentType<{
       onRetry?: () => void;
       children?: ReactNode;
@@ -85,23 +83,6 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
      * @returns A promise that resolves when the room state has been initialized.
      */
     initialize: () => Promise<void>;
-
-    /**
-     * Set the layout of the room.
-     * @param layout - The layout to set.
-     */
-    setLayout(layout: LayoutConfig): void;
-    /**
-     * Toggle a panel.
-     * @param panel - The panel to toggle.
-     * @param show - Whether to show the panel.
-     */
-    togglePanel: (panel: string, show?: boolean) => void;
-    /**
-     * Toggle the pin state of a panel.
-     * @param panel - The panel to toggle the pin state of.
-     */
-    togglePanelPin: (panel: string) => void;
 
     setRoomTitle(title: string): void;
     setDescription(description: string): void;
@@ -137,7 +118,8 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
 export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
   config: PC;
   room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
-} & DuckDbSliceState;
+} & DuckDbSliceState &
+  LayoutSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -145,8 +127,8 @@ export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
 type InitialState<PC extends BaseRoomConfig> = {
   connector?: DuckDbConnector;
   config: Partial<PC>;
-  room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config' | 'panels'>> & {
-    panels?: RoomShellSliceStateProps<PC>['panels'];
+  room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config'>> & {
+    panels?: Record<string, RoomPanelInfo>;
   };
 };
 
@@ -172,7 +154,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       initialized: false,
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],
-      panels: {},
       roomFilesProgress: {},
       isDataAvailable: false,
       dataSourceStates: {},
@@ -186,6 +167,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
     const roomState: RoomShellSliceState<PC> = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
+      ...createLayoutSlice({panels: roomStateProps.panels})(set, get, store),
       room: {
         ...initialRoomState,
         ...roomSliceState.room,
@@ -246,93 +228,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
               draft.config.description = description;
             }),
           ),
-        setLayout: (layout) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.config.layout = layout;
-            }),
-          ),
-
-        togglePanel: (panel, show) => {
-          const {config} = get();
-          if (config.layout?.nodes === panel) {
-            // don't hide the view if it's the only one
-            return;
-          }
-          const result = removeMosaicNodeByKey(config.layout?.nodes, panel);
-          const isShown = result.success;
-          if (isShown) {
-            if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
-              return;
-            }
-            set((state) =>
-              produce(state, (draft) => {
-                const layout = draft.config.layout;
-                layout.nodes = result.nextTree;
-                if (layout.pinned?.includes(panel)) {
-                  layout.pinned = layout.pinned.filter((p) => p !== panel);
-                }
-              }),
-            );
-          } else {
-            if (show === false) {
-              return;
-            }
-            set((state) =>
-              produce(state, (draft) => {
-                const layout = draft.config.layout;
-                const root = layout.nodes;
-                const placement = draft.room.panels[panel]?.placement;
-                const side = placement === 'sidebar' ? 'first' : 'second';
-                const toReplace = isMosaicLayoutParent(root)
-                  ? root[side]
-                  : undefined;
-                if (
-                  toReplace &&
-                  isMosaicLayoutParent(root) &&
-                  !isMosaicLayoutParent(toReplace) &&
-                  toReplace !== MAIN_VIEW &&
-                  !layout.fixed?.includes(toReplace) &&
-                  !layout.pinned?.includes(toReplace)
-                ) {
-                  // replace first un-pinned leaf
-                  root[side] = panel;
-                } else {
-                  const panelNode = {node: panel, weight: 1};
-                  const restNode = {
-                    node: config.layout?.nodes,
-                    weight: 3,
-                  };
-                  // add to to the left
-                  layout.nodes = makeMosaicStack(
-                    placement === 'sidebar-bottom' ? 'column' : 'row',
-                    side === 'first'
-                      ? [panelNode, restNode]
-                      : [restNode, panelNode],
-                  );
-                }
-              }),
-            );
-          }
-        },
-
-        /**
-         * Toggle the pin state of a panel.
-         * @param panel - The panel to toggle the pin state of.
-         */
-        togglePanelPin: (panel: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.config.layout;
-              const pinned = layout.pinned ?? [];
-              if (pinned.includes(panel)) {
-                layout.pinned = pinned.filter((p) => p !== panel);
-              } else {
-                layout.pinned = [...pinned, panel];
-              }
-            }),
-          );
-        },
 
         addDataSource: async (
           dataSource,

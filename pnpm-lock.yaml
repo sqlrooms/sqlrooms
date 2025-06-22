@@ -1157,6 +1157,9 @@ importers:
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui

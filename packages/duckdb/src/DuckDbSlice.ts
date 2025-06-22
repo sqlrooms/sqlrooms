@@ -2,7 +2,7 @@ import {
   createBaseSlice,
   RoomState,
   useBaseRoomStore,
-} from '../../room-store/dist';
+} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';

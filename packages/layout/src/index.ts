@@ -3,4 +3,5 @@
  * @packageDocumentation
  */
 
+export * from './LayoutSlice';
 export * from './mosaic';

@@ -25,7 +25,6 @@ export {
   createSlice,
   useBaseRoomShellStore,
   type RoomShellSliceState,
-  type RoomPanelInfo,
 } from './RoomShellStore';
 
 export type {StateCreator, StoreApi} from 'zustand';
@@ -40,3 +39,4 @@ export {
 // Re-export all room-config types
 export * from '@sqlrooms/room-config';
 export {RoomShell} from './RoomShell';
+export {type RoomPanelInfo} from '@sqlrooms/layout';
