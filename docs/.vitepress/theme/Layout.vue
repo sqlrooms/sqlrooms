@@ -114,10 +114,4 @@ html:not(.dark) .foursquare-footer img {
     max-height: 300px;
   }
 }
-
-@media (min-width: 1500px) {
-  .video {
-    max-height: 400px;
-  }
-}
 </style>
