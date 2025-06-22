@@ -6,21 +6,23 @@ import DefaultTheme from 'vitepress/theme';
   <DefaultTheme.Layout>
     <template #home-hero-image>
       <video
-        autoplay
+        class="video"
+        poster="/media/overview/collage.webp"
+        controls
         loop
         muted
-        src="/media/sqlrooms.mp4"
-        class="video light"
-        controls
-      />
+      >
+        <source src="/media/sqlrooms-examples-longer.mp4" type="video/mp4" />
+      </video>
+      <!--
       <video
+        class="video dark"
+        src="/media/sqlrooms.mp4"
         autoplay
+        controls
         loop
         muted
-        src="/media/sqlrooms.mp4"
-        class="video dark"
-        controls
-      />
+      />-->
     </template>
 
     <template #layout-bottom>
@@ -53,13 +55,15 @@ import DefaultTheme from 'vitepress/theme';
   max-height: 190px;
 }
 
+/*
 html:not(.dark) .video.dark {
   display: none;
 }
 
-.dark .video.light {
+.dark .video:not(.dark) {
   display: none;
 }
+*/
 
 .foursquare-footer {
   display: flex;
@@ -93,6 +97,10 @@ html:not(.dark) .video.dark {
 
 html:not(.dark) .foursquare-footer img {
   filter: invert(1);
+}
+
+.video {
+  max-height: 150px;
 }
 
 @media (min-width: 640px) {

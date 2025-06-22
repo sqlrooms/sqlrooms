@@ -26,7 +26,7 @@
     "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
     "graph": "turbo run build --filter=@sqlrooms/* --graph | sed 's/\\[root\\] @sqlrooms\\///g' | sed 's/#build//g' | grep -v '___ROOT___'",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs --port 4173 --open\"",
+    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs --port 4173 --host --open\"",
     "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs && echo 'open http://localhost:4173'",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
