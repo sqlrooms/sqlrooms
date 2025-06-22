@@ -1052,8 +1052,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.1-dev204.0
-        version: 1.29.1-dev204.0
+        specifier: 1.29.1-dev249.0
+        version: 1.29.1-dev249.0
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
@@ -2243,8 +2243,8 @@ packages:
   '@duckdb/duckdb-wasm@1.29.0':
     resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==}
 
-  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
-    resolution: {integrity: sha512-AgGQFCmPFbdCw6imPrCJECUK6v+VkSa0evmrFuqrFDMsL7/X6vKGDa5fx9NMtxiULBUUEQPnBteRHqX7LdamIw==}
+  '@duckdb/duckdb-wasm@1.29.1-dev249.0':
+    resolution: {integrity: sha512-2Xp7urbIhuyZxfIY2+x5b870JOu34S1Y4w+PRn22V/cMk1+GdeEJRpclnLDIZQEP/ABLigIWbR4z4rUEwNXn4g==}
 
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
@@ -11291,7 +11291,7 @@ snapshots:
     dependencies:
       apache-arrow: 17.0.0
 
-  '@duckdb/duckdb-wasm@1.29.1-dev204.0':
+  '@duckdb/duckdb-wasm@1.29.1-dev249.0':
     dependencies:
       apache-arrow: 17.0.0
 
