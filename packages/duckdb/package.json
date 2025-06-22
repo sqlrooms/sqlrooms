@@ -18,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.29.1-dev204.0",
+    "@duckdb/duckdb-wasm": "1.29.1-dev249.0",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

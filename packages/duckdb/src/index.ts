@@ -38,3 +38,4 @@ export {
   type TypedRowAccessor,
   createTypedRowAccessor,
 } from './typedRowAccessor';
+export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
