@@ -22,8 +22,8 @@ hero:
     alt: SQLRooms AI
 
 features:
-  - title: DuckDB Integration
-    details: Leverage DuckDB's powerful SQL capabilities, enabling fast in browser data processing  without a backend
+  - title: Blazing-Fast Local Analytics
+    details: Leverage DuckDB's powerful SQL capabilities, enabling fast in browser data processing without a backend
   - title: Own Your Data
     details: Data remains on your local device for maximum privacy, sub-second analytics on large datasets, and offline functionality
   - title: AI Integration
