@@ -1,4 +1,4 @@
-import {createWasmDuckDbConnector, DuckDBAccessMode} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
