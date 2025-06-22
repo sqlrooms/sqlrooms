@@ -51,11 +51,22 @@ export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
 export const TreeNodeActionsMenuItem = forwardRef<
   ElementRef<typeof DropdownMenuItem>,
   ComponentPropsWithoutRef<typeof DropdownMenuItem>
->(({className, ...props}, ref) => (
-  <DropdownMenuItem
-    ref={ref}
-    className={cn('gap-2 text-xs', className)}
-    {...props}
-  />
-));
+>(({className, ...props}, ref) => {
+  const {onClick} = props;
+  return (
+    <DropdownMenuItem
+      ref={ref}
+      className={cn('gap-2 text-xs', className)}
+      {...props}
+      onClick={
+        onClick
+          ? (evt) => {
+              evt.stopPropagation(); // prevent the tree node from closing
+              onClick(evt);
+            }
+          : undefined
+      }
+    />
+  );
+});
 TreeNodeActionsMenuItem.displayName = 'TreeNodeActionsMenuItem';
