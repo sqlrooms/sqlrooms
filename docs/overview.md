@@ -24,8 +24,16 @@ Explore the [Examples](/examples) gallery or the [Case Studies](/case-studies) f
 
 - **Performance & Scale:** Each user gets an in‑browser DuckDB instance with columnar speed and zero backend load.
 - **Modular Architecture:** Mix-and-match packages and combine state _slices_ to include only the functionality you need.
-- **AI‑Powered Analytics:** Local SQL execution lets AI agents generate and run queries instantly.
-- **Privacy & Security:** All data can stay client‑side for simplified compliance.
+- **AI‑Powered Analytics:** Use agents that can write and execute SQL queries, and generate insights directly in your browser.
+
+## Why Local first?
+
+_Local-first_ means your data and computation stay on your device, not on a remote server. This approach is inspired by the [Local-first Software](https://www.inkandswitch.com/essay/local-first) principles from Ink & Switch, emphasizing user ownership, privacy, and speed.
+
+- **Privacy:** All data can stay client‑side for simplified compliance and peace of mind—nothing leaves your device unless you choose.
+- **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage.
+- **Fast Local Querying:** Queries run instantly in your browser, with no network roundtrip or server lag.
+- **Private AI Insights:** AI agents generate insights and run queries locally, so your data does not have to be shared with external model providers.
 
 ## Modular Architecture
 
