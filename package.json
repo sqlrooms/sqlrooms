@@ -89,6 +89,7 @@
     ],
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",
+      "@vaadin/vaadin-usage-statistics",
       "sharp"
     ]
   }
