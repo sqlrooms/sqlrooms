@@ -23,7 +23,10 @@
     "react": "19.1.0",
     "react-dom": "19.1.0",
     "zod": "3.25.57",
-    "zustand": "5.0.5"
+    "zustand": "5.0.5",
+    "@sqlrooms/utils": "workspace:*",
+    "monaco-editor": "^0.52.2",
+    "@sqlrooms/monaco-editor": "workspace:*"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
