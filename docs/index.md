@@ -4,8 +4,8 @@ layout: home
 
 hero:
   name: 'SQLRooms'
-  text: 'Build data-centric apps with DuckDB'
-  tagline: An Open Source Framework for Building Local-First Data Analytics Apps powered by DuckDB
+  text: 'Build Local-First Data Apps with DuckDB'
+  tagline: An Open Source Framework for Single-Node Data Analytics powered by DuckDB-powered
   actions:
     - theme: brand
       text: What is SQLRooms?
