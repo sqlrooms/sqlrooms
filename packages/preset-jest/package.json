@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/jest-config",
+  "name": "@sqlrooms/preset-jest",
   "version": "0.18.1",
   "private": true,
   "main": "index.js",

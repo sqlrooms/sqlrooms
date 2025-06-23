@@ -25,18 +25,18 @@ importers:
       '@lerna-lite/version':
         specifier: ^3.12.3
         version: 3.12.3(@lerna-lite/publish@3.12.3(@types/node@20.19.0)(babel-plugin-macros@3.1.0)(typescript@5.8.3))(@types/node@20.19.0)(babel-plugin-macros@3.1.0)(typescript@5.8.3)
-      '@sqlrooms/eslint-config':
+      '@sqlrooms/preset-eslint':
         specifier: workspace:*
-        version: link:packages/eslint-config
-      '@sqlrooms/jest-config':
+        version: link:packages/preset-eslint
+      '@sqlrooms/preset-jest':
         specifier: workspace:*
-        version: link:packages/jest-config
-      '@sqlrooms/typedoc-config':
+        version: link:packages/preset-jest
+      '@sqlrooms/preset-typedoc':
         specifier: workspace:*
-        version: link:packages/typedoc-config
-      '@sqlrooms/typescript-config':
+        version: link:packages/preset-typedoc
+      '@sqlrooms/preset-typescript':
         specifier: workspace:*
-        version: link:packages/typescript-config
+        version: link:packages/preset-typescript
       '@types/glob':
         specifier: ^8.1.0
         version: 8.1.0
@@ -1089,69 +1089,6 @@ importers:
         specifier: ^29.3.4
         version: 29.3.4(@babel/core@7.27.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.4))(jest@29.7.0(@types/node@24.0.0)(babel-plugin-macros@3.1.0))(typescript@5.8.3)
 
-  packages/eslint-config:
-    devDependencies:
-      '@next/eslint-plugin-next':
-        specifier: ^15.3.3
-        version: 15.3.3
-      '@typescript-eslint/eslint-plugin':
-        specifier: ^8.34.0
-        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
-      '@typescript-eslint/parser':
-        specifier: ^8.34.0
-        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
-      eslint:
-        specifier: ^9.28.0
-        version: 9.28.0(jiti@2.4.2)
-      eslint-config-prettier:
-        specifier: ^9.1.0
-        version: 9.1.0(eslint@9.28.0(jiti@2.4.2))
-      eslint-plugin-only-warn:
-        specifier: ^1.1.0
-        version: 1.1.0
-      eslint-plugin-react:
-        specifier: ^7.37.5
-        version: 7.37.5(eslint@9.28.0(jiti@2.4.2))
-      eslint-plugin-react-hooks:
-        specifier: ^5.2.0
-        version: 5.2.0(eslint@9.28.0(jiti@2.4.2))
-      eslint-plugin-turbo:
-        specifier: ^2.5.4
-        version: 2.5.4(eslint@9.28.0(jiti@2.4.2))(turbo@2.5.4)
-      globals:
-        specifier: ^15.15.0
-        version: 15.15.0
-      typescript:
-        specifier: 5.8.3
-        version: 5.8.3
-      typescript-eslint:
-        specifier: ^8.34.0
-        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
-
-  packages/jest-config:
-    dependencies:
-      '@testing-library/jest-dom':
-        specifier: ^6.6.3
-        version: 6.6.3
-      '@testing-library/react':
-        specifier: ^16.3.0
-        version: 16.3.0(@testing-library/dom@9.3.4)(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
-      '@types/jest':
-        specifier: ^29.5.14
-        version: 29.5.14
-      identity-obj-proxy:
-        specifier: ^3.0.0
-        version: 3.0.0
-      jest:
-        specifier: ^29.7.0
-        version: 29.7.0(@types/node@24.0.0)(babel-plugin-macros@3.1.0)
-      jest-environment-jsdom:
-        specifier: ^29.7.0
-        version: 29.7.0
-      ts-jest:
-        specifier: ^29.3.4
-        version: 29.3.4(@babel/core@7.27.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.4))(jest@29.7.0(@types/node@24.0.0)(babel-plugin-macros@3.1.0))(typescript@5.8.3)
-
   packages/layout:
     dependencies:
       '@sqlrooms/layout-config':
@@ -1220,6 +1157,86 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+
+  packages/preset-eslint:
+    devDependencies:
+      '@next/eslint-plugin-next':
+        specifier: ^15.3.3
+        version: 15.3.3
+      '@typescript-eslint/eslint-plugin':
+        specifier: ^8.34.0
+        version: 8.34.0(@typescript-eslint/parser@8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3))(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
+      '@typescript-eslint/parser':
+        specifier: ^8.34.0
+        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
+      eslint:
+        specifier: ^9.28.0
+        version: 9.28.0(jiti@2.4.2)
+      eslint-config-prettier:
+        specifier: ^9.1.0
+        version: 9.1.0(eslint@9.28.0(jiti@2.4.2))
+      eslint-plugin-only-warn:
+        specifier: ^1.1.0
+        version: 1.1.0
+      eslint-plugin-react:
+        specifier: ^7.37.5
+        version: 7.37.5(eslint@9.28.0(jiti@2.4.2))
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.28.0(jiti@2.4.2))
+      eslint-plugin-turbo:
+        specifier: ^2.5.4
+        version: 2.5.4(eslint@9.28.0(jiti@2.4.2))(turbo@2.5.4)
+      globals:
+        specifier: ^15.15.0
+        version: 15.15.0
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      typescript-eslint:
+        specifier: ^8.34.0
+        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
+
+  packages/preset-jest:
+    dependencies:
+      '@testing-library/jest-dom':
+        specifier: ^6.6.3
+        version: 6.6.3
+      '@testing-library/react':
+        specifier: ^16.3.0
+        version: 16.3.0(@testing-library/dom@9.3.4)(@types/react-dom@19.1.6(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      '@types/jest':
+        specifier: ^29.5.14
+        version: 29.5.14
+      identity-obj-proxy:
+        specifier: ^3.0.0
+        version: 3.0.0
+      jest:
+        specifier: ^29.7.0
+        version: 29.7.0(@types/node@24.0.0)(babel-plugin-macros@3.1.0)
+      jest-environment-jsdom:
+        specifier: ^29.7.0
+        version: 29.7.0
+      ts-jest:
+        specifier: ^29.3.4
+        version: 29.3.4(@babel/core@7.27.4)(@jest/transform@29.7.0)(@jest/types@29.6.3)(babel-jest@29.7.0(@babel/core@7.27.4))(jest@29.7.0(@types/node@24.0.0)(babel-plugin-macros@3.1.0))(typescript@5.8.3)
+
+  packages/preset-typedoc:
+    dependencies:
+      typedoc:
+        specifier: 0.28.5
+        version: 0.28.5(typescript@5.8.3)
+      typedoc-plugin-markdown:
+        specifier: 4.4.2
+        version: 4.4.2(typedoc@0.28.5(typescript@5.8.3))
+      typedoc-plugin-zod:
+        specifier: 1.4.1
+        version: 1.4.1(typedoc@0.28.5(typescript@5.8.3))
+      typedoc-vitepress-theme:
+        specifier: 1.1.2
+        version: 1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.28.5(typescript@5.8.3)))
+
+  packages/preset-typescript: {}
 
   packages/recharts:
     dependencies:
@@ -1298,6 +1315,9 @@ importers:
 
   packages/room-store:
     dependencies:
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
       immer:
         specifier: ^10.1.1
         version: 10.1.1
@@ -1450,23 +1470,6 @@ importers:
       zod:
         specifier: ^3.25.57
         version: 3.25.57
-
-  packages/typedoc-config:
-    dependencies:
-      typedoc:
-        specifier: 0.28.5
-        version: 0.28.5(typescript@5.8.3)
-      typedoc-plugin-markdown:
-        specifier: 4.4.2
-        version: 4.4.2(typedoc@0.28.5(typescript@5.8.3))
-      typedoc-plugin-zod:
-        specifier: 1.4.1
-        version: 1.4.1(typedoc@0.28.5(typescript@5.8.3))
-      typedoc-vitepress-theme:
-        specifier: 1.1.2
-        version: 1.1.2(typedoc-plugin-markdown@4.4.2(typedoc@0.28.5(typescript@5.8.3)))
-
-  packages/typescript-config: {}
 
   packages/ui:
     dependencies:

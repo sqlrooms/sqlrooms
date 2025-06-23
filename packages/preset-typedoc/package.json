@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/typedoc-config",
+  "name": "@sqlrooms/preset-typedoc",
   "version": "0.18.1",
   "type": "module",
   "private": true,

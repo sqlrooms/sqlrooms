@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/eslint-config",
+  "name": "@sqlrooms/preset-eslint",
   "version": "0.18.1",
   "type": "module",
   "private": true,

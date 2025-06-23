@@ -1,3 +1,3 @@
-# `@sqlrooms/eslint-config`
+# `@sqlrooms/preset-eslint`
 
 Shared eslint configuration for the workspace.

@@ -6,8 +6,9 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {createWasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
+  LayoutTypes,
+  MAIN_VIEW,
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,

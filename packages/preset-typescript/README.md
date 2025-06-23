@@ -1,3 +1,3 @@
-# `@sqlrooms/typescript-config`
+# `@sqlrooms/preset-typescript`
 
 Shared typescript configuration for the workspace.
