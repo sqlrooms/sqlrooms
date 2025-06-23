@@ -15,3 +15,5 @@ export {
   type TaskProgress,
   createBaseSlice,
 } from './RoomStore';
+
+export * from '@sqlrooms/room-config';

@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+export {RoomShell} from './RoomShell';
+
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
 export {TableCard} from './data-sources/TableCard';
@@ -17,8 +19,6 @@ export {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-
-export {type TaskProgress, createRoomStore} from '../../room-store/dist';
 
 export {
   createRoomShellSlice,
@@ -36,7 +36,6 @@ export {
   type RoomFileState,
 } from './types';
 
-// Re-export all room-config types
-export * from '@sqlrooms/room-config';
-export {RoomShell} from './RoomShell';
+export * from '@sqlrooms/room-store';
+
 export {type RoomPanelInfo} from '@sqlrooms/layout';

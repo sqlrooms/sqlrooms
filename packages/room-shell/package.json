@@ -30,6 +30,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "apache-arrow": "17.0.0",

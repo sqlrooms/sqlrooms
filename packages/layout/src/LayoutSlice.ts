@@ -3,18 +3,18 @@ import {
   createBaseSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
-import {
-  BaseRoomConfig,
-  DEFAULT_MOSAIC_LAYOUT,
-  LayoutConfig,
-  MAIN_VIEW,
-  isMosaicLayoutParent,
-} from '@sqlrooms/room-config';
+import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
 import React from 'react';
 import {StateCreator} from 'zustand';
+import {
+  LayoutConfig,
+  DEFAULT_MOSAIC_LAYOUT,
+  MAIN_VIEW,
+  isMosaicLayoutParent,
+} from '@sqlrooms/layout-config';
 
 export type RoomPanelInfo = {
   title?: string;

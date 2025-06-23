@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/layout",
+  "name": "@sqlrooms/layout-config",
   "version": "0.18.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,14 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/layout-config": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
-    "@sqlrooms/room-store": "workspace:*",
-    "@sqlrooms/ui": "workspace:*"
-  },
-  "peerDependencies": {
-    "react": ">=18",
-    "react-mosaic-component": "5.3.0"
+    "zod": "^3.25.57"
   },
   "scripts": {
     "dev": "tsc -w",

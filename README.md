@@ -298,15 +298,15 @@ Install the required SQLRooms packages:
 ::: code-group
 
 ```bash [npm]
-npm install @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+npm install @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 ```bash [pnpm]
-pnpm add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+pnpm add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 ```bash [yarn]
-yarn add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+yarn add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 :::
@@ -351,7 +351,7 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 1. First, define your panel types and room configuration:
 
 ```typescript
-import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
+import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-store';
 import {z} from 'zod';
 
 // Define panel types

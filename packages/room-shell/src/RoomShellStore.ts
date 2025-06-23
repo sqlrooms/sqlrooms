@@ -18,11 +18,11 @@ import {
   BaseRoomConfig,
   DataSource,
   DataSourceTypes,
-  DEFAULT_MOSAIC_LAYOUT,
   FileDataSource,
   SqlQueryDataSource,
   UrlDataSource,
 } from '@sqlrooms/room-config';
+import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   RoomState,
   RoomStateActions,

@@ -6,13 +6,20 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.19.0
 
-### Package name changes
+We are trying to make the package structure more logical, especially, for new users of the SQLRooms framework.
 
-- `@sqlrooms/core` renamed to `@sqlrooms/room-store`
-
-### Other changes
-
-- Layout-related state and functions moved to `LayoutSlice` which is namespaced as `layout`:
+- Package `@sqlrooms/core` renamed to `@sqlrooms/room-store`
+- The layout config exports were moved to `@sqlrooms/layout` (re-exported from `@sqlrooms/layout-config`):
+  - `LayoutConfig`
+  - `LayoutTypes`
+  - `MosaicLayoutDirection`
+  - `MosaicLayoutParent`
+  - `isMosaicLayoutParent`
+  - `MosaicLayoutNodeKey`
+  - `MosaicLayoutNode`
+  - `MosaicLayoutConfig`
+  - `DEFAULT_MOSAIC_LAYOUT`
+- All layout-related state and functions was moved to `LayoutSlice` which is namespaced as `layout`:
   - `panels`
   - `setLayout`
   - `togglePanel`

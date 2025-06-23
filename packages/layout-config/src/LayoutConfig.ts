@@ -6,6 +6,11 @@ export const MAIN_VIEW = 'main';
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;
 
+export const DEFAULT_MOSAIC_LAYOUT: MosaicLayoutConfig = {
+  type: LayoutTypes.enum.mosaic,
+  nodes: MAIN_VIEW,
+};
+
 export const MosaicLayoutDirection = z.enum(['row', 'column']);
 export type MosaicLayoutDirection = z.infer<typeof MosaicLayoutDirection>;
 
@@ -49,12 +54,4 @@ export const MosaicLayoutConfig = z.object({
 export type MosaicLayoutConfig = z.infer<typeof MosaicLayoutConfig>;
 
 export const LayoutConfig = z.discriminatedUnion('type', [MosaicLayoutConfig]);
-
-export const DEFAULT_MOSAIC_LAYOUT: MosaicLayoutConfig = {
-  type: LayoutTypes.enum.mosaic,
-  nodes: MAIN_VIEW,
-};
-
 export type LayoutConfig = z.infer<typeof LayoutConfig>;
-
-export default LayoutConfig;

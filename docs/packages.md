@@ -11,7 +11,6 @@ Each package can be installed independently via `pnpm add @sqlrooms/<name>` and 
 
 - **[@sqlrooms/room-shell](/api/room-shell/)** — Central application shell and Zustand‑based state manager with panel system and DuckDB integration.
 - **[@sqlrooms/room-store](/api/core/)** — Core state management utilities, RoomStore, and React context providers.
-- **[@sqlrooms/room-config](/api/room-config/)** — Shared configuration schemas and TypeScript types powered by Zod.
 - **[@sqlrooms/duckdb](/api/duckdb/)** — WebAssembly build of DuckDB plus helper hooks for query execution and data import.
 - **[@sqlrooms/ui](/api/ui/)** — Tailwind‑powered component library and theme manager used across all other packages.
 - **[@sqlrooms/ai](/api/ai/)** — Natural‑language querying and AI‑assisted analytics tools.
