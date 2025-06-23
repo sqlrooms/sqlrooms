@@ -1,4 +1,4 @@
-import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector, DuckDBAccessMode} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -46,8 +46,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
-          // path: 'opfs://database.db',
-          // accessMode: DuckDBAccessMode.READ_WRITE,
+          path: 'opfs://database.db',
+          accessMode: DuckDBAccessMode.READ_WRITE,
         }),
         config: {
           layout: {
