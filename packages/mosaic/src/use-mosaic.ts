@@ -3,11 +3,10 @@ import {
   useDuckDb,
   isWasmDuckDbConnector,
 } from '@sqlrooms/duckdb';
-import {coordinator, wasmConnector} from '@uwdata/mosaic-core';
+import {Connector, coordinator, wasmConnector} from '@uwdata/mosaic-core';
 import {useEffect, useState} from 'react';
 
-type MosaicConnector = ReturnType<typeof coordinator>['databaseConnector'];
-let mosaicConnector: MosaicConnector;
+let mosaicConnector: Connector;
 
 // TODO: Create MosaicSlice and keep the connector in the store
 
@@ -27,6 +26,7 @@ async function getMosaicConnector(duckDb: DuckDbConnector) {
   mosaicConnector = await coordinator().databaseConnector(
     wasmConnector({
       duckDb: duckDb.getDb(),
+      // @ts-ignore - We install a different version of duckdb-wasm
       connection: duckDb.getConnection(),
     }),
   );
@@ -40,7 +40,7 @@ async function getMosaicConnector(duckDb: DuckDbConnector) {
  */
 export function useMosaic() {
   const [isLoading, setIsLoading] = useState(true);
-  const [connector, setConnector] = useState<MosaicConnector>();
+  const [connector, setConnector] = useState<Connector>();
   const duckDb = useDuckDb();
   useEffect(() => {
     getMosaicConnector(duckDb)
