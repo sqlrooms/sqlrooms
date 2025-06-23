@@ -67,6 +67,13 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
   };
 
 /**
+ * Path to the preloaded extensions directory.
+ * This is to avoid having to download the extensions from the
+ * jsDelivr CDN to support offline work.
+ */
+const EXTENSIONS_PATH = `${globalThis.location.origin}/extensions`;
+
+/**
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
@@ -78,6 +85,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           path: 'opfs://database.db',
           accessMode: DuckDBAccessMode.READ_WRITE,
           bundles: BUNDLES,
+          initializationQuery: `
+            INSTALL json FROM '${EXTENSIONS_PATH}';
+          `,
         }),
         config: {
           layout: {
