@@ -70,6 +70,9 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
  * Path to the preloaded extensions directory.
  * This is to avoid having to download the extensions from the
  * jsDelivr CDN to support offline work.
+ *
+ * See also https://github.com/observablehq/framework/pull/1734 for a more
+ * comprehensive implementation of self-hosting DuckDB extensions.
  */
 const EXTENSIONS_PATH = `${globalThis.location.origin}/extensions`;
 
