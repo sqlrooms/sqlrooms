@@ -5,7 +5,7 @@ layout: home
 hero:
   name: 'SQLRooms'
   text: 'Build data-centric apps with DuckDB'
-  tagline: Modular React framework for data analytics powered by DuckDB – in browser or backend
+  tagline: An Open Source Framework for Building Local-First Data Analytics Apps powered by DuckDB
   actions:
     - theme: brand
       text: What is SQLRooms?
@@ -22,16 +22,16 @@ hero:
     alt: SQLRooms AI
 
 features:
-  - title: DuckDB Integration
-    details: Leverage DuckDB's powerful SQL capabilities, enabling fast data processing with or without a backend
-  - title: Modular Architecture
-    details: Pick and choose exactly the functionality you need for composable, extensible applications
+  - title: Blazing-Fast Local Analytics
+    details: Leverage DuckDB's powerful SQL capabilities, enabling fast in browser data processing without a backend
+  - title: Own Your Data
+    details: Data remains on your local device for maximum privacy, sub-second analytics on large datasets, and offline functionality
   - title: AI Integration
-    details: Build AI-powered analytics workflows with interactive agents that can write and execute SQL queries, and generate insights
-  - title: Interactive SQL Editor
-    details: Built-in SQL editor with syntax highlighting, query history, and real-time results visualization
-  - title: Flexible Layouts
-    details: Customizable mosaic-style layouts for creating responsive and user-friendly analytics dashboards
+    details: Use agents that can write and execute SQL queries, and generate insights without sharing your data with model providers
+  - title: Modular Architecture
+    details: Pick and choose the functionality you need for composable, extensible applications, with integrations for popular data visualization libraries.
   - title: Modern UI Components
     details: Comprehensive set of React components including data tables, layouts, and visualization tools for building beautiful analytics interfaces
+  - title: Flexible Layouts
+    details: Customizable mosaic-style layouts for creating responsive and user-friendly analytics dashboards
 ---

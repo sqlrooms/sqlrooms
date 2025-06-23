@@ -9,11 +9,13 @@ const RoomPanelHeader: FC<{
   children?: React.ReactNode;
 }> = (props) => {
   const {showHeader = true, panelKey: type, children} = props;
-  const panels = useBaseRoomShellStore((state) => state.room.panels);
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const {icon: Icon, title} = panels[type] ?? {};
-  const togglePanel = useBaseRoomShellStore((state) => state.room.togglePanel);
+  const togglePanel = useBaseRoomShellStore(
+    (state) => state.layout.togglePanel,
+  );
   const togglePanelPin = useBaseRoomShellStore(
-    (state) => state.room.togglePanelPin,
+    (state) => state.layout.togglePanelPin,
   );
   const pinnedPanels = useBaseRoomShellStore(
     (state) => state.config.layout.pinned,

@@ -2,7 +2,7 @@
 /** @type {import("eslint").Linter.Config} */
 export default {
   ignorePatterns: ['apps/**', 'packages/**'],
-  extends: ['@sqlrooms/eslint-config/library.js'],
+  extends: ['@sqlrooms/preset-eslint/library.js'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     project: true,

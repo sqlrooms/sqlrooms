@@ -11,8 +11,9 @@ import {
   createRoomStore,
   RoomShellSliceState,
   StateCreator,
+  LayoutTypes,
+  MAIN_VIEW,
 } from '@sqlrooms/room-shell';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';

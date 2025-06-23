@@ -4,7 +4,6 @@ A central configuration and type definitions package that maintains base room co
 
 - 📝 **Room Configuration**: Define and manage room configuration schemas
 - 🔍 **Type Safety**: Strong TypeScript typing for configuration objects
-- 🧩 **Layout Configuration**: Flexible layout configuration system
 - ✅ **Validation**: Zod schemas for runtime validation of configuration
 
 ## Installation
@@ -80,34 +79,6 @@ function ConfigComponent() {
   const config = useRoomStore((state) => state.config);
 
   return <div>{config.title}</div>;
-}
-```
-
-### Using Layout Configuration
-
-```tsx
-import {LayoutConfig} from '@sqlrooms/room-config';
-
-// Define a layout configuration
-const layoutConfig: LayoutConfig = {
-  layout: 'grid',
-  panels: [
-    {
-      id: 'editor',
-      type: 'sql-editor',
-      position: {x: 0, y: 0, width: 6, height: 4},
-    },
-    {
-      id: 'results',
-      type: 'data-table',
-      position: {x: 0, y: 4, width: 6, height: 4},
-    },
-  ],
-};
-
-// Use the layout configuration in your application
-function renderLayout(config: LayoutConfig) {
-  // Implementation...
 }
 ```
 

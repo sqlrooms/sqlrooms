@@ -1,3 +1,3 @@
-import config from '@sqlrooms/typedoc-config';
+import config from '@sqlrooms/preset-typedoc';
 
 export default config(import.meta.url);

@@ -71,6 +71,10 @@ An advanced example showing how to build an AI-powered analytics application wit
 
 To create a new project from the AI example run this:
 
+```bash
+npx degit sqlrooms/examples/ai my-new-app/
+```
+
 ## [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
 
 [Try live](https://sqlrooms-deckgl-discuss.netlify.app/)
@@ -91,10 +95,6 @@ To create a new project from the deckgl-discuss example run this:
 
 ```bash
 npx degit sqlrooms/examples/deckgl-discuss my-new-app/
-```
-
-```bash
-npx degit sqlrooms/examples/ai my-new-app/
 ```
 
 ## [Next.js + Recharts Example](https://sqlrooms-nextjs.netlify.app/)

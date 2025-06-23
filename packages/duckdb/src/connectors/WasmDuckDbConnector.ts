@@ -1,5 +1,5 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
+import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
   LoadFileOptions,
   StandardLoadOptions,
@@ -8,15 +8,15 @@ import {
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {
-  createBaseDuckDbConnector,
   BaseDuckDbConnectorImpl,
+  createBaseDuckDbConnector,
 } from './BaseDuckDbConnector';
-import {loadObjects as loadObjectsSql, load, loadSpatial} from './load/load';
 import {DuckDbConnector} from './DuckDbConnector';
+import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
 
-export interface WasmDuckDbConnectorOptions {
+export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
+  /** @deprecated use `path` instead */
   dbPath?: string;
-  queryConfig?: DuckDBQueryConfig;
   initializationQuery?: string;
   logging?: boolean;
 }
@@ -34,7 +34,7 @@ export function createWasmDuckDbConnector(
     logging = false,
     initializationQuery = '',
     dbPath = ':memory:',
-    queryConfig,
+    ...restConfig
   } = options;
 
   let db: duckdb.AsyncDuckDB | null = null;
@@ -72,8 +72,8 @@ export function createWasmDuckDbConnector(
         URL.revokeObjectURL(workerUrl);
 
         await db.open({
-          path: dbPath,
-          query: queryConfig,
+          ...restConfig,
+          path: restConfig.path ?? dbPath,
         });
 
         conn = augmentConnectionQueryError(await db.connect());

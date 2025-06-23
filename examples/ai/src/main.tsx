@@ -2,12 +2,12 @@ import {ThemeProvider} from '@sqlrooms/ui';
 import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import './index.css';
-import {App} from './app';
+import {Room} from './room';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ui-theme">
-      <App />
+      <Room />
     </ThemeProvider>
   </StrictMode>,
 );

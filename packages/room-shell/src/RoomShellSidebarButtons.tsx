@@ -54,12 +54,14 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
 }) => {
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
   const layout = useBaseRoomShellStore((state) => state.config.layout);
-  const panels = useBaseRoomShellStore((state) => state.room.panels);
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),
     [layout],
   );
-  const togglePanel = useBaseRoomShellStore((state) => state.room.togglePanel);
+  const togglePanel = useBaseRoomShellStore(
+    (state) => state.layout.togglePanel,
+  );
   const {icon: Icon, title} = panels[roomPanelType] ?? {};
 
   return (
@@ -75,7 +77,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
 };
 
 const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
-  const panels = useBaseRoomShellStore((state) => state.room.panels);
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
 
   return (
     <div className={cn('flex h-full grow flex-col', className)}>

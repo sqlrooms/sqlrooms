@@ -5,22 +5,24 @@ import DefaultTheme from 'vitepress/theme';
 <template>
   <DefaultTheme.Layout>
     <template #home-hero-image>
-      <a href="./examples.html#ai-powered-analytics">
-        <video
-          autoplay
-          loop
-          muted
-          src="/media/examples/ai-example-light.mp4"
-          class="video light"
-        />
-        <video
-          autoplay
-          loop
-          muted
-          src="/media/examples/ai-example-dark.mp4"
-          class="video dark"
-        />
-      </a>
+      <video
+        class="video"
+        poster="/media/overview/collage.webp"
+        controls
+        loop
+        muted
+      >
+        <source src="/media/sqlrooms-examples-longer.mp4" type="video/mp4" />
+      </video>
+      <!--
+      <video
+        class="video dark"
+        src="/media/sqlrooms.mp4"
+        autoplay
+        controls
+        loop
+        muted
+      />-->
     </template>
 
     <template #layout-bottom>
@@ -53,13 +55,15 @@ import DefaultTheme from 'vitepress/theme';
   max-height: 190px;
 }
 
+/*
 html:not(.dark) .video.dark {
   display: none;
 }
 
-.dark .video.light {
+.dark .video:not(.dark) {
   display: none;
 }
+*/
 
 .foursquare-footer {
   display: flex;
@@ -95,15 +99,19 @@ html:not(.dark) .foursquare-footer img {
   filter: invert(1);
 }
 
+.video {
+  max-height: 150px;
+}
+
 @media (min-width: 640px) {
   .video {
     max-height: 256px;
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1000px) {
   .video {
-    max-height: 400px;
+    max-height: 300px;
   }
 }
 </style>
