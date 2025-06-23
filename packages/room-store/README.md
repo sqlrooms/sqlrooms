@@ -1,5 +1,3 @@
-# @sqlrooms/room-store
-
 This package provides the core state management for SQLRooms using [Zustand](https://github.com/pmndrs/zustand). It is designed to be extensible, allowing you to build custom room experiences by creating and composing state "slices".
 
 ## Installation
