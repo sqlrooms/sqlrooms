@@ -1155,14 +1155,14 @@ importers:
         specifier: workspace:*
         version: link:../duckdb
       '@uwdata/mosaic-core':
-        specifier: ^0.12.2
-        version: 0.12.2
+        specifier: ^0.16.2
+        version: 0.16.2
       '@uwdata/mosaic-spec':
-        specifier: ^0.12.2
-        version: 0.12.2
+        specifier: ^0.16.2
+        version: 0.16.2
       '@uwdata/vgplot':
-        specifier: ^0.12.2
-        version: 0.12.2
+        specifier: ^0.16.2
+        version: 0.16.2
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -5412,26 +5412,26 @@ packages:
   '@ungap/structured-clone@1.3.0':
     resolution: {integrity: sha512-WmoN8qaIAo7WTYWbAZuG8PYEhn5fkz7dZrqTBZ7dtt//lL2Gwms1IcnQ5yHqjDfX8Ft5j4YzDM23f87zBfDe9g==}
 
-  '@uwdata/flechette@1.1.2':
-    resolution: {integrity: sha512-hhtAgXlJbibLIHHIyFJ2fcPQ/hAK43HtEirRgrb/v2xEQv4It/KcUOyMklaVPUv2Z7+agKjSWLAXGyAQglRPvQ==}
+  '@uwdata/flechette@2.0.1':
+    resolution: {integrity: sha512-eKrNd1mNZDqf0iUbaDs3/Ld3qmVGb+ADckNjXTdUwfb2Q4o9cdGYIIYfzFSA5LybXx2RK5PXHPZS1c+PmyW0sA==}
 
-  '@uwdata/mosaic-core@0.12.2':
-    resolution: {integrity: sha512-O8Ju7EQE9fGZqrhMP+5U0gyyCtXklkpG9GahGuhiXnHuNtoO2vzIMIs/78LB9SjULVQ1zsww4ov5PbUnlEMmIg==}
+  '@uwdata/mosaic-core@0.16.2':
+    resolution: {integrity: sha512-B0xQBcpCdDH8t1hKnUzEM6NaRG2ugWUZoHcVfFzE3/Q0hv1bqLC6iVAbKk9D6xRjqazzlnl1vhR1jSpydWMMiw==}
 
-  '@uwdata/mosaic-inputs@0.12.2':
-    resolution: {integrity: sha512-+zhkldLn+Qa7CYs9R/ig/MHy72hgheRsKQPPwv/dZUb7JwaTBosuSbuCFfynEkJVXpSpbEiNpoU3oz9aciHs3w==}
+  '@uwdata/mosaic-inputs@0.16.2':
+    resolution: {integrity: sha512-bEqe1xnEjEjP+v0EJOgiYIUrf1Rh4BrgAmryCGwoLbiImMCWPUdxnuoARdwE/KuXsQvZPiggxg5Ebnd+Os0eDA==}
 
-  '@uwdata/mosaic-plot@0.12.2':
-    resolution: {integrity: sha512-uYV/OqN/VVyH/RKzTxK1jl1TxprmUhMuyWYN2ySd6/W7609e11CR4+v4hwsXXKn8T39/sFSrYQiu0qfz4V8gMw==}
+  '@uwdata/mosaic-plot@0.16.2':
+    resolution: {integrity: sha512-kcVV1076RZV3ESBjXr82BplUZS5K0bvyyPreC98CHC8TUTClc1o2mKKN37WQEzy78shhvMCcl8oQ78hwrw7Gpg==}
 
-  '@uwdata/mosaic-spec@0.12.2':
-    resolution: {integrity: sha512-kzs7+Wu2ilkYWcb7f0lsYVgyFHdbpP8MrQobreRQyT+Q9X0l6c5vJwaJxH5HHxcWRPHdg01CanSEahbBTpo7Bg==}
+  '@uwdata/mosaic-spec@0.16.2':
+    resolution: {integrity: sha512-7ywyIk/eBpEpn5TobR0AgumVQY4YdkAixywNkoRVLeAkF4HWdye5td4/dC6x7yvOr2Fl/J9cZvsKCXLZ+/x0Dg==}
 
-  '@uwdata/mosaic-sql@0.12.2':
-    resolution: {integrity: sha512-K/BkncYYmiXmSlkHZhHoOx8Un0Z4zG1XqsWugorspyy9Q9IAiZJG8w1VAqpOUqVafaFCytnNs3QigWlKVu2iiQ==}
+  '@uwdata/mosaic-sql@0.16.2':
+    resolution: {integrity: sha512-b4CaTnQ9ROvbh9IqZadRVc8IT1gFjsJN5X3eugvXvxWvLiRS9SzPzSSh4LbfUhEjwVI4wl2jYUSxxJ+xT1/2Hg==}
 
-  '@uwdata/vgplot@0.12.2':
-    resolution: {integrity: sha512-ADt9t8apullBEZ0ItMqy6/u0c7CVzdfWaK8cY+sPeoUxBdaj+ymIc40nXfCjbxkYMjcXOlS7gPnFOLlBJv0iAA==}
+  '@uwdata/vgplot@0.16.2':
+    resolution: {integrity: sha512-dAMImZP0Zi0l/K4bzWPkHJdR4sk0FpqV7OCgfiEIDpku0c4Qzf2ez+tyORXXIJTHRWqhgz643SE9sJ2MoVuTvg==}
 
   '@vaadin/a11y-base@24.6.11':
     resolution: {integrity: sha512-yBZ0QGPngbItIJQx3FRIa9IXDW2Ftf6SFFPGhbdAZafJPBlFi6FElP9cVtL3qjJlI5KKBp/UXEcC8ehPK207gw==}
@@ -15844,43 +15844,41 @@ snapshots:
 
   '@ungap/structured-clone@1.3.0': {}
 
-  '@uwdata/flechette@1.1.2': {}
+  '@uwdata/flechette@2.0.1': {}
 
-  '@uwdata/mosaic-core@0.12.2':
+  '@uwdata/mosaic-core@0.16.2':
     dependencies:
       '@duckdb/duckdb-wasm': 1.29.0
-      '@uwdata/flechette': 1.1.2
-      '@uwdata/mosaic-sql': 0.12.2
+      '@uwdata/flechette': 2.0.1
+      '@uwdata/mosaic-sql': 0.16.2
 
-  '@uwdata/mosaic-inputs@0.12.2':
+  '@uwdata/mosaic-inputs@0.16.2':
     dependencies:
-      '@uwdata/mosaic-core': 0.12.2
-      '@uwdata/mosaic-sql': 0.12.2
-      isoformat: 0.2.1
+      '@uwdata/mosaic-core': 0.16.2
+      '@uwdata/mosaic-sql': 0.16.2
 
-  '@uwdata/mosaic-plot@0.12.2':
+  '@uwdata/mosaic-plot@0.16.2':
     dependencies:
       '@observablehq/plot': 0.6.17
-      '@uwdata/mosaic-core': 0.12.2
-      '@uwdata/mosaic-sql': 0.12.2
+      '@uwdata/mosaic-core': 0.16.2
+      '@uwdata/mosaic-sql': 0.16.2
       d3: 7.9.0
-      isoformat: 0.2.1
 
-  '@uwdata/mosaic-spec@0.12.2':
+  '@uwdata/mosaic-spec@0.16.2':
     dependencies:
-      '@uwdata/mosaic-core': 0.12.2
-      '@uwdata/mosaic-sql': 0.12.2
-      '@uwdata/vgplot': 0.12.2
+      '@uwdata/mosaic-core': 0.16.2
+      '@uwdata/mosaic-sql': 0.16.2
+      '@uwdata/vgplot': 0.16.2
       ts-json-schema-generator: 2.4.0
 
-  '@uwdata/mosaic-sql@0.12.2': {}
+  '@uwdata/mosaic-sql@0.16.2': {}
 
-  '@uwdata/vgplot@0.12.2':
+  '@uwdata/vgplot@0.16.2':
     dependencies:
-      '@uwdata/mosaic-core': 0.12.2
-      '@uwdata/mosaic-inputs': 0.12.2
-      '@uwdata/mosaic-plot': 0.12.2
-      '@uwdata/mosaic-sql': 0.12.2
+      '@uwdata/mosaic-core': 0.16.2
+      '@uwdata/mosaic-inputs': 0.16.2
+      '@uwdata/mosaic-plot': 0.16.2
+      '@uwdata/mosaic-sql': 0.16.2
 
   '@vaadin/a11y-base@24.6.11':
     dependencies:
