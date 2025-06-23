@@ -1,3 +1,4 @@
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -44,6 +45,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
+        connector: createWasmDuckDbConnector({
+          // path: 'opfs://database.db',
+          // accessMode: DuckDBAccessMode.READ_WRITE,
+        }),
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,

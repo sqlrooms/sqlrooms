@@ -2,7 +2,15 @@ import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
 const PACKAGE_CATEGORIES = {
-  'Core Packages': ['ai', 'core', 'room-shell', 'duckdb', 'ui', 'layout'],
+  'Core Packages': [
+    'ai',
+    'core',
+    'room-shell',
+    'room-store',
+    'duckdb',
+    'ui',
+    'layout',
+  ],
   'Feature Packages': [
     'cosmos',
     'data-table',
@@ -17,7 +25,6 @@ const PACKAGE_CATEGORIES = {
     'vega',
   ],
   'Utility Packages': ['utils'],
-  'Internal Packages': ['room-config'],
 };
 
 // https://vitepress.dev/reference/site-config

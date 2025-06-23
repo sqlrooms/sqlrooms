@@ -1,0 +1,8 @@
+{
+  "name": "@sqlrooms/preset-typescript",
+  "version": "0.18.1",
+  "private": true,
+  "publishConfig": {
+    "access": "public"
+  }
+}

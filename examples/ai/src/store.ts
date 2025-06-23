@@ -6,8 +6,9 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {createWasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
+  LayoutTypes,
+  MAIN_VIEW,
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
@@ -27,8 +28,9 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import exampleSessions from './example-sessions.json';
 import {DEFAULT_MODEL} from './models';
+// import exampleSessions from './example-sessions.json';
+
 export const RoomPanelTypes = z.enum([
   'room-details',
   'data-sources',
@@ -71,7 +73,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
-          // path: 'opfs://db.duckdb',
+          // path: 'opfs://database.db',
           // accessMode: DuckDBAccessMode.READ_WRITE,
         }),
         config: {

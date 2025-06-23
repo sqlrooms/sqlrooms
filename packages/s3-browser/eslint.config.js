@@ -1,4 +1,4 @@
-import {config} from '@sqlrooms/eslint-config/react-internal';
+import {config} from '@sqlrooms/preset-eslint/react-internal';
 
 /** @type {import("eslint").Linter.Config} */
 export default config;

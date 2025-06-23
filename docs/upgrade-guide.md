@@ -4,6 +4,30 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.19.0
+
+We are trying to make the package structure more logical, especially, for new users of the SQLRooms framework. Sorry for the more renaming.
+
+- Package `@sqlrooms/core` (previously, `@sqlrooms/project`) renamed to `@sqlrooms/room-store`.
+
+- The layout-related state and functions were moved to the new `LayoutSlice` added to `@sqlrooms/layout` which is namespaced as `layout`:
+  - `panels`
+  - `setLayout`
+  - `togglePanel`
+  - `tooglePanelPin`
+
+Before:
+
+```tsx
+const togglePanel = useRoomStore((state) => state.room.togglePanel);
+```
+
+After:
+
+```tsx
+const togglePanel = useRoomStore((state) => state.layout.togglePanel);
+```
+
 ## 0.18.0
 
 `QueryHandle` returned from `.query()` is now implementing `PromiseLike` and can be awaited. So adding `.result`, which was introduced in [0.16.0](#_0-16-0), is not necessary anymore.
@@ -26,7 +50,7 @@ This release focuses on standardizing terminology across the codebase and improv
 
 ### Package name changes
 
-- `@sqlrooms/project` renamed to `@sqlrooms/core`
+- `@sqlrooms/project` renamed to `@sqlrooms/core` (renamed again to `@sqlrooms/room-store` in [0.19.0](#_0-19-0), sorry)
 - `@sqlrooms/project-config` renamed to `@sqlrooms/room-config`
 - `@sqlrooms/project-builder` renamed to `@sqlrooms/room-shell`
 

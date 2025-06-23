@@ -1,4 +1,4 @@
-import {RoomStateProvider, RoomStore} from '@sqlrooms/core';
+import {RoomStateProvider, RoomStore} from '../../room-store/dist';
 import {MosaicLayout} from '@sqlrooms/layout';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {
@@ -58,8 +58,8 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
 
 export const LayoutComposer: FC<{className?: string}> = ({className}) => {
   const layout = useBaseRoomShellStore((state) => state.config.layout);
-  const setLayout = useBaseRoomShellStore((state) => state.room.setLayout);
-  const panels = useBaseRoomShellStore((state) => state.room.panels);
+  const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
+  const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const ErrorBoundary = useBaseRoomShellStore(
     (state) => state.room.CustomErrorBoundary,
   );

@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+export {RoomShell} from './RoomShell';
+
 export {FileDataSourceCard} from './data-sources/FileDataSourceCard';
 export {FileDataSourcesPanel} from './data-sources/FileDataSourcesPanel';
 export {TableCard} from './data-sources/TableCard';
@@ -18,14 +20,11 @@ export {
   SidebarButton,
 } from './RoomShellSidebarButtons';
 
-export {type TaskProgress, createRoomStore} from '@sqlrooms/core';
-
 export {
   createRoomShellSlice,
   createSlice,
   useBaseRoomShellStore,
   type RoomShellSliceState,
-  type RoomPanelInfo,
 } from './RoomShellStore';
 
 export type {StateCreator, StoreApi} from 'zustand';
@@ -37,6 +36,6 @@ export {
   type RoomFileState,
 } from './types';
 
-// Re-export all room-config types
-export * from '@sqlrooms/room-config';
-export {RoomShell} from './RoomShell';
+export * from '@sqlrooms/room-store';
+
+export {type RoomPanelInfo} from '@sqlrooms/layout';

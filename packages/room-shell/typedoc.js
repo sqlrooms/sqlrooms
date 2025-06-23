@@ -1,4 +1,4 @@
-import config from '@sqlrooms/typedoc-config';
+import config from '@sqlrooms/preset-typedoc';
 
 /** @type {Partial<import("typedoc").TypeDocOptions>} */
 export default config(import.meta.url);

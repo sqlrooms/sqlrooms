@@ -1,5 +1,5 @@
 {
-  "extends": "@sqlrooms/typescript-config/react-library.json",
+  "extends": "@sqlrooms/preset-typescript/react-library.json",
   "compilerOptions": {
     "outDir": "dist",
     "baseUrl": "./",
