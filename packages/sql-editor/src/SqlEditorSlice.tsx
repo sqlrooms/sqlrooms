@@ -11,40 +11,12 @@ import {
   StateCreator,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
+import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
-import {z} from 'zod';
-
-// Saved state (persisted)
-export const SqlEditorSliceConfig = z.object({
-  sqlEditor: z.object({
-    queries: z.array(
-      z.object({
-        id: z.string().describe('Query identifier.'),
-        name: z.string().describe('Query name.'),
-        query: z.string().describe('SQL query to execute.'),
-      }),
-    ),
-    selectedQueryId: z
-      .string()
-      .default('default')
-      .describe('The id of the currently selected query.'),
-    lastExecutedQuery: z.string().optional().describe('Last executed query'),
-  }),
-});
-export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
-
-export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
-  return {
-    sqlEditor: {
-      queries: [{id: 'default', name: 'Untitled', query: ''}],
-      selectedQueryId: 'default',
-    },
-  };
-}
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}

@@ -1389,6 +1389,9 @@ importers:
       '@sqlrooms/schema-tree':
         specifier: workspace:*
         version: link:../schema-tree
+      '@sqlrooms/sql-editor-config':
+        specifier: workspace:*
+        version: link:../sql-editor-config
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1441,6 +1444,12 @@ importers:
       '@types/react-dom':
         specifier: ^19.1.6
         version: 19.1.6(@types/react@19.1.7)
+
+  packages/sql-editor-config:
+    dependencies:
+      zod:
+        specifier: ^3.25.57
+        version: 3.25.57
 
   packages/typedoc-config:
     dependencies:
