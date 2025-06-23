@@ -19,6 +19,12 @@ export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   dbPath?: string;
   initializationQuery?: string;
   logging?: boolean;
+  /**
+   * DuckDB bundles to use. Defaults to jsDelivr bundles. To use locally
+   * bundled files, you will need to import them in your app and construct a
+   * `DuckDBBundles` object.
+   */
+  bundles?: duckdb.DuckDBBundles;
 }
 
 export interface WasmDuckDbConnector extends DuckDbConnector {
@@ -34,6 +40,7 @@ export function createWasmDuckDbConnector(
     logging = false,
     initializationQuery = '',
     dbPath = ':memory:',
+    bundles = duckdb.getJsDelivrBundles(),
     ...restConfig
   } = options;
 
@@ -47,13 +54,17 @@ export function createWasmDuckDbConnector(
         throw new Error('No Worker support in this environment');
       }
       try {
-        const allBundles = duckdb.getJsDelivrBundles();
+        const allBundles = bundles;
         const bestBundle = await duckdb.selectBundle(allBundles);
         if (!bestBundle.mainWorker) {
           throw new Error('No best bundle found for DuckDB worker');
         }
+        const workerScriptUrl = new URL(
+          bestBundle.mainWorker,
+          globalThis.location.origin,
+        ).href;
         const workerUrl = URL.createObjectURL(
-          new Blob([`importScripts("${bestBundle.mainWorker}");`], {
+          new Blob([`importScripts("${workerScriptUrl}");`], {
             type: 'text/javascript',
           }),
         );
@@ -68,7 +79,14 @@ export function createWasmDuckDbConnector(
           }
         })(logger, worker);
 
-        await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
+        const mainModule = new URL(
+          bestBundle.mainModule,
+          globalThis.location.origin,
+        ).href;
+        const pthreadWorker = bestBundle.pthreadWorker
+          ? new URL(bestBundle.pthreadWorker, globalThis.location.origin).href
+          : undefined;
+        await db.instantiate(mainModule, pthreadWorker);
         URL.revokeObjectURL(workerUrl);
 
         await db.open({
