@@ -5,7 +5,7 @@ This package provides the core state management for SQLRooms using [Zustand](htt
 ## Installation
 
 ```bash
-npm install @sqlrooms/room-store @sqlrooms/room-config zod
+npm install @sqlrooms/room-store @sqlrooms/room-config zod zustand
 ```
 
 ## Core Concepts
