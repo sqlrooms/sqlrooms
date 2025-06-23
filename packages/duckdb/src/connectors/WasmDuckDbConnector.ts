@@ -12,32 +12,6 @@ import {
   createBaseDuckDbConnector,
 } from './BaseDuckDbConnector';
 import {DuckDbConnector} from './DuckDbConnector';
-
-// Local DuckDB bundle files for bundler environments
-import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
-import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
-import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
-import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
-import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
-import coi_pthread_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.pthread.worker.js?url';
-
-// Bundles used when not relying on jsDelivr CDN
-const MANUAL_BUNDLES: duckdb.DuckDBBundles = {
-  mvp: {
-    mainModule: duckdb_wasm,
-    mainWorker: mvp_worker,
-  },
-  eh: {
-    mainModule: duckdb_wasm_eh,
-    mainWorker: eh_worker,
-  },
-  coi: {
-    mainModule: duckdb_wasm_coi,
-    mainWorker: coi_worker,
-    pthreadWorker: coi_pthread_worker,
-  },
-};
 import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
@@ -46,10 +20,11 @@ export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   initializationQuery?: string;
   logging?: boolean;
   /**
-   * Whether to load DuckDB bundles from jsDelivr CDN. Set to false to
-   * use the locally bundled files instead.
+   * DuckDB bundles to use. Defaults to jsDelivr bundles. To use locally
+   * bundled files, you will need to import them in your app and construct a
+   * `DuckDBBundles` object.
    */
-  useJsDelivrBundles?: boolean;
+  bundles?: duckdb.DuckDBBundles;
 }
 
 export interface WasmDuckDbConnector extends DuckDbConnector {
@@ -65,7 +40,7 @@ export function createWasmDuckDbConnector(
     logging = false,
     initializationQuery = '',
     dbPath = ':memory:',
-    useJsDelivrBundles = false,
+    bundles = duckdb.getJsDelivrBundles(),
     ...restConfig
   } = options;
 
@@ -79,15 +54,17 @@ export function createWasmDuckDbConnector(
         throw new Error('No Worker support in this environment');
       }
       try {
-        const allBundles = useJsDelivrBundles
-          ? duckdb.getJsDelivrBundles()
-          : MANUAL_BUNDLES;
+        const allBundles = bundles;
         const bestBundle = await duckdb.selectBundle(allBundles);
         if (!bestBundle.mainWorker) {
           throw new Error('No best bundle found for DuckDB worker');
         }
+        const workerScriptUrl = new URL(
+          bestBundle.mainWorker,
+          globalThis.location.origin,
+        ).href;
         const workerUrl = URL.createObjectURL(
-          new Blob([`importScripts("${bestBundle.mainWorker}");`], {
+          new Blob([`importScripts("${workerScriptUrl}");`], {
             type: 'text/javascript',
           }),
         );
@@ -102,7 +79,14 @@ export function createWasmDuckDbConnector(
           }
         })(logger, worker);
 
-        await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
+        const mainModule = new URL(
+          bestBundle.mainModule,
+          globalThis.location.origin,
+        ).href;
+        const pthreadWorker = bestBundle.pthreadWorker
+          ? new URL(bestBundle.pthreadWorker, globalThis.location.origin).href
+          : undefined;
+        await db.instantiate(mainModule, pthreadWorker);
         URL.revokeObjectURL(workerUrl);
 
         await db.open({

@@ -1,4 +1,8 @@
-import {createWasmDuckDbConnector, DuckDBAccessMode} from '@sqlrooms/duckdb';
+import {
+  createWasmDuckDbConnector,
+  DuckDBAccessMode,
+  DuckDBBundles,
+} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -18,6 +22,31 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
+
+// Local DuckDB bundle files for bundler environments
+import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
+import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
+import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
+import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
+import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
+import coi_pthread_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.pthread.worker.js?url';
+
+const BUNDLES: DuckDBBundles = {
+  mvp: {
+    mainModule: duckdb_wasm,
+    mainWorker: mvp_worker,
+  },
+  eh: {
+    mainModule: duckdb_wasm_eh,
+    mainWorker: eh_worker,
+  },
+  coi: {
+    mainModule: duckdb_wasm_coi,
+    mainWorker: coi_worker,
+    pthreadWorker: coi_pthread_worker,
+  },
+};
 
 export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
@@ -48,6 +77,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         connector: createWasmDuckDbConnector({
           path: 'opfs://database.db',
           accessMode: DuckDBAccessMode.READ_WRITE,
+          bundles: BUNDLES,
         }),
         config: {
           layout: {
