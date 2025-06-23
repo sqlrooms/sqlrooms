@@ -1,3 +1,4 @@
+import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
   createBaseSlice,
   RoomState,
@@ -6,7 +7,6 @@ import {
 import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
-import {z} from 'zod';
 import {StateCreator} from 'zustand';
 import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
@@ -19,24 +19,13 @@ import {
   QualifiedTableName,
   splitSqlStatements,
 } from './duckdb-utils';
-import {createDbSchemaTrees as createDbSchemaTrees} from './schemaTree';
-import {DataTable, TableColumn, DbSchemaNode} from './types';
-
-export const DuckDbSliceConfig = z.object({
-  // nothing yet
-});
-export type DuckDbSliceConfig = z.infer<typeof DuckDbSliceConfig>;
+import {createDbSchemaTrees} from './schemaTree';
+import {DataTable, DbSchemaNode, TableColumn} from './types';
 
 export type SchemaAndDatabase = {
   schema?: string;
   database?: string;
 };
-
-export function createDefaultDuckDbConfig(): DuckDbSliceConfig {
-  return {
-    // nothing yet
-  };
-}
 
 /**
  * State and actions for the DuckDB slice
