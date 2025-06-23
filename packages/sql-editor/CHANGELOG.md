@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.19.2 (2025-06-23)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
 ## 0.19.1 (2025-06-23)
 
 ### Bug Fixes
