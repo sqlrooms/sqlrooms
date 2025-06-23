@@ -822,6 +822,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -831,9 +834,6 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
-      '@sqlrooms/utils':
-        specifier: workspace:*
-        version: link:../../packages/utils
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../../packages/utils
@@ -2592,7 +2592,6 @@ packages:
   '@cosmograph/cosmos@2.0.0-beta.22':
     resolution: {integrity: sha512-DzPk2m30nJyhwoVeNeTK+zzAmIpC/BQgHW5fBCmlbimrfbgWhXyOu6UEcrmjC32CVCyvgA+EEg2pUU7a/+UtEA==}
     engines: {node: '>=12.2.0', npm: '>=7.0.0'}
-    deprecated: This package has been moved to @cosmos.gl/graph. If you're using version >2, please update
 
   '@deck.gl/aggregation-layers@9.1.12':
     resolution: {integrity: sha512-41u5ZBnpIUzUQ+S8u/8JBWN9BHTerRUcOv+1QmjWsp8noNWZN69cvOy3/AaaPA8UgSEycdnv+y8GGIMspBLHZQ==}

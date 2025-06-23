@@ -59,31 +59,40 @@ function MyJsonEditor() {
 }
 ```
 
-### Configuring the loader
+### Configuring the loader for offline use
 
-By default, the editor loads its sources from a CDN. You can change this
-behaviour using the `configureMonacoLoader` utility which is a thin wrapper
-around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config).
-This allows bundling `monaco-editor` with your application or using a different
-CDN path. You can also pass worker constructors so that
-`self.MonacoEnvironment` is set up automatically.
+By default, the editor loads its sources from a CDN. To use the editor in an
+offline environment, you need to bundle `monaco-editor` with your application.
+You can do this with the `configureMonacoLoader` utility. This function is a
+thin wrapper around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config)
+and sets up `self.MonacoEnvironment` automatically when web workers are passed.
+
+Here's an example of how to configure the loader to use bundled workers with
+Vite (note the `?worker` suffix):
 
 ```ts
 import {configureMonacoLoader} from '@sqlrooms/monaco-editor';
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
+import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-// Use the monaco-editor package instead of CDN
+// Use the monaco-editor package instead of a CDN
 configureMonacoLoader({
   monaco,
   workers: {
     default: editorWorker,
     json: jsonWorker,
+    typescript: tsWorker,
+    javascript: tsWorker,
   },
 });
+```
 
-// Or specify a custom path
+You can also use `configureMonacoLoader` to specify a custom path to the
+editor's sources, for example, if you are hosting them on a different CDN:
+
+```ts
 // configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
 ```
 
