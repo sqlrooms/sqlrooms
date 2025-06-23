@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/room-store",
-  "version": "0.18.1",
+  "version": "0.19.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,10 +18,10 @@
     "access": "public"
   },
   "dependencies": {
+    "@sqlrooms/room-config": "workspace:*",
     "immer": "^10.1.1",
     "zod": "^3.25.57",
-    "zustand": "^5.0.5",
-    "@sqlrooms/room-config": "workspace:*"
+    "zustand": "^5.0.5"
   },
   "peerDependencies": {
     "react": ">=18"
