@@ -12,7 +12,7 @@ import DefaultTheme from 'vitepress/theme';
         loop
         muted
       >
-        <source src="/media/sqlrooms-examples.mp4" type="video/mp4" />
+        <source src="/media/sqlrooms-examples-75.mp4" type="video/mp4" />
       </video>
       <!--
       <video
