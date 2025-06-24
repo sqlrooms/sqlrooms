@@ -1,4 +1,5 @@
-import {ExtendedTool, StreamMessage} from '@openassistant/core';
+import {StreamMessage} from '@openassistant/core';
+import {ExtendedTool} from '@openassistant/utils';
 import {createId} from '@paralleldrive/cuid2';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
@@ -47,7 +48,7 @@ export function createDefaultAiConfig(
   };
 }
 
-export type AiSliceTool = ExtendedTool<any>;
+export type AiSliceTool = ExtendedTool<z.ZodTypeAny>;
 
 export type AiSliceState = {
   ai: {
@@ -262,9 +263,12 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
                   id: resultId,
                   prompt: get().ai.analysisPrompt,
                   streamMessage: {
-                    toolCallMessages: [],
-                    reasoning: '',
-                    text: '',
+                    parts: [
+                      {
+                        type: 'text',
+                        text: '',
+                      },
+                    ],
                   },
                   isCompleted: false,
                 });
@@ -398,37 +402,27 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
       const result = findResultById(currentSession.analysisResults, resultId);
       if (result) {
         if (streamMessage) {
-          result.streamMessage = {
-            toolCallMessages: (streamMessage.toolCallMessages || []).map(
-              (toolCall) => ({
-                args: {...toolCall.args},
-                isCompleted: toolCall.isCompleted,
-                llmResult: toolCall.llmResult,
-                additionalData: toolCall.additionalData,
-                text: toolCall.text,
-                toolCallId: toolCall.toolCallId,
-                toolName: toolCall.toolName,
-              }),
-            ),
-            reasoning: streamMessage.reasoning,
-            text: streamMessage.text,
-            analysis: streamMessage.analysis,
+          // copy all properties from streamMessage
+          const newStreamMessage = {
             parts: streamMessage.parts?.map((part) => ({
-              ...part,
-              ...(part.type === 'text' && {text: part.text}),
-              ...(part.type === 'tool' && {
-                toolCallMessages: part.toolCallMessages?.map((toolCall) => ({
-                  args: {...toolCall.args},
-                  isCompleted: toolCall.isCompleted,
-                  llmResult: toolCall.llmResult,
-                  additionalData: toolCall.additionalData,
-                  text: toolCall.text,
-                  toolCallId: toolCall.toolCallId,
-                  toolName: toolCall.toolName,
-                })),
+              ...(part.type === 'text' && {type: 'text', text: part.text}),
+              ...(part.type === 'tool-invocation' && {
+                type: 'tool-invocation',
+                toolInvocation: {
+                  toolName: part.toolInvocation.toolName,
+                  args: part.toolInvocation.args,
+                  state: part.toolInvocation.state,
+                  result:
+                    part.toolInvocation.state === 'result'
+                      ? part.toolInvocation.result
+                      : null,
+                },
               }),
+              additionalData: part.additionalData,
             })),
           };
+
+          result.streamMessage = newStreamMessage;
         }
         if (errorMessage) {
           result.errorMessage = errorMessage;

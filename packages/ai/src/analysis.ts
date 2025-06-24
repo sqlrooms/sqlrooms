@@ -27,6 +27,7 @@ const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
+- When calling query tool, please use type: 'query'
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
 - Some key DuckDB-specific functions to use:
   * regexp_matches() for regex (not regexp_like)
