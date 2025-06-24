@@ -1,3 +1,7 @@
+---
+outline: 2
+---
+
 # Upgrade Guide
 
 This document provides detailed guidance for upgrading between different versions of SQLRooms packages. Each section outlines breaking changes, required code modifications, and implementation examples to ensure a smooth upgrade process.
