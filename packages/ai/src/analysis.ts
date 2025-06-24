@@ -10,7 +10,6 @@ import {
   DuckDbConnector,
   DuckDbSliceState,
 } from '@sqlrooms/duckdb';
-
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
@@ -190,7 +189,7 @@ export async function runAnalysis({
   if (historyAnalysis) {
     const historyMessages = historyAnalysis.map((analysis) => ({
       prompt: analysis.prompt,
-      response: analysis.streamMessage,
+      response: analysis.streamMessage as StreamMessage,
     }));
     const initialMessages = rebuildMessages(historyMessages);
     assistant.setMessages(initialMessages);
@@ -199,7 +198,13 @@ export async function runAnalysis({
   // process the prompt
   const newMessages = await assistant.processTextMessage({
     textMessage: prompt,
-    streamMessageCallback: ({isCompleted, message}) => {
+    streamMessageCallback: ({
+      isCompleted,
+      message,
+    }: {
+      isCompleted: boolean;
+      message: StreamMessage;
+    }) => {
       onStreamResult(isCompleted ?? false, message);
     },
   });

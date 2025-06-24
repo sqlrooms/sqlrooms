@@ -1,6 +1,7 @@
 import {z} from 'zod';
 import {VegaChartToolResult} from './VegaChartToolResult';
 import {AiSliceTool} from '@sqlrooms/ai';
+import {extendedTool} from '@openassistant/utils';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -12,6 +13,24 @@ export const VegaChartToolParameters = z.object({
 });
 
 export type VegaChartToolParameters = z.infer<typeof VegaChartToolParameters>;
+
+export type VegaChartToolArgs = z.ZodObject<{
+  sqlQuery: z.ZodString;
+  vegaLiteSpec: z.ZodString;
+  reasoning: z.ZodString;
+}>;
+
+export type VegaChartToolLlmResult = {
+  success: boolean;
+  details: string;
+};
+
+export type VegaChartToolAdditionalData = {
+  sqlQuery: string;
+  vegaLiteSpec: object;
+};
+
+export type VegaChartToolContext = object;
 
 /**
  * Default description for the VegaChart tool
@@ -32,7 +51,12 @@ export function createVegaChartTool({
 }: {
   description?: string;
 } = {}): AiSliceTool {
-  return {
+  return extendedTool<
+    VegaChartToolArgs,
+    VegaChartToolLlmResult,
+    VegaChartToolAdditionalData,
+    VegaChartToolContext
+  >({
     description,
     parameters: VegaChartToolParameters,
     execute: async ({sqlQuery, vegaLiteSpec}: VegaChartToolParameters) => {
@@ -60,5 +84,5 @@ export function createVegaChartTool({
       }
     },
     component: VegaChartToolResult,
-  };
+  });
 }

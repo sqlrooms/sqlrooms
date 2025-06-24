@@ -18,6 +18,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@openassistant/utils": "^0.5.13",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
