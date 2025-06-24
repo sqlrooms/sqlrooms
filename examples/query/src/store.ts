@@ -1,8 +1,4 @@
-import {
-  createWasmDuckDbConnector,
-  DuckDBAccessMode,
-  DuckDBBundles,
-} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector, DuckDBBundles} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -85,8 +81,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
-          path: 'opfs://database.db',
-          accessMode: DuckDBAccessMode.READ_WRITE,
+          // Uncomment to use OPFS for persistent data storage
+          // path: 'opfs://database.db',
+          // accessMode: DuckDBAccessMode.READ_WRITE,
           bundles: BUNDLES,
           initializationQuery: `
             INSTALL json FROM '${EXTENSIONS_PATH}';
