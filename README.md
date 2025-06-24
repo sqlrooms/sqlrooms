@@ -11,7 +11,7 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-![SQLRooms example apps](http://sqlrooms.org/docs/media/overview/collage.webp)
+![SQLRooms example apps](docs/media/overview/collage.webp)
 
 ## Why SQLRooms?
 
@@ -38,7 +38,7 @@ SQLRooms is designed for single-node analytics: all computation happens on your 
 
 - **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](http://sqlrooms.org/overview#key-concepts)** to understand the core ideas and architecture.
+- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
 
 - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
 

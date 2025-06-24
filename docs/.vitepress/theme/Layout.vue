@@ -12,12 +12,12 @@ import DefaultTheme from 'vitepress/theme';
         loop
         muted
       >
-        <source src="/media/sqlrooms-examples-longer.mp4" type="video/mp4" />
+        <source src="/media/sqlrooms-examples.mp4" type="video/mp4" />
       </video>
       <!--
       <video
         class="video dark"
-        src="/media/sqlrooms-examples-longer.mp4"
+        src="/media/sqlrooms-examples.mp4"
         autoplay
         controls
         loop

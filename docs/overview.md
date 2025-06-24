@@ -34,7 +34,7 @@ SQLRooms is designed for single-node analytics: all computation happens on your 
 
 - **Explore the [Modular Architecture](/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](/overview#key-concepts)** to understand the core ideas and architecture.
+- **Review the [Key Concepts](/key-concepts)** to understand the core ideas and architecture.
 
 - **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
 
