@@ -17,7 +17,7 @@ import DefaultTheme from 'vitepress/theme';
       <!--
       <video
         class="video dark"
-        src="/media/sqlrooms.mp4"
+        src="/media/sqlrooms-examples-longer.mp4"
         autoplay
         controls
         loop

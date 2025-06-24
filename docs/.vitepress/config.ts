@@ -66,22 +66,13 @@ export default defineConfig({
             text: 'Overview',
             link: '/overview',
           },
-          // {
-          //   text: 'Modular Architecture',
-          //   link: '/architecture',
-          // },
-        ],
-      },
-      {
-        text: 'Examples',
-        items: [
           {
-            text: 'Example Apps',
-            link: '/examples',
+            text: 'Modular Architecture',
+            link: '/modular-architecture',
           },
           {
-            text: 'Case Studies',
-            link: '/case-studies',
+            text: 'Key Concepts',
+            link: '/key-concepts',
           },
         ],
       },
@@ -109,8 +100,26 @@ export default defineConfig({
             link: '/theming',
           },
           {
+            text: 'Offline Use',
+            link: '/offline-use',
+          },
+          {
             text: 'Upgrade Guide',
             link: '/upgrade-guide',
+          },
+        ],
+      },
+
+      {
+        text: 'Examples',
+        items: [
+          {
+            text: 'Example Apps',
+            link: '/examples',
+          },
+          {
+            text: 'Case Studies',
+            link: '/case-studies',
           },
         ],
       },

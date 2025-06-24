@@ -11,239 +11,34 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-<a href="/examples">
-  <img src="docs/media/overview/collage.webp" alt="SQLRooms example apps" width=600>
-</a>
-
-The framework is designed for developers building innovative data tools **and** it tackles several common analytics challenges:
-
-- Interactive data analysis tools
-- Custom BI solutions
-- Data visualization applications
-- Internal analytics dashboards
-
-Explore the [Examples](http://sqlrooms.org/examples) gallery or the [Case Studies](http://sqlrooms.org/case-studies) for real‑world setups.
+![SQLRooms example apps](http://sqlrooms.org/docs/media/overview/collage.webp)
 
 ## Why SQLRooms?
 
-- **Performance & Scale:** Each user gets an in‑browser DuckDB instance with columnar speed and zero backend load.
-- **Modular Architecture:** Mix-and-match packages and combine state _slices_ to include only the functionality you need.
-- **AI‑Powered Analytics:** Use agents that can write and execute SQL queries, and generate insights directly in your browser.
+SQLRooms is designed to empower developers and users with a modern, modular analytics toolkit that runs entirely in the browser. Here's what sets it apart:
 
-## Why Local first?
+- **Performance & Scale:** Every user gets a dedicated in-browser DuckDB instance, delivering columnar analytics speed with zero backend load.
+- **Modular Architecture:** Mix and match packages, and combine state _slices_ to include only the features you need—no bloat, just what your app requires.
+- **AI‑Powered Analytics:** Built-in support for agents that can write and execute SQL queries, and generate insights directly in your browser—no server roundtrips required.
+- **Developer Experience:** A composable, React-based framework with ready-to-use components, state management, and visualization tools, making it easy to build custom analytics solutions.
 
-_Local-first_ means your data and computation stay on your device, not on a remote server. This approach is inspired by the [Local-first Software](https://www.inkandswitch.com/essay/local-first) principles from Ink & Switch, emphasizing user ownership, privacy, and speed.
+## Why Single-Node?
 
-- **Privacy:** All data can stay client‑side for simplified compliance and peace of mind—nothing leaves your device unless you choose.
-- **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage.
-- **Fast Local Querying:** Queries run instantly in your browser, with no network roundtrip or server lag.
-- **Private AI Insights:** AI agents generate insights and run queries locally, so your data does not have to be shared with external model providers.
+SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed. This approach is inspired by [Local-First principles](https://www.inkandswitch.com/essay/local-first), prioritizing user control, privacy, and speed. While SQLRooms does not yet implement sync or collaboration, it delivers the core benefits of local-first software—your data and computation stay private and accessible on your device.
 
-## Modular Architecture
-
-SQLRooms is designed with a modular architecture that allows developers to pick and choose exactly the functionality they need for their data analytics applications. This approach enables you to build custom solutions tailored to your specific requirements.
-
-<img src="docs/media/overview/architecture.svg" alt="SQLRooms Architecture" width=600>
-
-## Key Concepts
-
-### What's a Room?
-
-A **Room** is a self-contained workspace where users can explore datasets, run queries, and view results. The term comes from collaborative tools—where users work in shared spaces—and SQLRooms is built with future real-time collaboration in mind.
-
-A Room consists of:
-
-- `<RoomShell>`: a React component that renders the Room UI
-- `roomStore`: a Zustand-based state store for the Room
-
----
-
-### Room Store
-
-The `roomStore` is a [composable](#composing-store-from-slices) [`Zustand`](http://sqlrooms.org/state-management#why-zustand) store created by calling `createRoomStore()`. The store holds:
-
-- `config`: the persistable part of the state that captures a Room's saveable settings and can be serialized to JSON for storage or sharing including:
-  - the view configuration and the layout state
-  - the user preferences
-- `room`: non-persistable state that holds runtime information like:
-  - loaded DuckDB tables
-  - transient UI state (like "query running")
-
-```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
-      config: {
-        dataSources: [
-          {
-            type: 'url',
-            url: 'https://.../earthquakes.parquet',
-            tableName: 'earthquakes',
-          },
-        ],
-      },
-      room: {
-        // Runtime state initialization…
-      },
-    })(set, get, store),
-  }),
-);
-```
-
-Check the [minimal example](https://github.com/sqlrooms/examples/blob/main/minimal/src/app.tsx) for the complete implementation.
-
----
-
-### RoomShell
-
-`<RoomShell>` is a React component that wraps your Room UI
-
-- It injects the `roomStore` into React context, accessible via the `useRoomStore()` hook
-- It sets up essential UI infrastructure including error boundaries, toast notifications, and tooltips, making it easy to use components from `@sqlrooms/ui` out of the box
-- It provides slots for the optional `LayoutComposer` (see [Layout](#layout-optional) section below), `Sidebar`, and `LoadingProgress` components
-
-```tsx
-const App = () => (
-  <RoomShell roomStore={roomStore}>
-    <MyComponent />
-  </RoomShell>
-);
-```
-
----
-
-### SQL and DuckDB Access
-
-SQLRooms includes a built-in DuckDB integration via the [`DuckDbSlice`](http://sqlrooms.org/api/duckdb/).
-The `DuckDbSlice` provides helper functions for managing and querying tables:
-
-- `findTableByName()` - Look up a table by name in the current schema
-- `addTable()` - Add a new table from Arrow data or records
-- `dropTable()` - Remove a table from the database
-- `refreshTableSchemas()` - Update the cached table schemas
-- `tables` - The cached list of tables from the last refreshTableSchemas() call
-- `getConnector()` - Access the underlying DuckDB connector
-
-You can query your datasets using the `useSql(query)` hook and work directly with Arrow tables in React.
-
-```tsx
-function MyComponent() {
-  const isTableReady = useRoomStore((state) =>
-    Boolean(state.db.findTableByName('earthquakes')),
-  );
-  const queryResult = useSql<{maxMagnitude: number}>({
-    query: `SELECT max(Magnitude) AS maxMagnitude FROM earthquakes`,
-    enabled: isTableReady,
-  });
-  const row = queryResult.data?.toArray()[0];
-  return row ? `Max earthquake magnitude: ${row.maxMagnitude}` : <Spinner />;
-}
-```
-
-For more details on DuckDB integration and available methods, see the [DuckDB API Reference](http://sqlrooms.org/api/duckdb/).
-
----
-
-### Composing Store from Slices
-
-The store can be enhanced with **slices**—modular pieces of state and logic that can be added to your Room. You can use slices from the `@sqlrooms/*` packages or create your own custom slices. Each slice is a function that returns a partial state object along with methods to modify that state.
-
-Here's an example showing how to combine the default room shell with SQL editor functionality:
-
-```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>({
-  // Default slice
-  ...createRoomShellSlice<RoomConfig>({
-    config: {
-      // Add SQL editor slice persistable config
-      ...createDefaultSqlEditorConfig(),
-    },
-    room: {},
-  })(set, get, store),
-
-  // Mix in sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-});
-```
-
-You can access slices' namespaced config, state and functions in the store using selectors, for example:
-
-```tsx
-const queries = useRoomStore((state) => state.config.sqlEditor.queries);
-const runQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
-```
-
-Learn more about store and slices in [State Management](http://sqlrooms.org/state-management).
-
----
-
-### Layout (Optional)
-
-The `LayoutComposer` provides a flexible panel layout for your Room's UI.
-
-- Panels are React components that can be plugged into the layout. They include metadata (`id`, `title`, `icon`) and a `component` to render.
-- Panels can be moved, resized, or hidden
-- Developers can add panels by registering them in the `roomStore`.
-- Layout state is persisted in the `roomStore`
-
-Configure the room layout and panels during store initialization:
-
-```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
-      config: {
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            // Data panel on left (30%) and main view on right
-            direction: 'row',
-            first: 'data-panel',
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
-        },
-      },
-      room: {
-        // Define the available panels in the room layout
-        panels: {
-          'data-panel': {
-            title: 'Data Sources',
-            icon: DatabaseIcon,
-            component: DataSourcesPanel,
-            placement: 'sidebar',
-          },
-          main: {
-            title: 'Main view',
-            icon: () => null,
-            component: MainView,
-            placement: 'main',
-          },
-        },
-      },
-    })(set, get, store),
-  }),
-);
-```
-
-Layout composer renders the mosaic layout with panels:
-
-```tsx
-function App() {
-  return (
-    <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar />
-      <RoomShell.LayoutComposer />
-    </RoomShell>
-  );
-}
-```
-
-For more details on layout configuration and customization, see the [Layout API Reference](http://sqlrooms.org/api/layout/).
+- **Privacy:** All data remains on your device for simplified compliance and peace of mind—nothing leaves your browser unless you choose.
+- **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage. Your work is portable and future-proof.
+- **Offline Use:** SQLRooms [supports fully offline work](http://sqlrooms.org/offline-use)—query, analyze, and visualize your data even without an internet connection.
+- **Fast Local Querying:** Queries run instantly in your browser, with no network roundtrip or server lag—results are available as soon as you ask.
+- **Private AI Insights:** AI agents generate insights and run queries locally, so your data is never shared with external model providers. You get the power of AI-driven analytics without sacrificing privacy.
 
 ## Next Steps
 
 - **Check the [Example applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+
+- **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
+
+- **Review the [Key Concepts](http://sqlrooms.org/overview#key-concepts)** to understand the core ideas and architecture.
 
 - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
 
@@ -255,7 +50,7 @@ For more details on layout configuration and customization, see the [Layout API 
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](http://sqlrooms.org/overview) page.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Modular Architecture](http://sqlrooms.org/modular-architecture) and [Key Concepts](http://sqlrooms.org/key-concepts) pages.
 
 ## Try the Minimal Example
 
@@ -327,22 +122,14 @@ SQLRooms provides a Tailwind preset that includes all the necessary styles. Upda
 import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-const preset = sqlroomsTailwindPreset();
 const config = {
-  ...preset,
+  presets: [sqlroomsTailwindPreset()],
   content: [
     // Your content paths...
     './src/**/*.{ts,tsx}',
     // Add SQLRooms packages to content paths
     './node_modules/@sqlrooms/**/dist/**/*.js',
   ],
-  theme: {
-    ...preset.theme,
-    extend: {
-      ...preset.theme?.extend,
-      // Add your custom theme extensions
-    },
-  },
 } satisfies Config;
 
 export default config;

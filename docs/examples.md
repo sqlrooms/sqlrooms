@@ -44,6 +44,7 @@ A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Fea
 - Tabbed interface for working with multiple queries
 - Query execution with results data table
 - Support for query cancellation
+- Offline functionality: supports Progressive Web App (PWA) features, persistent database storage with OPFS, and state persistence via local storage
 
 To create a new project from the query example run this:
 

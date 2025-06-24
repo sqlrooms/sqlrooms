@@ -4,7 +4,7 @@ outline: deep
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Modular Architecture](/modular-architecture) and [Key Concepts](/key-concepts) pages.
 
 ## Try the Minimal Example
 
@@ -76,22 +76,14 @@ SQLRooms provides a Tailwind preset that includes all the necessary styles. Upda
 import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-const preset = sqlroomsTailwindPreset();
 const config = {
-  ...preset,
+  presets: [sqlroomsTailwindPreset()],
   content: [
     // Your content paths...
     './src/**/*.{ts,tsx}',
     // Add SQLRooms packages to content paths
     './node_modules/@sqlrooms/**/dist/**/*.js',
   ],
-  theme: {
-    ...preset.theme,
-    extend: {
-      ...preset.theme?.extend,
-      // Add your custom theme extensions
-    },
-  },
 } satisfies Config;
 
 export default config;
