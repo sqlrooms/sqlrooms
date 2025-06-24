@@ -2,8 +2,8 @@ import {
   createAssistant,
   rebuildMessages,
   StreamMessage,
-  tool,
 } from '@openassistant/core';
+import {extendedTool} from '@openassistant/utils';
 import {
   arrowTableToJson,
   DataTable,
@@ -178,7 +178,7 @@ export async function runAnalysis({
     instructions: getInstructions
       ? getInstructions(tableSchemas)
       : getDefaultInstructions(tableSchemas),
-    functions: tools,
+    tools: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -215,7 +215,7 @@ export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
 ): Record<string, AiSliceTool> {
   return {
-    query: tool({
+    query: extendedTool({
       description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
