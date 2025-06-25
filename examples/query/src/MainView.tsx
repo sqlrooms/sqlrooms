@@ -2,7 +2,6 @@ import {
   CreateTableModal,
   QueryEditorPanel,
   QueryResultPanel,
-  SqlReferenceButton,
 } from '@sqlrooms/sql-editor';
 import {
   Button,

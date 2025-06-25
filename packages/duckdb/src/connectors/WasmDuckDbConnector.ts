@@ -1,5 +1,5 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
-import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
+import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
   LoadFileOptions,
   StandardLoadOptions,
@@ -8,17 +8,23 @@ import {
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {
-  createBaseDuckDbConnector,
   BaseDuckDbConnectorImpl,
+  createBaseDuckDbConnector,
 } from './BaseDuckDbConnector';
-import {loadObjects as loadObjectsSql, load, loadSpatial} from './load/load';
 import {DuckDbConnector} from './DuckDbConnector';
+import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
 
-export interface WasmDuckDbConnectorOptions {
+export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
+  /** @deprecated use `path` instead */
   dbPath?: string;
-  queryConfig?: DuckDBQueryConfig;
   initializationQuery?: string;
   logging?: boolean;
+  /**
+   * DuckDB bundles to use. Defaults to jsDelivr bundles. To use locally
+   * bundled files, you will need to import them in your app and construct a
+   * `DuckDBBundles` object.
+   */
+  bundles?: duckdb.DuckDBBundles;
 }
 
 export interface WasmDuckDbConnector extends DuckDbConnector {
@@ -34,7 +40,8 @@ export function createWasmDuckDbConnector(
     logging = false,
     initializationQuery = '',
     dbPath = ':memory:',
-    queryConfig,
+    bundles = duckdb.getJsDelivrBundles(),
+    ...restConfig
   } = options;
 
   let db: duckdb.AsyncDuckDB | null = null;
@@ -47,13 +54,17 @@ export function createWasmDuckDbConnector(
         throw new Error('No Worker support in this environment');
       }
       try {
-        const allBundles = duckdb.getJsDelivrBundles();
+        const allBundles = bundles;
         const bestBundle = await duckdb.selectBundle(allBundles);
         if (!bestBundle.mainWorker) {
           throw new Error('No best bundle found for DuckDB worker');
         }
+        const workerScriptUrl = new URL(
+          bestBundle.mainWorker,
+          globalThis.location.origin,
+        ).href;
         const workerUrl = URL.createObjectURL(
-          new Blob([`importScripts("${bestBundle.mainWorker}");`], {
+          new Blob([`importScripts("${workerScriptUrl}");`], {
             type: 'text/javascript',
           }),
         );
@@ -68,12 +79,19 @@ export function createWasmDuckDbConnector(
           }
         })(logger, worker);
 
-        await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
+        const mainModule = new URL(
+          bestBundle.mainModule,
+          globalThis.location.origin,
+        ).href;
+        const pthreadWorker = bestBundle.pthreadWorker
+          ? new URL(bestBundle.pthreadWorker, globalThis.location.origin).href
+          : undefined;
+        await db.instantiate(mainModule, pthreadWorker);
         URL.revokeObjectURL(workerUrl);
 
         await db.open({
-          path: dbPath,
-          query: queryConfig,
+          ...restConfig,
+          path: restConfig.path ?? dbPath,
         });
 
         conn = augmentConnectionQueryError(await db.connect());

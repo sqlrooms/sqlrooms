@@ -4,7 +4,7 @@ A powerful wrapper around DuckDB-WASM that provides React hooks and utilities fo
 
 ### React Integration & Type Safety
 
-- **React Hooks**: Seamless integration with React applications via `useSql` and `useRoomStore` hooks
+- **React Hooks**: Seamless integration with React applications via `useSql`
 - **Runtime Validation**: Optional Zod schema validation for query results with type transformations
 - **Typed Row Accessors**: Type-safe row access with validation and multiple iteration methods
 
@@ -102,8 +102,6 @@ function ValidatedUserList() {
 ### Using the Store for Direct Database Operations
 
 ```tsx
-import {useRoomStore} from '@sqlrooms/duckdb';
-
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
@@ -182,7 +180,6 @@ const tableExists = await checkTableExists(qualifiedTable);
 
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
-import {useRoomStore} from '@sqlrooms/duckdb';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -230,10 +227,8 @@ function DataLoader() {
 ### Using the Connector Directly
 
 ```tsx
-import {useDuckDb} from '@sqlrooms/duckdb';
-
 function AdvancedDataLoader() {
-  const connector = useDuckDb();
+  const connector = useRoomStore((state) => state.db.connector);
 
   const handleFileUpload = async (file: File) => {
     // Load file directly using the connector
@@ -279,43 +274,63 @@ function ExportButton() {
 
 ## Low-Level DuckDB Access
 
+### Basic direct usage
+
 ```tsx
-import {useDuckDb, useRoomStore} from '@sqlrooms/duckdb';
-
 async function executeCustomQuery() {
-  // Get the connector directly
-  const connector = useDuckDb();
+  // Grab the connector directly (no React hook necessary inside plain TS)
+  const connector = useRoomStore((state) => state.db.connector);
 
-  // Execute a query and get Arrow table
-  const queryHandle = connector.query('SELECT COUNT(*) as count FROM users');
-  const result = await queryHandle.result;
+  // QueryHandle is promise-like – await it directly
+  const result = await connector.query('SELECT COUNT(*) AS count FROM users');
 
-  // Access the Arrow table directly
+  // Inspect Arrow table
   const count = result.getChildAt(0)?.get(0);
   console.log(`Total users: ${count}`);
-
-  return result;
 }
+```
 
-// Using the store for advanced operations
+### Cancellation examples
+
+```tsx
+async function cancelExample() {
+  const connector = useRoomStore((state) => state.db.connector);
+
+  // 1. Manual cancel via the handle
+  const query = connector.query('SELECT * FROM large_table');
+  setTimeout(() => h.cancel(), 2000); // cancel after 2 s
+  await query; // throws if cancelled
+
+  // 2. Composable cancellation – many queries, one controller
+  const controller = new AbortController();
+  const q1 = connector.query('SELECT 1', {signal: controller.signal});
+  const q2 = connector.query('SELECT 2', {signal: controller.signal});
+  controller.abort(); // cancels q1 & q2
+  await Promise.allSettled([q1, q2]);
+}
+```
+
+### Advanced operations with the Zustand store
+
+```tsx
 function AdvancedOperations() {
-  const executeSql = useRoomStore((state) => state.db.executeSql);
-  const sqlSelectToJson = useRoomStore((state) => state.db.sqlSelectToJson);
-  const checkTableExists = useRoomStore((state) => state.db.checkTableExists);
+  const executeSql = useRoomStore((s) => s.db.executeSql);
+  const sqlSelectToJson = useRoomStore((s) => s.db.sqlSelectToJson);
+  const checkTableExists = useRoomStore((s) => s.db.checkTableExists);
 
   const handleAdvancedQuery = async () => {
-    // Execute with caching and deduplication
-    const queryHandle = await executeSql('SELECT * FROM users LIMIT 10');
-    if (queryHandle) {
-      const result = await queryHandle.result;
-      console.log('Query result:', result);
+    // Cached execution with deduplication
+    const query = await executeSql('SELECT * FROM users LIMIT 10');
+    if (query) {
+      const rows = await query; // await handle directly
+      console.log('Query result:', rows);
     }
 
-    // Parse SQL query to JSON for analysis
-    const parseResult = await sqlSelectToJson('SELECT id, name FROM users');
-    console.log('Parsed query:', parseResult);
+    // Parse SQL to JSON (analysis tool)
+    const parsed = await sqlSelectToJson('SELECT id, name FROM users');
+    console.log('Parsed query:', parsed);
 
-    // Check if table exists before operating on it
+    // Safety check before destructive operations
     const exists = await checkTableExists('users');
     console.log('Table exists:', exists);
   };

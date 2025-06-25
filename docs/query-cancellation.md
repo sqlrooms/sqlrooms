@@ -9,11 +9,12 @@ interface QueryOptions {
   signal?: AbortSignal; // Optional external abort signal
 }
 
-interface QueryHandle<T = any> {
-  result: Promise<T>; // Promise that resolves with query results
+// Promise-like intersection – can be awaited directly *or* via .result
+type QueryHandle<T = any> = PromiseLike<T> & {
+  result: Promise<T>; // Underlying promise (kept for backwards-compatibility)
   cancel: () => Promise<void>; // Method to cancel the query
-  signal: AbortSignal; // Read-only access to the abort signal for composability
-}
+  signal: AbortSignal; // Read-only abort signal for composability
+};
 ```
 
 ## Usage Examples
@@ -36,7 +37,7 @@ setTimeout(() => {
 }, 5000);
 
 try {
-  const result = await queryHandle.result;
+  const result = await queryHandle;
   console.log('Query completed:', result.numRows);
 } catch (error) {
   console.log('Query was cancelled or failed:', error.message);
@@ -67,11 +68,7 @@ setTimeout(() => {
 }, 3000);
 
 try {
-  const results = await Promise.allSettled([
-    query1.result,
-    query2.result,
-    query3.result,
-  ]);
+  const results = await Promise.allSettled([query1, query2, query3]);
 
   results.forEach((result, index) => {
     if (result.status === 'fulfilled') {
@@ -99,7 +96,7 @@ async function performComplexOperation() {
       {signal: operationController.signal},
     );
 
-    const queryResult = await queryHandle.result;
+    const queryResult = await queryHandle;
 
     // Step 2: Make HTTP requests using the same signal
     const response = await fetch('/api/process-data', {
@@ -114,7 +111,7 @@ async function performComplexOperation() {
       {signal: operationController.signal},
     );
 
-    await finalQuery.result;
+    await finalQuery;
     console.log('Complex operation completed');
   } catch (error) {
     if (error.name === 'AbortError') {
@@ -174,7 +171,7 @@ document.getElementById('cancel-btn').onclick = () => {
 };
 
 try {
-  const result = await queryHandle.result;
+  const result = await queryHandle;
   console.log('Query completed within timeout');
 } catch (error) {
   console.log('Query cancelled or timed out:', error.message);
@@ -219,7 +216,7 @@ console.log('Results:', data.numRows);
 // Simple usage (no external signal)
 const queryHandle = connector.query('SELECT * FROM table');
 console.log('Query started');
-const data = await queryHandle.result;
+const data = await queryHandle;
 console.log('Results:', data.numRows);
 
 // With external cancellation control
@@ -228,7 +225,7 @@ const queryHandle = connector.query('SELECT * FROM table', {
   signal: controller.signal,
 });
 // controller.abort() to cancel
-const data = await queryHandle.result;
+const data = await queryHandle;
 ```
 
 ## Implementation Notes

@@ -8,6 +8,12 @@
   }
 }
 
+.dark {
+  /* --vp-c-bg: hsl(223, 64%, 6%); */
+  --vp-c-bg: hsl(225, 27%, 11%);
+  --vp-sidebar-bg-color: hsl(225, 27%, 11%);
+}
+
 /* Add your custom styles here */
 .VPSidebarItem.level-3 .text {
   font-size: 0.8em;

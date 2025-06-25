@@ -1,14 +1,32 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = [
-  'core',
-  'room-shell',
-  'room-config',
-  'duckdb',
-  'ui',
-  'layout',
-];
+const PACKAGE_CATEGORIES = {
+  'Core Packages': [
+    'ai',
+    'core',
+    'room-shell',
+    'room-store',
+    'duckdb',
+    'ui',
+    'layout',
+  ],
+  'Feature Packages': [
+    'cosmos',
+    'data-table',
+    'discuss',
+    'dropzone',
+    'monaco-editor',
+    'mosaic',
+    'recharts',
+    's3-browser',
+    'schema-tree',
+    'sql-editor',
+    'vega',
+  ],
+  'Utility Packages': ['utils'],
+};
+
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   ignoreDeadLinks: true,
@@ -35,9 +53,9 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
+      {text: 'Examples', link: '/examples'},
       {text: 'Get started', link: '/getting-started'},
       {text: 'Reference', link: '/packages'},
-      {text: 'Examples', link: '/examples'},
     ],
 
     sidebar: [
@@ -50,20 +68,11 @@ export default defineConfig({
           },
           {
             text: 'Modular Architecture',
-            link: '/architecture',
-          },
-        ],
-      },
-      {
-        text: 'Examples',
-        items: [
-          {
-            text: 'Example Apps',
-            link: '/examples',
+            link: '/modular-architecture',
           },
           {
-            text: 'Case Studies',
-            link: '/case-studies',
+            text: 'Key Concepts',
+            link: '/key-concepts',
           },
         ],
       },
@@ -91,6 +100,10 @@ export default defineConfig({
             link: '/theming',
           },
           {
+            text: 'Offline Use',
+            link: '/offline-use',
+          },
+          {
             text: 'Upgrade Guide',
             link: '/upgrade-guide',
           },
@@ -98,23 +111,32 @@ export default defineConfig({
       },
 
       {
-        text: 'Reference',
+        text: 'Examples',
         items: [
           {
-            text: 'Core Packages',
-            link: '/packages#core-packages',
-            items: apiSidebarConfig.filter((item) =>
-              CORE_PACKAGES.includes(item.text),
-            ),
+            text: 'Example Apps',
+            link: '/examples',
           },
           {
-            text: 'Feature Packages',
-            link: '/packages#feature-packages',
-            items: apiSidebarConfig.filter(
-              (item) => !CORE_PACKAGES.includes(item.text),
-            ),
+            text: 'Case Studies',
+            link: '/case-studies',
           },
         ],
+      },
+
+      {
+        text: 'Reference',
+        items: Object.entries(PACKAGE_CATEGORIES).map(
+          ([category, packages]) => {
+            return {
+              text: category,
+              link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
+              items: apiSidebarConfig.filter((item) =>
+                packages.includes(item.text),
+              ),
+            };
+          },
+        ),
       },
     ],
 

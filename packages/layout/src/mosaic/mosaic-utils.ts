@@ -1,15 +1,15 @@
 import {
-  DEFAULT_MOSAIC_LAYOUT,
-  isMosaicLayoutParent,
-  MosaicLayoutNode,
-} from '@sqlrooms/room-config';
-import {
   createRemoveUpdate,
   MosaicDirection,
   MosaicNode,
   MosaicPath,
   updateTree,
 } from 'react-mosaic-component';
+import {
+  MosaicLayoutNode,
+  isMosaicLayoutParent,
+  DEFAULT_MOSAIC_LAYOUT,
+} from '@sqlrooms/layout-config';
 
 export function makeMosaicStack(
   direction: MosaicDirection,

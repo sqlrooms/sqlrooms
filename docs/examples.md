@@ -6,12 +6,12 @@ outline: deep
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
 
-## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
+<!-- ## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
 
 [Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
 
-<!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
+<img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450>
 
 A minimal Vite application demonstrating the basic usage of SQLRooms. Features include:
 
@@ -24,6 +24,32 @@ To create a new project from the get-started example run this:
 
 ```bash
 npx degit sqlrooms/examples/get-started my-new-app/
+``` -->
+
+## [SQL Query Editor](https://query.sqlrooms.org/)
+
+[Try live](https://query.sqlrooms.org/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/query)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/query?embed=1)
+
+<a href="https://query.sqlrooms.org/" target="_blank">
+<img src="/media/examples/sqlrooms-query.webp" alt="SQLRooms SQL Query workbench example" width=450>
+</a>
+
+A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Features include:
+
+- Interactive SQL editor with syntax highlighting
+- File dropzone for adding data tables to DuckDB
+- Schema tree for browsing database tables and columns
+- Tabbed interface for working with multiple queries
+- Query execution with results data table
+- Support for query cancellation
+- Offline functionality: supports Progressive Web App (PWA) features, persistent database storage with OPFS, and state persistence via local storage
+
+To create a new project from the query example run this:
+
+```bash
+npx degit sqlrooms/examples/query my-new-app/
 ```
 
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
@@ -44,20 +70,11 @@ An advanced example showing how to build an AI-powered analytics application wit
 - Custom visualization components
 - Room state persistence
 
-## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
+To create a new project from the AI example run this:
 
-[Try live](https://sqlrooms-nextjs.netlify.app/)
-| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
-| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
-
-<a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
-  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
-</a>
-
-A minimalistic [Next.js](https://nextjs.org/) app example featuring:
-
-- [Recharts module](/api/recharts) for data visualization
-- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+```bash
+npx degit sqlrooms/examples/ai my-new-app/
+```
 
 ## [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
 
@@ -74,6 +91,33 @@ An example showcasing integration with [deck.gl](https://deck.gl/) for geospatia
 - High-performance WebGL-based geospatial visualizations
 - Real-time commenting and annotation system
 - Contextual discussions tied to specific data points
+
+To create a new project from the deckgl-discuss example run this:
+
+```bash
+npx degit sqlrooms/examples/deckgl-discuss my-new-app/
+```
+
+## [Next.js + Recharts Example](https://sqlrooms-nextjs.netlify.app/)
+
+[Try live](https://sqlrooms-nextjs.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
+
+<a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
+  <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
+</a>
+
+A minimalistic [Next.js](https://nextjs.org/) app example featuring:
+
+- [Recharts module](/api/recharts) for data visualization
+- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+
+To create a new project from the Next.js example run this:
+
+```bash
+npx degit sqlrooms/examples/nextjs my-new-app/
+```
 
 ## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
@@ -93,6 +137,12 @@ An example demonstrating integration with the [Cosmos](https://github.com/cosmog
 - Customizable visual attributes and physics parameters
 - Event handling for node/edge interactions
 
+To create a new project from the cosmos example run this:
+
+```bash
+npx degit sqlrooms/examples/cosmos my-new-app/
+```
+
 ## [Cosmos – 2D Embedding Visualization](http://sqlrooms-cosmos-embedding.netlify.app/)
 
 [Try live](http://sqlrooms-cosmos-embedding.netlify.app/)
@@ -110,6 +160,12 @@ An example showcasing integration with Cosmos for visualizing high-dimensional d
 - Dynamic mapping of data attributes to visual properties
 - Efficient handling of large-scale embedding datasets
 - Interactive exploration with pan, zoom, and filtering
+
+To create a new project from the cosmos-embedding example run this:
+
+```bash
+npx degit sqlrooms/examples/cosmos-embedding my-new-app/
+```
 
 ## [Mosaic Example](https://sqlrooms-mosaic.netlify.app/)
 
@@ -130,6 +186,12 @@ Features include:
 - Seamless integration with Mosaic for interactive visualizations
 - Real-time cross-filtering capabilities across multiple views
 - Example dashboards with common visualization types
+
+To create a new project from the mosaic example run this:
+
+```bash
+npx degit sqlrooms/examples/mosaic my-new-app/
+```
 
 ## Looking for More?
 

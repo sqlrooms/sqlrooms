@@ -3,8 +3,9 @@ import {
   createRoomStore,
   RoomShellSliceState,
   BaseRoomConfig,
+  LayoutTypes,
+  MAIN_VIEW,
 } from '@sqlrooms/room-shell';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,

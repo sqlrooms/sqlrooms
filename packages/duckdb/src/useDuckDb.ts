@@ -3,10 +3,13 @@ import {useStoreWithDuckDb} from './DuckDbSlice';
 import {DuckDbConnector} from './connectors/DuckDbConnector';
 
 /**
- * @deprecated DuckConn is deprecated, use DuckDb instead
+ * @deprecated
  */
 export type DuckConn = DuckDb;
 
+/**
+ * @deprecated
+ */
 export type DuckDb = {
   db: duckdb.AsyncDuckDB;
   conn: duckdb.AsyncDuckDBConnection;

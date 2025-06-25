@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/sql-editor",
-  "version": "0.17.0",
+  "version": "0.19.2",
   "private": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
@@ -35,6 +35,7 @@
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
+    "@sqlrooms/sql-editor-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "d3-dsv": "^3.0.1",

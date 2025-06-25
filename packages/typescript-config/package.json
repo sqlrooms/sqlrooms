@@ -1,8 +1,0 @@
-{
-  "name": "@sqlrooms/typescript-config",
-  "version": "0.17.0",
-  "private": true,
-  "publishConfig": {
-    "access": "public"
-  }
-}

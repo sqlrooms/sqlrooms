@@ -14,8 +14,6 @@ export {
 export * from './useSql';
 export {
   createDuckDbSlice,
-  createDefaultDuckDbConfig,
-  DuckDbSliceConfig,
   type DuckDbSliceState,
   useStoreWithDuckDb,
 } from './DuckDbSlice';
@@ -38,3 +36,6 @@ export {
   type TypedRowAccessor,
   createTypedRowAccessor,
 } from './typedRowAccessor';
+export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
+export * from '@sqlrooms/duckdb-config';
+export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';

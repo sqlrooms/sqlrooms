@@ -4,11 +4,28 @@ outline: deep
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Modular Architecture](/modular-architecture) and [Key Concepts](/key-concepts) pages.
 
 ## Try the Minimal Example
 
-To create a new project from the get-started example run this:
+The [Minimal Example](https://github.com/sqlrooms/examples/tree/main/minimal) is the quickest way to see SQLRooms in action with the smallest possible setup. It demonstrates loading a CSV data source and running SQL queries with `useSql()` in a barebones Vite + React app.
+
+To create a new project from the minimal example, run:
+
+```bash
+npx degit sqlrooms/examples/minimal my-minimal-app/
+cd my-minimal-app
+npm install
+npm run dev
+```
+
+---
+
+## Try the Get Started Example
+
+The [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started) is a more feature-rich starter template that demonstrates a typical SQLRooms application structure, including panels, layout, and configuration.
+
+To create a new project from the get-started example, run:
 
 ```bash
 npx degit sqlrooms/examples/get-started myapp/
@@ -17,7 +34,7 @@ npm install
 npm run dev
 ```
 
-This basic Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`.
+This Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`, along with a more complete app shell and layout.
 
 ## Manual Setup
 
@@ -38,15 +55,15 @@ Install the required SQLRooms packages:
 ::: code-group
 
 ```bash [npm]
-npm install @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+npm install @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 ```bash [pnpm]
-pnpm add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+pnpm add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 ```bash [yarn]
-yarn add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
+yarn add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 ```
 
 :::
@@ -59,22 +76,14 @@ SQLRooms provides a Tailwind preset that includes all the necessary styles. Upda
 import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-const preset = sqlroomsTailwindPreset();
 const config = {
-  ...preset,
+  presets: [sqlroomsTailwindPreset()],
   content: [
     // Your content paths...
     './src/**/*.{ts,tsx}',
     // Add SQLRooms packages to content paths
     './node_modules/@sqlrooms/**/dist/**/*.js',
   ],
-  theme: {
-    ...preset.theme,
-    extend: {
-      ...preset.theme?.extend,
-      // Add your custom theme extensions
-    },
-  },
 } satisfies Config;
 
 export default config;
@@ -91,7 +100,7 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 1. First, define your panel types and room configuration:
 
 ```typescript
-import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
+import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-store';
 import {z} from 'zod';
 
 // Define panel types
@@ -232,15 +241,7 @@ function YourComponent() {
 }
 ```
 
-## Key Features
-
-- DuckDB integration for powerful data analytics
-- Customizable panel system with sidebar and main view layouts
-- Built-in data source management
-- Extensible room configuration with Zod schemas
-- Type-safe state management
-
 ## Need Help?
 
-- Check our [documentation](https://github.com/sqlrooms/sqlrooms)
+- Start or join a discussion on [GitHub Discussions](https://github.com/sqlrooms/sqlrooms/discussions)
 - File an issue on [GitHub](https://github.com/sqlrooms/sqlrooms/issues)

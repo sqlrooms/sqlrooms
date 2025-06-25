@@ -1,13 +1,32 @@
 import {defineConfig} from 'vite';
-import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-// https://vite.dev/config/
+import {VitePWA} from 'vite-plugin-pwa';
+
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      manifest: {
+        name: 'SQLRooms Query Workbench',
+        short_name: 'SQLRooms',
+        start_url: '.',
+        display: 'standalone',
+        background_color: '#ffffff',
+        description: 'Query Workbench example for SQLRooms',
+        icons: [
+          {
+            src: 'icon.png',
+            sizes: '192x192',
+            type: 'image/png',
+          },
+          {
+            src: 'icon.png',
+            sizes: '512x512',
+            type: 'image/png',
+          },
+        ],
+      },
+    }),
+  ],
 });

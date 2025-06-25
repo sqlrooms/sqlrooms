@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=20 --filter=@sqlrooms/*",
+    "dev": "turbo dev --concurrency=25 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",
@@ -26,9 +26,9 @@
     "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
     "graph": "turbo run build --filter=@sqlrooms/* --graph | sed 's/\\[root\\] @sqlrooms\\///g' | sed 's/#build//g' | grep -v '___ROOT___'",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs --port 4173 --open\"",
+    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs --port 6173 --host --open\"",
     "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
-    "docs:preview": "pnpm run typedoc && vitepress preview docs && echo 'open http://localhost:4173'",
+    "docs:preview": "pnpm run typedoc && vitepress preview docs --port 7173 --open",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
     "version-auto": "lerna version --conventional-commits --yes --sync-workspace-lock",
     "version-patch": "lerna version patch --yes --sync-workspace-lock",
@@ -46,10 +46,10 @@
     "@lerna-lite/cli": "^3.12.3",
     "@lerna-lite/publish": "^3.12.3",
     "@lerna-lite/version": "^3.12.3",
-    "@sqlrooms/eslint-config": "workspace:*",
-    "@sqlrooms/jest-config": "workspace:*",
-    "@sqlrooms/typedoc-config": "workspace:*",
-    "@sqlrooms/typescript-config": "workspace:*",
+    "@sqlrooms/preset-eslint": "workspace:*",
+    "@sqlrooms/preset-jest": "workspace:*",
+    "@sqlrooms/preset-typedoc": "workspace:*",
+    "@sqlrooms/preset-typescript": "workspace:*",
     "@types/glob": "^8.1.0",
     "@types/jest": "^29.5.14",
     "@types/mocha": "^10.0.10",
@@ -89,6 +89,7 @@
     ],
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",
+      "@vaadin/vaadin-usage-statistics",
       "sharp"
     ]
   }

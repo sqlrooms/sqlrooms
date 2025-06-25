@@ -8,19 +8,22 @@ function stripFrontmatter(md) {
 }
 
 function adjustRelativePaths(md) {
-  return (
-    md
-      // HTML-style src="media/..."
-      .replace(/(src\s*=\s*["'])\/?media\//g, '$1docs/media/')
-      // Markdown-style ![...](media/...)
-      .replace(/(\]\()\s*\/?media\//g, '$1docs/media/')
-      // Convert relative markdown links to absolute links with http://sqlrooms.org/
-      // Match [text](relative-path) but not [text](http://...) or [text](https://...) or [text](#anchor) or [text](mailto:...)
-      .replace(
-        /(\]\()(?!https?:\/\/|#|mailto:)\/?([^)]+)(\))/g,
-        '$1http://sqlrooms.org/$2$3',
-      )
+  // 1. Fix HTML-style src="media/..."
+  md = md.replace(/(src\s*=\s*["'])\/?media\//g, '$1docs/media/');
+
+  // 2. Fix Markdown image links ![...](media/...)
+  md = md.replace(/(!\[[^\]]*\]\()\s*\/?media\//g, '$1docs/media/');
+
+  // 3. Convert other relative markdown links (not images) to absolute URLs, avoiding double slashes
+  md = md.replace(
+    /(?<!!)[\[]([^\]]+)[\]]\((?!https?:\/\/|#|mailto:)(\/?[^)]+)\)/g,
+    (match, text, path) => {
+      const cleanPath = path.startsWith('/') ? path.slice(1) : path;
+      return `[${text}](http://sqlrooms.org/${cleanPath})`;
+    },
   );
+
+  return md;
 }
 
 const readmeRaw = await fs.readFile(README_PATH, 'utf-8');

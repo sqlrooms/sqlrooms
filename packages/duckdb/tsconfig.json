@@ -1,5 +1,5 @@
 {
-  "extends": "@sqlrooms/typescript-config/base.json",
+  "extends": "@sqlrooms/preset-typescript/base.json",
   "compilerOptions": {
     "outDir": "dist"
   },

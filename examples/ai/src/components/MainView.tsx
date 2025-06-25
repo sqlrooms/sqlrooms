@@ -7,7 +7,7 @@ import {
   ModelSelector,
 } from '@sqlrooms/ai';
 import {useRoomStore} from '../store';
-import {LLM_MODELS} from './constant';
+import {LLM_MODELS} from '../models';
 import {capitalize} from '@sqlrooms/utils';
 import {useMemo} from 'react';
 
@@ -19,7 +19,7 @@ export const MainView: React.FC = () => {
   });
 
   // Check if data is available
-  const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
+  const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const apiKeys = useRoomStore((s) => s.apiKeys);
   const setProviderApiKey = useRoomStore((s) => s.setProviderApiKey);
