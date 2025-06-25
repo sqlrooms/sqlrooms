@@ -14,6 +14,7 @@ import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
 import {AnalysisResultSchema, QueryToolParameters} from './schemas';
+import {convertToCoreMessages} from 'ai';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -192,7 +193,7 @@ export async function runAnalysis({
       response: analysis.streamMessage as StreamMessage,
     }));
     const initialMessages = rebuildMessages(historyMessages);
-    assistant.setMessages(initialMessages);
+    assistant.setMessages(convertToCoreMessages(initialMessages));
   }
 
   // process the prompt
@@ -202,8 +203,8 @@ export async function runAnalysis({
       isCompleted,
       message,
     }: {
-      isCompleted: boolean;
-      message: StreamMessage;
+      isCompleted?: boolean;
+      message?: StreamMessage;
     }) => {
       onStreamResult(isCompleted ?? false, message);
     },

@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {StreamMessageSchema} from '@openassistant/core';
+import {StreamMessagePart} from '@openassistant/core';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -74,7 +74,9 @@ export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 export const AnalysisResultSchema = z.object({
   id: z.string().cuid2(),
   prompt: z.string(),
-  streamMessage: StreamMessageSchema,
+  streamMessage: z.object({
+    parts: z.array(z.custom<StreamMessagePart>()).optional(),
+  }),
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });

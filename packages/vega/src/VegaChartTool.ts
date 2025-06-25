@@ -30,7 +30,7 @@ export type VegaChartToolAdditionalData = {
   vegaLiteSpec: object;
 };
 
-export type VegaChartToolContext = object;
+export type VegaChartToolContext = unknown;
 
 /**
  * Default description for the VegaChart tool

@@ -48,7 +48,7 @@ export function createDefaultAiConfig(
   };
 }
 
-export type AiSliceTool = ExtendedTool<z.ZodTypeAny>;
+export type AiSliceTool = ExtendedTool<z.ZodTypeAny, unknown, unknown, unknown>;
 
 export type AiSliceState = {
   ai: {
@@ -360,13 +360,14 @@ function getCurrentSessionFromState<PC extends BaseRoomConfig & AiSliceConfig>(
   state: RoomShellSliceState<PC> | WritableDraft<RoomShellSliceState<PC>>,
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.config.ai;
-  return sessions.find(
-    (session: AnalysisSessionSchema) => session.id === currentSessionId,
-  );
+  return sessions.find((session) => session.id === currentSessionId);
 }
 
-function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
-  return analysisResults.find((r: AnalysisResultSchema) => r.id === id);
+function findResultById(
+  analysisResults: AnalysisResultSchema[],
+  id: string,
+): AnalysisResultSchema | undefined {
+  return analysisResults.find((result) => result.id === id);
 }
 
 /**
@@ -401,28 +402,40 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
 
       const result = findResultById(currentSession.analysisResults, resultId);
       if (result) {
-        if (streamMessage) {
+        if (streamMessage && streamMessage.parts) {
           // copy all properties from streamMessage
           const newStreamMessage = {
-            parts: streamMessage.parts?.map((part) => ({
-              ...(part.type === 'text' && {type: 'text', text: part.text}),
-              ...(part.type === 'tool-invocation' && {
-                type: 'tool-invocation',
-                toolInvocation: {
-                  toolName: part.toolInvocation.toolName,
-                  args: part.toolInvocation.args,
-                  state: part.toolInvocation.state,
-                  result:
-                    part.toolInvocation.state === 'result'
-                      ? part.toolInvocation.result
-                      : null,
-                },
-              }),
-              additionalData: part.additionalData,
-            })),
+            parts: streamMessage.parts.map((part) => {
+              if (part.type === 'text') {
+                return {
+                  type: 'text' as const,
+                  text: part.text,
+                  additionalData: part.additionalData,
+                  isCompleted: part.isCompleted,
+                };
+              } else if (part.type === 'tool-invocation') {
+                return {
+                  type: 'tool-invocation' as const,
+                  toolInvocation: {
+                    toolName: part.toolInvocation.toolName,
+                    args: part.toolInvocation.args,
+                    state: part.toolInvocation.state,
+                    result:
+                      part.toolInvocation.state === 'result'
+                        ? part.toolInvocation.result
+                        : undefined,
+                  },
+                  additionalData: part.additionalData,
+                  isCompleted: part.isCompleted,
+                };
+              } else {
+                // TODO: handle other part types later
+                return part;
+              }
+            }),
           };
 
-          result.streamMessage = newStreamMessage;
+          result.streamMessage = newStreamMessage as StreamMessage;
         }
         if (errorMessage) {
           result.errorMessage = errorMessage;

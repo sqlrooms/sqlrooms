@@ -5,7 +5,11 @@ import {
   createDefaultAiConfig,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
-import {createWasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
+import {
+  createWasmDuckDbConnector,
+  DataTable,
+  DuckDBAccessMode,
+} from '@sqlrooms/duckdb';
 import {
   LayoutTypes,
   MAIN_VIEW,
@@ -29,7 +33,9 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {DEFAULT_MODEL} from './models';
-// import exampleSessions from './example-sessions.json';
+import exampleSessions from './example-sessions.json';
+
+console.log(exampleSessions);
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -73,8 +79,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
-          // path: 'opfs://database.db',
-          // accessMode: DuckDBAccessMode.READ_WRITE,
+          path: 'opfs://database.db',
+          accessMode: DuckDBAccessMode.READ_WRITE,
         }),
         config: {
           layout: {
@@ -87,15 +93,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           },
           dataSources: [
-            // {
-            //   tableName: 'earthquakes',
-            //   type: 'url',
-            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            // },
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
           ],
           ...createDefaultAiConfig(
-            {},
-            // AiSliceConfig.shape.ai.parse(exampleSessions),
+            // {},
+            AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
         },
