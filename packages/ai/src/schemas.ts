@@ -42,12 +42,69 @@ export const StreamMessagePartSchema = z.union([
     .passthrough(),
 ]);
 
+// migrate from old streamMessage to new streamMessage
+const migrateStreamMessage = z.preprocess(
+  (data) => {
+    if (
+      data &&
+      typeof data === 'object' &&
+      'toolCallMessages' in data &&
+      'parts' in data
+    ) {
+      // migrate from old streamMessage to new streamMessage
+      const parts = (data as any).parts as any[];
+
+      const newParts = [];
+      for (const part of parts) {
+        if (part.type === 'text') {
+          const text = part.text;
+          newParts.push({
+            type: 'text',
+            text,
+          });
+        } else if (part.type === 'tool') {
+          const toolCallMessages = part.toolCallMessages;
+          for (const toolCallMessage of toolCallMessages) {
+            const toolCallId = toolCallMessage.toolCallId;
+            const toolName = toolCallMessage.toolName;
+            const args = toolCallMessage.args;
+            const isCompleted = toolCallMessage.isCompleted;
+            const llmResult = toolCallMessage.llmResult;
+            const additionalData = toolCallMessage.additionalData;
+
+            const toolInvocation = {
+              toolCallId,
+              toolName,
+              args,
+              state: isCompleted ? 'result' : 'call',
+              result: llmResult,
+            };
+
+            newParts.push({
+              type: 'tool-invocation',
+              toolInvocation,
+              additionalData,
+              isCompleted,
+            });
+          }
+        }
+      }
+
+      return {
+        parts: newParts,
+      };
+    }
+    return data;
+  },
+  z.object({
+    parts: z.array(StreamMessagePartSchema).optional(),
+  }),
+);
+
 export const AnalysisResultSchema = z.object({
   id: z.string().cuid2(),
   prompt: z.string(),
-  streamMessage: z.object({
-    parts: z.array(StreamMessagePartSchema).optional(),
-  }),
+  streamMessage: migrateStreamMessage,
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });
