@@ -2,9 +2,9 @@
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
-  ProjectBuilderPanel,
+  RoomPanel,
   TablesListPanel,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {
   Accordion,
   AccordionContent,
@@ -13,15 +13,13 @@ import {
 } from '@sqlrooms/ui';
 import {FolderIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
 const DataSourcesPanel: FC = () => {
-  const addProjectFile = useProjectStore(
-    (state) => state.project.addProjectFile,
-  );
+  const addRoomFile = useRoomStore((state) => state.room.addRoomFile);
 
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
       <FileDropzone
         className="h-[200px] p-5"
         acceptedFormats={{
@@ -32,7 +30,7 @@ const DataSourcesPanel: FC = () => {
         }}
         onDrop={async (files) => {
           for (const file of files) {
-            await addProjectFile(file);
+            await addRoomFile(file);
           }
         }}
       >
@@ -80,7 +78,7 @@ const DataSourcesPanel: FC = () => {
           </AccordionContent>
         </AccordionItem>
       </Accordion>
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 };
 

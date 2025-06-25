@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/monaco-editor",
-  "version": "0.13.1",
+  "version": "0.17.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -23,13 +23,14 @@
     "monaco-editor": "^0.52.2"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   }
 }

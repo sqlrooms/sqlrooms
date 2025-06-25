@@ -82,8 +82,11 @@ export default function useArrowDataTable(
                   className={`w-auto max-w-[500px] text-${fontSize}`}
                 >
                   <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
+                    <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
+                    <div className="relative">
+                      <pre className="whitespace-pre-wrap text-xs">
+                        {valueStr}
+                      </pre>
                       <Button
                         variant="ghost"
                         size="xs"

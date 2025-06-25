@@ -1,256 +1,232 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol, DuckDBQueryConfig} from '@duckdb/duckdb-wasm';
-import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/project-config';
+import {
+  LoadFileOptions,
+  StandardLoadOptions,
+  isSpatialLoadFileOptions,
+} from '@sqlrooms/room-config';
 import {splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
-import {BaseDuckDbConnector} from './BaseDuckDbConnector';
-import {loadObjects} from './load/load';
+import {
+  createBaseDuckDbConnector,
+  BaseDuckDbConnectorImpl,
+} from './BaseDuckDbConnector';
+import {loadObjects as loadObjectsSql, load, loadSpatial} from './load/load';
+import {DuckDbConnector} from './DuckDbConnector';
 
-export class WasmDuckDbConnector extends BaseDuckDbConnector {
-  private logging: boolean;
-  private db: duckdb.AsyncDuckDB | null = null;
-  private conn: duckdb.AsyncDuckDBConnection | null = null;
-  private worker: Worker | null = null;
-  private queryConfig?: DuckDBQueryConfig;
+export interface WasmDuckDbConnectorOptions {
+  dbPath?: string;
+  queryConfig?: DuckDBQueryConfig;
+  initializationQuery?: string;
+  logging?: boolean;
+}
 
-  constructor({
+export interface WasmDuckDbConnector extends DuckDbConnector {
+  getDb(): duckdb.AsyncDuckDB;
+  getConnection(): duckdb.AsyncDuckDBConnection;
+  readonly type: 'wasm';
+}
+
+export function createWasmDuckDbConnector(
+  options: WasmDuckDbConnectorOptions = {},
+): WasmDuckDbConnector {
+  const {
     logging = false,
     initializationQuery = '',
     dbPath = ':memory:',
     queryConfig,
-  }: {
-    dbPath?: string;
-    queryConfig?: DuckDBQueryConfig;
-    initializationQuery?: string;
-    logging?: boolean;
-  } = {}) {
-    super({dbPath, initializationQuery});
-    this.queryConfig = queryConfig;
-    this.logging = logging;
-  }
+  } = options;
 
-  protected async initializeInternal(): Promise<void> {
-    if (!globalThis.Worker) {
-      throw new Error('No Worker support in this environment');
-    }
+  let db: duckdb.AsyncDuckDB | null = null;
+  let conn: duckdb.AsyncDuckDBConnection | null = null;
+  let worker: Worker | null = null;
 
-    try {
-      const allBundles = duckdb.getJsDelivrBundles();
-      const bestBundle = await duckdb.selectBundle(allBundles);
-      if (!bestBundle.mainWorker) {
-        throw new Error('No best bundle found for DuckDB worker');
+  const impl: BaseDuckDbConnectorImpl = {
+    async initializeInternal() {
+      if (!globalThis.Worker) {
+        throw new Error('No Worker support in this environment');
       }
-      const workerUrl = URL.createObjectURL(
-        new Blob([`importScripts("${bestBundle.mainWorker}");`], {
-          type: 'text/javascript',
-        }),
-      );
-
-      const worker = new window.Worker(workerUrl);
-      const logger = this.logging
-        ? new duckdb.ConsoleLogger()
-        : {
-            // Silently log
-            log: () => {
-              /* do nothing */
-            },
-          };
-
-      const db = new (class extends duckdb.AsyncDuckDB {
-        onError(event: ErrorEvent) {
-          super.onError(event);
-          console.error('DuckDB worker error:', event);
+      try {
+        const allBundles = duckdb.getJsDelivrBundles();
+        const bestBundle = await duckdb.selectBundle(allBundles);
+        if (!bestBundle.mainWorker) {
+          throw new Error('No best bundle found for DuckDB worker');
         }
-      })(logger, worker);
+        const workerUrl = URL.createObjectURL(
+          new Blob([`importScripts("${bestBundle.mainWorker}");`], {
+            type: 'text/javascript',
+          }),
+        );
 
-      await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
-      URL.revokeObjectURL(workerUrl);
+        worker = new window.Worker(workerUrl);
+        const logger = logging ? new duckdb.ConsoleLogger() : {log: () => {}};
 
-      await db.open({
-        path: this.dbPath,
-        query: this.queryConfig,
+        db = new (class extends duckdb.AsyncDuckDB {
+          onError(event: ErrorEvent) {
+            super.onError(event);
+            console.error('DuckDB worker error:', event);
+          }
+        })(logger, worker);
+
+        await db.instantiate(bestBundle.mainModule, bestBundle.pthreadWorker);
+        URL.revokeObjectURL(workerUrl);
+
+        await db.open({
+          path: dbPath,
+          query: queryConfig,
+        });
+
+        conn = augmentConnectionQueryError(await db.connect());
+        if (initializationQuery) {
+          await conn.query(initializationQuery);
+        }
+      } catch (err) {
+        db = null;
+        conn = null;
+        worker = null;
+        throw err;
+      }
+    },
+
+    async destroyInternal() {
+      if (conn) {
+        await conn.close();
+        conn = null;
+      }
+      if (db) {
+        await db.terminate();
+        db = null;
+      }
+      if (worker) {
+        worker.terminate();
+        worker = null;
+      }
+    },
+
+    async executeQueryInternal<T extends arrow.TypeMap = any>(
+      query: string,
+      signal: AbortSignal,
+    ): Promise<arrow.Table<T>> {
+      if (!db) {
+        throw new Error('DuckDB not initialized');
+      }
+
+      if (signal.aborted) {
+        throw new Error('Query aborted before execution');
+      }
+
+      const localConn = augmentConnectionQueryError(await db.connect());
+      const streamPromise = localConn.send<T>(query, true);
+      let reader: arrow.RecordBatchReader<T> | null = null;
+
+      const buildTable = async () => {
+        reader = await streamPromise;
+        const batches: arrow.RecordBatch<T>[] = [];
+        let rowCount = 0;
+        for await (const batch of reader) {
+          if (batch.numRows === 0) continue;
+          batches.push(batch);
+          rowCount += batch.numRows;
+        }
+        if (rowCount === 0) {
+          return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
+        }
+        return new arrow.Table(batches);
+      };
+
+      let abortHandler: (() => void) | undefined;
+      const abortPromise = new Promise<never>((_, reject) => {
+        abortHandler = () => {
+          localConn.cancelSent().catch(() => {});
+          reader?.cancel?.();
+          reject(new Error('Query cancelled'));
+        };
+        signal.addEventListener('abort', abortHandler);
       });
 
-      const conn = await db.connect();
-
-      // Add error handling to conn.query
-      const originalQuery = conn.query;
-      conn.query = (async (q: string) => {
-        const stack = new Error().stack;
-        try {
-          return await originalQuery.call(conn, q);
-        } catch (err) {
-          throw new DuckQueryError(err, q, stack);
-        }
-      }) as typeof conn.query;
-
-      if (this.initializationQuery) {
-        await conn.query(this.initializationQuery);
-      }
-
-      this.db = db;
-      this.conn = conn;
-      this.worker = worker;
-      this.initialized = true;
-    } catch (err) {
-      this.initialized = false;
-      this.initializing = null;
-      throw err;
-    }
-  }
-
-  async destroy(): Promise<void> {
-    try {
-      if (this.conn) {
-        await this.conn.close();
-        this.conn = null;
-      }
-
-      if (this.db) {
-        await this.db.terminate();
-        this.db = null;
-      }
-
-      if (this.worker) {
-        this.worker.terminate();
-        this.worker = null;
-      }
-
-      this.initialized = false;
-      this.initializing = null;
-    } catch (err) {
-      console.error('Error during DuckDB shutdown:', err);
-      throw err;
-    }
-  }
-
-  protected async executeQueryInternal<T extends arrow.TypeMap = any>(
-    query: string,
-    signal: AbortSignal,
-  ): Promise<arrow.Table<T>> {
-    await this.ensureInitialized();
-    if (!this.conn) {
-      throw new Error('DuckDB connection not initialized');
-    }
-
-    if (signal.aborted) {
-      // Fast‑path: request was already cancelled
-      await this.conn.cancelSent().catch(() => {});
-      throw new Error('Query aborted before execution');
-    }
-
-    // 1️⃣ Kick‑off the statement using the *cancellable* streaming API
-    const streamPromise = this.conn.send<T>(
-      query,
-      /* allowStreamResult */ true,
-    );
-    // 2️⃣ Helper to materialise all batches into a single Arrow Table
-    const buildTable = async () => {
-      const reader = await streamPromise;
-      const batches: arrow.RecordBatch<T>[] = [];
-      for await (const batch of reader) {
-        batches.push(batch);
-      }
-      return new arrow.Table(batches);
-    };
-
-    // const buildTable = async () => {
-    //   return await this.conn!.query(query);
-    // };
-
-    // 3️⃣ AbortSignal → DuckDB interrupt wiring
-    let abortHandler: (() => void) | undefined;
-    const abortPromise = new Promise<never>((_, reject) => {
-      abortHandler = () => {
-        // Interrupt the currently running statement inside DuckDB
-        this.conn!.cancelSent().catch(() => {
-          /* ignore failure if nothing to cancel */
-        });
-        reject(new Error('Query cancelled'));
-      };
-      signal.addEventListener('abort', abortHandler);
-    });
-
-    try {
-      // Whichever finishes first (query or cancel) wins
-      return await Promise.race([buildTable(), abortPromise]);
-    } finally {
-      if (abortHandler) {
-        signal.removeEventListener('abort', abortHandler);
-      }
-    }
-  }
-
-  protected async cancelQueryInternal(queryId: string): Promise<void> {
-    // First, invoke the base‑class logic (removes AbortController listeners, etc.)
-    await super.cancelQueryInternal(queryId);
-
-    // Then, interrupt the running statement on the DuckDB side.
-    if (this.conn) {
       try {
-        await this.conn.cancelSent();
-      } catch (err) {
-        // If no statement is active or interrupt fails, just log and move on.
-        console.warn('DuckDB cancelSent failed:', err);
+        return await Promise.race([buildTable(), abortPromise]);
+      } finally {
+        if (abortHandler) {
+          signal.removeEventListener('abort', abortHandler);
+        }
+        await localConn.close();
       }
-    }
-  }
+    },
 
-  async loadFile(
-    file: string | File,
-    tableName: string,
-    opts?: LoadFileOptions,
-  ) {
-    await this.withTempRegisteredFile(file, async (fileName) => {
-      await super.loadFile(fileName, tableName, opts);
-    });
-  }
+    async cancelQueryInternal() {
+      if (conn) {
+        try {
+          await conn.cancelSent();
+        } catch (err) {
+          console.warn('DuckDB cancelSent failed:', err);
+        }
+      }
+    },
 
-  async loadArrow(
-    file: arrow.Table | Uint8Array,
-    tableName: string,
-    opts?: {schema?: string},
-  ) {
-    await this.ensureInitialized();
-    if (!this.conn) {
-      throw new Error('DuckDB connection not initialized');
-    }
-    const options = {name: tableName, schema: opts?.schema};
-    if (file instanceof arrow.Table) {
-      await this.conn.insertArrowTable(file, options);
-    } else {
-      await this.conn.insertArrowFromIPCStream(file, options);
-    }
-  }
+    async loadFileInternal(
+      file: string | File,
+      tableName: string,
+      opts?: LoadFileOptions,
+    ) {
+      if (!conn) {
+        throw new Error('DuckDB connection not initialized');
+      }
+      await withTempRegisteredFile(file, async (fileName) => {
+        if (opts && isSpatialLoadFileOptions(opts)) {
+          await conn!.query(loadSpatial(tableName, fileName, opts));
+        } else {
+          await conn!.query(
+            load(opts?.method ?? 'auto', tableName, fileName, opts),
+          );
+        }
+      });
+    },
 
-  async loadObjects(
-    file: Record<string, unknown>[],
-    tableName: string,
-    opts?: StandardLoadOptions,
-  ) {
-    await this.ensureInitialized();
-    if (!this.conn) {
-      throw new Error('DuckDB connection not initialized');
-    }
-    await this.conn.query(loadObjects(tableName, file, opts));
-  }
+    async loadArrowInternal(
+      file: arrow.Table | Uint8Array,
+      tableName: string,
+      opts?: {schema?: string},
+    ) {
+      if (!conn) {
+        throw new Error('DuckDB connection not initialized');
+      }
+      const options = {name: tableName, schema: opts?.schema};
+      if (file instanceof arrow.Table) {
+        await conn.insertArrowTable(file, options);
+      } else {
+        await conn.insertArrowFromIPCStream(file, options);
+      }
+    },
 
-  private async withTempRegisteredFile(
+    async loadObjectsInternal(
+      file: Record<string, unknown>[],
+      tableName: string,
+      opts?: StandardLoadOptions,
+    ) {
+      if (!conn) {
+        throw new Error('DuckDB connection not initialized');
+      }
+      await conn.query(loadObjectsSql(tableName, file, opts));
+    },
+  };
+
+  const base = createBaseDuckDbConnector({dbPath, initializationQuery}, impl);
+
+  async function withTempRegisteredFile(
     file: string | File,
     action: (fileName: string) => Promise<void>,
   ) {
-    await this.ensureInitialized();
-    if (!this.conn || !this.db) {
+    if (!conn || !db) {
       throw new Error('DuckDB connection not initialized');
     }
     let fileName: string;
     let tempFileName: string | undefined = undefined;
     if (file instanceof File) {
-      // Extension might help DuckDB determine the file type
       const {ext} = splitFilePath(file.name);
       tempFileName = `${Math.random().toString(36).substring(2, 15)}${ext ? `.${ext}` : ''}`;
       fileName = tempFileName;
-      await this.db.registerFileHandle(
+      await db.registerFileHandle(
         fileName,
         file,
         DuckDBDataProtocol.BROWSER_FILEREADER,
@@ -261,29 +237,44 @@ export class WasmDuckDbConnector extends BaseDuckDbConnector {
     }
     try {
       await action(fileName);
-    } catch (err) {
-      console.error(`Error during file loading "${fileName}":`, err);
-      throw err;
     } finally {
       if (tempFileName) {
-        await this.db.dropFile(tempFileName);
+        await db!.dropFile(tempFileName);
       }
     }
   }
 
-  getDb(): duckdb.AsyncDuckDB {
-    if (!this.db) {
-      throw new Error('DuckDB not initialized');
-    }
-    return this.db;
-  }
+  return {
+    ...base,
+    getDb() {
+      if (!db) {
+        throw new Error('DuckDB not initialized');
+      }
+      return db;
+    },
+    getConnection() {
+      if (!conn) {
+        throw new Error('DuckDB connection not initialized');
+      }
+      return conn;
+    },
+    get type() {
+      return 'wasm' as const;
+    },
+  };
+}
 
-  getConnection(): duckdb.AsyncDuckDBConnection {
-    if (!this.conn) {
-      throw new Error('DuckDB connection not initialized');
+function augmentConnectionQueryError(conn: duckdb.AsyncDuckDBConnection) {
+  const originalQuery = conn.query;
+  conn.query = (async (q: string) => {
+    const stack = new Error().stack;
+    try {
+      return await originalQuery.call(conn, q);
+    } catch (err) {
+      throw new DuckQueryError(err, q, stack);
     }
-    return this.conn;
-  }
+  }) as typeof conn.query;
+  return conn;
 }
 
 export class DuckQueryError extends Error {
@@ -305,7 +296,6 @@ export class DuckQueryError extends Error {
     );
   }
   getMessageForUser() {
-    const {message} = this;
-    return message;
+    return this.message;
   }
 }

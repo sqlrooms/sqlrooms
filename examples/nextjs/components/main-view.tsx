@@ -1,8 +1,8 @@
 'use client';
 
-import {useProjectStore} from '@/app/store';
+import {useRoomStore} from '@/app/store';
 import {useSql} from '@sqlrooms/duckdb';
-import {TableCard} from '@sqlrooms/project-builder';
+import {TableCard} from '@sqlrooms/room-shell';
 import {
   Area,
   AreaChart,
@@ -24,7 +24,7 @@ import {
 } from '@sqlrooms/ui';
 
 export function MainView() {
-  const table = useProjectStore((state) =>
+  const table = useRoomStore((state) =>
     state.db.findTableByName('earthquakes'),
   );
   const result = useSql<{year: string; magnitude: number; depth: number}>({

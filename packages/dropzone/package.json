@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/dropzone",
-  "version": "0.13.1",
+  "version": "0.17.0",
   "type": "module",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
@@ -28,11 +28,12 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
   "dependencies": {
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0",
-    "react-dropzone": "^14.3.5"
+    "react-dropzone": "^14.3.8"
   }
 }

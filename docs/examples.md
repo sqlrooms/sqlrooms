@@ -2,9 +2,29 @@
 outline: deep
 ---
 
-# Examples
+# Example Applications
 
 All example applications are available in our [Examples Repository](https://github.com/sqlrooms/examples). Here's a list of examples:
+
+## [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-started)
+
+[Github repo](https://github.com/sqlrooms/examples/tree/main/get-started)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/get-started?embed=1)
+
+<!-- <img src="/media/examples/get-started.webp" alt="SQLRooms get started example" width=450> -->
+
+A minimal Vite application demonstrating the basic usage of SQLRooms. Features include:
+
+- Sets up an app store and a single main panel using SQLRooms' project builder utilities
+- Loads a CSV file of California earthquakes as a data source
+- Runs a SQL query in the browser (DuckDB WASM) to show summary statistics
+- Simple UI with loading, error, and result states
+
+To create a new project from the get-started example run this:
+
+```bash
+npx degit sqlrooms/examples/get-started my-new-app/
+```
 
 ## [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
 
@@ -22,7 +42,7 @@ An advanced example showing how to build an AI-powered analytics application wit
 - AI-driven data analysis
 - Integration with [Vercel AI SDK](https://sdk.vercel.ai/docs/introduction)
 - Custom visualization components
-- Project state persistence
+- Room state persistence
 
 ## [Next.js Example](https://sqlrooms-nextjs.netlify.app/)
 
@@ -37,7 +57,23 @@ An advanced example showing how to build an AI-powered analytics application wit
 A minimalistic [Next.js](https://nextjs.org/) app example featuring:
 
 - [Recharts module](/api/recharts) for data visualization
-- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling
+- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+
+## [Deck.gl + Commenting & Annotation](https://sqlrooms-deckgl-discuss.netlify.app/)
+
+[Try live](https://sqlrooms-deckgl-discuss.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl-discuss)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl-discuss?embed=1&file=src/app.tsx)
+
+<a href="https://sqlrooms-deckgl-discuss.netlify.app/" target="_blank">
+  <img src="/media/examples/deckgl-discuss.webp" alt="SQLRooms Deck.gl with commenting and annotation example" width=450>
+</a>
+
+An example showcasing integration with [deck.gl](https://deck.gl/) for geospatial data visualization combined with the [@sqlrooms/discuss](/api/discuss) module for collaborative features. Features include:
+
+- High-performance WebGL-based geospatial visualizations
+- Real-time commenting and annotation system
+- Contextual discussions tied to specific data points
 
 ## [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 

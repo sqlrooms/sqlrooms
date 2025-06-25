@@ -2,7 +2,7 @@ import {
   DEFAULT_MOSAIC_LAYOUT,
   isMosaicLayoutParent,
   MosaicLayoutNode,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 import {
   createRemoveUpdate,
   MosaicDirection,

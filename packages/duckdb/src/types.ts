@@ -1,10 +1,17 @@
+import {QualifiedTableName} from './duckdb-utils';
+
 export type TableColumn = {
   name: string;
   type: string;
 };
 
 export type DataTable = {
+  table: QualifiedTableName;
+  /** @deprecated Use table.database instead */
   database?: string;
+  /** @deprecated Use table.schema instead */
+  schema: string;
+  /** @deprecated Use table.table instead */
   tableName: string;
   schema: string;
   columns: TableColumn[];

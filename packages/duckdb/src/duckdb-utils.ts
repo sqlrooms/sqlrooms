@@ -1,5 +1,42 @@
 import * as arrow from 'apache-arrow';
 
+export type QualifiedTableName = {
+  database?: string;
+  schema?: string;
+  table: string;
+  toString: () => string;
+};
+
+export function isQualifiedTableName(
+  tableName: string | QualifiedTableName,
+): tableName is QualifiedTableName {
+  return typeof tableName === 'object' && 'toString' in tableName;
+}
+
+/**
+ * Get a qualified table name from a table name, schema, and database.
+ * @param table - The name of the table.
+ * @param schema - The schema of the table.
+ * @param database - The database of the table.
+ * @returns The qualified table name.
+ */
+export function makeQualifiedTableName({
+  database,
+  schema,
+  table,
+}: QualifiedTableName) {
+  const qualifiedTableName = [database, schema, table]
+    .filter((id) => id !== undefined && id !== null)
+    .map((id) => escapeId(id))
+    .join('.');
+  return {
+    database,
+    schema,
+    table,
+    toString: () => qualifiedTableName,
+  };
+}
+
 /**
  * Escapes a value for use in DuckDB SQL queries by wrapping it in single quotes
  * and escaping any existing single quotes by doubling them.

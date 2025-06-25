@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/schema-tree",
-  "version": "0.11.0",
+  "version": "0.17.0",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -24,18 +24,17 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@radix-ui/react-slot": "^1.1.1",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "lucide-react": "^0.474.0"
   },
   "peerDependencies": {
-    "react": "*",
-    "react-dom": "*"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
-    "@types/react": "^18.2.48",
-    "@types/react-dom": "^18.2.18"
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.6"
   }
 }

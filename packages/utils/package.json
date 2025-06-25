@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/utils",
-  "version": "0.13.1",
+  "version": "0.17.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -20,9 +20,10 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
-    "_test": "jest",
-    "_test:watch": "jest --watch",
+    "test": "jest",
+    "test:watch": "jest --watch",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
   "dependencies": {
@@ -38,5 +39,9 @@
     "@types/d3-time-format": "^4.0.3",
     "@types/seedrandom": "^3.0.8",
     "usehooks-ts": "^3.1.1"
+  },
+  "peerDependencies": {
+    "react": ">=18",
+    "react-dom": ">=18"
   }
 }

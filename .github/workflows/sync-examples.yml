@@ -7,7 +7,7 @@ on:
       - 'examples/**'
       - 'docs/media/examples/**'
       - '.github/workflows/sync-examples.yml'
-      - 'lerna.json'
+  workflow_dispatch:
 
 jobs:
   sync:

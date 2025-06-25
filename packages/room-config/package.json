@@ -1,0 +1,33 @@
+{
+  "name": "@sqlrooms/room-config",
+  "version": "0.17.0",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "zod": "^3.25.57"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  }
+}

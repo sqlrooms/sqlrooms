@@ -2,7 +2,7 @@ import {
   ProjectBuilder,
   ProjectBuilderSidebarButtons,
   SidebarButton,
-} from '@sqlrooms/project-builder';
+} from '@sqlrooms/room-shell';
 import {SqlEditorModal} from '@sqlrooms/sql-editor';
 import {ThemeSwitch, useDisclosure} from '@sqlrooms/ui';
 import {TerminalIcon} from 'lucide-react';

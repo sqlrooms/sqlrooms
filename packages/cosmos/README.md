@@ -82,10 +82,10 @@ import {
   useStoreWithCosmos,
   createDefaultCosmosConfig,
 } from '@sqlrooms/cosmos';
-import {createProjectStore} from '@sqlrooms/project-builder';
+import {createRoomStore} from '@sqlrooms/room-shell';
 
-// Create a project store with cosmos capabilities
-const useStore = createProjectStore({
+// Create a room store with cosmos capabilities
+const useStore = createRoomStore({
   cosmos: createCosmosSlice(createDefaultCosmosConfig()),
 });
 

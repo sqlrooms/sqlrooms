@@ -1,12 +1,19 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
 
-const CORE_PACKAGES = ['project-builder', 'project-config', 'duckdb', 'ui'];
+const CORE_PACKAGES = [
+  'core',
+  'room-shell',
+  'room-config',
+  'duckdb',
+  'ui',
+  'layout',
+];
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   ignoreDeadLinks: true,
   title: 'SQLRooms',
-  description: 'Build powerful analytics apps with DuckDB in browser',
+  description: 'Build powerful analytics apps with DuckDB',
   base: '/',
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
@@ -35,10 +42,10 @@ export default defineConfig({
 
     sidebar: [
       {
-        text: 'Overview',
+        text: 'Introduction',
         items: [
           {
-            text: 'Introduction',
+            text: 'Overview',
             link: '/overview',
           },
           {
@@ -51,7 +58,7 @@ export default defineConfig({
         text: 'Examples',
         items: [
           {
-            text: 'Example Projects',
+            text: 'Example Apps',
             link: '/examples',
           },
           {
@@ -70,6 +77,14 @@ export default defineConfig({
           {
             text: 'State Management',
             link: '/state-management',
+          },
+          // {
+          //   text: 'How Create a Custom Slice',
+          //   link: '/custom-slice',
+          // },
+          {
+            text: 'Query Cancellation',
+            link: '/query-cancellation',
           },
           {
             text: 'Theming',
@@ -110,12 +125,12 @@ export default defineConfig({
   transformPageData(pageData) {
     const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
       .replace(/index\.md$/, '')
-      .replace(/\.md$/, '.html')
+      .replace(/\.md$/, '.html');
 
-    pageData.frontmatter.head ??= []
+    pageData.frontmatter.head ??= [];
     pageData.frontmatter.head.push([
       'link',
-      { rel: 'canonical', href: canonicalUrl }
-    ])
-  }
+      {rel: 'canonical', href: canonicalUrl},
+    ]);
+  },
 });

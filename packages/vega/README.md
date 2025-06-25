@@ -123,34 +123,32 @@ A tool for creating Vega-Lite charts in AI-assisted workflows, designed to work 
 ```tsx
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {createAiSlice} from '@sqlrooms/ai';
-import {createProjectStore} from '@sqlrooms/project-builder';
+import {createRoomStore} from '@sqlrooms/room-shell';
 
-// Create a project store with the VegaChartTool configured
-export const {projectStore, useProjectStore} = createProjectStore(
-  (set, get, store) => ({
-    // Other slices and state...
+// Create a room store with the VegaChartTool configured
+export const {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({
+  // Other slices and state...
 
-    // AI slice with custom tools
-    ...createAiSlice({
-      getApiKey: (modelProvider: string) => {
-        return get()?.apiKeys[modelProvider] || '';
-      },
-      // Configure custom tools at store creation time
-      customTools: {
-        // Add the VegaChart tool
-        chart: createVegaChartTool({
-          // Optional custom description
-          description:
-            'Create data visualizations using Vega-Lite and SQL queries',
-        }),
+  // AI slice with custom tools
+  ...createAiSlice({
+    getApiKey: (modelProvider: string) => {
+      return get()?.apiKeys[modelProvider] || '';
+    },
+    // Configure custom tools at store creation time
+    customTools: {
+      // Add the VegaChart tool
+      chart: createVegaChartTool({
+        // Optional custom description
+        description:
+          'Create data visualizations using Vega-Lite and SQL queries',
+      }),
 
-        // Other custom tools...
-      },
-    })(set, get, store),
+      // Other custom tools...
+    },
+  })(set, get, store),
 
-    // Other state and methods...
-  }),
-);
+  // Other state and methods...
+}));
 ```
 
 #### Tool Parameters

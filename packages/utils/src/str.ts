@@ -34,12 +34,17 @@ export function formatBytes(bytes: number): string {
  */
 export function camelCaseToTitle(camelCase: string): string {
   // Split the string into words on the camelCase boundaries
-  const words = camelCase.match(/^[a-z]+|[A-Z][a-z]*/g);
+  const words = camelCase.match(/[A-Z]+(?![a-z])|[A-Z]?[a-z]+/g);
 
   // If words are found, transform them and join into a title string
   if (words) {
     return words
       .map((word) => {
+        // Preserve fully uppercase words like "URL"
+        if (word === word.toUpperCase()) {
+          return word;
+        }
+
         // Capitalize the first letter of each word
         return word.charAt(0).toUpperCase() + word.slice(1).toLowerCase();
       })

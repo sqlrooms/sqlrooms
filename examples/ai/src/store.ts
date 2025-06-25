@@ -6,13 +6,13 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
   StateCreator,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -28,25 +28,25 @@ import {createVegaChartTool} from '@sqlrooms/vega';
 import {DataTable} from '@sqlrooms/duckdb';
 import exampleSessions from './example-sessions.json';
 import EchoToolResult from './components/EchoToolResult';
-export const ProjectPanelTypes = z.enum([
-  'project-details',
+export const RoomPanelTypes = z.enum([
+  'room-details',
   'data-sources',
   'view-configuration',
   MAIN_VIEW,
 ] as const);
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig =
-  BaseProjectConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig =
+  BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
- * Project state
+ * Room state
  */
-type CustomAppState = {
+type CustomRoomState = {
   selectedModel: {
     model: string;
     provider: string;
@@ -56,28 +56,25 @@ type CustomAppState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
-export type AppState = ProjectBuilderState<AppConfig> &
+export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  CustomAppState;
+  CustomRoomState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
-      // Base project slice
-      ...createProjectBuilderSlice<AppConfig>({
+      // Base room slice
+      ...createRoomShellSlice<RoomConfig>({
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
-              first: ProjectPanelTypes.enum['data-sources'],
+              first: RoomPanelTypes.enum['data-sources'],
               second: MAIN_VIEW,
               splitPercentage: 30,
             },
@@ -94,9 +91,9 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
           ),
           ...createDefaultSqlEditorConfig(),
         },
-        project: {
+        room: {
           panels: {
-            [ProjectPanelTypes.enum['data-sources']]: {
+            [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
               // icon: FolderIcon,
               icon: DatabaseIcon,
@@ -174,10 +171,10 @@ export const {projectStore, useProjectStore} = createProjectBuilderStore<
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: AppConfig.parse(state.config),
+        config: RoomConfig.parse(state.config),
         selectedModel: state.selectedModel,
         apiKeys: state.apiKeys,
       }),
     },
-  ) as StateCreator<AppState>,
+  ) as StateCreator<RoomState>,
 );

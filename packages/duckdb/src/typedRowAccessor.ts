@@ -8,7 +8,7 @@ export interface TypedRowAccessor<T> extends Iterable<T> {
   length: number;
   /** Returns an iterator that yields each row in the table */
   rows(): IterableIterator<T>;
-  /** Returns an array containing all rows in the table */
+  /** Returns an array containing all rows in the table. The array is cached and reused. */
   toArray(): T[];
 }
 

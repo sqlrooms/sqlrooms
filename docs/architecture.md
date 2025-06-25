@@ -4,7 +4,7 @@ SQLRooms is designed with a modular architecture that allows developers to pick 
 
 ![SQLRooms Architecture](/media/overview/architecture.svg)
 
-## Core Philosophy
+## Core Principles
 
 The SQLRooms architecture follows these key principles:
 
@@ -16,18 +16,18 @@ The SQLRooms architecture follows these key principles:
 
 ## Core Components
 
-### ProjectStore
+### RoomStore
 
 The central state management system built on Zustand handles:
 
-- Project configuration and persistence
+- Room configuration and persistence
 - Data source management
 - DuckDB integration
 - Type-safe state management
 
-The ProjectStore can be extended with custom configuration and functionality specific to your needs.
+The RoomStore can be extended with custom configuration and functionality specific to your needs.
 
-### Project Builder
+### RoomShell
 
 Provides the application shell with:
 
@@ -45,58 +45,43 @@ Ready-to-use components accelerate development:
 
 ## Package Structure
 
-SQLRooms is organized into several categories of packages:
+Below is a full breakdown of all **Core**, **Feature**, and **Utility** packages available in SQLRooms.  
+Each package can be installed independently via `pnpm add @sqlrooms/<name>` and mixed‑and‑matched to suit your app’s needs.
 
 ### Core Packages
 
-These packages form the foundation of any SQLRooms application:
-
-- **[@sqlrooms/project-builder](https://sqlrooms.github.io/api/project-builder/)**: The central package that provides the foundation for building analytics applications with Zustand-based state management. It handles project state management using a composable slice-based architecture, allowing applications to combine and extend functionality from different modules. The package integrates the panel system and includes DuckDB integration to keep track of database tables created as part of the project.
-
-- **[@sqlrooms/project-config](https://sqlrooms.github.io/api/project-config/)**: Defines central configuration and type definitions using Zod schemas. It provides TypeScript types and interfaces along with essential constants and utilities used throughout the framework.
-
-- **[@sqlrooms/duckdb](https://sqlrooms.github.io/api/duckdb/)**: Provides DuckDB integration for query execution and data source connections. It manages DuckDB-WASM instances and handles query execution with robust data source connection capabilities and ensures type-safe query results for reliable data operations.
-
-- **[@sqlrooms/ui](https://sqlrooms.github.io/api/ui/)**: Offers a comprehensive UI toolkit based on shadcn/ui with Tailwind preset. It includes a carefully crafted Tailwind preset configuration, a library of common UI components, robust theme management capabilities, and a collection of icons and assets.
+- **[@sqlrooms/room-shell](/api/room-shell/)** — Central application shell and Zustand‑based state manager with panel system and DuckDB integration.
+- **[@sqlrooms/room-config](/api/room-config/)** — Shared configuration schemas and TypeScript types powered by Zod.
+- **[@sqlrooms/duckdb](/api/duckdb/)** — WebAssembly build of DuckDB plus helper hooks for query execution and data import.
+- **[@sqlrooms/ui](/api/ui/)** — Tailwind‑powered component library and theme manager used across all other packages.
 
 ### Feature Packages
 
-These packages provide specific functionality that can be added as needed:
-
-- **[@sqlrooms/data-table](https://sqlrooms.github.io/api/data-table/)**: An advanced interactive data grid component designed for SQL query result visualization. The table supports dynamic column sorting and pagination features for efficient data exploration and analysis.
-
-- **[@sqlrooms/sql-editor](https://sqlrooms.github.io/api/sql-editor/)**: A powerful SQL query editor that enhances the development experience with syntax highlighting and intelligent auto-completion. It maintains a query history for easy reference and provides integrated result visualization capabilities.
-
-- **[@sqlrooms/layout](https://sqlrooms.github.io/api/layout/)**: A sophisticated layout system and panel management solution based on [react-mosaic](https://nomcopter.github.io/react-mosaic/) that enables flexible panel layouts with intuitive sidebar and main view management. It supports smooth panel resize functionality and ensures layout persistence across sessions.
-
-- **[@sqlrooms/s3-browser](https://sqlrooms.github.io/api/s3-browser/)**: A feature-rich S3-compatible storage browser that provides an intuitive file browsing interface. It supports file upload and download operations, comprehensive directory management, and seamless S3 bucket integration.
-
-- **[@sqlrooms/vega](https://sqlrooms.github.io/api/vega/)**: A data visualization package that integrates [Vega-Lite](https://vega.github.io/vega-lite/) for creating sophisticated interactive visualizations. It provides React components for rendering Vega specifications and handling visualization interactions.
-
-- **[@sqlrooms/ai](https://sqlrooms.github.io/api/ai/)**: An AI integration package that enables natural language querying and analysis capabilities. It provides tools for query generation, result interpretation, and interactive AI-powered analytics workflows.
-
-- **[@sqlrooms/cosmos](https://sqlrooms.github.io/api/cosmos/)**: A graph visualization package that integrates [Cosmos](https://github.com/cosmograph-org/cosmos) for creating interactive network visualizations. It provides high-performance WebGL-based graph rendering capabilities with support for large-scale networks.
-
-- **[@sqlrooms/dropzone](https://sqlrooms.github.io/api/dropzone/)**: A comprehensive file upload solution that implements drag-and-drop functionality. It provides sophisticated file upload handling with built-in file type validation and upload progress tracking to enhance the user experience.
-
-- **[@sqlrooms/mosaic](https://sqlrooms.github.io/api/mosaic/)**: A visualization package that integrates with [UW Interactive Data Lab's Mosaic library](https://idl.uw.edu/mosaic/). It provides declarative chart specifications and interactive visualization capabilities for data analysis.
-
-- **[@sqlrooms/monaco-editor](https://sqlrooms.github.io/api/monaco-editor/)**: A powerful code editing package that integrates [Monaco Editor](https://microsoft.github.io/monaco-editor/) (the editor that powers VS Code). It provides customizable text editing components with features like syntax highlighting, code completion, and theming. The package includes specialized editors for JSON with schema validation support.
+- **[@sqlrooms/ai](/api/ai/)** — Natural‑language querying and AI‑assisted analytics tools.
+- **[@sqlrooms/cosmos](/api/cosmos/)** — High‑performance WebGL graph visualization with Cosmos.
+- **[@sqlrooms/data-table](/api/data-table/)** — Interactive data grid for SQL results with sorting and pagination.
+- **[@sqlrooms/discuss](/api/discuss/)** — Threaded discussion system with anchor links to data points.
+- **[@sqlrooms/dropzone](/api/dropzone/)** — Drag‑and‑drop file uploads with type validation and progress tracking.
+- **[@sqlrooms/layout](/api/layout/)** — Panel layout management built on react‑mosaic.
+- **[@sqlrooms/monaco-editor](/api/monaco-editor/)** — VS Code’s Monaco editor with SQL‑aware autocompletion.
+- **[@sqlrooms/mosaic](/api/mosaic/)** — Declarative charting powered by UW IDL’s Mosaic library.
+- **[@sqlrooms/recharts](/api/recharts/)** — Responsive charts via Recharts (line, bar, pie, etc.).
+- **[@sqlrooms/s3-browser](/api/s3-browser/)** — S3‑compatible storage browser with uploads and directory management.
+- **[@sqlrooms/schema-tree](/api/schema-tree/)** — Interactive database‑schema explorer.
+- **[@sqlrooms/sql-editor](/api/sql-editor/)** — SQL editor with history, syntax highlighting, and result docking.
+- **[@sqlrooms/vega](/api/vega/)** — Vega‑Lite visualization components for sophisticated interactive charts.
 
 ### Utility Packages
 
-- **[@sqlrooms/utils](https://sqlrooms.github.io/api/utils/)**: A utility package providing shared helper functions for color manipulation, data formatting, random generation, and string operations used across the framework.
-- **[@sqlrooms/typescript-config](https://sqlrooms.github.io/api/typescript-config/)**: Shared TypeScript configuration
-- **[@sqlrooms/eslint-config](https://sqlrooms.github.io/api/eslint-config/)**: Shared ESLint configuration
-- **[@sqlrooms/typedoc-config](https://sqlrooms.github.io/api/typedoc-config/)**: Shared TypeDoc configuration
+- **[@sqlrooms/utils](/api/utils/)** — Shared helper functions for colors, formatting, random IDs, and string utilities.
 
 ## Extension Points
 
 The framework is designed to be highly extensible through:
 
-1. **Extended ProjectStore**
+1. **Extended RoomStore**
 
-   - Custom project configuration using Zod schemas
+   - Custom room configuration using Zod schemas
    - Additional state management
    - Integration with other services
 
@@ -105,12 +90,12 @@ The framework is designed to be highly extensible through:
    - Configure panel layouts and behavior
    - Integrate with existing panel management
 
-## Data Flow
+## Runtime Anatomy
 
 1. Data sources (CSV, Parquet) are loaded through the dropzone, the S3 browser or custom import methods
 2. DuckDB processes queries locally in the browser
 3. Results are displayed in the DataTable view or custom visualizations
-4. Project state can be saved and loaded for persistence
+4. Room state can be saved and loaded for persistence
 
 This extensibility allows you to customize the behavior of each slice to meet your specific requirements.
 
@@ -119,3 +104,5 @@ This extensibility allows you to customize the behavior of each slice to meet yo
 SQLRooms' modular architecture gives you the flexibility to build exactly the data analytics application you need. By combining different packages and slices, you can create anything from simple data explorers to complex AI-powered analytics dashboards, all running entirely in the browser.
 
 The [slice-based state management](/state-management) makes it easy to pick and choose the functionality you need while maintaining a clean and organized codebase. This approach allows for maximum flexibility and extensibility, enabling you to create custom solutions tailored to your specific requirements.
+
+[← Back to Overview](/overview)

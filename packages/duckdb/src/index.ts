@@ -21,14 +21,19 @@ export {
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/BaseDuckDbConnector';
-export * from './connectors/WasmDuckDbConnector';
+export {
+  createDuckDbConnector,
+  createWasmDuckDbConnector,
+  isWasmDuckDbConnector,
+  type WasmDuckDbConnector,
+} from './connectors/createDuckDbConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';
 export {
   LoadFileOptions,
   SpatialLoadFileOptions,
   isSpatialLoadFileOptions,
-} from '@sqlrooms/project-config';
+} from '@sqlrooms/room-config';
 export {
   type TypedRowAccessor,
   createTypedRowAccessor,

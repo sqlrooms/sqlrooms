@@ -1,10 +1,10 @@
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -22,70 +22,69 @@ import {
   createDefaultCosmosConfig,
 } from '@sqlrooms/cosmos';
 
-export const ProjectPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
+export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
-
-/**
- * Project config for saving
- */
-export const AppConfig =
-  BaseProjectConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
-
-export type AppConfig = z.infer<typeof AppConfig>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project state
+ * Room config for saving
  */
-export type AppState = ProjectBuilderState<AppConfig> &
+export const RoomConfig =
+  BaseRoomConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
+
+export type RoomConfig = z.infer<typeof RoomConfig>;
+
+/**
+ * Room state
+ */
+export type RoomState = RoomShellSliceState<RoomConfig> &
   SqlEditorSliceState &
   CosmosSliceState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectBuilderSlice<AppConfig>({
-    config: {
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: MAIN_VIEW,
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomShellSlice<RoomConfig>({
+      config: {
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: MAIN_VIEW,
+        },
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
+            tableName: 'mammals',
+          },
+        ],
+        ...createDefaultSqlEditorConfig(),
+        ...createDefaultCosmosConfig(),
       },
-      dataSources: [
-        {
-          type: 'url',
-          url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/Cosmograph/mammals.csv',
-          tableName: 'mammals',
-        },
-      ],
-      ...createDefaultSqlEditorConfig(),
-      ...createDefaultCosmosConfig(),
-    },
-    project: {
-      panels: {
-        [ProjectPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
+      room: {
+        panels: {
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
 
-  // Cosmos slice
-  ...createCosmosSlice()(set, get, store),
-}));
+    // Cosmos slice
+    ...createCosmosSlice()(set, get, store),
+  }),
+);

@@ -6,7 +6,22 @@ outline: deep
 
 SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture, check out the [Overview](/overview) page.
 
-## Prerequisites
+## Try the Minimal Example
+
+To create a new project from the get-started example run this:
+
+```bash
+npx degit sqlrooms/examples/get-started myapp/
+cd myapp
+npm install
+npm run dev
+```
+
+This basic Vite application demonstrates loading a CSV data source and running SQL queries with `useSql()`.
+
+## Manual Setup
+
+### Prerequisites
 
 Your application should have the following dependencies:
 
@@ -16,27 +31,27 @@ Your application should have the following dependencies:
 - [Zod](https://zod.dev) for schema validation
 - [Node.js](https://nodejs.org/) >= 20
 
-## Installation
+### Installation
 
 Install the required SQLRooms packages:
 
 ::: code-group
 
 ```bash [npm]
-npm install @sqlrooms/project-builder @sqlrooms/project-config @sqlrooms/layout @sqlrooms/ui
+npm install @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
 ```
 
 ```bash [pnpm]
-pnpm add @sqlrooms/project-builder @sqlrooms/project-config @sqlrooms/layout @sqlrooms/ui
+pnpm add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
 ```
 
 ```bash [yarn]
-yarn add @sqlrooms/project-builder @sqlrooms/project-config @sqlrooms/layout @sqlrooms/ui
+yarn add @sqlrooms/room-shell @sqlrooms/room-config @sqlrooms/layout @sqlrooms/ui
 ```
 
 :::
 
-## Configure Tailwind CSS
+### Configure Tailwind CSS
 
 SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
 
@@ -71,89 +86,81 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 @import '@sqlrooms/ui/tailwind-preset.css';
 ```
 
-## Setting Up the Project Store
+### Setting Up the Room Store
 
-1. First, define your panel types and project configuration:
+1. First, define your panel types and room configuration:
 
 ```typescript
-import {
-  BaseProjectConfig,
-  LayoutTypes,
-  MAIN_VIEW,
-} from '@sqlrooms/project-config';
+import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {z} from 'zod';
 
 // Define panel types
-export const ProjectPanelTypes = z.enum([
-  'project-details',
+export const RoomPanelTypes = z.enum([
+  'room-details',
   'data-sources',
   MAIN_VIEW,
 ] as const);
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-// Define your project config
+// Define your room config
 // This holds all state necessary for persisting/saving the state of the app
-export const AppConfig = BaseProjectConfig;
+export const RoomConfig = BaseRoomConfig;
 // If using additional slices like SQL Editor:
-// export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+// export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 // Define your application state type
-export type AppState = ProjectState<AppConfig>;
+export type RoomState = RoomState<RoomConfig>;
 // If using additional slices:
-// export type AppState = ProjectState<AppConfig> & SqlEditorSliceState;
+// export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 ```
 
-2. Create your project store:
+2. Create your room store:
 
 ```typescript
-import {
-  createProjectSlice,
-  createProjectStore,
-} from '@sqlrooms/project-builder';
+import {createRoomSlice, createRoomStore} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectSlice<AppConfig>({
-    // config holds all state that should be persisted between sessions
-    config: {
-      title: 'My SQLRooms Project',
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
-          second: MAIN_VIEW,
-          splitPercentage: 30,
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomSlice<RoomConfig>({
+      // config holds all state that should be persisted between sessions
+      config: {
+        title: 'My SQLRooms Room',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
+        dataSources: [],
+      },
+      room: {
+        panels: {
+          'data-sources': {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          [MAIN_VIEW]: {
+            title: 'Main View',
+            icon: () => null,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-      dataSources: [],
-    },
-    project: {
-      panels: {
-        'data-sources': {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        [MAIN_VIEW]: {
-          title: 'Main View',
-          icon: () => null,
-          component: MainView,
-          placement: 'main',
-        },
-      },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Add additional slices if needed
-  // ...createSqlEditorSlice()(set, get, store),
-}));
+    // Add additional slices if needed
+    // ...createSqlEditorSlice()(set, get, store),
+  }),
+);
 ```
 
 3. Optionally add persistence:
@@ -162,19 +169,16 @@ export const {projectStore, useProjectStore} = createProjectStore<
 import {persist} from 'zustand/middleware';
 
 // The config is meant to be saved for persistence between sessions
-export const {projectStore, useProjectStore} = createProjectStore<
-  AppConfig,
-  AppState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       // Store configuration as shown above
-      ...createProjectSlice<AppConfig>({
+      ...createRoomSlice<RoomConfig>({
         config: {
-          title: 'My SQLRooms Project',
+          title: 'My SQLRooms Room',
           // ...other configuration
         },
-        project: {
+        room: {
           panels: {
             // Panel definitions
           },
@@ -194,18 +198,21 @@ export const {projectStore, useProjectStore} = createProjectStore<
 );
 ```
 
-## Using the Project Store
+### Using the Room Store
 
-Wrap your application with the project store provider:
+Wrap your application with a `RoomShell` which provides the room store context:
 
 ```typescript
-import {ProjectBuilderProvider} from '@sqlrooms/project-builder';
+import {RoomShell} from '@sqlrooms/room-shell';
+import {roomStore} from './store';
 
 function App() {
   return (
-    <ProjectBuilderProvider store={projectStore}>
-      <YourApp />
-    </ProjectBuilderProvider>
+    <RoomShell className="h-screen" roomStore={roomStore}>
+      <RoomShell.Sidebar/>
+      <RoomShell.LayoutComposer />
+      <RoomShell.LoadingProgress />
+    </RoomShell>
   );
 }
 ```
@@ -214,10 +221,10 @@ Access the store in your components:
 
 ```typescript
 function YourComponent() {
-  // Config is now accessed directly from state, not from state.project.config
-  const projectConfig = useProjectStore((state) => state.config);
-  // Other state properties remain in the project object
-  const dataSources = useProjectStore((state) => state.project.dataSources);
+  // Config is now accessed directly from state, not from state.room.config
+  const roomConfig = useRoomStore((state) => state.config);
+  // Other state properties remain in the room object
+  const dataSources = useRoomStore((state) => state.room.dataSources);
 
   return (
     // Your component JSX
@@ -230,7 +237,7 @@ function YourComponent() {
 - DuckDB integration for powerful data analytics
 - Customizable panel system with sidebar and main view layouts
 - Built-in data source management
-- Extensible project configuration with Zod schemas
+- Extensible room configuration with Zod schemas
 - Type-safe state management
 
 ## Need Help?

@@ -8,8 +8,6 @@ import {QueryEditorPanelTabsList} from './QueryEditorPanelTabsList';
 export interface QueryEditorPanelProps {
   /** Custom class name for styling */
   className?: string;
-  /** The database schema to use. Defaults to 'main' */
-  schema?: string;
 }
 
 export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({

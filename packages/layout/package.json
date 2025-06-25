@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/layout",
-  "version": "0.13.1",
+  "version": "0.17.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,17 +18,18 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/project-config": "workspace:*",
+    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*"
   },
   "peerDependencies": {
-    "react": "*",
+    "react": ">=18",
     "react-mosaic-component": "5.3.0"
   },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   }
 }

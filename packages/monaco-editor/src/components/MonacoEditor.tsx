@@ -77,6 +77,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 }) => {
   // Get the app theme from the ThemeProvider
   const {theme: appTheme} = useTheme();
+  const [renderKey, setRenderKey] = React.useState(0);
 
   // If a theme is explicitly provided, use it. Otherwise, determine from the app theme
   const theme =
@@ -205,6 +206,9 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
           isDark ? 'sqlrooms-dark' : 'sqlrooms-light',
         );
       }
+
+      // Force re-render to apply the new theme
+      setRenderKey((key) => key + 1);
     }
   }, [appTheme, explicitTheme, language]);
 
@@ -224,6 +228,8 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
               mediaQuery.matches ? 'sqlrooms-dark' : 'sqlrooms-light',
             );
           }
+          // Force re-render to apply the new theme
+          setRenderKey((key) => key + 1);
         }
       };
 
@@ -262,6 +268,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         onMount={handleEditorDidMount}
         onChange={onChange}
         loading={<Spinner />}
+        key={renderKey}
         {...props}
       />
     </div>

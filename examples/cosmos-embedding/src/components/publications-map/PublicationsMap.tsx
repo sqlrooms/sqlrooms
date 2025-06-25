@@ -4,7 +4,7 @@ import {CosmosGraph, CosmosGraphControls} from '@sqlrooms/cosmos';
 import {usePublicationsData} from './hooks/usePublicationsData';
 import {Legend} from './components/Legend';
 import {PublicationTooltip} from './components/PublicationTooltip';
-import {useProjectStore} from '../../store';
+import {useRoomStore} from '../../store';
 
 export const PublicationsMap: FC = () => {
   const {
@@ -23,7 +23,7 @@ export const PublicationsMap: FC = () => {
 
   const [focusedPointIndex, setFocusedPointIndex] = useState<number>();
 
-  const updateGraphConfig = useProjectStore((s) => s.cosmos.updateGraphConfig);
+  const updateGraphConfig = useRoomStore((s) => s.cosmos.updateGraphConfig);
 
   const config = useMemo<GraphConfigInterface>(
     () => ({

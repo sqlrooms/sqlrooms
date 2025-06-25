@@ -9,10 +9,9 @@ import {
   DataTable,
   DuckDbConnector,
   DuckDbSliceState,
-  DuckQueryError,
 } from '@sqlrooms/duckdb';
 
-import type {StoreApi} from '@sqlrooms/project-builder';
+import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
 import {AnalysisResultSchema, QueryToolParameters} from './schemas';
@@ -25,7 +24,7 @@ import {AnalysisResultSchema, QueryToolParameters} from './schemas';
  * - Formatting final answers
  */
 const DEFAULT_INSTRUCTIONS = `
-You are analyzing tables in DuckDB database in the context of a project.
+You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
@@ -150,7 +149,7 @@ type AnalysisParameters = {
 };
 
 /**
- * Executes an AI analysis session on the project data
+ * Executes an AI analysis session on the room data
  *
  * @param config - Analysis configuration options. See {@link AnalysisParameters} for more details.
  * @returns Object containing tool calls executed and the final analysis result
@@ -256,11 +255,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
               success: false,
               details: 'Query execution failed.',
               errorMessage:
-                error instanceof DuckQueryError
-                  ? error.getMessageForUser()
-                  : error instanceof Error
-                    ? error.message
-                    : 'Unknown error',
+                error instanceof Error ? error.message : 'Unknown error',
             },
           };
         }

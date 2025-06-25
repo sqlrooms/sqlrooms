@@ -1,7 +1,7 @@
 import {
   DuckDbConnector,
   useDuckDb,
-  WasmDuckDbConnector,
+  isWasmDuckDbConnector,
 } from '@sqlrooms/duckdb';
 import {coordinator, wasmConnector} from '@uwdata/mosaic-core';
 import {useEffect, useState} from 'react';
@@ -20,7 +20,7 @@ async function getMosaicConnector(duckDb: DuckDbConnector) {
   if (mosaicConnector) {
     return mosaicConnector;
   }
-  if (!(duckDb instanceof WasmDuckDbConnector)) {
+  if (!isWasmDuckDbConnector(duckDb)) {
     throw new Error('Only WasmDuckDbConnector is currently supported');
   }
   await duckDb.initialize();

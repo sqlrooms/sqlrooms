@@ -1,8 +1,5 @@
-import {
-  DataSourceStatus,
-  useBaseProjectBuilderStore,
-} from '@sqlrooms/project-builder';
-import {SqlQueryDataSource} from '@sqlrooms/project-builder';
+import {DataSourceStatus, useBaseRoomShellStore} from '@sqlrooms/room-shell';
+import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Button,
   DropdownMenu,
@@ -28,11 +25,11 @@ const SqlQueryDataSourcesPanel: FC<{
   const [selectedDataSource, setSelectedDataSource] =
     useState<SqlQueryDataSource>();
   const [isOpen, setIsOpen] = useState(false);
-  const dataSourceStates = useBaseProjectBuilderStore(
-    (state) => state.project.dataSourceStates,
+  const dataSourceStates = useBaseRoomShellStore(
+    (state) => state.room.dataSourceStates,
   );
-  const removeSqlQueryDataSource = useBaseProjectBuilderStore(
-    (state) => state.project.removeSqlQueryDataSource,
+  const removeSqlQueryDataSource = useBaseRoomShellStore(
+    (state) => state.room.removeSqlQueryDataSource,
   );
 
   const handleEdit = useCallback((dataSource: SqlQueryDataSource) => {
@@ -53,8 +50,8 @@ const SqlQueryDataSourcesPanel: FC<{
     [removeSqlQueryDataSource],
   );
 
-  const addOrUpdateSqlQueryDataSource = useBaseProjectBuilderStore(
-    (state) => state.project.addOrUpdateSqlQueryDataSource,
+  const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
+    (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
 
   return (
@@ -115,7 +112,7 @@ const SqlQueryDataSourcesPanel: FC<{
                         onClick={() => handleRemove(dataSource)}
                       >
                         <XIcon className="mr-2 h-4 w-4" />
-                        Remove from project
+                        Remove from room
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

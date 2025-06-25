@@ -3,12 +3,12 @@ import {createId} from '@paralleldrive/cuid2';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
   createSlice,
-  ProjectBuilderState,
-  useBaseProjectBuilderStore,
+  RoomShellSliceState,
+  useBaseRoomShellStore,
   type Slice,
   type StateCreator,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
 import {getDefaultTools, runAnalysis} from './analysis';
@@ -74,7 +74,7 @@ export type AiSliceState = Slice & {
   };
 };
 
-export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
+export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
   getApiKey,
   initialAnalysisPrompt = '',
   customTools = {},
@@ -353,10 +353,8 @@ export function createAiSlice<PC extends BaseProjectConfig & AiSliceConfig>({
 /**
  * Helper function to get the current session from state
  */
-function getCurrentSessionFromState<
-  PC extends BaseProjectConfig & AiSliceConfig,
->(
-  state: ProjectBuilderState<PC> | WritableDraft<ProjectBuilderState<PC>>,
+function getCurrentSessionFromState<PC extends BaseRoomConfig & AiSliceConfig>(
+  state: RoomShellSliceState<PC> | WritableDraft<RoomShellSliceState<PC>>,
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.config.ai;
   return sessions.find(
@@ -379,7 +377,7 @@ function findResultById(analysisResults: AnalysisResultSchema[], id: string) {
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
  */
-function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
+function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
   resultId,
   streamMessage,
   errorMessage,
@@ -390,7 +388,7 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
   errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
 }) {
-  return (state: ProjectBuilderState<PC>) =>
+  return (state: RoomShellSliceState<PC>) =>
     produce(state, (draft) => {
       const currentSession = getCurrentSessionFromState(draft);
       if (!currentSession) {
@@ -445,16 +443,16 @@ function makeResultsAppender<PC extends BaseProjectConfig & AiSliceConfig>({
     });
 }
 
-type ProjectConfigWithAi = BaseProjectConfig & AiSliceConfig;
-type ProjectBuilderStateWithAi = ProjectBuilderState<ProjectConfigWithAi> &
+type RoomConfigWithAi = BaseRoomConfig & AiSliceConfig;
+type RoomShellSliceStateWithAi = RoomShellSliceState<RoomConfigWithAi> &
   AiSliceState;
 
 export function useStoreWithAi<T>(
-  selector: (state: ProjectBuilderStateWithAi) => T,
+  selector: (state: RoomShellSliceStateWithAi) => T,
 ): T {
-  return useBaseProjectBuilderStore<
-    BaseProjectConfig & AiSliceConfig,
-    ProjectBuilderState<ProjectConfigWithAi>,
+  return useBaseRoomShellStore<
+    BaseRoomConfig & AiSliceConfig,
+    RoomShellSliceState<RoomConfigWithAi>,
     T
-  >((state) => selector(state as unknown as ProjectBuilderStateWithAi));
+  >((state) => selector(state as unknown as RoomShellSliceStateWithAi));
 }

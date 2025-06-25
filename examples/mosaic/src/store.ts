@@ -1,10 +1,10 @@
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-  BaseProjectConfig,
-} from '@sqlrooms/project-builder';
-import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/project-config';
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+  BaseRoomConfig,
+} from '@sqlrooms/room-shell';
+import {LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-config';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -15,82 +15,81 @@ import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import ProjectDetailsPanel from './components/ProjectDetailsPanel';
+import RoomDetailsPanel from './components/RoomDetailsPanel';
 
-export const ProjectPanelTypes = z.enum([
-  'project-details',
+export const RoomPanelTypes = z.enum([
+  'room-details',
   'data-sources',
   'data-tables',
   'docs',
   MAIN_VIEW,
 ] as const);
 
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig = BaseProjectConfig.merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
- * Project state
+ * Room state
  */
-export type AppState = ProjectBuilderState<AppConfig> & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->((set, get, store) => ({
-  // Base project slice
-  ...createProjectBuilderSlice<AppConfig>({
-    config: {
-      title: 'Demo App Project',
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
-          second: MAIN_VIEW,
-          splitPercentage: 30,
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomShellSlice<RoomConfig>({
+      config: {
+        title: 'Demo App Room',
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+            tableName: 'latency',
+          },
+        ],
+        ...createDefaultSqlEditorConfig(),
+      },
+      room: {
+        panels: {
+          [RoomPanelTypes.enum['room-details']]: {
+            title: 'Room Details',
+            icon: InfoIcon,
+            component: RoomDetailsPanel,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          main: {
+            title: 'Main view',
+            icon: MapIcon,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-      dataSources: [
-        {
-          type: 'url',
-          url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
-          tableName: 'latency',
-        },
-      ],
-      ...createDefaultSqlEditorConfig(),
-    },
-    project: {
-      panels: {
-        [ProjectPanelTypes.enum['project-details']]: {
-          title: 'Project Details',
-          icon: InfoIcon,
-          component: ProjectDetailsPanel,
-          placement: 'sidebar',
-        },
-        [ProjectPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        main: {
-          title: 'Main view',
-          icon: MapIcon,
-          component: MainView,
-          placement: 'main',
-        },
-      },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-}));
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
+  }),
+);

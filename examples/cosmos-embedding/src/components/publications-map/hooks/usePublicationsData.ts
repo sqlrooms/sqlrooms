@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {useSql} from '@sqlrooms/duckdb';
-import {useProjectStore} from '../../../store';
+import {useRoomStore} from '../../../store';
 import {useMemo} from 'react';
 import {scaleOrdinal, scaleSqrt} from 'd3-scale';
 import {schemeTableau10} from 'd3-scale-chromatic';
@@ -20,7 +20,7 @@ export const citationStatsSchema = z.object({
 });
 
 export const usePublicationsData = () => {
-  const isTableReady = useProjectStore((state) =>
+  const isTableReady = useRoomStore((state) =>
     Boolean(state.db.tables.find((t) => t.tableName === 'publications')),
   );
 
