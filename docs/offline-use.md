@@ -8,7 +8,7 @@ SQLRooms can be integrated into a [Progressive Web App (PWA)](https://web.dev/pr
 
 ![SQLRooms Query Workbench progressive web app](/media/offline/sqlrooms-query-pwa.png)
 
-All computation happens on your device, whether in the browser or a desktop app, with no backend required. This enables privacy, speed, and user control, even when you're completely offline. While SQLRooms is inspired by [Local-First principles](https://www.inkandswitch.com/essay/local-first), it currently focuses on offline and client-side capabilities. Future versions may add sync and collaboration features.
+All computation happens on your device, whether in the browser or a desktop app, with no backend required. This enables privacy, speed, and user control, even when you're completely offline.
 
 Here's how you can implement an offline-first experience with SQLRooms:
 
