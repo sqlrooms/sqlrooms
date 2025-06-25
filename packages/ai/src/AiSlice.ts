@@ -48,6 +48,7 @@ export function createDefaultAiConfig(
   };
 }
 
+// template for the tool: Argument, LLM Result, Additional Data, Context
 export type AiSliceTool = ExtendedTool<z.ZodTypeAny, unknown, unknown, unknown>;
 
 export type AiSliceState = {
@@ -417,6 +418,7 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
                 return {
                   type: 'tool-invocation' as const,
                   toolInvocation: {
+                    toolCallId: part.toolInvocation.toolCallId,
                     toolName: part.toolInvocation.toolName,
                     args: part.toolInvocation.args,
                     state: part.toolInvocation.state,

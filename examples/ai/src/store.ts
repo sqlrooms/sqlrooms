@@ -35,8 +35,6 @@ import {MainView} from './components/MainView';
 import {DEFAULT_MODEL} from './models';
 import exampleSessions from './example-sessions.json';
 
-console.log(exampleSessions);
-
 export const RoomPanelTypes = z.enum([
   'room-details',
   'data-sources',
