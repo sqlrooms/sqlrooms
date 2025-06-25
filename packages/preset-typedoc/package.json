@@ -1,0 +1,15 @@
+{
+  "name": "@sqlrooms/preset-typedoc",
+  "version": "0.19.2",
+  "type": "module",
+  "private": true,
+  "exports": {
+    "default": "./typedoc-base-config.js"
+  },
+  "peerDependencies": {
+    "typedoc": "0.28.5",
+    "typedoc-plugin-markdown": "4.4.2",
+    "typedoc-plugin-zod": "1.4.1",
+    "typedoc-vitepress-theme": "1.1.2"
+  }
+}
