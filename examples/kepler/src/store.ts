@@ -5,15 +5,13 @@ import {
   KeplerSliceState,
 } from '@sqlrooms/kepler';
 import {
-  createProjectBuilderSlice,
-  createProjectBuilderStore,
-  ProjectBuilderState,
-} from '@sqlrooms/project-builder';
-import {
-  BaseProjectConfig,
+  createRoomShellSlice,
+  BaseRoomConfig,
   LayoutTypes,
   MAIN_VIEW,
-} from '@sqlrooms/project-config';
+  RoomShellSliceState,
+  createRoomStore,
+} from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -27,17 +25,17 @@ import {
   Map as MapIcon,
   SlidersHorizontal,
 } from 'lucide-react';
-import { z } from 'zod';
-import { DataSourcesPanel } from './components/DataSourcesPanel';
+import {z} from 'zod';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {
   KeplerSidePanelBaseMapManager,
   KeplerSidePanelFilterManager,
   KeplerSidePanelInteractionManager,
   KeplerSidePanelLayerManager,
 } from './components/KeplerSidePanels';
-import { MainView } from './components/MainView';
+import {MainView} from './components/MainView';
 
-export const ProjectPanelTypes = z.enum([
+export const RoomPanelTypes = z.enum([
   'data-sources',
   'kepler-layers',
   'kepler-filters',
@@ -45,121 +43,121 @@ export const ProjectPanelTypes = z.enum([
   'kepler-basemaps',
   MAIN_VIEW,
 ] as const);
-export type ProjectPanelTypes = z.infer<typeof ProjectPanelTypes>;
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Project config for saving
+ * Room config for saving
  */
-export const AppConfig =
-  BaseProjectConfig.merge(KeplerSliceConfig).merge(SqlEditorSliceConfig);
-export type AppConfig = z.infer<typeof AppConfig>;
+export const RoomConfig =
+  BaseRoomConfig.merge(KeplerSliceConfig).merge(SqlEditorSliceConfig);
+export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
- * Project state
+ * Room state
  */
-type CustomAppState = {
+type CustomRoomState = {
   // TODO: Add custom state here
 };
-export type AppState = ProjectBuilderState<AppConfig> &
-  KeplerSliceState &
+export type RoomState = RoomShellSliceState<RoomConfig> &
+  KeplerSliceState<RoomConfig> &
   SqlEditorSliceState &
-  CustomAppState;
+  CustomRoomState;
 
 /**
- * Create a customized project store
+ * Create a customized room store
  */
-export const {projectStore, useProjectStore} = createProjectBuilderStore<
-  AppConfig,
-  AppState
->((set, get, store) => {
-  // Base project slice
-  const projectSlice = createProjectBuilderSlice<AppConfig>({
-    config: {
-      layout: {
-        type: LayoutTypes.enum.mosaic,
-        nodes: {
-          direction: 'row',
-          first: ProjectPanelTypes.enum['data-sources'],
-          second: MAIN_VIEW,
-          splitPercentage: 30,
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+  (set, get, store) => {
+    // Base room slice
+    const roomSlice = createRoomShellSlice<RoomConfig>({
+      config: {
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+          },
+        ],
+        ...createDefaultKeplerConfig(),
+        ...createDefaultSqlEditorConfig(),
+      },
+      room: {
+        panels: {
+          [RoomPanelTypes.enum['data-sources']]: {
+            title: 'Data Sources',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['kepler-layers']]: {
+            title: 'Layers',
+            icon: Layers,
+            component: KeplerSidePanelLayerManager,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['kepler-filters']]: {
+            title: 'Filters',
+            icon: Filter,
+            component: KeplerSidePanelFilterManager,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['kepler-interactions']]: {
+            title: 'Interactions',
+            icon: SlidersHorizontal,
+            component: KeplerSidePanelInteractionManager,
+            placement: 'sidebar',
+          },
+          [RoomPanelTypes.enum['kepler-basemaps']]: {
+            title: 'Base Maps',
+            icon: MapIcon,
+            component: KeplerSidePanelBaseMapManager,
+            placement: 'sidebar',
+          },
+          // MapIcon
+          main: {
+            title: 'Main view',
+            icon: () => null,
+            component: MainView,
+            placement: 'main',
+          },
         },
       },
-      dataSources: [
-        {
-          tableName: 'earthquakes',
-          type: 'url',
-          url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-        },
-      ],
-      ...createDefaultKeplerConfig(),
-      ...createDefaultSqlEditorConfig(),
-    },
-    project: {
-      panels: {
-        [ProjectPanelTypes.enum['data-sources']]: {
-          title: 'Data Sources',
-          icon: DatabaseIcon,
-          component: DataSourcesPanel,
-          placement: 'sidebar',
-        },
-        [ProjectPanelTypes.enum['kepler-layers']]: {
-          title: 'Layers',
-          icon: Layers,
-          component: KeplerSidePanelLayerManager,
-          placement: 'sidebar',
-        },
-        [ProjectPanelTypes.enum['kepler-filters']]: {
-          title: 'Filters',
-          icon: Filter,
-          component: KeplerSidePanelFilterManager,
-          placement: 'sidebar',
-        },
-        [ProjectPanelTypes.enum['kepler-interactions']]: {
-          title: 'Interactions',
-          icon: SlidersHorizontal,
-          component: KeplerSidePanelInteractionManager,
-          placement: 'sidebar',
-        },
-        [ProjectPanelTypes.enum['kepler-basemaps']]: {
-          title: 'Base Maps',
-          icon: MapIcon,
-          component: KeplerSidePanelBaseMapManager,
-          placement: 'sidebar',
-        },
-        // MapIcon
-        main: {
-          title: 'Main view',
-          icon: () => null,
-          component: MainView,
-          placement: 'main',
-        },
-      },
-    },
-  })(set, get, store);
+    })(set, get, store);
 
-  const keplerSlice = createKeplerSlice({
-    actionLogging: true,
-  })(set, get, store);
-  return {
-    ...projectSlice,
-    project: {
-      ...projectSlice.project,
-      addProjectFile: async (file, tName, loadOptions) => {
-        const addedTable = await projectSlice.project.addProjectFile(
-          file,
-          tName,
-          loadOptions,
-        );
-        if (!addedTable) {
-          return;
-        }
-        const currentMapId = get().config.kepler.currentMapId;
-        get().kepler.addTableToMap(currentMapId, addedTable.tableName);
-        return addedTable;
-      },
-    },
+    const keplerSlice = createKeplerSlice<RoomConfig>({
+      actionLogging: true,
+    })(set, get, store);
 
-    ...keplerSlice,
-    ...createSqlEditorSlice()(set, get, store),
-  };
-});
+    return {
+      ...roomSlice,
+      room: {
+        ...roomSlice.room,
+        addRoomFile: async (file, tName, loadOptions) => {
+          const addedTable = await roomSlice.room.addRoomFile(
+            file,
+            tName,
+            loadOptions,
+          );
+          if (!addedTable) {
+            return;
+          }
+          const currentMapId = get().config.kepler.currentMapId;
+          get().kepler.addTableToMap(currentMapId, addedTable.tableName);
+          return addedTable;
+        },
+      },
+
+      ...keplerSlice,
+      ...createSqlEditorSlice()(set, get, store),
+    };
+  },
+);

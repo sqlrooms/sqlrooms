@@ -13,7 +13,6 @@ export type DataTable = {
   schema: string;
   /** @deprecated Use table.table instead */
   tableName: string;
-  schema: string;
   columns: TableColumn[];
   rowCount?: number;
   inputFileName?: string;

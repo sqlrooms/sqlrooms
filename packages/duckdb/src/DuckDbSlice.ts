@@ -21,6 +21,7 @@ import {
 } from './duckdb-utils';
 import {createDbSchemaTrees} from './schemaTree';
 import {DataTable, DbSchemaNode, TableColumn} from './types';
+import {type Slice} from '@sqlrooms/room-store';
 
 export type SchemaAndDatabase = {
   schema?: string;

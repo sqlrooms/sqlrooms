@@ -5,7 +5,7 @@ import {
   S3CredentialForm,
   S3BrowserState,
 } from '@sqlrooms/s3-browser';
-import {S3FileOrDirectory, S3Config, S3Credential} from '@sqlrooms/s3';
+import {S3FileOrDirectory, S3Config, S3Credential} from '@sqlrooms/s3-browser';
 import {ChevronLeft} from 'lucide-react';
 import {
   DialogFooter,

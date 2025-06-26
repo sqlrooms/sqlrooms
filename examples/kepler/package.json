@@ -32,8 +32,8 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
-    "@types/react": "^18.3.18",
-    "@types/react-dom": "^18.3.5",
+    "@types/react": "19.1.7",
+    "@types/react-dom": "19.1.6",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.20",
     "esbuild-plugin-react-virtualized": "^1.0.4",
@@ -48,6 +48,21 @@
     "vite": "^6.2.0"
   },
   "overrides": {
-    "apache-arrow": "18.1.0"
+    "apache-arrow": "17.0.0",
+    "@luma.gl/core": "8.5.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "gl-matrix": "3.0.0",
+      "@luma.gl/core": "8.5.10",
+      "@math.gl/core": "3.6.2",
+      "@math.gl/web-mercator": "3.6.2",
+      "@luma.gl/webgl": "8.4.0",
+      "@luma.gl/engine": "8.4.0",
+      "@luma.gl/gltools": "8.4.0",
+      "@loaders.gl/images": "3.0.0",
+      "@luma.gl/shadertools": "8.4.0",
+      "@deck.gl/aggregation-layers": "8.9.27"
+    }
   }
 }

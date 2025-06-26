@@ -1,8 +1,7 @@
 import {StateCreator} from 'zustand';
 import {produce} from 'immer';
-import {BaseProjectConfig, createSlice} from '@sqlrooms/project-builder';
-import {S3Config} from '@sqlrooms/s3';
-import {type Slice} from '@sqlrooms/project';
+import {type Slice, BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
+import {S3Config} from '../../s3-browser-config/dist';
 
 export type S3BrowserState = Slice & {
   s3Browser: {
@@ -16,7 +15,7 @@ export type S3BrowserState = Slice & {
 
 // Create the store
 export function createS3BrowserSlice<
-  PC extends BaseProjectConfig & S3Config,
+  PC extends BaseRoomConfig & S3Config,
 >(): StateCreator<S3BrowserState> {
   return createSlice<PC, S3BrowserState>((set) => ({
     // Initial state

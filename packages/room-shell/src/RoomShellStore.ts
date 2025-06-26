@@ -69,7 +69,7 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-    autoDownloadDataSources: boolean;
+    autoDownloadDataSources?: boolean;
 
     CustomErrorBoundary: React.ComponentType<{
       onRetry?: () => void;

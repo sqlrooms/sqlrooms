@@ -12,20 +12,18 @@ import {
   TabsList,
   TabsTrigger,
 } from '@sqlrooms/ui';
-import {useProjectStore} from '../store';
+import {useRoomStore} from '../store';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
 import {useState} from 'react';
 import {KeplerMapContainer, KeplerPlotContainer} from '@sqlrooms/kepler';
 
 export function KeplerMapsContainer() {
-  const maps = useProjectStore((state) => state.config.kepler.maps);
-  const currentMap = useProjectStore((state) => state.kepler.getCurrentMap());
-  const setCurrentMapId = useProjectStore(
-    (state) => state.kepler.setCurrentMapId,
-  );
-  const createMap = useProjectStore((state) => state.kepler.createMap);
-  const renameMap = useProjectStore((state) => state.kepler.renameMap);
-  const deleteMap = useProjectStore((state) => state.kepler.deleteMap);
+  const maps = useRoomStore((state) => state.config.kepler.maps);
+  const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
+  const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
+  const createMap = useRoomStore((state) => state.kepler.createMap);
+  const renameMap = useRoomStore((state) => state.kepler.renameMap);
+  const deleteMap = useRoomStore((state) => state.kepler.deleteMap);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
   const handleDeleteMap = () => {
@@ -95,7 +93,7 @@ export function KeplerMapsContainer() {
           </TabsContent>
         ))}
       </Tabs>
-      <KeplerPlotContainer mapId={currentMap?.id} />
+      <KeplerPlotContainer mapId={currentMap?.id ?? ''} />
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
           <DialogHeader>

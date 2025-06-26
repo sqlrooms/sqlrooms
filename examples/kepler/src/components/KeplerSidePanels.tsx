@@ -1,47 +1,47 @@
 import {KeplerSidePanels} from '@sqlrooms/kepler';
-import {ProjectBuilderPanel} from '@sqlrooms/project-builder';
-import {ProjectPanelTypes, useProjectStore} from '../store';
+import {RoomPanel} from '@sqlrooms/room-shell';
+import {RoomPanelTypes, useRoomStore} from '../store';
 
 export function KeplerSidePanelLayerManager() {
-  const currentMap = useProjectStore((state) => {
+  const currentMap = useRoomStore((state) => {
     return state.kepler.getCurrentMap();
   });
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['kepler-layers']}>
+    <RoomPanel type={RoomPanelTypes.enum['kepler-layers']}>
       <KeplerSidePanels panelId="layer" mapId={currentMap?.id || ''} />
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 }
 
 export function KeplerSidePanelFilterManager() {
-  const currentMap = useProjectStore((state) => {
+  const currentMap = useRoomStore((state) => {
     return state.kepler.getCurrentMap();
   });
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['kepler-filters']}>
+    <RoomPanel type={RoomPanelTypes.enum['kepler-filters']}>
       <KeplerSidePanels panelId="filter" mapId={currentMap?.id || ''} />
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 }
 
 export function KeplerSidePanelBaseMapManager() {
-  const currentMap = useProjectStore((state) => {
+  const currentMap = useRoomStore((state) => {
     return state.kepler.getCurrentMap();
   });
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['kepler-basemaps']}>
+    <RoomPanel type={RoomPanelTypes.enum['kepler-basemaps']}>
       <KeplerSidePanels panelId="map" mapId={currentMap?.id || ''} />
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 }
 
 export function KeplerSidePanelInteractionManager() {
-  const currentMap = useProjectStore((state) => {
+  const currentMap = useRoomStore((state) => {
     return state.kepler.getCurrentMap();
   });
   return (
-    <ProjectBuilderPanel type={ProjectPanelTypes.enum['kepler-interactions']}>
+    <RoomPanel type={RoomPanelTypes.enum['kepler-interactions']}>
       <KeplerSidePanels panelId="interaction" mapId={currentMap?.id || ''} />
-    </ProjectBuilderPanel>
+    </RoomPanel>
   );
 }

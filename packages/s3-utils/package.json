@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/s3",
+  "name": "@sqlrooms/s3-utils",
   "version": "0.13.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,8 +18,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.726.1",
-    "zod": "^3.24.1"
+    "@sqlrooms/s3-browser-config": "workspace:*",
+    "@aws-sdk/client-s3": "^3.726.1"
   },
   "scripts": {
     "dev": "tsc -w",

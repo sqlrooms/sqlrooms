@@ -4,11 +4,9 @@
  */
 
 export {
-  KeplerSliceConfig,
   createKeplerSlice,
   useStoreWithKepler,
   createDefaultKeplerConfig,
-  KeplerMapSchema,
   type KeplerSliceState,
 } from './KeplerSlice';
 
@@ -32,3 +30,5 @@ export {KeplerProvider} from './components/KeplerProvider';
 export {useKeplerStateActions} from './hooks/useKeplerStateActions';
 export {KeplerPlotContainer} from './components/KeplerPlotContainer';
 export {KeplerImageExport} from './components/KeplerImageExport';
+
+export * from '@sqlrooms/kepler-config';

@@ -13,13 +13,12 @@ import {
 import type {StateCreator} from 'zustand';
 import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';
-import {type Slice} from '@sqlrooms/project';
 
 /**
  * Core state interface for the Cosmos graph visualization.
  * Contains the graph instance, simulation state, and all control functions.
  */
-export type CosmosSliceState = Slice & {
+export type CosmosSliceState = {
   cosmos: {
     /** The current graph instance */
     graph: Graph | null;

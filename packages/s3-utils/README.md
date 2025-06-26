@@ -11,9 +11,9 @@ A utilities for calling S3-compatible storage services. To be used with s3-brows
 ## Installation
 
 ```bash
-npm install @sqlrooms/s3
+npm install @sqlrooms/s3-utils
 # or
-yarn add @sqlrooms/s3
+yarn add @sqlrooms/s3-utils
 ```
 
 ### S3 Utility Functions
@@ -22,7 +22,7 @@ The package also provides utility functions for working with S3:
 
 ```tsx
 import {S3Client} from '@aws-sdk/client-s3';
-import {listFilesAndDirectoriesWithPrefix} from '@sqlrooms/s3';
+import {listFilesAndDirectoriesWithPrefix} from '@sqlrooms/s3-utils';
 
 // Initialize S3 client
 const s3Client = new S3Client({region: 'us-east-1'});

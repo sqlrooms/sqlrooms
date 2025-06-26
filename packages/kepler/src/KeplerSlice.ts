@@ -22,12 +22,12 @@ import {AddDataToMapPayload} from '@kepler.gl/types';
 import {createId} from '@paralleldrive/cuid2';
 import {
   createSlice,
-  ProjectBuilderState,
-  useBaseProjectBuilderStore,
   type Slice,
   type StateCreator,
-} from '@sqlrooms/project-builder';
-import {BaseProjectConfig} from '@sqlrooms/project-config';
+  BaseRoomConfig,
+  RoomShellSliceState,
+  useBaseRoomShellStore,
+} from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
@@ -38,14 +38,13 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
-import {z} from 'zod';
-// @ts-ignore
 import {KeplerTable} from '@kepler.gl/table';
 import {
   DatabaseConnection,
   initApplicationConfig,
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
+import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import * as arrow from 'apache-arrow';
 
 class DesktopKeplerTable extends KeplerTable {
@@ -55,23 +54,6 @@ class DesktopKeplerTable extends KeplerTable {
   };
 }
 
-export const KeplerMapSchema = z.object({
-  id: z.string(),
-  name: z.string(),
-  config: z
-    .object({
-      version: z.literal('v1'),
-      config: z.object({
-        visState: z.object({}).passthrough(),
-        mapState: z.object({}).passthrough(),
-        mapStyle: z.object({}).passthrough(),
-        uiState: z.object({}).passthrough(),
-      }),
-    })
-    .optional(),
-});
-
-export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
 export type KeplerGLBasicProps = {
   mapboxApiAccessToken?: string;
 };
@@ -83,14 +65,6 @@ export type CreateKeplerSliceOptions = {
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
 };
-
-export const KeplerSliceConfig = z.object({
-  kepler: z.object({
-    currentMapId: z.string(),
-    maps: z.array(KeplerMapSchema),
-  }),
-});
-export type KeplerSliceConfig = z.infer<typeof KeplerSliceConfig>;
 
 export function createDefaultKeplerConfig(
   props?: Partial<KeplerSliceConfig['kepler']>,
@@ -131,7 +105,7 @@ export function hasMapId(action: KeplerAction): action is KeplerAction & {
 
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
-export type KeplerSliceState<PC extends ProjectConfigWithKepler> = Slice & {
+export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
   kepler: {
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
@@ -186,7 +160,7 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
 ];
 
 export function createKeplerSlice<
-  PC extends BaseProjectConfig & KeplerSliceConfig,
+  PC extends BaseRoomConfig & KeplerSliceConfig,
 >({
   basicKeplerProps = {},
   initialKeplerState = {
@@ -280,7 +254,7 @@ export function createKeplerSlice<
             },
           });
           if (config) {
-            get().project.setProjectConfig(config);
+            get().room.setRoomConfig(config);
             const keplerMaps = config.kepler.maps;
             for (const {id, config} of keplerMaps) {
               if (config) {
@@ -558,16 +532,16 @@ export function createKeplerSlice<
   });
 }
 
-type ProjectConfigWithKepler = BaseProjectConfig & KeplerSliceConfig;
-type ProjectStateWithKepler = ProjectBuilderState<ProjectConfigWithKepler> &
-  KeplerSliceState<ProjectConfigWithKepler>;
+type RoomConfigWithKepler = BaseRoomConfig & KeplerSliceConfig;
+type RoomStateWithKepler = RoomShellSliceState<RoomConfigWithKepler> &
+  KeplerSliceState<RoomConfigWithKepler>;
 
 export function useStoreWithKepler<T>(
-  selector: (state: ProjectStateWithKepler) => T,
+  selector: (state: RoomStateWithKepler) => T,
 ): T {
-  return useBaseProjectBuilderStore<
-    BaseProjectConfig & KeplerSliceConfig,
-    ProjectBuilderState<ProjectConfigWithKepler>,
+  return useBaseRoomShellStore<
+    BaseRoomConfig & KeplerSliceConfig,
+    RoomShellSliceState<RoomConfigWithKepler>,
     T
-  >((state) => selector(state as unknown as ProjectStateWithKepler));
+  >((state) => selector(state as unknown as RoomStateWithKepler));
 }

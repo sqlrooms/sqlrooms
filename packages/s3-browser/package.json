@@ -18,9 +18,9 @@
     "access": "public"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.826.0",
     "@hookform/resolvers": "^3.10.0",
     "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/s3-browser-config": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "immer": "^10.1.1",

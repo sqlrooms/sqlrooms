@@ -1,12 +1,10 @@
 import {KeplerMapsContainer} from './KeplerMapsContainer';
 import {SkeletonPane} from '@sqlrooms/ui';
-import {useProjectStore} from '../store';
+import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {
   // Check if data is available
-  const isDataAvailable = useProjectStore(
-    (state) => state.project.isDataAvailable,
-  );
+  const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
   if (!isDataAvailable) {
     return <SkeletonPane />;

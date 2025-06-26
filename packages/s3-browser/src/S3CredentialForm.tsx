@@ -3,7 +3,7 @@ import {useForm, SubmitHandler} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
-import {S3Config, S3Credential} from '@sqlrooms/s3';
+import {S3Config, S3Credential} from '@sqlrooms/s3-browser-config';
 
 import {
   Input,

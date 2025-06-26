@@ -1,5 +1,5 @@
 import {messages} from '@kepler.gl/localization';
-import {useMemo} from 'react';
+import {PropsWithChildren, useMemo} from 'react';
 import {IntlProvider} from 'react-intl';
 import {ThemeProvider, StyleSheetManager} from 'styled-components';
 import {KeplerGlReduxState, useStoreWithKepler} from '../KeplerSlice';
@@ -8,10 +8,9 @@ import {KeplerGlContext, shouldForwardProp} from '@kepler.gl/components';
 import {darkTheme} from '../styles/theme';
 import {Provider} from 'react-redux';
 
-type KeplerProviderProps = {
-  children: React.ReactNode;
+type KeplerProviderProps = PropsWithChildren<{
   mapId: string;
-};
+}>;
 
 // Provide intl, theme, context, and redux store to the kepler
 export const KeplerProvider: React.FC<KeplerProviderProps> = ({
@@ -38,7 +37,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
         <StyleSheetManager shouldForwardProp={shouldForwardProp}>
           <ThemeProvider theme={darkTheme}>
             <KeplerGlContext.Provider value={keplerContext}>
-              {children}
+              <>{children}</>
             </KeplerGlContext.Provider>
           </ThemeProvider>
         </StyleSheetManager>

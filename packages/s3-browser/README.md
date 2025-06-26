@@ -29,7 +29,7 @@ yarn add @sqlrooms/s3-browser
 ```tsx
 import {useState} from 'react';
 import {S3FileBrowser, S3CredentialForm, S3State} from '@sqlrooms/s3-browser';
-import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3';
+import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3-utils';
 
 type S3BrowserProps = {
   listS3Files: (args: {
@@ -175,7 +175,7 @@ The `S3CredentialForm` component provides a form interface for managing S3 crede
 
 ```tsx
 import {S3CredentialForm} from '@sqlrooms/s3-browser';
-import {S3Config, S3Connection} from '@sqlrooms/s3';
+import {S3Config, S3Connection} from '@sqlrooms/s3-utils';
 
 function MyS3ConnectionManager() {
   const handleConnect = async (credentials: S3Config) => {

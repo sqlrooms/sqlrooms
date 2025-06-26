@@ -31,8 +31,9 @@
     "@kepler.gl/types": "3.1.8",
     "@kepler.gl/utils": "3.1.8",
     "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/kepler-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/s3": "workspace:*",
+    "@sqlrooms/s3-utils": "workspace:*",
     "@sqlrooms/s3-browser": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^10.1.1",
@@ -59,7 +60,23 @@
     "typedoc": "typedoc"
   },
   "devDependencies": {
-    "@types/redux-logger": "^3.0.13",
-    "typescript": "^5.8.3"
+    "@types/redux-logger": "^3.0.13"
+  },
+  "overrides": {
+    "@luma.gl/core": "8.5.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "gl-matrix": "3.0.0",
+      "@luma.gl/core": "8.5.10",
+      "@math.gl/core": "3.6.2",
+      "@math.gl/web-mercator": "3.6.2",
+      "@luma.gl/webgl": "8.4.0",
+      "@luma.gl/engine": "8.4.0",
+      "@luma.gl/gltools": "8.4.0",
+      "@loaders.gl/images": "3.0.0",
+      "@luma.gl/shadertools": "8.4.0",
+      "@deck.gl/aggregation-layers": "8.9.27"
+    }
   }
 }
