@@ -76,10 +76,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
-        connector: createWasmDuckDbConnector({
-          path: 'opfs://database.db',
-          accessMode: DuckDBAccessMode.READ_WRITE,
-        }),
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -98,7 +94,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           ],
           ...createDefaultAiConfig(
-            // {},
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
