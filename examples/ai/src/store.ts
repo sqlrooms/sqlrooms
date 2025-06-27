@@ -5,17 +5,13 @@ import {
   createDefaultAiConfig,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
+import {DataTable} from '@sqlrooms/duckdb';
 import {
-  createWasmDuckDbConnector,
-  DataTable,
-  DuckDBAccessMode,
-} from '@sqlrooms/duckdb';
-import {
-  LayoutTypes,
-  MAIN_VIEW,
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutTypes,
+  MAIN_VIEW,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
@@ -32,8 +28,8 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import {DEFAULT_MODEL} from './models';
 import exampleSessions from './example-sessions.json';
+import {DEFAULT_MODEL} from './models';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
