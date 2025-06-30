@@ -2,19 +2,19 @@ import {
   createAssistant,
   rebuildMessages,
   StreamMessage,
-  tool,
 } from '@openassistant/core';
+import {extendedTool} from '@openassistant/utils';
 import {
   arrowTableToJson,
   DataTable,
   DuckDbConnector,
   DuckDbSliceState,
 } from '@sqlrooms/duckdb';
-
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
 import {AnalysisResultSchema, QueryToolParameters} from './schemas';
+import {convertToCoreMessages} from 'ai';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -27,6 +27,7 @@ const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
+- When calling query tool, please use type: 'query'
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
 - Some key DuckDB-specific functions to use:
   * regexp_matches() for regex (not regexp_like)
@@ -178,7 +179,7 @@ export async function runAnalysis({
     instructions: getInstructions
       ? getInstructions(tableSchemas)
       : getDefaultInstructions(tableSchemas),
-    functions: tools,
+    tools: tools,
     temperature: 0,
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
@@ -189,16 +190,22 @@ export async function runAnalysis({
   if (historyAnalysis) {
     const historyMessages = historyAnalysis.map((analysis) => ({
       prompt: analysis.prompt,
-      response: analysis.streamMessage,
+      response: analysis.streamMessage as StreamMessage,
     }));
     const initialMessages = rebuildMessages(historyMessages);
-    assistant.setMessages(initialMessages);
+    assistant.setMessages(convertToCoreMessages(initialMessages));
   }
 
   // process the prompt
   const newMessages = await assistant.processTextMessage({
     textMessage: prompt,
-    streamMessageCallback: ({isCompleted, message}) => {
+    streamMessageCallback: ({
+      isCompleted,
+      message,
+    }: {
+      isCompleted?: boolean;
+      message?: StreamMessage;
+    }) => {
       onStreamResult(isCompleted ?? false, message);
     },
   });
@@ -215,7 +222,7 @@ export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
 ): Record<string, AiSliceTool> {
   return {
-    query: tool({
+    query: extendedTool({
       description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,

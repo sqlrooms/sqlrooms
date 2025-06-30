@@ -30,4 +30,8 @@ export const LLM_MODELS = [
     name: 'deepseek',
     models: ['deepseek-chat'],
   },
+  {
+    name: 'ollama',
+    models: ['MFDoom/deepseek-r1-tool-calling:8b'],
+  },
 ];

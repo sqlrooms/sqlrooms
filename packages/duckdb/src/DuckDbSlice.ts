@@ -2,6 +2,7 @@ import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
   createBaseSlice,
   RoomState,
+  Slice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -21,7 +22,6 @@ import {
 } from './duckdb-utils';
 import {createDbSchemaTrees} from './schemaTree';
 import {DataTable, DbSchemaNode, TableColumn} from './types';
-import {type Slice} from '@sqlrooms/room-store';
 
 export type SchemaAndDatabase = {
   schema?: string;
