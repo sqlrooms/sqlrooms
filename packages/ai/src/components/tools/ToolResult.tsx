@@ -1,4 +1,3 @@
-import {ToolCallMessage} from '@openassistant/core';
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, useDisclosure} from '@sqlrooms/ui';
 import {TriangleAlertIcon} from 'lucide-react';
@@ -6,20 +5,29 @@ import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
+import {ToolInvocation} from 'ai';
 
 type ToolResultProps = {
-  toolCallMessage: ToolCallMessage;
+  toolInvocation: ToolInvocation;
+  additionalData: unknown;
+  isCompleted: boolean;
   errorMessage?: string;
 };
 
 export const ToolResult: React.FC<ToolResultProps> = ({
-  toolCallMessage,
+  toolInvocation,
+  additionalData,
+  isCompleted,
   errorMessage,
 }) => {
   const {isOpen: showDetails, onToggle: toggleShowDetails} =
     useDisclosure(false);
-  const {toolName, args, llmResult, additionalData, text, isCompleted} =
-    toolCallMessage;
+
+  const {toolName, args, state} = toolInvocation;
+  const llmResult = state === 'result' ? toolInvocation.result : null;
+
+  // show reason text before tool call complete
+  const text = args.reasoning || '';
 
   const ToolComponent = useStoreWithAi((state) =>
     state.ai.findToolComponent(toolName),
@@ -80,7 +88,7 @@ export const ToolResult: React.FC<ToolResultProps> = ({
           {showDetails && (
             <div className="h-[300px] w-full overflow-hidden rounded-md border">
               <JsonMonacoEditor
-                value={toolCallMessage}
+                value={toolInvocation}
                 readOnly={true}
                 options={{
                   lineNumbers: false,

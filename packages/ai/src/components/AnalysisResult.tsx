@@ -11,6 +11,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@sqlrooms/ui';
+import {StreamMessagePart} from '@openassistant/core';
 import {CodeIcon, SquareTerminalIcon, TrashIcon} from 'lucide-react';
 import {useState} from 'react';
 import {AnalysisResultSchema} from '../schemas';
@@ -55,6 +56,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   // the toolResults are reasoning steps that the LLM took to achieve the final result
   // by calling function tools to answer the prompt
   const {id, prompt, errorMessage, streamMessage} = result;
+  const parts = streamMessage.parts as StreamMessagePart[];
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   return (
@@ -136,7 +138,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
         </div>
       </div>
       {/** render parts */}
-      {streamMessage.parts?.map((part, index) => (
+      {parts?.map((part, index) => (
         <div key={index}>
           {part.type === 'text' && (
             <AnalysisAnswer
@@ -144,14 +146,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               isAnswer={index === (streamMessage.parts?.length || 0) - 1}
             />
           )}
-          {part.type === 'tool' && (
+          {part.type === 'tool-invocation' && (
             <div>
-              {part.toolCallMessages.map((toolCallMessage) => (
-                <ToolResult
-                  key={toolCallMessage.toolCallId}
-                  toolCallMessage={toolCallMessage}
-                />
-              ))}
+              <ToolResult
+                key={part.toolInvocation.toolCallId}
+                toolInvocation={part.toolInvocation}
+                additionalData={part.additionalData}
+                isCompleted={result.isCompleted}
+              />
             </div>
           )}
         </div>

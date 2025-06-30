@@ -12,6 +12,8 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutTypes,
+  MAIN_VIEW,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';

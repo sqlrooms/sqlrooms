@@ -4,6 +4,12 @@ import {
   RoomState,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
+import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
+import {
+  createBaseSlice,
+  RoomState,
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
@@ -21,7 +27,6 @@ import {
 } from './duckdb-utils';
 import {createDbSchemaTrees} from './schemaTree';
 import {DataTable, DbSchemaNode, TableColumn} from './types';
-import {type Slice} from '@sqlrooms/room-store';
 
 export type SchemaAndDatabase = {
   schema?: string;
