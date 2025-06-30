@@ -2,6 +2,7 @@ import * as duckdb from '@duckdb/duckdb-wasm';
 import {DataTable} from '@sqlrooms/duckdb';
 import {useQuery} from '@tanstack/react-query';
 import * as arrow from 'apache-arrow';
+import { Table, tableToIPC } from 'apache-arrow'
 
 export type DuckConn = {
   db: duckdb.AsyncDuckDB;
@@ -290,4 +291,34 @@ export async function dropFile(fname: string): Promise<void> {
 export async function dropAllFiles(): Promise<void> {
   const {db} = await getDuckConn();
   db.dropFiles();
+}
+
+export const CHUNKED_QUERY_THRESHOLD = 250_000
+export const CHUNK_SIZE = 100_000
+
+export async function exportTableToIPC(
+  conn: duckdb.AsyncDuckDBConnection,
+  tableName: string,
+  rowThreshold: number = CHUNKED_QUERY_THRESHOLD,
+  chunkSize: number = CHUNK_SIZE,
+): Promise<Uint8Array> {
+  const countRes = await conn.query(`SELECT COUNT(*) as cnt FROM ${tableName}`)
+  const totalRows = getColValAsNumber(countRes)
+
+  let table: Table
+  if (totalRows > rowThreshold) {
+    // Stream in chunks and concatenate
+    let resultTable: Table | undefined
+    for (let offset = 0; offset < totalRows; offset += chunkSize) {
+      const chunk = await conn.query(`SELECT * FROM ${tableName} LIMIT ${chunkSize} OFFSET ${offset}`)
+      if (!chunk || chunk.numRows === 0) continue
+      resultTable = resultTable ? resultTable.concat(chunk) : chunk
+    }
+    if (!resultTable) throw new Error(`Failed to export table ${tableName}`)
+    table = resultTable
+  } else {
+    table = await conn.query(`SELECT * FROM ${tableName}`)
+  }
+
+  return tableToIPC(table)
 }

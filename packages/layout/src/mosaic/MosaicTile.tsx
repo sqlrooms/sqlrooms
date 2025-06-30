@@ -28,6 +28,7 @@ const MosaicTile: FC<Props> = (props) => {
       borderRadius="sm"
       overflow="hidden"
       bg={'gray.700'}
+      zIndex={0}
       pointerEvents={isDragging ? 'none' : undefined}
     >
       {content}
