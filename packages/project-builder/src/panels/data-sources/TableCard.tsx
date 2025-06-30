@@ -25,6 +25,7 @@ export type Props = {
   showSwitches?: boolean;
   selectedColumns?: Record<string, string>;
   onColumnToggle?: (columnName: string, isSelected: boolean) => void;
+  tableId?: string;
 } & FlexProps;
 
 const TableCard: FC<Props> = ({ 
@@ -36,12 +37,15 @@ const TableCard: FC<Props> = ({
   onClick, 
   selectedColumns = {}, 
   onColumnToggle,
+  tableId,
   ...rest 
 }) => {
   if (!value) return null;
   const allSelected = value.columns?.every(col => 
     Object.values(selectedColumns).includes(col.name)
   ) ?? false;
+
+  const uniqueTableId = tableId || value.tableName || Math.random().toString(36).slice(2, 9);
 
   return (
     <Flex
@@ -111,7 +115,7 @@ const TableCard: FC<Props> = ({
                   <Tr key={i}>
                     <Td overflow="hidden">
                       <HStack justifyContent={'space-between'}>
-                        <HStack cursor={'pointer'} alignItems={'center'} as="label" htmlFor={`${row.name}-switch`} flex={1} minW={0} gap={2}>
+                        <HStack cursor={'pointer'} alignItems={'center'} as="label" htmlFor={`${uniqueTableId}-${row.name}-switch`} flex={1} minW={0} gap={2}>
                         <Flex>
                           <Badge
                             my={1}
@@ -137,7 +141,7 @@ const TableCard: FC<Props> = ({
                         </Text>
                         </HStack>
                         {showSwitches && <Switch
-                          id={`${row.name}-switch`}
+                          id={`${uniqueTableId}-${row.name}-switch`}
                           size="sm"
                           transform={'scale(0.8)'}
                           colorScheme="blue"
