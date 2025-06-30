@@ -185,7 +185,7 @@ html:not(.dark) .foursquare-footer img {
   font-size: 15px;
   font-weight: 600;
   color: #fff;
-  background: linear-gradient(90deg, #f7b733 0%, #fc4a1a 100%);
+  background: linear-gradient(90deg, #ac3979 0%, #21305a 100%);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -194,7 +194,7 @@ html:not(.dark) .foursquare-footer img {
 .banner a {
   color: #fff;
   text-decoration: underline;
-  font-weight: 600;
+  font-weight: normal;
   margin-right: 1.5rem;
 }
 .banner button {
