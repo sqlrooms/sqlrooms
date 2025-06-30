@@ -39,13 +39,7 @@ const ProgressModal: FC<{
             className="h-2 w-full"
             indeterminate={indeterminate}
           />
-          <Progress
-            value={progress}
-            className="h-2 w-full"
-            indeterminate={indeterminate}
-          />
           <DialogDescription className="text-muted-foreground flex justify-between text-sm">
-            <span className="text-sm">{loadingStage ?? ''}</span>
             <span className="text-sm">{loadingStage ?? ''}</span>
             {progress ? <span>{progress}%</span> : null}
           </DialogDescription>

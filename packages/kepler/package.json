@@ -61,22 +61,5 @@
   },
   "devDependencies": {
     "@types/redux-logger": "^3.0.13"
-  },
-  "overrides": {
-    "@luma.gl/core": "8.5.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "gl-matrix": "3.0.0",
-      "@luma.gl/core": "8.5.10",
-      "@math.gl/core": "3.6.2",
-      "@math.gl/web-mercator": "3.6.2",
-      "@luma.gl/webgl": "8.4.0",
-      "@luma.gl/engine": "8.4.0",
-      "@luma.gl/gltools": "8.4.0",
-      "@loaders.gl/images": "3.0.0",
-      "@luma.gl/shadertools": "8.4.0",
-      "@deck.gl/aggregation-layers": "8.9.27"
-    }
   }
 }

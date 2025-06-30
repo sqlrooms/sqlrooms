@@ -10,14 +10,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/mapbox": "^9.1.12",
+    "@deck.gl/mapbox": "^8.9.27",
     "@sqlrooms/discuss": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "deck.gl": "^9.1.12",
+    "deck.gl": "^8.9.27",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "maplibre-gl": "^5.6.0",
