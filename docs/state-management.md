@@ -23,11 +23,11 @@ Slices are combined in the store creation process. Here's an example from the AI
 
 ```typescript
 import {AiSliceState} from '@sqlrooms/ai';
-import {RoomState} from '@sqlrooms/room-shell';
+import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
 // Combining multiple slices into a unified application state type
-export type RoomState = RoomState<RoomConfig> &
+export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
   CustomRoomState;
