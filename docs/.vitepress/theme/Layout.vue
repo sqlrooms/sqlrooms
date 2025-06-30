@@ -1,10 +1,12 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme';
-import {ref, onMounted} from 'vue';
+import {ref, onMounted, watchEffect} from 'vue';
 import {useData} from 'vitepress';
 const {frontmatter} = useData();
 
-const BANNER_ID = 'sqlrooms-launch-2024';
+const SHOW_BANNER = true; // Set to false to hide banner and margin everywhere
+
+const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
 
 onMounted(() => {
@@ -22,70 +24,81 @@ function dismiss() {
 </script>
 
 <template>
-  <div v-if="open && frontmatter.layout === 'home'" class="banner">
-    <a
-      href="https://medium.com/@foursquare/foursquare-introduces-sqlrooms-b6397d53546c"
-      target="_blank"
-      rel="noopener noreferrer"
+  <div
+    :class="{
+      'with-banner-margin':
+        SHOW_BANNER && open && frontmatter.layout === 'home',
+    }"
+  >
+    <div
+      v-if="SHOW_BANNER && open && frontmatter.layout === 'home'"
+      class="banner"
     >
-      🚀 <span>Read our launch announcement!</span>
-    </a>
-    <button @click="dismiss" aria-label="Close banner">&times;</button>
-  </div>
-  <DefaultTheme.Layout>
-    <template #home-hero-image>
-      <video
-        class="video"
-        poster="/media/overview/collage.webp"
-        controls
-        loop
-        muted
+      <span>🚀</span>
+      <a
+        href="https://medium.com/@foursquare/foursquare-introduces-sqlrooms-b6397d53546c"
+        target="_blank"
+        rel="noopener noreferrer"
       >
-        <source src="/media/sqlrooms-examples-75.mp4" type="video/mp4" />
-      </video>
-      <!--
-      <video
-        class="video dark"
-        src="/media/sqlrooms-examples.mp4"
-        autoplay
-        controls
-        loop
-        muted
-      />-->
-    </template>
-
-    <template #layout-bottom>
-      <div class="foursquare-footer">
-        Supported by
-        <a
-          href="https://location.foursquare.com"
-          target="_blank"
-          rel="noopener noreferrer"
+        <span>Read our launch announcement!</span>
+      </a>
+      <button @click="dismiss" aria-label="Close banner">&times;</button>
+    </div>
+    <DefaultTheme.Layout>
+      <template #home-hero-image>
+        <video
+          class="video"
+          poster="/media/overview/collage.webp"
+          controls
+          loop
+          muted
         >
-          <img
-            width="100"
-            height="32"
-            src="/public/foursquare-logo.svg"
-            alt="Foursquare Logo"
-            decoding="async"
-          />
-        </a>
-      </div>
-    </template>
-  </DefaultTheme.Layout>
+          <source src="/media/sqlrooms-examples-75.mp4" type="video/mp4" />
+        </video>
+        <!--
+        <video
+          class="video dark"
+          src="/media/sqlrooms-examples.mp4"
+          autoplay
+          controls
+          loop
+          muted
+        />-->
+      </template>
+
+      <template #layout-bottom>
+        <div class="foursquare-footer">
+          Supported by
+          <a
+            href="https://location.foursquare.com"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            <img
+              width="100"
+              height="32"
+              src="/public/foursquare-logo.svg"
+              alt="Foursquare Logo"
+              decoding="async"
+            />
+          </a>
+        </div>
+      </template>
+    </DefaultTheme.Layout>
+  </div>
 </template>
 
 <style>
-html:not(.banner-dismissed) {
+.with-banner-margin {
   --vt-banner-height: 38px;
 }
 .banner-dismissed .banner {
   display: none;
 }
 
-html:not(.banner-dismissed) .VPNavBar,
-html:not(.banner-dismissed) .VPLocalNav,
-html:not(.banner-dismissed) .VPContent {
+.with-banner-margin .VPNavBar,
+.with-banner-margin .VPLocalNav,
+.with-banner-margin .VPContent {
   margin-top: var(--vt-banner-height);
 }
 </style>
@@ -176,6 +189,7 @@ html:not(.dark) .foursquare-footer img {
   display: flex;
   align-items: center;
   justify-content: center;
+  gap: 0.5rem;
 }
 .banner a {
   color: #fff;
