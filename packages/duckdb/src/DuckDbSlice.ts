@@ -2,12 +2,7 @@ import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
   createBaseSlice,
   RoomState,
-  useBaseRoomStore,
-} from '@sqlrooms/room-store';
-import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
-import {
-  createBaseSlice,
-  RoomState,
+  Slice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
