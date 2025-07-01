@@ -10,9 +10,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@kepler.gl/duckdb": "^3.1.1",
-    "@kepler.gl/processors": "3.1.1",
-    "@kepler.gl/types": "3.1.1",
+    "@kepler.gl/duckdb": "3.1.8",
+    "@kepler.gl/processors": "3.1.8",
+    "@kepler.gl/types": "3.1.8",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/kepler": "workspace:*",

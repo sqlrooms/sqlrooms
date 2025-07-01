@@ -1,8 +1,7 @@
-import {defineConfig} from 'vite';
 import react from '@vitejs/plugin-react';
-import path from 'path';
-import fs from 'fs';
 import fixReactVirtualized from 'esbuild-plugin-react-virtualized';
+import path from 'path';
+import {defineConfig} from 'vite';
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -10,22 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
-      ...Object.fromEntries(
-        fs
-          .readdirSync(
-            path.resolve(__dirname, '../../packages/kepler.gl/src'),
-            {
-              withFileTypes: true,
-            },
-          )
-          .filter((dirent) => dirent.isDirectory())
-          .map((dirent) => [
-            [`@kepler.gl/${dirent.name}`],
-            path.resolve(
-              __dirname,
-              `../../packages/kepler.gl/src/${dirent.name}/src`,
-            ),
-          ]),
+      // Avoid issues with double styled-components
+      'styled-components': path.resolve(
+        __dirname,
+        '../../packages/kepler/node_modules/styled-components',
       ),
     },
   },
