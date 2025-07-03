@@ -5,8 +5,10 @@ import {useBaseRoomStore} from './RoomStateProvider';
 export type RoomStore<PC> = StoreApi<RoomState<PC>>;
 
 export type RoomStateProps<PC> = {
+  initialized: boolean;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
+  roomError: Error | undefined;
   captureException: (exception: unknown, captureContext?: unknown) => void;
 };
 
@@ -33,9 +35,21 @@ export type RoomStateActions<PC> = {
    * @returns True if the room has unsaved changes, false otherwise.
    */
   hasUnsavedChanges(): boolean; // since last save
+  /**
+   * Called when the project config is saved. To be overridden by the custom project state.
+   * Implementations should call get().room.setLastSavedConfig(config) after a successful
+   * save to update the last saved config.
+   * @param config - The project config to save.
+   */
+  onSaveConfig?: (config: PC) => Promise<void> | undefined;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
+  /**
+   * Set the error of the project.
+   * @param error - The error to set.
+   */
+  setRoomError: (error: Error) => void;
 };
 
 export type RoomState<PC> = {
@@ -50,7 +64,9 @@ export function createRoomSlice<PC>(props: {
   const {config: initialConfig, room: roomStateProps, ...restState} = props;
   const initialRoomState: RoomStateProps<PC> = {
     ...roomStateProps,
+    initialized: false,
     lastSavedConfig: undefined,
+    roomError: undefined,
     tasksProgress: {},
     captureException: (exception: unknown) => {
       console.error(exception);
@@ -95,6 +111,14 @@ export function createRoomSlice<PC>(props: {
           return undefined;
         },
 
+        setRoomError(error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.room.roomError = error;
+            }),
+          );
+        },
+
         setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
@@ -114,6 +138,16 @@ export function createRoomSlice<PC>(props: {
   };
 
   return slice;
+}
+
+export interface Slice {
+  initialize?: () => Promise<void>;
+}
+
+function isSliceWithInitialize(
+  slice: unknown,
+): slice is Slice & Required<Pick<Slice, 'initialize'>> {
+  return typeof slice === 'object' && slice !== null && 'initialize' in slice;
 }
 
 export function createBaseSlice<PC, S>(
@@ -140,13 +174,41 @@ export function createRoomStore<PC, RS extends RoomState<PC>>(
     ...stateCreator(set, get, store),
   }));
 
-  if (typeof window !== 'undefined') {
-    roomStore.getState().room.initialize();
-  } else {
-    console.warn(
-      'Skipping room store initialization. Room store should be only used on client.',
-    );
-  }
+  (async () => {
+    if (typeof window !== 'undefined') {
+      roomStore.getState().room.initialize();
+      const slices = Object.entries(roomStore.getState());
+      for (const [key, slice] of slices) {
+        if (isSliceWithInitialize(slice)) {
+          console.log('Initializing slice', key);
+          await slice.initialize();
+        }
+      }
+      // Subscribe to the project store changes after initialization
+      roomStore.subscribe(async (state) => {
+        try {
+          // Only save the project config if it has an onSaveConfig function and has unsaved changes
+          if (state.room.onSaveConfig && state.room.hasUnsavedChanges()) {
+            state.room.onSaveConfig(state.config);
+          }
+        } catch (error) {
+          state.room.captureException(error);
+          state.room.setRoomError(
+            new Error('Error saving room config', {cause: error}),
+          );
+        }
+      });
+      roomStore.setState((state) =>
+        produce(state, (draft) => {
+          draft.room.initialized = true;
+        }),
+      );
+    } else {
+      console.warn(
+        'Skipping room store initialization. Room store should be only used on client.',
+      );
+    }
+  })();
 
   function useRoomStore<T>(selector: (state: RS) => T): T {
     // @ts-ignore TODO fix typing

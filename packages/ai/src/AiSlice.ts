@@ -6,6 +6,7 @@ import {
   createSlice,
   RoomShellSliceState,
   useBaseRoomShellStore,
+  type Slice,
   type StateCreator,
   BaseRoomConfig,
 } from '@sqlrooms/room-shell';
@@ -51,7 +52,7 @@ export function createDefaultAiConfig(
 // template for the tool: Argument, LLM Result, Additional Data, Context
 export type AiSliceTool = ExtendedTool<z.ZodTypeAny, unknown, unknown, unknown>;
 
-export type AiSliceState = {
+export type AiSliceState = Slice & {
   ai: {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
