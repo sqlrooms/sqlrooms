@@ -1136,12 +1136,21 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       react:
         specifier: 19.1.0
         version: 19.1.0
       react-mosaic-component:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
+      zustand:
+        specifier: ^5.0.6
+        version: 5.0.6(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
 
   packages/layout-config:
     dependencies:
@@ -2614,6 +2623,7 @@ packages:
   '@cosmograph/cosmos@2.0.0-beta.22':
     resolution: {integrity: sha512-DzPk2m30nJyhwoVeNeTK+zzAmIpC/BQgHW5fBCmlbimrfbgWhXyOu6UEcrmjC32CVCyvgA+EEg2pUU7a/+UtEA==}
     engines: {node: '>=12.2.0', npm: '>=7.0.0'}
+    deprecated: This package has been moved to @cosmos.gl/graph. If you're using version >2, please update
 
   '@deck.gl/aggregation-layers@9.1.12':
     resolution: {integrity: sha512-41u5ZBnpIUzUQ+S8u/8JBWN9BHTerRUcOv+1QmjWsp8noNWZN69cvOy3/AaaPA8UgSEycdnv+y8GGIMspBLHZQ==}
@@ -10977,11 +10987,32 @@ packages:
   zod@3.25.57:
     resolution: {integrity: sha512-6tgzLuwVST5oLUxXTmBqoinKMd3JeesgbgseXeFasKKj8Q1FCZrHnbqJOyiEvr4cVAlbug+CgIsmJ8cl/pU5FA==}
 
+  zod@3.25.73:
+    resolution: {integrity: sha512-fuIKbQAWQl22Ba5d1quwEETQYjqnpKVyZIWAhbnnHgnDd3a+z4YgEfkI5SZ2xMELnLAXo/Flk2uXgysZNf0uaA==}
+
   zstd-codec@0.1.5:
     resolution: {integrity: sha512-v3fyjpK8S/dpY/X5WxqTK3IoCnp/ZOLxn144GZVlNUjtwAchzrVo03h+oMATFhCIiJ5KTr4V3vDQQYz4RU684g==}
 
   zustand@5.0.5:
     resolution: {integrity: sha512-mILtRfKW9xM47hqxGIxCv12gXusoY/xTSHBYApXozR0HmQv299whhBeeAcRy+KrPPybzosvJBCOmVjq6x12fCg==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: 19.1.0
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
+  zustand@5.0.6:
+    resolution: {integrity: sha512-ihAqNeUVhe0MAD+X8M5UzqyZ9k3FFZLBTtqo6JLPwV53cbRB/mJwBI0PxcIgqhBBHlEs8G45OTDTMq3gNcLq3A==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': '>=18.0.0'
@@ -22594,10 +22625,19 @@ snapshots:
 
   zod@3.25.57: {}
 
+  zod@3.25.73: {}
+
   zstd-codec@0.1.5:
     optional: true
 
   zustand@5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
+    optionalDependencies:
+      '@types/react': 19.1.7
+      immer: 10.1.1
+      react: 19.1.0
+      use-sync-external-store: 1.5.0(react@19.1.0)
+
+  zustand@5.0.6(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
     optionalDependencies:
       '@types/react': 19.1.7
       immer: 10.1.1

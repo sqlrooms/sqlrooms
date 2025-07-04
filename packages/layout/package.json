@@ -21,7 +21,10 @@
     "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
-    "@sqlrooms/ui": "workspace:*"
+    "@sqlrooms/ui": "workspace:*",
+    "immer": "^10.1.1",
+    "zod": "^3.25.73",
+    "zustand": "^5.0.6"
   },
   "peerDependencies": {
     "react": ">=18",
