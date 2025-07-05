@@ -7,8 +7,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "preview": "vite preview",
-    "postinstall": "node scripts/download-extensions.mjs"
+    "preview": "vite preview"
   },
   "dependencies": {
     "@sqlrooms/dropzone": "^0.16.2",
