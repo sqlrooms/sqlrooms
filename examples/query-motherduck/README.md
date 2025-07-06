@@ -1,11 +1,22 @@
-# SQLRooms Query Workbench
+## [MotherDuck Cloud Query Editor](https://motherduck.sqlrooms.org/)
 
-This application demonstrates querying MotherDuck via the `@sqlrooms/motherduck` connector.
+[Try live](https://motherduck.sqlrooms.org/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/query-motherduck)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/query-motherduck?embed=1)
 
-This application showcases several key features:
+<a href="https://motherduck.sqlrooms.org/" target="_blank">
+  <img src="/media/examples/motherduck-example.webp" alt="SQLRooms MotherDuck Cloud Query example" width=450>
+</a>
 
-- **Local First & Offline Support**: It is designed to work completely offline.
-- **Installable as a PWA**: The application can be installed as a Progressive Web App for a more native experience.
-- **OPFS Storage**: It uses the Origin Private File System (OPFS) for persistent and private data storage directly in the browser.
+A browser-based SQL query editor that connects directly to MotherDuck's cloud-hosted DuckDB using the WASM connector. Features include:
 
-To enable powerful, in-browser analytics, this application bundles DuckDB-WASM. To ensure offline availability, some of its core extensions are downloaded during the `postinstall` step.
+- Example of using the `WasmMotherDuckDbConnector` from [`@sqlrooms/motherduck`](api/motherduck)
+- Connect to MotherDuck from the browser using DuckDB WASM
+- Run SQL queries against local and cloud datasets
+- Attach and query [DuckLake data lake and catalog](https://motherduck.com/docs/integrations/file-formats/ducklake/)
+
+To create a new project from the query-motherduck example run this:
+
+```bash
+npx degit sqlrooms/examples/query-motherduck my-new-app/
+```

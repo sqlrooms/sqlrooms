@@ -10,7 +10,6 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/dropzone": "^0.16.2",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/motherduck": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
