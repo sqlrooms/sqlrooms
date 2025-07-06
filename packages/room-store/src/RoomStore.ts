@@ -136,7 +136,7 @@ export function createBaseSlice<PC, S>(
  * @returns An object with createRoomStore(params) and useRoomStore(selector)
  *
  */
-export function createRoomStoreCreator<TState>() {
+export function createRoomStoreCreator<TState extends RoomState<any>>() {
   return function <TFactory extends (...args: any[]) => StateCreator<TState>>(
     stateCreatorFactory: TFactory,
   ): {
@@ -147,6 +147,13 @@ export function createRoomStoreCreator<TState>() {
 
     function createRoomStore(...args: Parameters<TFactory>): StoreApi<TState> {
       store = createStore(stateCreatorFactory(...args));
+      if (typeof window !== 'undefined') {
+        store.getState().room.initialize();
+      } else {
+        console.warn(
+          'Skipping room store initialization. Room store should be only used on client.',
+        );
+      }
       return store;
     }
 
