@@ -18,6 +18,7 @@ const PACKAGE_CATEGORIES = {
     'dropzone',
     'monaco-editor',
     'mosaic',
+    'motherduck',
     'recharts',
     's3-browser',
     'schema-tree',

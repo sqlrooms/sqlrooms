@@ -1,7 +1,6 @@
-# @sqlrooms/motherduck
+[MotherDuck](https://motherduck.com/) is a managed DuckDB-in-the-cloud service that enables you to run DuckDB queries both in your browser and in the cloud.
 
-MotherDuck WASM connector for SQLRooms.
+This package exposes a `createWasmMotherDuckDbConnector` function, which allows SQLRooms to connect to MotherDuck.
+The connector is implemented using the [`@motherduck/wasm-client`](https://motherduck.com/docs/sql-reference/wasm-client/) library.
 
-This package exposes a `WasmMotherDuckDbConnector` that implements the
-`DuckDbConnector` interface using the `@motherduck/wasm-client` library.
-It provides query cancellation via MotherDuck's built-in queuing API.
+See [`examples/query-motherduck`](/examples#query-motherduck) for a usage example.
