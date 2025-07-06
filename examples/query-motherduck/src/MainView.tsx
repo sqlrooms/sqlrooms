@@ -2,6 +2,7 @@ import {
   CreateTableModal,
   QueryEditorPanel,
   QueryResultPanel,
+  SqlReferenceButton,
 } from '@sqlrooms/sql-editor';
 import {
   Button,
@@ -42,21 +43,26 @@ export const MainView: FC = () => {
 
   return (
     <>
-      {/* MotherDuck Token Input */}
-      <div className="flex items-center justify-end gap-2 pb-2">
-        <Button
-          variant="outline"
-          size="xs"
-          onClick={confirmClearTokenModal.onOpen}
-        >
-          Clear Saved MotherDuck Token
-          <XCircleIcon className="h-4 w-4" />
-        </Button>
-      </div>
-      {/* Main panels */}
       <div className="bg-muted flex h-full flex-col">
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={50}>
+            <div className="bg-background flex items-center justify-end gap-2 pb-2">
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-8"
+                onClick={confirmClearTokenModal.onOpen}
+              >
+                Forget MotherDuck token
+                <XCircleIcon className="h-4 w-4" />
+              </Button>
+              <SqlReferenceButton
+                variant="ghost"
+                className="h-8"
+                url="https://motherduck.com/docs/sql-reference/motherduck-sql-reference/"
+              />
+            </div>
+
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />

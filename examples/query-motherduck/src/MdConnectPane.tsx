@@ -1,6 +1,6 @@
 import {MDConnection} from '@motherduck/wasm-client';
 import {Button, cn, Input} from '@sqlrooms/ui';
-import {KeyIcon} from 'lucide-react';
+import {CheckIcon, KeyIcon} from 'lucide-react';
 import {useCallback, useEffect, useState} from 'react';
 
 const motherDuckUrl = 'https://app.motherduck.com';
@@ -74,9 +74,6 @@ export function MdConnectPane({
         <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-gray-100">
           Connect to MotherDuck
         </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          Choose one of the following authentication methods:
-        </p>
       </div>
 
       <div
@@ -87,17 +84,18 @@ export function MdConnectPane({
       </div>
 
       {/* Option 1: Paste existing token */}
-      <div className="rounded-lg border bg-gray-50 p-4 dark:bg-gray-800">
+      <div className="flex flex-col gap-3 rounded-lg border bg-gray-50 p-4 dark:bg-gray-800">
         <div className="mb-3 flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
-            A
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-sm font-medium text-white">
+            <CheckIcon className="h-4 w-4" />
           </span>
           <h4 className="font-medium text-gray-900 dark:text-gray-100">
-            Paste Existing Access Token
+            Use existing MotherDuck access token
           </h4>
         </div>
-        <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-          If you already have a MotherDuck access token, paste it here:
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          If you have a MotherDuck access token, paste it here. It will be saved
+          in your browser's local storage.
         </p>
         <div className="flex gap-2">
           <div className="relative flex w-full items-center">
@@ -106,7 +104,7 @@ export function MdConnectPane({
               ref={setTextInputRef}
               type="password"
               autoComplete="off"
-              placeholder="Paste MotherDuck service token here"
+              placeholder="Paste MotherDuck access token here"
               onChange={(e) => handleTokenInputChange(e.target.value)}
               className="flex-1 pl-8"
             />
@@ -123,32 +121,32 @@ export function MdConnectPane({
       {/* Option 2: Get token automatically */}
       <div className="rounded-lg border bg-gray-50 p-4 dark:bg-gray-800">
         <div className="mb-3 flex items-center gap-2">
-          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-green-600 text-sm font-medium text-white">
-            B
+          <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-blue-600 text-sm font-medium text-white">
+            <KeyIcon className="h-4 w-4" />
           </span>
           <h4 className="font-medium text-gray-900 dark:text-gray-100">
-            Get New Token
+            Create a new token
           </h4>
         </div>
         <p className="mb-3 text-sm text-gray-600 dark:text-gray-400">
-          Don't have a token? Get one automatically from MotherDuck:
+          Get one automatically from MotherDuck:
         </p>
         <Button onClick={handleGetTokenButtonClick} className="w-full">
-          Get Token from MotherDuck
+          Get New Token from MotherDuck
         </Button>
       </div>
 
       {/* Documentation link */}
       <div className="text-center">
         <p className="text-sm text-gray-600 dark:text-gray-400">
-          Need help?{' '}
+          Need help? View{' '}
           <a
             href="https://motherduck.com/docs/key-tasks/authenticating-and-connecting-to-motherduck/authenticating-to-motherduck/#authentication-using-an-access-token"
             target="_blank"
             rel="noopener noreferrer"
             className="text-blue-600 underline hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-200"
           >
-            View authentication documentation
+            MotherDuck access token documentation
           </a>
         </p>
       </div>

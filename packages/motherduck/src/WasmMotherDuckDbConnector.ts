@@ -1,16 +1,22 @@
 import {MDConnection, MDConnectionParams} from '@motherduck/wasm-client';
 import {
-  createBaseDuckDbConnector,
   BaseDuckDbConnectorImpl,
+  createBaseDuckDbConnector,
   DuckDbConnector,
 } from '@sqlrooms/duckdb';
 import * as arrow from 'apache-arrow';
+import {RecordBatch} from 'apache-arrow';
 
-function valueToJS(value: any): any {
-  if (value && typeof value === 'object' && typeof value.toJS === 'function') {
-    return value.toJS();
-  }
-  return value;
+export type MotherDuckDbConnectorType = 'wasm-motherduck';
+
+export type MotherDuckDbConnectorOptions = {
+  type: MotherDuckDbConnectorType;
+} & WasmMotherDuckDbConnectorOptions;
+
+export function isWasmMotherDuckDbConnector(
+  connector: DuckDbConnector,
+): connector is WasmMotherDuckDbConnector {
+  return (connector as any).type === 'wasm-motherduck';
 }
 
 export interface WasmMotherDuckDbConnectorOptions extends MDConnectionParams {
@@ -27,7 +33,6 @@ export function createWasmMotherDuckDbConnector(
 ): WasmMotherDuckDbConnector {
   const {initializationQuery = '', ...params} = options;
   let connection: MDConnection | null = null;
-  const queryIdMap = new Map<string, string>();
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
@@ -53,36 +58,31 @@ export function createWasmMotherDuckDbConnector(
       if (!connection) {
         throw new Error('MotherDuck connection not initialized');
       }
-      const mdId = connection.enqueueQuery(query);
-      queryIdMap.set(id, mdId);
-      const abortHandler = () => {
-        connection!.cancelQuery(mdId).catch(() => {});
-      };
-      signal.addEventListener('abort', abortHandler);
-      try {
-        const result = await connection.evaluateQueuedQuery(mdId);
-        const rows = result.data.toRows().map((row: any) => {
-          const obj: Record<string, unknown> = {};
-          for (const [k, v] of Object.entries(row)) {
-            obj[k] = valueToJS(v);
-          }
-          return obj;
-        });
-        if (rows.length === 0) {
-          return arrow.tableFromArrays({});
-        }
-        return arrow.tableFromJSON(rows);
-      } finally {
-        signal.removeEventListener('abort', abortHandler);
-        queryIdMap.delete(id);
+
+      // Check if already cancelled before starting
+      if (signal.aborted) {
+        throw new DOMException('Query was cancelled', 'AbortError');
       }
+
+      // Not using evaluateQueuedQuery which supports cancellation
+      // because it doesn't provide arrow results
+      const result = await connection.evaluateStreamingQuery(query);
+      const batches = new Array<RecordBatch<any>>();
+
+      for await (const batch of result.arrowStream) {
+        // Check for cancellation before processing each batch
+        if (signal.aborted) {
+          throw new DOMException('Query was cancelled', 'AbortError');
+        }
+        batches.push(batch);
+      }
+
+      return new arrow.Table(batches);
     },
 
     async cancelQueryInternal(queryId: string) {
-      const mdId = queryIdMap.get(queryId);
-      if (mdId && connection) {
-        await connection.cancelQuery(mdId).catch(() => {});
-      }
+      // Cancellation is handled by checking AbortSignal in the stream reading loop
+      // No server-side cancellation is performed since evaluateStreamingQuery doesn't provide queryId
     },
   };
 

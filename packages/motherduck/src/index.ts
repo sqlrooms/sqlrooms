@@ -1,1 +1,6 @@
-export * from './connectors/createMotherDuckDbConnector';
+export {
+  createWasmMotherDuckDbConnector,
+  isWasmMotherDuckDbConnector,
+  type WasmMotherDuckDbConnector,
+  type WasmMotherDuckDbConnectorOptions,
+} from './WasmMotherDuckDbConnector';
