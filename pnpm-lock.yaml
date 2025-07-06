@@ -908,6 +908,94 @@ importers:
         specifier: ^0.18.1
         version: 0.18.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))(workbox-build@7.3.0(@types/babel__core@7.20.5))(workbox-window@7.3.0)
 
+  examples/query-motherduck:
+    dependencies:
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
+      '@sqlrooms/motherduck':
+        specifier: workspace:*
+        version: link:../../packages/motherduck
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: 0.501.0
+        version: 0.501.0(react@19.1.0)
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: 3.25.57
+        version: 3.25.57
+      zustand:
+        specifier: 5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.28.0
+        version: 9.28.0
+      '@types/react':
+        specifier: ^19.1.7
+        version: 19.1.7
+      '@types/react-dom':
+        specifier: ^19.1.6
+        version: 19.1.6(@types/react@19.1.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.5.2
+        version: 4.5.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))
+      eslint:
+        specifier: ^9.28.0
+        version: 9.28.0(jiti@2.4.2)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.28.0(jiti@2.4.2))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.20
+        version: 0.4.20(eslint@9.28.0(jiti@2.4.2))
+      globals:
+        specifier: ^16.2.0
+        version: 16.2.0
+      postcss:
+        specifier: ^8.5.4
+        version: 8.5.4
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      typescript-eslint:
+        specifier: ^8.34.0
+        version: 8.34.0(eslint@9.28.0(jiti@2.4.2))(typescript@5.8.3)
+      vite:
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0)
+      vite-plugin-pwa:
+        specifier: ^0.18.1
+        version: 0.18.2(vite@6.3.5(@types/node@24.0.0)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.37.0)(yaml@2.8.0))(workbox-build@7.3.0(@types/babel__core@7.20.5))(workbox-window@7.3.0)
+
   packages/ai:
     dependencies:
       '@ai-sdk/provider':
@@ -1199,6 +1287,18 @@ importers:
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+
+  packages/motherduck:
+    dependencies:
+      '@motherduck/wasm-client':
+        specifier: ^0.6.6
+        version: 0.6.6(apache-arrow@17.0.0)
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      apache-arrow:
+        specifier: ^17.0.0
+        version: 17.0.0
 
   packages/preset-eslint:
     devDependencies:
@@ -3660,6 +3760,11 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: 19.1.0
       react-dom: 19.1.0
+
+  '@motherduck/wasm-client@0.6.6':
+    resolution: {integrity: sha512-6tx9VVYFcuz4EDMmowmWUD2OrstnSe/3vcYptsiHiTa7meNNC3LBDr1z2g3KhC09TO9fgKpIekyH7OQxqZGPfQ==}
+    peerDependencies:
+      apache-arrow: ^17.0.0
 
   '@next/env@15.2.4':
     resolution: {integrity: sha512-+SFtMgoiYP3WoSswuNmxJOCwi06TdWE733D+WPjpXIe4LXGULwEaofiiAy6kbS0+XjM5xF5n3lKuBwN2SnqD9g==}
@@ -13295,8 +13400,8 @@ snapshots:
       p-queue: 6.6.2
       p-retry: 4.6.2
       uuid: 10.0.0
-      zod: 3.25.57
-      zod-to-json-schema: 3.24.5(zod@3.25.57)
+      zod: 3.25.73
+      zod-to-json-schema: 3.24.5(zod@3.25.73)
     transitivePeerDependencies:
       - openai
 
@@ -13788,6 +13893,10 @@ snapshots:
       monaco-editor: 0.52.2
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
+
+  '@motherduck/wasm-client@0.6.6(apache-arrow@17.0.0)':
+    dependencies:
+      apache-arrow: 17.0.0
 
   '@next/env@15.2.4': {}
 
@@ -15308,7 +15417,7 @@ snapshots:
       tailwindcss: 3.4.17
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.17)
       usehooks-ts: 3.1.1(react@19.1.0)
-      zod: 3.25.57
+      zod: 3.25.73
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -20045,9 +20154,9 @@ snapshots:
   openai-zod-functions@0.1.2(openai@4.104.0(encoding@0.1.13)(ws@8.18.2)(zod@3.25.57)):
     dependencies:
       openai: 4.104.0(encoding@0.1.13)(ws@8.18.2)(zod@3.25.57)
-      zod: 3.25.57
-      zod-to-json-schema: 3.24.5(zod@3.25.57)
-      zod-validation-error: 2.1.0(zod@3.25.57)
+      zod: 3.25.73
+      zod-to-json-schema: 3.24.5(zod@3.25.73)
+      zod-validation-error: 2.1.0(zod@3.25.73)
 
   openai@4.104.0(encoding@0.1.13)(ws@8.18.2)(zod@3.25.57):
     dependencies:
@@ -22619,9 +22728,13 @@ snapshots:
     dependencies:
       zod: 3.25.57
 
-  zod-validation-error@2.1.0(zod@3.25.57):
+  zod-to-json-schema@3.24.5(zod@3.25.73):
     dependencies:
-      zod: 3.25.57
+      zod: 3.25.73
+
+  zod-validation-error@2.1.0(zod@3.25.73):
+    dependencies:
+      zod: 3.25.73
 
   zod@3.25.57: {}
 

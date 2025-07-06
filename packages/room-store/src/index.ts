@@ -12,6 +12,7 @@ export {
 
 export {
   createRoomStore,
+  createRoomStoreCreator,
   createRoomSlice,
   type RoomStateActions,
   type RoomStateProps,

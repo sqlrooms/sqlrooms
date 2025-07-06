@@ -24,6 +24,7 @@ Each package can be installed independently via `pnpm add @sqlrooms/<name>` and 
 - **[@sqlrooms/dropzone](/api/dropzone/)** — Drag‑and‑drop file uploads with type validation and progress tracking.
 - **[@sqlrooms/monaco-editor](/api/monaco-editor/)** — VS Code's Monaco editor with SQL‑aware autocompletion.
 - **[@sqlrooms/mosaic](/api/mosaic/)** — Declarative charting powered by UW IDL's Mosaic library.
+- **[@sqlrooms/motherduck](/api/motherduck/)** — MotherDuck connector using the WASM client
 - **[@sqlrooms/recharts](/api/recharts/)** — Responsive charts via Recharts (line, bar, pie, etc.).
 - **[@sqlrooms/s3-browser](/api/s3-browser/)** — S3‑compatible storage browser with uploads and directory management.
 - **[@sqlrooms/schema-tree](/api/schema-tree/)** — Interactive database‑schema explorer.

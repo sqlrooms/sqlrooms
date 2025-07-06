@@ -1,5 +1,5 @@
 import {castDraft, produce} from 'immer';
-import {StateCreator, StoreApi, createStore} from 'zustand';
+import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 import {useBaseRoomStore} from './RoomStateProvider';
 
 export type RoomStore<PC> = StoreApi<RoomState<PC>>;
@@ -136,21 +136,55 @@ export function createBaseSlice<PC, S>(
 export function createRoomStore<PC, RS extends RoomState<PC>>(
   stateCreator: StateCreator<RS>,
 ) {
-  const roomStore = createStore<RS>((set, get, store) => ({
-    ...stateCreator(set, get, store),
-  }));
-
-  if (typeof window !== 'undefined') {
-    roomStore.getState().room.initialize();
-  } else {
-    console.warn(
-      'Skipping room store initialization. Room store should be only used on client.',
-    );
-  }
+  const factory = createRoomStoreCreator<RS>();
+  const storeCreator = factory(() => stateCreator);
+  const roomStore = storeCreator.createRoomStore();
 
   function useRoomStore<T>(selector: (state: RS) => T): T {
-    // @ts-ignore TODO fix typing
-    return useBaseRoomStore(selector as (state: RS) => T);
+    return storeCreator.useRoomStore(selector);
   }
+
   return {roomStore, useRoomStore};
+}
+
+/**
+ * Factory to create a room store creator with custom params.
+ *
+ * @template PC - Room config type
+ * @template RS - Room state type
+ * @param stateCreatorFactory - A function that takes params and returns a Zustand state creator
+ * @returns An object with createRoomStore(params) and useRoomStore(selector)
+ *
+ */
+export function createRoomStoreCreator<TState extends RoomState<any>>() {
+  return function <TFactory extends (...args: any[]) => StateCreator<TState>>(
+    stateCreatorFactory: TFactory,
+  ): {
+    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<TState>;
+    useRoomStore: <T>(selector: (state: TState) => T) => T;
+  } {
+    let store: StoreApi<TState> | undefined;
+
+    function createRoomStore(...args: Parameters<TFactory>): StoreApi<TState> {
+      store = createStore(stateCreatorFactory(...args));
+      if (typeof window !== 'undefined') {
+        store.getState().room.initialize();
+      } else {
+        console.warn(
+          'Skipping room store initialization. Room store should be only used on client.',
+        );
+      }
+      return store;
+    }
+
+    function useRoomStore<T>(selector: (state: TState) => T): T {
+      if (!store)
+        throw new Error(
+          'Room store not initialized. Call createRoomStore first.',
+        );
+      return useStore(store, selector);
+    }
+
+    return {createRoomStore, useRoomStore};
+  };
 }

@@ -1,19 +1,23 @@
 import React from 'react';
-import {Button, cn} from '@sqlrooms/ui';
+import {Button, ButtonProps, cn} from '@sqlrooms/ui';
 import {BookOpenIcon} from 'lucide-react';
 
 export const SqlReferenceButton: React.FC<{
   className?: string;
   text?: string;
   icon?: React.ReactNode;
-}> = ({className, text, icon}) => {
+  variant?: ButtonProps['variant'];
+  url?: string;
+}> = ({
+  className,
+  text,
+  icon,
+  url = 'https://duckdb.org/docs/sql/introduction',
+  variant = 'outline',
+}) => {
   return (
-    <Button asChild size="sm" variant="outline" className={cn(className)}>
-      <a
-        href="https://duckdb.org/docs/sql/introduction"
-        target="_blank"
-        rel="noreferrer"
-      >
+    <Button asChild size="sm" variant={variant} className={cn(className)}>
+      <a href={url} target="_blank" rel="noreferrer">
         <SqlReferenceButtonContent text={text} icon={icon} />
       </a>
     </Button>
