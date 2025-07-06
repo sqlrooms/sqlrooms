@@ -128,6 +128,26 @@ export function createBaseSlice<PC, S>(
 }
 
 /**
+ * Create a room store with custom fields and methods
+ * @param initialState - The initial state and config for the room
+ * @param sliceCreators - The slices to add to the room store
+ * @returns The room store and a hook for accessing the room store
+ */
+export function createRoomStore<PC, RS extends RoomState<PC>>(
+  stateCreator: StateCreator<RS>,
+) {
+  const factory = createRoomStoreCreator<RS>();
+  const storeCreator = factory(() => stateCreator);
+  const roomStore = storeCreator.createRoomStore();
+
+  function useRoomStore<T>(selector: (state: RS) => T): T {
+    return storeCreator.useRoomStore(selector);
+  }
+
+  return {roomStore, useRoomStore};
+}
+
+/**
  * Factory to create a room store creator with custom params.
  *
  * @template PC - Room config type
