@@ -9,13 +9,18 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
   useDisclosure,
+  Input,
 } from '@sqlrooms/ui';
-import {PlusIcon} from 'lucide-react';
+import {PlusIcon, KeyIcon} from 'lucide-react';
 import {FC} from 'react';
 import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
+  const motherDuckToken = useRoomStore(
+    (s) => s.motherDuckToken || s.config.motherDuckToken || '',
+  );
+  const setMotherDuckToken = useRoomStore((s) => s.setMotherDuckToken);
   const lastQueryStatement = useRoomStore((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
     s.sqlEditor.queryResult?.type === 'select'
@@ -27,6 +32,21 @@ export const MainView: FC = () => {
   );
   return (
     <>
+      {/* MotherDuck Token Input */}
+      <div className="flex items-center gap-2 p-4 pb-0">
+        <div className="relative flex items-center">
+          <KeyIcon className="absolute left-2 h-4 w-4" />
+          <Input
+            className="w-[260px] pl-8"
+            type="password"
+            placeholder="MotherDuck Token"
+            value={motherDuckToken}
+            onChange={(e) => setMotherDuckToken(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
+      </div>
+      {/* Main panels */}
       <div className="bg-muted flex h-full flex-col">
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={50}>

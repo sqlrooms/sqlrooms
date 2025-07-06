@@ -2,11 +2,11 @@ import {createWasmMotherDuckDbConnector} from '@sqlrooms/duckdb-motherduck';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
-  createRoomStore,
   LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
+import {createRoomStoreCreator} from '@sqlrooms/room-store';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -27,7 +27,9 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig).extend({
+  motherDuckToken: z.string().optional(),
+});
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
@@ -36,70 +38,79 @@ export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
   SqlEditorSliceState & {
-    // Add your own state here
+    motherDuckToken?: string;
+    setMotherDuckToken: (token: string) => void;
   };
 
-/**
- * Path to the preloaded extensions directory.
- * This is to avoid having to download the extensions from the
- * jsDelivr CDN to support offline work.
- *
- * See also https://github.com/observablehq/framework/pull/1734 for a more
- * comprehensive implementation of self-hosting DuckDB extensions.
- */
-
-/**
- * Create a customized room store
- */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  persist(
-    (set, get, store) => ({
-      // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
-        connector: createWasmMotherDuckDbConnector({
-          mdToken: '',
-          initializationQuery: '',
-        }),
-        config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              first: RoomPanelTypes.enum['data'],
-              second: RoomPanelTypes.enum['main'],
-              direction: 'row',
-              splitPercentage: 30,
+const {createRoomStore, useRoomStore} = createRoomStoreCreator<
+  RoomConfig,
+  RoomState
+>()(
+  (mdToken: string) =>
+    // persist(
+    (set, get, store) => {
+      return {
+        ...createRoomShellSlice<RoomConfig>({
+          connector: createWasmMotherDuckDbConnector({
+            mdToken,
+          }),
+          config: {
+            layout: {
+              type: LayoutTypes.enum.mosaic,
+              nodes: {
+                first: RoomPanelTypes.enum['data'],
+                second: RoomPanelTypes.enum['main'],
+                direction: 'row',
+                splitPercentage: 30,
+              },
+            },
+            motherDuckToken: mdToken,
+            ...createDefaultSqlEditorConfig(),
+          },
+          room: {
+            panels: {
+              [RoomPanelTypes.enum['main']]: {
+                component: MainView,
+                placement: 'main',
+              },
+              [RoomPanelTypes.enum['data']]: {
+                title: 'Data',
+                component: DataPanel,
+                icon: DatabaseIcon,
+                placement: 'sidebar',
+              },
             },
           },
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
-          panels: {
-            [RoomPanelTypes.enum['main']]: {
-              component: MainView,
-              placement: 'main',
-            },
-            [RoomPanelTypes.enum['data']]: {
-              title: 'Data',
-              component: DataPanel,
-              icon: DatabaseIcon,
-              placement: 'sidebar',
-            },
-          },
-        },
-      })(set, get, store),
+        })(set, get, store),
 
-      // Sql editor slice
-      ...createSqlEditorSlice()(set, get, store),
-    }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sql-editor-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-      }),
+        // Sql editor slice
+        ...createSqlEditorSlice()(set, get, store),
+        motherDuckToken: mdToken,
+        setMotherDuckToken: (token: string) => {
+          set((state) => ({
+            motherDuckToken: token,
+            config: {...state.config, motherDuckToken: token},
+          }));
+        },
+      };
     },
-  ) as StateCreator<RoomState>,
+  //   // Persist settings
+  //   {
+  //     // Local storage key
+  //     name: 'sql-editor-example-app-state-storage',
+  //     // Subset of the state to persist
+  //     partialize: (state) => ({
+  //       config: RoomConfig.parse(state.config),
+  //       motherDuckToken: state.motherDuckToken,
+  //     }),
+  //   },
+  // ) as StateCreator<RoomState>,
 );
+
+createRoomStore('test-token');
+
+const setMotherDuckToken = useRoomStore((state) => state.setMotherDuckToken);
+
+setMotherDuckToken('test-token');
+
+export {createRoomStore, useRoomStore};

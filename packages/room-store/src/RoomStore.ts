@@ -1,5 +1,5 @@
 import {castDraft, produce} from 'immer';
-import {StateCreator, StoreApi, createStore} from 'zustand';
+import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 import {useBaseRoomStore} from './RoomStateProvider';
 
 export type RoomStore<PC> = StoreApi<RoomState<PC>>;
@@ -128,29 +128,41 @@ export function createBaseSlice<PC, S>(
 }
 
 /**
- * Create a room store with custom fields and methods
- * @param initialState - The initial state and config for the room
- * @param sliceCreators - The slices to add to the room store
- * @returns The room store and a hook for accessing the room store
+ * Factory to create a room store creator with custom params.
+ *
+ * @template PC - Room config type
+ * @template RS - Room state type
+ * @template Factory - Factory function type
+ * @param stateCreatorFactory - A function that takes params and returns a Zustand state creator
+ * @returns An object with createRoomStore(params) and useRoomStore(selector)
+ *
+ * @example
+ * const { createRoomStore, useRoomStore } = createRoomStoreCreator((token) => ...);
+ * createRoomStore('my-token');
+ * const value = useRoomStore(state => state.something);
  */
-export function createRoomStore<PC, RS extends RoomState<PC>>(
-  stateCreator: StateCreator<RS>,
-) {
-  const roomStore = createStore<RS>((set, get, store) => ({
-    ...stateCreator(set, get, store),
-  }));
+export function createRoomStoreCreator<PC, RS extends RoomState<PC>>() {
+  return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
+    stateCreatorFactory: TFactory,
+  ): {
+    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<RS>;
+    useRoomStore: <T>(selector: (state: RS) => T) => T;
+  } {
+    let store: StoreApi<RS> | undefined;
 
-  if (typeof window !== 'undefined') {
-    roomStore.getState().room.initialize();
-  } else {
-    console.warn(
-      'Skipping room store initialization. Room store should be only used on client.',
-    );
-  }
+    function createRoomStore(...args: Parameters<TFactory>): StoreApi<RS> {
+      store = createStore(stateCreatorFactory(...args));
+      return store;
+    }
 
-  function useRoomStore<T>(selector: (state: RS) => T): T {
-    // @ts-ignore TODO fix typing
-    return useBaseRoomStore(selector as (state: RS) => T);
-  }
-  return {roomStore, useRoomStore};
+    function useRoomStore<T>(selector: (state: RS) => T): T {
+      if (!store)
+        throw new Error(
+          'Room store not initialized. Call createRoomStore first.',
+        );
+      return useStore(store, selector);
+    }
+
+    return {createRoomStore, useRoomStore};
+  };
 }
