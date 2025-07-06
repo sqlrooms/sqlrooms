@@ -5,22 +5,26 @@ import {
 } from '@sqlrooms/sql-editor';
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
   useDisclosure,
-  Input,
 } from '@sqlrooms/ui';
-import {PlusIcon, KeyIcon} from 'lucide-react';
+import {PlusIcon, XCircleIcon} from 'lucide-react';
 import {FC} from 'react';
+import {MD_TOKEN_KEY} from './App';
 import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
-  const motherDuckToken = useRoomStore(
-    (s) => s.motherDuckToken || s.config.motherDuckToken || '',
-  );
-  const setMotherDuckToken = useRoomStore((s) => s.setMotherDuckToken);
+  const confirmClearTokenModal = useDisclosure();
+
   const lastQueryStatement = useRoomStore((s) =>
     s.sqlEditor.queryResult?.status === 'success' &&
     s.sqlEditor.queryResult?.type === 'select'
@@ -30,21 +34,24 @@ export const MainView: FC = () => {
   const addOrUpdateSqlQueryDataSource = useRoomStore(
     (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
+
+  const handleClearToken = () => {
+    localStorage.removeItem(MD_TOKEN_KEY);
+    window.location.reload();
+  };
+
   return (
     <>
       {/* MotherDuck Token Input */}
-      <div className="flex items-center gap-2 p-4 pb-0">
-        <div className="relative flex items-center">
-          <KeyIcon className="absolute left-2 h-4 w-4" />
-          <Input
-            className="w-[260px] pl-8"
-            type="password"
-            placeholder="MotherDuck Token"
-            value={motherDuckToken}
-            onChange={(e) => setMotherDuckToken(e.target.value)}
-            autoComplete="off"
-          />
-        </div>
+      <div className="flex items-center justify-end gap-2 pb-2">
+        <Button
+          variant="outline"
+          size="xs"
+          onClick={confirmClearTokenModal.onOpen}
+        >
+          Clear Saved MotherDuck Token
+          <XCircleIcon className="h-4 w-4" />
+        </Button>
       </div>
       {/* Main panels */}
       <div className="bg-muted flex h-full flex-col">
@@ -67,6 +74,31 @@ export const MainView: FC = () => {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
+
+      {/* Confirmation Dialog */}
+      <Dialog
+        open={confirmClearTokenModal.isOpen}
+        onOpenChange={confirmClearTokenModal.onClose}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Clear MotherDuck Token</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to clear your saved MotherDuck token? You
+              will need to reconnect to MotherDuck after this action.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={confirmClearTokenModal.onClose}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleClearToken}>
+              Clear Token
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <CreateTableModal
         query={lastQueryStatement ?? ''}
         isOpen={createTableModal.isOpen}

@@ -12,7 +12,7 @@
   "dependencies": {
     "@sqlrooms/dropzone": "^0.16.2",
     "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/duckdb-motherduck": "workspace:*",
+    "@sqlrooms/motherduck": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

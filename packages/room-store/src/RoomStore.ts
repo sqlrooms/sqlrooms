@@ -132,30 +132,25 @@ export function createBaseSlice<PC, S>(
  *
  * @template PC - Room config type
  * @template RS - Room state type
- * @template Factory - Factory function type
  * @param stateCreatorFactory - A function that takes params and returns a Zustand state creator
  * @returns An object with createRoomStore(params) and useRoomStore(selector)
  *
- * @example
- * const { createRoomStore, useRoomStore } = createRoomStoreCreator((token) => ...);
- * createRoomStore('my-token');
- * const value = useRoomStore(state => state.something);
  */
-export function createRoomStoreCreator<PC, RS extends RoomState<PC>>() {
-  return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
+export function createRoomStoreCreator<TState>() {
+  return function <TFactory extends (...args: any[]) => StateCreator<TState>>(
     stateCreatorFactory: TFactory,
   ): {
-    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<RS>;
-    useRoomStore: <T>(selector: (state: RS) => T) => T;
+    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<TState>;
+    useRoomStore: <T>(selector: (state: TState) => T) => T;
   } {
-    let store: StoreApi<RS> | undefined;
+    let store: StoreApi<TState> | undefined;
 
-    function createRoomStore(...args: Parameters<TFactory>): StoreApi<RS> {
+    function createRoomStore(...args: Parameters<TFactory>): StoreApi<TState> {
       store = createStore(stateCreatorFactory(...args));
       return store;
     }
 
-    function useRoomStore<T>(selector: (state: RS) => T): T {
+    function useRoomStore<T>(selector: (state: TState) => T): T {
       if (!store)
         throw new Error(
           'Room store not initialized. Call createRoomStore first.',

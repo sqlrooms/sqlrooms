@@ -1,6 +1,6 @@
 # SQLRooms Query Workbench
 
-This application demonstrates querying MotherDuck via the `@sqlrooms/duckdb-motherduck` connector.
+This application demonstrates querying MotherDuck via the `@sqlrooms/motherduck` connector.
 
 This application showcases several key features:
 

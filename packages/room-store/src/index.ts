@@ -11,7 +11,6 @@ export {
 } from './RoomStateProvider';
 
 export {
-  createRoomStore,
   createRoomStoreCreator,
   createRoomSlice,
   type RoomStateActions,

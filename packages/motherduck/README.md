@@ -1,4 +1,4 @@
-# @sqlrooms/duckdb-motherduck
+# @sqlrooms/motherduck
 
 MotherDuck WASM connector for SQLRooms.
 
