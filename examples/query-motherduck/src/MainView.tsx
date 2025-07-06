@@ -59,7 +59,7 @@ export const MainView: FC = () => {
               <SqlReferenceButton
                 variant="ghost"
                 className="h-8"
-                url="https://motherduck.com/docs/sql-reference/motherduck-sql-reference/"
+                url="https://motherduck.com/docs/sql-reference/"
               />
             </div>
 
