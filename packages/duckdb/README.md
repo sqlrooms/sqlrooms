@@ -97,6 +97,51 @@ function ValidatedUserList() {
 }
 ```
 
+### Accessing the Underlying Arrow Table and Schema
+
+You can access the underlying Arrow table and schema of a `useSql()` query result. This is especially useful if you want to pass the data to a library that expect an Apache Arrow Table as input without additional data transformation:
+
+```tsx
+import {useSql} from '@sqlrooms/duckdb';
+
+function ArrowTableSchemaExample() {
+  const {data, isLoading, error} = useSql({
+    query: 'SELECT id, name FROM users',
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+  if (!data || !data.arrowTable) return null;
+
+  const {arrowTable} = data;
+  const fields = arrowTable.schema.fields;
+  const numRows = arrowTable.numRows;
+
+  return (
+    <table>
+      <thead>
+        <tr>
+          {fields.map((field) => (
+            <th key={field.name}>{field.name}</th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {Array.from({length: numRows}).map((_, rowIdx) => (
+          <tr key={rowIdx}>
+            {fields.map((field, colIdx) => (
+              <td key={field.name}>
+                {String(arrowTable.getChildAt(colIdx)?.get(rowIdx) ?? '')}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+```
+
 ## Working with Tables
 
 ### Using the Store for Direct Database Operations
@@ -340,7 +385,3 @@ function AdvancedOperations() {
 ```
 
 For more information, visit the SQLRooms documentation.
-
-```
-
-```
