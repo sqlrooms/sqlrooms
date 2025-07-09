@@ -28,7 +28,7 @@ export type RoomState = RoomShellSliceState<RoomConfig> & {
  * Create the room store. You can combine your custom state and logic
  * with the slices from the SQLRooms modules.
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     ...createRoomShellSlice<RoomConfig>({
       config: {

@@ -36,45 +36,43 @@ export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
 const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
   (mdToken: string) =>
     persist(
-      (set, get, store) => {
-        return {
-          ...createRoomShellSlice<RoomConfig>({
-            connector: createWasmMotherDuckDbConnector({
-              mdToken,
-            }),
-            config: {
-              layout: {
-                type: LayoutTypes.enum.mosaic,
-                nodes: {
-                  first: RoomPanelTypes.enum['data'],
-                  second: RoomPanelTypes.enum['main'],
-                  direction: 'row',
-                  splitPercentage: 30,
-                },
-              },
-
-              ...createDefaultSqlEditorConfig(),
-            },
-            room: {
-              panels: {
-                [RoomPanelTypes.enum['main']]: {
-                  component: MainView,
-                  placement: 'main',
-                },
-                [RoomPanelTypes.enum['data']]: {
-                  title: 'Data',
-                  component: DataPanel,
-                  icon: DatabaseIcon,
-                  placement: 'sidebar',
-                },
+      (set, get, store) => ({
+        ...createRoomShellSlice<RoomConfig>({
+          connector: createWasmMotherDuckDbConnector({
+            mdToken,
+          }),
+          config: {
+            layout: {
+              type: LayoutTypes.enum.mosaic,
+              nodes: {
+                first: RoomPanelTypes.enum['data'],
+                second: RoomPanelTypes.enum['main'],
+                direction: 'row',
+                splitPercentage: 30,
               },
             },
-          })(set, get, store),
 
-          // Sql editor slice
-          ...createSqlEditorSlice()(set, get, store),
-        };
-      },
+            ...createDefaultSqlEditorConfig(),
+          },
+          room: {
+            panels: {
+              [RoomPanelTypes.enum['main']]: {
+                component: MainView,
+                placement: 'main',
+              },
+              [RoomPanelTypes.enum['data']]: {
+                title: 'Data',
+                component: DataPanel,
+                icon: DatabaseIcon,
+                placement: 'sidebar',
+              },
+            },
+          },
+        })(set, get, store),
+
+        // Sql editor slice
+        ...createSqlEditorSlice()(set, get, store),
+      }),
       // Persist settings
       {
         // Local storage key

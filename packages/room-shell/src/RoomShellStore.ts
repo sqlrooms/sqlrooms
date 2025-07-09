@@ -14,6 +14,7 @@ import {
   createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
+import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   BaseRoomConfig,
   DataSource,
@@ -22,13 +23,13 @@ import {
   SqlQueryDataSource,
   UrlDataSource,
 } from '@sqlrooms/room-config';
-import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   RoomState,
   RoomStateActions,
-  RoomStateContext,
   RoomStateProps,
   createRoomSlice,
+  isRoomSliceWithInitialize,
+  useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
 import {
@@ -38,8 +39,8 @@ import {
   downloadFile,
 } from '@sqlrooms/utils';
 import {castDraft, produce} from 'immer';
-import {ReactNode, useContext} from 'react';
-import {StateCreator, StoreApi, useStore} from 'zustand';
+import {ReactNode} from 'react';
+import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -64,7 +65,6 @@ export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
 
 export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
   RoomStateProps<PC> & {
-    initialized: boolean;
     roomFiles: RoomFileInfo[];
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
@@ -78,12 +78,6 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
 
 export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
   RoomStateActions<PC> & {
-    /**
-     * Initialize the room state.
-     * @returns A promise that resolves when the room state has been initialized.
-     */
-    initialize: () => Promise<void>;
-
     setRoomTitle(title: string): void;
     setDescription(description: string): void;
 
@@ -116,6 +110,7 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
   };
 
 export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
+  initialize?: () => Promise<void>;
   config: PC;
   room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
 } & DuckDbSliceState &
@@ -151,7 +146,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       ...configProps,
     } as PC;
     const initialRoomState = {
-      initialized: false,
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],
       roomFilesProgress: {},
@@ -172,7 +166,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         ...initialRoomState,
         ...roomSliceState.room,
         async initialize() {
-          roomSliceState.room.initialize();
+          await roomSliceState.room.initialize();
 
           const {setTaskProgress} = get().room;
           setTaskProgress(INIT_DB_TASK, {
@@ -188,13 +182,25 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           });
           await updateReadyDataSources();
           await maybeDownloadDataSources();
-          setTaskProgress(INIT_ROOM_TASK, undefined);
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.initialized = true;
-            }),
+          // Call initialize on all other slices that have an initialize function
+          const slices = Object.entries(store.getState()).filter(
+            ([key, value]) =>
+              key !== 'room' &&
+              key !== 'db' &&
+              isRoomSliceWithInitialize(value),
           );
+          for (const [_, slice] of slices) {
+            if (isRoomSliceWithInitialize(slice)) {
+              await slice.initialize();
+            }
+          }
+          const state = store.getState();
+          if (isRoomSliceWithInitialize(state)) {
+            await state.initialize();
+          }
+
+          setTaskProgress(INIT_ROOM_TASK, undefined);
         },
 
         setRoomConfig: (config) =>
@@ -629,11 +635,7 @@ export function useBaseRoomShellStore<
   PS extends RoomShellSliceState<PC>,
   T,
 >(selector: (state: RoomShellSliceState<PC>) => T): T {
-  const store = useContext(RoomStateContext);
-  if (!store) {
-    throw new Error('Missing RoomStateProvider in the tree');
-  }
-  return useStore(store as unknown as StoreApi<PS>, selector);
+  return useBaseRoomStore<PC, PS, T>(selector as (state: RoomState<PC>) => T);
 }
 
 export function createSlice<PC extends BaseRoomConfig, S>(

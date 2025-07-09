@@ -70,6 +70,12 @@ export function createBaseDuckDbConnector(
     }
     state.initializing = (async () => {
       await impl.initializeInternal?.();
+      if (initializationQuery) {
+        await impl.executeQueryInternal(
+          initializationQuery,
+          new AbortController().signal,
+        );
+      }
       state.initialized = true;
       state.initializing = null;
     })().catch((err) => {
