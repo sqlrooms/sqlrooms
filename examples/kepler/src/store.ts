@@ -19,6 +19,7 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {
   DatabaseIcon,
   Filter,
@@ -27,15 +28,14 @@ import {
   SlidersHorizontal,
 } from 'lucide-react';
 import {z} from 'zod';
+import {DataPanel} from './components/DataPanel';
+import {KeplerMapsContainer} from './components/KeplerMapsContainer';
 import {
   KeplerSidePanelBaseMapManager,
   KeplerSidePanelFilterManager,
   KeplerSidePanelInteractionManager,
   KeplerSidePanelLayerManager,
 } from './components/KeplerSidePanels';
-import {KeplerMapsContainer} from './components/KeplerMapsContainer';
-import {DataPanel} from './components/DataPanel';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 
 export const RoomPanelTypes = z.enum([
   'data',

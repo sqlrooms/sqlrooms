@@ -361,12 +361,15 @@ export function createKeplerSlice<
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
             for (const {table} of get().db.tables) {
-              const qualifiedTable = table.toString();
+              // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
+              // const qualifiedTable = table.toString();
               if (
-                !table.schema?.startsWith('__') && // skip internal schemas
-                !keplerDatasets?.[qualifiedTable]
+                // !table.schema?.startsWith('__') && // skip internal schemas
+                // !keplerDatasets?.[qualifiedTable]
+                table.schema === 'main' &&
+                !keplerDatasets?.[table.table]
               ) {
-                await get().kepler.addTableToMap(mapId, qualifiedTable, {
+                await get().kepler.addTableToMap(mapId, table.table, {
                   autoCreateLayers: true,
                   centerMap: false,
                 });
