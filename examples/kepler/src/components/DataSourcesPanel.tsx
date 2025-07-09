@@ -19,7 +19,7 @@ const DataSourcesPanel: FC = () => {
   const addRoomFile = useRoomStore((state) => state.room.addRoomFile);
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data-sources']}>
+    <RoomPanel type={RoomPanelTypes.enum['data']}>
       <FileDropzone
         className="h-[200px] p-5"
         acceptedFormats={{

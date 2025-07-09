@@ -1,5 +1,6 @@
 import {
   Button,
+  cn,
   Dialog,
   DialogContent,
   DialogDescription,
@@ -14,10 +15,12 @@ import {
 } from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
 import {PlusIcon, Trash2Icon} from 'lucide-react';
-import {useState} from 'react';
+import {FC, useState} from 'react';
 import {KeplerMapContainer, KeplerPlotContainer} from '@sqlrooms/kepler';
 
-export function KeplerMapsContainer() {
+export const KeplerMapsContainer: FC<{
+  className?: string;
+}> = ({className}) => {
   const maps = useRoomStore((state) => state.config.kepler.maps);
   const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
   const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
@@ -41,7 +44,7 @@ export function KeplerMapsContainer() {
   };
 
   return (
-    <>
+    <div className={cn('flex h-full w-full flex-col', className)}>
       <Tabs
         value={currentMap?.id}
         onValueChange={setCurrentMapId}
@@ -116,6 +119,6 @@ export function KeplerMapsContainer() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
-}
+};

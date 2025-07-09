@@ -16,7 +16,12 @@ import {
   setGeoArrowWKBExtension,
 } from '@kepler.gl/duckdb';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
-import {keplerGlReducer, KeplerGlState, MapStyle} from '@kepler.gl/reducers';
+import {
+  INITIAL_UI_STATE,
+  keplerGlReducer,
+  KeplerGlState,
+  MapStyle,
+} from '@kepler.gl/reducers';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
 import {AddDataToMapPayload} from '@kepler.gl/types';
 import {createId} from '@paralleldrive/cuid2';
@@ -165,6 +170,21 @@ export function createKeplerSlice<
   basicKeplerProps = {},
   initialKeplerState = {
     mapStyle: {styleType: 'positron'} as MapStyle,
+    uiState: {
+      ...INITIAL_UI_STATE,
+      currentModal: null,
+      mapControls: {
+        visibleLayers: INITIAL_UI_STATE.mapControls.visibleLayers,
+        mapLegend: {
+          show: true,
+          active: false,
+        },
+        toggle3d: {
+          show: true,
+          active: false,
+        },
+      },
+    },
   },
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
@@ -340,10 +360,14 @@ export function createKeplerSlice<
         async syncKeplerDatasets() {
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
-            for (const {schema, tableName} of get().db.tables) {
-              if (schema === 'main' && !keplerDatasets?.[tableName]) {
-                await get().kepler.addTableToMap(mapId, tableName, {
-                  autoCreateLayers: false,
+            for (const {table} of get().db.tables) {
+              const qualifiedTable = table.toString();
+              if (
+                !table.schema?.startsWith('__') && // skip internal schemas
+                !keplerDatasets?.[qualifiedTable]
+              ) {
+                await get().kepler.addTableToMap(mapId, qualifiedTable, {
+                  autoCreateLayers: true,
                   centerMap: false,
                 });
               }
