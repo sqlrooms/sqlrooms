@@ -176,7 +176,7 @@ export function createRoomStore<PC, RS extends RoomState<PC>>(
 
   (async () => {
     if (typeof window !== 'undefined') {
-      roomStore.getState().room.initialize();
+      await roomStore.getState().room.initialize();
       const slices = Object.entries(roomStore.getState());
       for (const [key, slice] of slices) {
         if (isSliceWithInitialize(slice)) {
