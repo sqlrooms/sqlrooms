@@ -26,10 +26,10 @@ import {
 import {
   RoomState,
   RoomStateActions,
-  RoomStateContext,
   RoomStateProps,
   createRoomSlice,
   isRoomSliceWithInitialize,
+  useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
 import {
@@ -39,8 +39,8 @@ import {
   downloadFile,
 } from '@sqlrooms/utils';
 import {castDraft, produce} from 'immer';
-import {ReactNode, useContext} from 'react';
-import {StateCreator, StoreApi, useStore} from 'zustand';
+import {ReactNode} from 'react';
+import {StateCreator, StoreApi} from 'zustand';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -630,11 +630,7 @@ export function useBaseRoomShellStore<
   PS extends RoomShellSliceState<PC>,
   T,
 >(selector: (state: RoomShellSliceState<PC>) => T): T {
-  const store = useContext(RoomStateContext);
-  if (!store) {
-    throw new Error('Missing RoomStateProvider in the tree');
-  }
-  return useStore(store as unknown as StoreApi<PS>, selector);
+  return useBaseRoomStore<PC, PS, T>(selector as (state: RoomState<PC>) => T);
 }
 
 export function createSlice<PC extends BaseRoomConfig, S>(
