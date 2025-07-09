@@ -12,6 +12,7 @@ export {
 
 export {
   createRoomStore,
+  createRoomStoreCreator,
   createRoomSlice,
   type RoomStateActions,
   type RoomStateProps,
@@ -20,6 +21,8 @@ export {
   type TaskProgress,
   type Slice,
   createBaseSlice,
+  type RoomSlice,
+  isRoomSliceWithInitialize,
 } from './RoomStore';
 
 export * from '@sqlrooms/room-config';

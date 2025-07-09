@@ -122,6 +122,27 @@ yarn add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
 
 ### Configure Tailwind CSS
 
+You can follow [this guide](https://v3.tailwindcss.com/docs/installation) to install and configure Tailwind 3 (Tailwind 4 support is still experimental).
+
+::: code-group
+
+```bash [npm]
+npm install -D tailwindcss@3
+npx tailwindcss init
+```
+
+```bash [pnpm]
+pnpm add -D tailwindcss@3
+npx tailwindcss init
+```
+
+```bash [yarn]
+yarn add -D tailwindcss@3
+npx tailwindcss init
+```
+
+:::
+
 SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
 
 ```typescript

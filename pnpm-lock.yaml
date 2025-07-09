@@ -1014,6 +1014,94 @@ importers:
         specifier: ^0.18.1
         version: 0.18.2(vite@6.3.5(@types/node@20.19.2)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(workbox-build@7.3.0(@types/babel__core@7.20.5))(workbox-window@7.3.0)
 
+  examples/query-motherduck:
+    dependencies:
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
+      '@sqlrooms/motherduck':
+        specifier: workspace:*
+        version: link:../../packages/motherduck
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      class-variance-authority:
+        specifier: 0.7.1
+        version: 0.7.1
+      clsx:
+        specifier: 2.1.1
+        version: 2.1.1
+      lucide-react:
+        specifier: 0.501.0
+        version: 0.501.0(react@19.1.0)
+      monaco-editor:
+        specifier: ^0.52.2
+        version: 0.52.2
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: 3.25.57
+        version: 3.25.57
+      zustand:
+        specifier: 5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.28.0
+        version: 9.30.0
+      '@types/react':
+        specifier: 19.1.7
+        version: 19.1.7
+      '@types/react-dom':
+        specifier: 19.1.6
+        version: 19.1.6(@types/react@19.1.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.5.2
+        version: 4.6.0(vite@6.3.5(@types/node@20.19.2)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))
+      eslint:
+        specifier: ^9.28.0
+        version: 9.30.0(jiti@2.4.2)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.30.0(jiti@2.4.2))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.20
+        version: 0.4.20(eslint@9.30.0(jiti@2.4.2))
+      globals:
+        specifier: ^16.2.0
+        version: 16.2.0
+      postcss:
+        specifier: ^8.5.4
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      typescript-eslint:
+        specifier: ^8.34.0
+        version: 8.35.0(eslint@9.30.0(jiti@2.4.2))(typescript@5.8.3)
+      vite:
+        specifier: ^6.3.5
+        version: 6.3.5(@types/node@20.19.2)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0)
+      vite-plugin-pwa:
+        specifier: ^0.18.1
+        version: 0.18.2(vite@6.3.5(@types/node@20.19.2)(jiti@2.4.2)(lightningcss@1.30.1)(terser@5.43.1)(yaml@2.8.0))(workbox-build@7.3.0(@types/babel__core@7.20.5))(workbox-window@7.3.0)
+
   packages/ai:
     dependencies:
       '@ai-sdk/provider':
@@ -1351,12 +1439,21 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
       react:
         specifier: '>=18'
         version: 19.1.0
       react-mosaic-component:
         specifier: 5.3.0
         version: 5.3.0(@types/hoist-non-react-statics@3.3.6)(@types/node@20.19.2)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.76
+      zustand:
+        specifier: ^5.0.6
+        version: 5.0.6(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
 
   packages/layout-config:
     dependencies:
@@ -1405,6 +1502,18 @@ importers:
       react-dom:
         specifier: '>=18'
         version: 19.1.0(react@19.1.0)
+
+  packages/motherduck:
+    dependencies:
+      '@motherduck/wasm-client':
+        specifier: ^0.6.6
+        version: 0.6.6(apache-arrow@17.0.0)
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      apache-arrow:
+        specifier: ^17.0.0
+        version: 17.0.0
 
   packages/preset-eslint:
     devDependencies:
@@ -4129,6 +4238,11 @@ packages:
       monaco-editor: '>= 0.25.0 < 1'
       react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-dom: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
+  '@motherduck/wasm-client@0.6.6':
+    resolution: {integrity: sha512-6tx9VVYFcuz4EDMmowmWUD2OrstnSe/3vcYptsiHiTa7meNNC3LBDr1z2g3KhC09TO9fgKpIekyH7OQxqZGPfQ==}
+    peerDependencies:
+      apache-arrow: ^17.0.0
 
   '@nebula.gl/edit-modes@1.0.2-alpha.1':
     resolution: {integrity: sha512-8E6eXT/2tANvdGma3Z21a54UVDB5wdTVwNlhkZQKU+kP8sZCq3grYFRB4Uqt3WbZVvcfP9Yviyck84VxHszEXw==}
@@ -12502,11 +12616,32 @@ packages:
   zod@3.25.57:
     resolution: {integrity: sha512-6tgzLuwVST5oLUxXTmBqoinKMd3JeesgbgseXeFasKKj8Q1FCZrHnbqJOyiEvr4cVAlbug+CgIsmJ8cl/pU5FA==}
 
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
   zstd-codec@0.1.5:
     resolution: {integrity: sha512-v3fyjpK8S/dpY/X5WxqTK3IoCnp/ZOLxn144GZVlNUjtwAchzrVo03h+oMATFhCIiJ5KTr4V3vDQQYz4RU684g==}
 
   zustand@5.0.5:
     resolution: {integrity: sha512-mILtRfKW9xM47hqxGIxCv12gXusoY/xTSHBYApXozR0HmQv299whhBeeAcRy+KrPPybzosvJBCOmVjq6x12fCg==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': 19.1.7
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
+
+  zustand@5.0.6:
+    resolution: {integrity: sha512-ihAqNeUVhe0MAD+X8M5UzqyZ9k3FFZLBTtqo6JLPwV53cbRB/mJwBI0PxcIgqhBBHlEs8G45OTDTMq3gNcLq3A==}
     engines: {node: '>=12.20.0'}
     peerDependencies:
       '@types/react': 19.1.7
@@ -12561,6 +12696,12 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.57)
       zod: 3.25.57
 
+  '@ai-sdk/openai@1.3.22(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
+      zod: 3.25.76
+
   '@ai-sdk/provider-utils@2.1.6(zod@3.25.57)':
     dependencies:
       '@ai-sdk/provider': 1.0.7
@@ -12576,6 +12717,13 @@ snapshots:
       nanoid: 3.3.11
       secure-json-parse: 2.7.0
       zod: 3.25.57
+
+  '@ai-sdk/provider-utils@2.2.8(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      nanoid: 3.3.11
+      secure-json-parse: 2.7.0
+      zod: 3.25.76
 
   '@ai-sdk/provider@1.0.7':
     dependencies:
@@ -12605,12 +12753,29 @@ snapshots:
     optionalDependencies:
       zod: 3.25.57
 
+  '@ai-sdk/react@1.2.12(react@19.1.0)(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
+      '@ai-sdk/ui-utils': 1.2.11(zod@3.25.76)
+      react: 19.1.0
+      swr: 2.3.3(react@19.1.0)
+      throttleit: 2.1.0
+    optionalDependencies:
+      zod: 3.25.76
+
   '@ai-sdk/ui-utils@1.2.11(zod@3.25.57)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.57)
       zod: 3.25.57
       zod-to-json-schema: 3.24.6(zod@3.25.57)
+
+  '@ai-sdk/ui-utils@1.2.11(zod@3.25.76)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
 
   '@ai-sdk/xai@1.2.16(zod@3.25.57)':
     dependencies:
@@ -14212,14 +14377,14 @@ snapshots:
       react-dom: 18.3.1(react@18.3.1)
       tslib: 2.8.1
 
-  '@dnd-kit/modifiers@7.0.0(@dnd-kit/core@6.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@18.3.1)':
+  '@dnd-kit/modifiers@7.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
       react: 18.3.1
       tslib: 2.8.1
 
-  '@dnd-kit/sortable@8.0.0(@dnd-kit/core@6.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@18.3.1)':
+  '@dnd-kit/sortable@8.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)':
     dependencies:
       '@dnd-kit/core': 6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
@@ -15049,8 +15214,8 @@ snapshots:
       '@deck.gl/core': 8.9.36
       '@deck.gl/react': 8.9.36(@deck.gl/core@8.9.36)(@types/react@19.1.7)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
       '@dnd-kit/core': 6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
-      '@dnd-kit/modifiers': 7.0.0(@dnd-kit/core@6.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@18.3.1)
-      '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.3.1(react-dom@19.1.0(react@19.1.0))(react@19.1.0))(react@18.3.1)
+      '@dnd-kit/modifiers': 7.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
+      '@dnd-kit/sortable': 8.0.0(@dnd-kit/core@6.3.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1))(react@18.3.1)
       '@dnd-kit/utilities': 3.2.2(react@18.3.1)
       '@emotion/is-prop-valid': 1.3.1
       '@floating-ui/react': 0.25.1(react-dom@18.3.1(react@18.3.1))(react@18.3.1)
@@ -16245,20 +16410,20 @@ snapshots:
       - '@loaders.gl/core'
       - react-dom
 
-  '@langchain/core@0.3.61(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57))':
+  '@langchain/core@0.3.61(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76))':
     dependencies:
       '@cfworker/json-schema': 4.1.1
       ansi-styles: 5.2.0
       camelcase: 6.3.0
       decamelize: 1.2.0
       js-tiktoken: 1.0.20
-      langsmith: 0.3.34(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57))
+      langsmith: 0.3.34(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76))
       mustache: 4.2.0
       p-queue: 6.6.2
       p-retry: 4.6.2
       uuid: 10.0.0
-      zod: 3.25.57
-      zod-to-json-schema: 3.24.6(zod@3.25.57)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
     transitivePeerDependencies:
       - openai
 
@@ -16941,6 +17106,10 @@ snapshots:
       react: 19.1.0
       react-dom: 19.1.0(react@19.1.0)
 
+  '@motherduck/wasm-client@0.6.6(apache-arrow@17.0.0)':
+    dependencies:
+      apache-arrow: 17.0.0
+
   '@nebula.gl/edit-modes@1.0.2-alpha.1':
     dependencies:
       '@turf/along': 7.2.0
@@ -17301,16 +17470,16 @@ snapshots:
 
   '@openassistant/core@0.5.13(@ai-sdk/anthropic@1.2.12(zod@3.25.57))(@ai-sdk/google@1.2.19(zod@3.25.57))(@ai-sdk/xai@1.2.16(zod@3.25.57))(encoding@0.1.13)(ollama-ai-provider-v2@0.0.5(zod@3.25.57))(react@19.1.0)(ws@8.18.3)':
     dependencies:
-      '@ai-sdk/openai': 1.3.22(zod@3.25.57)
-      '@ai-sdk/react': 1.2.12(react@19.1.0)(zod@3.25.57)
-      '@ai-sdk/ui-utils': 1.2.11(zod@3.25.57)
-      '@langchain/core': 0.3.61(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57))
-      ai: 4.3.16(react@19.1.0)(zod@3.25.57)
+      '@ai-sdk/openai': 1.3.22(zod@3.25.76)
+      '@ai-sdk/react': 1.2.12(react@19.1.0)(zod@3.25.76)
+      '@ai-sdk/ui-utils': 1.2.11(zod@3.25.76)
+      '@langchain/core': 0.3.61(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76))
+      ai: 4.3.16(react@19.1.0)(zod@3.25.76)
       openai: 4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57)
-      openai-zod-functions: 0.1.2(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57))
+      openai-zod-functions: 0.1.2(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76))
       react: 19.1.0
-      zod: 3.25.57
-      zod-to-json-schema: 3.24.6(zod@3.25.57)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
     optionalDependencies:
       '@ai-sdk/anthropic': 1.2.12(zod@3.25.57)
       '@ai-sdk/google': 1.2.19(zod@3.25.57)
@@ -17322,7 +17491,7 @@ snapshots:
 
   '@openassistant/utils@0.5.13':
     dependencies:
-      zod: 3.25.57
+      zod: 3.25.76
 
   '@opentelemetry/api@1.9.0': {}
 
@@ -18678,7 +18847,7 @@ snapshots:
       tailwindcss: 3.4.17
       tailwindcss-animate: 1.0.7(tailwindcss@3.4.17)
       usehooks-ts: 3.1.1(react@19.1.0)
-      zod: 3.25.57
+      zod: 3.25.76
     transitivePeerDependencies:
       - '@types/react'
       - '@types/react-dom'
@@ -19841,6 +20010,18 @@ snapshots:
       '@opentelemetry/api': 1.9.0
       jsondiffpatch: 0.6.0
       zod: 3.25.57
+    optionalDependencies:
+      react: 19.1.0
+
+  ai@4.3.16(react@19.1.0)(zod@3.25.76):
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.76)
+      '@ai-sdk/react': 1.2.12(react@19.1.0)(zod@3.25.76)
+      '@ai-sdk/ui-utils': 1.2.11(zod@3.25.76)
+      '@opentelemetry/api': 1.9.0
+      jsondiffpatch: 0.6.0
+      zod: 3.25.76
     optionalDependencies:
       react: 19.1.0
 
@@ -23101,7 +23282,7 @@ snapshots:
 
   ktx-parse@0.7.1: {}
 
-  langsmith@0.3.34(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57)):
+  langsmith@0.3.34(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76)):
     dependencies:
       '@types/uuid': 10.0.0
       chalk: 4.1.2
@@ -24125,12 +24306,12 @@ snapshots:
       regex: 6.0.1
       regex-recursion: 6.0.2
 
-  openai-zod-functions@0.1.2(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57)):
+  openai-zod-functions@0.1.2(openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.76)):
     dependencies:
       openai: 4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57)
-      zod: 3.25.57
-      zod-to-json-schema: 3.24.6(zod@3.25.57)
-      zod-validation-error: 2.1.0(zod@3.25.57)
+      zod: 3.25.76
+      zod-to-json-schema: 3.24.6(zod@3.25.76)
+      zod-validation-error: 2.1.0(zod@3.25.76)
 
   openai@4.104.0(encoding@0.1.13)(ws@8.18.3)(zod@3.25.57):
     dependencies:
@@ -27294,11 +27475,17 @@ snapshots:
     dependencies:
       zod: 3.25.57
 
-  zod-validation-error@2.1.0(zod@3.25.57):
+  zod-to-json-schema@3.24.6(zod@3.25.76):
     dependencies:
-      zod: 3.25.57
+      zod: 3.25.76
+
+  zod-validation-error@2.1.0(zod@3.25.76):
+    dependencies:
+      zod: 3.25.76
 
   zod@3.25.57: {}
+
+  zod@3.25.76: {}
 
   zstd-codec@0.1.5: {}
 
@@ -27310,6 +27497,13 @@ snapshots:
       use-sync-external-store: 1.5.0(react@18.3.1)
 
   zustand@5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
+    optionalDependencies:
+      '@types/react': 19.1.7
+      immer: 10.1.1
+      react: 19.1.0
+      use-sync-external-store: 1.5.0(react@19.1.0)
+
+  zustand@5.0.6(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
     optionalDependencies:
       '@types/react': 19.1.7
       immer: 10.1.1

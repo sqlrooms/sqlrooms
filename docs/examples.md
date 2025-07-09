@@ -193,6 +193,8 @@ To create a new project from the mosaic example run this:
 npx degit sqlrooms/examples/mosaic my-new-app/
 ```
 
+<!--@include: ../examples/query-motherduck/README.md-->
+
 ## Looking for More?
 
 Make sure to check out our [Case Studies](/case-studies) page for real-world applications and success stories using SQLRooms.
