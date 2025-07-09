@@ -14,6 +14,7 @@ import {
   createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
+import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   BaseRoomConfig,
   DataSource,
@@ -22,13 +23,13 @@ import {
   SqlQueryDataSource,
   UrlDataSource,
 } from '@sqlrooms/room-config';
-import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   RoomState,
   RoomStateActions,
   RoomStateContext,
   RoomStateProps,
   createRoomSlice,
+  isRoomSliceWithInitialize,
 } from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
 import {
@@ -64,7 +65,6 @@ export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
 
 export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
   RoomStateProps<PC> & {
-    initialized: boolean;
     roomFiles: RoomFileInfo[];
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
@@ -78,12 +78,6 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
 
 export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
   RoomStateActions<PC> & {
-    /**
-     * Initialize the room state.
-     * @returns A promise that resolves when the room state has been initialized.
-     */
-    initialize: () => Promise<void>;
-
     setRoomTitle(title: string): void;
     setDescription(description: string): void;
 
@@ -151,7 +145,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       ...configProps,
     } as PC;
     const initialRoomState = {
-      initialized: false,
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],
       roomFilesProgress: {},
@@ -172,7 +165,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         ...initialRoomState,
         ...roomSliceState.room,
         async initialize() {
-          roomSliceState.room.initialize();
+          await roomSliceState.room.initialize();
 
           const {setTaskProgress} = get().room;
           setTaskProgress(INIT_DB_TASK, {
@@ -188,13 +181,21 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           });
           await updateReadyDataSources();
           await maybeDownloadDataSources();
-          setTaskProgress(INIT_ROOM_TASK, undefined);
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.initialized = true;
-            }),
+          // Call initialize on all other slices that have an initialize function
+          const slices = Object.entries(store.getState()).filter(
+            ([key, value]) =>
+              key !== 'room' &&
+              key !== 'db' &&
+              isRoomSliceWithInitialize(value),
           );
+          for (const [_, slice] of slices) {
+            if (isRoomSliceWithInitialize(slice)) {
+              await slice.initialize();
+            }
+          }
+
+          setTaskProgress(INIT_ROOM_TASK, undefined);
         },
 
         setRoomConfig: (config) =>

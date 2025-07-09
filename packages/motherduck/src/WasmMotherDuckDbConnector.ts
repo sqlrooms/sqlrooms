@@ -38,9 +38,6 @@ export function createWasmMotherDuckDbConnector(
     async initializeInternal() {
       connection = MDConnection.create(params);
       await connection.isInitialized();
-      if (initializationQuery) {
-        await connection.evaluateQuery(initializationQuery);
-      }
     },
 
     async destroyInternal() {

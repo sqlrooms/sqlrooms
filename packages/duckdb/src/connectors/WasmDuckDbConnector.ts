@@ -95,9 +95,6 @@ export function createWasmDuckDbConnector(
         });
 
         conn = augmentConnectionQueryError(await db.connect());
-        if (initializationQuery) {
-          await conn.query(initializationQuery);
-        }
       } catch (err) {
         db = null;
         conn = null;

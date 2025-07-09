@@ -40,6 +40,7 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
         return {
           ...createRoomShellSlice<RoomConfig>({
             connector: createWasmMotherDuckDbConnector({
+              initializationQuery: `QQ`,
               mdToken,
             }),
             config: {

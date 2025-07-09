@@ -1,10 +1,10 @@
 import {castDraft, produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
-import {useBaseRoomStore} from './RoomStateProvider';
 
 export type RoomStore<PC> = StoreApi<RoomState<PC>>;
 
 export type RoomStateProps<PC> = {
+  initialized: boolean;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
   captureException: (exception: unknown, captureContext?: unknown) => void;
@@ -33,6 +33,12 @@ export type RoomStateActions<PC> = {
    * @returns True if the room has unsaved changes, false otherwise.
    */
   hasUnsavedChanges(): boolean; // since last save
+  /**
+   * Called when the project config gets changed. Can be used for saving.
+   * To be overridden by the custom project state.
+   * @param config - The project config to save.
+   */
+  onConfigChanged?: (config: PC) => Promise<void> | undefined;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
@@ -50,6 +56,7 @@ export function createRoomSlice<PC>(props: {
   const {config: initialConfig, room: roomStateProps, ...restState} = props;
   const initialRoomState: RoomStateProps<PC> = {
     ...roomStateProps,
+    initialized: false,
     lastSavedConfig: undefined,
     tasksProgress: {},
     captureException: (exception: unknown) => {
@@ -147,6 +154,21 @@ export function createRoomStore<PC, RS extends RoomState<PC>>(
   return {roomStore, useRoomStore};
 }
 
+export interface RooomSlice {
+  initialize?: () => Promise<void>;
+}
+
+export function isRoomSliceWithInitialize(
+  slice: unknown,
+): slice is RooomSlice & Required<Pick<RooomSlice, 'initialize'>> {
+  return (
+    typeof slice === 'object' &&
+    slice !== null &&
+    'initialize' in slice &&
+    typeof slice.initialize === 'function'
+  );
+}
+
 /**
  * Factory to create a room store creator with custom params.
  *
@@ -168,7 +190,27 @@ export function createRoomStoreCreator<TState extends RoomState<any>>() {
     function createRoomStore(...args: Parameters<TFactory>): StoreApi<TState> {
       store = createStore(stateCreatorFactory(...args));
       if (typeof window !== 'undefined') {
-        store.getState().room.initialize();
+        (async () => {
+          try {
+            // Initialize the room
+            await store.getState().room.initialize();
+            // Set initialized to true after initialization
+            store.setState((state) =>
+              produce(state, ({room}) => {
+                room.initialized = true;
+              }),
+            );
+            // Subscribe to the project store changes after initialization
+            store.subscribe(async (state) => {
+              const {room} = state;
+              if (room.onConfigChanged && room.hasUnsavedChanges()) {
+                room.onConfigChanged(state.config);
+              }
+            });
+          } catch (error) {
+            store.getState().room.captureException(error);
+          }
+        })();
       } else {
         console.warn(
           'Skipping room store initialization. Room store should be only used on client.',
