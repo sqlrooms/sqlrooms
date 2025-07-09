@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/room-config",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
