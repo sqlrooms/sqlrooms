@@ -38,7 +38,7 @@ export type RoomStateActions<PC> = {
    * To be overridden by the custom project state.
    * @param config - The project config to save.
    */
-  onConfigChanged?: (config: PC) => Promise<void> | undefined;
+  onSaveConfig?: (config: PC) => Promise<void> | undefined;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
@@ -203,8 +203,8 @@ export function createRoomStoreCreator<TState extends RoomState<any>>() {
             // Subscribe to the project store changes after initialization
             store.subscribe(async (state) => {
               const {room} = state;
-              if (room.onConfigChanged && room.hasUnsavedChanges()) {
-                room.onConfigChanged(state.config);
+              if (room.onSaveConfig && room.hasUnsavedChanges()) {
+                room.onSaveConfig(state.config);
               }
             });
           } catch (error) {
