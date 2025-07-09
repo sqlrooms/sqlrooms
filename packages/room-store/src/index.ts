@@ -20,7 +20,7 @@ export {
   type RoomStore,
   type TaskProgress,
   createBaseSlice,
-  type RooomSlice,
+  type RoomSlice,
   isRoomSliceWithInitialize,
 } from './RoomStore';
 

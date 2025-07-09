@@ -110,6 +110,7 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
   };
 
 export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
+  initialize?: () => Promise<void>;
   config: PC;
   room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
 } & DuckDbSliceState &
@@ -193,6 +194,10 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
             if (isRoomSliceWithInitialize(slice)) {
               await slice.initialize();
             }
+          }
+          const state = store.getState();
+          if (isRoomSliceWithInitialize(state)) {
+            await state.initialize();
           }
 
           setTaskProgress(INIT_ROOM_TASK, undefined);

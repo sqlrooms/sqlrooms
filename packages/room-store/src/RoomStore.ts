@@ -154,13 +154,13 @@ export function createRoomStore<PC, RS extends RoomState<PC>>(
   return {roomStore, useRoomStore};
 }
 
-export interface RooomSlice {
+export interface RoomSlice {
   initialize?: () => Promise<void>;
 }
 
 export function isRoomSliceWithInitialize(
   slice: unknown,
-): slice is RooomSlice & Required<Pick<RooomSlice, 'initialize'>> {
+): slice is RoomSlice & Required<Pick<RoomSlice, 'initialize'>> {
   return (
     typeof slice === 'object' &&
     slice !== null &&
