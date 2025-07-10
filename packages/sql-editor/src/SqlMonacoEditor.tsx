@@ -7,10 +7,10 @@ import {
   DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
-  getFunctionSuggestions,
 } from './constants/duckdb-dialect';
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
+import {getFunctionSuggestions} from './constants/functionSuggestions';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
@@ -105,13 +105,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
           // Combine keywords and functions with custom ones
           const keywords = [...DUCKDB_KEYWORDS, ...customKeywords];
-          const functions = [
-            ...DUCKDB_FUNCTIONS,
-            ...customFunctions,
-            ...(connector
-              ? await getFunctionSuggestions(connector, word.word)
-              : []),
-          ];
+          const functions = [...DUCKDB_FUNCTIONS, ...customFunctions];
 
           // Add keyword suggestions (if not in a specific context)
           if (!isColumnContext) {
@@ -139,6 +133,13 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                 sortText: isTableContext ? 'z' + func : 'b' + func, // Lower priority in table context
               });
             });
+            if (connector) {
+              const functions = await getFunctionSuggestions(
+                connector,
+                word.word,
+              );
+              suggestions.push(...functions);
+            }
           }
 
           // Add table and column suggestions from schemas

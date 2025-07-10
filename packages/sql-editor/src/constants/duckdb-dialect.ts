@@ -499,31 +499,6 @@ export const DUCKDB_KEYWORDS = [
   'ZONE',
 ];
 
-export async function getFunctionSuggestions(
-  connector: DuckDbConnector,
-  wordBeforeCursor: string,
-): Promise<Iterable<string>> {
-  const result = await connector.query(
-    `SELECT     
-      function_name as name
-     FROM duckdb_functions()
-     WHERE name ILIKE ${escapeVal(
-       wordBeforeCursor.replace(/([%_\\])/g, '\\$1') + '%',
-     )} ESCAPE '\\'
-     AND REGEXP_MATCHES(name,'^[A-Z]', 'i')
-     ORDER BY name`,
-  );
-  return (function* () {
-    // avoid copying to a new array
-    const accessor = result.getChild('name');
-    if (accessor) {
-      for (let i = 0; i < accessor.length; i++) {
-        yield accessor.get(i);
-      }
-    }
-  })();
-}
-
 // DuckDB functions
 export const DUCKDB_FUNCTIONS = [
   // ... getFunctionSuggestions
