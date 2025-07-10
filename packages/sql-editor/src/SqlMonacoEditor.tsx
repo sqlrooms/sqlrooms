@@ -11,6 +11,7 @@ import {
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import {getFunctionSuggestions} from './constants/functionSuggestions';
+import {languages} from 'monaco-editor';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
@@ -134,11 +135,24 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
               });
             });
             if (connector) {
-              const functions = await getFunctionSuggestions(
+              const functionSuggestions = await getFunctionSuggestions(
                 connector,
                 word.word,
               );
-              suggestions.push(...functions);
+              for (const {name, documentation} of functionSuggestions) {
+                suggestions.push({
+                  label: name,
+                  insertText: name,
+                  documentation: {
+                    value: documentation,
+                    isTrusted: true,
+                    supportHtml: true,
+                  },
+                  range: range,
+                  kind: languages.CompletionItemKind.Function,
+                  sortText: isTableContext ? 'z' + name : 'b' + name, // Lower priority in table context
+                });
+              }
             }
           }
 

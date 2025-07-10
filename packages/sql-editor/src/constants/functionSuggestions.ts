@@ -5,13 +5,12 @@ import {
   DuckDbConnector,
   escapeVal,
 } from '@sqlrooms/duckdb';
-import {languages} from 'monaco-editor';
 
 export async function getFunctionSuggestions(
   connector: DuckDbConnector,
   wordBeforeCursor: string,
   limit = 100,
-): Promise<Iterable<Partial<languages.CompletionItem>>> {
+): Promise<Iterable<{name: string; documentation: string}>> {
   const result = await connector.query(
     `SELECT     
       function_name as name,
@@ -45,16 +44,7 @@ export async function getFunctionSuggestions(
       ),
     ).entries(),
   ).map(([name, rows]) => {
-    return {
-      label: name,
-      insertText: name,
-      documentation: {
-        value: formatDocumentation(rows),
-        isTrusted: true,
-        supportHtml: true,
-      },
-      kind: languages.CompletionItemKind.Function,
-    };
+    return {name, documentation: formatDocumentation(rows)};
   });
 }
 
