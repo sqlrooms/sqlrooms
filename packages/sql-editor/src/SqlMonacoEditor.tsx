@@ -7,12 +7,14 @@ import {
   DUCKDB_KEYWORDS,
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
+  getFunctionSuggestions,
 } from './constants/duckdb-dialect';
-import type {DataTable} from '@sqlrooms/duckdb';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
+  connector?: DuckDbConnector;
   /**
    * Custom SQL keywords to add to the completion provider
    */
@@ -39,6 +41,7 @@ export interface SqlMonacoEditorProps
  * This is an internal component used by SqlEditor
  */
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
+  connector,
   customKeywords = [],
   customFunctions = [],
   tableSchemas = [],
@@ -66,7 +69,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     // Register SQL completion provider
     const disposable = monaco.languages.registerCompletionItemProvider('sql', {
       triggerCharacters: [' ', '.', ',', '(', '='],
-      provideCompletionItems: (model: any, position: any) => {
+      provideCompletionItems: async (model: any, position: any) => {
         try {
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
@@ -102,7 +105,13 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
           // Combine keywords and functions with custom ones
           const keywords = [...DUCKDB_KEYWORDS, ...customKeywords];
-          const functions = [...DUCKDB_FUNCTIONS, ...customFunctions];
+          const functions = [
+            ...DUCKDB_FUNCTIONS,
+            ...customFunctions,
+            ...(connector
+              ? await getFunctionSuggestions(connector, word.word)
+              : []),
+          ];
 
           // Add keyword suggestions (if not in a specific context)
           if (!isColumnContext) {
@@ -262,13 +271,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         onMount(editor, monaco);
       }
     },
-    [
-      customKeywords,
-      customFunctions,
-      tableSchemas,
-      onMount,
-      registerCompletionProvider,
-    ],
+    [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
 
   return (
