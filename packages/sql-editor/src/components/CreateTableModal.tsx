@@ -22,6 +22,7 @@ import {FC, useCallback} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {SqlMonacoEditor} from '../SqlMonacoEditor';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -51,6 +52,7 @@ export type CreateTableModalProps = {
 const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   const {editDataSource, isOpen, onClose, onAddOrUpdateSqlQuery} = props;
 
+  const connector = useStoreWithSqlEditor((state) => state.db.connector);
   const form = useForm<z.infer<typeof formSchema>>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(formSchema as any),
@@ -126,6 +128,7 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
                   <FormLabel>SQL query:</FormLabel>
                   <FormControl>
                     <SqlMonacoEditor
+                      connector={connector}
                       value={field.value}
                       onChange={field.onChange}
                       className="h-[200px] w-full"

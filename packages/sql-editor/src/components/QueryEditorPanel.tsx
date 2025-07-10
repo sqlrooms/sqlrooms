@@ -27,7 +27,12 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     <Tabs
       value={selectedQueryId}
       onValueChange={setSelectedQueryId}
-      className={cn('flex h-full flex-col overflow-hidden', className)}
+      className={cn(
+        'flex h-full flex-col',
+        // this is for Monaco's completion menu to not being cut off
+        'overflow-visible',
+        className,
+      )}
     >
       <div className="border-border flex items-center border-b p-1">
         <QueryEditorPanelActions />
