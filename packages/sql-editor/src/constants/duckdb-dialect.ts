@@ -505,22 +505,17 @@ export async function getFunctionSuggestions(
 ): Promise<Iterable<string>> {
   const result = await connector.query(
     `SELECT     
-      function_name as name,
-      function_type as type,
-      return_type as returnType,
-      parameters,
-      parameter_types as parameterTypes,
-      description
-    FROM duckdb_functions()
-     WHERE function_name ILIKE ${escapeVal(
+      function_name as name
+     FROM duckdb_functions()
+     WHERE name ILIKE ${escapeVal(
        wordBeforeCursor.replace(/([%_\\])/g, '\\$1') + '%',
      )} ESCAPE '\\'
-     AND REGEXP_MATCHES(function_name,'^[A-Z]', 'i')
+     AND REGEXP_MATCHES(name,'^[A-Z]', 'i')
      ORDER BY name`,
   );
   return (function* () {
     // avoid copying to a new array
-    const accessor = result.getChild('function_name');
+    const accessor = result.getChild('name');
     if (accessor) {
       for (let i = 0; i < accessor.length; i++) {
         yield accessor.get(i);
