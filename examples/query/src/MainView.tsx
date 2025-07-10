@@ -29,7 +29,11 @@ export const MainView: FC = () => {
     <>
       <div className="bg-muted flex h-full flex-col">
         <ResizablePanelGroup direction="vertical">
-          <ResizablePanel defaultSize={50}>
+          <ResizablePanel
+            defaultSize={50}
+            // this is for Monaco's completion menu to not being cut off
+            className="!overflow-visible"
+          >
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />

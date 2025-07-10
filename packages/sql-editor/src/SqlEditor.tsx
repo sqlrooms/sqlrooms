@@ -77,7 +77,11 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
                     <TableStructurePanel schema={schema} />
                   </ResizablePanel>
                   <ResizableHandle withHandle />
-                  <ResizablePanel defaultSize={80}>
+                  <ResizablePanel
+                    defaultSize={80}
+                    // this is for Monaco's completion menu to not being cut off
+                    className="!overflow-visible"
+                  >
                     <QueryEditorPanel />
                   </ResizablePanel>
                 </ResizablePanelGroup>

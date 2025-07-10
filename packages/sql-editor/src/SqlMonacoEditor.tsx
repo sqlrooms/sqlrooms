@@ -8,11 +8,14 @@ import {
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import type {DataTable} from '@sqlrooms/duckdb';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
+import {getFunctionSuggestions} from './constants/functionSuggestions';
+import {languages} from 'monaco-editor';
 
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
+  connector?: DuckDbConnector;
   /**
    * Custom SQL keywords to add to the completion provider
    */
@@ -39,6 +42,7 @@ export interface SqlMonacoEditorProps
  * This is an internal component used by SqlEditor
  */
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
+  connector,
   customKeywords = [],
   customFunctions = [],
   tableSchemas = [],
@@ -66,7 +70,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     // Register SQL completion provider
     const disposable = monaco.languages.registerCompletionItemProvider('sql', {
       triggerCharacters: [' ', '.', ',', '(', '='],
-      provideCompletionItems: (model: any, position: any) => {
+      provideCompletionItems: async (model: any, position: any) => {
         try {
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
@@ -130,6 +134,26 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                 sortText: isTableContext ? 'z' + func : 'b' + func, // Lower priority in table context
               });
             });
+            if (connector) {
+              const functionSuggestions = await getFunctionSuggestions(
+                connector,
+                word.word,
+              );
+              for (const {name, documentation} of functionSuggestions) {
+                suggestions.push({
+                  label: name,
+                  insertText: name,
+                  documentation: {
+                    value: documentation,
+                    isTrusted: true,
+                    supportHtml: true,
+                  },
+                  range: range,
+                  kind: languages.CompletionItemKind.Function,
+                  sortText: isTableContext ? 'z' + name : 'b' + name, // Lower priority in table context
+                });
+              }
+            }
           }
 
           // Add table and column suggestions from schemas
@@ -262,13 +286,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         onMount(editor, monaco);
       }
     },
-    [
-      customKeywords,
-      customFunctions,
-      tableSchemas,
-      onMount,
-      registerCompletionProvider,
-    ],
+    [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
 
   return (

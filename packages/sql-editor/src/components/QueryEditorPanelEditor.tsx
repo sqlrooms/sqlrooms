@@ -1,8 +1,8 @@
-import {useRef, useCallback} from 'react';
+import {cn} from '@sqlrooms/ui';
+import type * as Monaco from 'monaco-editor';
+import {useCallback, useRef} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {SqlMonacoEditor} from '../SqlMonacoEditor';
-import type * as Monaco from 'monaco-editor';
-import {cn} from '@sqlrooms/ui';
 
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 type MonacoInstance = typeof Monaco;
@@ -13,6 +13,7 @@ export const QueryEditorPanelEditor: React.FC<{
 }> = ({className, queryId}) => {
   const tableSchemas = useStoreWithSqlEditor((s) => s.db.tables);
   const runQuery = useStoreWithSqlEditor((s) => s.sqlEditor.parseAndRunQuery);
+  const connector = useStoreWithSqlEditor((s) => s.db.connector);
 
   const queryText = useStoreWithSqlEditor(
     (s) => s.config.sqlEditor.queries.find((q) => q.id === queryId)?.query,
@@ -54,6 +55,7 @@ export const QueryEditorPanelEditor: React.FC<{
 
   return (
     <SqlMonacoEditor
+      connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
       className={cn('h-full w-full flex-grow', className)}
@@ -69,7 +71,6 @@ export const QueryEditorPanelEditor: React.FC<{
         handleEditorMount(editor, monaco, queryId);
       }}
       tableSchemas={tableSchemas}
-      getLatestSchemas={() => ({tableSchemas})}
     />
   );
 };
