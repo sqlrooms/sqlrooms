@@ -5,7 +5,7 @@ import {
   createDefaultAiConfig,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
-import {DataTable} from '@sqlrooms/duckdb';
+import {createWasmDuckDbConnector, DataTable} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -28,8 +28,8 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import exampleSessions from './example-sessions.json';
 import {DEFAULT_MODEL} from './models';
+// import exampleSessions from './example-sessions.json';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -72,6 +72,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
+        connector: createWasmDuckDbConnector({
+          // path: 'opfs://database.db',
+          // accessMode: DuckDBAccessMode.READ_WRITE,
+        }),
         config: {
           layout: {
             type: LayoutTypes.enum.mosaic,
@@ -83,14 +87,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           },
           dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
+            // {
+            //   tableName: 'earthquakes',
+            //   type: 'url',
+            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            // },
           ],
           ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
+            {},
+            // AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
         },
