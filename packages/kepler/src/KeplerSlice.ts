@@ -69,6 +69,12 @@ export type CreateKeplerSliceOptions = {
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
+  /**
+   * Called when a kepler action is dispatched
+   * @param mapId - The map id
+   * @param action - The action
+   */
+  onAction?: (mapId: string, action: KeplerAction) => void;
 };
 
 export function createDefaultKeplerConfig(
@@ -146,12 +152,6 @@ export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
-    /**
-     * Override the function to be called when a kepler action is dispatched
-     * @param mapId - The map id
-     * @param action - The action
-     */
-    onAction?: (mapId: string, action: Action) => void;
     registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
   };
@@ -189,6 +189,7 @@ export function createKeplerSlice<
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
   applicationConfig,
+  onAction,
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState<PC>> {
   initApplicationConfig({
     table: DesktopKeplerTable,
@@ -221,7 +222,7 @@ export function createKeplerSlice<
       // Call onAction if it's defined
       const mapId = hasMapId(action) ? action.payload.meta._id_ : undefined;
       if (!mapId) throw new Error('Map ID not found in action payload');
-      get().kepler.onAction?.(mapId, action);
+      onAction?.(mapId, action);
       return action;
     };
     // const forwardDispatch: {[id: string]: Dispatch} = {};
