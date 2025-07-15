@@ -69,6 +69,29 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
+    /**
+     * Load a file data source. A fileDataSourceLoader implementation can be passed to
+     * createRoomShellSlice to specify how file data sources should be loaded.
+     *
+     * @example
+     * ```ts
+     *     ...createRoomShellSlice<RoomConfig>({
+     *       config: {
+     *         dataSources: [
+     *           { type: 'file', fileName: 'earthquakes.parquet', tableName: 'earthquakes' },
+     *         ],
+     *       },
+     *       room: {
+     *         fileDataSourceLoader: async ({fileName}, onProgress) =>
+     *           await downloadFile(`https://some.url/${fileName}`, {onProgress}),
+     *       },
+     *     })(set, get, store)
+     * ```
+     *
+     * @param fileName - The name of the file to load.
+     * @param onProgress - A callback to report the progress of the download.
+     * @returns The loaded file.
+     */
     fileDataSourceLoader?: (
       {fileName}: FileDataSource,
       onProgress: (progress: ProgressInfo) => void,
