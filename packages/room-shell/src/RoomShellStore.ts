@@ -69,7 +69,33 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-
+    /**
+     * Load a file data source. A fileDataSourceLoader implementation can be passed to
+     * createRoomShellSlice to specify how file data sources should be loaded.
+     *
+     * @example
+     * ```ts
+     *     ...createRoomShellSlice<RoomConfig>({
+     *       config: {
+     *         dataSources: [
+     *           { type: 'file', fileName: 'earthquakes.parquet', tableName: 'earthquakes' },
+     *         ],
+     *       },
+     *       room: {
+     *         fileDataSourceLoader: async ({fileName}, onProgress) =>
+     *           await downloadFile(`https://some.url/${fileName}`, {onProgress}),
+     *       },
+     *     })(set, get, store)
+     * ```
+     *
+     * @param fileName - The name of the file to load.
+     * @param onProgress - A callback to report the progress of the download.
+     * @returns The loaded file.
+     */
+    fileDataSourceLoader?: (
+      {fileName}: FileDataSource,
+      onProgress: (progress: ProgressInfo) => void,
+    ) => Promise<Uint8Array | File>;
     CustomErrorBoundary: React.ComponentType<{
       onRetry?: () => void;
       children?: ReactNode;
@@ -520,30 +546,43 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         filesToDownload.map(async (ds) => {
           const fileName =
             ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
-          try {
-            if (ds.type === DataSourceTypes.Enum.file) {
-              throw new Error('File data source is not supported');
-            }
-            const url = ds.url;
-            setRoomFileProgress(fileName, {status: 'download'});
-            const downloadedFile = await downloadFile(url, {
-              ...(ds.type === DataSourceTypes.Enum.url && {
-                method: ds.httpMethod,
-                headers: ds.headers,
-              }),
-              onProgress: (progress: ProgressInfo) => {
-                setRoomFileProgress(fileName, {
-                  status: 'download',
-                  progress,
-                });
-                updateTotalFileDownloadProgress();
-              },
+          const onProgress = (progress: ProgressInfo) => {
+            setRoomFileProgress(fileName, {
+              status: 'download',
+              progress,
             });
+            updateTotalFileDownloadProgress();
+          };
+          try {
+            let downloadedFile: Uint8Array | File;
+            switch (ds.type) {
+              case DataSourceTypes.Enum.file: {
+                const {fileDataSourceLoader} = get().room;
+                if (!fileDataSourceLoader) {
+                  throw new Error('fileDataSourceLoader is not defined');
+                }
+                downloadedFile = await fileDataSourceLoader(ds, onProgress);
+                break;
+              }
+              case DataSourceTypes.Enum.url: {
+                const url = ds.url;
+                downloadedFile = await downloadFile(url, {
+                  ...(ds.type === DataSourceTypes.Enum.url && {
+                    method: ds.httpMethod,
+                    headers: ds.headers,
+                  }),
+                  onProgress,
+                });
+                break;
+              }
+            }
             setRoomFileProgress(fileName, {status: 'done'});
             updateTotalFileDownloadProgress();
             const {db} = get();
             await db.connector.loadFile(
-              new File([downloadedFile], fileName),
+              downloadedFile instanceof File
+                ? downloadedFile
+                : new File([downloadedFile], fileName),
               ds.tableName,
               ds.loadOptions,
             );
