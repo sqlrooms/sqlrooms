@@ -41,6 +41,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   const processContent = (originalContent: string) => {
     let processedContent = originalContent;
     const thinkContents: string[] = [];
+    const isCompleteThink: boolean[] = [];
     let index = 0;
 
     // Replace complete think tags
@@ -53,6 +54,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       if (completeMatch[0] && completeMatch[1]) {
         const content = completeMatch[1].trim();
         thinkContents.push(content);
+        isCompleteThink.push(true);
         const marker = `\n\n<think-block data-index="${index}"></think-block>\n\n`;
         processedContent = processedContent.replace(completeMatch[0], marker);
         index++;
@@ -66,14 +68,17 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     if (incompleteMatch && incompleteMatch[0] && incompleteMatch[1]) {
       const content = incompleteMatch[1].trim();
       thinkContents.push(content);
+      isCompleteThink.push(false);
       const marker = `\n\n<think-block data-index="${index}"></think-block>\n\n`;
       processedContent = processedContent.replace(incompleteMatch[0], marker);
     }
 
-    return {processedContent, thinkContents};
+    return {processedContent, thinkContents, isCompleteThink};
   };
 
-  const {processedContent, thinkContents} = processContent(props.content);
+  const {processedContent, thinkContents, isCompleteThink} = processContent(
+    props.content,
+  );
 
   return (
     <div className="flex flex-col gap-5">
@@ -90,11 +95,14 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
             'think-block': (thinkBlock) => {
               const index = parseInt(thinkBlock.props?.['data-index'] || '0');
               const content = thinkContents[index] || '';
+              const isComplete = isCompleteThink[index] || false;
 
               const isExpanded = expandedThink.has(content);
-              const displayText = isExpanded ? content : truncateText(content);
+              // Only truncate if the think block is complete
+              const displayText =
+                isComplete && !isExpanded ? truncateText(content) : content;
               const needsTruncation =
-                content.split(' ').length > THINK_WORD_LIMIT;
+                isComplete && content.split(' ').length > THINK_WORD_LIMIT;
 
               return (
                 <div key={`think-${index}`} className="inline-block">
