@@ -1,5 +1,9 @@
 export const DEFAULT_MODEL = 'gpt-4o-mini';
 
+// Constants for commonly used values
+export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';
+export const CUSTOM_MODEL_NAME = 'custom';
+
 export const LLM_MODELS = [
   {
     name: 'openai',
@@ -32,6 +36,6 @@ export const LLM_MODELS = [
   },
   {
     name: 'ollama',
-    models: ['MFDoom/deepseek-r1-tool-calling:8b'],
+    models: ['qwen3:32b', 'qwen3', CUSTOM_MODEL_NAME],
   },
 ];
