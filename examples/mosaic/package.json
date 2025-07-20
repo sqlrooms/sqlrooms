@@ -29,7 +29,7 @@
     "zustand": "^5.0.5"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.29.1-dev249.0",
+    "@duckdb/duckdb-wasm": "^1.29.1",
     "apache-arrow": "17.0.0"
   },
   "peerDependencies": {
