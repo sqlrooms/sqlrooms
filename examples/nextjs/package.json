@@ -23,7 +23,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "tailwind-merge": "^2.6.0",
-    "zod": "^3.25.57"
+    "zod": "^3.25.73"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.1.8",

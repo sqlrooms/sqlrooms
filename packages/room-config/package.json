@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@sqlrooms/layout-config": "workspace:*",
-    "zod": "^3.25.57"
+    "zod": "^3.25.73"
   },
   "peerDependencies": {
     "react": ">=18"

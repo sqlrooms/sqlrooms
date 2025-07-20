@@ -33,7 +33,7 @@
     "immer": "^10.1.1",
     "lucide-react": "^0.475.0",
     "react-markdown": "^9.1.0",
-    "zod": "^3.25.57"
+    "zod": "^3.25.73"
   },
   "peerDependencies": {
     "react": ">=18",

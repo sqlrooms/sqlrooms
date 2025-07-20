@@ -26,7 +26,7 @@
     "react-vega": "^7.6.0",
     "vega": "^5.33.0",
     "vega-lite": "^5.23.0",
-    "zod": "^3.25.57"
+    "zod": "^3.25.73"
   },
   "peerDependencies": {
     "react": ">=18",

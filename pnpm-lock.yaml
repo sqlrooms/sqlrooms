@@ -180,7 +180,7 @@ importers:
         specifier: ^2.2.2
         version: 2.2.2
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -274,7 +274,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -374,7 +374,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -474,7 +474,7 @@ importers:
         specifier: ^8.0.4
         version: 8.0.4(maplibre-gl@5.6.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -702,7 +702,7 @@ importers:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -796,7 +796,7 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
     devDependencies:
       '@tailwindcss/postcss':
@@ -863,8 +863,8 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: 3.25.57
-        version: 3.25.57
+        specifier: ^3.25.73
+        version: 3.25.73
       zustand:
         specifier: 5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
@@ -951,8 +951,8 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: 3.25.57
-        version: 3.25.57
+        specifier: ^3.25.73
+        version: 3.25.73
       zustand:
         specifier: 5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
@@ -1054,7 +1054,7 @@ importers:
         specifier: ^9.1.0
         version: 9.1.0(@types/react@19.1.7)(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/cosmos:
@@ -1084,7 +1084,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1150,7 +1150,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/dropzone:
@@ -1192,7 +1192,7 @@ importers:
         specifier: ^10.1.1
         version: 10.1.1
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1211,7 +1211,7 @@ importers:
   packages/duckdb-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/layout:
@@ -1247,7 +1247,7 @@ importers:
   packages/layout-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/monaco-editor:
@@ -1408,7 +1408,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/room-shell:
@@ -1453,7 +1453,7 @@ importers:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1471,7 +1471,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1495,7 +1495,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/schema-tree:
@@ -1592,7 +1592,7 @@ importers:
         specifier: ^7.57.0
         version: 7.57.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1614,7 +1614,7 @@ importers:
   packages/sql-editor-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/ui:
@@ -1734,7 +1734,7 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/utils:
@@ -1810,7 +1810,7 @@ importers:
         specifier: ^5.23.0
         version: 5.23.0(vega@5.33.0(encoding@0.1.13))
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
 packages:
@@ -11089,9 +11089,6 @@ packages:
     engines: {node: '>=18.0.0'}
     peerDependencies:
       zod: ^3.18.0
-
-  zod@3.25.57:
-    resolution: {integrity: sha512-6tgzLuwVST5oLUxXTmBqoinKMd3JeesgbgseXeFasKKj8Q1FCZrHnbqJOyiEvr4cVAlbug+CgIsmJ8cl/pU5FA==}
 
   zod@3.25.73:
     resolution: {integrity: sha512-fuIKbQAWQl22Ba5d1quwEETQYjqnpKVyZIWAhbnnHgnDd3a+z4YgEfkI5SZ2xMELnLAXo/Flk2uXgysZNf0uaA==}
@@ -22728,8 +22725,6 @@ snapshots:
   zod-validation-error@2.1.0(zod@3.25.73):
     dependencies:
       zod: 3.25.73
-
-  zod@3.25.57: {}
 
   zod@3.25.73: {}
 

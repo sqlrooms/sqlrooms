@@ -37,7 +37,7 @@
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
     "react-mosaic-component": "5.3.0",
-    "zod": "^3.25.57",
+    "zod": "^3.25.73",
     "zustand": "^5.0.5"
   },
   "peerDependencies": {

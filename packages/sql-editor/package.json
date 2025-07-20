@@ -44,7 +44,7 @@
     "lucide-react": "^0.474.0",
     "monaco-editor": "^0.52.2",
     "react-hook-form": "^7.57.0",
-    "zod": "^3.25.57",
+    "zod": "^3.25.73",
     "zustand": "^5.0.5"
   },
   "peerDependencies": {
