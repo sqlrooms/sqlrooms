@@ -6,7 +6,8 @@
       "exact": false,
       "createRelease": "github",
       "syncWorkspaceLock": true,
-      "forcePublish": true
+      "forcePublish": true,
+      "premajorVersionBump": "force-patch"
     },
     "publish": {
       "conventionalCommits": true,
@@ -14,7 +15,5 @@
     }
   },
   "$schema": "node_modules/@lerna-lite/cli/schemas/lerna-schema.json",
-  "packages": [
-    "packages/*"
-  ]
+  "packages": ["packages/*"]
 }
