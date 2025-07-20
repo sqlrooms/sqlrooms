@@ -200,13 +200,13 @@ export type RoomState = RoomState<RoomConfig>;
 2. Create your room store:
 
 ```typescript
-import {createRoomSlice, createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomShellSlice, createRoomStore} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<RoomConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       // config holds all state that should be persisted between sessions
       config: {
         title: 'My SQLRooms Room',
@@ -255,7 +255,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       // Store configuration as shown above
-      ...createRoomSlice<RoomConfig>({
+      ...createRoomShellSlice<RoomConfig>({
         config: {
           title: 'My SQLRooms Room',
           // ...other configuration

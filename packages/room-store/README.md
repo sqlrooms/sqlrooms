@@ -21,7 +21,7 @@ The `RoomState` is the object that defines the shape of the store. It has two ma
 
 ### Slices
 
-A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
+A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomShellSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
 
 ## Basic Usage
 
@@ -30,7 +30,7 @@ Here's an example of how to create a room store with a custom feature slice.
 ```typescript
 import {
   createRoomStore,
-  createRoomSlice,
+  createRoomShellSlice,
   RoomState,
 } from '@sqlrooms/room-store';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
@@ -65,7 +65,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
   MyRoomConfig,
   MyRoomState
 >((set, get, store) => ({
-  ...createRoomSlice<MyRoomConfig>({
+  ...createRoomShellSlice<MyRoomConfig>({
     config: {
       // You can provide initial values for your config here
       title: 'My First Room',

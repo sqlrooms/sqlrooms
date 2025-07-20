@@ -32,6 +32,6 @@ export const LLM_MODELS = [
   },
   {
     name: 'ollama',
-    models: ['MFDoom/deepseek-r1-tool-calling:8b'],
+    models: ['qwen3:32b'],
   },
 ];
