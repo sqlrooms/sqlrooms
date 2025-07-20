@@ -28,10 +28,6 @@
     "zod": "^3.25.73",
     "zustand": "^5.0.5"
   },
-  "overrides": {
-    "@duckdb/duckdb-wasm": "^1.29.1",
-    "apache-arrow": "17.0.0"
-  },
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18"
