@@ -63,6 +63,9 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Build examples
+        run: pnpm build:examples
+
       - name: Lint
         run: pnpm lint
 
