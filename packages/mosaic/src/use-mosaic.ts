@@ -25,6 +25,7 @@ async function getMosaicConnector(duckDb: DuckDbConnector) {
   await duckDb.initialize();
   mosaicConnector = await coordinator().databaseConnector(
     wasmConnector({
+      // @ts-ignore - We install a different version of duckdb-wasm
       duckDb: duckDb.getDb(),
       // @ts-ignore - We install a different version of duckdb-wasm
       connection: duckDb.getConnection(),

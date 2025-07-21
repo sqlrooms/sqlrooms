@@ -8,7 +8,7 @@ import {fileURLToPath} from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const DUCKDB_VERSION = 'v1.3.1';
+const DUCKDB_VERSION = 'v1.3.2';
 const BUNDLE = 'wasm_eh';
 const EXTENSIONS = ['json'];
 const DEST_DIR = path.resolve(__dirname, `../public/extensions`);

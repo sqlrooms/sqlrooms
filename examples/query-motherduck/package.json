@@ -20,7 +20,7 @@
     "lucide-react": "0.501.0",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "zod": "3.25.57",
+    "zod": "^3.25.73",
     "zustand": "5.0.5",
     "monaco-editor": "^0.52.2",
     "@sqlrooms/monaco-editor": "workspace:*"

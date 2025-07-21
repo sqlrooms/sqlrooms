@@ -79,8 +79,11 @@
   "pnpm": {
     "overrides": {
       "typescript": "5.8.3",
+      "react": "19.1.0",
+      "react-dom": "19.1.0",
       "@types/react": "19.1.7",
-      "@types/react-dom": "19.1.6"
+      "@types/react-dom": "19.1.6",
+      "@duckdb/duckdb-wasm": "1.29.1-dev263.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

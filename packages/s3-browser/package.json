@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/s3-browser",
-  "version": "0.23.0",
+  "version": "0.24.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -25,7 +25,7 @@
     "@sqlrooms/utils": "workspace:*",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
-    "zod": "^3.25.57",
+    "zod": "^3.25.73",
     "zustand": "^5.0.3"
   },
   "peerDependencies": {
