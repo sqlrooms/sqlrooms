@@ -8,11 +8,17 @@ import {
 } from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
 import {z} from 'zod';
+import {
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceConfig,
+  SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
 
 /**
  * Room config for saving
  */
-export const RoomConfig = BaseRoomConfig.extend({
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig).extend({
   // Add custom config here
 });
 export type RoomConfig = z.infer<typeof RoomConfig>;
@@ -20,9 +26,10 @@ export type RoomConfig = z.infer<typeof RoomConfig>;
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & {
-  // Add custom state type definitions here (fields and methods)
-};
+export type RoomState = RoomShellSliceState<RoomConfig> &
+  SqlEditorSliceState & {
+    // Add custom state type definitions here (fields and methods)
+  };
 
 /**
  * Create a customized room store
@@ -39,6 +46,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
           },
         ],
+        ...createDefaultSqlEditorConfig(),
       },
       room: {
         panels: {
@@ -51,5 +59,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       },
     })(set, get, store),
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
   }),
 );

@@ -3,11 +3,11 @@ import {ExtendedTool} from '@openassistant/utils';
 import {createId} from '@paralleldrive/cuid2';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
+  BaseRoomConfig,
   createSlice,
   RoomShellSliceState,
   useBaseRoomShellStore,
   type StateCreator,
-  BaseRoomConfig,
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';

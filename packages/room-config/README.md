@@ -42,14 +42,14 @@ Room configuration is designed to be saved and restored between sessions. Here's
 
 ```tsx
 import {persist} from 'zustand/middleware';
-import {createRoomStore, createRoomSlice} from '@sqlrooms/room-shell';
+import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 
 // Create a store with persistence for configuration
 const {useRoomStore} = createRoomStore(
   persist(
     (set, get, store) => ({
-      ...createRoomSlice({
+      ...createRoomShellSlice({
         // Config is stored at the root level of state for persisting the app state
         config: {
           title: 'My Room',

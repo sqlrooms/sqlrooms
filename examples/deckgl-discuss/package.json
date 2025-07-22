@@ -24,7 +24,7 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-map-gl": "^8.0.4",
-    "zod": "^3.25.57",
+    "zod": "^3.25.73",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

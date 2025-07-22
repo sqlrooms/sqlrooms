@@ -63,7 +63,7 @@ The SQL Editor requires a properly configured store with the SQL Editor slice:
 
 ```tsx
 import {
-  createRoomSlice,
+  createRoomShellSlice,
   createRoomStore,
   RoomState,
 } from '@sqlrooms/room-shell';
@@ -87,7 +87,7 @@ export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<RoomConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
         // ... other room config
@@ -182,7 +182,7 @@ import {
   SqlEditorSliceConfig,
 } from '@sqlrooms/sql-editor';
 import {
-  createRoomSlice,
+  createRoomShellSlice,
   createRoomStore,
   RoomState,
   RoomShell,
@@ -201,7 +201,7 @@ export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice<RoomConfig>({
+    ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
         // ... other room config
@@ -425,7 +425,7 @@ config.sqlEditor.selectedQueryId = 'default';
 
 // Use in store creation
 const {roomStore} = createRoomStore({
-  ...createRoomSlice({
+  ...createRoomShellSlice({
     config: {
       ...config,
       // other config options

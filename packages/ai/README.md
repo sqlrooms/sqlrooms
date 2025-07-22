@@ -50,7 +50,7 @@ npm install @ai-sdk/xai
 ollama LLM provider:
 
 ```bash
-npm install ollama-ai-provider
+npm install ollama-ai-provider-v2
 ```
 
 ## Basic Usage
@@ -64,7 +64,7 @@ import {createRoomStore} from '@sqlrooms/room-shell';
 // Create a room store with AI capabilities
 const {roomStore, useRoomStore} = createRoomStore({
   // Base room configuration
-  ...createRoomSlice({
+  ...createRoomShellSlice({
     config: {
       // Your room configuration
       ...createDefaultAiConfig(), // Default AI configuration
@@ -111,7 +111,7 @@ import {
   createSqlEditorSlice,
   createDefaultSqlEditorConfig,
 } from '@sqlrooms/sql-editor';
-import {createRoomStore, createRoomSlice} from '@sqlrooms/room-shell';
+import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
 
 // Define your application state type
 export type RoomState = RoomState<RoomConfig> &
@@ -122,7 +122,7 @@ export type RoomState = RoomState<RoomConfig> &
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice({
+    ...createRoomShellSlice({
       config: {
         // Your base configuration
         ...createDefaultAiConfig({

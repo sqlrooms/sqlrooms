@@ -124,7 +124,7 @@ When using the combined configuration type in your store, you can ensure that al
 
 ```typescript
 // Using the combined RoomConfig in the store
-...createRoomSlice<RoomConfig>({
+...createRoomShellSlice<RoomConfig>({
   config: {
     // AI slice configuration
     ...createDefaultAiConfig(),

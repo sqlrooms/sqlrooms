@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/duckdb-config",
-  "version": "0.24.0",
+  "version": "0.24.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "zod": "^3.25.57"
+    "zod": "^3.25.73"
   },
   "scripts": {
     "dev": "tsc -w",

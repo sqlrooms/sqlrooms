@@ -41,7 +41,7 @@ The room-shell package uses Zustand for state management. You can create a custo
 
 ```tsx
 import {
-  createRoomSlice,
+  createRoomShellSlice,
   createRoomStore,
   RoomState,
   BaseRoomConfig,
@@ -67,7 +67,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
   MyRoomState
 >((set, get, store) => ({
   // Base room slice with initial configuration
-  ...createRoomSlice<MyRoomConfig>({
+  ...createRoomShellSlice<MyRoomConfig>({
     config: {
       title: 'My Room',
       layout: {
@@ -120,7 +120,7 @@ The room configuration is designed to be persisted between sessions. You can use
 ```tsx
 import {persist} from 'zustand/middleware';
 import {
-  createRoomSlice,
+  createRoomShellSlice,
   createRoomStore,
   RoomState,
   BaseRoomConfig,
@@ -147,7 +147,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<MyRoomConfig>({
+      ...createRoomShellSlice<MyRoomConfig>({
         config: {
           title: 'My Room',
           layout: {
@@ -187,7 +187,7 @@ For larger applications, you can organize your state into feature slices:
 
 ```tsx
 import {
-  createRoomSlice,
+  createRoomShellSlice,
   createRoomStore,
   RoomState,
 } from '@sqlrooms/room-shell';
@@ -206,7 +206,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
   RoomState
 >((set, get, store) => ({
   // Base room slice
-  ...createRoomSlice<MyRoomConfig>({
+  ...createRoomShellSlice<MyRoomConfig>({
     config: {
       /* initial config */
     },
