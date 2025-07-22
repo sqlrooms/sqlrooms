@@ -8,6 +8,7 @@ overrides:
   typescript: 5.8.3
   react: 19.1.0
   react-dom: 19.1.0
+  '@duckdb/duckdb-wasm': 1.29.1-dev263.0
 
 importers:
 
@@ -179,7 +180,7 @@ importers:
         specifier: ^2.2.2
         version: 2.2.2
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -273,7 +274,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -373,7 +374,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -473,7 +474,7 @@ importers:
         specifier: ^8.0.4
         version: 8.0.4(maplibre-gl@5.6.0)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -701,7 +702,7 @@ importers:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -764,6 +765,9 @@ importers:
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
@@ -792,7 +796,7 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
     devDependencies:
       '@tailwindcss/postcss':
@@ -859,8 +863,8 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: 3.25.57
-        version: 3.25.57
+        specifier: ^3.25.73
+        version: 3.25.73
       zustand:
         specifier: 5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
@@ -947,8 +951,8 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: 3.25.57
-        version: 3.25.57
+        specifier: ^3.25.73
+        version: 3.25.73
       zustand:
         specifier: 5.0.5
         version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
@@ -1053,7 +1057,7 @@ importers:
         specifier: ^7.0.0
         version: 7.0.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/cosmos:
@@ -1083,7 +1087,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1149,7 +1153,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/dropzone:
@@ -1167,8 +1171,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.1-dev249.0
-        version: 1.29.1-dev249.0
+        specifier: 1.29.1-dev263.0
+        version: 1.29.1-dev263.0
       '@sqlrooms/duckdb-config':
         specifier: workspace:*
         version: link:../duckdb-config
@@ -1191,7 +1195,7 @@ importers:
         specifier: ^10.1.1
         version: 10.1.1
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1210,7 +1214,7 @@ importers:
   packages/duckdb-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/layout:
@@ -1246,7 +1250,7 @@ importers:
   packages/layout-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/monaco-editor:
@@ -1407,7 +1411,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/room-shell:
@@ -1452,7 +1456,7 @@ importers:
         specifier: 5.3.0
         version: 5.3.0(@types/node@24.0.0)(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1470,7 +1474,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1494,7 +1498,7 @@ importers:
         specifier: 19.1.0
         version: 19.1.0
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/schema-tree:
@@ -1591,7 +1595,7 @@ importers:
         specifier: ^7.57.0
         version: 7.57.0(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
       zustand:
         specifier: ^5.0.5
@@ -1613,7 +1617,7 @@ importers:
   packages/sql-editor-config:
     dependencies:
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/ui:
@@ -1733,7 +1737,7 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(react@19.1.0)
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
   packages/utils:
@@ -1809,7 +1813,7 @@ importers:
         specifier: ^5.23.0
         version: 5.23.0(vega@5.33.0(encoding@0.1.13))
       zod:
-        specifier: ^3.25.57
+        specifier: ^3.25.73
         version: 3.25.73
 
 packages:
@@ -2868,11 +2872,8 @@ packages:
       search-insights:
         optional: true
 
-  '@duckdb/duckdb-wasm@1.29.0':
-    resolution: {integrity: sha512-8Zq7vafQuIz9gklC/9375KE38UlkaS2n8+yvG+/JK7irm3DjwYNJHL4xfplIj0bSHFIg6we5XhWYFqtE/vO3+Q==}
-
-  '@duckdb/duckdb-wasm@1.29.1-dev249.0':
-    resolution: {integrity: sha512-2Xp7urbIhuyZxfIY2+x5b870JOu34S1Y4w+PRn22V/cMk1+GdeEJRpclnLDIZQEP/ABLigIWbR4z4rUEwNXn4g==}
+  '@duckdb/duckdb-wasm@1.29.1-dev263.0':
+    resolution: {integrity: sha512-UvNtLdWsbdf+w2+ODXJohgw5NUlraYNjTQQiAzt2Ya0fxbaxkcwuYNUa/lKCJ3q4PqD7gPZcjL2LLF+aA4BwbA==}
 
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
@@ -11150,9 +11151,6 @@ packages:
     peerDependencies:
       zod: ^3.18.0
 
-  zod@3.25.57:
-    resolution: {integrity: sha512-6tgzLuwVST5oLUxXTmBqoinKMd3JeesgbgseXeFasKKj8Q1FCZrHnbqJOyiEvr4cVAlbug+CgIsmJ8cl/pU5FA==}
-
   zod@3.25.73:
     resolution: {integrity: sha512-fuIKbQAWQl22Ba5d1quwEETQYjqnpKVyZIWAhbnnHgnDd3a+z4YgEfkI5SZ2xMELnLAXo/Flk2uXgysZNf0uaA==}
 
@@ -12862,11 +12860,7 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
-  '@duckdb/duckdb-wasm@1.29.0':
-    dependencies:
-      apache-arrow: 17.0.0
-
-  '@duckdb/duckdb-wasm@1.29.1-dev249.0':
+  '@duckdb/duckdb-wasm@1.29.1-dev263.0':
     dependencies:
       apache-arrow: 17.0.0
 
@@ -16149,7 +16143,7 @@ snapshots:
 
   '@uwdata/mosaic-core@0.16.2':
     dependencies:
-      '@duckdb/duckdb-wasm': 1.29.0
+      '@duckdb/duckdb-wasm': 1.29.1-dev263.0
       '@uwdata/flechette': 2.0.1
       '@uwdata/mosaic-sql': 0.16.2
 
@@ -22887,8 +22881,6 @@ snapshots:
   zod-validation-error@2.1.0(zod@3.25.73):
     dependencies:
       zod: 3.25.73
-
-  zod@3.25.57: {}
 
   zod@3.25.73: {}
 
