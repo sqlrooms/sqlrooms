@@ -81,7 +81,7 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
     // const panelId = visibleRoomPanels.find((p) => p === id);
     const PanelComp = panelId && panels[panelId]?.component;
     if (!PanelComp) {
-      return null;
+      return <></>;
     }
     return (
       <ErrorBoundary key={panelId}>

@@ -5,12 +5,13 @@ import {
   DuckDbConnector,
   escapeVal,
 } from '@sqlrooms/duckdb';
+import { memoizeOnce } from '@sqlrooms/utils';
 
-export async function getFunctionSuggestions(
+const getFunctionSuggestionsImpl = async (
   connector: DuckDbConnector,
   wordBeforeCursor: string,
   limit = 100,
-): Promise<Iterable<{name: string; documentation: string}>> {
+): Promise<Iterable<{name: string; documentation: string}>> => {
   const result = await connector.query(
     `SELECT     
       function_name as name,
@@ -46,7 +47,10 @@ export async function getFunctionSuggestions(
   ).map(([name, rows]) => {
     return {name, documentation: formatDocumentation(rows)};
   });
-}
+};
+
+// Memoized version of the function
+export const getFunctionSuggestions = memoizeOnce(getFunctionSuggestionsImpl);
 
 type FunctionRow = {
   name: string;
