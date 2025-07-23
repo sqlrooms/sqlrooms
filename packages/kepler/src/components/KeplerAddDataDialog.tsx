@@ -119,7 +119,7 @@ export const KeplerAddDataDialog = ({
         open={addDataModal.isOpen}
         onOpenChange={(isOpen: boolean) => !isOpen && addDataModal.onClose()}
       >
-        <DialogContent className="min-w-md min-h-[600px] max-w-4xl grid-rows-[auto,1fr]">
+        <DialogContent className="min-w-md h-[80vh] max-w-4xl grid-rows-[auto,1fr]">
           <DialogHeader>
             <DialogTitle>Add Data</DialogTitle>
             <DialogDescription>
@@ -129,7 +129,7 @@ export const KeplerAddDataDialog = ({
           </DialogHeader>
           <Tabs
             defaultValue={currentMethod}
-            className="flex h-full w-full flex-col gap-4"
+            className="flex h-full w-full flex-col gap-4 overflow-auto"
             onValueChange={(value) =>
               selectCurrentMethod(value as AddDataMethods)
             }
@@ -172,7 +172,7 @@ export const KeplerAddDataDialog = ({
             {/** TileSet*/}
             <TabsContent
               value={AddDataMethods.TileSet}
-              className="h-full w-full data-[state=inactive]:hidden"
+              className="h-full w-full data-[state=inactive]:hidden overflow-auto"
             >
               <LoadTileSetContent
                 loadTileSet={loadTileSet}
