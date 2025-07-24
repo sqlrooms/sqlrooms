@@ -42,7 +42,7 @@ export const MainView: React.FC = () => {
     currentSession?.ollamaBaseUrl || OLLAMA_DEFAULT_BASE_URL;
 
   // State for custom model name
-  const [customModelName, setCustomModelNameLocal] = useState('');
+  const [customModelNameLocal, setCustomModelNameLocal] = useState('');
 
   // Initialize custom model name from current session
   useEffect(() => {
@@ -69,16 +69,16 @@ export const MainView: React.FC = () => {
     setCustomModelNameLocal(modelName);
   };
 
-  // Debounced effect to update the custom model name in the store
+  // Debounced effect to update the custom model name in the store after user stops typing
   useEffect(() => {
     if (currentSession?.model === CUSTOM_MODEL_NAME) {
       const timeoutId = setTimeout(() => {
-        setCustomModelName(customModelName);
+        setCustomModelName(customModelNameLocal);
       }, 500); // 500ms delay
 
       return () => clearTimeout(timeoutId);
     }
-  }, [customModelName, currentSession?.model, setCustomModelName]);
+  }, [customModelNameLocal, currentSession, setCustomModelName]);
 
   // Transform LLM_MODELS into the format expected by ModelSelector
   const modelOptions = useMemo(
@@ -153,7 +153,7 @@ export const MainView: React.FC = () => {
                 className="w-[200px] pl-8"
                 type="text"
                 placeholder="e.g., llama2:7b, codellama:7b"
-                value={customModelName}
+                value={customModelNameLocal}
                 onChange={onCustomModelNameChange}
               />
             </div>
