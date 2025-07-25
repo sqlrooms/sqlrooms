@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/duckdb-config",
-  "version": "0.24.4",
+  "version": "0.24.5",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
