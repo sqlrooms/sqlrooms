@@ -27,7 +27,7 @@ const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
-- When calling query tool, please use type: 'query'
+- When using 'query' tool, please assign parameter 'type' with value 'query'
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
 - Some key DuckDB-specific functions to use:
   * regexp_matches() for regex (not regexp_like)
@@ -116,6 +116,9 @@ type AnalysisParameters = {
   /** Model identifier (e.g., 'gpt-4', 'claude-3') */
   model: string;
 
+  /** Custom model name for Ollama (used when model is 'custom') */
+  customModelName?: string;
+
   /** Authentication key for the model provider's API */
   apiKey: string;
 
@@ -133,6 +136,9 @@ type AnalysisParameters = {
 
   /** Tools to use in the analysis */
   tools?: Record<string, AiSliceTool>;
+
+  /** Base URL for Ollama provider (required when modelProvider is 'ollama') */
+  baseUrl?: string;
 
   /**
    * Function to get custom instructions for the AI assistant
@@ -160,6 +166,7 @@ export async function runAnalysis({
   tableSchemas,
   modelProvider,
   model,
+  customModelName,
   apiKey,
   prompt,
   abortController,
@@ -168,12 +175,17 @@ export async function runAnalysis({
   maxSteps = 5,
   tools = {},
   getInstructions,
+  baseUrl,
 }: AnalysisParameters) {
+  // Use custom model name if model is 'custom' and customModelName is provided
+  const actualModel =
+    model === 'custom' && customModelName ? customModelName : model;
+
   // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
-    model,
+    model: actualModel,
     apiKey,
     version: 'v1',
     instructions: getInstructions
@@ -184,6 +196,7 @@ export async function runAnalysis({
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
     ...(abortController ? {abortController} : {}),
+    ...(modelProvider === 'ollama' && baseUrl ? {baseUrl} : {}),
   });
 
   // restore ai messages from historyAnalysis?
