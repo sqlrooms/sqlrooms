@@ -435,6 +435,10 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
 
     // If the tables have changed, update the data sources
     store.subscribe((state, prevState) => {
+      if (!state) {
+        // Prevent errors in mysterious cases when state isn't passed correctly here
+        return;
+      }
       if (state.db.tables !== prevState.db.tables) {
         updateReadyDataSources();
       }
