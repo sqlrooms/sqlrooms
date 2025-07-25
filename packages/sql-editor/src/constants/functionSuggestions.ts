@@ -13,8 +13,7 @@ const getFunctionSuggestionsImpl = async (
   limit = 100,
 ): Promise<Iterable<{name: string; documentation: string}>> => {
   const result = await connector.query(
-    `SELECT *, 'qq' as examples
-     FROM duckdb_functions()
+    `SELECT * FROM duckdb_functions()
      WHERE function_name ILIKE ${escapeVal(
        wordBeforeCursor.replace(/([%_\\])/g, '\\$1') + '%',
      )} ESCAPE '\\'
