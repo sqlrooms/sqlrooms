@@ -42,7 +42,7 @@ const getFunctionSuggestionsImpl = async (
             returnType: return_type,
             examples:
               // older DuckDB versions have `example` string instead of `examples` array
-              typeof examples === 'object' && 'toArray' in examples
+              examples?.toArray instanceof Function
                 ? examples.toArray()
                 : typeof example === 'string'
                   ? [example]
