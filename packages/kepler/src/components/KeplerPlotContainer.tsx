@@ -25,6 +25,7 @@ export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
       keplerState !== undefined
         ? {
             ...KEPLER_PROPS,
+            mapboxApiAccessToken: KEPLER_PROPS.mapboxApiAccessToken || keplerState?.mapStyle?.mapboxApiAccessToken || '',
             ...keplerState,
             ...keplerActions,
             id: mapId,
