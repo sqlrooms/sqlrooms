@@ -19,7 +19,7 @@ export type QueryDataTableProps = {
 
 const QueryDataTable: FC<QueryDataTableProps> = ({
   className,
-  fontSize = 'text-base',
+  fontSize = 'text-xs',
   query,
   renderActions = (query) => <QueryDataTableActionsMenu query={query} />,
 }) => {

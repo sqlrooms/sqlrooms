@@ -61,7 +61,7 @@ export type DataTablePaginatedProps<Data extends object> = {
  */
 export default function DataTablePaginated<Data extends object>({
   className,
-  fontSize = 'text-base',
+  fontSize = 'text-xs',
   data,
   columns,
   numRows,
