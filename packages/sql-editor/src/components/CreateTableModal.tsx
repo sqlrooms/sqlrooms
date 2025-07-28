@@ -169,12 +169,19 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
 };
 
 const CreateTableModal: FC<CreateTableModalProps> = (props) => {
-  const {isOpen, onClose} = props;
+  const {isOpen, onClose, query, editDataSource, onAddOrUpdateSqlQuery} = props;
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-[800px]">
-        {isOpen && <CreateTableForm {...props} />}
+        {isOpen && (
+          <CreateTableForm
+            query={query}
+            onClose={onClose}
+            editDataSource={editDataSource}
+            onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
