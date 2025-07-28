@@ -13,7 +13,7 @@ import {
 
 export const defaultRenderTableNodeMenuItems = (
   nodeObject: TableNodeObject,
-  tableModal: ReturnType<typeof useDisclosure>,
+  viewTableModal?: ReturnType<typeof useDisclosure>,
 ) => {
   const {database, schema, name} = nodeObject;
   const qualifiedTableName = makeQualifiedTableName({
@@ -23,15 +23,16 @@ export const defaultRenderTableNodeMenuItems = (
   });
   return (
     <>
-      <TreeNodeActionsMenuItem
-        onClick={() => {
-          tableModal.onOpen();
-        }}
-      >
-        <EyeIcon width="15px" />
-        View table
-      </TreeNodeActionsMenuItem>
-
+      {viewTableModal && (
+        <TreeNodeActionsMenuItem
+          onClick={() => {
+            viewTableModal.onOpen();
+          }}
+        >
+          <EyeIcon width="15px" />
+          View table
+        </TreeNodeActionsMenuItem>
+      )}
       <TreeNodeActionsMenuItem
         onClick={() => {
           navigator.clipboard.writeText(qualifiedTableName.table);
