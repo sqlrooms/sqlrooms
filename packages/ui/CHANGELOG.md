@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.7 (2025-07-28)
+
+### Bug Fixes
+
+* Optional viewTableModal in defaultRenderTableNodeMenuItems ([#100](https://github.com/sqlrooms/sqlrooms/issues/100)) ([5b8c2f4](https://github.com/sqlrooms/sqlrooms/commit/5b8c2f47f1752de2fbfb9e6b41fb4c339da31876))
+
 ## 0.24.6 (2025-07-28)
 
 ### Bug Fixes
