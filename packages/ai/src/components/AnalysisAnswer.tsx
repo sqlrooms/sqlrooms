@@ -1,6 +1,7 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import Markdown from 'react-markdown';
 import rehypeRaw from 'rehype-raw';
+import {truncate} from '@sqlrooms/utils';
 import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
@@ -18,18 +19,6 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
-
-/**
- * Utility function to truncate text to a specified word limit
- */
-const truncateText = (
-  text: string,
-  maxWords: number = THINK_WORD_LIMIT,
-): string => {
-  const words = text.split(' ');
-  if (words.length <= maxWords) return text;
-  return words.slice(0, maxWords).join(' ') + '...';
-};
 
 /**
  * Processes content and extracts think content in one pass
@@ -90,7 +79,7 @@ const ThinkBlock = React.memo<{
   const {content, isComplete, index} = thinkContent;
 
   const displayText =
-    isComplete && !isExpanded ? truncateText(content) : content;
+    isComplete && !isExpanded ? truncate(content, THINK_WORD_LIMIT) : content;
   const needsTruncation =
     isComplete && content.split(' ').length > THINK_WORD_LIMIT;
 
