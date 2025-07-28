@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/discuss",
-  "version": "0.24.8",
+  "version": "0.24.9",
   "private": false,
   "type": "module",
   "main": "dist/index.js",
