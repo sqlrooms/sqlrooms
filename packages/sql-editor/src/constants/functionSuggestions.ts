@@ -5,27 +5,20 @@ import {
   DuckDbConnector,
   escapeVal,
 } from '@sqlrooms/duckdb';
+import {memoizeOnce} from '@sqlrooms/utils';
 
-export async function getFunctionSuggestions(
+const getFunctionSuggestionsImpl = async (
   connector: DuckDbConnector,
   wordBeforeCursor: string,
   limit = 100,
-): Promise<Iterable<{name: string; documentation: string}>> {
+): Promise<Iterable<{name: string; documentation: string}>> => {
   const result = await connector.query(
-    `SELECT     
-      function_name as name,
-      function_type as type,
-      return_type as returnType,
-      examples,
-      parameters,
-      parameter_types as parameterTypes,
-      description
-     FROM duckdb_functions()
-     WHERE name ILIKE ${escapeVal(
+    `SELECT * FROM duckdb_functions()
+     WHERE function_name ILIKE ${escapeVal(
        wordBeforeCursor.replace(/([%_\\])/g, '\\$1') + '%',
      )} ESCAPE '\\'
-     AND REGEXP_MATCHES(name,'^[A-Z]', 'i')
-     ORDER BY name
+     AND REGEXP_MATCHES(function_name, '^[A-Z]', 'i')
+     ORDER BY function_name
      LIMIT ${limit}
      `,
   );
@@ -33,12 +26,30 @@ export async function getFunctionSuggestions(
   return Array.from(
     groupFunctionsByName(
       Array.from(createTypedRowAccessor({arrowTable: result})).map(
-        (row: FunctionRow) => {
+        ({
+          function_name,
+          function_type,
+          return_type,
+          example, // older DuckDB versions
+          examples,
+          parameters,
+          parameter_types,
+          description,
+        }: Record<string, any>) => {
           return {
-            ...row,
-            parameterTypes: Array.from(row.parameterTypes),
-            parameters: Array.from(row.parameters),
-            examples: Array.from(row.examples),
+            name: function_name,
+            type: function_type,
+            returnType: return_type,
+            examples:
+              // older DuckDB versions have `example` string instead of `examples` array
+              examples?.toArray instanceof Function
+                ? examples.toArray()
+                : typeof example === 'string'
+                  ? [example]
+                  : [],
+            parameters: Array.from(parameters),
+            parameterTypes: Array.from(parameter_types),
+            description: description,
           };
         },
       ),
@@ -46,7 +57,10 @@ export async function getFunctionSuggestions(
   ).map(([name, rows]) => {
     return {name, documentation: formatDocumentation(rows)};
   });
-}
+};
+
+// Memoized version of the function
+export const getFunctionSuggestions = memoizeOnce(getFunctionSuggestionsImpl);
 
 type FunctionRow = {
   name: string;

@@ -54,7 +54,7 @@ const DataTableModal: FC<{
         aria-describedby="data-table-modal"
       >
         <DialogHeader>
-          <DialogTitle>{title ? `Table "${title}"` : ''}</DialogTitle>
+          <DialogTitle>{title ?? ''}</DialogTitle>
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         <div className="bg-muted flex-1 overflow-hidden">

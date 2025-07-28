@@ -7,6 +7,15 @@ import {SqlMonacoEditor} from '../SqlMonacoEditor';
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 type MonacoInstance = typeof Monaco;
 
+const MONACO_OPTIONS = {
+  scrollBeyondLastLine: false,
+  automaticLayout: true,
+  minimap: {enabled: false},
+  wordWrap: 'on',
+  quickSuggestions: true,
+  suggestOnTriggerCharacters: true,
+};
+
 export const QueryEditorPanelEditor: React.FC<{
   className?: string;
   queryId: string;
@@ -37,7 +46,7 @@ export const QueryEditorPanelEditor: React.FC<{
 
   // Handle editor mount
   const handleEditorMount = useCallback(
-    (editor: EditorInstance, monaco: MonacoInstance, queryId: string) => {
+    (editor: EditorInstance, monaco: MonacoInstance) => {
       editorRef.current[queryId] = editor;
       // Add keyboard shortcut for running query
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
@@ -59,17 +68,8 @@ export const QueryEditorPanelEditor: React.FC<{
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
       className={cn('h-full w-full flex-grow', className)}
-      options={{
-        scrollBeyondLastLine: false,
-        automaticLayout: true,
-        minimap: {enabled: false},
-        wordWrap: 'on',
-        quickSuggestions: true,
-        suggestOnTriggerCharacters: true,
-      }}
-      onMount={(editor: EditorInstance, monaco: MonacoInstance) => {
-        handleEditorMount(editor, monaco, queryId);
-      }}
+      options={MONACO_OPTIONS}
+      onMount={handleEditorMount}
       tableSchemas={tableSchemas}
     />
   );

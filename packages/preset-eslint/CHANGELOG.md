@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.8 (2025-07-28)
+
+### Bug Fixes
+
+* Incorrect DataTableModal import ([#101](https://github.com/sqlrooms/sqlrooms/issues/101)) ([c6c4548](https://github.com/sqlrooms/sqlrooms/commit/c6c4548aa597ad1a9622701d67fc11e731e00343))
+
+## 0.24.7 (2025-07-28)
+
+### Bug Fixes
+
+* Optional viewTableModal in defaultRenderTableNodeMenuItems ([#100](https://github.com/sqlrooms/sqlrooms/issues/100)) ([5b8c2f4](https://github.com/sqlrooms/sqlrooms/commit/5b8c2f47f1752de2fbfb9e6b41fb4c339da31876))
+
+## 0.24.6 (2025-07-28)
+
+### Bug Fixes
+
+* Create table initial query wasn't properly set ([#99](https://github.com/sqlrooms/sqlrooms/issues/99)) ([c95ca58](https://github.com/sqlrooms/sqlrooms/commit/c95ca58c64fa17a8eff4e2bad683bb9b50f26e94))
+
+## 0.24.5 (2025-07-25)
+
+### Bug Fixes
+
+* SQL editor function suggestions backward compatibility ([#97](https://github.com/sqlrooms/sqlrooms/issues/97)) ([cc08dee](https://github.com/sqlrooms/sqlrooms/commit/cc08dee7bf0a73a6cbbaaff3f5bc0fc128c049d5))
+
+## 0.24.4 (2025-07-23)
+
+### Bug Fixes
+
+* Memoize function suggestions in SqlMonacoEditor to avoid infinite loop ([#95](https://github.com/sqlrooms/sqlrooms/issues/95)) ([5860d45](https://github.com/sqlrooms/sqlrooms/commit/5860d45be538ba5ba7660d881b97a24e9702c592))
+
 ## 0.24.3 (2025-07-20)
 
 ### Bug Fixes
