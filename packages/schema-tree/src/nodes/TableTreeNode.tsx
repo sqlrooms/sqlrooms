@@ -4,7 +4,7 @@ import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
 import {CopyIcon, EyeIcon, SquareTerminalIcon, TableIcon} from 'lucide-react';
 import {FC} from 'react';
 import {useDisclosure} from '@sqlrooms/ui';
-import DataTableModal from '@sqlrooms/data-table/src/DataTableModal';
+import {DataTableModal} from '@sqlrooms/data-table';
 import {BaseTreeNode} from './BaseTreeNode';
 import {
   TreeNodeActionsMenu,
