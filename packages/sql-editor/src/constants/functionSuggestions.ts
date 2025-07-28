@@ -6,7 +6,6 @@ import {
   escapeVal,
 } from '@sqlrooms/duckdb';
 import {memoizeOnce} from '@sqlrooms/utils';
-import {memoizeOnce} from '@sqlrooms/utils';
 
 const getFunctionSuggestionsImpl = async (
   connector: DuckDbConnector,
