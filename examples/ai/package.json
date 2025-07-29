@@ -25,10 +25,10 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "^4.3.16",
+    "ai": "^4.3.19",
     "immer": "^10.1.1",
     "lucide-react": "^0.474.0",
-    "ollama-ai-provider-v2": "^0.0.5",
+    "ollama-ai-provider-v2": "0.0.6",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "superjson": "^2.2.2",
@@ -50,5 +50,8 @@
     "typescript": "5.8.3",
     "typescript-eslint": "^8.34.0",
     "vite": "^6.3.5"
+  },
+  "overrides": {
+    "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
   }
 }

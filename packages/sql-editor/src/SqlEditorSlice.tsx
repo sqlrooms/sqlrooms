@@ -338,14 +338,6 @@ export function createSqlEditorSlice<
               throw new Error('Empty query');
             }
 
-            // Execute all but the last statements with cancellation support
-            for (const statement of allButLastStatements) {
-              if (signal.aborted) {
-                throw new Error('Query aborted');
-              }
-              await connector.query(statement, {signal});
-            }
-
             if (signal.aborted) {
               throw new Error('Query aborted');
             }
@@ -360,13 +352,15 @@ export function createSqlEditorSlice<
             const isValidSelectQuery = !parsedLastStatement.error;
 
             if (isValidSelectQuery) {
-              const result = await connector.query(
+              // Add limit to the last statement
+              const queryWithLimit = [
+                ...allButLastStatements,
                 makeLimitQuery(lastQueryStatement, {
                   sanitize: false, // should already be sanitized
                   limit: get().sqlEditor.queryResultLimit,
                 }),
-                {signal},
-              );
+              ].join(';\n');
+              const result = await connector.query(queryWithLimit, {signal});
               queryResult = {
                 status: 'success',
                 type: 'select',
@@ -374,6 +368,7 @@ export function createSqlEditorSlice<
                 result,
               };
             } else {
+              // Run the complete query as it is
               if (
                 parsedLastStatement.error &&
                 parsedLastStatement.error_type !== 'not implemented'
@@ -384,9 +379,7 @@ export function createSqlEditorSlice<
                 );
               }
 
-              const result = await connector.query(lastQueryStatement, {
-                signal,
-              });
+              const result = await connector.query(query, {signal});
               // EXPLAIN and PRAGMA are not detected as select queries
               // and we cannot wrap them in a SELECT * FROM,
               // but we can still execute them and return the result
@@ -426,7 +419,6 @@ export function createSqlEditorSlice<
           } catch (e) {
             console.error(e);
             const errorMessage = e instanceof Error ? e.message : String(e);
-
             if (
               errorMessage === 'Query aborted' ||
               queryController.signal.aborted

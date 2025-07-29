@@ -33,5 +33,8 @@
     "tailwindcss": "^4.1.8",
     "tw-animate-css": "^1.3.4",
     "typescript": "5.8.3"
+  },
+  "overrides": {
+    "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
   }
 }
