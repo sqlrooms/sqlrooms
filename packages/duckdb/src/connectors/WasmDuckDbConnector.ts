@@ -120,7 +120,7 @@ export function createWasmDuckDbConnector(
     },
 
     async executeQueryInternal<T extends arrow.TypeMap = any>(
-      query: string,
+      query: string | string[],
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {
       if (!db) {
@@ -132,40 +132,11 @@ export function createWasmDuckDbConnector(
       }
 
       const localConn = await db.connect();
-      const streamPromise = localConn.send<T>(query, true);
-      let reader: arrow.RecordBatchReader<T> | null = null;
 
-      const buildTable = async () => {
-        reader = await streamPromise;
-        const batches: arrow.RecordBatch<T>[] = [];
-        let rowCount = 0;
-        for await (const batch of reader) {
-          if (batch.numRows === 0) continue;
-          batches.push(batch);
-          rowCount += batch.numRows;
-        }
-        if (rowCount === 0) {
-          return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
-        }
-        return new arrow.Table(batches);
-      };
-
-      let abortHandler: (() => void) | undefined;
-      const abortPromise = new Promise<never>((_, reject) => {
-        abortHandler = () => {
-          localConn.cancelSent().catch(() => {});
-          reader?.cancel?.();
-          reject(new Error('Query cancelled'));
-        };
-        signal.addEventListener('abort', abortHandler);
-      });
-
-      try {
-        return await Promise.race([buildTable(), abortPromise]);
-      } catch (e) {
-        // Some errors are returned as JSON, so we try to parse them
-        if (e instanceof Error) {
-          const parsed: any = safeJsonParse(e.message);
+      // Helper function to parse and throw SQL errors
+      const throwSqlError = (error: unknown, statement: string) => {
+        if (error instanceof Error) {
+          const parsed: any = safeJsonParse(error.message);
           if (
             parsed !== null &&
             typeof parsed === 'object' &&
@@ -173,15 +144,109 @@ export function createWasmDuckDbConnector(
           ) {
             throw new Error(
               `${parsed.exception_type} ${parsed.error_subtype}: ${parsed.exception_message}` +
-                `\n${getSqlErrorWithPointer(query, Number(parsed.position)).formatted}`,
+                `\n${getSqlErrorWithPointer(statement, Number(parsed.position)).formatted}`,
             );
           }
         }
-        throw e;
-      } finally {
-        if (abortHandler) {
-          signal.removeEventListener('abort', abortHandler);
+        throw error;
+      };
+
+      // Helper function to execute a single statement
+      const executeStatement = async (
+        stmt: string,
+        buildTable: boolean,
+      ): Promise<arrow.Table<T> | null> => {
+        const streamPromise = localConn.send<T>(stmt, true);
+        let reader: arrow.RecordBatchReader<T> | null = null;
+
+        try {
+          reader = await streamPromise;
+
+          if (buildTable) {
+            // Build table for the result
+            const batches: arrow.RecordBatch<T>[] = [];
+            let rowCount = 0;
+            for await (const batch of reader) {
+              if (signal.aborted) {
+                throw new Error('Query cancelled');
+              }
+              if (batch.numRows === 0) continue;
+              batches.push(batch);
+              rowCount += batch.numRows;
+            }
+            if (rowCount === 0) {
+              return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
+            }
+            return new arrow.Table(batches);
+          } else {
+            // Just consume the stream to ensure completion
+            for await (const batch of reader) {
+              if (signal.aborted) {
+                throw new Error('Query cancelled');
+              }
+              // Don't store batches, just consume them
+            }
+            return null;
+          }
+        } catch (e) {
+          throwSqlError(e, stmt);
+          return null; // Never reached, but TypeScript needs it
         }
+      };
+
+      try {
+        // Handle multiple statements by executing them individually
+        if (Array.isArray(query)) {
+          let lastResult: arrow.Table<T> | null = null;
+
+          for (let i = 0; i < query.length; i++) {
+            if (signal.aborted) {
+              throw new Error('Query cancelled');
+            }
+
+            const stmt = query[i]?.trim();
+            if (!stmt) continue; // Skip empty statements
+
+            const isLastStatement = i === query.length - 1;
+            const result = await executeStatement(stmt, isLastStatement);
+
+            if (isLastStatement && result) {
+              lastResult = result;
+            }
+          }
+
+          // Return the result from the last statement, or empty table if no statements
+          return (
+            lastResult ||
+            (arrow.tableFromArrays({}) as unknown as arrow.Table<T>)
+          );
+        } else {
+          // Single statement execution with abort handling
+          let abortHandler: (() => void) | undefined;
+          const abortPromise = new Promise<never>((_, reject) => {
+            abortHandler = () => {
+              localConn.cancelSent().catch(() => {});
+              reject(new Error('Query cancelled'));
+            };
+            signal.addEventListener('abort', abortHandler);
+          });
+
+          try {
+            const resultPromise = executeStatement(query, true);
+            const result = await Promise.race([resultPromise, abortPromise]);
+            return (
+              result || (arrow.tableFromArrays({}) as unknown as arrow.Table<T>)
+            );
+          } catch (e) {
+            throwSqlError(e, query);
+            return null as never; // Never reached
+          } finally {
+            if (abortHandler) {
+              signal.removeEventListener('abort', abortHandler);
+            }
+          }
+        }
+      } finally {
         await localConn.close();
       }
     },

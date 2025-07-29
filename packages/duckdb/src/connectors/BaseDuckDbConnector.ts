@@ -18,7 +18,7 @@ export interface BaseDuckDbConnectorImpl {
   initializeInternal?(): Promise<void>;
   destroyInternal?(): Promise<void>;
   executeQueryInternal<T extends TypeMap = any>(
-    query: string,
+    query: string | string[],
     signal: AbortSignal,
     queryId?: string,
   ): Promise<arrow.Table<T>>;
