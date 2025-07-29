@@ -353,16 +353,14 @@ export function createSqlEditorSlice<
 
             if (isValidSelectQuery) {
               // Add limit to the last statement
-              const result = await connector.query(
-                [
-                  ...allButLastStatements,
-                  makeLimitQuery(lastQueryStatement, {
-                    sanitize: false, // should already be sanitized
-                    limit: get().sqlEditor.queryResultLimit,
-                  }),
-                ].join(';\n'),
-                {signal},
-              );
+              const queryWithLimit = [
+                ...allButLastStatements,
+                makeLimitQuery(lastQueryStatement, {
+                  sanitize: false, // should already be sanitized
+                  limit: get().sqlEditor.queryResultLimit,
+                }),
+              ].join(';\n');
+              const result = await connector.query(queryWithLimit, {signal});
               queryResult = {
                 status: 'success',
                 type: 'select',
@@ -381,9 +379,7 @@ export function createSqlEditorSlice<
                 );
               }
 
-              const result = await connector.query(query, {
-                signal,
-              });
+              const result = await connector.query(query, {signal});
               // EXPLAIN and PRAGMA are not detected as select queries
               // and we cannot wrap them in a SELECT * FROM,
               // but we can still execute them and return the result
@@ -423,7 +419,6 @@ export function createSqlEditorSlice<
           } catch (e) {
             console.error(e);
             const errorMessage = e instanceof Error ? e.message : String(e);
-
             if (
               errorMessage === 'Query aborted' ||
               queryController.signal.aborted

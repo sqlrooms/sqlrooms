@@ -5,7 +5,7 @@ import {
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {splitFilePath} from '@sqlrooms/utils';
+import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {
   BaseDuckDbConnectorImpl,
@@ -13,6 +13,7 @@ import {
 } from './BaseDuckDbConnector';
 import {DuckDbConnector} from './DuckDbConnector';
 import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
+import {getSqlErrorWithPointer} from '../duckdb-utils';
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */
@@ -161,6 +162,22 @@ export function createWasmDuckDbConnector(
 
       try {
         return await Promise.race([buildTable(), abortPromise]);
+      } catch (e) {
+        // Some errors are returned as JSON, so we try to parse them
+        if (e instanceof Error) {
+          const parsed: any = safeJsonParse(e.message);
+          if (
+            parsed !== null &&
+            typeof parsed === 'object' &&
+            'exception_message' in parsed
+          ) {
+            throw new Error(
+              `${parsed.exception_type} ${parsed.error_subtype}: ${parsed.exception_message}` +
+                `\n${getSqlErrorWithPointer(query, Number(parsed.position)).formatted}`,
+            );
+          }
+        }
+        throw e;
       } finally {
         if (abortHandler) {
           signal.removeEventListener('abort', abortHandler);
