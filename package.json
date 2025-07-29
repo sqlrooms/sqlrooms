@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@10.13.1",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -68,7 +68,7 @@
     "react-dom": "^19.1.0",
     "remove": "^0.1.5",
     "shx": "^0.3.4",
-    "turbo": "^2.5.4",
+    "turbo": "^2.5.5",
     "typedoc": "0.27.9",
     "typedoc-plugin-markdown": "4.4.2",
     "typedoc-plugin-zod": "1.4.1",
@@ -81,7 +81,7 @@
       "typescript": "5.8.3",
       "react": "19.1.0",
       "react-dom": "19.1.0",
-      "@duckdb/duckdb-wasm": "1.29.1-dev263.0"
+      "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",
