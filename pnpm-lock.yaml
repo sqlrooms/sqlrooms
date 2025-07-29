@@ -8,7 +8,7 @@ overrides:
   typescript: 5.8.3
   react: 19.1.0
   react-dom: 19.1.0
-  '@duckdb/duckdb-wasm': 1.29.1-dev263.0
+  '@duckdb/duckdb-wasm': 1.29.1-dev269.0
 
 importers:
 
@@ -1171,8 +1171,8 @@ importers:
   packages/duckdb:
     dependencies:
       '@duckdb/duckdb-wasm':
-        specifier: 1.29.1-dev263.0
-        version: 1.29.1-dev263.0
+        specifier: 1.29.1-dev269.0
+        version: 1.29.1-dev269.0
       '@sqlrooms/duckdb-config':
         specifier: workspace:*
         version: link:../duckdb-config
@@ -2850,8 +2850,8 @@ packages:
       search-insights:
         optional: true
 
-  '@duckdb/duckdb-wasm@1.29.1-dev263.0':
-    resolution: {integrity: sha512-UvNtLdWsbdf+w2+ODXJohgw5NUlraYNjTQQiAzt2Ya0fxbaxkcwuYNUa/lKCJ3q4PqD7gPZcjL2LLF+aA4BwbA==}
+  '@duckdb/duckdb-wasm@1.29.1-dev269.0':
+    resolution: {integrity: sha512-ELqe4sEocqY7rVdYKzLZ7Of4khm2sO4LTv6vkC76jbzeC8FroW9GDCXu1l1+1NPqvhNa3viRieCPF7zEpuwEmA==}
 
   '@emnapi/runtime@1.4.3':
     resolution: {integrity: sha512-pBPWdu6MLKROBX05wSNKcNb++m5Er+KQ9QkB+WVM+pW2Kx9hoSrVTnu3BdkI5eBLZoKu/J6mW/B6i6bJB2ytXQ==}
@@ -12817,7 +12817,7 @@ snapshots:
     transitivePeerDependencies:
       - '@algolia/client-search'
 
-  '@duckdb/duckdb-wasm@1.29.1-dev263.0':
+  '@duckdb/duckdb-wasm@1.29.1-dev269.0':
     dependencies:
       apache-arrow: 17.0.0
 
@@ -16104,7 +16104,7 @@ snapshots:
 
   '@uwdata/mosaic-core@0.16.2':
     dependencies:
-      '@duckdb/duckdb-wasm': 1.29.1-dev263.0
+      '@duckdb/duckdb-wasm': 1.29.1-dev269.0
       '@uwdata/flechette': 2.0.1
       '@uwdata/mosaic-sql': 0.16.2
 
