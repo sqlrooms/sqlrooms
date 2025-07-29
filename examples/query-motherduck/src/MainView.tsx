@@ -44,29 +44,28 @@ export const MainView: FC = () => {
   return (
     <>
       <div className="bg-muted flex h-full flex-col">
+        <div className="bg-background flex items-center justify-end gap-2 pb-2">
+          <Button
+            variant="ghost"
+            size="xs"
+            className="h-8"
+            onClick={confirmClearTokenModal.onOpen}
+          >
+            Forget MotherDuck token
+            <XCircleIcon className="h-4 w-4" />
+          </Button>
+          <SqlReferenceButton
+            variant="ghost"
+            className="h-8"
+            url="https://motherduck.com/docs/sql-reference/"
+          />
+        </div>
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel
             defaultSize={50}
             // this is for Monaco's completion menu to not being cut off
             className="!overflow-visible"
           >
-            <div className="bg-background flex items-center justify-end gap-2 pb-2">
-              <Button
-                variant="ghost"
-                size="xs"
-                className="h-8"
-                onClick={confirmClearTokenModal.onOpen}
-              >
-                Forget MotherDuck token
-                <XCircleIcon className="h-4 w-4" />
-              </Button>
-              <SqlReferenceButton
-                variant="ghost"
-                className="h-8"
-                url="https://motherduck.com/docs/sql-reference/"
-              />
-            </div>
-
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
