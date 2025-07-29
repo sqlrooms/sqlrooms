@@ -95,7 +95,7 @@ export function createWasmDuckDbConnector(
           path: restConfig.path ?? dbPath,
         });
 
-        conn = augmentConnectionQueryError(await db.connect());
+        conn = await db.connect();
       } catch (err) {
         db = null;
         conn = null;
@@ -131,7 +131,7 @@ export function createWasmDuckDbConnector(
         throw new Error('Query aborted before execution');
       }
 
-      const localConn = augmentConnectionQueryError(await db.connect());
+      const localConn = await db.connect();
       const streamPromise = localConn.send<T>(query, true);
       let reader: arrow.RecordBatchReader<T> | null = null;
 
@@ -294,40 +294,4 @@ export function createWasmDuckDbConnector(
       return 'wasm' as const;
     },
   };
-}
-
-function augmentConnectionQueryError(conn: duckdb.AsyncDuckDBConnection) {
-  const originalQuery = conn.query;
-  conn.query = (async (q: string) => {
-    const stack = new Error().stack;
-    try {
-      return await originalQuery.call(conn, q);
-    } catch (err) {
-      throw new DuckQueryError(err, q, stack);
-    }
-  }) as typeof conn.query;
-  return conn;
-}
-
-export class DuckQueryError extends Error {
-  readonly cause: unknown;
-  readonly query: string | undefined;
-  readonly queryCallStack: string | undefined;
-  constructor(err: unknown, query: string, stack: string | undefined) {
-    super(err instanceof Error ? err.message : `${err}`);
-    this.cause = err;
-    this.query = query;
-    this.queryCallStack = stack;
-    Object.setPrototypeOf(this, DuckQueryError.prototype);
-  }
-  getDetailedMessage() {
-    const {message, query, queryCallStack: stack} = this;
-    return (
-      `DB query failed: ${message}` +
-      `\n\nFull query:\n\n${query}\n\nQuery call stack:\n\n${stack}\n\n`
-    );
-  }
-  getMessageForUser() {
-    return this.message;
-  }
 }
