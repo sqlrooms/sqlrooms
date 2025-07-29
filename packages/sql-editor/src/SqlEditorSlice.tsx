@@ -361,10 +361,13 @@ export function createSqlEditorSlice<
 
             if (isValidSelectQuery) {
               const result = await connector.query(
-                makeLimitQuery(lastQueryStatement, {
-                  sanitize: false, // should already be sanitized
-                  limit: get().sqlEditor.queryResultLimit,
-                }),
+                [
+                  ...allButLastStatements,
+                  makeLimitQuery(lastQueryStatement, {
+                    sanitize: false, // should already be sanitized
+                    limit: get().sqlEditor.queryResultLimit,
+                  }),
+                ].join(';\n'),
                 {signal},
               );
               queryResult = {
@@ -384,7 +387,7 @@ export function createSqlEditorSlice<
                 );
               }
 
-              const result = await connector.query(lastQueryStatement, {
+              const result = await connector.query(query, {
                 signal,
               });
               // EXPLAIN and PRAGMA are not detected as select queries
