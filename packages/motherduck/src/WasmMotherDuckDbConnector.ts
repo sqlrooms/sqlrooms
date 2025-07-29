@@ -48,7 +48,7 @@ export function createWasmMotherDuckDbConnector(
     },
 
     async executeQueryInternal(
-      query: string,
+      query: string | string[],
       signal: AbortSignal,
       id: string,
     ): Promise<arrow.Table> {
@@ -61,20 +61,68 @@ export function createWasmMotherDuckDbConnector(
         throw new DOMException('Query was cancelled', 'AbortError');
       }
 
-      // Not using evaluateQueuedQuery which supports cancellation
-      // because it doesn't provide arrow results
-      const result = await connection.evaluateStreamingQuery(query);
-      const batches = new Array<RecordBatch<any>>();
+      // Helper function to execute a single statement
+      const executeStatement = async (
+        stmt: string,
+        buildTable: boolean,
+      ): Promise<arrow.Table | null> => {
+        // Not using evaluateQueuedQuery which supports cancellation
+        // because it doesn't provide arrow results
+        const result = await connection.evaluateStreamingQuery(stmt);
 
-      for await (const batch of result.arrowStream) {
-        // Check for cancellation before processing each batch
-        if (signal.aborted) {
-          throw new DOMException('Query was cancelled', 'AbortError');
+        if (buildTable) {
+          // Build table for the result
+          const batches = new Array<RecordBatch<any>>();
+
+          for await (const batch of result.arrowStream) {
+            // Check for cancellation before processing each batch
+            if (signal.aborted) {
+              throw new DOMException('Query was cancelled', 'AbortError');
+            }
+            batches.push(batch);
+          }
+
+          return new arrow.Table(batches);
+        } else {
+          // Just consume the stream to ensure completion
+          for await (const batch of result.arrowStream) {
+            // Check for cancellation before processing each batch
+            if (signal.aborted) {
+              throw new DOMException('Query was cancelled', 'AbortError');
+            }
+            // Don't store the batch, just consume it
+          }
+          return null;
         }
-        batches.push(batch);
-      }
+      };
 
-      return new arrow.Table(batches);
+      // Handle multiple statements by executing them individually
+      if (Array.isArray(query)) {
+        let lastResult: arrow.Table | null = null;
+
+        for (let i = 0; i < query.length; i++) {
+          if (signal.aborted) {
+            throw new DOMException('Query was cancelled', 'AbortError');
+          }
+
+          const stmt = query[i]?.trim();
+          if (!stmt) continue; // Skip empty statements
+
+          const isLastStatement = i === query.length - 1;
+          const result = await executeStatement(stmt, isLastStatement);
+
+          if (isLastStatement && result) {
+            lastResult = result;
+          }
+        }
+
+        // Return the result from the last statement, or empty table if no statements
+        return lastResult || new arrow.Table([]);
+      } else {
+        // Single statement execution
+        const result = await executeStatement(query, true);
+        return result || new arrow.Table([]);
+      }
     },
 
     async cancelQueryInternal(queryId: string) {

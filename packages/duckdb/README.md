@@ -385,3 +385,38 @@ function AdvancedOperations() {
 ```
 
 For more information, visit the SQLRooms documentation.
+
+## Multiple Statements Support
+
+The DuckDB connectors now support executing multiple SQL statements in a single call by passing an array of strings instead of a single string:
+
+```typescript
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+
+const connector = createWasmDuckDbConnector();
+await connector.initialize();
+
+// Execute multiple statements
+const queries = [
+  'CREATE TABLE users (id INTEGER, name VARCHAR)',
+  "INSERT INTO users VALUES (1, 'Alice')",
+  "INSERT INTO users VALUES (2, 'Bob')",
+  'SELECT COUNT(*) as user_count FROM users',
+];
+
+const result = await connector.query(queries);
+console.log(result.get(0)?.user_count); // Output: 2
+```
+
+### Key Features
+
+- **Sequential Execution**: Statements are executed in order, one after another
+- **Last Result Returned**: Only the result from the last statement is returned
+- **Performance Optimized**: Intermediate statements (CREATE, INSERT, etc.) are executed efficiently without building full result tables
+- **Error Handling**: If any statement fails, execution stops and an error is thrown
+- **Cancellation Support**: The entire operation can be cancelled using AbortSignal
+- **Empty Statement Handling**: Empty or whitespace-only statements are automatically skipped
+
+### Compatibility
+
+This feature is compatible with both WasmDuckDbConnector and WasmMotherDuckDbConnector. Each statement is executed individually to ensure compatibility with older DuckDB versions that don't support multiple statements in a single call.
