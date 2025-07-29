@@ -338,14 +338,6 @@ export function createSqlEditorSlice<
               throw new Error('Empty query');
             }
 
-            // Execute all but the last statements with cancellation support
-            for (const statement of allButLastStatements) {
-              if (signal.aborted) {
-                throw new Error('Query aborted');
-              }
-              await connector.query(statement, {signal});
-            }
-
             if (signal.aborted) {
               throw new Error('Query aborted');
             }
@@ -360,6 +352,7 @@ export function createSqlEditorSlice<
             const isValidSelectQuery = !parsedLastStatement.error;
 
             if (isValidSelectQuery) {
+              // Add limit to the last statement
               const result = await connector.query(
                 [
                   ...allButLastStatements,
@@ -377,6 +370,7 @@ export function createSqlEditorSlice<
                 result,
               };
             } else {
+              // Run the complete query as it is
               if (
                 parsedLastStatement.error &&
                 parsedLastStatement.error_type !== 'not implemented'
