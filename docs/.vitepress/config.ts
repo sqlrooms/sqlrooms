@@ -68,12 +68,12 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Modular Architecture',
-            link: '/modular-architecture',
-          },
-          {
             text: 'Key Concepts',
             link: '/key-concepts',
+          },
+          {
+            text: 'Modular Architecture',
+            link: '/modular-architecture',
           },
         ],
       },
