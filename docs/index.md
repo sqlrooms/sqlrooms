@@ -82,4 +82,13 @@ function MyComponent() {
 
 That's it! You've just built an app with a flexible store and UI that can be extended with various analytics, visualization and AI modules — all powered by client-side DuckDB with no backend required.
 
+To create a new project from the minimal example, run:
+
+```sh
+npx degit sqlrooms/examples/minimal my-minimal-app/
+cd my-minimal-app
+npm install
+npm run dev
+```
+
 For a more comprehensive guide, see [Key Concepts](/key-concepts) and the [Getting Started](/getting-started) page.
