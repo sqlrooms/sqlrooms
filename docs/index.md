@@ -72,7 +72,7 @@ function MyComponent() {
     query: `SELECT max(Magnitude) AS maxMagnitude FROM earthquakes`,
     enabled: isTableReady,
   });
-  if (!isTableReady) return `Loading…`;
+  if (!isTableReady) return 'Loading…';
   const row = queryResult.data?.toArray()[0];
   return `Max earthquake magnitude: ${row?.maxMagnitude}`;
 }
