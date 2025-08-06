@@ -1,9 +1,11 @@
 /**
  * Splits a file path into its directory, name, and extension components.
+ * Preserves the original path separator style (Windows backslashes or Unix forward slashes).
  * @param filePath - The full file path to split
- * @returns An object containing the directory path, file name (without extension), and extension
+ * @returns An object containing the directory path, file name (without extension), extension, and full filename
  * @example
- * splitFilePath("path/to/file.txt") // returns { dir: "path/to", name: "file", ext: "txt" }
+ * splitFilePath("path/to/file.txt") // returns { dir: "path/to", name: "file", ext: "txt", filename: "file.txt" }
+ * splitFilePath("C:\\Users\\file.txt") // returns { dir: "C:\\Users", name: "file", ext: "txt", filename: "file.txt" }
  */
 export function splitFilePath(filePath: string): {
   dir: string;
@@ -11,17 +13,33 @@ export function splitFilePath(filePath: string): {
   ext: string;
   filename: string;
 } {
-  const pathParts = filePath.split('/');
+  // Detect the original separator used
+  const hasBackslash = filePath.includes('\\');
+  const hasForwardSlash = filePath.includes('/');
+  const separator = hasBackslash && !hasForwardSlash ? '\\' : '/';
+
+  // Handle both Windows backslashes and Unix forward slashes
+  const pathParts = filePath.split(/[/\\]/);
   const file = pathParts.pop() || '';
 
   const dotIndex = file.lastIndexOf('.');
   if (dotIndex === -1 || dotIndex === 0)
-    return {dir: pathParts.join('/'), name: file, ext: '', filename: file};
+    return {
+      dir: pathParts.join(separator),
+      name: file,
+      ext: '',
+      filename: file,
+    };
 
   const name = file.substring(0, dotIndex);
   const ext = file.substring(dotIndex + 1);
 
-  return {dir: pathParts.join('/'), name, ext, filename: `${name}.${ext}`};
+  return {
+    dir: pathParts.join(separator),
+    name,
+    ext,
+    filename: `${name}.${ext}`,
+  };
 }
 
 /**
