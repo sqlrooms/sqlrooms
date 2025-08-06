@@ -13,10 +13,8 @@ export function splitFilePath(filePath: string): {
   ext: string;
   filename: string;
 } {
-  // Detect the original separator used
-  const hasBackslash = filePath.includes('\\');
-  const hasForwardSlash = filePath.includes('/');
-  const separator = hasBackslash && !hasForwardSlash ? '\\' : '/';
+  // If backslash appears, assume Windows filesystem (backslash is not a valid path separator on Unix)
+  const separator = filePath.includes('\\') ? '\\' : '/';
 
   // Handle both Windows backslashes and Unix forward slashes
   const pathParts = filePath.split(/[/\\]/);
@@ -38,7 +36,7 @@ export function splitFilePath(filePath: string): {
     dir: pathParts.join(separator),
     name,
     ext,
-    filename: `${name}.${ext}`,
+    filename: file,
   };
 }
 
