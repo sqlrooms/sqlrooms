@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.11 (2025-08-07)
+
+### Bug Fixes
+
+* splitFilePath to support both Windows and Unix path separators ([#108](https://github.com/sqlrooms/sqlrooms/issues/108)) ([eb19a12](https://github.com/sqlrooms/sqlrooms/commit/eb19a123d9a21ccdfb6da0c61100979fab33ea56))
+
 ## 0.24.10 (2025-07-29)
 
 ### Bug Fixes
