@@ -27,7 +27,7 @@ const DEFAULT_ACCEPTED_FORMATS = [
   'json',
   'arrow',
   'shp',
-  'klm',
+  'kml',
 ];
 
 const LoadTileSet = KeplerInjector.get(LoadTileSetFactory);
