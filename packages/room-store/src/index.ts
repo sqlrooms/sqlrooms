@@ -19,6 +19,7 @@ export {
   type RoomState,
   type RoomStore,
   type TaskProgress,
+  type Slice,
   createBaseSlice,
   type RoomSlice,
   isRoomSliceWithInitialize,
