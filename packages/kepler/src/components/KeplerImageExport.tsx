@@ -131,7 +131,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
           className="w-full"
           onClick={handleExportImage}
         >
-          Export Current Map
+          Export Image
         </Button>
       </div>
     </AccordionContent>

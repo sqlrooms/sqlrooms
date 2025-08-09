@@ -1,4 +1,4 @@
-import {FC, useMemo} from 'react';
+import {FC, ReactNode, useMemo} from 'react';
 
 import {
   PlotContainerFactory,
@@ -16,7 +16,10 @@ const KEPLER_PROPS = {
   mapboxApiAccessToken: '',
 };
 
-export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
+export const KeplerPlotContainer: FC<{mapId: string; logoComponent?: ReactNode}> = ({
+  mapId,
+  logoComponent
+}) => {
   const {keplerState, keplerActions} = useKeplerStateActions({mapId});
 
   const isExportingImage = keplerState?.uiState?.exportImage?.exporting;
@@ -41,7 +44,7 @@ export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
 
   return isExportingImage && plotContainerFields ? (
     <KeplerProvider mapId={mapId}>
-      <PlotContainer {...plotContainerFields} />
+      <PlotContainer {...plotContainerFields} logoComponent={logoComponent ?? null} />
     </KeplerProvider>
   ) : null;
 };
