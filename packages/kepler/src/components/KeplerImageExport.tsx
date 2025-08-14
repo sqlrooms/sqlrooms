@@ -11,7 +11,6 @@ import {
   Checkbox,
 } from '@sqlrooms/ui';
 import type {
-  ExportImage,
   ImageRatioOption,
   ImageResolutionOption,
 } from '@kepler.gl/constants';
@@ -24,6 +23,7 @@ import {
 import {FormattedMessage} from '@kepler.gl/localization';
 import {ImagePreview} from '@kepler.gl/components';
 import {dataURItoBlob, downloadFile} from '@kepler.gl/utils';
+import {ExportImage} from '@kepler.gl/types';
 
 export interface KeplerImageExportProps {
   setExportImageSetting: (settings: Partial<ExportImage>) => void;
