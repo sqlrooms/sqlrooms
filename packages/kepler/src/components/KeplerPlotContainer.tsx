@@ -1,4 +1,4 @@
-import {FC, ReactNode, useMemo} from 'react';
+import {FC, ReactNode, useEffect, useMemo, useRef, useState} from 'react';
 
 import {
   PlotContainerFactory,
@@ -39,7 +39,8 @@ export const KeplerPlotContainer: FC<{mapId: string; logoComponent?: ReactNode}>
 
   const plotContainerFields = useMemo(
     () => (mergedKeplerProps ? plotContainerSelector(mergedKeplerProps) : null),
-    [mergedKeplerProps],
+    // include filters in deps to trigger refresh when filters change from bottom time widget
+    [mergedKeplerProps, keplerState?.visState?.filters],
   );
 
   return isExportingImage && plotContainerFields ? (
