@@ -1,4 +1,4 @@
-import {FC, ReactNode, useEffect, useMemo, useRef, useState} from 'react';
+import {FC, ReactNode, useMemo} from 'react';
 
 import {
   PlotContainerFactory,
