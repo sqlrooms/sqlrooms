@@ -22,7 +22,7 @@ export const DataPanel = () => {
           'text/parquet': ['.parquet'],
           'text/json': ['.json'],
         }}
-        onDrop={async (files) => {
+        onDrop={async (files: File[]) => {
           for (const file of files) {
             try {
               const tableName = convertToValidColumnOrTableName(file.name);
