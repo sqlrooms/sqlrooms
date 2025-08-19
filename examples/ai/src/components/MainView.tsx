@@ -69,7 +69,17 @@ export const MainView: React.FC = () => {
   };
 
   const onBaseUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setBaseUrl(e.target.value);
+    const value = e.target.value;
+    // If the input is empty, use the default provider URL
+    if (value === '') {
+      const defaultUrl =
+        PROVIDER_DEFAULT_BASE_URLS[
+          currentModelProvider as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+        ] || OLLAMA_DEFAULT_BASE_URL;
+      setBaseUrl(defaultUrl);
+    } else {
+      setBaseUrl(value);
+    }
   };
 
   const onCustomModelNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -127,14 +137,10 @@ export const MainView: React.FC = () => {
 
       <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
         <div className="flex items-center justify-end gap-2">
-          <button
-            type="button"
+          <ServerIcon
+            className="h-4 w-4 hover:cursor-pointer"
             onClick={() => setShowBaseUrlInput(!showBaseUrlInput)}
-            className="border-input bg-background hover:bg-accent hover:text-accent-foreground flex h-9 w-9 items-center justify-center rounded-md border"
-            title="Toggle server URL input"
-          >
-            <ServerIcon className="h-4 w-4" />
-          </button>
+          />
           {showBaseUrlInput && (
             <div className="relative flex items-center">
               <Input
