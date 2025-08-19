@@ -62,7 +62,7 @@ export type AiSliceState = {
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     setCustomModelName: (customModelName: string) => void;
-    setOllamaBaseUrl: (baseUrl: string) => void;
+    setBaseUrl: (baseUrl: string) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -83,7 +83,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
   customTools = {},
   getInstructions,
 }: {
-  getApiKey: (modelProvider: string) => string;
+  getApiKey?: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
   customTools?: Record<string, AiSliceTool>;
   /**
@@ -144,15 +144,15 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
         },
 
         /**
-         * Set the Ollama base URL for the current session
-         * @param baseUrl - The Ollama server URL to set
+         * Set the base URL for the current session
+         * @param baseUrl - The server URL to set
          */
-        setOllamaBaseUrl: (baseUrl: string) => {
+        setBaseUrl: (baseUrl: string) => {
           set((state) =>
             produce(state, (draft) => {
               const currentSession = getCurrentSessionFromState(draft);
               if (currentSession) {
-                currentSession.ollamaBaseUrl = baseUrl;
+                currentSession.baseUrl = baseUrl;
               }
             }),
           );
@@ -315,11 +315,11 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
               modelProvider: currentSession.modelProvider || 'openai',
               model: currentSession.model || 'gpt-4o-mini',
               customModelName: currentSession.customModelName,
-              apiKey: getApiKey(currentSession.modelProvider || 'openai'),
-              ...(currentSession.modelProvider === 'ollama' &&
-                currentSession.ollamaBaseUrl && {
-                  baseUrl: currentSession.ollamaBaseUrl,
-                }),
+              apiKey:
+                getApiKey?.(currentSession.modelProvider || 'openai') || '',
+              ...(currentSession.baseUrl && {
+                baseUrl: currentSession.baseUrl,
+              }),
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
