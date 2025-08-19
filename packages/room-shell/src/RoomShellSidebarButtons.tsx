@@ -84,7 +84,7 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
       <div className="flex flex-col gap-2">
         {panels
           ? Object.keys(panels)
-              .filter((key) => panels[key]?.placement === 'sidebar')
+              .filter((key) => panels[key]?.placement.includes('sidebar'))
               .map((type) => (
                 <RoomShellSidebarButton key={type} roomPanelType={type} />
               ))
