@@ -1,5 +1,6 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {truncate} from '@sqlrooms/utils';
 import {MessageContainer} from './MessageContainer';
@@ -175,6 +176,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       >
         <Markdown
           className="prose dark:prose-invert max-w-none text-sm"
+          remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
           components={{
             // @ts-expect-error - Custom HTML element not in react-markdown types
