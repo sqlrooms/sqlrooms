@@ -85,23 +85,24 @@ const ThinkBlock = React.memo<{
     isComplete && content.split(' ').length > THINK_WORD_LIMIT;
 
   return (
-    <div key={`think-${index}`} className="inline-block">
-      <span className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-normal text-gray-100 dark:bg-gray-800/50 dark:text-gray-400">
-        <span className="inline-flex items-start gap-2">
-          <span className="text-gray-400">
-            <span className="inline-block opacity-60 grayscale">💭</span>{' '}
-            {displayText}
-          </span>
+    <div
+      key={`think-${index}`}
+      className="inline-block rounded-lg bg-gray-50 px-3 py-2 text-sm font-normal text-gray-100 dark:bg-gray-800/50 dark:text-gray-400"
+    >
+      <span className="inline-flex items-start gap-2">
+        <span className="text-gray-400">
+          <span className="inline-block opacity-60 grayscale">💭</span>{' '}
+          {displayText}
         </span>
-        {needsTruncation && (
-          <button
-            onClick={() => onToggleExpansion(content)}
-            className="ml-2 text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
-            {isExpanded ? 'Show less' : 'Show more'}
-          </button>
-        )}
-      </span>
+      </span>{' '}
+      {needsTruncation && (
+        <button
+          onClick={() => onToggleExpansion(content)}
+          className="text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+        >
+          {isExpanded ? 'Show less' : 'Show more'}
+        </button>
+      )}
     </div>
   );
 });

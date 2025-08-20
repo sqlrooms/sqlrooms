@@ -10,9 +10,16 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  CopyButton,
 } from '@sqlrooms/ui';
 import {StreamMessagePart} from '@openassistant/core';
-import {CodeIcon, SquareTerminalIcon, TrashIcon} from 'lucide-react';
+import {
+  ClipboardIcon,
+  CodeIcon,
+  SquareTerminalIcon,
+  TrashIcon,
+  CheckIcon,
+} from 'lucide-react';
 import {useState} from 'react';
 import {AnalysisResultSchema} from '../schemas';
 import {AnalysisAnswer} from './AnalysisAnswer';
@@ -67,32 +74,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           {/** render prompt */}
           <div className="flex-1">{prompt}</div>
           <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6">
-                  <CodeIcon className="h-4 w-4" />
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent
-                className="max-h-[400px] w-[400px] overflow-auto"
-                align="end"
-                side="right"
-              >
-                <JsonMonacoEditor
-                  value={stringifyResult(result)}
-                  readOnly={true}
-                  className="h-[300px]"
-                  options={{
-                    minimap: {enabled: false},
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    folding: true,
-                    lineNumbers: false,
-                    wordWrap: 'on',
-                  }}
-                />
-              </PopoverContent>
-            </Popover>
+            <CopyButton
+              text={prompt}
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              ariaLabel="Copy prompt"
+            />
             <Button
               variant="ghost"
               size="icon"
