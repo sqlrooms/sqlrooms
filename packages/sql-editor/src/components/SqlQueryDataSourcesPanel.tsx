@@ -112,7 +112,7 @@ const SqlQueryDataSourcesPanel: FC<{
                         onClick={() => handleRemove(dataSource)}
                       >
                         <XIcon className="mr-2 h-4 w-4" />
-                        Remove from room
+                        Remove query
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
