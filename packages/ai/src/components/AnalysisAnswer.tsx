@@ -1,8 +1,11 @@
 import React, {useState, useCallback, useMemo} from 'react';
 import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {truncate} from '@sqlrooms/utils';
 import {MessageContainer} from './MessageContainer';
+import {BrainIcon} from 'lucide-react';
+import {cn} from '@sqlrooms/ui';
 
 type AnalysisAnswerProps = {
   content: string;
@@ -72,10 +75,11 @@ const processContent = (
  * ThinkBlock component for rendering individual think blocks
  */
 const ThinkBlock = React.memo<{
+  className?: string;
   thinkContent: ThinkContent;
   isExpanded: boolean;
   onToggleExpansion: (content: string) => void;
-}>(({thinkContent, isExpanded, onToggleExpansion}) => {
+}>(({thinkContent, isExpanded, onToggleExpansion, className}) => {
   const {content, isComplete, index} = thinkContent;
 
   const displayText =
@@ -84,24 +88,32 @@ const ThinkBlock = React.memo<{
     isComplete && content.split(' ').length > THINK_WORD_LIMIT;
 
   return (
-    <div key={`think-${index}`} className="inline-block">
-      <span className="rounded-lg bg-gray-50 px-3 py-2 text-sm font-normal text-gray-100 dark:bg-gray-800/50 dark:text-gray-400">
-        <span className="inline-flex items-start gap-2">
-          <span className="text-gray-400">
-            <span className="inline-block opacity-60 grayscale">💭</span>{' '}
-            {displayText}
-          </span>
+    <span
+      key={`think-${index}`}
+      className={cn(
+        'inline-block rounded-lg px-3 py-2 text-xs font-normal text-gray-100 dark:text-gray-400',
+        isExpanded && 'bg-gray-50 dark:bg-gray-800/50',
+        className,
+      )}
+    >
+      <span className="inline-flex items-start gap-2">
+        <span className="text-gray-400">
+          <BrainIcon
+            className="mb-1 inline-block opacity-60 grayscale"
+            size={12}
+          />{' '}
+          {displayText}
         </span>
-        {needsTruncation && (
-          <button
-            onClick={() => onToggleExpansion(content)}
-            className="ml-2 text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
-          >
-            {isExpanded ? 'Show less' : 'Show more'}
-          </button>
-        )}
-      </span>
-    </div>
+      </span>{' '}
+      {needsTruncation && (
+        <button
+          onClick={() => onToggleExpansion(content)}
+          className="text-xs text-gray-500 underline hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+        >
+          {isExpanded ? 'Show less' : 'Show more thinking'}
+        </button>
+      )}
+    </span>
   );
 });
 
@@ -175,6 +187,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
       >
         <Markdown
           className="prose dark:prose-invert max-w-none text-sm"
+          remarkPlugins={[remarkGfm]}
           rehypePlugins={[rehypeRaw]}
           components={{
             // @ts-expect-error - Custom HTML element not in react-markdown types
