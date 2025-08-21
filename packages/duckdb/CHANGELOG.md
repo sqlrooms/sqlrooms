@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.13 (2025-08-21)
+
+### Features
+
+* AI assistant rendering improvements ([#117](https://github.com/sqlrooms/sqlrooms/issues/117)) ([59023d9](https://github.com/sqlrooms/sqlrooms/commit/59023d95f2effdb78bf2706e819c30f275335572))
+
 ## 0.24.12 (2025-08-21)
 
 ### Bug Fixes
