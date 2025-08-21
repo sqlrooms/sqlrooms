@@ -12,6 +12,7 @@ import {
   LLM_MODELS,
   OLLAMA_DEFAULT_BASE_URL,
   CUSTOM_MODEL_NAME,
+  PROVIDER_DEFAULT_BASE_URLS,
 } from '../models';
 import {capitalize} from '@sqlrooms/utils';
 import {useMemo, useState, useEffect} from 'react';
@@ -30,7 +31,7 @@ export const MainView: React.FC = () => {
   const setProviderApiKey = useRoomStore((s) => s.setProviderApiKey);
 
   // Get AI slice functions
-  const setOllamaBaseUrl = useStoreWithAi((s) => s.ai.setOllamaBaseUrl);
+  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
   const setCustomModelName = useStoreWithAi((s) => s.ai.setCustomModelName);
 
   // The current model is from the session
@@ -38,11 +39,18 @@ export const MainView: React.FC = () => {
     currentSession?.modelProvider || LLM_MODELS[0].name;
 
   const apiKey = apiKeys[currentModelProvider] || '';
-  const ollamaBaseUrl =
-    currentSession?.ollamaBaseUrl || OLLAMA_DEFAULT_BASE_URL;
+  const baseUrl =
+    currentSession?.baseUrl ||
+    PROVIDER_DEFAULT_BASE_URLS[
+      currentModelProvider as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+    ] ||
+    OLLAMA_DEFAULT_BASE_URL;
 
   // State for custom model name
   const [customModelNameLocal, setCustomModelNameLocal] = useState('');
+
+  // State for toggling base URL input
+  const [showBaseUrlInput, setShowBaseUrlInput] = useState(false);
 
   // Initialize custom model name from current session
   useEffect(() => {
@@ -60,8 +68,18 @@ export const MainView: React.FC = () => {
     setProviderApiKey(currentModelProvider, e.target.value);
   };
 
-  const onOllamaBaseUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setOllamaBaseUrl(e.target.value);
+  const onBaseUrlChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // If the input is empty, use the default provider URL
+    if (value === '') {
+      const defaultUrl =
+        PROVIDER_DEFAULT_BASE_URLS[
+          currentModelProvider as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+        ] || OLLAMA_DEFAULT_BASE_URL;
+      setBaseUrl(defaultUrl);
+    } else {
+      setBaseUrl(value);
+    }
   };
 
   const onCustomModelNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -93,9 +111,6 @@ export const MainView: React.FC = () => {
     [],
   );
 
-  // Check if current provider is ollama
-  const isOllamaProvider = currentModelProvider === 'ollama';
-
   // Check if current model is custom
   const isCustomModel = currentSession?.model === CUSTOM_MODEL_NAME;
 
@@ -122,7 +137,22 @@ export const MainView: React.FC = () => {
 
       <QueryControls placeholder="What would you like to learn about the data?">
         <div className="flex items-center justify-end gap-2">
-          {!isOllamaProvider && (
+          <ServerIcon
+            className="h-4 w-4 hover:cursor-pointer"
+            onClick={() => setShowBaseUrlInput(!showBaseUrlInput)}
+          />
+          {showBaseUrlInput && (
+            <div className="relative flex items-center">
+              <Input
+                className="w-[200px]"
+                type="text"
+                placeholder={`${capitalize(currentModelProvider)} Server URL`}
+                value={baseUrl}
+                onChange={onBaseUrlChange}
+              />
+            </div>
+          )}
+          {currentModelProvider !== 'ollama' && (
             <div className="relative flex items-center">
               <KeyIcon className="absolute left-2 h-4 w-4" />
               <Input
@@ -134,19 +164,7 @@ export const MainView: React.FC = () => {
               />
             </div>
           )}
-          {isOllamaProvider && (
-            <div className="relative flex items-center">
-              <ServerIcon className="absolute left-2 h-4 w-4" />
-              <Input
-                className="w-[200px] pl-8"
-                type="text"
-                placeholder="Ollama Server URL"
-                value={ollamaBaseUrl}
-                onChange={onOllamaBaseUrlChange}
-              />
-            </div>
-          )}
-          {isOllamaProvider && isCustomModel && (
+          {currentModelProvider === 'ollama' && isCustomModel && (
             <div className="relative flex items-center">
               <CpuIcon className="absolute left-2 h-4 w-4" />
               <Input
