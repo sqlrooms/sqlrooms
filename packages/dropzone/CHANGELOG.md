@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.14 (2025-08-21)
+
+### Features
+
+* support connect to proxy llm server ([#116](https://github.com/sqlrooms/sqlrooms/issues/116)) ([ac3fef2](https://github.com/sqlrooms/sqlrooms/commit/ac3fef21731cb1f6484fe4d96f1a5791070e1e26))
+
 ## 0.24.13 (2025-08-21)
 
 ### Features
