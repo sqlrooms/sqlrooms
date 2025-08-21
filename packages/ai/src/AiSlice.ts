@@ -63,7 +63,7 @@ export type AiSliceState = Slice & {
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     setCustomModelName: (customModelName: string) => void;
-    setOllamaBaseUrl: (baseUrl: string) => void;
+    setBaseUrl: (baseUrl: string) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -78,14 +78,13 @@ export type AiSliceState = Slice & {
   };
 };
 
-export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
-  getApiKey,
-  initialAnalysisPrompt = '',
-  customTools = {},
-  getInstructions,
-}: {
-  getApiKey: (modelProvider: string) => string;
+/**
+ * Configuration options for creating an AI slice
+ */
+export interface AiSliceOptions {
+  /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
+  /** Custom tools to add to the AI assistant */
   customTools?: Record<string, AiSliceTool>;
   /**
    * Function to get custom instructions for the AI assistant
@@ -93,7 +92,30 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
-}): StateCreator<AiSliceState> {
+}
+
+/**
+ * API key configuration for the AI slice
+ */
+export type AiSliceApiConfig =
+  | {baseUrl: string; getApiKey?: never}
+  | {getApiKey: (modelProvider: string) => string; baseUrl?: never};
+
+/**
+ * Complete configuration for creating an AI slice
+ */
+export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
+
+export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
+  config: CreateAiSliceConfig,
+): StateCreator<AiSliceState> {
+  const {
+    getApiKey,
+    baseUrl,
+    initialAnalysisPrompt = '',
+    customTools = {},
+    getInstructions,
+  } = config;
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
@@ -145,15 +167,15 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
         },
 
         /**
-         * Set the Ollama base URL for the current session
-         * @param baseUrl - The Ollama server URL to set
+         * Set the base URL for the current session
+         * @param baseUrl - The server URL to set
          */
-        setOllamaBaseUrl: (baseUrl: string) => {
+        setBaseUrl: (baseUrl: string) => {
           set((state) =>
             produce(state, (draft) => {
               const currentSession = getCurrentSessionFromState(draft);
               if (currentSession) {
-                currentSession.ollamaBaseUrl = baseUrl;
+                currentSession.baseUrl = baseUrl;
               }
             }),
           );
@@ -316,11 +338,9 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
               modelProvider: currentSession.modelProvider || 'openai',
               model: currentSession.model || 'gpt-4o-mini',
               customModelName: currentSession.customModelName,
-              apiKey: getApiKey(currentSession.modelProvider || 'openai'),
-              ...(currentSession.modelProvider === 'ollama' &&
-                currentSession.ollamaBaseUrl && {
-                  baseUrl: currentSession.ollamaBaseUrl,
-                }),
+              apiKey:
+                getApiKey?.(currentSession.modelProvider || 'openai') || '',
+              baseUrl: currentSession.baseUrl || baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
