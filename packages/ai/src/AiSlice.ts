@@ -77,14 +77,13 @@ export type AiSliceState = {
   };
 };
 
-export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
-  getApiKey,
-  initialAnalysisPrompt = '',
-  customTools = {},
-  getInstructions,
-}: {
-  getApiKey?: (modelProvider: string) => string;
+/**
+ * Configuration options for creating an AI slice
+ */
+export interface AiSliceOptions {
+  /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
+  /** Custom tools to add to the AI assistant */
   customTools?: Record<string, AiSliceTool>;
   /**
    * Function to get custom instructions for the AI assistant
@@ -92,7 +91,30 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
-}): StateCreator<AiSliceState> {
+}
+
+/**
+ * API key configuration for the AI slice
+ */
+export type AiSliceApiConfig =
+  | {baseUrl: string; getApiKey?: never}
+  | {getApiKey: (modelProvider: string) => string; baseUrl?: never};
+
+/**
+ * Complete configuration for creating an AI slice
+ */
+export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
+
+export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
+  config: CreateAiSliceConfig,
+): StateCreator<AiSliceState> {
+  const {
+    getApiKey,
+    baseUrl,
+    initialAnalysisPrompt = '',
+    customTools = {},
+    getInstructions,
+  } = config;
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
@@ -317,9 +339,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
               customModelName: currentSession.customModelName,
               apiKey:
                 getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              ...(currentSession.baseUrl && {
-                baseUrl: currentSession.baseUrl,
-              }),
+              baseUrl: currentSession.baseUrl || baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
