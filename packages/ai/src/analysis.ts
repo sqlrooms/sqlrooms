@@ -233,6 +233,7 @@ export async function runAnalysis({
  */
 export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
+  sendSampleRowsToLLM: boolean = true,
 ): Record<string, AiSliceTool> {
   return {
     query: extendedTool({
@@ -240,7 +241,6 @@ export function getDefaultTools(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
       parameters: QueryToolParameters,
-      // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
       execute: async ({type, sqlQuery}) => {
         try {
           const connector = await store.getState().db.getConnector();
@@ -251,9 +251,10 @@ If a query fails, please don't try to run it again with the same syntax.`,
             ? arrowTableToJson(result)
             : await getQuerySummary(connector, sqlQuery);
 
-          // Get first 2 rows of the result as a json object
-          const subResult = result.slice(0, 2);
-          const firstTwoRows = arrowTableToJson(subResult);
+          // Conditionally get first 2 rows of the result as a json object
+          const firstTwoRows = sendSampleRowsToLLM
+            ? arrowTableToJson(result.slice(0, 2))
+            : [];
 
           return {
             llmResult: {
@@ -261,7 +262,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
               data: {
                 type,
                 summary: summaryData,
-                firstTwoRows,
+                ...(sendSampleRowsToLLM ? {firstTwoRows} : {}),
               },
             },
             additionalData: {

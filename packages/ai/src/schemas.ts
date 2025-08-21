@@ -88,6 +88,7 @@ export const AnalysisSessionSchema = z.object({
   model: z.string(),
   customModelName: z.string().optional(),
   ollamaBaseUrl: z.string().optional(),
+  sendSampleRowsToLLM: z.boolean().optional().default(true),
   analysisResults: z.array(AnalysisResultSchema),
   createdAt: z.coerce.date().optional(),
 });
