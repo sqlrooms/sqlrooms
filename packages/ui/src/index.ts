@@ -49,6 +49,7 @@ export * from './components/toast';
 export * from './components/toaster';
 export * from './components/toggle-group';
 export * from './components/toggle';
+export * from './components/copy-button';
 export * from './components/tooltip';
 export * from './components/tree';
 export * from './hooks/use-toast';
