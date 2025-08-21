@@ -11,7 +11,7 @@ export function QueryToolResult({title, sqlQuery}: QueryToolResultProps) {
   const tableModal = useDisclosure();
   return (
     <>
-      <div className="text-muted-foreground bg-muted relative max-h-[50px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
+      <div className="text-muted-foreground bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
         <pre className="whitespace-pre-wrap break-words pr-8">{sqlQuery}</pre>
         <div className="absolute right-1 top-1">
           <CopyButton

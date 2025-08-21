@@ -100,7 +100,7 @@ export const MainView: React.FC = () => {
   const isCustomModel = currentSession?.model === CUSTOM_MODEL_NAME;
 
   return (
-    <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
+    <div className="flex h-full w-full flex-col gap-0 overflow-hidden">
       {/* Display SessionControls at the top */}
       <div className="mb-4">
         <SessionControls />
@@ -120,13 +120,13 @@ export const MainView: React.FC = () => {
         )}
       </div>
 
-      <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+      <QueryControls placeholder="What would you like to learn about the data?">
         <div className="flex items-center justify-end gap-2">
           {!isOllamaProvider && (
             <div className="relative flex items-center">
               <KeyIcon className="absolute left-2 h-4 w-4" />
               <Input
-                className="w-[165px] pl-8"
+                className="w-[100px] pl-8 text-xs"
                 type="password"
                 placeholder={`${capitalize(currentModelProvider)} API Key`}
                 value={apiKey}
@@ -158,7 +158,7 @@ export const MainView: React.FC = () => {
               />
             </div>
           )}
-          <ModelSelector models={modelOptions} className="w-[200px]" />
+          <ModelSelector models={modelOptions} />
         </div>
       </QueryControls>
     </div>

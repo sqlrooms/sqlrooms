@@ -10,7 +10,7 @@ type QueryControlsProps = PropsWithChildren<{
 
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
-  placeholder = 'Type here what would you like to learn about the data?',
+  placeholder = 'What would you like to learn about the data?',
   children,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -56,9 +56,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     [isRunningAnalysis, model, analysisPrompt, runAnalysis],
   );
 
-  const canStart = Boolean(
-    !isRunningAnalysis && model && analysisPrompt.trim().length,
-  );
+  const canStart = Boolean(model && analysisPrompt.trim().length);
   return (
     <div
       className={cn(
@@ -66,47 +64,37 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         className,
       )}
     >
-      <div className="relative w-full overflow-hidden p-[1px]">
-        <div className="flex flex-col">
+      <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
+        <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
             ref={textareaRef}
             disabled={isRunningAnalysis}
-            className="bg-muted/50 h-[50px] resize-none"
+            className="min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
+            autoResize
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoFocus
           />
-          <div className="bg-muted/30 flex w-full items-center justify-between gap-2 p-2">
-            <div>{children}</div>
-            <div className="flex-1" />
-            <div>
-              {isRunningAnalysis && (
+          <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
+            <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
+              <div className="min-w-0 flex-1 overflow-hidden pl-2">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1">
+                  {children}
+                </div>
+              </div>
+              <div className="ml-auto shrink-0 pr-2">
                 <Button
-                  variant="outline"
-                  className="rounded-full"
-                  onClick={cancelAnalysis}
+                  className="h-8 w-8 rounded-full"
+                  variant="default"
+                  size="icon"
+                  onClick={isRunningAnalysis ? cancelAnalysis : runAnalysis}
+                  disabled={!canStart}
                 >
-                  <OctagonXIcon className="h-4 w-4" />
-                  Stop
+                  {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>
-              )}
-              <Button
-                className="h-10 w-10 rounded-full"
-                variant="default"
-                size="icon"
-                onClick={runAnalysis}
-                disabled={!canStart}
-              >
-                {isRunningAnalysis ? (
-                  <div className="flex items-center gap-2">
-                    <Spinner className="h-4 w-4" />
-                  </div>
-                ) : (
-                  <ArrowUpIcon />
-                )}
-              </Button>
+              </div>
             </div>
           </div>
         </div>
