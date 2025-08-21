@@ -66,6 +66,9 @@ For your final answer:
 - Explain your reasoning step by step
 - Include relevant statistics or metrics
 - For each prompt, please always provide the final answer.
+- IMPORTANT: Query tool results may include sample rows (first two rows) or may be empty:
+  * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
+  * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
 Please use the following schema for the tables:
 `;
