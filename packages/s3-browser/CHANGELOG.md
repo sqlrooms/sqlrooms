@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.12 (2025-08-21)
+
+### Bug Fixes
+
+* Fewer keywords in completion ([#106](https://github.com/sqlrooms/sqlrooms/issues/106)) ([e386b7d](https://github.com/sqlrooms/sqlrooms/commit/e386b7da6663ccef52807362b57804b88111276f))
+
 ## 0.24.11 (2025-08-07)
 
 ### Bug Fixes
