@@ -38,7 +38,6 @@ export function createDefaultAiConfig(
           name: 'Default Session',
           modelProvider: 'openai',
           model: 'gpt-4o-mini',
-          sendSampleRowsToLLM: true,
           analysisResults: [],
           createdAt: new Date(),
         },
@@ -64,7 +63,7 @@ export type AiSliceState = {
     setAiModel: (modelProvider: string, model: string) => void;
     setCustomModelName: (customModelName: string) => void;
     setOllamaBaseUrl: (baseUrl: string) => void;
-    setSendSampleRowsToLLM: (sendSampleRowsToLLM: boolean) => void;
+
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -84,6 +83,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
   initialAnalysisPrompt = '',
   customTools = {},
   getInstructions,
+  numberOfRowsToShareWithLLM = 0,
 }: {
   getApiKey: (modelProvider: string) => string;
   initialAnalysisPrompt?: string;
@@ -94,6 +94,10 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
+  /**
+   * Number of rows to share with LLM (default: 0)
+   */
+  numberOfRowsToShareWithLLM?: number;
 }): StateCreator<AiSliceState> {
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
@@ -102,7 +106,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
         isRunningAnalysis: false,
 
         tools: {
-          ...getDefaultTools(store, true), // Default to true for backwards compatibility
+          ...getDefaultTools(store, numberOfRowsToShareWithLLM),
           ...customTools,
         },
 
@@ -161,21 +165,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
         },
 
         /**
-         * Set whether to send sample rows to LLM for the current session
-         * @param sendSampleRowsToLLM - Whether to send sample rows to LLM
-         */
-        setSendSampleRowsToLLM: (sendSampleRowsToLLM: boolean) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.sendSampleRowsToLLM = sendSampleRowsToLLM;
-              }
-            }),
-          );
-        },
-
-        /**
          * Get the current active session
          */
         getCurrentSession: () => {
@@ -221,8 +210,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
                 modelProvider:
                   modelProvider || currentSession?.modelProvider || 'openai',
                 model: model || currentSession?.model || 'gpt-4o-mini',
-                sendSampleRowsToLLM:
-                  currentSession?.sendSampleRowsToLLM ?? true,
+
                 analysisResults: [],
                 createdAt: new Date(),
               });
@@ -342,10 +330,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>({
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: {
-                ...getDefaultTools(
-                  store,
-                  currentSession?.sendSampleRowsToLLM ?? true,
-                ),
+                ...getDefaultTools(store, numberOfRowsToShareWithLLM),
                 ...customTools,
               },
               getInstructions,

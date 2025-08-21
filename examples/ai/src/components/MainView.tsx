@@ -1,11 +1,5 @@
-import {Input, SkeletonPane, Checkbox, Label} from '@sqlrooms/ui';
-import {
-  KeyIcon,
-  ServerIcon,
-  CpuIcon,
-  ChevronRight,
-  ChevronLeft,
-} from 'lucide-react';
+import {Input, SkeletonPane} from '@sqlrooms/ui';
+import {KeyIcon, ServerIcon, CpuIcon} from 'lucide-react';
 import {
   AnalysisResultsContainer,
   SessionControls,
@@ -38,9 +32,6 @@ export const MainView: React.FC = () => {
   // Get AI slice functions
   const setOllamaBaseUrl = useStoreWithAi((s) => s.ai.setOllamaBaseUrl);
   const setCustomModelName = useStoreWithAi((s) => s.ai.setCustomModelName);
-  const setSendSampleRowsToLLM = useStoreWithAi(
-    (s) => s.ai.setSendSampleRowsToLLM,
-  );
 
   // The current model is from the session
   const currentModelProvider =
@@ -52,9 +43,6 @@ export const MainView: React.FC = () => {
 
   // State for custom model name
   const [customModelNameLocal, setCustomModelNameLocal] = useState('');
-
-  // State for collapsible sample rows section
-  const [isSampleRowsExpanded, setIsSampleRowsExpanded] = useState(false);
 
   // Initialize custom model name from current session
   useEffect(() => {
@@ -91,10 +79,6 @@ export const MainView: React.FC = () => {
       return () => clearTimeout(timeoutId);
     }
   }, [customModelNameLocal, currentSession, setCustomModelName]);
-
-  const onSendSampleRowsChange = (checked: boolean) => {
-    setSendSampleRowsToLLM(checked);
-  };
 
   // Transform LLM_MODELS into the format expected by ModelSelector
   const modelOptions = useMemo(
@@ -175,38 +159,6 @@ export const MainView: React.FC = () => {
             </div>
           )}
           <ModelSelector models={modelOptions} className="w-[200px]" />
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setIsSampleRowsExpanded(!isSampleRowsExpanded)}
-              className="text-muted-foreground hover:text-foreground flex h-6 w-6 items-center justify-center transition-colors"
-              aria-label={
-                isSampleRowsExpanded
-                  ? 'Hide sample rows settings'
-                  : 'Show sample rows settings'
-              }
-            >
-              {isSampleRowsExpanded ? (
-                <ChevronLeft className="h-4 w-4" />
-              ) : (
-                <ChevronRight className="h-4 w-4" />
-              )}
-            </button>
-            {isSampleRowsExpanded && (
-              <div className="flex items-center gap-2">
-                <Checkbox
-                  id="sample-rows-checkbox"
-                  checked={currentSession?.sendSampleRowsToLLM ?? true}
-                  onCheckedChange={onSendSampleRowsChange}
-                />
-                <Label
-                  htmlFor="sample-rows-checkbox"
-                  className="text-muted-foreground text-xs"
-                >
-                  Send Sample Rows to LLM
-                </Label>
-              </div>
-            )}
-          </div>
         </div>
       </QueryControls>
     </div>
