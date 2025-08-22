@@ -78,6 +78,7 @@ export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 export type CanvasSliceState = {
   canvas: {
     sqlResults: Record<string, SqlNodeQueryResult>;
+    initialize: () => Promise<void>;
     setViewport: (viewport: Viewport) => void;
     addNode: (params: {
       parentId?: string;
@@ -116,7 +117,67 @@ export function createCanvasSlice<
     canvas: {
       sqlResults: {},
 
-      async initialize() {},
+      async initialize() {
+        // Execute SQL nodes in topological order based on edges
+        const nodes = get().config.canvas.nodes;
+        const edges = get().config.canvas.edges;
+
+        // Build adjacency list and indegree map for all nodes
+        const adjacency: Record<string, string[]> = {};
+        const inDegree: Record<string, number> = {};
+
+        for (const node of nodes) {
+          adjacency[node.id] = [];
+          inDegree[node.id] = 0;
+        }
+
+        for (const edge of edges) {
+          adjacency[edge.source] = adjacency[edge.source] ?? [];
+          adjacency[edge.source].push(edge.target);
+          inDegree[edge.target] = (inDegree[edge.target] ?? 0) + 1;
+        }
+
+        // Kahn's algorithm for topological sort
+        const queue: string[] = Object.keys(inDegree).filter(
+          (id) => inDegree[id] === 0,
+        );
+        const order: string[] = [];
+
+        while (queue.length > 0) {
+          const current = queue.shift() as string;
+          order.push(current);
+          const neighbors = adjacency[current] || [];
+          for (const neighbor of neighbors) {
+            inDegree[neighbor] = (inDegree[neighbor] ?? 0) - 1;
+            if (inDegree[neighbor] === 0) {
+              queue.push(neighbor);
+            }
+          }
+        }
+
+        // If there's a cycle, append remaining nodes in their current config order
+        if (order.length < nodes.length) {
+          const remaining = nodes
+            .map((n) => n.id)
+            .filter((id) => !order.includes(id));
+          // eslint-disable-next-line no-console
+          console.warn(
+            '[canvas.initialize] Cycle detected in graph. Execution order may be invalid for nodes:',
+            remaining,
+          );
+          order.push(...remaining);
+        }
+
+        // Execute SQL nodes sequentially to ensure parents finish before children
+        for (const nodeId of order) {
+          const node = get().config.canvas.nodes.find((n) => n.id === nodeId);
+          if (!node || node.type !== 'sql') continue;
+          const sqlText = ((node.data as any)?.sql as string) || '';
+          if (!sqlText.trim()) continue;
+          // Await ensures table creation completes before children execute
+          await get().canvas.executeSqlNodeQuery(nodeId);
+        }
+      },
 
       addNode: ({
         parentId,
