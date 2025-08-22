@@ -5,7 +5,16 @@ import {
   RoomShellSliceState,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
-import type {Edge, Node, Viewport, XYPosition} from '@xyflow/react';
+import {
+  applyEdgeChanges,
+  applyNodeChanges,
+  type Edge,
+  type EdgeChange,
+  type Node,
+  type NodeChange,
+  type Viewport,
+  type XYPosition,
+} from '@xyflow/react';
 import {produce} from 'immer';
 import {z} from 'zod';
 
@@ -31,6 +40,8 @@ export const CanvasNodeSchema = z.object({
   position: z.object({x: z.number(), y: z.number()}),
   type: CanvasNodeTypes,
   data: CanvasNodeData,
+  width: z.number(),
+  height: z.number(),
 });
 export type CanvasNodeSchema = z.infer<typeof CanvasNodeSchema>;
 
@@ -67,8 +78,9 @@ export type CanvasSliceState = {
       updater: (data: CanvasNodeData) => CanvasNodeData,
     ) => void;
     deleteNode: (nodeId: string) => void;
-    setNodes: (nodes: Node<CanvasNodeData>[]) => void;
-    setEdges: (edges: Edge[]) => void;
+    applyNodeChanges: (changes: NodeChange[]) => void;
+    applyEdgeChanges: (changes: EdgeChange[]) => void;
+    addEdge: (edge: Edge) => void;
   };
 };
 
@@ -108,11 +120,16 @@ export function createCanvasSlice<
             const position: XYPosition = initialPosition
               ? initialPosition
               : parent
-                ? {x: parent.position.x + 300, y: parent.position.y}
+                ? {
+                    x: parent.position.x + parent.width + 100,
+                    y: parent.position.y + 50,
+                  }
                 : {x: 0, y: 0};
             draft.config.canvas.nodes.push({
               id: newId,
               position,
+              width: 200,
+              height: 120,
               type: nodeType,
               data: (nodeType === 'sql'
                 ? {
@@ -152,6 +169,14 @@ export function createCanvasSlice<
         return newId;
       },
 
+      addEdge: (edge) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.canvas.edges.push(edge);
+          }),
+        );
+      },
+
       updateNode: (nodeId, updater) => {
         set((state) =>
           produce(state, (draft) => {
@@ -176,18 +201,24 @@ export function createCanvasSlice<
         );
       },
 
-      setNodes: (nodes) => {
+      applyNodeChanges: (changes) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.nodes = nodes as any;
+            draft.config.canvas.nodes = applyNodeChanges(
+              changes,
+              draft.config.canvas.nodes,
+            ) as any;
           }),
         );
       },
 
-      setEdges: (edges) => {
+      applyEdgeChanges: (changes) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.edges = edges as any;
+            draft.config.canvas.edges = applyEdgeChanges(
+              changes,
+              draft.config.canvas.edges,
+            ) as any;
           }),
         );
       },

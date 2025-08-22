@@ -23,6 +23,7 @@ import {useStoreWithCanvas} from './CanvasSlice';
 import type {CanvasNodeData} from './CanvasSlice';
 import {SqlNode} from './nodes/SqlNode';
 import {VegaNode} from './nodes/VegaNode';
+import {produce} from 'immer';
 
 const nodeTypes = {
   sql: SqlNode,
@@ -34,32 +35,12 @@ export const Canvas: React.FC = () => {
     (s) => s.config.canvas.nodes,
   ) as unknown as Node<CanvasNodeData>[];
   const edges = useStoreWithCanvas((s) => s.config.canvas.edges) as Edge[];
-  const setNodes = useStoreWithCanvas((s) => s.canvas.setNodes);
-  const setEdges = useStoreWithCanvas((s) => s.canvas.setEdges);
+  const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
+  const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
+  const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
   const viewport = useStoreWithCanvas((s) => s.config.canvas.viewport);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
-
-  const onNodesChange = useCallback(
-    (changes: NodeChange[]) => {
-      setNodes(
-        applyNodeChanges(changes, nodes) as unknown as Node<CanvasNodeData>[],
-      );
-    },
-    [nodes, setNodes],
-  );
-
-  const onEdgesChange = useCallback(
-    (changes: EdgeChange[]) => {
-      setEdges(applyEdgeChanges(changes, edges));
-    },
-    [edges, setEdges],
-  );
-
-  const onConnect = useCallback(
-    (connection: Connection) => setEdges(addEdge(connection, edges)),
-    [edges, setEdges],
-  );
 
   const empty = nodes.length === 0;
 
@@ -80,10 +61,10 @@ export const Canvas: React.FC = () => {
           nodes={nodes as any}
           edges={edges}
           nodeTypes={nodeTypes}
-          onNodesChange={onNodesChange}
-          onEdgesChange={onEdgesChange}
+          onNodesChange={applyNodeChanges}
+          onEdgesChange={applyEdgeChanges}
           onViewportChange={setViewport}
-          onConnect={onConnect}
+          onConnect={addEdge}
           viewport={viewport}
           // fitView
         >
