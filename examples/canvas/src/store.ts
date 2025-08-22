@@ -17,6 +17,7 @@ import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
 import {DatabaseIcon} from 'lucide-react';
+import exampleCanvas from './example-canvas.json';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
@@ -30,15 +31,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice<RoomConfig>({
         config: {
-          ...createDefaultCanvasConfig({
-            nodes: [],
-            edges: [],
-          }),
+          ...createDefaultCanvasConfig(
+            CanvasSliceConfig.parse(exampleCanvas).canvas,
+          ),
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
-              splitPercentage: 30,
+              splitPercentage: 20,
               first: 'data',
               second: 'main',
             },
