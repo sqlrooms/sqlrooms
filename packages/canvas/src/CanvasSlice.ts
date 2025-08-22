@@ -141,6 +141,9 @@ export function createCanvasSlice<
                     x: draft.config.canvas.viewport.x + 100,
                     y: draft.config.canvas.viewport.y + 100,
                   };
+            const firstTable = draft.db.tables.find(
+              (t) => t.table.schema === 'main',
+            );
             draft.config.canvas.nodes.push({
               id: newId,
               position,
@@ -151,7 +154,9 @@ export function createCanvasSlice<
                 ? {
                     title: 'Query',
                     type: 'sql',
-                    sql: 'SELECT * FROM earthquakes',
+                    sql: firstTable
+                      ? `SELECT * FROM ${firstTable?.table.table}`
+                      : `SELECT 1`,
                   }
                 : {
                     title: 'Chart',

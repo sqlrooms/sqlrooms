@@ -1,8 +1,7 @@
-import {Handle, Position, NodeResizer} from '@xyflow/react';
+import {cn} from '@sqlrooms/ui';
+import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {FC, PropsWithChildren} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
-import {AddChildButton} from './AddChildButton';
-import {cn} from '@sqlrooms/ui';
 
 export const CanvasNodeContainer: FC<
   PropsWithChildren<{id: string; className?: string}>
@@ -19,11 +18,6 @@ export const CanvasNodeContainer: FC<
       <div className="h-full w-full">{children}</div>
       <Handle type="source" position={Position.Right} />
       <Handle type="target" position={Position.Left} />
-      <AddChildButton
-        className="absolute -right-10 top-1/2"
-        onAddSql={() => addNode({parentId: id, nodeType: 'sql'})}
-        onAddVega={() => addNode({parentId: id, nodeType: 'vega'})}
-      />
     </div>
   );
 };

@@ -33,7 +33,7 @@ export function AddChildButton({
         <PopoverContent
           side="right"
           align="center"
-          className="max-w-[100px] border-none bg-transparent p-0 shadow-none"
+          className="max-w-[150px] border-none bg-transparent p-0 shadow-none"
         >
           <div className="flex flex-col gap-2">
             <Button
@@ -42,9 +42,8 @@ export function AddChildButton({
                 onAddSql();
                 setOpen(false);
               }}
-              title="Query these results"
             >
-              Query
+              Query results
             </Button>
             <Button
               size="xs"
@@ -52,9 +51,8 @@ export function AddChildButton({
                 onAddVega();
                 setOpen(false);
               }}
-              title="Visualize these results"
             >
-              Visualize
+              Visualize results
             </Button>
           </div>
         </PopoverContent>

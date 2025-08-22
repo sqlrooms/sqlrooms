@@ -1,18 +1,19 @@
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
-import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
-import {FC, useCallback, useRef} from 'react';
-import {CanvasNodeContainer} from './CanvasNodeContainer';
-import {Button, EditableText} from '@sqlrooms/ui';
 import {QueryDataTable} from '@sqlrooms/data-table';
-import type * as Monaco from 'monaco-editor';
-
-type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
-type MonacoInstance = typeof Monaco;
+import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {Button, EditableText} from '@sqlrooms/ui';
+import {FC} from 'react';
+import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
+import {CanvasNodeContainer} from './CanvasNodeContainer';
+import {AddChildButton} from './AddChildButton';
+// import type * as Monaco from 'monaco-editor';
+// type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
+// type MonacoInstance = typeof Monaco;
 
 type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
 
 export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   const sql = data.sql || '';
+  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   const updateNode = useStoreWithCanvas((s) => s.canvas.updateNode);
   const tables = useStoreWithCanvas((s) => s.db.tables);
   const execute = useStoreWithCanvas((s) => s.canvas.executeSqlNodeQuery);
@@ -66,12 +67,19 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           </div>
         )}
         {result?.status === 'success' && (
-          <div className="flex-1 overflow-hidden border-t">
-            <QueryDataTable
-              query={`SELECT * FROM ${result.tableName}`}
-              fontSize="text-xs"
+          <>
+            <div className="flex-1 overflow-hidden border-t">
+              <QueryDataTable
+                query={`SELECT * FROM ${result.tableName}`}
+                fontSize="text-xs"
+              />
+            </div>
+            <AddChildButton
+              className="absolute -right-10 top-1/2"
+              onAddSql={() => addNode({parentId: id, nodeType: 'sql'})}
+              onAddVega={() => addNode({parentId: id, nodeType: 'vega'})}
             />
-          </div>
+          </>
         )}
       </div>
     </CanvasNodeContainer>
