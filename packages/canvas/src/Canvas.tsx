@@ -1,29 +1,18 @@
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
-import {VegaLiteChart, type VisualizationSpec} from '@sqlrooms/vega';
 import {
-  ReactFlow,
-  addEdge,
-  applyEdgeChanges,
-  applyNodeChanges,
   Background,
   BackgroundVariant,
-  Connection,
   Controls,
   Edge,
-  EdgeChange,
-  Handle,
   MiniMap,
   Node,
-  NodeChange,
-  Position,
+  ReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import React, {useCallback} from 'react';
-import {useStoreWithCanvas} from './CanvasSlice';
+import React from 'react';
 import type {CanvasNodeData} from './CanvasSlice';
+import {useStoreWithCanvas} from './CanvasSlice';
 import {SqlNode} from './nodes/SqlNode';
 import {VegaNode} from './nodes/VegaNode';
-import {produce} from 'immer';
 
 const nodeTypes = {
   sql: SqlNode,

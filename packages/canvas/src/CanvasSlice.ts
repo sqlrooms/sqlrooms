@@ -6,11 +6,11 @@ import {
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
 import {
+  addEdge,
   applyEdgeChanges,
   applyNodeChanges,
-  type Edge,
+  Connection,
   type EdgeChange,
-  type Node,
   type NodeChange,
   type Viewport,
   type XYPosition,
@@ -18,6 +18,8 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
+const DEFAULT_NODE_WIDTH = 300;
+const DEFAULT_NODE_HEIGHT = 200;
 export const CanvasNodeTypes = z.enum(['sql', 'vega'] as const);
 export type CanvasNodeTypes = z.infer<typeof CanvasNodeTypes>;
 
@@ -80,7 +82,7 @@ export type CanvasSliceState = {
     deleteNode: (nodeId: string) => void;
     applyNodeChanges: (changes: NodeChange[]) => void;
     applyEdgeChanges: (changes: EdgeChange[]) => void;
-    addEdge: (edge: Edge) => void;
+    addEdge: (edge: Connection) => void;
   };
 };
 
@@ -124,12 +126,15 @@ export function createCanvasSlice<
                     x: parent.position.x + parent.width + 100,
                     y: parent.position.y + 50,
                   }
-                : {x: 0, y: 0};
+                : {
+                    x: draft.config.canvas.viewport.x + 100,
+                    y: draft.config.canvas.viewport.y + 100,
+                  };
             draft.config.canvas.nodes.push({
               id: newId,
               position,
-              width: 200,
-              height: 120,
+              width: DEFAULT_NODE_WIDTH,
+              height: DEFAULT_NODE_HEIGHT,
               type: nodeType,
               data: (nodeType === 'sql'
                 ? {
@@ -169,10 +174,13 @@ export function createCanvasSlice<
         return newId;
       },
 
-      addEdge: (edge) => {
+      addEdge: (connection) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.edges.push(edge);
+            draft.config.canvas.edges = addEdge(
+              connection,
+              draft.config.canvas.edges,
+            );
           }),
         );
       },
@@ -197,6 +205,10 @@ export function createCanvasSlice<
             draft.config.canvas.edges = draft.config.canvas.edges.filter(
               (e) => e.source !== nodeId && e.target !== nodeId,
             );
+            if (draft.config.canvas.nodes.length === 0) {
+              draft.config.canvas.viewport.x = 0;
+              draft.config.canvas.viewport.y = 0;
+            }
           }),
         );
       },
