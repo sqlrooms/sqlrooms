@@ -180,6 +180,8 @@ export function createCanvasSlice<
           // Await ensures table creation completes before children execute
           await get().canvas.executeSqlNodeQuery(nodeId, {cascade: false});
         }
+
+        await get().db.refreshTableSchemas();
       },
 
       addNode: ({
@@ -361,7 +363,6 @@ export function createCanvasSlice<
         nodeId: string,
         opts?: {cascade?: boolean},
       ) => {
-        console.log('executeSqlNodeQuery', nodeId);
         const node = get().config.canvas.nodes.find((n) => n.id === nodeId);
         if (!node || node.type !== 'sql') return;
         const sqlNode = node.data as Extract<CanvasNodeData, {type: 'sql'}>;
@@ -378,7 +379,9 @@ export function createCanvasSlice<
           // Validate it's a single select
           const parsed = await get().db.sqlSelectToJson(sql);
           if (parsed.error) {
-            throw new Error('Not a SELECT statement');
+            throw new Error(
+              parsed.error_message || 'Not a valid SELECT statement',
+            );
           }
 
           // Create schema and table
@@ -476,6 +479,8 @@ export function createCanvasSlice<
                 });
               }
             }
+
+            await get().db.refreshTableSchemas();
           }
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
