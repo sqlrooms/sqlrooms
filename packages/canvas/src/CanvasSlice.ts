@@ -93,7 +93,10 @@ export type CanvasSliceState = {
     applyNodeChanges: (changes: NodeChange[]) => void;
     applyEdgeChanges: (changes: EdgeChange[]) => void;
     addEdge: (edge: Connection) => void;
-    executeSqlNodeQuery: (nodeId: string) => Promise<void>;
+    executeSqlNodeQuery: (
+      nodeId: string,
+      opts?: {cascade?: boolean},
+    ) => Promise<void>;
   };
 };
 
@@ -132,14 +135,14 @@ export function createCanvasSlice<
         }
 
         for (const edge of edges) {
-          adjacency[edge.source] = adjacency[edge.source] ?? [];
-          adjacency[edge.source].push(edge.target);
+          const list = adjacency[edge.source] || (adjacency[edge.source] = []);
+          list.push(edge.target);
           inDegree[edge.target] = (inDegree[edge.target] ?? 0) + 1;
         }
 
         // Kahn's algorithm for topological sort
         const queue: string[] = Object.keys(inDegree).filter(
-          (id) => inDegree[id] === 0,
+          (id) => (inDegree[id] ?? 0) === 0,
         );
         const order: string[] = [];
 
@@ -175,7 +178,7 @@ export function createCanvasSlice<
           const sqlText = ((node.data as any)?.sql as string) || '';
           if (!sqlText.trim()) continue;
           // Await ensures table creation completes before children execute
-          await get().canvas.executeSqlNodeQuery(nodeId);
+          await get().canvas.executeSqlNodeQuery(nodeId, {cascade: false});
         }
       },
 
@@ -354,7 +357,10 @@ export function createCanvasSlice<
         );
       },
 
-      executeSqlNodeQuery: async (nodeId: string) => {
+      executeSqlNodeQuery: async (
+        nodeId: string,
+        opts?: {cascade?: boolean},
+      ) => {
         console.log('executeSqlNodeQuery', nodeId);
         const node = get().config.canvas.nodes.find((n) => n.id === nodeId);
         if (!node || node.type !== 'sql') return;
@@ -395,6 +401,82 @@ export function createCanvasSlice<
               };
             }),
           );
+
+          // Cascade execution to downstream SQL nodes (topologically) unless disabled
+          if (opts?.cascade !== false) {
+            const allEdges = get().config.canvas.edges;
+            const allNodes = get().config.canvas.nodes;
+
+            // Build adjacency for forward traversal
+            const adjacency: Record<string, string[]> = {};
+            for (const n of allNodes) adjacency[n.id] = [];
+            for (const e of allEdges) {
+              const list = adjacency[e.source] || (adjacency[e.source] = []);
+              list.push(e.target);
+            }
+
+            // Collect reachable node ids excluding the start
+            const reachable = new Set<string>();
+            const queue = [...(adjacency[nodeId] || [])];
+            while (queue.length) {
+              const cur = queue.shift() as string;
+              if (reachable.has(cur)) continue;
+              reachable.add(cur);
+              const nexts = adjacency[cur] || [];
+              for (const nxt of nexts) queue.push(nxt);
+            }
+
+            if (reachable.size > 0) {
+              // Compute in-degree within the reachable subgraph
+              const inDegree: Record<string, number> = {};
+              for (const id of reachable) inDegree[id] = 0;
+              for (const e of allEdges) {
+                if (reachable.has(e.source) && reachable.has(e.target)) {
+                  inDegree[e.target] = (inDegree[e.target] ?? 0) + 1;
+                }
+              }
+
+              // Kahn's algorithm over the reachable subgraph
+              const queue2: string[] = Array.from(reachable).filter(
+                (id) => (inDegree[id] ?? 0) === 0,
+              );
+              const order: string[] = [];
+              while (queue2.length) {
+                const cur = queue2.shift() as string;
+                order.push(cur);
+                const neighbors = adjacency[cur] || [];
+                for (const nb of neighbors) {
+                  if (!reachable.has(nb)) continue;
+                  inDegree[nb] = (inDegree[nb] ?? 0) - 1;
+                  if (inDegree[nb] === 0) queue2.push(nb);
+                }
+              }
+
+              // If cycle detected in subgraph, append remaining in arbitrary order
+              if (order.length < reachable.size) {
+                const remaining = Array.from(reachable).filter(
+                  (id) => !order.includes(id),
+                );
+                // eslint-disable-next-line no-console
+                console.warn(
+                  '[canvas.executeSqlNodeQuery] Cycle detected in downstream graph. Some nodes may run out of order:',
+                  remaining,
+                );
+                order.push(...remaining);
+              }
+
+              // Execute downstream SQL nodes sequentially without further cascading
+              for (const childId of order) {
+                const child = allNodes.find((n) => n.id === childId);
+                if (!child || child.type !== 'sql') continue;
+                const text = ((child.data as any)?.sql as string) || '';
+                if (!text.trim()) continue;
+                await get().canvas.executeSqlNodeQuery(childId, {
+                  cascade: false,
+                });
+              }
+            }
+          }
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           set((state) =>
