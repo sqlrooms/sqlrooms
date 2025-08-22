@@ -1,0 +1,97 @@
+import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {VegaLiteChart, type VisualizationSpec} from '@sqlrooms/vega';
+import {
+  ReactFlow,
+  addEdge,
+  applyEdgeChanges,
+  applyNodeChanges,
+  Background,
+  BackgroundVariant,
+  Connection,
+  Controls,
+  Edge,
+  EdgeChange,
+  Handle,
+  MiniMap,
+  Node,
+  NodeChange,
+  Position,
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+import React, {useCallback} from 'react';
+import {useStoreWithCanvas} from './CanvasSlice';
+import type {CanvasNodeData} from './CanvasSlice';
+import {SqlNode} from './nodes/SqlNode';
+import {VegaNode} from './nodes/VegaNode';
+
+const nodeTypes = {
+  sql: SqlNode,
+  vega: VegaNode,
+};
+
+export const Canvas: React.FC = () => {
+  const nodes = useStoreWithCanvas(
+    (s) => s.config.canvas.nodes,
+  ) as unknown as Node<CanvasNodeData>[];
+  const edges = useStoreWithCanvas((s) => s.config.canvas.edges) as Edge[];
+  const setNodes = useStoreWithCanvas((s) => s.canvas.setNodes);
+  const setEdges = useStoreWithCanvas((s) => s.canvas.setEdges);
+  const viewport = useStoreWithCanvas((s) => s.config.canvas.viewport);
+  const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
+  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
+
+  const onNodesChange = useCallback(
+    (changes: NodeChange[]) => {
+      setNodes(
+        applyNodeChanges(changes, nodes) as unknown as Node<CanvasNodeData>[],
+      );
+    },
+    [nodes, setNodes],
+  );
+
+  const onEdgesChange = useCallback(
+    (changes: EdgeChange[]) => {
+      setEdges(applyEdgeChanges(changes, edges));
+    },
+    [edges, setEdges],
+  );
+
+  const onConnect = useCallback(
+    (connection: Connection) => setEdges(addEdge(connection, edges)),
+    [edges, setEdges],
+  );
+
+  const empty = nodes.length === 0;
+
+  return (
+    <div className="h-full w-full">
+      <div className="relative h-full w-full">
+        {empty && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <button
+              className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
+              onClick={() => addNode({})}
+            >
+              Add node
+            </button>
+          </div>
+        )}
+        <ReactFlow
+          nodes={nodes as any}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          onNodesChange={onNodesChange}
+          onEdgesChange={onEdgesChange}
+          onViewportChange={setViewport}
+          onConnect={onConnect}
+          viewport={viewport}
+          // fitView
+        >
+          <MiniMap />
+          <Controls position="top-left" />
+          <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
+        </ReactFlow>
+      </div>
+    </div>
+  );
+};
