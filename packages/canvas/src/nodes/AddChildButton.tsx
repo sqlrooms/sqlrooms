@@ -1,13 +1,64 @@
+import {useState} from 'react';
+import {
+  Button,
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
 
-export function AddChildButton({onClick}: {onClick: () => void}) {
+export function AddChildButton({
+  className,
+  onAddSql,
+  onAddVega,
+}: {
+  className?: string;
+  onAddSql: () => void;
+  onAddVega: () => void;
+}) {
+  const [open, setOpen] = useState(false);
   return (
-    <button
-      onClick={onClick}
-      className="absolute -right-3 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full bg-blue-600 text-white hover:bg-blue-700"
-      title="Add child node"
-    >
-      <PlusIcon className="h-4 w-4" />
-    </button>
+    <div className={cn(className)}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant="default"
+            className="h-8 w-8 -translate-y-1/2 rounded-full"
+            title="Add child node"
+          >
+            <PlusIcon className="h-4 w-4" />
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          side="right"
+          align="center"
+          className="max-w-[100px] border-none bg-transparent p-0 shadow-none"
+        >
+          <div className="flex flex-col gap-2">
+            <Button
+              size="xs"
+              onClick={() => {
+                onAddSql();
+                setOpen(false);
+              }}
+              title="Query these results"
+            >
+              Query
+            </Button>
+            <Button
+              size="xs"
+              onClick={() => {
+                onAddVega();
+                setOpen(false);
+              }}
+              title="Visualize these results"
+            >
+              Visualize
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   );
 }

@@ -143,7 +143,7 @@ export function createCanvasSlice<
                     sql: 'SELECT * FROM earthquakes',
                   }
                 : {
-                    title: 'Vega Chart',
+                    title: 'Chart',
                     type: 'vega',
                     vegaSpec: {
                       description: 'A simple bar chart',

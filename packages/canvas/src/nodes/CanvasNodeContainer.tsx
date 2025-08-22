@@ -7,7 +7,7 @@ import {cn} from '@sqlrooms/ui';
 export const CanvasNodeContainer: FC<
   PropsWithChildren<{id: string; className?: string}>
 > = ({id, className, children}) => {
-  const addChild = useStoreWithCanvas((s) => s.canvas.addNode);
+  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   return (
     <div
       className={cn(
@@ -19,7 +19,11 @@ export const CanvasNodeContainer: FC<
       <div className="h-full w-full">{children}</div>
       <Handle type="source" position={Position.Right} />
       <Handle type="target" position={Position.Left} />
-      <AddChildButton onClick={() => addChild({parentId: id})} />
+      <AddChildButton
+        className="absolute -right-10 top-1/2"
+        onAddSql={() => addNode({parentId: id, nodeType: 'sql'})}
+        onAddVega={() => addNode({parentId: id, nodeType: 'vega'})}
+      />
     </div>
   );
 };
