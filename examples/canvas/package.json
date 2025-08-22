@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/examples-canvas",
+  "name": "sqlrooms-canvas",
   "private": true,
   "version": "0.24.14",
   "type": "module",
