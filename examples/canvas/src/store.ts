@@ -15,25 +15,41 @@ import {
 } from '@sqlrooms/room-shell';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
+import {DataSourcesPanel} from './DataSourcesPanel';
+import {DatabaseIcon} from 'lucide-react';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> & CanvasSliceState;
+export const RoomPanelTypes = z.enum(['main', 'data'] as const);
+export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       ...createRoomShellSlice<RoomConfig>({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: 'main',
-          },
           ...createDefaultCanvasConfig({
             nodes: [],
             edges: [],
           }),
+          layout: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              splitPercentage: 30,
+              first: 'data',
+              second: 'main',
+            },
+          },
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+            },
+          ],
         },
         room: {
           panels: {
@@ -42,6 +58,12 @@ export const {roomStore} = createRoomStore<RoomConfig, RoomState>(
               icon: () => null,
               component: Canvas,
               placement: 'main',
+            },
+            data: {
+              title: 'Data',
+              icon: DatabaseIcon,
+              component: DataSourcesPanel,
+              placement: 'sidebar',
             },
           },
         },

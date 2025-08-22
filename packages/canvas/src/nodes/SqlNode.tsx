@@ -2,6 +2,7 @@ import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {FC} from 'react';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
+import {EditableText} from '@sqlrooms/ui';
 
 type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
 
@@ -12,8 +13,14 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   return (
     <CanvasNodeContainer id={id}>
       <div className="flex h-full w-full flex-col">
-        <div className="flex items-center justify-between border-b px-3 py-2 text-sm font-medium">
-          <span>{data.title}</span>
+        <div className="flex items-center justify-between border-b px-3 py-2">
+          <EditableText
+            className="text-sm font-medium"
+            value={data.title}
+            onChange={(v) =>
+              updateNode(id, (d) => ({...(d as SqlData), title: v}))
+            }
+          />
           <span className="text-[10px] uppercase text-gray-500">SQL</span>
         </div>
         <div className="relative flex-1">

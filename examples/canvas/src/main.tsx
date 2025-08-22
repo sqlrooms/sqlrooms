@@ -1,11 +1,14 @@
+import {ThemeProvider} from '@sqlrooms/ui';
+import '@xyflow/react/dist/style.css';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-import {Room} from './room';
 import './index.css';
-import '@xyflow/react/dist/style.css';
+import {Room} from './room';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <Room />
+    <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ui-theme">
+      <Room />
+    </ThemeProvider>
   </React.StrictMode>,
 );

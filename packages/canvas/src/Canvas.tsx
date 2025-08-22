@@ -13,6 +13,7 @@ import type {CanvasNodeData} from './CanvasSlice';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {SqlNode} from './nodes/SqlNode';
 import {VegaNode} from './nodes/VegaNode';
+import {useTheme} from '@sqlrooms/ui';
 
 const nodeTypes = {
   sql: SqlNode,
@@ -32,6 +33,7 @@ export const Canvas: React.FC = () => {
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
 
   const empty = nodes.length === 0;
+  const {theme: colorMode} = useTheme();
 
   return (
     <div className="h-full w-full">
@@ -47,6 +49,7 @@ export const Canvas: React.FC = () => {
           </div>
         )}
         <ReactFlow
+          colorMode={colorMode}
           nodes={nodes as any}
           edges={edges}
           nodeTypes={nodeTypes}

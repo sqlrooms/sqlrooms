@@ -138,9 +138,9 @@ export function createCanvasSlice<
               type: nodeType,
               data: (nodeType === 'sql'
                 ? {
-                    title: 'SQL Query',
+                    title: 'Query',
                     type: 'sql',
-                    sql: 'SELECT 1;',
+                    sql: 'SELECT * FROM earthquakes',
                   }
                 : {
                     title: 'Vega Chart',

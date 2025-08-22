@@ -8,7 +8,7 @@ export function Room() {
       <RoomShell.Sidebar>
         <ThemeSwitch />
       </RoomShell.Sidebar>
-      <RoomShell.LayoutComposer />
+      <RoomShell.LayoutComposer tileClassName="p-0" />
       <RoomShell.LoadingProgress />
     </RoomShell>
   );

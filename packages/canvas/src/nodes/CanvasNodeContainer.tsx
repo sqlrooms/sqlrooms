@@ -11,7 +11,7 @@ export const CanvasNodeContainer: FC<
   return (
     <div
       className={cn(
-        `relative flex h-full w-full rounded-md border bg-white shadow-sm`,
+        `bg-background relative flex h-full w-full rounded-md border shadow-sm`,
         className,
       )}
     >
