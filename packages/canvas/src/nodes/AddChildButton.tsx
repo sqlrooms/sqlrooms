@@ -43,7 +43,7 @@ export function AddChildButton({
                 setOpen(false);
               }}
             >
-              Query results
+              Query these results
             </Button>
             <Button
               size="xs"
@@ -52,7 +52,7 @@ export function AddChildButton({
                 setOpen(false);
               }}
             >
-              Visualize results
+              Visualize
             </Button>
           </div>
         </PopoverContent>

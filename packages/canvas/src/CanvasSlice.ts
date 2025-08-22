@@ -115,6 +115,9 @@ export function createCanvasSlice<
   return createSlice<PC, CanvasSliceState>((set, get) => ({
     canvas: {
       sqlResults: {},
+
+      async initialize() {},
+
       addNode: ({
         parentId,
         nodeType = 'sql',
@@ -135,7 +138,7 @@ export function createCanvasSlice<
               : parent
                 ? {
                     x: parent.position.x + parent.width + 100,
-                    y: parent.position.y + 50,
+                    y: parent.position.y,
                   }
                 : {
                     x: draft.config.canvas.viewport.x + 100,
@@ -144,6 +147,39 @@ export function createCanvasSlice<
             const firstTable = draft.db.tables.find(
               (t) => t.table.schema === 'main',
             );
+
+            const getUniqueQueryTitle = () => {
+              const baseTitle = 'Query';
+              const existing = new Set(
+                draft.config.canvas.nodes
+                  .filter((n) => n.type === 'sql')
+                  .map((n) => (n.data as any).title as string),
+              );
+              if (!existing.has(baseTitle)) return baseTitle;
+              let counter = 1;
+              while (existing.has(`${baseTitle} ${counter}`)) counter += 1;
+              return `${baseTitle} ${counter}`;
+            };
+
+            const getInitialSqlForNewSqlNode = () => {
+              if (parent && parent.type === 'sql') {
+                const parentResults = draft.canvas.sqlResults[parent.id];
+                const parentTitle = (parent.data as any).title || 'Query';
+                const fallbackParentTable = `${CANVAS_SCHEMA_NAME}.${escapeId(parentTitle)}`;
+                const parentTableName =
+                  parentResults && parentResults.status === 'success'
+                    ? parentResults.tableName
+                    : fallbackParentTable;
+                return `SELECT * FROM ${parentTableName}`;
+              }
+              return firstTable
+                ? `SELECT * FROM ${firstTable.table.table}`
+                : `SELECT 1`;
+            };
+
+            const newSqlTitle = getUniqueQueryTitle();
+            const initialSql = getInitialSqlForNewSqlNode();
+
             draft.config.canvas.nodes.push({
               id: newId,
               position,
@@ -152,11 +188,9 @@ export function createCanvasSlice<
               type: nodeType,
               data: (nodeType === 'sql'
                 ? {
-                    title: 'Query',
+                    title: newSqlTitle,
                     type: 'sql',
-                    sql: firstTable
-                      ? `SELECT * FROM ${firstTable?.table.table}`
-                      : `SELECT 1`,
+                    sql: initialSql,
                   }
                 : {
                     title: 'Chart',
