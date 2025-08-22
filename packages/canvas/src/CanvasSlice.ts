@@ -1,10 +1,12 @@
 import {createId} from '@paralleldrive/cuid2';
+import {escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createSlice,
   RoomShellSliceState,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
+import type {Viewport, XYPosition} from '@xyflow/react';
 import {
   addEdge,
   applyEdgeChanges,
@@ -12,14 +14,14 @@ import {
   Connection,
   type EdgeChange,
   type NodeChange,
-  type Viewport,
-  type XYPosition,
 } from '@xyflow/react';
 import {produce} from 'immer';
 import {z} from 'zod';
 
-const DEFAULT_NODE_WIDTH = 300;
-const DEFAULT_NODE_HEIGHT = 200;
+const DEFAULT_NODE_WIDTH = 800;
+const DEFAULT_NODE_HEIGHT = 600;
+const CANVAS_SCHEMA_NAME = '__canvas';
+
 export const CanvasNodeTypes = z.enum(['sql', 'vega'] as const);
 export type CanvasNodeTypes = z.infer<typeof CanvasNodeTypes>;
 
@@ -54,6 +56,12 @@ export const CanvasEdgeSchema = z.object({
 });
 export type CanvasEdgeSchema = z.infer<typeof CanvasEdgeSchema>;
 
+export type SqlNodeQueryResult =
+  | {status: 'idle'}
+  | {status: 'loading'}
+  | {status: 'error'; error: string}
+  | {status: 'success'; tableName: string; lastQueryStatement: string};
+
 export const CanvasSliceConfig = z.object({
   canvas: z.object({
     viewport: z.object({
@@ -69,6 +77,7 @@ export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = {
   canvas: {
+    sqlResults: Record<string, SqlNodeQueryResult>;
     setViewport: (viewport: Viewport) => void;
     addNode: (params: {
       parentId?: string;
@@ -83,6 +92,7 @@ export type CanvasSliceState = {
     applyNodeChanges: (changes: NodeChange[]) => void;
     applyEdgeChanges: (changes: EdgeChange[]) => void;
     addEdge: (edge: Connection) => void;
+    executeSqlNodeQuery: (nodeId: string) => Promise<void>;
   };
 };
 
@@ -104,6 +114,7 @@ export function createCanvasSlice<
 >() {
   return createSlice<PC, CanvasSliceState>((set, get) => ({
     canvas: {
+      sqlResults: {},
       addNode: ({
         parentId,
         nodeType = 'sql',
@@ -241,6 +252,60 @@ export function createCanvasSlice<
             draft.config.canvas.viewport = viewport;
           }),
         );
+      },
+
+      executeSqlNodeQuery: async (nodeId: string) => {
+        console.log('executeSqlNodeQuery', nodeId);
+        const node = get().config.canvas.nodes.find((n) => n.id === nodeId);
+        if (!node || node.type !== 'sql') return;
+        const sqlNode = node.data as Extract<CanvasNodeData, {type: 'sql'}>;
+        const sql = sqlNode.sql || '';
+        const title = sqlNode.title || 'result';
+
+        set((state) =>
+          produce(state, (draft) => {
+            draft.canvas.sqlResults[nodeId] = {status: 'loading'};
+          }),
+        );
+
+        try {
+          // Validate it's a single select
+          const parsed = await get().db.sqlSelectToJson(sql);
+          if (parsed.error) {
+            throw new Error('Not a SELECT statement');
+          }
+
+          // Create schema and table
+          const connector = await get().db.getConnector();
+          await connector.query(
+            `CREATE SCHEMA IF NOT EXISTS ${CANVAS_SCHEMA_NAME}`,
+          );
+
+          const tableName = `${CANVAS_SCHEMA_NAME}.${escapeId(title)}`;
+          await connector.query(
+            `CREATE OR REPLACE TABLE ${tableName} AS ${sql}`,
+          );
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.canvas.sqlResults[nodeId] = {
+                status: 'success',
+                tableName,
+                lastQueryStatement: sql,
+              };
+            }),
+          );
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.canvas.sqlResults[nodeId] = {
+                status: 'error',
+                error: message,
+              };
+            }),
+          );
+        }
       },
     },
   }));
