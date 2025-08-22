@@ -20,7 +20,7 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
         <div className="flex items-center justify-between border-b px-3 py-2 text-sm font-medium">
           <EditableText
             value={data.title}
-            onChange={(value) => {
+            onChange={(v) => {
               updateNode(id, (d) => ({...(d as VegaData), title: v}));
             }}
           />
