@@ -259,17 +259,90 @@ export function createCanvasSlice<
       },
 
       updateNode: (nodeId, updater) => {
+        const current = get();
+        const node = current.config.canvas.nodes.find((n) => n.id === nodeId);
+        if (!node) return;
+        const isSqlNode = node.type === 'sql';
+        const prevData = node.data as CanvasNodeData;
+        const nextData = updater(prevData) as CanvasNodeData;
+        const prevTitle = isSqlNode
+          ? ((prevData as any).title as string)
+          : undefined;
+        const nextTitle = isSqlNode
+          ? ((nextData as any).title as string)
+          : undefined;
+        const titleChanged =
+          isSqlNode && prevTitle !== nextTitle && !!prevTitle && !!nextTitle;
+
+        // Apply the data update
         set((state) =>
           produce(state, (draft) => {
-            const node = draft.config.canvas.nodes.find((n) => n.id === nodeId);
-            if (node) {
-              node.data = updater(node.data as CanvasNodeData) as any;
+            const dnode = draft.config.canvas.nodes.find(
+              (n) => n.id === nodeId,
+            );
+            if (dnode) {
+              dnode.data = nextData as any;
             }
           }),
         );
+
+        // If SQL node title changed and there is/was a table, attempt to rename it
+        if (titleChanged) {
+          (async () => {
+            try {
+              const result = get().canvas.sqlResults[nodeId];
+              const connector = await get().db.getConnector();
+              await connector.query(
+                `CREATE SCHEMA IF NOT EXISTS ${CANVAS_SCHEMA_NAME}`,
+              );
+              const oldTableName =
+                result && result.status === 'success'
+                  ? result.tableName
+                  : `${CANVAS_SCHEMA_NAME}.${escapeId(prevTitle as string)}`;
+              const newTableName = `${CANVAS_SCHEMA_NAME}.${escapeId(nextTitle as string)}`;
+
+              // If a table with the new name exists, drop it to avoid rename conflicts
+              await connector.query(`DROP TABLE IF EXISTS ${newTableName}`);
+              // Rename uses only the table identifier, not qualified schema, in DuckDB
+              await connector.query(
+                `ALTER TABLE ${oldTableName} RENAME TO ${escapeId(nextTitle as string)}`,
+              );
+
+              // Update stored result table name if present
+              set((state) =>
+                produce(state, (draft) => {
+                  const r = draft.canvas.sqlResults[nodeId];
+                  if (r && r.status === 'success') {
+                    r.tableName = newTableName;
+                  }
+                }),
+              );
+              await get().db.refreshTableSchemas();
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                '[canvas.updateNode] Failed to rename table for node',
+                nodeId,
+                e,
+              );
+            }
+          })();
+        }
       },
 
       deleteNode: (nodeId) => {
+        const current = get();
+        const node = current.config.canvas.nodes.find((n) => n.id === nodeId);
+        let tableToDrop: string | undefined;
+        if (node && node.type === 'sql') {
+          const title = ((node.data as any).title as string) || 'result';
+          const res = current.canvas.sqlResults[nodeId];
+          tableToDrop =
+            res && res.status === 'success'
+              ? res.tableName
+              : `${CANVAS_SCHEMA_NAME}.${escapeId(title)}`;
+        }
+
         set((state) =>
           produce(state, (draft) => {
             draft.config.canvas.nodes = draft.config.canvas.nodes.filter(
@@ -278,12 +351,31 @@ export function createCanvasSlice<
             draft.config.canvas.edges = draft.config.canvas.edges.filter(
               (e) => e.source !== nodeId && e.target !== nodeId,
             );
+            // Clear stored result for the node
+            delete draft.canvas.sqlResults[nodeId];
             if (draft.config.canvas.nodes.length === 0) {
               draft.config.canvas.viewport.x = 0;
               draft.config.canvas.viewport.y = 0;
             }
           }),
         );
+
+        if (tableToDrop) {
+          (async () => {
+            try {
+              const connector = await get().db.getConnector();
+              await connector.query(`DROP TABLE IF EXISTS ${tableToDrop}`);
+              await get().db.refreshTableSchemas();
+            } catch (e) {
+              // eslint-disable-next-line no-console
+              console.warn(
+                '[canvas.deleteNode] Failed to drop table for node',
+                nodeId,
+                e,
+              );
+            }
+          })();
+        }
       },
 
       applyNodeChanges: (changes) => {

@@ -1,12 +1,10 @@
 import {cn} from '@sqlrooms/ui';
 import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {FC, PropsWithChildren} from 'react';
-import {useStoreWithCanvas} from '../CanvasSlice';
 
 export const CanvasNodeContainer: FC<
   PropsWithChildren<{id: string; className?: string}>
 > = ({id, className, children}) => {
-  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   return (
     <div
       className={cn(
