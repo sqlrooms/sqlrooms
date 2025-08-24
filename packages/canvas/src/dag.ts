@@ -24,6 +24,20 @@ export function buildAdjacency(nodes: DagNode[], edges: DagEdge[]): Adjacency {
 }
 
 /**
+ * Find a node by id in a list of nodes.
+ *
+ * @param nodes - Array of nodes with an `id` field.
+ * @param id - The node id to find.
+ * @returns The node if found, otherwise undefined.
+ */
+export function findNodeById<T extends {id: string}>(
+  nodes: T[],
+  id: string,
+): T | undefined {
+  return nodes.find((n) => n.id === id);
+}
+
+/**
  * Topologically sort all nodes in the graph using Kahn's algorithm.
  * If a cycle is detected, the remaining nodes are appended in arbitrary order,
  * and a warning is logged.
