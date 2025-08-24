@@ -1,8 +1,8 @@
-import {arrowTableToJson, useDuckDb, useSql} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
-import {useEffect, useMemo, useRef, useState} from 'react';
-import {PlainObject, VegaLite, VisualizationSpec} from 'react-vega';
+import {useMemo, useRef} from 'react';
+import {VegaLite, VisualizationSpec} from 'react-vega';
 
 const DATA_NAME = 'queryResult';
 
