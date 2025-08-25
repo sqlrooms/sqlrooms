@@ -23,7 +23,7 @@ const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
 const CANVAS_SCHEMA_NAME = 'canvas';
 
-export const CanvasNodeTypes = z.enum(['sql', 'vega'] as const);
+export const CanvasNodeTypes = z.enum(['sql', 'vega']);
 export type CanvasNodeTypes = z.infer<typeof CanvasNodeTypes>;
 
 export const CanvasNodeData = z.discriminatedUnion('type', [
@@ -40,6 +40,11 @@ export const CanvasNodeData = z.discriminatedUnion('type', [
 ]);
 export type CanvasNodeData = z.infer<typeof CanvasNodeData>;
 
+type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
+function isSqlData(data: CanvasNodeData): data is SqlData {
+  return data.type === 'sql';
+}
+
 function getUniqueSqlTitle(
   nodes: CanvasNodeSchema[],
   baseTitle: string,
@@ -48,7 +53,7 @@ function getUniqueSqlTitle(
   const existing = new Set(
     nodes
       .filter((n) => n.type === 'sql' && n.id !== (excludeNodeId || ''))
-      .map((n) => ((n.data as any).title as string) || ''),
+      .map((n) => n.data.title || ''),
   );
   if (!existing.has(baseTitle)) return baseTitle;
   let counter = 1;
@@ -109,8 +114,8 @@ export type CanvasSliceState = {
       updater: (data: CanvasNodeData) => CanvasNodeData,
     ) => void;
     deleteNode: (nodeId: string) => void;
-    applyNodeChanges: (changes: NodeChange[]) => void;
-    applyEdgeChanges: (changes: EdgeChange[]) => void;
+    applyNodeChanges: (changes: NodeChange<CanvasNodeSchema>[]) => void;
+    applyEdgeChanges: (changes: EdgeChange<CanvasEdgeSchema>[]) => void;
     addEdge: (edge: Connection) => void;
     executeSqlNodeQuery: (
       nodeId: string,
@@ -149,8 +154,8 @@ export function createCanvasSlice<
         // Execute SQL nodes sequentially to ensure parents finish before children
         for (const nodeId of order) {
           const node = findNodeById(get().config.canvas.nodes, nodeId);
-          if (!node || node.type !== 'sql') continue;
-          const sqlText = ((node.data as any)?.sql as string) || '';
+          if (!node || !isSqlData(node.data)) continue;
+          const sqlText = node.data.sql || '';
           if (!sqlText.trim()) continue;
           // Await ensures table creation completes before children execute
           await get().canvas.executeSqlNodeQuery(nodeId, {cascade: false});
@@ -190,9 +195,9 @@ export function createCanvasSlice<
             );
 
             const getInitialSqlForNewSqlNode = () => {
-              if (parent && parent.type === 'sql') {
+              if (parent && isSqlData(parent.data)) {
                 const parentResults = draft.canvas.sqlResults[parent.id];
-                const parentTitle = (parent.data as any).title || 'Query';
+                const parentTitle = parent.data.title || 'Query';
                 const fallbackParentTable = `${CANVAS_SCHEMA_NAME}.${escapeId(parentTitle)}`;
                 const parentTableName =
                   parentResults && parentResults.status === 'success'
@@ -261,8 +266,8 @@ export function createCanvasSlice<
         const downstreamOrder = topoSortDownstream(nodeId, allNodes, allEdges);
         for (const childId of downstreamOrder) {
           const child = findNodeById(allNodes, childId);
-          if (!child || child.type !== 'sql') continue;
-          const text = ((child.data as any)?.sql as string) || '';
+          if (!child || !isSqlData(child.data)) continue;
+          const text = child.data.sql || '';
           if (!text.trim()) continue;
           await get().canvas.executeSqlNodeQuery(childId, {cascade: false});
         }
@@ -285,7 +290,7 @@ export function createCanvasSlice<
           produce(state, (draft) => {
             const node = findNodeById(draft.config.canvas.nodes, nodeId);
             if (node) {
-              node.data = updater(node.data as CanvasNodeData) as any;
+              node.data = updater(node.data as CanvasNodeData);
             }
           }),
         );
@@ -294,17 +299,17 @@ export function createCanvasSlice<
       renameNode: async (nodeId: string, newTitle: string) => {
         const node = findNodeById(get().config.canvas.nodes, nodeId);
         if (!node) throw new Error('Node not found');
-        if (node.type !== 'sql') {
+        if (!isSqlData(node.data)) {
           set((state) =>
             produce(state, (draft) => {
               const dnode = findNodeById(draft.config.canvas.nodes, nodeId);
-              if (dnode) (dnode.data as any).title = newTitle;
+              if (dnode) dnode.data.title = newTitle;
             }),
           );
           return;
         }
 
-        const prevTitle = ((node.data as any).title as string) || 'result';
+        const prevTitle = node.data.title || 'result';
         if (prevTitle === newTitle) return;
 
         // Ensure title uniqueness among SQL nodes by adjusting to a unique variant
@@ -333,7 +338,7 @@ export function createCanvasSlice<
         set((state) =>
           produce(state, (draft) => {
             const dnode = findNodeById(draft.config.canvas.nodes, nodeId);
-            if (dnode) (dnode.data as any).title = uniqueTitle;
+            if (dnode) dnode.data.title = uniqueTitle;
             const r = draft.canvas.sqlResults[nodeId];
             if (r && r.status === 'success') r.tableName = newQualified;
           }),
@@ -349,8 +354,8 @@ export function createCanvasSlice<
         const current = get();
         const node = findNodeById(current.config.canvas.nodes, nodeId);
         let tableToDrop: string | undefined;
-        if (node && node.type === 'sql') {
-          const title = ((node.data as any).title as string) || 'result';
+        if (node && isSqlData(node.data)) {
+          const title = node.data.title || 'result';
           const res = current.canvas.sqlResults[nodeId];
           tableToDrop =
             res && res.status === 'success'
@@ -399,7 +404,7 @@ export function createCanvasSlice<
             draft.config.canvas.nodes = applyNodeChanges(
               changes,
               draft.config.canvas.nodes,
-            ) as any;
+            );
           }),
         );
       },
@@ -410,7 +415,7 @@ export function createCanvasSlice<
             draft.config.canvas.edges = applyEdgeChanges(
               changes,
               draft.config.canvas.edges,
-            ) as any;
+            );
           }),
         );
       },
@@ -428,10 +433,9 @@ export function createCanvasSlice<
         opts?: {cascade?: boolean},
       ) => {
         const node = findNodeById(get().config.canvas.nodes, nodeId);
-        if (!node || node.type !== 'sql') return;
-        const sqlNode = node.data as Extract<CanvasNodeData, {type: 'sql'}>;
-        const sql = sqlNode.sql || '';
-        const title = sqlNode.title || 'result';
+        if (!node || !isSqlData(node.data)) return;
+        const sql = node.data.sql || '';
+        const title = node.data.title || 'result';
 
         set((state) =>
           produce(state, (draft) => {
