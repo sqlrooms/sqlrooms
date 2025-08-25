@@ -231,8 +231,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 name: sessionName,
                 modelProvider:
                   modelProvider || currentSession?.modelProvider || 'openai',
-                model: model || currentSession?.model || 'gpt-4o-mini',
-
+                model: model || currentSession?.model || 'gpt-4.1',
                 analysisResults: [],
                 createdAt: new Date(),
               });
