@@ -371,7 +371,7 @@ export function createKeplerSlice<
                 !keplerDatasets?.[table.table]
               ) {
                 await get().kepler.addTableToMap(mapId, table.table, {
-                  autoCreateLayers: true,
+                  autoCreateLayers: false,
                   centerMap: false,
                 });
               }
