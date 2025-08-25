@@ -199,7 +199,7 @@ export async function runAnalysis({
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
     ...(abortController ? {abortController} : {}),
-    ...(modelProvider === 'ollama' && baseUrl ? {baseUrl} : {}),
+    baseUrl, // ollama base url or LLM proxy server url
   });
 
   // restore ai messages from historyAnalysis?
