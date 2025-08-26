@@ -182,7 +182,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
     const initialConfig: PC = {
       ...INITIAL_BASE_ROOM_CONFIG,
       ...configProps,
-    } as PC;
+    } as unknown as PC;
     const initialRoomState = {
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],
