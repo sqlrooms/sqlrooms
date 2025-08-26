@@ -91,6 +91,10 @@ export interface AiSliceOptions {
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
+  /**
+   * Number of rows to share with LLM (default: 0)
+   */
+  numberOfRowsToShareWithLLM?: number;
 }
 
 /**
@@ -114,7 +118,9 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     initialAnalysisPrompt = '',
     customTools = {},
     getInstructions,
+    numberOfRowsToShareWithLLM,
   } = config;
+
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
@@ -122,7 +128,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         isRunningAnalysis: false,
 
         tools: {
-          ...getDefaultTools(store),
+          ...getDefaultTools(store, numberOfRowsToShareWithLLM),
           ...customTools,
         },
 
@@ -225,7 +231,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 name: sessionName,
                 modelProvider:
                   modelProvider || currentSession?.modelProvider || 'openai',
-                model: model || currentSession?.model || 'gpt-4o-mini',
+                model: model || currentSession?.model || 'gpt-4.1',
                 analysisResults: [],
                 createdAt: new Date(),
               });
@@ -342,7 +348,10 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               baseUrl: currentSession.baseUrl || baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
-              tools: get().ai.tools,
+              tools: {
+                ...getDefaultTools(store, numberOfRowsToShareWithLLM),
+                ...customTools,
+              },
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
