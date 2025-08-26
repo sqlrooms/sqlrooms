@@ -185,17 +185,18 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
         type={props.isAnswer ? 'answer' : 'thinking'}
         content={props}
       >
-        <Markdown
-          className="prose dark:prose-invert max-w-none text-sm"
-          remarkPlugins={[remarkGfm]}
-          rehypePlugins={[rehypeRaw]}
-          components={{
-            // @ts-expect-error - Custom HTML element not in react-markdown types
-            'think-block': thinkBlockComponent,
-          }}
-        >
-          {processedContent}
-        </Markdown>
+        <div className="prose dark:prose-invert max-w-none text-sm">
+          <Markdown
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeRaw]}
+            components={{
+              // @ts-expect-error - Custom HTML element not in react-markdown types
+              'think-block': thinkBlockComponent,
+            }}
+          >
+            {processedContent}
+          </Markdown>
+        </div>
       </MessageContainer>
     </div>
   );

@@ -1051,8 +1051,8 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       react-markdown:
-        specifier: ^9.1.0
-        version: 9.1.0(@types/react@19.1.7)(react@19.1.0)
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
       rehype-raw:
         specifier: ^7.0.0
         version: 7.0.0
@@ -9540,8 +9540,8 @@ packages:
       maplibre-gl:
         optional: true
 
-  react-markdown@9.1.0:
-    resolution: {integrity: sha512-xaijuJB0kzGiUdG7nc2MOMDUDBWPyGAjZtUrow9XxUeua8IqeP+VlIfAZ3bphpcLTnSZXz6z9jcVC/TCwbfgdw==}
+  react-markdown@10.1.0:
+    resolution: {integrity: sha512-qKxVopLT/TyA6BX3Ue5NwabOsAzm0Q7kAPwq6L+wWDwisYs7R8vZ0nRXqq6rkueboxpkjvLGU9fWifiX/ZZFxQ==}
     peerDependencies:
       '@types/react': '>=18'
       react: 19.1.0
@@ -20981,7 +20981,7 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.6.0
 
-  react-markdown@9.1.0(@types/react@19.1.7)(react@19.1.0):
+  react-markdown@10.1.0(@types/react@19.1.7)(react@19.1.0):
     dependencies:
       '@types/hast': 3.0.4
       '@types/mdast': 4.0.4

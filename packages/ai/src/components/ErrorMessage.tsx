@@ -5,12 +5,9 @@ import {MessageContainer} from './MessageContainer';
 export function ErrorMessage(props: {errorMessage: string}) {
   return (
     <MessageContainer isSuccess={false} type="error" content={props}>
-      <Markdown
-        className="prose dark:prose-invert max-w-none text-sm"
-        remarkPlugins={[remarkGfm]}
-      >
-        {props.errorMessage}
-      </Markdown>
+      <div className="prose dark:prose-invert max-w-none text-sm">
+        <Markdown remarkPlugins={[remarkGfm]}>{props.errorMessage}</Markdown>
+      </div>
     </MessageContainer>
   );
 }
