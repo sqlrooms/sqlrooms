@@ -69,7 +69,7 @@ export const defaultRenderTableNodeMenuItems = (
         disabled={!sql}
       >
         <CopyIcon width="15px" />
-        Copy CREATE query
+        Copy CREATE TABLE
       </TreeNodeActionsMenuItem>
     </>
   );
