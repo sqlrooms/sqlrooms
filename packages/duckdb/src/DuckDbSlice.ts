@@ -431,7 +431,12 @@ export function createDuckDbSlice({
               sql,
               comment,
               isView: Boolean(isView),
-              rowCount: Number(estimatedSize),
+              rowCount:
+                typeof estimatedSize === 'bigint'
+                  ? Number(estimatedSize)
+                  : estimatedSize === null
+                    ? undefined
+                    : estimatedSize,
             });
           }
           return newTables;

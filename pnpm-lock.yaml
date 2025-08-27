@@ -1515,6 +1515,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
       lucide-react:
         specifier: ^0.474.0
         version: 0.474.0(react@19.1.0)

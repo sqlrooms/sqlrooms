@@ -3,6 +3,7 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
 import {useDisclosure} from '@sqlrooms/ui';
+import {formatCount} from '@sqlrooms/utils';
 import {CopyIcon, EyeIcon, TableIcon, ViewIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -90,7 +91,7 @@ export const TableTreeNode: FC<{
   } = props;
 
   const tableModal = useDisclosure();
-  const {database, schema, name} = nodeObject;
+  const {database, schema, name, rowCount, isView} = nodeObject;
   const qualifiedTableName = makeQualifiedTableName({
     database,
     schema,
@@ -101,13 +102,20 @@ export const TableTreeNode: FC<{
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="flex w-full items-center space-x-2">
-          {nodeObject.isView ? (
+        <div className="relative flex w-full items-center space-x-2">
+          {isView ? (
             <ViewIcon size="16px" className="shrink-0 text-blue-500" />
           ) : (
             <TableIcon size="16px" className="shrink-0 text-blue-500" />
           )}
-          <span className="text-sm">{nodeObject.name}</span>
+          <div className="flex w-full items-center justify-between gap-2">
+            <span className="text-sm">{name}</span>
+            {rowCount !== undefined && (
+              <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-5 text-xs">
+                {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
+              </span>
+            )}
+          </div>
         </div>
         <TreeNodeActionsMenu>
           {renderMenuItems(nodeObject, tableModal)}
