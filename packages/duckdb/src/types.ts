@@ -7,6 +7,7 @@ export type TableColumn = {
 
 export type DataTable = {
   table: QualifiedTableName;
+  isView: boolean;
   /** @deprecated Use table.database instead */
   database?: string;
   /** @deprecated Use table.schema instead */

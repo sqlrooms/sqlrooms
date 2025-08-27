@@ -358,16 +358,33 @@ export function createDuckDbSlice({
         ): Promise<DataTable[]> {
           const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
-            `SELECT 
+            `WITH tables_and_views AS (
+              FROM duckdb_tables() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                table_name AS name,
+                sql,
+                comment,
+                estimated_size,
+                FALSE AS isView
+              UNION
+              FROM duckdb_views() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                view_name AS name,
+                sql,
+                comment,
+                NULL estimated_size,
+                TRUE AS isView
+            )
+            SELECT 
+                isView,
                 database, schema,
                 name, column_names, column_types,
                 sql, comment,
                 estimated_size
-            FROM (DESCRIBE) t1
-            JOIN duckdb_tables() t2 ON 
-                t1.database = t2.database_name AND 
-                t1.schema = t2.schema_name AND
-                t1.name = t2.table_name
+            FROM (DESCRIBE)
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -383,6 +400,7 @@ export function createDuckDbSlice({
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
+            const isView = describeResults.getChild('isView')?.get(i);
             const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
             const table = describeResults.getChild('name')?.get(i);
@@ -412,6 +430,7 @@ export function createDuckDbSlice({
               columns,
               sql,
               comment,
+              isView: Boolean(isView),
               rowCount: Number(estimatedSize),
             });
           }
