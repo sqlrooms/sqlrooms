@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/mosaic",
-  "version": "0.24.14",
+  "version": "0.24.15",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",

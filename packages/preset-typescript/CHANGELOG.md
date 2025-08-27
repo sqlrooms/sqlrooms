@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.15 (2025-08-27)
+
+**Note:** Version bump only for package @sqlrooms/preset-typescript
+
 ## 0.24.14 (2025-08-21)
 
 ### Features
