@@ -16,6 +16,8 @@ export type DataTable = {
   columns: TableColumn[];
   rowCount?: number;
   inputFileName?: string;
+  sql?: string;
+  comment?: string;
 };
 export type ColumnTypeCategory =
   | 'number'

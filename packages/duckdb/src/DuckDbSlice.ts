@@ -358,10 +358,16 @@ export function createDuckDbSlice({
         ): Promise<DataTable[]> {
           const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
-            `FROM (DESCRIBE)
-             SELECT 
+            `SELECT 
                 database, schema,
-                name, column_names, column_types
+                name, column_names, column_types,
+                sql, comment,
+                estimated_size
+            FROM (DESCRIBE) t1
+            JOIN duckdb_tables() t2 ON 
+                t1.database = t2.database_name AND 
+                t1.schema = t2.schema_name AND
+                t1.name = t2.table_name
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -380,6 +386,11 @@ export function createDuckDbSlice({
             const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
             const table = describeResults.getChild('name')?.get(i);
+            const sql = describeResults.getChild('sql')?.get(i);
+            const comment = describeResults.getChild('comment')?.get(i);
+            const estimatedSize = describeResults
+              .getChild('estimated_size')
+              ?.get(i);
             const columnNames = describeResults
               .getChild('column_names')
               ?.get(i);
@@ -399,6 +410,9 @@ export function createDuckDbSlice({
               schema,
               tableName: table,
               columns,
+              sql,
+              comment,
+              rowCount: Number(estimatedSize),
             });
           }
           return newTables;
