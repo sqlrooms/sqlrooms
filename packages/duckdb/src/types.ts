@@ -54,9 +54,7 @@ export type ColumnNodeObject = BaseNodeObject & {
 
 export type TableNodeObject = BaseNodeObject & {
   type: 'table';
-  schema: string;
-  database: string;
-};
+} & DataTable;
 
 export type SchemaNodeObject = BaseNodeObject & {
   type: 'schema';

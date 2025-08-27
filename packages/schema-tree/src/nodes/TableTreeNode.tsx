@@ -15,7 +15,7 @@ export const defaultRenderTableNodeMenuItems = (
   nodeObject: TableNodeObject,
   viewTableModal?: ReturnType<typeof useDisclosure>,
 ) => {
-  const {database, schema, name} = nodeObject;
+  const {database, schema, name, sql} = nodeObject;
   const qualifiedTableName = makeQualifiedTableName({
     database,
     schema,
@@ -56,8 +56,20 @@ export const defaultRenderTableNodeMenuItems = (
           navigator.clipboard.writeText(`SELECT * FROM ${qualifiedTableName}`);
         }}
       >
-        <SquareTerminalIcon width="15px" />
+        <CopyIcon width="15px" />
         Copy SELECT query
+      </TreeNodeActionsMenuItem>
+
+      <TreeNodeActionsMenuItem
+        onClick={() => {
+          if (sql) {
+            navigator.clipboard.writeText(sql);
+          }
+        }}
+        disabled={!sql}
+      >
+        <CopyIcon width="15px" />
+        Copy CREATE query
       </TreeNodeActionsMenuItem>
     </>
   );
