@@ -358,10 +358,33 @@ export function createDuckDbSlice({
         ): Promise<DataTable[]> {
           const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
-            `FROM (DESCRIBE)
-             SELECT 
+            `WITH tables_and_views AS (
+              FROM duckdb_tables() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                table_name AS name,
+                sql,
+                comment,
+                estimated_size,
+                FALSE AS isView
+              UNION
+              FROM duckdb_views() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                view_name AS name,
+                sql,
+                comment,
+                NULL estimated_size,
+                TRUE AS isView
+            )
+            SELECT 
+                isView,
                 database, schema,
-                name, column_names, column_types
+                name, column_names, column_types,
+                sql, comment,
+                estimated_size
+            FROM (DESCRIBE)
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -377,9 +400,15 @@ export function createDuckDbSlice({
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
+            const isView = describeResults.getChild('isView')?.get(i);
             const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
             const table = describeResults.getChild('name')?.get(i);
+            const sql = describeResults.getChild('sql')?.get(i);
+            const comment = describeResults.getChild('comment')?.get(i);
+            const estimatedSize = describeResults
+              .getChild('estimated_size')
+              ?.get(i);
             const columnNames = describeResults
               .getChild('column_names')
               ?.get(i);
@@ -399,6 +428,15 @@ export function createDuckDbSlice({
               schema,
               tableName: table,
               columns,
+              sql,
+              comment,
+              isView: Boolean(isView),
+              rowCount:
+                typeof estimatedSize === 'bigint'
+                  ? Number(estimatedSize)
+                  : estimatedSize === null
+                    ? undefined
+                    : estimatedSize,
             });
           }
           return newTables;
