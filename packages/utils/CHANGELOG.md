@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.16 (2025-08-27)
+
+### Features
+
+* Add to DataTable: estimated rowCount, create table DDL and comment ([#127](https://github.com/sqlrooms/sqlrooms/issues/127)) ([13a6a7f](https://github.com/sqlrooms/sqlrooms/commit/13a6a7fb3f95ffd66c20bf6beec816bf225fdc91))
+
 ## 0.24.15 (2025-08-27)
 
 **Note:** Version bump only for package @sqlrooms/utils
