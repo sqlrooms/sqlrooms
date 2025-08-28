@@ -43,7 +43,7 @@ export const Canvas: React.FC = () => {
         {empty && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <AddNodePopover>
-              <Button size="sm">
+              <Button size="xs">
                 <PlusIcon className="h-4 w-4" />
                 Add node
               </Button>
