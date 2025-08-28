@@ -24,6 +24,7 @@ import {
   createAiSlice,
   createDefaultAiConfig,
 } from '@sqlrooms/ai';
+import {createVegaChartTool} from '@sqlrooms/vega';
 
 const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
@@ -148,11 +149,13 @@ export function createDefaultCanvasConfig(
 
 export function createCanvasSlice<
   PC extends BaseRoomConfig & CanvasSliceConfig,
->() {
+>(props: Parameters<typeof createAiSlice<PC>>[0]) {
   return createSlice<PC, CanvasSliceState>((set, get, store) => ({
     ...createAiSlice({
-      getApiKey: (modelProvider) => {
-        return '';
+      ...props,
+      customTools: {
+        chart: createVegaChartTool(),
+        ...props.customTools,
       },
     })(set, get, store),
     canvas: {

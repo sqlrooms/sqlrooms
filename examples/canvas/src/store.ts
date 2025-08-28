@@ -18,11 +18,16 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
 import {DatabaseIcon} from 'lucide-react';
 import exampleCanvas from './example-canvas.json';
+import {createVegaChartTool} from '../../../packages/vega/dist/VegaChartTool';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
-export type RoomState = RoomShellSliceState<RoomConfig> & CanvasSliceState;
+export type RoomState = RoomShellSliceState<RoomConfig> &
+  CanvasSliceState & {
+    apiKey: string;
+    setApiKey: (apiKey: string) => void;
+  };
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
@@ -67,7 +72,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         },
       })(set, get, store),
-      ...createCanvasSlice<RoomConfig>()(set, get, store),
+
+      ...createCanvasSlice<RoomConfig>({
+        getApiKey: () => get().apiKey,
+        numberOfRowsToShareWithLLM: 2,
+      })(set, get, store),
+
+      apiKey: '',
+      setApiKey: (apiKey) => set({apiKey}),
     }),
 
     // Persist settings
@@ -76,6 +88,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       name: 'canvas-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
+        apiKey: state.apiKey,
         config: RoomConfig.parse(state.config),
       }),
     },

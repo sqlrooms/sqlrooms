@@ -1,5 +1,6 @@
 import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
+import {InputApiKey} from './InputApiKey';
 import {roomStore} from './store';
 
 export function Room() {
@@ -10,6 +11,7 @@ export function Room() {
       </RoomShell.Sidebar>
       <RoomShell.LayoutComposer tileClassName="p-0" />
       <RoomShell.LoadingProgress />
+      <InputApiKey className="absolute right-[60px] top-5 z-10" />
     </RoomShell>
   );
 }

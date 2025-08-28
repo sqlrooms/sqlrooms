@@ -5,6 +5,7 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerFooter,
+  DrawerHandle,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
@@ -14,7 +15,7 @@ import {FC} from 'react';
 
 export const CanvasAssistantDrawer: FC = () => {
   return (
-    <Drawer>
+    <Drawer direction="right">
       <DrawerTrigger asChild>
         <Button
           variant="default"
@@ -24,14 +25,12 @@ export const CanvasAssistantDrawer: FC = () => {
         </Button>
       </DrawerTrigger>
       <DrawerContent
-        data-vaul-drawer-direction="right"
-        className="border-none bg-transparent p-4"
+        className="border-none bg-transparent p-4 outline-none"
         overlayClassName="bg-transparent"
       >
-        <div className="border-border bg-background relative mx-auto flex h-full w-full max-w-sm flex-col gap-0 overflow-hidden rounded-md border">
+        <div className="border-border bg-background relative mx-auto flex h-full w-full flex-col gap-0 overflow-hidden rounded-md border">
           <DrawerHeader>
             <DrawerTitle>Assistant</DrawerTitle>
-            {/* <DrawerDescription>Canvas assistant</DrawerDescription> */}
             <DrawerClose asChild className="absolute right-2 top-2">
               <Button variant="ghost" size="xs">
                 <XIcon className="h-4 w-4" />
