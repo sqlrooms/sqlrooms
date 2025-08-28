@@ -11,11 +11,12 @@ import {
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
 import React from 'react';
+import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
 import type {CanvasNodeData} from './CanvasSlice';
 import {useStoreWithCanvas} from './CanvasSlice';
+import {AddNodePopover} from './nodes/AddNodePopover';
 import {SqlNode} from './nodes/SqlNode';
 import {VegaNode} from './nodes/VegaNode';
-import {AddNodePopover} from './nodes/AddNodePopover';
 
 const nodeTypes = {
   sql: SqlNode,
@@ -68,6 +69,7 @@ export const Canvas: React.FC = () => {
           <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
       </div>
+      <CanvasAssistantDrawer />
     </div>
   );
 };

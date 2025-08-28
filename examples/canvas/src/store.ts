@@ -31,9 +31,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice<RoomConfig>({
         config: {
-          ...createDefaultCanvasConfig(
-            CanvasSliceConfig.parse(exampleCanvas).canvas,
-          ),
+          ...createDefaultCanvasConfig(),
+          // CanvasSliceConfig.parse(exampleCanvas).canvas,
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {

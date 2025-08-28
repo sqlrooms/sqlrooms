@@ -18,6 +18,12 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 import {topoSortAll, topoSortDownstream, findNodeById} from './dag';
+import {
+  AiSliceConfig,
+  AiSliceState,
+  createAiSlice,
+  createDefaultAiConfig,
+} from '@sqlrooms/ai';
 
 const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
@@ -84,20 +90,22 @@ export type SqlNodeQueryResult =
   | {status: 'error'; error: string}
   | {status: 'success'; tableName: string; lastQueryStatement: string};
 
-export const CanvasSliceConfig = z.object({
-  canvas: z.object({
-    viewport: z.object({
-      x: z.number(),
-      y: z.number(),
-      zoom: z.number(),
+export const CanvasSliceConfig = z
+  .object({
+    canvas: z.object({
+      viewport: z.object({
+        x: z.number(),
+        y: z.number(),
+        zoom: z.number(),
+      }),
+      nodes: z.array(CanvasNodeSchema).default([]),
+      edges: z.array(CanvasEdgeSchema).default([]),
     }),
-    nodes: z.array(CanvasNodeSchema).default([]),
-    edges: z.array(CanvasEdgeSchema).default([]),
-  }),
-});
+  })
+  .merge(AiSliceConfig);
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
-export type CanvasSliceState = {
+export type CanvasSliceState = AiSliceState & {
   canvas: {
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
@@ -134,13 +142,19 @@ export function createDefaultCanvasConfig(
       edges: [],
       ...props,
     },
+    ...createDefaultAiConfig({}),
   };
 }
 
 export function createCanvasSlice<
   PC extends BaseRoomConfig & CanvasSliceConfig,
 >() {
-  return createSlice<PC, CanvasSliceState>((set, get) => ({
+  return createSlice<PC, CanvasSliceState>((set, get, store) => ({
+    ...createAiSlice({
+      getApiKey: (modelProvider) => {
+        return '';
+      },
+    })(set, get, store),
     canvas: {
       sqlResults: {},
 

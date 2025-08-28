@@ -1,9 +1,24 @@
-import {Button, EditableText, cn, useToast} from '@sqlrooms/ui';
+import {
+  Button,
+  EditableText,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  cn,
+  useToast,
+} from '@sqlrooms/ui';
 import {Handle, NodeResizer, Position} from '@xyflow/react';
-import {PlusIcon} from 'lucide-react';
+import {PlusIcon, SparklesIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
+import {AnalysisResultsContainer, QueryControls} from '@sqlrooms/ai';
+
+const PROMPT_PLACEHOLDER = {
+  sql: 'What would you like to learn about the data?',
+  vega: 'How would you like to visualize the data?',
+  default: 'What would you like to do?',
+};
 
 /**
  * Container applied to every canvas node. Provides resizing, connection handles,
@@ -48,9 +63,9 @@ export const CanvasNodeContainer: FC<
       )}
     >
       <NodeResizer minWidth={200} minHeight={200} />
-      <div className="flex h-full min-h-0 w-full flex-col">
+      <div className="flex h-full min-h-0 w-full flex-col items-center">
         {(title !== undefined || headerRight) && (
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
+          <div className="flex w-full items-center justify-between gap-2 border-b px-3 py-2">
             <EditableText
               className="text-sm font-medium"
               value={title ?? ''}
@@ -59,6 +74,21 @@ export const CanvasNodeContainer: FC<
             <div className="flex items-center gap-2">{headerRight}</div>
           </div>
         )}
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="default"
+              className="h-8 w-8 -translate-y-1/2 rounded-full"
+            >
+              <SparklesIcon className="h-4 w-4" />
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="max-h-[50vh] w-[400px] overflow-auto">
+            <QueryControls
+              placeholder={`✨ ${PROMPT_PLACEHOLDER[node?.type ?? 'default']}`}
+            />
+          </PopoverContent>
+        </Popover>
         <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
       <AddNodePopover className="absolute -right-10 top-1/2" parentId={id}>

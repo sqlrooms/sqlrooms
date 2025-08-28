@@ -50,19 +50,17 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
       }
     >
       <div className="flex h-full w-full flex-col">
-        <div className="flex flex-1 flex-col">
-          <div className="relative flex-1">
-            <SqlMonacoEditor
-              className="absolute inset-0 p-1"
-              value={sql}
-              options={EDITOR_OPTIONS}
-              onChange={(v) =>
-                updateNode(id, (d) => ({...(d as SqlData), sql: v || ''}))
-              }
-              tableSchemas={tables}
-              // onMount={handleEditorMount}
-            />
-          </div>
+        <div className="relative flex-1">
+          <SqlMonacoEditor
+            className="absolute inset-0 p-1"
+            value={sql}
+            options={EDITOR_OPTIONS}
+            onChange={(v) =>
+              updateNode(id, (d) => ({...(d as SqlData), sql: v || ''}))
+            }
+            tableSchemas={tables}
+            // onMount={handleEditorMount}
+          />
         </div>
         {result?.status === 'error' && (
           <div className="flex-1 overflow-auto whitespace-pre-wrap border-t p-4 font-mono text-xs text-red-600">
@@ -70,7 +68,7 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           </div>
         )}
         {result?.status === 'success' && (
-          <div className="flex-1 overflow-hidden border-t">
+          <div className="flex-[2] overflow-hidden border-t">
             <QueryDataTable
               query={`SELECT * FROM ${result.tableName}`}
               fontSize="text-xs"

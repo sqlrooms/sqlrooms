@@ -99,7 +99,6 @@ export const VegaLiteChart: React.FC<{
     if (!result.data) return null;
     return {[DATA_NAME]: result.data.toArray()};
   }, [result.data]);
-  console.log(result.data?.toArray());
 
   return (
     <div

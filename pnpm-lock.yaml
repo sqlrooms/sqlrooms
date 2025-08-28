@@ -1126,6 +1126,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/ai':
+        specifier: workspace:*
+        version: link:../ai
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1839,6 +1842,9 @@ importers:
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.1.0)
+      vaul:
+        specifier: ^1.1.2
+        version: 1.1.2(@types/react-dom@19.1.7(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       zod:
         specifier: ^3.25.73
         version: 3.25.73
@@ -2118,6 +2124,7 @@ packages:
 
   '@arcgis/components-utils@4.33.0-next.158':
     resolution: {integrity: sha512-EkfOQ9V7lvuCalY4ZniZ8bn/988HwAaIpaKiK5O+aqydUM9YhJh2UnHi5Cwx/izI1RsdZsvy7R6cWaBptqcK/A==}
+    deprecated: This version is no longer supported. Upgrade to @latest
 
   '@arcgis/core@4.32.10':
     resolution: {integrity: sha512-dcYbISxjsrBUBmrIx1dlTV4ynrl1CrvqLcd2fYtFgc0WNTqx3V7lFNmpBbT9wu15wqaTUA8kVXmN9HCoUppA4w==}
@@ -10859,6 +10866,12 @@ packages:
   validate-npm-package-name@5.0.1:
     resolution: {integrity: sha512-OljLrQ9SQdOUqTaQxqL5dEfZWrXExyyWsozYlAWFawPVNuD83igl7uJD2RTkNMbniIYgt8l81eCJGIdQF7avLQ==}
     engines: {node: ^14.17.0 || ^16.13.0 || >=18.0.0}
+
+  vaul@1.1.2:
+    resolution: {integrity: sha512-ZFkClGpWyI2WUQjdLJ/BaGuV6AVQiJ3uELGk3OYtP+B6yCO7Cmn9vPFXVJkRaGkOJu3m8bQMgtyzNHixULceQA==}
+    peerDependencies:
+      react: 19.1.0
+      react-dom: 19.1.0
 
   vega-canvas@1.2.7:
     resolution: {integrity: sha512-OkJ9CACVcN9R5Pi9uF6MZBF06pO6qFpDYHWSKBJsdHP5o724KrsgR6UvbnXFH82FdsiTOff/HqjuaG8C7FL+9Q==}
@@ -23072,6 +23085,15 @@ snapshots:
       spdx-expression-parse: 3.0.1
 
   validate-npm-package-name@5.0.1: {}
+
+  vaul@1.1.2(@types/react-dom@19.1.7(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0):
+    dependencies:
+      '@radix-ui/react-dialog': 1.1.14(@types/react-dom@19.1.7(@types/react@19.1.7))(@types/react@19.1.7)(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      react: 19.1.0
+      react-dom: 19.1.0(react@19.1.0)
+    transitivePeerDependencies:
+      - '@types/react'
+      - '@types/react-dom'
 
   vega-canvas@1.2.7: {}
 
