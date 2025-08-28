@@ -12,15 +12,10 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
   }) as VisualizationSpec;
   const defaultQuery =
     "SELECT * FROM (VALUES ('A', 28), ('B', 55), ('C', 43)) AS t(category, value)";
-  const updateNode = useStoreWithCanvas((s) => s.canvas.updateNode);
   return (
     <CanvasNodeContainer
       id={id}
-      title={data.title}
       className="overflow-hidden"
-      onTitleChange={(v) => {
-        updateNode(id, (d) => ({...(d as VegaData), title: v}));
-      }}
       headerRight={
         <span className="text-[10px] uppercase text-gray-500">Vega</span>
       }

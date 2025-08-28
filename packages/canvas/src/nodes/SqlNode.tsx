@@ -12,9 +12,7 @@ type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
 
 export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   const sql = data.sql || '';
-  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   const updateNode = useStoreWithCanvas((s) => s.canvas.updateNode);
-  const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
   const tables = useStoreWithCanvas((s) => s.db.tables);
   const execute = useStoreWithCanvas((s) => s.canvas.executeSqlNodeQuery);
   const result = useStoreWithCanvas((s) => s.canvas.sqlResults[id]);
@@ -33,18 +31,6 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   return (
     <CanvasNodeContainer
       id={id}
-      title={data.title}
-      onTitleChange={async (v) => {
-        try {
-          await renameNode(id, v);
-        } catch (e) {
-          toast({
-            variant: 'destructive',
-            title: 'Rename failed',
-            description: e instanceof Error ? e.message : String(e),
-          });
-        }
-      }}
       headerRight={
         <>
           <Button size="sm" variant="secondary" onClick={() => execute(id)}>

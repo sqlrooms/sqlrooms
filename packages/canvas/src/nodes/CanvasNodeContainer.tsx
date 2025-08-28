@@ -1,8 +1,9 @@
-import {Button, EditableText, cn} from '@sqlrooms/ui';
+import {Button, EditableText, cn, useToast} from '@sqlrooms/ui';
 import {Handle, NodeResizer, Position} from '@xyflow/react';
-import {FC, PropsWithChildren, ReactNode} from 'react';
-import {AddNodePopover} from './AddNodePopover';
 import {PlusIcon} from 'lucide-react';
+import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
+import {useStoreWithCanvas} from '../CanvasSlice';
+import {AddNodePopover} from './AddNodePopover';
 
 /**
  * Container applied to every canvas node. Provides resizing, connection handles,
@@ -13,14 +14,32 @@ export const CanvasNodeContainer: FC<
   PropsWithChildren<{
     id: string;
     className?: string;
-    /** Title shown in the header. If provided, a header will be rendered. */
-    title?: string;
-    /** Callback when title changes. Ignored if not provided. */
-    onTitleChange?: (value: string) => void | Promise<void>;
     /** Right-side header content (e.g. buttons, badges). */
     headerRight?: ReactNode;
   }>
-> = ({id, className, title, onTitleChange, headerRight, children}) => {
+> = ({id, className, headerRight, children}) => {
+  const {toast} = useToast();
+  const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
+  const node = useStoreWithCanvas((s) =>
+    s.config.canvas.nodes.find((n) => n.id === id),
+  );
+  const title = node?.data.title;
+  const onTitleChange = useCallback(
+    (v: string) => {
+      async () => {
+        try {
+          await renameNode(id, v);
+        } catch (e) {
+          toast({
+            variant: 'destructive',
+            title: 'Rename failed',
+            description: e instanceof Error ? e.message : String(e),
+          });
+        }
+      };
+    },
+    [id, renameNode],
+  );
   return (
     <div
       className={cn(
@@ -29,7 +48,7 @@ export const CanvasNodeContainer: FC<
       )}
     >
       <NodeResizer minWidth={200} minHeight={200} />
-      <div className="flex h-full w-full flex-col">
+      <div className="flex h-full min-h-0 w-full flex-col">
         {(title !== undefined || headerRight) && (
           <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
             <EditableText
@@ -40,7 +59,7 @@ export const CanvasNodeContainer: FC<
             <div className="flex items-center gap-2">{headerRight}</div>
           </div>
         )}
-        <div className="w-full flex-1">{children}</div>
+        <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
       <AddNodePopover className="absolute -right-10 top-1/2" parentId={id}>
         <Button
