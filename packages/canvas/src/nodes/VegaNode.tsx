@@ -1,6 +1,6 @@
-import {FC} from 'react';
-import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {VegaLiteChart, type VisualizationSpec} from '@sqlrooms/vega';
+import {FC} from 'react';
+import {CanvasNodeData} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
 
 type VegaData = Extract<CanvasNodeData, {type: 'vega'}>;
@@ -15,7 +15,6 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
   return (
     <CanvasNodeContainer
       id={id}
-      className="overflow-hidden"
       headerRight={
         <span className="text-[10px] uppercase text-gray-500">Vega</span>
       }
