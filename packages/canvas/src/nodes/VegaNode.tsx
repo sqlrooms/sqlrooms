@@ -10,8 +10,9 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
     mark: 'point',
     data: {values: []},
   }) as VisualizationSpec;
-  const defaultQuery =
-    "SELECT * FROM (VALUES ('A', 28), ('B', 55), ('C', 43)) AS t(category, value)";
+
+  const {vegaSpec, sql} = data;
+
   return (
     <CanvasNodeContainer
       id={id}
@@ -20,12 +21,14 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
       }
     >
       <div className="h-full flex-1 overflow-hidden p-2">
-        <VegaLiteChart
-          spec={spec}
-          sqlQuery={defaultQuery}
-          aspectRatio={3 / 2}
-          className="h-full"
-        />
+        {sql && vegaSpec ? (
+          <VegaLiteChart
+            spec={vegaSpec}
+            sqlQuery={sql}
+            aspectRatio={3 / 2}
+            className="h-full"
+          />
+        ) : null}
       </div>
     </CanvasNodeContainer>
   );

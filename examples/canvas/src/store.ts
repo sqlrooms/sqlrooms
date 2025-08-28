@@ -76,6 +76,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createCanvasSlice<RoomConfig>({
         getApiKey: () => get().apiKey,
         numberOfRowsToShareWithLLM: 2,
+        defaultModel: 'gpt-4.1-mini',
       })(set, get, store),
 
       apiKey: '',

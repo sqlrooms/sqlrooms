@@ -17,7 +17,7 @@ export const InputApiKey: FC<{className?: string}> = ({className}) => {
       <Input
         className="pl-8 text-xs placeholder:text-xs"
         type="password"
-        placeholder={`OpenAI API key`}
+        placeholder={`Enter your OpenAI API key`}
         value={apiKey}
         onChange={(e) => setApiKey(e.target.value)}
       />

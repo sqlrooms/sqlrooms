@@ -1,4 +1,10 @@
 import {createId} from '@paralleldrive/cuid2';
+import {
+  AiSliceConfig,
+  AiSliceState,
+  createAiSlice,
+  createDefaultAiConfig,
+} from '@sqlrooms/ai';
 import {escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
@@ -6,6 +12,7 @@ import {
   RoomShellSliceState,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
+import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
 import {
   addEdge,
@@ -17,14 +24,7 @@ import {
 } from '@xyflow/react';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {topoSortAll, topoSortDownstream, findNodeById} from './dag';
-import {
-  AiSliceConfig,
-  AiSliceState,
-  createAiSlice,
-  createDefaultAiConfig,
-} from '@sqlrooms/ai';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {findNodeById, topoSortAll, topoSortDownstream} from './dag';
 
 const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
@@ -42,6 +42,7 @@ export const CanvasNodeData = z.discriminatedUnion('type', [
   z.object({
     title: z.string().default('Untitled'),
     type: z.literal('vega'),
+    sql: z.string().optional(),
     vegaSpec: z.any().optional(),
   }),
 ]);
@@ -108,9 +109,11 @@ export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = AiSliceState & {
   canvas: {
+    isAssistantOpen: boolean;
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
     setViewport: (viewport: Viewport) => void;
+    setAssistantOpen: (isAssistantOpen: boolean) => void;
     addNode: (params: {
       parentId?: string;
       nodeType?: CanvasNodeTypes;
@@ -159,7 +162,15 @@ export function createCanvasSlice<
       },
     })(set, get, store),
     canvas: {
+      isAssistantOpen: false,
       sqlResults: {},
+      setAssistantOpen: (isAssistantOpen) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.canvas.isAssistantOpen = isAssistantOpen;
+          }),
+        );
+      },
 
       async initialize() {
         // Execute SQL nodes in topological order based on edges
@@ -248,21 +259,6 @@ export function createCanvasSlice<
                 : {
                     title: 'Chart',
                     type: 'vega',
-                    vegaSpec: {
-                      description: 'A simple bar chart',
-                      mark: 'bar',
-                      encoding: {
-                        x: {field: 'category', type: 'ordinal'},
-                        y: {field: 'value', type: 'quantitative'},
-                      },
-                      data: {
-                        values: [
-                          {category: 'A', value: 28},
-                          {category: 'B', value: 55},
-                          {category: 'C', value: 43},
-                        ],
-                      },
-                    },
                   }) as CanvasNodeData,
             });
             if (parentId) {

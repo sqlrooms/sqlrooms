@@ -1,3 +1,4 @@
+import {QueryControls} from '@sqlrooms/ai';
 import {
   Button,
   EditableText,
@@ -5,14 +6,12 @@ import {
   PopoverContent,
   PopoverTrigger,
   cn,
-  useToast,
 } from '@sqlrooms/ui';
 import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {PlusIcon, SparklesIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
-import {AnalysisResultsContainer, QueryControls} from '@sqlrooms/ai';
 
 const PROMPT_PLACEHOLDER = {
   sql: 'What would you like to learn about the data?',
@@ -33,28 +32,18 @@ export const CanvasNodeContainer: FC<
     headerRight?: ReactNode;
   }>
 > = ({id, className, headerRight, children}) => {
-  const {toast} = useToast();
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
   const node = useStoreWithCanvas((s) =>
     s.config.canvas.nodes.find((n) => n.id === id),
   );
   const title = node?.data.title;
   const onTitleChange = useCallback(
-    (v: string) => {
-      async () => {
-        try {
-          await renameNode(id, v);
-        } catch (e) {
-          toast({
-            variant: 'destructive',
-            title: 'Rename failed',
-            description: e instanceof Error ? e.message : String(e),
-          });
-        }
-      };
+    async (v: string) => {
+      await renameNode(id, v);
     },
     [id, renameNode],
   );
+  const setAssistantOpen = useStoreWithCanvas((s) => s.canvas.setAssistantOpen);
   return (
     <div
       className={cn(
@@ -86,6 +75,9 @@ export const CanvasNodeContainer: FC<
           <PopoverContent className="max-h-[50vh] w-[400px] overflow-auto">
             <QueryControls
               placeholder={`✨ ${PROMPT_PLACEHOLDER[node?.type ?? 'default']}`}
+              onRun={() => {
+                setAssistantOpen(true);
+              }}
             />
           </PopoverContent>
         </Popover>

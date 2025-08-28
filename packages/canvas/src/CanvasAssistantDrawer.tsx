@@ -12,10 +12,21 @@ import {
 } from '@sqlrooms/ui';
 import {SparklesIcon, XIcon} from 'lucide-react';
 import {FC} from 'react';
+import {useStoreWithCanvas} from './CanvasSlice';
 
 export const CanvasAssistantDrawer: FC = () => {
+  const isAssistantOpen = useStoreWithCanvas(
+    (state) => state.canvas.isAssistantOpen,
+  );
+  const setAssistantOpen = useStoreWithCanvas(
+    (state) => state.canvas.setAssistantOpen,
+  );
   return (
-    <Drawer direction="right">
+    <Drawer
+      direction="right"
+      open={isAssistantOpen}
+      onOpenChange={setAssistantOpen}
+    >
       <DrawerTrigger asChild>
         <Button
           variant="default"
@@ -26,6 +37,11 @@ export const CanvasAssistantDrawer: FC = () => {
       </DrawerTrigger>
       <DrawerContent
         className="border-none bg-transparent p-4 outline-none"
+        style={{
+          width: 500,
+          maxWidth: '50%',
+        }}
+        data-vaul-drawer-direction="right"
         overlayClassName="bg-transparent"
       >
         <div className="border-border bg-background relative mx-auto flex h-full w-full flex-col gap-0 overflow-hidden rounded-md border">
