@@ -32,6 +32,7 @@ const TableCard: FC<{
   if (!value) return null;
 
   const numRows = value.rowCount ?? rowCount;
+  console.log(value, numRows);
   return (
     <Card
       className={cn(
@@ -94,7 +95,8 @@ const TableCard: FC<{
               </Tooltip>
             ))}
           </div>
-          {numRows !== undefined && Number.isFinite(numRows) && (
+          {(typeof numRows === 'bigint' ||
+            (numRows !== undefined && Number.isFinite(numRows))) && (
             <div className="mt-1 text-right text-xs">
               {`${formatNumber(numRows)} rows`}
             </div>

@@ -1,10 +1,11 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
-import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
-import {CopyIcon, EyeIcon, SquareTerminalIcon, TableIcon} from 'lucide-react';
-import {FC} from 'react';
-import {useDisclosure} from '@sqlrooms/ui';
 import {DataTableModal} from '@sqlrooms/data-table';
+import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
+import {useDisclosure} from '@sqlrooms/ui';
+import {formatCount} from '@sqlrooms/utils';
+import {CopyIcon, EyeIcon, TableIcon, ViewIcon} from 'lucide-react';
+import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
 import {
   TreeNodeActionsMenu,
@@ -15,7 +16,7 @@ export const defaultRenderTableNodeMenuItems = (
   nodeObject: TableNodeObject,
   viewTableModal?: ReturnType<typeof useDisclosure>,
 ) => {
-  const {database, schema, name} = nodeObject;
+  const {database, schema, name, sql, isView} = nodeObject;
   const qualifiedTableName = makeQualifiedTableName({
     database,
     schema,
@@ -30,7 +31,7 @@ export const defaultRenderTableNodeMenuItems = (
           }}
         >
           <EyeIcon width="15px" />
-          View table
+          View data
         </TreeNodeActionsMenuItem>
       )}
       <TreeNodeActionsMenuItem
@@ -39,7 +40,7 @@ export const defaultRenderTableNodeMenuItems = (
         }}
       >
         <CopyIcon width="15px" />
-        Copy table name
+        Copy {isView ? 'view' : 'table'} name
       </TreeNodeActionsMenuItem>
 
       <TreeNodeActionsMenuItem
@@ -48,7 +49,7 @@ export const defaultRenderTableNodeMenuItems = (
         }}
       >
         <CopyIcon width="15px" />
-        Copy qualified table name
+        Copy qualified {isView ? 'view' : 'table'} name
       </TreeNodeActionsMenuItem>
 
       <TreeNodeActionsMenuItem
@@ -56,8 +57,20 @@ export const defaultRenderTableNodeMenuItems = (
           navigator.clipboard.writeText(`SELECT * FROM ${qualifiedTableName}`);
         }}
       >
-        <SquareTerminalIcon width="15px" />
+        <CopyIcon width="15px" />
         Copy SELECT query
+      </TreeNodeActionsMenuItem>
+
+      <TreeNodeActionsMenuItem
+        onClick={() => {
+          if (sql) {
+            navigator.clipboard.writeText(sql);
+          }
+        }}
+        disabled={!sql}
+      >
+        <CopyIcon width="15px" />
+        Copy CREATE {isView ? 'VIEW' : 'TABLE'}
       </TreeNodeActionsMenuItem>
     </>
   );
@@ -78,7 +91,7 @@ export const TableTreeNode: FC<{
   } = props;
 
   const tableModal = useDisclosure();
-  const {database, schema, name} = nodeObject;
+  const {database, schema, name, rowCount, isView} = nodeObject;
   const qualifiedTableName = makeQualifiedTableName({
     database,
     schema,
@@ -89,9 +102,20 @@ export const TableTreeNode: FC<{
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="flex w-full items-center space-x-2">
-          <TableIcon size="16px" className="shrink-0 text-blue-500" />
-          <span className="text-sm">{nodeObject.name}</span>
+        <div className="relative flex w-full items-center space-x-2">
+          {isView ? (
+            <ViewIcon size="16px" className="shrink-0 text-blue-500" />
+          ) : (
+            <TableIcon size="16px" className="shrink-0 text-blue-500" />
+          )}
+          <div className="flex w-full items-center justify-between gap-2">
+            <span className="text-sm">{name}</span>
+            {rowCount !== undefined && (
+              <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-5 text-xs">
+                {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
+              </span>
+            )}
+          </div>
         </div>
         <TreeNodeActionsMenu>
           {renderMenuItems(nodeObject, tableModal)}

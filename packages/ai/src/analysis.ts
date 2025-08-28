@@ -66,6 +66,9 @@ For your final answer:
 - Explain your reasoning step by step
 - Include relevant statistics or metrics
 - For each prompt, please always provide the final answer.
+- IMPORTANT: Query tool results may include sample rows (firstRows) or may be empty:
+  * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
+  * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
 Please use the following schema for the tables:
 `;
@@ -233,6 +236,7 @@ export async function runAnalysis({
  */
 export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
+  numberOfRowsToShareWithLLM: number = 0,
 ): Record<string, AiSliceTool> {
   return {
     query: extendedTool({
@@ -240,7 +244,6 @@ export function getDefaultTools(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
       parameters: QueryToolParameters,
-      // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
       execute: async ({type, sqlQuery}) => {
         try {
           const connector = await store.getState().db.getConnector();
@@ -251,9 +254,11 @@ If a query fails, please don't try to run it again with the same syntax.`,
             ? arrowTableToJson(result)
             : await getQuerySummary(connector, sqlQuery);
 
-          // Get first 2 rows of the result as a json object
-          const subResult = result.slice(0, 2);
-          const firstTwoRows = arrowTableToJson(subResult);
+          // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
+          const firstRows =
+            numberOfRowsToShareWithLLM > 0
+              ? arrowTableToJson(result.slice(0, numberOfRowsToShareWithLLM))
+              : [];
 
           return {
             llmResult: {
@@ -261,7 +266,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
               data: {
                 type,
                 summary: summaryData,
-                firstTwoRows,
+                ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
               },
             },
             additionalData: {
