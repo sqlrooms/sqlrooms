@@ -8,6 +8,14 @@ import {CanvasNodeContainer} from './CanvasNodeContainer';
 // type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 // type MonacoInstance = typeof Monaco;
 
+const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
+  minimap: {enabled: false},
+  lineNumbers: 'off',
+  scrollbar: {
+    handleMouseWheel: false,
+  },
+};
+
 type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
 
 export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
@@ -17,6 +25,7 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   const execute = useStoreWithCanvas((s) => s.canvas.executeSqlNodeQuery);
   const result = useStoreWithCanvas((s) => s.canvas.sqlResults[id]);
   const {toast} = useToast();
+
   // const handleEditorMount = useCallback(
   //   (editor: EditorInstance, monaco: MonacoInstance) => {
   //     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
@@ -46,7 +55,7 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
             <SqlMonacoEditor
               className="absolute inset-0 p-1"
               value={sql}
-              options={{minimap: {enabled: false}, lineNumbers: 'off'}}
+              options={EDITOR_OPTIONS}
               onChange={(v) =>
                 updateNode(id, (d) => ({...(d as SqlData), sql: v || ''}))
               }
