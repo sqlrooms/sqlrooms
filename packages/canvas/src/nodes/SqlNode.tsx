@@ -4,7 +4,6 @@ import {Button, EditableText, useToast} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
-import {AddChildButton} from './AddChildButton';
 // import type * as Monaco from 'monaco-editor';
 // type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 // type MonacoInstance = typeof Monaco;
@@ -77,19 +76,12 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           </div>
         )}
         {result?.status === 'success' && (
-          <>
-            <div className="flex-1 overflow-hidden border-t">
-              <QueryDataTable
-                query={`SELECT * FROM ${result.tableName}`}
-                fontSize="text-xs"
-              />
-            </div>
-            <AddChildButton
-              className="absolute -right-10 top-1/2"
-              onAddSql={() => addNode({parentId: id, nodeType: 'sql'})}
-              onAddVega={() => addNode({parentId: id, nodeType: 'vega'})}
+          <div className="flex-1 overflow-hidden border-t">
+            <QueryDataTable
+              query={`SELECT * FROM ${result.tableName}`}
+              fontSize="text-xs"
             />
-          </>
+          </div>
         )}
       </div>
     </CanvasNodeContainer>

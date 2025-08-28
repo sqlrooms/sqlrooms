@@ -1,19 +1,21 @@
+import {Button, useTheme} from '@sqlrooms/ui';
 import {
-  ReactFlow,
   Background,
   BackgroundVariant,
   Controls,
   Edge,
   MiniMap,
   Node,
+  ReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
+import {PlusIcon} from 'lucide-react';
 import React from 'react';
 import type {CanvasNodeData} from './CanvasSlice';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {SqlNode} from './nodes/SqlNode';
 import {VegaNode} from './nodes/VegaNode';
-import {useTheme} from '@sqlrooms/ui';
+import {AddNodePopover} from './nodes/AddNodePopover';
 
 const nodeTypes = {
   sql: SqlNode,
@@ -40,12 +42,12 @@ export const Canvas: React.FC = () => {
       <div className="relative h-full w-full">
         {empty && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
-            <button
-              className="rounded-md bg-blue-600 px-3 py-2 text-white hover:bg-blue-700"
-              onClick={() => addNode({})}
-            >
-              Add node
-            </button>
+            <AddNodePopover>
+              <Button size="sm">
+                <PlusIcon className="h-4 w-4" />
+                Add node
+              </Button>
+            </AddNodePopover>
           </div>
         )}
         <ReactFlow
