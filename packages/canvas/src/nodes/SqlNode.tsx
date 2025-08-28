@@ -1,6 +1,6 @@
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
-import {Button, EditableText, useToast} from '@sqlrooms/ui';
+import {Button, useToast} from '@sqlrooms/ui';
 import {FC} from 'react';
 import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
@@ -31,32 +31,31 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   // );
 
   return (
-    <CanvasNodeContainer id={id}>
+    <CanvasNodeContainer
+      id={id}
+      title={data.title}
+      onTitleChange={async (v) => {
+        try {
+          await renameNode(id, v);
+        } catch (e) {
+          toast({
+            variant: 'destructive',
+            title: 'Rename failed',
+            description: e instanceof Error ? e.message : String(e),
+          });
+        }
+      }}
+      headerRight={
+        <>
+          <Button size="sm" variant="secondary" onClick={() => execute(id)}>
+            Run
+          </Button>
+          <span className="text-[10px] uppercase text-gray-500">SQL</span>
+        </>
+      }
+    >
       <div className="flex h-full w-full flex-col">
         <div className="flex flex-1 flex-col">
-          <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
-            <EditableText
-              className="text-sm font-medium"
-              value={data.title}
-              onChange={async (v) => {
-                try {
-                  await renameNode(id, v);
-                } catch (e) {
-                  toast({
-                    variant: 'destructive',
-                    title: 'Rename failed',
-                    description: e instanceof Error ? e.message : String(e),
-                  });
-                }
-              }}
-            />
-            <div className="flex items-center gap-2">
-              <Button size="sm" variant="secondary" onClick={() => execute(id)}>
-                Run
-              </Button>
-              <span className="text-[10px] uppercase text-gray-500">SQL</span>
-            </div>
-          </div>
           <div className="relative flex-1">
             <SqlMonacoEditor
               className="absolute inset-0 p-1"
