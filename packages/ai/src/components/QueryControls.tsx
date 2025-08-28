@@ -6,12 +6,16 @@ import {useStoreWithAi} from '../AiSlice';
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
+  onRun?: () => void;
+  onCancel?: () => void;
 }>;
 
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
   children,
+  onRun,
+  onCancel,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
@@ -57,6 +61,17 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
+
+  const handleClickRunOrCancel = useCallback(() => {
+    if (isRunningAnalysis) {
+      cancelAnalysis();
+      onCancel?.();
+    } else {
+      runAnalysis();
+      onRun?.();
+    }
+  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+
   return (
     <div
       className={cn(
@@ -89,7 +104,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   className="h-8 w-8 rounded-full"
                   variant="default"
                   size="icon"
-                  onClick={isRunningAnalysis ? cancelAnalysis : runAnalysis}
+                  onClick={handleClickRunOrCancel}
                   disabled={!canStart}
                 >
                   {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}

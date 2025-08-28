@@ -1,7 +1,7 @@
-import {arrowTableToJson, useDuckDb} from '@sqlrooms/duckdb';
+import {useSql} from '@sqlrooms/duckdb';
 import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useRef} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
 
 const DATA_NAME = 'queryResult';
@@ -79,9 +79,6 @@ export const VegaLiteChart: React.FC<{
     aspectRatio,
   });
 
-  const connector = useDuckDb();
-  const [data, setData] = useState<Record<string, unknown>>();
-
   const refinedSpec = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) return null;
@@ -97,13 +94,11 @@ export const VegaLiteChart: React.FC<{
     } as VisualizationSpec;
   }, [spec, dimensions]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const result = await connector.query(sqlQuery);
-      setData({[DATA_NAME]: arrowTableToJson(result)});
-    };
-    fetchData();
-  }, [sqlQuery, connector]);
+  const result = useSql({query: sqlQuery});
+  const data = useMemo(() => {
+    if (!result.data) return null;
+    return {[DATA_NAME]: result.data.toArray()};
+  }, [result.data]);
 
   return (
     <div
@@ -113,6 +108,11 @@ export const VegaLiteChart: React.FC<{
         className,
       )}
     >
+      {result.error && (
+        <div className="whitespace-pre-wrap font-mono text-sm text-red-500">
+          {result.error.message}
+        </div>
+      )}
       <AspectRatio ratio={aspectRatio}>
         {refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />}
       </AspectRatio>

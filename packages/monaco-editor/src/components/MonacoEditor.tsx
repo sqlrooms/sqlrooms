@@ -8,6 +8,7 @@ import {
   getMenuColors,
   getMonospaceFont,
 } from '../utils/color-utils';
+import type * as Monaco from 'monaco-editor';
 
 export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   /**
@@ -46,7 +47,7 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   /**
    * Additional options for the editor
    */
-  options?: Record<string, any>;
+  options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
 /**

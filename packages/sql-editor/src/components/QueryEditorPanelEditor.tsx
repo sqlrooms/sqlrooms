@@ -7,7 +7,7 @@ import {SqlMonacoEditor} from '../SqlMonacoEditor';
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 type MonacoInstance = typeof Monaco;
 
-const MONACO_OPTIONS = {
+const MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions = {
   scrollBeyondLastLine: false,
   automaticLayout: true,
   minimap: {enabled: false},

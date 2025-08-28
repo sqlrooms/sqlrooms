@@ -1,8 +1,8 @@
-import {Suspense} from 'react';
-import {VegaLiteChart} from './VegaLiteChart';
 import {QueryToolResult} from '@sqlrooms/ai';
+import {cn} from '@sqlrooms/ui';
+import {Suspense} from 'react';
 import {VisualizationSpec} from 'react-vega';
-import {AspectRatio, cn} from '@sqlrooms/ui';
+import {VegaLiteChart} from './VegaLiteChart';
 
 type VegaChartToolResultProps = {
   className?: string;

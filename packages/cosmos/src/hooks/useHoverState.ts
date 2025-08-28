@@ -54,22 +54,19 @@ export const useHoverState = (
 ) => {
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
 
-  const onPointMouseOver: GraphConfigInterface['onPointMouseOver'] =
-    useCallback(
-      (
-        index: number,
-        _pointPosition: [number, number],
-        event: MouseEvent | TouchEvent,
-      ) => {
-        if (hasClientCoordinates(event)) {
-          setHoveredPoint({
-            index,
-            position: calcRelativeCoordinates(event.clientX, event.clientY),
-          });
-        }
-      },
-      [calcRelativeCoordinates],
-    );
+  const onPointMouseOver = useCallback<
+    Required<GraphConfigInterface>['onPointMouseOver']
+  >(
+    (index, _pointPosition, event) => {
+      if (hasClientCoordinates(event)) {
+        setHoveredPoint({
+          index,
+          position: calcRelativeCoordinates(event.clientX, event.clientY),
+        });
+      }
+    },
+    [calcRelativeCoordinates],
+  );
 
   const clearHoverState = useCallback(() => setHoveredPoint(null), []);
 
