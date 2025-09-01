@@ -10,15 +10,15 @@ hero:
     - theme: brand
       text: What is SQLRooms?
       link: /overview
-    - theme: alt
-      text: Key Concepts
-      link: /key-concepts
+    #    - theme: alt
+    #      text: Key Concepts
+    #      link: /key-concepts
     - theme: alt
       text: Example Apps
       link: /examples
-    # - theme: alt
-    #   text: View on GitHub
-    #   link: https://github.com/sqlrooms/sqlrooms
+    - theme: alt
+      text: View on GitHub
+      link: https://github.com/sqlrooms/sqlrooms
   image:
     # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
     src: /media/sqlrooms-ai.webp
@@ -40,6 +40,17 @@ features:
 ---
 
 ## Get Started in Minutes
+
+To create a new project from the minimal example, run:
+
+```sh
+npx degit sqlrooms/examples/minimal my-minimal-app/
+cd my-minimal-app
+npm install
+npm run dev
+```
+
+## Manual set up
 
 Set up a simple room that loads and queries a single data table:
 
@@ -81,14 +92,5 @@ function MyComponent() {
 [Complete example on GitHub →](https://github.com/sqlrooms/examples/tree/main/minimal)
 
 That's it! You've just built an app with a flexible store and UI that can be extended with various analytics, visualization and AI modules — all powered by client-side DuckDB with no backend required.
-
-To create a new project from the minimal example, run:
-
-```sh
-npx degit sqlrooms/examples/minimal my-minimal-app/
-cd my-minimal-app
-npm install
-npm run dev
-```
 
 For a more comprehensive guide, see [Key Concepts](/key-concepts) and the [Getting Started](/getting-started) page.

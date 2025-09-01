@@ -4,7 +4,7 @@ import {ref, onMounted, watchEffect} from 'vue';
 import {useData} from 'vitepress';
 const {frontmatter} = useData();
 
-const SHOW_BANNER = true; // Set to false to hide banner and margin everywhere
+const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
