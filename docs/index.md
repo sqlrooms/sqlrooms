@@ -50,7 +50,7 @@ npm install
 npm run dev
 ```
 
-## Manual set up
+## Manual setup
 
 Set up a simple room that loads and queries a single data table:
 
