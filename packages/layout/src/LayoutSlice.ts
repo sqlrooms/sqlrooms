@@ -25,8 +25,6 @@ export type RoomPanelInfo = {
 };
 
 export type PanelBehavior = {
-  canToggle: boolean; // Whether this panel can be toggled on/off
-  isFixed: boolean; // Whether this panel is always visible and can't be moved
   toggleTargetPath?: MosaicPath; // Preferred mosaic path location when showing
 };
 
@@ -39,8 +37,6 @@ export const LayoutSliceConfigSchema = z.object({
     .record(
       z.string(),
       z.object({
-        canToggle: z.boolean(),
-        isFixed: z.boolean(),
         toggleTargetPath: z
           .array(z.union([z.literal('first'), z.literal('second')]))
           .optional(),
@@ -246,12 +242,14 @@ export function createLayoutSlice<
         return get().layout.panelBehaviors;
       },
       canPanelToggle: (panel: string) => {
-        const config = get().layout.panelBehaviors[panel];
-        return config ? config.canToggle : true; // Default to true if no config
+        const {config} = get();
+        const pinned = config.layout?.pinned ?? [];
+        return !pinned.includes(panel); // Panel cannot be toggled if it's pinned
       },
       isPanelFixed: (panel: string) => {
-        const config = get().layout.panelBehaviors[panel];
-        return config ? config.isFixed : false; // Default to false if no config
+        const {config} = get();
+        const pinned = config.layout?.pinned ?? [];
+        return pinned.includes(panel); // Panel is fixed if it's pinned
       },
     },
   }));
