@@ -100,9 +100,10 @@ export interface AiSliceOptions {
 /**
  * API key configuration for the AI slice
  */
-export type AiSliceApiConfig =
+export type AiSliceApiConfig = {defaultModel?: string} & (
   | {baseUrl: string; getApiKey?: never}
-  | {getApiKey: (modelProvider: string) => string; baseUrl?: never};
+  | {getApiKey: (modelProvider: string) => string; baseUrl?: never}
+);
 
 /**
  * Complete configuration for creating an AI slice
@@ -110,7 +111,7 @@ export type AiSliceApiConfig =
 export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
 
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
-  config: CreateAiSliceConfig,
+  params: CreateAiSliceConfig,
 ): StateCreator<AiSliceState> {
   const {
     getApiKey,
@@ -119,7 +120,8 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     customTools = {},
     getInstructions,
     numberOfRowsToShareWithLLM,
-  } = config;
+    defaultModel = 'gpt-4o-mini',
+  } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
@@ -341,7 +343,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             await runAnalysis({
               tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || 'openai',
-              model: currentSession.model || 'gpt-4o-mini',
+              model: currentSession.model || defaultModel,
               customModelName: currentSession.customModelName,
               apiKey:
                 getApiKey?.(currentSession.modelProvider || 'openai') || '',

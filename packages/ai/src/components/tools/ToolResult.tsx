@@ -91,7 +91,7 @@ export const ToolResult: React.FC<ToolResultProps> = ({
                 value={toolInvocation}
                 readOnly={true}
                 options={{
-                  lineNumbers: false,
+                  lineNumbers: 'off',
                   minimap: {enabled: false},
                   scrollBeyondLastLine: false,
                   wordWrap: 'on',
