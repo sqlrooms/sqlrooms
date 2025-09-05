@@ -25,12 +25,27 @@ export type SqlEditorProps = {
   isOpen: boolean;
   /** Optional component to render SQL documentation in the side panel */
   documentationPanel?: React.ReactNode;
+  /** Options for the result limit dropdown in `QueryResultPanel` */
+  queryResultLimitOptions?: number[];
+  /**
+   * Props forwarded to `QueryResultPanel` to configure result behavior.
+   * This provides a single entry point for table interactions.
+   */
+  queryResultProps?: Pick<
+    React.ComponentProps<typeof QueryResultPanel>,
+    'queryResultLimitOptions' | 'onRowClick' | 'onRowDoubleClick'
+  >;
   /** Callback fired when the SQL editor should be closed */
   onClose: () => void;
 };
 
-const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
-  const {schema = '*', documentationPanel} = props;
+const SqlEditor = React.memo<SqlEditorProps>((props) => {
+  const {
+    schema = '*',
+    documentationPanel,
+    queryResultLimitOptions,
+    queryResultProps,
+  } = props;
 
   // Store access
   const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
@@ -89,6 +104,12 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
               <ResizableHandle withHandle />
               <ResizablePanel defaultSize={50}>
                 <QueryResultPanel
+                  queryResultLimitOptions={
+                    queryResultProps?.queryResultLimitOptions ??
+                    queryResultLimitOptions
+                  }
+                  onRowClick={queryResultProps?.onRowClick}
+                  onRowDoubleClick={queryResultProps?.onRowDoubleClick}
                   renderActions={() => (
                     <div className="flex gap-2">
                       <Button size="xs" onClick={handleCreateTable}>
@@ -119,9 +140,6 @@ const SqlEditorBase: React.FC<SqlEditorProps> = (props) => {
       />
     </div>
   );
-};
-
-// Wrap with React.memo to prevent unnecessary re-renders
-const SqlEditor = React.memo(SqlEditorBase);
+});
 
 export default SqlEditor;

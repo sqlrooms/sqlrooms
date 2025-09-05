@@ -20,6 +20,11 @@ export interface QueryResultPanelProps {
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
   fontSize?: string;
   /**
+   * Options for the result limit dropdown. Defaults to [100, 500, 1000].
+   * If the current limit isn't present, it will be added to the list.
+   */
+  queryResultLimitOptions?: number[];
+  /**
    * Called when a row in the results table is clicked.
    */
   onRowClick?: (args: {
@@ -39,6 +44,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
   renderActions,
   fontSize = 'text-xs',
+  queryResultLimitOptions = [100, 500, 1000],
   onRowClick,
   onRowDoubleClick,
 }) => {
@@ -49,6 +55,12 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   const queryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.queryResultLimit,
   );
+  const limitOptions = React.useMemo(() => {
+    const merged = Array.from(
+      new Set<number>([...queryResultLimitOptions, queryResultLimit]),
+    );
+    return merged.sort((a, b) => a - b);
+  }, [queryResultLimitOptions, queryResultLimit]);
   const arrowTableData = useArrowDataTable(
     isQueryWithResult(queryResult) ? queryResult.result : undefined,
   );
@@ -115,7 +127,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {[100, 500, 1000].map((limit) => (
+                      {limitOptions.map((limit) => (
                         <SelectItem key={limit} value={limit.toString()}>
                           {`${formatCount(limit)} rows`}
                         </SelectItem>
