@@ -1,8 +1,5 @@
-import {
-  DataTablePaginated,
-  DataTablePaginatedProps,
-  useArrowDataTable,
-} from '@sqlrooms/data-table';
+import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
+import type {Row} from '@tanstack/react-table';
 import {
   cn,
   Select,
@@ -21,13 +18,29 @@ export interface QueryResultPanelProps {
   /** Custom actions to render in the query result panel */
   renderActions?: (query: string) => React.ReactNode;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
-  fontSize?: DataTablePaginatedProps<any>['fontSize'];
+  fontSize?: string;
+  /**
+   * Called when a row in the results table is clicked.
+   */
+  onRowClick?: (args: {
+    row: Row<any>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
+  /**
+   * Called when a row in the results table is double-clicked.
+   */
+  onRowDoubleClick?: (args: {
+    row: Row<any>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
   renderActions,
   fontSize = 'text-xs',
+  onRowClick,
+  onRowDoubleClick,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
   const setQueryResultLimit = useStoreWithSqlEditor(
@@ -80,6 +93,8 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
               className="flex-grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
+              onRowClick={onRowClick}
+              onRowDoubleClick={onRowDoubleClick}
             />
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
               {queryResult.result ? (

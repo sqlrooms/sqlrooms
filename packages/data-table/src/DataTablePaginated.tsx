@@ -30,6 +30,7 @@ import {
   ColumnDef,
   PaginationState,
   SortingState,
+  Row,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
@@ -52,6 +53,20 @@ export type DataTablePaginatedProps<Data extends object> = {
   footerActions?: React.ReactNode;
   onPaginationChange?: (pagination: PaginationState) => void;
   onSortingChange?: (sorting: SortingState) => void;
+  /**
+   * Called when a row is clicked.
+   */
+  onRowClick?: (args: {
+    row: Row<Data>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
+  /**
+   * Called when a row is double-clicked.
+   */
+  onRowDoubleClick?: (args: {
+    row: Row<Data>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
 };
 
 /**
@@ -71,6 +86,8 @@ export default function DataTablePaginated<Data extends object>({
   onSortingChange,
   footerActions,
   isFetching,
+  onRowClick,
+  onRowDoubleClick,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
   const pageCount =
@@ -171,7 +188,20 @@ export default function DataTablePaginated<Data extends object>({
             </TableHeader>
             <TableBody>
               {table.getRowModel().rows.map((row, i) => (
-                <TableRow key={row.id} className="hover:bg-muted bg-background">
+                <TableRow
+                  key={row.id}
+                  className="hover:bg-muted bg-background"
+                  onClick={(event) => {
+                    event.preventDefault();
+                    console.log('onClick', row);
+                    onRowClick?.({row: row as Row<Data>, event});
+                  }}
+                  onDoubleClick={(event) => {
+                    event.preventDefault();
+                    console.log('onDoubleClick', row);
+                    onRowDoubleClick?.({row: row as Row<Data>, event});
+                  }}
+                >
                   <TableCell
                     className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSize}`}
                   >
