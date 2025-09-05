@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/monaco-editor",
-  "version": "0.24.17",
+  "version": "0.24.18",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
