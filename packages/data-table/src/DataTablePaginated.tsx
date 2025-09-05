@@ -193,12 +193,10 @@ export default function DataTablePaginated<Data extends object>({
                   className="hover:bg-muted bg-background"
                   onClick={(event) => {
                     event.preventDefault();
-                    console.log('onClick', row);
                     onRowClick?.({row: row as Row<Data>, event});
                   }}
                   onDoubleClick={(event) => {
                     event.preventDefault();
-                    console.log('onDoubleClick', row);
                     onRowDoubleClick?.({row: row as Row<Data>, event});
                   }}
                 >
