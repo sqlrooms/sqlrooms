@@ -14,96 +14,20 @@ import {MarkdownCell} from './cells/MarkdownCell';
 import {VegaCell} from './cells/VegaCell';
 import {InputCell} from './cells/InputCell';
 import {z} from 'zod';
+import {
+  NotebookCell,
+  NotebookCellTypes,
+  NotebookSliceConfig,
+  NotebookTab,
+} from './cellSchemas';
+import {defaultCellRegistry} from './defaultCellRegistry';
 
 /**
  * DuckDB schema used for storing notebook SQL cell views.
  */
 const NOTEBOOK_SCHEMA_NAME = 'notebook';
 
-export const NotebookCellTypes = z.enum([
-  'sql',
-  'markdown',
-  'text',
-  'vega',
-  'input',
-]);
-export type NotebookCellTypes = z.infer<typeof NotebookCellTypes>;
-
-export const NotebookCellSchema = z.discriminatedUnion('type', [
-  z.object({
-    id: z.string(),
-    name: z.string().default('Untitled'),
-    type: z.literal('sql'),
-    sql: z.string().default(''),
-    status: z.enum(['idle', 'running', 'success', 'error']).default('idle'),
-    lastError: z.string().optional(),
-    lastQueryStatement: z.string().optional(),
-    outputTable: z.string().optional(),
-    referencedTables: z.array(z.string()).default([]),
-  }),
-  z.object({
-    id: z.string(),
-    name: z.string().default('Text'),
-    type: z.literal('text'),
-    text: z.string().default(''),
-  }),
-  z.object({
-    id: z.string(),
-    name: z.string().default('Markdown'),
-    type: z.literal('markdown'),
-    markdown: z.string().default(''),
-  }),
-  z.object({
-    id: z.string(),
-    name: z.string().default('Chart'),
-    type: z.literal('vega'),
-    sql: z.string().default(''),
-    vegaSpec: z.any().optional(),
-  }),
-  z.object({
-    id: z.string(),
-    name: z.string().default('Input'),
-    type: z.literal('input'),
-    input: z.discriminatedUnion('kind', [
-      z.object({
-        kind: z.literal('slider'),
-        varName: z.string(),
-        min: z.number().default(0),
-        max: z.number().default(100),
-        step: z.number().default(1),
-        value: z.number().default(0),
-      }),
-      z.object({
-        kind: z.literal('text'),
-        varName: z.string(),
-        value: z.string().default(''),
-      }),
-      z.object({
-        kind: z.literal('dropdown'),
-        varName: z.string(),
-        options: z.array(z.string()).default([]),
-        value: z.string().default(''),
-      }),
-    ]),
-  }),
-]);
-export type NotebookCell = z.infer<typeof NotebookCellSchema>;
-
-export const NotebookTabSchema = z.object({
-  id: z.string(),
-  title: z.string().default('Notebook'),
-  cellOrder: z.array(z.string()).default([]),
-});
-export type NotebookTab = z.infer<typeof NotebookTabSchema>;
-
-export const NotebookSliceConfig = z.object({
-  notebook: z.object({
-    tabs: z.array(NotebookTabSchema).default([]),
-    currentTabId: z.string().optional(),
-    cells: z.record(z.string(), NotebookCellSchema).default({}),
-  }),
-});
-export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;
+// schemas moved to ./cellSchemas
 
 export type NotebookSliceState = {
   notebook: {
@@ -140,6 +64,20 @@ export type NotebookSliceState = {
 
     // for extensibility (UI overrides)
     customRenderers: Record<string, (cell: NotebookCell) => any>;
+
+    // runtime-only cell state
+    runtime: Record<
+      string,
+      | {
+          type: 'sql';
+          status: 'idle' | 'running' | 'success' | 'error';
+          lastError?: string;
+          lastQueryStatement?: string;
+          outputTable?: string;
+          referencedTables?: string[];
+        }
+      | {type: 'other'}
+    >;
   };
 };
 
@@ -183,8 +121,6 @@ export function createNotebookSlice<
             type: 'sql',
             name: `cell_${id.slice(0, 5)}`,
             sql: '',
-            status: 'idle',
-            referencedTables: [],
           }),
           renderComponent: (id: string) => {
             const cell = get().config.notebook.cells[id];
@@ -266,6 +202,8 @@ export function createNotebookSlice<
         },
       },
 
+      runtime: {},
+
       addTab: () => {
         const id = createId();
         set((state) =>
@@ -323,6 +261,15 @@ export function createNotebookSlice<
             const cell = reg.createCell(id) as NotebookCell;
             draft.config.notebook.cells[id] = cell;
             tab.cellOrder.push(id);
+            if (type === 'sql') {
+              (draft as any).notebook.runtime[id] = {
+                type: 'sql',
+                status: 'idle',
+                referencedTables: [],
+              };
+            } else {
+              (draft as any).notebook.runtime[id] = {type: 'other'};
+            }
           }),
         );
         return id;
@@ -332,6 +279,7 @@ export function createNotebookSlice<
         set((state) =>
           produce(state, (draft) => {
             delete draft.config.notebook.cells[cellId];
+            delete (draft as any).notebook.runtime[cellId];
             for (const tab of draft.config.notebook.tabs) {
               tab.cellOrder = tab.cellOrder.filter((id) => id !== cellId);
             }
@@ -392,10 +340,10 @@ export function createNotebookSlice<
 
           set((state) =>
             produce(state, (draft) => {
-              const c = draft.config.notebook.cells[cellId];
-              if (c?.type === 'sql') {
-                c.status = 'running';
-                c.lastError = undefined;
+              const r = (draft as any).notebook.runtime[cellId];
+              if (r?.type === 'sql') {
+                r.status = 'running';
+                r.lastError = undefined;
               }
             }),
           );
@@ -461,12 +409,12 @@ export function createNotebookSlice<
 
             set((state) =>
               produce(state, (draft) => {
-                const c = draft.config.notebook.cells[cellId];
-                if (c?.type === 'sql') {
-                  c.status = 'success';
-                  c.outputTable = tableName;
-                  c.lastQueryStatement = renderedSql;
-                  c.referencedTables = referenced.slice();
+                const r = (draft as any).notebook.runtime[cellId];
+                if (r?.type === 'sql') {
+                  r.status = 'success';
+                  r.outputTable = tableName;
+                  r.lastQueryStatement = renderedSql;
+                  r.referencedTables = referenced.slice();
                 }
               }),
             );
@@ -478,9 +426,8 @@ export function createNotebookSlice<
                 const c = cellsMap3[key];
                 if (c?.type === 'sql') {
                   const text = (c as any).sql as string;
-                  const refs = (c as any).referencedTables as
-                    | string[]
-                    | undefined;
+                  const refs = (get().notebook.runtime[c.id] as any)
+                    ?.referencedTables as string[] | undefined;
                   if (
                     (text && text.indexOf(sqlCell.name) >= 0) ||
                     (refs && refs.indexOf(tableName) >= 0)
@@ -494,10 +441,10 @@ export function createNotebookSlice<
             const message = e instanceof Error ? e.message : String(e);
             set((state) =>
               produce(state, (draft) => {
-                const c = draft.config.notebook.cells[cellId];
-                if (c?.type === 'sql') {
-                  c.status = 'error';
-                  c.lastError = message;
+                const r = (draft as any).notebook.runtime[cellId];
+                if (r?.type === 'sql') {
+                  r.status = 'error';
+                  r.lastError = message;
                 }
               }),
             );
