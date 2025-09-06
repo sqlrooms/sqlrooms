@@ -3,6 +3,7 @@ import {escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createSlice,
+  useBaseRoomShellStore,
   type RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
@@ -145,7 +146,9 @@ export function createDefaultNotebookConfig(
  */
 export function createNotebookSlice<
   PC extends BaseRoomConfig & NotebookSliceConfig,
->({customRenderers = {}}: {
+>({
+  customRenderers = {},
+}: {
   customRenderers?: NotebookSliceState['notebook']['customRenderers'];
 } = {}) {
   return createSlice<PC, NotebookSliceState>((set, get) => ({
@@ -273,9 +276,12 @@ export function createNotebookSlice<
           const dependents: {id: string}[] = [];
           for (const key in cellsMap) {
             const c = cellsMap[key];
-            if (c.type === 'sql') {
+            if (c?.type === 'sql') {
               const text = (c as any).sql as string;
-              if ((text && text.indexOf(`{{${varName}}}`) >= 0) || (text && text.indexOf(`:${varName}`) >= 0)) {
+              if (
+                (text && text.indexOf(`{{${varName}}}`) >= 0) ||
+                (text && text.indexOf(`:${varName}`) >= 0)
+              ) {
                 dependents.push({id: c.id});
               }
             }
@@ -322,7 +328,7 @@ export function createNotebookSlice<
             const cellsMap2 = get().config.notebook.cells;
             for (const key in cellsMap2) {
               const c = cellsMap2[key];
-              if (c.type === 'input') inputs.push(c as any);
+              if (c?.type === 'input') inputs.push(c as any);
             }
             const varMap: Record<string, string | number> = {};
             for (const iv of inputs) {
@@ -392,10 +398,15 @@ export function createNotebookSlice<
               const cellsMap3 = get().config.notebook.cells;
               for (const key in cellsMap3) {
                 const c = cellsMap3[key];
-                if (c.type === 'sql') {
+                if (c?.type === 'sql') {
                   const text = (c as any).sql as string;
-                  const refs = (c as any).referencedTables as string[] | undefined;
-                  if ((text && text.indexOf(sqlCell.name) >= 0) || (refs && refs.indexOf(tableName) >= 0)) {
+                  const refs = (c as any).referencedTables as
+                    | string[]
+                    | undefined;
+                  if (
+                    (text && text.indexOf(sqlCell.name) >= 0) ||
+                    (refs && refs.indexOf(tableName) >= 0)
+                  ) {
                     await get().notebook.runCell(c.id, {cascade: false});
                   }
                 }
@@ -420,5 +431,15 @@ export function createNotebookSlice<
 }
 
 export type RoomConfigWithNotebook = BaseRoomConfig & NotebookSliceConfig;
-export type RoomShellSliceStateWithNotebook = RoomShellSliceState<RoomConfigWithNotebook> & NotebookSliceState;
+export type RoomShellSliceStateWithNotebook =
+  RoomShellSliceState<RoomConfigWithNotebook> & NotebookSliceState;
 
+export function useStoreWithNotebook<T>(
+  selector: (state: RoomShellSliceStateWithNotebook) => T,
+): T {
+  return useBaseRoomShellStore<
+    BaseRoomConfig & NotebookSliceConfig,
+    RoomShellSliceState<RoomConfigWithNotebook>,
+    T
+  >((state) => selector(state as unknown as RoomShellSliceStateWithNotebook));
+}

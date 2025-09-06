@@ -3,10 +3,18 @@
   "version": "0.0.0",
   "private": true,
   "type": "module",
-  "sideEffects": false,
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -15,8 +23,11 @@
     }
   },
   "scripts": {
-    "build": "tsup",
-    "watch": "tsup --watch"
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
   },
   "peerDependencies": {
     "react": "^18 || ^19",
@@ -25,16 +36,10 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "immer": "^10.1.1",
-    "zod": "^3.23.8",
-    "zustand": "^4.5.5",
+    "zod": "^3.25.73",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*"
-  },
-  "devDependencies": {
-    "tsup": "^8.0.2",
-    "typescript": "^5.4.5"
   }
 }
-

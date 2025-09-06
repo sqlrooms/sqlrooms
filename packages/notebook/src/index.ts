@@ -1,3 +1,2 @@
-export * from './slices/NotebookSlice';
-export * from './ui/Notebook';
-
+export * from './NotebookSlice';
+export * from './Notebook';

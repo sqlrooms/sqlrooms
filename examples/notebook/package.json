@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/examples-notebooks",
+  "name": "@sqlrooms/examples-notebook",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -9,9 +9,9 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "zustand": "^4.5.5",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.73",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -19,13 +19,12 @@
     "@sqlrooms/sql-editor": "workspace:*"
   },
   "devDependencies": {
+    "@types/react": "^19.1.7",
+    "@types/react-dom": "^19.1.7",
+    "@vitejs/plugin-react": "^4.3.4",
+    "postcss": "^8.5.4",
+    "tailwindcss": "^3.4.17",
     "typescript": "^5.4.5",
-    "vite": "^5.4.0",
-    "@types/react": "^18.2.66",
-    "@types/react-dom": "^18.2.22",
-    "tailwindcss": "^3.4.7",
-    "postcss": "^8.4.41",
-    "autoprefixer": "^10.4.19"
+    "vite": "^5.2.0"
   }
 }
-

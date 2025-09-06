@@ -879,6 +879,55 @@ importers:
         specifier: 5.8.3
         version: 5.8.3
 
+  examples/notebook:
+    dependencies:
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
+      '@sqlrooms/notebook':
+        specifier: workspace:*
+        version: link:../../packages/notebook
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../packages/sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../packages/ui
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
+    devDependencies:
+      '@types/react':
+        specifier: ^19.1.7
+        version: 19.1.7
+      '@types/react-dom':
+        specifier: ^19.1.7
+        version: 19.1.7(@types/react@19.1.7)
+      '@vitejs/plugin-react':
+        specifier: ^4.3.4
+        version: 4.5.2(vite@5.4.19(@types/node@24.0.0)(lightningcss@1.30.1)(terser@5.37.0))
+      postcss:
+        specifier: ^8.5.4
+        version: 8.5.4
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.17
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+      vite:
+        specifier: ^5.2.0
+        version: 5.4.19(@types/node@24.0.0)(lightningcss@1.30.1)(terser@5.37.0)
+
   examples/query:
     dependencies:
       '@sqlrooms/dropzone':
@@ -1409,6 +1458,36 @@ importers:
       apache-arrow:
         specifier: ^17.0.0
         version: 17.0.0
+
+  packages/notebook:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^2.2.2
+        version: 2.2.2
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
 
   packages/preset-eslint:
     devDependencies:
@@ -2131,6 +2210,7 @@ packages:
 
   '@arcgis/lumina@4.33.0-next.158':
     resolution: {integrity: sha512-UM0+h+3CMvlN74EZr5bsbSTtluDICMfhtPEERj9TstH2Vk7YHXlkA7or4BUL3msSjEfqPftouDizvFmAHtVRnQ==}
+    deprecated: This version is no longer supported. Upgrade to @latest
 
   '@aws-crypto/crc32@5.2.0':
     resolution: {integrity: sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg==}
