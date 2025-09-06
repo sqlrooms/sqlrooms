@@ -7,6 +7,12 @@ import {
   type RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
+import React from 'react';
+import {SqlCell} from './cells/SqlCell';
+import {TextCell} from './cells/TextCell';
+import {MarkdownCell} from './cells/MarkdownCell';
+import {VegaCell} from './cells/VegaCell';
+import {InputCell} from './cells/InputCell';
 import {z} from 'zod';
 
 /**
@@ -118,7 +124,21 @@ export type NotebookSliceState = {
     runAllCells: (tabId: string) => Promise<void>;
     cancelRunCell: (cellId: string) => void;
 
-    // for extensibility
+    // registry of cell behaviors and renderers
+    cellRegistry: Record<
+      string,
+      {
+        title: string;
+        createCell: (id: string) => NotebookCell;
+        renderComponent: (id: string) => any;
+        findDependents: (
+          changed: NotebookCell,
+          cells: Record<string, NotebookCell>,
+        ) => string[];
+      }
+    >;
+
+    // for extensibility (UI overrides)
     customRenderers: Record<string, (cell: NotebookCell) => any>;
   };
 };
@@ -154,6 +174,97 @@ export function createNotebookSlice<
   return createSlice<PC, NotebookSliceState>((set, get) => ({
     notebook: {
       customRenderers,
+
+      cellRegistry: {
+        sql: {
+          title: 'SQL',
+          createCell: (id) => ({
+            id,
+            type: 'sql',
+            name: `cell_${id.slice(0, 5)}`,
+            sql: '',
+            status: 'idle',
+            referencedTables: [],
+          }),
+          renderComponent: (id: string) => {
+            const cell = get().config.notebook.cells[id];
+            const cr = get().notebook.customRenderers['sql'];
+            return cr ? cr(cell!) : React.createElement(SqlCell as any, {id});
+          },
+          findDependents: (_changed, _cells) => {
+            return [];
+          },
+        },
+        text: {
+          title: 'Text',
+          createCell: (id) => ({id, type: 'text', name: 'Text', text: ''}),
+          renderComponent: (id: string) => {
+            const cell = get().config.notebook.cells[id];
+            const cr = get().notebook.customRenderers['text'];
+            return cr ? cr(cell!) : React.createElement(TextCell as any, {id});
+          },
+          findDependents: () => [],
+        },
+        markdown: {
+          title: 'Markdown',
+          createCell: (id) => ({
+            id,
+            type: 'markdown',
+            name: 'Markdown',
+            markdown: '',
+          }),
+          renderComponent: (id: string) => {
+            const cell = get().config.notebook.cells[id];
+            const cr = get().notebook.customRenderers['markdown'];
+            return cr
+              ? cr(cell!)
+              : React.createElement(MarkdownCell as any, {id});
+          },
+          findDependents: () => [],
+        },
+        vega: {
+          title: 'Vega',
+          createCell: (id) => ({id, type: 'vega', name: 'Chart', sql: ''}),
+          renderComponent: (id: string) => {
+            const cell = get().config.notebook.cells[id];
+            const cr = get().notebook.customRenderers['vega'];
+            return cr ? cr(cell!) : React.createElement(VegaCell as any, {id});
+          },
+          findDependents: () => [],
+        },
+        input: {
+          title: 'Input',
+          createCell: (id) => ({
+            id,
+            type: 'input',
+            name: 'Input',
+            input: {kind: 'text', varName: 'var', value: ''} as any,
+          }),
+          renderComponent: (id: string) => {
+            const cell = get().config.notebook.cells[id];
+            const cr = get().notebook.customRenderers['input'];
+            return cr ? cr(cell!) : React.createElement(InputCell as any, {id});
+          },
+          findDependents: (changed, cells) => {
+            if (changed.type !== 'input') return [];
+            const varName = changed.input.varName;
+            const dependents: string[] = [];
+            for (const key in cells) {
+              const c = cells[key];
+              if (c?.type === 'sql') {
+                const text = (c as any).sql as string;
+                if (
+                  (text && text.indexOf(`{{${varName}}}`) >= 0) ||
+                  (text && text.indexOf(`:${varName}`) >= 0)
+                ) {
+                  dependents.push(c.id);
+                }
+              }
+            }
+            return dependents;
+          },
+        },
+      },
 
       addTab: () => {
         const id = createId();
@@ -203,36 +314,14 @@ export function createNotebookSlice<
 
       addCell: (tabId, type) => {
         const id = createId();
-        const name = type === 'sql' ? `cell_${id.slice(0, 5)}` : 'Untitled';
         set((state) =>
           produce(state, (draft) => {
             const tab = draft.config.notebook.tabs.find((t) => t.id === tabId);
             if (!tab) return;
-            let cell: NotebookCell;
-            if (type === 'sql') {
-              cell = {
-                id,
-                type: 'sql',
-                name,
-                sql: '',
-                status: 'idle',
-                referencedTables: [],
-              };
-            } else if (type === 'markdown') {
-              cell = {id, type: 'markdown', name: 'Markdown', markdown: ''};
-            } else if (type === 'text') {
-              cell = {id, type: 'text', name: 'Text', text: ''};
-            } else if (type === 'vega') {
-              cell = {id, type: 'vega', name: 'Chart', sql: ''};
-            } else {
-              cell = {
-                id,
-                type: 'input',
-                name: 'Input',
-                input: {kind: 'text', varName: 'var', value: ''},
-              } as NotebookCell;
-            }
-            draft.config.notebook.cells[id] = cell as NotebookCell;
+            const reg = (get().notebook.cellRegistry as any)[type];
+            if (!reg) return;
+            const cell = reg.createCell(id) as NotebookCell;
+            draft.config.notebook.cells[id] = cell;
             tab.cellOrder.push(id);
           }),
         );
@@ -260,7 +349,6 @@ export function createNotebookSlice<
       },
 
       updateCell: (cellId, updater) => {
-        const prev = get().config.notebook.cells[cellId];
         set((state) =>
           produce(state, (draft) => {
             const cell = draft.config.notebook.cells[cellId];
@@ -268,26 +356,16 @@ export function createNotebookSlice<
             draft.config.notebook.cells[cellId] = updater(cell);
           }),
         );
-        // If an input cell changed, cascade re-run dependent SQL cells
         const next = get().config.notebook.cells[cellId];
-        if (next?.type === 'input') {
-          const varName = next.input.varName;
-          const cellsMap = get().config.notebook.cells;
-          const dependents: {id: string}[] = [];
-          for (const key in cellsMap) {
-            const c = cellsMap[key];
-            if (c?.type === 'sql') {
-              const text = (c as any).sql as string;
-              if (
-                (text && text.indexOf(`{{${varName}}}`) >= 0) ||
-                (text && text.indexOf(`:${varName}`) >= 0)
-              ) {
-                dependents.push({id: c.id});
-              }
-            }
-          }
-          for (const d of dependents) {
-            void get().notebook.runCell(d.id, {cascade: true});
+        if (!next) return;
+        const reg = get().notebook.cellRegistry[next.type];
+        if (reg) {
+          const dependents = reg.findDependents(
+            next,
+            get().config.notebook.cells,
+          );
+          for (const depId of dependents) {
+            void get().notebook.runCell(depId, {cascade: true});
           }
         }
       },
