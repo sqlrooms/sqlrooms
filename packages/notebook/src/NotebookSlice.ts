@@ -19,25 +19,7 @@ import {
   NotebookSliceConfig,
 } from './cellSchemas';
 
-/**
- * DuckDB schema used for storing notebook SQL cell views.
- */
-
 export type NotebookCellRegistryItem = {
-  title: string;
-  createCell: (id: string) => NotebookCell;
-  renderComponent: (id: string) => any;
-  findDependents: (
-    changed: NotebookCell,
-    cells: Record<string, NotebookCell>,
-  ) => string[];
-  runCell?: (args: {
-    id: string;
-    opts?: {cascade?: boolean};
-  }) => Promise<void> | void;
-};
-
-export type CellRegistryItem = {
   title: string;
   createCell: (id: string) => NotebookCell;
   renderComponent: (id: string) => any;
@@ -48,7 +30,7 @@ export type CellRegistryItem = {
   runCell?: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
 };
 
-export type CellRegistry = Record<string, CellRegistryItem>;
+export type CellRegistry = Record<string, NotebookCellRegistryItem>;
 
 export type NotebookSliceState = {
   notebook: {
