@@ -27,7 +27,7 @@ export type NotebookCellRegistryItem = {
     changed: NotebookCell,
     cells: Record<string, NotebookCell>,
   ) => string[];
-  runCell?: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
+  runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
 };
 
 export type CellRegistry = Record<string, NotebookCellRegistryItem>;
@@ -245,7 +245,7 @@ export function createNotebookSlice<
         if (!cell) return;
         const {runCell} = get().notebook.cellRegistry[cell.type] || {};
         if (runCell) {
-          await runCell({id: cellId, opts});
+          await runCell({id: cellId, opts: opts || {}});
         }
       },
 
