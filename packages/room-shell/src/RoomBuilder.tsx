@@ -23,7 +23,7 @@ export const RoomShell: React.FC = () => {
   const handleLayoutChange = useCallback(
     (nodes: MosaicNode<string> | null) => {
       // Keep layout properties, e.g. 'pinned' and 'fixed'
-      setLayout({...layout, nodes});
+      setLayout(layout ? {...layout, nodes} : undefined);
     },
     [setLayout, layout],
   );
