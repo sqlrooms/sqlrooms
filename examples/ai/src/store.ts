@@ -30,6 +30,12 @@ import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
 import {DEFAULT_MODEL} from './models';
+import {
+  createAiChatUiSlice,
+  AiChatUiSlice,
+  AiChatUiSliceConfig,
+  createDefaultAiChatUiConfig,
+} from '@sqlrooms/ai-chatui';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -42,8 +48,9 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig =
-  BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
+  .merge(SqlEditorSliceConfig)
+  .merge(AiChatUiSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
@@ -59,9 +66,11 @@ type CustomRoomState = {
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
 };
+
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
+  AiChatUiSlice &
   CustomRoomState;
 
 /**
@@ -93,6 +102,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
+          ...createDefaultAiChatUiConfig(),
         },
         room: {
           panels: {
@@ -116,10 +126,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
 
+      // ai-chatui config slice
+      ...createAiChatUiSlice()(set, get, store),
+
       // Ai slice
       ...createAiSlice({
-        getApiKey: (modelProvider: string) => {
-          return get()?.apiKeys[modelProvider] || '';
+        getApiKey: () => {
+          const state = get();
+          if (state.config.aiChatUi.type === 'default') {
+            return state.config.aiChatUi.defaultModel.apiKey || '';
+          } else {
+            return state.config.aiChatUi.customModel.apiKey;
+          }
         },
         toolsOptions: {
           // Configure number of rows to share with LLM globally
@@ -177,11 +195,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Local storage key
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-        selectedModel: state.selectedModel,
-        apiKeys: state.apiKeys,
-      }),
+      partialize: (state) => {
+        const persisted = {
+          config: RoomConfig.parse(state.config),
+          selectedModel: state.selectedModel,
+          apiKeys: state.apiKeys,
+        };
+        return persisted;
+      },
     },
   ) as StateCreator<RoomState>,
 );

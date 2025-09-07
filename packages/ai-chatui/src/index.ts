@@ -5,14 +5,16 @@
 
 // Export the AI configuration slice
 export {
-  createAiConfigSlice,
-  useStoreWithAiConfig
+  createAiChatUiSlice,
+  useStoreWithAiChatUi,
+  AiChatUiSliceConfig,
+  createDefaultAiChatUiConfig,
 } from './AiConfigSlice';
 
 export type {
-  AiConfigState,
-  AiConfigActions,
-  AiConfigSlice
+  AiChatUiSliceState as AiChatUiState,
+  AiChatUiActions,
+  AiChatUiSlice,
 } from './AiConfigSlice';
 
 // Export UI components

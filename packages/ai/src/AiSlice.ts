@@ -62,7 +62,7 @@ export type AiSliceState = {
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     setCustomModelName: (customModelName: string) => void;
-    setBaseUrl: (baseUrl: string) => void;
+    setBaseUrl: (baseUrl?: string) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -174,7 +174,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
          * Set the base URL for the current session
          * @param baseUrl - The server URL to set
          */
-        setBaseUrl: (baseUrl: string) => {
+        setBaseUrl: (baseUrl?: string) => {
           set((state) =>
             produce(state, (draft) => {
               const currentSession = getCurrentSessionFromState(draft);

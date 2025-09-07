@@ -1,4 +1,8 @@
-import {SessionControls, AnalysisResultsContainer, QueryControls} from '@sqlrooms/ai';
+import {
+  SessionControls,
+  AnalysisResultsContainer,
+  QueryControls,
+} from '@sqlrooms/ai';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {SkeletonPane} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -9,22 +13,25 @@ import {ModelUsageData} from '../types';
 interface AssistantPanelProps {
   currentSessionId: string | null;
   getModelStatus: () => {isReady: boolean; error?: string};
+  // chat data available
+  isDataAvailable: boolean;
   supportUrl: string;
   // Model options
   modelOptions: Array<{provider: string; label: string; value: string}>;
   // Optional model usage data
   modelUsage?: ModelUsageData;
-  // Base URL function
-  getProxyBaseUrl: () => string;
+  // Optional proxy base URL function
+  getProxyBaseUrl?: () => string;
 }
 
 export const AssistantPanel: FC<AssistantPanelProps> = ({
   currentSessionId,
   getModelStatus,
+  isDataAvailable,
   supportUrl,
   modelOptions,
   modelUsage,
-  getProxyBaseUrl
+  getProxyBaseUrl,
 }) => {
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
 
@@ -34,10 +41,10 @@ export const AssistantPanel: FC<AssistantPanelProps> = ({
   return (
     <RoomPanel type="assistant" className="overflow-hidden">
       <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-        <div className="mb-4 relative">
+        <div className="relative mb-4">
           <SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <button
-            className="absolute right-0 top-0 flex items-center justify-center w-8 h-8 hover:bg-accent transition-colors"
+            className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
             onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
             title="Configuration"
           >
@@ -58,16 +65,26 @@ export const AssistantPanel: FC<AssistantPanelProps> = ({
         ) : (
           <>
             <div className="flex-grow overflow-auto">
-              <AnalysisResultsContainer
-                key={currentSessionId} // will prevent scrolling to bottom after changing current session
-              />
+              {isDataAvailable ? (
+                <AnalysisResultsContainer
+                  key={currentSessionId} // will prevent scrolling to bottom after changing current session
+                />
+              ) : (
+                <div className="flex h-full w-full flex-col items-center justify-center">
+                  <SkeletonPane className="p-4" />
+                  <p className="text-muted-foreground mt-4">
+                    Loading database...
+                  </p>
+                </div>
+              )}
             </div>
 
             {!isReady ? (
               <div className="flex w-full flex-col items-center justify-center gap-4">
-                <p className="text-left p-6 text-red-500 text-sm">
-                  ⚠️ The AI assistant is currently unavailable. {modelError && `Error: ${modelError}`} Please try restarting the
-                  application or{' '}
+                <p className="p-6 text-left text-sm text-red-500">
+                  ⚠️ The AI assistant is currently unavailable.{' '}
+                  {modelError && `Error: ${modelError}`} Please try restarting
+                  the application or{' '}
                   <a
                     href={supportUrl}
                     className="underline hover:text-red-600"

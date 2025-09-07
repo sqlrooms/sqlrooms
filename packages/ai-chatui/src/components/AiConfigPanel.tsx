@@ -12,7 +12,7 @@ interface AiConfigPanelProps {
   setIsOpen: (isOpen: boolean) => void;
   modelOptions: Array<{provider: string; label: string; value: string}>;
   modelUsage?: ModelUsageData;
-  getProxyBaseUrl: () => string;
+  getProxyBaseUrl?: () => string;
 }
 
 export const AiConfigPanel: FC<AiConfigPanelProps> = ({
@@ -20,19 +20,18 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
   setIsOpen,
   modelOptions,
   modelUsage,
-  getProxyBaseUrl
+  getProxyBaseUrl,
 }) => {
-
   if (!isOpen) return null;
 
   return (
-    <div className="w-full bg-background border border-border rounded-lg shadow-sm">
-      <div className="p-6 flex flex-col gap-12 overflow-y-auto relative">
+    <div className="bg-background border-border w-full rounded-lg border shadow-sm">
+      <div className="relative flex flex-col gap-12 overflow-y-auto p-6">
         <Button
           variant="outline"
           size="sm"
           onClick={() => setIsOpen(false)}
-          className="absolute top-2 right-2 z-10"
+          className="absolute right-2 top-2 z-10"
         >
           <X className="h-4 w-4" />
         </Button>

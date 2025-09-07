@@ -1,6 +1,6 @@
 import {FC, useRef, useState} from 'react';
 import {Sliders, Wrench, FileText, Upload, Eye} from 'lucide-react';
-import {useStoreWithAiConfig} from '../AiConfigSlice';
+import {useStoreWithAiChatUi} from '../AiConfigSlice';
 import {
   Textarea,
   Input,
@@ -11,21 +11,27 @@ import {
   DialogTitle,
   DialogDescription,
   useDisclosure,
-  useToast
+  useToast,
 } from '@sqlrooms/ui';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {getDefaultInstructions} from '@sqlrooms/ai';
 
 export const AiModelParameters: FC = () => {
-  const maxSteps = useStoreWithAiConfig(s => s.modelParameters.maxSteps);
-  const systemInstruction = useStoreWithAiConfig(s => s.modelParameters.systemInstruction);
-  const setMaxSteps = useStoreWithAiConfig(s => s.setMaxSteps);
-  const setSystemInstruction = useStoreWithAiConfig(s => s.setSystemInstruction);
+  const maxSteps = useStoreWithAiChatUi(
+    (s) => s.aiChatUi.modelParameters.maxSteps,
+  );
+  const systemInstruction = useStoreWithAiChatUi(
+    (s) => s.aiChatUi.modelParameters.systemInstruction,
+  );
+  const setMaxSteps = useStoreWithAiChatUi((s) => s.aiChatUi.setMaxSteps);
+  const setSystemInstruction = useStoreWithAiChatUi(
+    (s) => s.aiChatUi.setSystemInstruction,
+  );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {toast} = useToast();
 
   // Get tables schema from room store
-  const tables = useBaseRoomShellStore(s => s.db.tables);
+  const tables = useBaseRoomShellStore((s) => s.db.tables);
 
   // Modal state
   const {isOpen, onOpen, onClose} = useDisclosure();
@@ -39,20 +45,27 @@ export const AiModelParameters: FC = () => {
     setSystemInstruction(value);
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     // Validate file type
     const allowedTypes = ['text/plain', 'text/markdown', 'application/json'];
     const allowedExtensions = ['.txt', '.md', '.json', '.text'];
-    const fileExtension = file.name.toLowerCase().slice(file.name.lastIndexOf('.'));
+    const fileExtension = file.name
+      .toLowerCase()
+      .slice(file.name.lastIndexOf('.'));
 
-    if (!allowedTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+    if (
+      !allowedTypes.includes(file.type) &&
+      !allowedExtensions.includes(fileExtension)
+    ) {
       toast({
         title: 'Invalid file type',
         description: 'Please select a text file (.txt, .md, .json)',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -63,7 +76,7 @@ export const AiModelParameters: FC = () => {
       toast({
         title: 'File too large',
         description: 'File size must be less than 1MB',
-        variant: 'destructive'
+        variant: 'destructive',
       });
       return;
     }
@@ -73,14 +86,15 @@ export const AiModelParameters: FC = () => {
       setSystemInstruction(text);
       toast({
         title: 'File uploaded successfully',
-        description: 'System instructions have been updated from the uploaded file.'
+        description:
+          'System instructions have been updated from the uploaded file.',
       });
     } catch (error) {
       console.error('Error reading file:', error);
       toast({
         title: 'Error reading file',
         description: 'Please try again.',
-        variant: 'destructive'
+        variant: 'destructive',
       });
     }
 
@@ -100,7 +114,7 @@ export const AiModelParameters: FC = () => {
 
     if (additionalInstructions) {
       setFullInstructions(
-        `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstructions}`
+        `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstructions}`,
       );
     } else {
       setFullInstructions(`${defaultInstructions}.`);
@@ -111,14 +125,14 @@ export const AiModelParameters: FC = () => {
 
   return (
     <div className="space-y-2">
-      <label className="text-md font-medium flex items-center gap-2 pb-6">
+      <label className="text-md flex items-center gap-2 pb-6 font-medium">
         <Sliders className="h-4 w-4" />
         Model Parameters
       </label>
       <div className="grid grid-cols-1 gap-4">
         {/* Max Steps */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-medium">
             <Wrench className="h-4 w-4" />
             Max Tool Steps
           </label>
@@ -129,7 +143,9 @@ export const AiModelParameters: FC = () => {
               max="20"
               step="1"
               value={maxSteps}
-              onChange={e => handleMaxStepsChange(parseInt(e.target.value) || 1)}
+              onChange={(e) =>
+                handleMaxStepsChange(parseInt(e.target.value) || 1)
+              }
               className="flex-1"
             />
           </div>
@@ -137,13 +153,13 @@ export const AiModelParameters: FC = () => {
 
         {/* System Instruction */}
         <div className="space-y-2">
-          <label className="text-sm font-medium flex items-center gap-2">
+          <label className="flex items-center gap-2 text-sm font-medium">
             <FileText className="h-4 w-4" />
             Additional Instructions
           </label>
           <Textarea
             value={systemInstruction}
-            onChange={e => handleSystemInstructionChange(e.target.value)}
+            onChange={(e) => handleSystemInstructionChange(e.target.value)}
             placeholder="Enter custom system instructions for the AI model..."
             className="min-h-[80px] resize-y"
             autoResize={false}
@@ -180,17 +196,18 @@ export const AiModelParameters: FC = () => {
 
       {/* Full Instructions Modal */}
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogContent className="flex h-[80vh] max-w-4xl flex-col">
           <DialogHeader className="flex-shrink-0">
             <DialogTitle>Full System Instructions</DialogTitle>
             <DialogDescription>
-              Complete system instructions that will be sent to the AI model, including default
-              instructions and your additional custom instructions.
+              Complete system instructions that will be sent to the AI model,
+              including default instructions and your additional custom
+              instructions.
             </DialogDescription>
           </DialogHeader>
-          <div className="mt-4 flex-1 min-h-0 overflow-hidden">
-            <div className="bg-muted/50 rounded-lg p-4 h-full overflow-auto">
-              <pre className="text-sm font-mono leading-relaxed break-words w-full max-w-full overflow-wrap-anywhere">
+          <div className="mt-4 min-h-0 flex-1 overflow-hidden">
+            <div className="bg-muted/50 h-full overflow-auto rounded-lg p-4">
+              <pre className="overflow-wrap-anywhere w-full max-w-full break-words font-mono text-sm leading-relaxed">
                 {fullInstructions}
               </pre>
             </div>

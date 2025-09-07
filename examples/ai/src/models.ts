@@ -1,4 +1,4 @@
-export const DEFAULT_MODEL = 'gpt-4o-mini';
+export const DEFAULT_MODEL = 'gpt-4.1';
 
 // Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';

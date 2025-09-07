@@ -31,7 +31,7 @@ This package provides a complete set of UI components and state management for A
 ```tsx
 import {
   createAiConfigSlice,
-  useStoreWithAiConfig,
+  useStoreWithAiChatUi,
   AssistantPanel,
   ModelUsageData
 } from '@sqlrooms/ai-chatui';
@@ -80,7 +80,7 @@ const getProxyBaseUrl = () => 'https://api.example.com/liteLLM/v1';
   supportUrl="https://support.example.com"
   modelOptions={modelOptions}
   modelUsage={modelUsage} // Optional
-  getProxyBaseUrl={getProxyBaseUrl}
+  getProxyBaseUrl={getProxyBaseUrl} // Optional
 />
 ```
 
@@ -108,7 +108,7 @@ const modelUsage: ModelUsageData = {
   setIsOpen={setIsConfigOpen}
   modelOptions={modelOptions}
   modelUsage={modelUsage} // Optional - usage panel will be hidden if not provided
-  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'}
+  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional
 />
 ```
 
@@ -121,7 +121,7 @@ const modelUsage: ModelUsageData = {
   getModelStatus={() => ({ isReady: true })}
   supportUrl="https://support.example.com"
   modelOptions={modelOptions}
-  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'}
+  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional
   // modelUsage is optional - no usage panel will be shown
 />
 ```
@@ -133,7 +133,7 @@ const modelUsage: ModelUsageData = {
 The package uses functions instead of static values for better flexibility:
 
 - **`getModelStatus()`**: Returns model readiness status and error details
-- **`getProxyBaseUrl()`**: Provides dynamic base URL resolution
+- **`getProxyBaseUrl()`**: Provides dynamic base URL resolution (optional)
 
 ### Optional Usage Tracking
 
