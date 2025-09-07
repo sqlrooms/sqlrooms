@@ -13,6 +13,7 @@ interface AiConfigPanelProps {
   modelOptions: Array<{provider: string; label: string; value: string}>;
   modelUsage?: ModelUsageData;
   getProxyBaseUrl?: () => string;
+  hideApiKeyInputForDefaultModels?: boolean;
 }
 
 export const AiConfigPanel: FC<AiConfigPanelProps> = ({
@@ -21,6 +22,7 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
   modelOptions,
   modelUsage,
   getProxyBaseUrl,
+  hideApiKeyInputForDefaultModels,
 }) => {
   if (!isOpen) return null;
 
@@ -38,6 +40,7 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
         <AiModelSelection
           modelOptions={modelOptions}
           getProxyBaseUrl={getProxyBaseUrl}
+          hideApiKeyInputForDefaultModels={hideApiKeyInputForDefaultModels}
         />
         {modelUsage && (
           <AiModelUsage

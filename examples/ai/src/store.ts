@@ -32,9 +32,9 @@ import exampleSessions from './example-sessions.json';
 import {DEFAULT_MODEL} from './models';
 import {
   createAiChatUiSlice,
-  AiChatUiSlice,
   AiChatUiSliceConfig,
   createDefaultAiChatUiConfig,
+  AiChatUiState,
 } from '@sqlrooms/ai-chatui';
 
 export const RoomPanelTypes = z.enum([
@@ -61,7 +61,7 @@ type CustomRoomState = {
     model: string;
     provider: string;
   };
-  setSelectedModel: (model: string, provider: string) => void;
+  setCustomSelectedModel: (model: string, provider: string) => void;
   /** API keys by provider */
   apiKeys: Record<string, string | undefined>;
   setProviderApiKey: (provider: string, apiKey: string) => void;
@@ -70,7 +70,7 @@ type CustomRoomState = {
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  AiChatUiSlice &
+  AiChatUiState &
   CustomRoomState;
 
 /**
@@ -135,12 +135,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           const state = get();
           if (state.config.aiChatUi.type === 'default') {
             const selectedModel = state.config.aiChatUi.models.find(
-              (model: {
-                id: string;
-                model: string;
-                provider: string;
-                apiKey?: string;
-              }) => model.id === state.config.aiChatUi.selectedModelId,
+              (model) => model.id === state.config.aiChatUi.selectedModelId,
             );
             return selectedModel?.apiKey || '';
           } else {
@@ -185,7 +180,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         model: DEFAULT_MODEL,
         provider: 'openai',
       },
-      setSelectedModel: (model: string, provider: string) => {
+      setCustomSelectedModel: (model: string, provider: string) => {
         set({selectedModel: {model, provider}});
       },
       apiKeys: {

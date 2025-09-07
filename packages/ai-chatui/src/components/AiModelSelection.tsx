@@ -8,6 +8,7 @@ interface AiModelSelectionProps {
   modelOptions: Array<{provider: string; label: string; value: string}>;
   className?: string;
   getProxyBaseUrl?: () => string;
+  hideApiKeyInputForDefaultModels?: boolean;
 }
 
 const CUSTOM_PROVIDER_NAME_FOR_API_KEY = 'custom';
@@ -16,6 +17,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   modelOptions,
   className = '',
   getProxyBaseUrl,
+  hideApiKeyInputForDefaultModels,
 }) => {
   const aiConfigType = useStoreWithAiChatUi((s) => s.getAiConfig().type);
   const aiConfigModels = useStoreWithAiChatUi((s) => s.getAiConfig().models);
@@ -158,7 +160,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
         {/* Default Tab */}
         <TabsContent value="default" className="space-y-2">
           <ModelSelector models={modelOptions} className="w-full" />
-          {selectedModel && (
+          {selectedModel && !hideApiKeyInputForDefaultModels && (
             <div className="relative mt-2 flex items-center">
               <KeyIcon className="absolute left-2 h-4 w-4" />
               <Input

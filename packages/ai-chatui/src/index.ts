@@ -11,11 +11,7 @@ export {
   createDefaultAiChatUiConfig,
 } from './AiConfigSlice';
 
-export type {
-  AiChatUiSliceState as AiChatUiState,
-  AiChatUiActions,
-  AiChatUiSlice,
-} from './AiConfigSlice';
+export type {AiChatUiSliceState as AiChatUiState} from './AiConfigSlice';
 
 // Export UI components
 export {AiConfigPanel} from './components/AiConfigPanel';

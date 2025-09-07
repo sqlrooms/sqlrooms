@@ -33,7 +33,6 @@ export const AiModelParameters: FC = () => {
   // Get tables schema from room store
   const tables = useBaseRoomShellStore((s) => s.db.tables);
 
-  // Modal state
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleMaxStepsChange = (value: number) => {

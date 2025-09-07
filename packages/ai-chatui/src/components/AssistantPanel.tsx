@@ -4,15 +4,15 @@ import {
   QueryControls,
 } from '@sqlrooms/ai';
 import {RoomPanel} from '@sqlrooms/room-shell';
-import {SkeletonPane} from '@sqlrooms/ui';
+import {SkeletonPane, Button} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
-import {useState, FC} from 'react';
+import {useState, FC, useMemo} from 'react';
 import {AiConfigPanel} from './AiConfigPanel';
 import {ModelUsageData} from '../types';
+import {useStoreWithAiChatUi} from '../AiConfigSlice';
 
 interface AssistantPanelProps {
   currentSessionId: string | null;
-  getModelStatus: () => {isReady: boolean; error?: string};
   // chat data available
   isDataAvailable: boolean;
   supportUrl: string;
@@ -22,34 +22,56 @@ interface AssistantPanelProps {
   modelUsage?: ModelUsageData;
   // Optional proxy base URL function
   getProxyBaseUrl?: () => string;
+  // Optional model status function
+  getModelStatus?: () => {isReady: boolean; error?: string};
+  // Optional hide apiKey input for default models
+  hideApiKeyInputForDefaultModels?: boolean;
 }
 
 export const AssistantPanel: FC<AssistantPanelProps> = ({
   currentSessionId,
-  getModelStatus,
   isDataAvailable,
   supportUrl,
   modelOptions,
   modelUsage,
   getProxyBaseUrl,
+  getModelStatus,
+  hideApiKeyInputForDefaultModels,
 }) => {
+  // Get AI configuration state
+  const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
+  const selectedModel = useStoreWithAiChatUi((s) => s.getSelectedModel());
+
+  // Get model status e.g. from proxy - default to ready if not provided
+  const {isReady, error: modelError} = getModelStatus?.() ?? {isReady: true};
+
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
 
-  // Get model status
-  const {isReady, error: modelError} = getModelStatus();
+  // Determine button variant based on model type and API key
+  const buttonVariant = useMemo(() => {
+    if (
+      aiConfig.type === 'default' &&
+      selectedModel &&
+      (!selectedModel.apiKey || selectedModel.apiKey.trim() === '')
+    ) {
+      return 'destructive';
+    }
+    return 'outline';
+  }, [aiConfig.type, selectedModel]);
 
   return (
     <RoomPanel type="assistant" className="overflow-hidden">
       <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
         <div className="relative mb-4">
           <SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
-          <button
+          <Button
+            variant={buttonVariant}
             className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
             onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
             title="Configuration"
           >
             <Settings className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         {isConfigPanelOpen ? (
@@ -60,6 +82,7 @@ export const AssistantPanel: FC<AssistantPanelProps> = ({
               modelOptions={modelOptions}
               modelUsage={modelUsage}
               getProxyBaseUrl={getProxyBaseUrl}
+              hideApiKeyInputForDefaultModels={hideApiKeyInputForDefaultModels}
             />
           </div>
         ) : (
