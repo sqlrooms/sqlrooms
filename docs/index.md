@@ -5,7 +5,7 @@ layout: home
 hero:
   name: 'SQLRooms'
   text: 'Build data-centric apps with DuckDB'
-  tagline: An Open Source React Framework for Single-Node Data Analytics powered by DuckDB
+  tagline: An open source React toolkit for human + agent collaborative analytics apps
   actions:
     - theme: brand
       text: What is SQLRooms?
