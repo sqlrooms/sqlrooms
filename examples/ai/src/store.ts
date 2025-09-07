@@ -102,7 +102,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
-          ...createDefaultAiChatUiConfig(),
+          ...createDefaultAiChatUiConfig({}),
         },
         room: {
           panels: {
@@ -134,7 +134,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         getApiKey: () => {
           const state = get();
           if (state.config.aiChatUi.type === 'default') {
-            return state.config.aiChatUi.defaultModel.apiKey || '';
+            const selectedModel = state.config.aiChatUi.models.find(
+              (model: {
+                id: string;
+                model: string;
+                provider: string;
+                apiKey?: string;
+              }) => model.id === state.config.aiChatUi.selectedModelId,
+            );
+            return selectedModel?.apiKey || '';
           } else {
             return state.config.aiChatUi.customModel.apiKey;
           }

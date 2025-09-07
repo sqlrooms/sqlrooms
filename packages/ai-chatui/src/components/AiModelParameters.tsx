@@ -1,4 +1,4 @@
-import {FC, useRef, useState} from 'react';
+import {FC, useRef} from 'react';
 import {Sliders, Wrench, FileText, Upload, Eye} from 'lucide-react';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
 import {
@@ -18,14 +18,14 @@ import {getDefaultInstructions} from '@sqlrooms/ai';
 
 export const AiModelParameters: FC = () => {
   const maxSteps = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.modelParameters.maxSteps,
+    (s) => s.getAiConfig().modelParameters.maxSteps,
   );
   const systemInstruction = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.modelParameters.systemInstruction,
+    (s) => s.getAiConfig().modelParameters.systemInstruction,
   );
-  const setMaxSteps = useStoreWithAiChatUi((s) => s.aiChatUi.setMaxSteps);
+  const setMaxSteps = useStoreWithAiChatUi((s) => s.setMaxSteps);
   const setSystemInstruction = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.setSystemInstruction,
+    (s) => s.setSystemInstruction,
   );
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {toast} = useToast();
@@ -35,7 +35,6 @@ export const AiModelParameters: FC = () => {
 
   // Modal state
   const {isOpen, onOpen, onClose} = useDisclosure();
-  const [fullInstructions, setFullInstructions] = useState<string>('');
 
   const handleMaxStepsChange = (value: number) => {
     setMaxSteps(value);
@@ -109,18 +108,19 @@ export const AiModelParameters: FC = () => {
   };
 
   const handleViewFullInstructions = () => {
+    onOpen();
+  };
+
+  // Compute full instructions on-the-fly
+  const getFullInstructions = () => {
     const defaultInstructions = getDefaultInstructions(tables);
     const additionalInstructions = systemInstruction;
 
     if (additionalInstructions) {
-      setFullInstructions(
-        `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstructions}`,
-      );
+      return `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstructions}`;
     } else {
-      setFullInstructions(`${defaultInstructions}.`);
+      return `${defaultInstructions}.`;
     }
-
-    onOpen();
   };
 
   return (
@@ -208,7 +208,7 @@ export const AiModelParameters: FC = () => {
           <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             <div className="bg-muted/50 h-full overflow-auto rounded-lg p-4">
               <pre className="overflow-wrap-anywhere w-full max-w-full break-words font-mono text-sm leading-relaxed">
-                {fullInstructions}
+                {getFullInstructions()}
               </pre>
             </div>
           </div>

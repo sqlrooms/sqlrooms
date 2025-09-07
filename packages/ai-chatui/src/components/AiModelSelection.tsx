@@ -1,4 +1,4 @@
-import {FC, useState, useEffect} from 'react';
+import {FC, useEffect} from 'react';
 import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
 import {ModelSelector, useStoreWithAi} from '@sqlrooms/ai';
@@ -17,21 +17,18 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   className = '',
   getProxyBaseUrl,
 }) => {
-  const aiConfigType = useStoreWithAiChatUi((s) => s.aiChatUi.type);
-  const aiConfigDefaultModel = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.defaultModel,
-  );
+  const aiConfigType = useStoreWithAiChatUi((s) => s.getAiConfig().type);
+  const aiConfigModels = useStoreWithAiChatUi((s) => s.getAiConfig().models);
+  const selectedModel = useStoreWithAiChatUi((s) => s.getSelectedModel());
   const aiConfigCustomModel = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.customModel,
+    (s) => s.getAiConfig().customModel,
   );
 
-  const setAiConfigType = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.setAiConfigType,
-  );
-  const setCustomModel = useStoreWithAiChatUi((s) => s.aiChatUi.setCustomModel);
-  const setDefaultModel = useStoreWithAiChatUi(
-    (s) => s.aiChatUi.setDefaultModel,
-  );
+  const setAiConfigType = useStoreWithAiChatUi((s) => s.setAiConfigType);
+  const setCustomModel = useStoreWithAiChatUi((s) => s.setCustomModel);
+  const addModel = useStoreWithAiChatUi((s) => s.addModel);
+  const updateModel = useStoreWithAiChatUi((s) => s.updateModel);
+  const setSelectedModel = useStoreWithAiChatUi((s) => s.setSelectedModel);
 
   const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
@@ -42,77 +39,61 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
     (s) => s.ai.getCurrentSession()?.modelProvider,
   );
 
-  // Local state for inputs
-  const [activeTab, setActiveTab] = useState(aiConfigType);
-  const [customModelApiKey, setCustomModelApiKey] = useState(
-    aiConfigCustomModel.apiKey || '',
-  );
-  const [customModelName, setCustomModelName] = useState(
-    aiConfigCustomModel.modelName || '',
-  );
-
-  // Debug: Log the current store values
   useEffect(() => {
-    console.log('AiModelSelection mounted/updated:', {
-      aiConfigType,
-      aiConfigDefaultModel,
-      aiConfigCustomModel,
-      activeTab,
-    });
-  }, [aiConfigType, aiConfigDefaultModel, aiConfigCustomModel, activeTab]);
-
-  // Sync local state with store values after hydration (important for persistence)
-  useEffect(() => {
-    console.log('aiConfigType changed:', aiConfigType);
-    setActiveTab(aiConfigType);
-  }, [aiConfigType]);
-
-  useEffect(() => {
-    console.log('aiConfigCustomModel changed:', aiConfigCustomModel);
-    setCustomModelApiKey(aiConfigCustomModel.apiKey || '');
-    setCustomModelName(aiConfigCustomModel.modelName || '');
-  }, [aiConfigCustomModel.apiKey, aiConfigCustomModel.modelName]);
-
-  useEffect(() => {
-    // update slice when <ModelSelector /> changed
+    // update slice when <ModelSelector /> changed, maybe add onModelChange prop to <ModelSelector />
     if (
       currentSessionModel &&
       currentSessionProvider &&
       currentSessionProvider !== CUSTOM_PROVIDER_NAME_FOR_API_KEY
     ) {
-      setDefaultModel(currentSessionModel, currentSessionProvider);
-    }
-  }, [currentSessionModel, currentSessionProvider, setDefaultModel]);
+      // Find existing model or add new one
+      const existingModel = aiConfigModels.find(
+        (m) =>
+          m.model === currentSessionModel &&
+          m.provider === currentSessionProvider,
+      );
 
-  // useEffect(() => {
-  //   // Initialize AI store with aiConfigSlice default model on mount
-  //   if (
-  //     aiConfigType === 'default' &&
-  //     aiConfigDefaultModel.model &&
-  //     aiConfigDefaultModel.provider
-  //   ) {
-  //     setAiModel(aiConfigDefaultModel.provider, aiConfigDefaultModel.model);
-  //     setBaseUrl(getProxyBaseUrl?.());
-  //   }
-  // }, []);
+      if (existingModel) {
+        setSelectedModel(existingModel.id);
+      } else {
+        // Add new model and select it
+        const newModelId = addModel(
+          currentSessionModel,
+          currentSessionProvider,
+        );
+        setSelectedModel(newModelId);
+      }
+    }
+  }, [
+    currentSessionModel,
+    currentSessionProvider,
+    aiConfigModels,
+    addModel,
+    setSelectedModel,
+  ]);
 
   const handleTabChange = (value: string) => {
-    setActiveTab(value as 'default' | 'custom');
     setAiConfigType(value as 'default' | 'custom');
 
     if (value === 'default') {
-      const selectedOption = modelOptions.find(
-        (m) => m.label === aiConfigDefaultModel.model,
-      );
-      const selectedModelProvider =
-        selectedOption?.provider || modelOptions[0]?.provider || 'openai';
-      const selectedModelName =
-        selectedOption?.label || modelOptions[0]?.label || 'gpt-4';
-      setAiModel(selectedModelProvider, selectedModelName);
-      setBaseUrl(getProxyBaseUrl?.());
+      if (selectedModel) {
+        setAiModel(selectedModel.provider, selectedModel.model);
+        setBaseUrl(getProxyBaseUrl?.());
+      } else if (aiConfigModels.length > 0) {
+        // Select the first available model
+        const firstModel = aiConfigModels[0];
+        if (firstModel) {
+          setSelectedModel(firstModel.id);
+          setAiModel(firstModel.provider, firstModel.model);
+          setBaseUrl(getProxyBaseUrl?.());
+        }
+      }
     } else {
       // use 'custom' for other models which are openai compatible
-      setAiModel(CUSTOM_PROVIDER_NAME_FOR_API_KEY, customModelName);
+      setAiModel(
+        CUSTOM_PROVIDER_NAME_FOR_API_KEY,
+        aiConfigCustomModel.modelName,
+      );
       setBaseUrl(aiConfigCustomModel.baseUrl);
     }
   };
@@ -121,7 +102,11 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputBaseUrl = e.target.value;
-    setCustomModel(inputBaseUrl, customModelApiKey, customModelName);
+    setCustomModel(
+      inputBaseUrl,
+      aiConfigCustomModel.apiKey,
+      aiConfigCustomModel.modelName,
+    );
     setBaseUrl(inputBaseUrl);
   };
 
@@ -129,25 +114,29 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputApiKey = e.target.value;
-    setCustomModelApiKey(inputApiKey);
-    setCustomModel(aiConfigCustomModel.baseUrl, inputApiKey, customModelName);
+    setCustomModel(
+      aiConfigCustomModel.baseUrl,
+      inputApiKey,
+      aiConfigCustomModel.modelName,
+    );
   };
 
   const onCustomModelNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const modelName = e.target.value;
-    setCustomModelName(modelName);
-    setCustomModel(aiConfigCustomModel.baseUrl, customModelApiKey, modelName);
+    setCustomModel(
+      aiConfigCustomModel.baseUrl,
+      aiConfigCustomModel.apiKey,
+      modelName,
+    );
   };
 
   const onDefaultModelApiKeyChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputApiKey = e.target.value;
-    setDefaultModel(
-      aiConfigDefaultModel.model,
-      aiConfigDefaultModel.provider,
-      inputApiKey,
-    );
+    if (selectedModel) {
+      updateModel(selectedModel.id, {apiKey: inputApiKey});
+    }
   };
 
   return (
@@ -157,7 +146,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
         Model Selection
       </label>
       <Tabs
-        value={activeTab}
+        value={aiConfigType}
         onValueChange={handleTabChange}
         className="w-full"
       >
@@ -169,16 +158,18 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
         {/* Default Tab */}
         <TabsContent value="default" className="space-y-2">
           <ModelSelector models={modelOptions} className="w-full" />
-          <div className="relative mt-2 flex items-center">
-            <KeyIcon className="absolute left-2 h-4 w-4" />
-            <Input
-              className="w-full pl-8 text-xs"
-              type="password"
-              placeholder="API Key"
-              value={aiConfigDefaultModel.apiKey}
-              onChange={onDefaultModelApiKeyChange}
-            />
-          </div>
+          {selectedModel && (
+            <div className="relative mt-2 flex items-center">
+              <KeyIcon className="absolute left-2 h-4 w-4" />
+              <Input
+                className="w-full pl-8 text-xs"
+                type="password"
+                placeholder="API Key"
+                value={selectedModel.apiKey || ''}
+                onChange={onDefaultModelApiKeyChange}
+              />
+            </div>
+          )}
         </TabsContent>
 
         {/* Custom Tab */}
@@ -200,7 +191,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
                 className="w-full pl-8 text-xs"
                 type="password"
                 placeholder="API Key"
-                value={customModelApiKey}
+                value={aiConfigCustomModel.apiKey}
                 onChange={onCustomModelApiKeyChange}
               />
             </div>
@@ -210,7 +201,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
                 className="w-full pl-8 text-xs"
                 type="text"
                 placeholder="Model Name"
-                value={customModelName}
+                value={aiConfigCustomModel.modelName}
                 onChange={onCustomModelNameChange}
               />
             </div>

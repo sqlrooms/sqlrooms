@@ -1,17 +1,25 @@
 import {StateCreator} from 'zustand';
-import {useBaseRoomShellStore, createSlice} from '@sqlrooms/room-shell';
-import {BaseRoomConfig, RoomShellSliceState} from '@sqlrooms/room-shell';
+import {
+  useBaseRoomShellStore,
+  createSlice,
+  BaseRoomConfig,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {z} from 'zod';
 
 export const AiChatUiSliceConfig = z.object({
   aiChatUi: z.object({
     type: z.enum(['default', 'custom']),
-    defaultModel: z.object({
-      model: z.string(),
-      provider: z.string(),
-      apiKey: z.string().optional(),
-    }),
+    models: z.array(
+      z.object({
+        id: z.string(),
+        model: z.string(),
+        provider: z.string(),
+        apiKey: z.string().optional(),
+      }),
+    ),
+    selectedModelId: z.string().optional(),
     customModel: z.object({
       baseUrl: z.string(),
       apiKey: z.string(),
@@ -28,14 +36,31 @@ export type AiChatUiSliceConfig = z.infer<typeof AiChatUiSliceConfig>;
 export function createDefaultAiChatUiConfig(
   props: Partial<AiChatUiSliceConfig['aiChatUi']>,
 ): AiChatUiSliceConfig {
+  const defaultModelId = 'default-gpt-4o-mini';
   return {
     aiChatUi: {
       type: 'default',
-      defaultModel: {
-        model: 'gpt-4.1',
-        provider: 'openai',
-        apiKey: '',
-      },
+      models: [
+        {
+          id: defaultModelId,
+          model: 'gpt-4o-mini',
+          provider: 'openai',
+          apiKey: '',
+        },
+        {
+          id: 'default-gpt-4',
+          model: 'gpt-4',
+          provider: 'openai',
+          apiKey: '',
+        },
+        {
+          id: 'default-claude-3-sonnet',
+          model: 'claude-3-sonnet-20240229',
+          provider: 'anthropic',
+          apiKey: '',
+        },
+      ],
+      selectedModelId: defaultModelId,
       customModel: {
         baseUrl: '',
         apiKey: '',
@@ -49,14 +74,17 @@ export function createDefaultAiChatUiConfig(
     },
   };
 }
+
 export type AiChatUiSliceState = {
-  aiChatUi: {
+  getAiConfig: () => {
     type: 'default' | 'custom';
-    defaultModel: {
+    models: Array<{
+      id: string;
       model: string;
       provider: string;
       apiKey?: string;
-    };
+    }>;
+    selectedModelId?: string;
     customModel: {
       baseUrl: string;
       apiKey: string;
@@ -66,151 +94,169 @@ export type AiChatUiSliceState = {
       maxSteps: number;
       systemInstruction: string;
     };
-    getAiConfig: () => {
-      type: 'default' | 'custom';
-      defaultModel: {
-        model: string;
-        provider: string;
-        apiKey?: string;
-      };
-      customModel: {
-        baseUrl: string;
-        apiKey: string;
-        modelName: string;
-      };
-      modelParameters: {
-        maxSteps: number;
-        systemInstruction: string;
-      };
-    };
-    setAiConfigType: (type: 'default' | 'custom') => void;
-    setDefaultModel: (model: string, provider: string, apiKey?: string) => void;
-    setCustomModel: (
-      baseUrl: string,
-      apiKey: string,
-      modelName: string,
-    ) => void;
-    setModelParameters: (parameters: {
-      maxSteps?: number;
-      systemInstruction?: string;
-    }) => void;
-    setMaxSteps: (maxSteps: number) => void;
-    setSystemInstruction: (systemInstruction: string) => void;
   };
-};
-
-type CreateAiChatUiSliceParams = {
-  initialType?: 'default' | 'custom';
-  initialDefaultModel?: string;
-  initialDefaultModelProvider?: string;
-  initialDefaultModelApiKey?: string;
-  initialDefaultCustomModelBaseUrl?: string;
-  initialDefaultCustomModelApiKey?: string;
-  initialDefaultCustomModelModelName?: string;
-  initialMaxSteps?: number;
-  initialSystemInstruction?: string;
+  getSelectedModel: () => {
+    id: string;
+    model: string;
+    provider: string;
+    apiKey?: string;
+  } | null;
+  setAiConfigType: (type: 'default' | 'custom') => void;
+  addModel: (model: string, provider: string, apiKey?: string) => string;
+  updateModel: (
+    id: string,
+    updates: {
+      model?: string;
+      provider?: string;
+      apiKey?: string;
+    },
+  ) => void;
+  removeModel: (id: string) => void;
+  setSelectedModel: (id: string) => void;
+  setCustomModel: (baseUrl: string, apiKey: string, modelName: string) => void;
+  setModelParameters: (parameters: {
+    maxSteps?: number;
+    systemInstruction?: string;
+  }) => void;
+  setMaxSteps: (maxSteps: number) => void;
+  setSystemInstruction: (systemInstruction: string) => void;
 };
 
 export function createAiChatUiSlice<
   PC extends BaseRoomConfig & AiChatUiSliceConfig,
->(params: CreateAiChatUiSliceParams = {}): StateCreator<AiChatUiSliceState> {
-  const {
-    initialType = 'default',
-    initialDefaultModel = 'gpt-4.1',
-    initialDefaultModelProvider = 'openai',
-    initialDefaultModelApiKey = '',
-    initialDefaultCustomModelBaseUrl = '',
-    initialDefaultCustomModelApiKey = '',
-    initialDefaultCustomModelModelName = '',
-    initialMaxSteps = 10,
-    initialSystemInstruction = '',
-  } = params;
-
+>(): StateCreator<AiChatUiSliceState> {
   return createSlice<PC, AiChatUiSliceState>((set, get) => {
     return {
-      aiChatUi: {
-        type: initialType,
-        defaultModel: {
-          model: initialDefaultModel,
-          provider: initialDefaultModelProvider,
-          apiKey: initialDefaultModelApiKey,
-        },
-        customModel: {
-          baseUrl: initialDefaultCustomModelBaseUrl,
-          apiKey: initialDefaultCustomModelApiKey,
-          modelName: initialDefaultCustomModelModelName,
-        },
-        modelParameters: {
-          maxSteps: initialMaxSteps,
-          systemInstruction: initialSystemInstruction,
-        },
+      getAiConfig: () => {
+        const state = get();
+        return state.config.aiChatUi;
+      },
 
-        getAiConfig: () => {
-          const state = get();
-          return state.aiChatUi;
-        },
+      getSelectedModel: () => {
+        const state = get();
+        const {models, selectedModelId} = state.config.aiChatUi;
+        if (!selectedModelId) return null;
+        return models.find((model) => model.id === selectedModelId) || null;
+      },
 
-        setAiConfigType: (type: 'default' | 'custom') => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.aiChatUi.type = type;
-            }),
-          );
-        },
+      setAiConfigType: (type: 'default' | 'custom') => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiChatUi.type = type;
+          }),
+        );
+      },
 
-        setDefaultModel: (model: string, provider: string, apiKey?: string) => {
-          const newDefaultModel = {model, provider, apiKey};
-          set((state) =>
-            produce(state, (draft) => {
-              draft.aiChatUi.defaultModel = newDefaultModel;
-            }),
-          );
-        },
+      addModel: (model: string, provider: string, apiKey?: string) => {
+        const id = `${provider}-${model}-${Date.now()}`;
+        const newModel = {id, model, provider, apiKey};
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiChatUi.models.push(newModel);
+            // If this is the first model, select it
+            if (draft.config.aiChatUi.models.length === 1) {
+              draft.config.aiChatUi.selectedModelId = id;
+            }
+          }),
+        );
+        return id;
+      },
 
-        setCustomModel: (
-          baseUrl: string,
-          apiKey: string,
-          modelName: string,
-        ) => {
-          const newCustomModel = {baseUrl, apiKey, modelName};
-          set((state) =>
-            produce(state, (draft) => {
-              draft.aiChatUi.customModel = newCustomModel;
-            }),
-          );
+      updateModel: (
+        id: string,
+        updates: {
+          model?: string;
+          provider?: string;
+          apiKey?: string;
         },
+      ) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const modelIndex = draft.config.aiChatUi.models.findIndex(
+              (model) => model.id === id,
+            );
+            if (modelIndex !== -1) {
+              const model = draft.config.aiChatUi.models[modelIndex];
+              if (model) {
+                Object.assign(model, updates);
+              }
+            }
+          }),
+        );
+      },
 
-        setModelParameters: (parameters: {
-          maxSteps?: number;
-          systemInstruction?: string;
-        }) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const newParameters = {
-                ...draft.aiChatUi.modelParameters,
-                ...parameters,
-              };
-              draft.aiChatUi.modelParameters = newParameters;
-            }),
-          );
-        },
+      removeModel: (id: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const modelIndex = draft.config.aiChatUi.models.findIndex(
+              (model) => model.id === id,
+            );
+            if (modelIndex !== -1) {
+              draft.config.aiChatUi.models.splice(modelIndex, 1);
+              // If we removed the selected model, select the first available one
+              if (draft.config.aiChatUi.selectedModelId === id) {
+                draft.config.aiChatUi.selectedModelId =
+                  draft.config.aiChatUi.models.length > 0
+                    ? draft.config.aiChatUi.models[0]?.id
+                    : undefined;
+              }
+            }
+          }),
+        );
+      },
 
-        setMaxSteps: (maxSteps: number) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.aiChatUi.modelParameters.maxSteps = maxSteps;
-            }),
-          );
-        },
+      setSelectedModel: (id: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const modelExists = draft.config.aiChatUi.models.some(
+              (model) => model.id === id,
+            );
+            if (modelExists) {
+              draft.config.aiChatUi.selectedModelId = id;
+            }
+          }),
+        );
+      },
 
-        setSystemInstruction: (systemInstruction: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.aiChatUi.modelParameters.systemInstruction =
-                systemInstruction;
-            }),
-          );
-        },
+      setCustomModel: (baseUrl: string, apiKey: string, modelName: string) => {
+        const newCustomModel = {baseUrl, apiKey, modelName};
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiChatUi.customModel = newCustomModel;
+          }),
+        );
+      },
+
+      setModelParameters: (parameters: {
+        maxSteps?: number;
+        systemInstruction?: string;
+      }) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const newParameters = {
+              ...draft.config.aiChatUi.modelParameters,
+              ...parameters,
+            };
+            draft.config.aiChatUi.modelParameters = newParameters;
+          }),
+        );
+      },
+
+      setMaxSteps: (maxSteps: number) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiChatUi.modelParameters.maxSteps = maxSteps;
+          }),
+        );
+      },
+
+      setSystemInstruction: (systemInstruction: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiChatUi.modelParameters.systemInstruction =
+              systemInstruction;
+          }),
+        );
       },
     };
   });
