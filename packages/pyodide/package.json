@@ -1,0 +1,35 @@
+{
+  "name": "@sqlrooms/pyodide",
+  "version": "0.24.18",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "module": "dist/index.js",
+  "type": "module",
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "@sqlrooms/duckdb": "workspace:*",
+    "apache-arrow": "^17.0.0"
+  },
+  "peerDependencies": {
+    "pyodide": "^0.26.0"
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  }
+}
+
