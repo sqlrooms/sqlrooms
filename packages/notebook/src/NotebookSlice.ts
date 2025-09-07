@@ -9,6 +9,7 @@ import {
 import {produce} from 'immer';
 import React from 'react';
 import {InputCell} from './cells/InputCell';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {MarkdownCell} from './cells/MarkdownCell';
 import {SqlCell} from './cells/SqlCell';
 import {TextCell} from './cells/TextCell';
@@ -222,6 +223,21 @@ export function createNotebookSlice<
               const reg = get().notebook.cellRegistry[type];
               if (!reg) return;
               const cell = reg.createCell(id) as NotebookCell;
+              // Assign a readable unique name using shared utility
+              const typeToLabel: Record<NotebookCellTypes, string> = {
+                sql: 'SQL',
+                vega: 'Chart',
+                markdown: 'Markdown',
+                text: 'Text',
+                input: 'Input',
+              };
+              const usedNames = Object.values(draft.config.notebook.cells).map(
+                (c) => c.name,
+              );
+              const baseLabel = typeToLabel[cell.type as NotebookCellTypes];
+              if (baseLabel) {
+                (cell as any).name = generateUniqueName(baseLabel, usedNames);
+              }
               draft.config.notebook.cells[id] = cell;
               tab.cellOrder.push(id);
               if (type === 'sql') {
@@ -305,7 +321,7 @@ export function createNotebookSlice<
               ({
                 id,
                 type: 'sql',
-                name: `cell_${id.slice(0, 5)}`,
+                name: 'SQL',
                 sql: '',
               }) as NotebookCell,
             renderComponent: (id: string) => React.createElement(SqlCell, {id}),
