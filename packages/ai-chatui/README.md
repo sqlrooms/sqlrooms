@@ -6,7 +6,7 @@ Reusable AI chat UI components and configuration slice for SQLRooms applications
 
 This package provides a complete set of UI components and state management for AI assistant interfaces, including:
 
-- **AiChatUiSlice**: Zustand slice for managing AI model configuration with room-shell integration
+- **createAiChatUiSlice**: Function to create a Zustand slice for managing AI model configuration with room-shell integration
 - **AiConfigPanel**: Main configuration panel with model selection, parameters, and optional usage tracking
 - **AiModelSelection**: Component for selecting between default and custom AI models
 - **AiModelParameters**: Component for configuring model parameters like max steps and system instructions
