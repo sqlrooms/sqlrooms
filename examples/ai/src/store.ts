@@ -170,9 +170,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
         // Example of customizing the system instructions
         getInstructions: (tablesSchema: DataTable[]) => {
-          // You can use getDefaultInstructions() and append to it
           const defaultInstructions = getDefaultInstructions(tablesSchema);
-          return `${defaultInstructions}. Please be polite and concise.`;
+          const customInstructions =
+            get().config.aiChatUi.modelParameters.additionalInstruction;
+
+          if (customInstructions) {
+            return `${defaultInstructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
+          }
+          return defaultInstructions;
         },
       })(set, get, store),
 

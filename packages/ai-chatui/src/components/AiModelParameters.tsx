@@ -14,19 +14,24 @@ import {
   useToast,
 } from '@sqlrooms/ui';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
-import {getDefaultInstructions} from '@sqlrooms/ai';
+import {getDefaultInstructions, useStoreWithAi} from '@sqlrooms/ai';
 
 export const AiModelParameters: FC = () => {
   const maxSteps = useStoreWithAiChatUi(
     (s) => s.getAiConfig().modelParameters.maxSteps,
   );
-  const systemInstruction = useStoreWithAiChatUi(
-    (s) => s.getAiConfig().modelParameters.systemInstruction,
+  const setMaxStepsAiChatUi = useStoreWithAiChatUi((s) => s.setMaxSteps);
+
+  const additionalInstruction = useStoreWithAiChatUi(
+    (s) => s.getAiConfig().modelParameters.additionalInstruction,
   );
-  const setMaxSteps = useStoreWithAiChatUi((s) => s.setMaxSteps);
-  const setSystemInstruction = useStoreWithAiChatUi(
-    (s) => s.setSystemInstruction,
+  const setAdditionalInstruction = useStoreWithAiChatUi(
+    (s) => s.setAdditionalInstruction,
   );
+
+  // maxSteps for ai slice
+  const setMaxSteps = useStoreWithAi((s) => s.ai.setMaxSteps);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {toast} = useToast();
 
@@ -36,11 +41,12 @@ export const AiModelParameters: FC = () => {
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleMaxStepsChange = (value: number) => {
+    setMaxStepsAiChatUi(value);
     setMaxSteps(value);
   };
 
-  const handleSystemInstructionChange = (value: string) => {
-    setSystemInstruction(value);
+  const handleAdditionalInstructionChange = (value: string) => {
+    setAdditionalInstruction(value);
   };
 
   const handleFileUpload = async (
@@ -81,7 +87,7 @@ export const AiModelParameters: FC = () => {
 
     try {
       const text = await file.text();
-      setSystemInstruction(text);
+      setAdditionalInstruction(text);
       toast({
         title: 'File uploaded successfully',
         description:
@@ -113,10 +119,9 @@ export const AiModelParameters: FC = () => {
   // Compute full instructions on-the-fly
   const getFullInstructions = () => {
     const defaultInstructions = getDefaultInstructions(tables);
-    const additionalInstructions = systemInstruction;
 
-    if (additionalInstructions) {
-      return `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstructions}`;
+    if (additionalInstruction) {
+      return `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstruction}`;
     } else {
       return `${defaultInstructions}.`;
     }
@@ -150,15 +155,15 @@ export const AiModelParameters: FC = () => {
           </div>
         </div>
 
-        {/* System Instruction */}
+        {/* Additional Instruction */}
         <div className="space-y-2">
           <label className="flex items-center gap-2 text-sm font-medium">
             <FileText className="h-4 w-4" />
             Additional Instructions
           </label>
           <Textarea
-            value={systemInstruction}
-            onChange={(e) => handleSystemInstructionChange(e.target.value)}
+            value={additionalInstruction}
+            onChange={(e) => handleAdditionalInstructionChange(e.target.value)}
             placeholder="Enter custom system instructions for the AI model..."
             className="min-h-[80px] resize-y"
             autoResize={false}

@@ -27,7 +27,7 @@ export const AiChatUiSliceConfig = z.object({
     }),
     modelParameters: z.object({
       maxSteps: z.number(),
-      systemInstruction: z.string(),
+      additionalInstruction: z.string(),
     }),
   }),
 });
@@ -67,8 +67,8 @@ export function createDefaultAiChatUiConfig(
         modelName: '',
       },
       modelParameters: {
-        maxSteps: 10,
-        systemInstruction: '',
+        maxSteps: 5,
+        additionalInstruction: '',
       },
       ...props,
     },
@@ -92,7 +92,7 @@ export type AiChatUiSliceState = {
     };
     modelParameters: {
       maxSteps: number;
-      systemInstruction: string;
+      additionalInstruction: string;
     };
   };
   getSelectedModel: () => {
@@ -116,10 +116,10 @@ export type AiChatUiSliceState = {
   setCustomModel: (baseUrl: string, apiKey: string, modelName: string) => void;
   setModelParameters: (parameters: {
     maxSteps?: number;
-    systemInstruction?: string;
+    additionalInstruction?: string;
   }) => void;
   setMaxSteps: (maxSteps: number) => void;
-  setSystemInstruction: (systemInstruction: string) => void;
+  setAdditionalInstruction: (additionalInstruction: string) => void;
 };
 
 export function createAiChatUiSlice<
@@ -229,7 +229,7 @@ export function createAiChatUiSlice<
 
       setModelParameters: (parameters: {
         maxSteps?: number;
-        systemInstruction?: string;
+        additionalInstruction?: string;
       }) => {
         set((state) =>
           produce(state, (draft) => {
@@ -250,11 +250,11 @@ export function createAiChatUiSlice<
         );
       },
 
-      setSystemInstruction: (systemInstruction: string) => {
+      setAdditionalInstruction: (additionalInstruction: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiChatUi.modelParameters.systemInstruction =
-              systemInstruction;
+            draft.config.aiChatUi.modelParameters.additionalInstruction =
+              additionalInstruction;
           }),
         );
       },

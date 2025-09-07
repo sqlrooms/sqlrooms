@@ -57,12 +57,14 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     tools: Record<string, AiSliceTool>;
     analysisAbortController?: AbortController;
+    maxSteps: number;
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     setCustomModelName: (customModelName: string) => void;
     setBaseUrl: (baseUrl?: string) => void;
+    setMaxSteps: (maxSteps: number) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -74,6 +76,7 @@ export type AiSliceState = {
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
+    getMaxSteps: () => number;
   };
 };
 
@@ -92,6 +95,10 @@ export interface AiSliceOptions {
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
   toolsOptions?: DefaultToolsOptions;
+  /**
+   * Maximum number of analysis steps allowed (default: 5)
+   */
+  maxSteps?: number;
 }
 
 /**
@@ -117,6 +124,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     customTools = {},
     getInstructions,
     toolsOptions,
+    maxSteps = 5,
     defaultModel = 'gpt-4o-mini',
   } = params;
 
@@ -125,6 +133,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
+        maxSteps: maxSteps,
 
         tools: {
           ...getDefaultTools(store, toolsOptions),
@@ -181,6 +190,18 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               if (currentSession) {
                 currentSession.baseUrl = baseUrl;
               }
+            }),
+          );
+        },
+
+        /**
+         * Set the maximum number of analysis steps
+         * @param maxSteps - The maximum number of steps to set
+         */
+        setMaxSteps: (maxSteps: number) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.maxSteps = maxSteps;
             }),
           );
         },
@@ -348,6 +369,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
+              maxSteps: get().ai.maxSteps,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -410,6 +432,10 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           return Object.entries(get().ai.tools).find(
             ([name]) => name === toolName,
           )?.[1]?.component as React.ComponentType;
+        },
+
+        getMaxSteps: () => {
+          return get().ai.maxSteps;
         },
       },
     };

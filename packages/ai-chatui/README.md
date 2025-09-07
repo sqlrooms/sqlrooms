@@ -49,7 +49,7 @@ const roomConfig = {
     ],
     selectedModelId: 'gpt-4o-mini',
     customModel: {baseUrl: '', apiKey: '', modelName: ''},
-    modelParameters: {maxSteps: 10, systemInstruction: ''},
+    modelParameters: {maxSteps: 5, additionalInstruction: ''},
   },
 };
 
