@@ -23,9 +23,10 @@ export type NotebookCellRegistryItem = {
   title: string;
   createCell: (id: string) => NotebookCell;
   renderComponent: (id: string) => any;
-  findDependents: (
-    changed: NotebookCell,
+  findDependencies: (
+    cell: NotebookCell,
     cells: Record<string, NotebookCell>,
+    status: NotebookSliceState['notebook']['cellStatus'],
   ) => string[];
   runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
 };
@@ -216,14 +217,18 @@ export function createNotebookSlice<
         );
         const next = get().config.notebook.cells[cellId];
         if (!next) return;
-        const reg = get().notebook.cellRegistry[next.type];
-        if (reg) {
-          const dependents = reg.findDependents(
-            next,
-            get().config.notebook.cells,
-          );
-          for (const depId of dependents) {
-            void get().notebook.runCell(depId, {cascade: true});
+        // Compute dependents by scanning all cells' dependencies
+        const cellsMap = get().config.notebook.cells;
+        const statusMap = get().notebook.cellStatus;
+        for (const candidateId in cellsMap) {
+          if (candidateId === cellId) continue;
+          const candidate = cellsMap[candidateId];
+          if (!candidate) continue;
+          const reg2 = get().notebook.cellRegistry[candidate.type];
+          if (!reg2 || !reg2.findDependencies) continue;
+          const deps = reg2.findDependencies(candidate, cellsMap, statusMap);
+          if (deps.indexOf(cellId) >= 0) {
+            void get().notebook.runCell(candidateId, {cascade: true});
           }
         }
       },
@@ -260,7 +265,33 @@ export function createNotebookSlice<
               sql: '',
             }) as NotebookCell,
           renderComponent: (id: string) => React.createElement(SqlCell, {id}),
-          findDependents: () => [],
+          findDependencies: (cell, cells, status) => {
+            const deps: string[] = [];
+            const text = (cell as any).sql as string;
+            for (const otherId in cells) {
+              if (otherId === cell.id) continue;
+              const other = cells[otherId];
+              if (!other) continue;
+              if (other.type === 'input') {
+                const vn = other.input.varName;
+                if (
+                  (text && text.indexOf(`{{${vn}}}`) >= 0) ||
+                  (text && text.indexOf(`:${vn}`) >= 0)
+                )
+                  deps.push(other.id);
+              } else if (other.type === 'sql') {
+                const st = status[other.id];
+                const otherView =
+                  st && st.type === 'sql' ? st.resultView : undefined;
+                if (
+                  (text && text.indexOf(other.name) >= 0) ||
+                  (otherView && text && text.indexOf(otherView) >= 0)
+                )
+                  deps.push(other.id);
+              }
+            }
+            return Array.from(new Set(deps));
+          },
           runCell: async ({id}) => {
             const cell = get().config.notebook.cells[id];
             if (!cell || cell.type !== 'sql') return;
@@ -369,7 +400,7 @@ export function createNotebookSlice<
           createCell: (id) =>
             ({id, type: 'text', name: 'Text', text: ''}) as NotebookCell,
           renderComponent: (id: string) => React.createElement(TextCell, {id}),
-          findDependents: () => [],
+          findDependencies: () => [],
         },
         markdown: {
           title: 'Markdown',
@@ -382,14 +413,40 @@ export function createNotebookSlice<
             }) as NotebookCell,
           renderComponent: (id: string) =>
             React.createElement(MarkdownCell, {id}),
-          findDependents: () => [],
+          findDependencies: () => [],
         },
         vega: {
           title: 'Vega',
           createCell: (id) =>
             ({id, type: 'vega', name: 'Chart', sql: ''}) as NotebookCell,
           renderComponent: (id: string) => React.createElement(VegaCell, {id}),
-          findDependents: () => [],
+          findDependencies: (cell, cells, status) => {
+            const deps: string[] = [];
+            const text = (cell as any).sql as string;
+            for (const otherId in cells) {
+              if (otherId === cell.id) continue;
+              const other = cells[otherId];
+              if (!other) continue;
+              if (other.type === 'input') {
+                const vn = other.input.varName;
+                if (
+                  (text && text.indexOf(`{{${vn}}}`) >= 0) ||
+                  (text && text.indexOf(`:${vn}`) >= 0)
+                )
+                  deps.push(other.id);
+              } else if (other.type === 'sql') {
+                const st = status[other.id];
+                const otherView =
+                  st && st.type === 'sql' ? st.resultView : undefined;
+                if (
+                  (text && text.indexOf(other.name) >= 0) ||
+                  (otherView && text && text.indexOf(otherView) >= 0)
+                )
+                  deps.push(other.id);
+              }
+            }
+            return Array.from(new Set(deps));
+          },
         },
         input: {
           title: 'Input',
@@ -401,24 +458,7 @@ export function createNotebookSlice<
               input: {kind: 'text', varName: 'var', value: ''},
             }) as NotebookCell,
           renderComponent: (id: string) => React.createElement(InputCell, {id}),
-          findDependents: (changed, cells) => {
-            if (changed.type !== 'input') return [];
-            const varName = changed.input.varName;
-            const dependents: string[] = [];
-            for (const key in cells) {
-              const c = cells[key];
-              if (c?.type === 'sql') {
-                const text = c.sql;
-                if (
-                  (text && text.indexOf(`{{${varName}}}`) >= 0) ||
-                  (text && text.indexOf(`:${varName}`) >= 0)
-                ) {
-                  dependents.push(c.id);
-                }
-              }
-            }
-            return dependents;
-          },
+          findDependencies: () => [],
         },
       },
     },
