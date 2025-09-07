@@ -25,7 +25,7 @@ export type RoomPanelInfo = {
 };
 
 export const LayoutSliceConfig = z.object({
-  layout: MosaicLayoutConfig, // TODO: add more layout types
+  layout: MosaicLayoutConfig,
 });
 
 export type LayoutSliceConfig = z.infer<typeof LayoutSliceConfig>;

@@ -1,11 +1,13 @@
+import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-export default {
-  darkMode: ['class'],
-  content: ['./index.html', './src/**/*.{ts,tsx}'],
-  theme: {
-    extend: {},
-  },
-  plugins: [],
+const config = {
+  presets: [sqlroomsTailwindPreset({})],
+  content: [
+    'src/**/*.{ts,tsx}',
+    './node_modules/@sqlrooms/*/dist/**/*.js',
+    '../../node_modules/@sqlrooms/*/dist/**/*.js',
+  ],
 } satisfies Config;
 
+export default config;

@@ -35,10 +35,11 @@ export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
 
 const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
   () =>
+    // @ts-ignore
     persist(
       (set, get, store) => ({
         ...createRoomShellSlice<RoomConfig>({
-          connector: createPyodideDuckDbConnector({}),
+          connector: createPyodideDuckDbConnector(),
           config: {
             layout: {
               type: LayoutTypes.enum.mosaic,
@@ -84,4 +85,3 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
 );
 
 export {createRoomStore, useRoomStore};
-

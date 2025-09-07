@@ -22,6 +22,12 @@ export interface PyodideDuckDbConnectorOptions {
   initializationPy?: string;
   /** Explicit Pyodide instance. If omitted, uses globalThis.pyodide. */
   pyodide?: any;
+  /**
+   * Base URL for Pyodide packages when we initialize via ESM import.
+   * Defaults to the public CDN matching the example app.
+   * Example: 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full'
+   */
+  indexURL?: string;
 }
 
 /**
@@ -62,10 +68,13 @@ export function createPyodideDuckDbConnector(
     duckdbModuleName = 'duckdb',
     initializationPy,
     pyodide: providedPyodide,
+    indexURL = 'https://cdn.jsdelivr.net/pyodide/v0.26.4/full',
   } = options;
 
-  let pyodide: any | null = providedPyodide ?? (globalThis as any).pyodide ?? null;
+  let pyodide: any | null =
+    providedPyodide ?? (globalThis as any).pyodide ?? null;
   let pyConn: any | null = null;
+  let havePyArrow = false;
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
@@ -73,7 +82,64 @@ export function createPyodideDuckDbConnector(
         pyodide = (globalThis as any).pyodide;
       }
       if (!pyodide) {
-        throw new Error('Pyodide instance not available. Pass via options.pyodide or ensure globalThis.pyodide is set.');
+        // Try to initialize Pyodide if it hasn't been provided.
+        // 1) Use global loadPyodide if the CDN script was included.
+        const maybeLoadPyodide = (globalThis as any).loadPyodide;
+        if (typeof maybeLoadPyodide === 'function') {
+          try {
+            pyodide = await maybeLoadPyodide({indexURL});
+          } catch {}
+        }
+
+        // 2) Fall back to dynamic ESM import if available in the app.
+        if (!pyodide) {
+          try {
+            // eslint-disable-next-line @typescript-eslint/consistent-type-imports
+            const mod: any = await import('pyodide');
+            if (typeof mod?.loadPyodide === 'function') {
+              pyodide = await mod.loadPyodide({indexURL});
+            }
+          } catch {}
+        }
+
+        if (pyodide) {
+          (globalThis as any).pyodide = pyodide;
+        }
+      }
+      if (!pyodide) {
+        throw new Error(
+          'Pyodide instance not available. Provide options.pyodide, include the Pyodide CDN script, or install the pyodide package.',
+        );
+      }
+
+      // Ensure required Python packages are available in the Pyodide environment.
+      // The 'duckdb' wheel is part of Pyodide but must be explicitly loaded.
+      // 'pyarrow' is required for Arrow IPC data transfer.
+      if (typeof pyodide.loadPackage === 'function') {
+        try {
+          await pyodide.loadPackage(['duckdb', 'pyarrow']);
+        } catch (_) {
+          // Best-effort: if bulk load fails, try loading individually.
+          try {
+            await pyodide.loadPackage('duckdb');
+          } catch {}
+          try {
+            await pyodide.loadPackage('pyarrow');
+          } catch {
+            // Some environments require 'pyarrow-core'
+            try {
+              await pyodide.loadPackage('pyarrow-core');
+            } catch {}
+          }
+        }
+      }
+
+      // Verify that pyarrow is actually importable. If not, we will fallback to CSV transport.
+      try {
+        await pyodide.runPythonAsync('import pyarrow as pa');
+        havePyArrow = true;
+      } catch {
+        havePyArrow = false;
       }
 
       if (initializationPy) {
@@ -105,7 +171,10 @@ con = duckdb.connect()
       }
     },
 
-    async executeQueryInternal(query: string, signal: AbortSignal): Promise<arrow.Table> {
+    async executeQueryInternal(
+      query: string,
+      signal: AbortSignal,
+    ): Promise<arrow.Table> {
       if (!pyodide || !pyConn) {
         throw new Error('Pyodide DuckDB not initialized');
       }
@@ -114,9 +183,9 @@ con = duckdb.connect()
         throw new DOMException('Query was cancelled', 'AbortError');
       }
 
-      // We use Arrow IPC to transfer results from Pyodide to JS efficiently
-      // Requires pyarrow in the Pyodide environment
-      const py = `
+      // Prefer Arrow IPC via pyarrow when available; otherwise, fallback to JSON transport.
+      const py = havePyArrow
+        ? `
 import io
 import pyarrow as pa
 tbl = con.execute(r"""${query.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}""").arrow()
@@ -124,15 +193,53 @@ sink = io.BytesIO()
 with pa.ipc.new_file(sink, tbl.schema) as writer:
   writer.write_table(tbl)
 sink.getvalue()
+`
+        : `
+import json
+res = con.execute(r"""${query.replaceAll('\\', '\\\\').replaceAll('"', '\\"')}""")
+cols = [d[0] for d in res.description]
+rows = res.fetchall()
+data = [dict(zip(cols, row)) for row in rows]
+json.dumps(data, default=str)
 `;
 
-      const proxy = await pyodide.runPythonAsync(py);
+      const result: any = await pyodide.runPythonAsync(py);
+      const isPyProxy = !!result && typeof result.toJs === 'function';
       try {
-        // Convert Python bytes to Uint8Array
-        const buffer: Uint8Array = proxy.toJs({create_proxies: false});
-        return arrow.tableFromIPC(buffer);
+        if (havePyArrow) {
+          // Convert to Uint8Array for Arrow IPC
+          let bytes: Uint8Array;
+          if (isPyProxy) {
+            bytes = result.toJs({create_proxies: false});
+          } else if (result instanceof Uint8Array) {
+            bytes = result;
+          } else if (result instanceof ArrayBuffer) {
+            bytes = new Uint8Array(result);
+          } else if (ArrayBuffer.isView(result)) {
+            bytes = new Uint8Array(result.buffer);
+          } else {
+            throw new Error('Expected Arrow IPC bytes from Pyodide');
+          }
+          return arrow.tableFromIPC(bytes);
+        } else {
+          // JSON array of records
+          let jsonText: string;
+          if (isPyProxy) {
+            jsonText = result.toJs({create_proxies: false});
+          } else if (typeof result === 'string') {
+            jsonText = result;
+          } else {
+            jsonText = JSON.stringify(result);
+          }
+          const records = JSON.parse(jsonText);
+          return arrow.tableFromJSON(records);
+        }
       } finally {
-        proxy.destroy?.();
+        if (isPyProxy) {
+          try {
+            result.destroy?.();
+          } catch {}
+        }
       }
     },
   };
@@ -163,4 +270,3 @@ export function isPyodideDuckDbConnector(
 ): connector is PyodideDuckDbConnector {
   return (connector as any).type === 'pyodide';
 }
-

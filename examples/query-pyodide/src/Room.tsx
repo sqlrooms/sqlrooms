@@ -9,6 +9,10 @@ export const Room = () => {
     roomStoreRef.current = createRoomStore();
   }
 
+  // if (!roomStoreRef.current.getState().room.initialized) {
+  //   return <div>Loading...</div>;
+  // }
+
   return (
     <RoomShell className="h-screen" roomStore={roomStoreRef.current}>
       <RoomShell.Sidebar>
@@ -18,4 +22,3 @@ export const Room = () => {
     </RoomShell>
   );
 };
-

@@ -15,6 +15,7 @@
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
     "class-variance-authority": "0.7.1",
     "clsx": "2.1.1",
     "lucide-react": "0.501.0",
@@ -22,8 +23,7 @@
     "react-dom": "19.1.0",
     "zod": "^3.25.73",
     "zustand": "5.0.5",
-    "monaco-editor": "^0.52.2",
-    "@sqlrooms/monaco-editor": "workspace:*"
+    "monaco-editor": "^0.52.2"
   },
   "devDependencies": {
     "@eslint/js": "^9.28.0",
@@ -42,4 +42,3 @@
     "vite-plugin-pwa": "^0.18.1"
   }
 }
-
