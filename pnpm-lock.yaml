@@ -881,6 +881,9 @@ importers:
 
   examples/notebook:
     dependencies:
+      '@sqlrooms/dropzone':
+        specifier: workspace:*
+        version: link:../../packages/dropzone
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
@@ -896,6 +899,12 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      lucide-react:
+        specifier: 0.501.0
+        version: 0.501.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -905,6 +914,9 @@ importers:
       zod:
         specifier: ^3.25.73
         version: 3.25.73
+      zustand:
+        specifier: 5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
       '@types/react':
         specifier: ^19.1.7
@@ -1202,6 +1214,9 @@ importers:
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      lucide-react:
+        specifier: ^0.542.0
+        version: 0.542.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -1464,6 +1479,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -1755,6 +1773,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
@@ -8683,6 +8704,11 @@ packages:
 
   lucide-react@0.503.0:
     resolution: {integrity: sha512-HGGkdlPWQ0vTF8jJ5TdIqhQXZi6uh3LnNgfZ8MHiuxFfX3RZeA79r2MW2tHAZKlAVfoNE8esm3p+O6VkIvpj6w==}
+    peerDependencies:
+      react: 19.1.0
+
+  lucide-react@0.542.0:
+    resolution: {integrity: sha512-w3hD8/SQB7+lzU2r4VdFyzzOzKnUjTZIF/MQJGSSvni7Llewni4vuViRppfRAa2guOsY5k4jZyxw/i9DQHv+dw==}
     peerDependencies:
       react: 19.1.0
 
@@ -20527,6 +20553,10 @@ snapshots:
       react: 19.1.0
 
   lucide-react@0.503.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
+  lucide-react@0.542.0(react@19.1.0):
     dependencies:
       react: 19.1.0
 

@@ -41,6 +41,7 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "@sqlrooms/sql-editor": "workspace:*"
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*"
   }
 }
