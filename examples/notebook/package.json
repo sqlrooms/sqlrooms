@@ -1,7 +1,7 @@
 {
-  "name": "sqlrooms-canvas",
+  "name": "sqlrooms-examples-notebook",
   "private": true,
-  "version": "0.24.14",
+  "version": "0.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,25 +9,22 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/canvas": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/sql-editor": "workspace:*",
-    "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
-    "lucide-react": "^0.475.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@xyflow/react": "^12.0.2",
-    "zod": "^3.25.73"
+    "zod": "^3.25.73",
+    "@sqlrooms/notebook": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.1.7",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^4.3.4",
-    "typescript": "^5.4.5",
     "postcss": "^8.5.4",
     "tailwindcss": "^3.4.17",
+    "typescript": "^5.4.5",
     "vite": "^6.3.5"
   }
 }
