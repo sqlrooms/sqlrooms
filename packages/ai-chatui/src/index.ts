@@ -16,9 +16,9 @@ export type {AiChatUiSliceState as AiChatUiState} from './AiConfigSlice';
 // Export UI components
 export {AiConfigPanel} from './components/AiConfigPanel';
 export {AiModelParameters} from './components/AiModelParameters';
-export {AiModelSelection} from './components/AiModelSelection';
+export {AiModelSelection} from './components/AiModelConfig';
+export {AiModelSelector} from './components/AiModelSelector';
 export {AiModelUsage} from './components/AiModelUsage';
-export {AssistantPanel} from './components/AssistantPanel';
 
 // Export types
 export type {ModelUsageData} from './types';

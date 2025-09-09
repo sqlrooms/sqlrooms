@@ -1,6 +1,6 @@
 import {FC} from 'react';
 
-import {AiModelSelection} from './AiModelSelection';
+import {AiModelSelection} from './AiModelConfig';
 import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage} from './AiModelUsage';
 import {Button} from '@sqlrooms/ui';
@@ -10,19 +10,25 @@ import {ModelUsageData} from '../types';
 interface AiConfigPanelProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  modelOptions: Array<{provider: string; label: string; value: string}>;
   modelUsage?: ModelUsageData;
   getProxyBaseUrl?: () => string;
   hideApiKeyInputForDefaultModels?: boolean;
+  setBaseUrl: (url: string | undefined) => void;
+  setAiModel: (provider: string, model: string) => void;
+  setMaxSteps: (steps: number) => void;
+  getDefaultInstructions?: (tables: unknown[]) => string;
 }
 
 export const AiConfigPanel: FC<AiConfigPanelProps> = ({
   isOpen,
   setIsOpen,
-  modelOptions,
   modelUsage,
   getProxyBaseUrl,
   hideApiKeyInputForDefaultModels,
+  setBaseUrl,
+  setAiModel,
+  setMaxSteps,
+  getDefaultInstructions,
 }) => {
   if (!isOpen) return null;
 
@@ -38,9 +44,10 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
           <X className="h-4 w-4" />
         </Button>
         <AiModelSelection
-          modelOptions={modelOptions}
           getProxyBaseUrl={getProxyBaseUrl}
           hideApiKeyInputForDefaultModels={hideApiKeyInputForDefaultModels}
+          setBaseUrl={setBaseUrl}
+          setAiModel={setAiModel}
         />
         {modelUsage && (
           <AiModelUsage
@@ -51,7 +58,10 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
             isLoadingWeeklySpend={modelUsage.isLoadingWeeklySpend}
           />
         )}
-        <AiModelParameters />
+        <AiModelParameters
+          setMaxSteps={setMaxSteps}
+          getDefaultInstructions={getDefaultInstructions}
+        />
       </div>
     </div>
   );

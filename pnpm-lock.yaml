@@ -1138,6 +1138,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
       immer:
         specifier: ^10.1.1
         version: 10.1.1

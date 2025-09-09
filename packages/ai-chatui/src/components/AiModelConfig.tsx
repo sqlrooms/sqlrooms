@@ -1,23 +1,25 @@
-import {FC, useEffect} from 'react';
+import {FC} from 'react';
 import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
-import {ModelSelector, useStoreWithAi} from '@sqlrooms/ai';
+import {AiModelSelector} from './AiModelSelector';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
-
-interface AiModelSelectionProps {
-  modelOptions: Array<{provider: string; label: string; value: string}>;
-  className?: string;
-  getProxyBaseUrl?: () => string;
-  hideApiKeyInputForDefaultModels?: boolean;
-}
 
 const CUSTOM_PROVIDER_NAME_FOR_API_KEY = 'custom';
 
+interface AiModelSelectionProps {
+  className?: string;
+  getProxyBaseUrl?: () => string;
+  hideApiKeyInputForDefaultModels?: boolean;
+  setBaseUrl: (url: string | undefined) => void;
+  setAiModel: (provider: string, model: string) => void;
+}
+
 export const AiModelSelection: FC<AiModelSelectionProps> = ({
-  modelOptions,
   className = '',
   getProxyBaseUrl,
   hideApiKeyInputForDefaultModels,
+  setBaseUrl,
+  setAiModel,
 }) => {
   const aiConfigType = useStoreWithAiChatUi((s) => s.getAiConfig().type);
   const aiConfigModels = useStoreWithAiChatUi((s) => s.getAiConfig().models);
@@ -26,53 +28,11 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
     (s) => s.getAiConfig().customModel,
   );
 
+  // actions
   const setAiConfigType = useStoreWithAiChatUi((s) => s.setAiConfigType);
   const setCustomModel = useStoreWithAiChatUi((s) => s.setCustomModel);
-  const addModel = useStoreWithAiChatUi((s) => s.addModel);
   const updateModel = useStoreWithAiChatUi((s) => s.updateModel);
   const setSelectedModel = useStoreWithAiChatUi((s) => s.setSelectedModel);
-
-  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
-  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
-  const currentSessionModel = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.model,
-  );
-  const currentSessionProvider = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.modelProvider,
-  );
-
-  useEffect(() => {
-    // update slice when <ModelSelector /> changed, maybe add onModelChange prop to <ModelSelector />
-    if (
-      currentSessionModel &&
-      currentSessionProvider &&
-      currentSessionProvider !== CUSTOM_PROVIDER_NAME_FOR_API_KEY
-    ) {
-      // Find existing model or add new one
-      const existingModel = aiConfigModels.find(
-        (m) =>
-          m.model === currentSessionModel &&
-          m.provider === currentSessionProvider,
-      );
-
-      if (existingModel) {
-        setSelectedModel(existingModel.id);
-      } else {
-        // Add new model and select it
-        const newModelId = addModel(
-          currentSessionModel,
-          currentSessionProvider,
-        );
-        setSelectedModel(newModelId);
-      }
-    }
-  }, [
-    currentSessionModel,
-    currentSessionProvider,
-    aiConfigModels,
-    addModel,
-    setSelectedModel,
-  ]);
 
   const handleTabChange = (value: string) => {
     setAiConfigType(value as 'default' | 'custom');
@@ -159,7 +119,12 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
 
         {/* Default Tab */}
         <TabsContent value="default" className="space-y-2">
-          <ModelSelector models={modelOptions} className="w-full" />
+          <AiModelSelector
+            className="w-full"
+            getProxyBaseUrl={getProxyBaseUrl}
+            setBaseUrl={setBaseUrl}
+            setAiModel={setAiModel}
+          />
           {selectedModel && !hideApiKeyInputForDefaultModels && (
             <div className="relative mt-2 flex items-center">
               <KeyIcon className="absolute left-2 h-4 w-4" />

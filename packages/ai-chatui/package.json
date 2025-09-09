@@ -18,10 +18,10 @@
     "access": "public"
   },
   "dependencies": {
-    "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "immer": "^10.1.1",
     "lucide-react": "^0.475.0",
     "recharts": "^2.12.7",

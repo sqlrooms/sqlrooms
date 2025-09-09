@@ -11,14 +11,32 @@ This package provides a complete set of UI components and state management for A
 - **AiModelSelection**: Component for selecting between default and custom AI models
 - **AiModelParameters**: Component for configuring model parameters like max steps and system instructions
 - **AiModelUsage**: Optional component for displaying billing and usage information
-- **AssistantPanel**: Main assistant panel component (independent of external dependencies)
+- **AiModelSelector**: Standalone model selector component
+
+**Note**: This package is now completely independent of `@sqlrooms/ai` and requires you to pass AI-related functions as props.
+
+## Migration from @sqlrooms/ai
+
+If you're migrating from a version that depended on `@sqlrooms/ai`, you'll need to:
+
+1. **Remove the `@sqlrooms/ai` dependency** from your package.json
+2. **Provide AI functions as props** to the components
+3. **Implement the required functions** in your application:
+   - `setBaseUrl(url: string | undefined)`
+   - `setAiModel(provider: string, model: string)`
+   - `setMaxSteps(steps: number)`
+4. **Optionally provide** `getDefaultInstructions(tables: unknown[])` if you need custom system instructions
+
+The components will work exactly the same way, but now you have full control over how the AI functions are implemented in your application.
 
 ## Features
 
+- **Independent**: No dependencies on `@sqlrooms/ai` package - completely self-contained
 - **Reusable**: Can be used across different applications with flexible configuration
 - **Configurable**: Supports both default and custom AI model configurations
 - **Optional Usage Tracking**: Billing and usage components are optional
 - **Function-based API**: Uses functions for dynamic behavior (connection status, base URLs)
+- **Prop-based Integration**: AI functions are passed as props for maximum flexibility
 - **State Management**: Built-in Zustand slice with room-shell integration for configuration persistence
 - **TypeScript**: Full TypeScript support with proper type definitions
 - **Responsive**: Modern UI components with responsive design
@@ -33,7 +51,7 @@ This package provides a complete set of UI components and state management for A
 import {
   createAiChatUiSlice,
   useStoreWithAiChatUi,
-  AssistantPanel,
+  AiConfigPanel,
   ModelUsageData,
   AiChatUiSliceConfig,
 } from '@sqlrooms/ai-chatui';
@@ -59,15 +77,6 @@ const useAppStore = createRoomStore(roomConfig, (store) => ({
   aiChatUi: createAiChatUiSlice()(store),
 }));
 
-// ModelOptions example
-const modelOptions = [
-  {provider: 'openai', label: 'gpt-4o', value: 'gpt-4o'},
-  {provider: 'anthropic', label: 'claude-4-sonnet', value: 'claude-4-sonnet'},
-  {provider: 'google', label: 'gemini-2.0-flash', value: 'gemini-2.0-flash'},
-  {provider: 'deepseek', label: 'deepseek-chat', value: 'deepseek-chat'},
-  {provider: 'ollama', label: 'qwen3:32b', value: 'qwen3:32b'},
-];
-
 // Create model usage data (optional)
 const modelUsage: ModelUsageData = {
   totalSpend: 15.5,
@@ -80,25 +89,42 @@ const modelUsage: ModelUsageData = {
   isLoadingWeeklySpend: false,
 };
 
-// Model status function (optional - typically used with proxy servers)
-const getModelStatus = () => ({
-  isReady: true,
-  error: undefined,
-});
-
 // Proxy base URL function (optional - typically used with proxy servers)
 const getProxyBaseUrl = () => 'https://api.example.com/liteLLM/v1';
 
-// Use the assistant panel
-<AssistantPanel
-  currentSessionId={currentSessionId}
-  getModelStatus={getModelStatus} // Optional - for checking proxy server connection status
-  isDataAvailable={true} // Whether data is available for analysis
-  supportUrl="https://support.example.com"
-  modelOptions={modelOptions}
+// AI functions that need to be provided by your application
+const setBaseUrl = (url: string | undefined) => {
+  // Your implementation to set the base URL for AI requests
+  console.log('Setting base URL:', url);
+};
+
+const setAiModel = (provider: string, model: string) => {
+  // Your implementation to set the AI model
+  console.log('Setting AI model:', provider, model);
+};
+
+const setMaxSteps = (steps: number) => {
+  // Your implementation to set max steps for AI
+  console.log('Setting max steps:', steps);
+};
+
+// Optional: Default instructions function (if you have access to table schemas)
+const getDefaultInstructions = (tables: unknown[]) => {
+  // Your implementation to generate default instructions
+  return `You are analyzing data with ${tables.length} tables available.`;
+};
+
+// Use the AI config panel
+<AiConfigPanel
+  isOpen={isConfigOpen}
+  setIsOpen={setIsConfigOpen}
   modelUsage={modelUsage} // Optional
   getProxyBaseUrl={getProxyBaseUrl} // Optional - for proxy server base URL
   hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  setBaseUrl={setBaseUrl} // Required
+  setAiModel={setAiModel} // Required
+  setMaxSteps={setMaxSteps} // Required
+  getDefaultInstructions={getDefaultInstructions} // Optional
 />;
 ```
 
@@ -110,6 +136,7 @@ import {
   AiModelSelection,
   AiModelParameters,
   AiModelUsage,
+  AiModelSelector,
   ModelUsageData,
   useStoreWithAiChatUi,
 } from '@sqlrooms/ai-chatui';
@@ -121,15 +148,36 @@ const modelUsage: ModelUsageData = {
   isLoadingSpend: false,
 };
 
-// Use individual components as needed
+// AI functions that need to be provided by your application
+const setBaseUrl = (url: string | undefined) => {
+  // Your implementation to set the base URL for AI requests
+};
+
+const setAiModel = (provider: string, model: string) => {
+  // Your implementation to set the AI model
+};
+
+const setMaxSteps = (steps: number) => {
+  // Your implementation to set max steps for AI
+};
+
+const getDefaultInstructions = (tables: unknown[]) => {
+  // Your implementation to generate default instructions
+  return `You are analyzing data with ${tables.length} tables available.`;
+};
+
 <AiConfigPanel
   isOpen={isConfigOpen}
   setIsOpen={setIsConfigOpen}
-  modelOptions={modelOptions}
   modelUsage={modelUsage} // Optional - usage panel will be hidden if not provided
   getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional - for proxy server base URL
   hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  setBaseUrl={setBaseUrl} // Required
+  setAiModel={setAiModel} // Required
+  setMaxSteps={setMaxSteps} // Required
+  getDefaultInstructions={getDefaultInstructions} // Optional
 />;
+
 
 // Access the AI chat UI state
 const {getAiConfig, setSelectedModel, setModelParameters} =
@@ -144,15 +192,16 @@ const {getAiConfig, setSelectedModel, setModelParameters} =
 
 ```tsx
 // Minimal setup without usage tracking
-<AssistantPanel
-  currentSessionId={currentSessionId}
-  getModelStatus={() => ({isReady: true})} // Optional - for checking proxy server connection status
-  isDataAvailable={true}
-  supportUrl="https://support.example.com"
-  modelOptions={modelOptions}
+<AiConfigPanel
+  isOpen={isConfigOpen}
+  setIsOpen={setIsConfigOpen}
   getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional - for proxy server base URL
   hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  setBaseUrl={setBaseUrl} // Required
+  setAiModel={setAiModel} // Required
+  setMaxSteps={setMaxSteps} // Required
   // modelUsage is optional - no usage panel will be shown
+  // getDefaultInstructions is optional - will show fallback message if not provided
 />
 ```
 
@@ -167,12 +216,68 @@ The package uses a slice-based configuration system that integrates with SQLRoom
 - **`AiChatUiSliceConfig`**: TypeScript type for configuration schema
 - **`createDefaultAiChatUiConfig()`**: Helper to create default configuration
 
-### Function-based Configuration
+### Required Props
 
-The package uses functions instead of static values for better flexibility:
+The package now requires you to provide AI-related functions as props:
 
-- **`getModelStatus()`**: Returns model readiness status and error details (optional - typically used with proxy servers)
+- **`setBaseUrl(url: string | undefined)`**: Function to set the base URL for AI requests
+- **`setAiModel(provider: string, model: string)`**: Function to set the AI model
+- **`setMaxSteps(steps: number)`**: Function to set max steps for AI processing
+
+### Optional Props
+
+- **`getDefaultInstructions(tables: unknown[])`**: Function to generate default system instructions (optional)
 - **`getProxyBaseUrl()`**: Provides dynamic base URL resolution (optional - typically used with proxy servers)
+
+### Component Props
+
+#### AiConfigPanel Props
+
+```tsx
+interface AiConfigPanelProps {
+  isOpen: boolean;
+  setIsOpen: (isOpen: boolean) => void;
+  modelUsage?: ModelUsageData;
+  getProxyBaseUrl?: () => string;
+  hideApiKeyInputForDefaultModels?: boolean;
+  setBaseUrl: (url: string | undefined) => void; // Required
+  setAiModel: (provider: string, model: string) => void; // Required
+  setMaxSteps: (steps: number) => void; // Required
+  getDefaultInstructions?: (tables: unknown[]) => string; // Optional
+}
+```
+
+#### AiModelSelection Props
+
+```tsx
+interface AiModelSelectionProps {
+  className?: string;
+  getProxyBaseUrl?: () => string;
+  hideApiKeyInputForDefaultModels?: boolean;
+  setBaseUrl: (url: string | undefined) => void; // Required
+  setAiModel: (provider: string, model: string) => void; // Required
+}
+```
+
+#### AiModelSelector Props
+
+```tsx
+interface AiModelSelectorProps {
+  className?: string;
+  getProxyBaseUrl?: () => string;
+  setBaseUrl: (url: string | undefined) => void; // Required
+  setAiModel: (provider: string, model: string) => void; // Required
+}
+```
+
+#### AiModelParameters Props
+
+```tsx
+interface AiModelParametersProps {
+  setMaxSteps: (steps: number) => void; // Required
+  getDefaultInstructions?: (tables: unknown[]) => string; // Optional
+}
+```
 
 ### Optional Usage Tracking
 
@@ -210,22 +315,25 @@ const getModelStatus = () => ({
 
 ## Dependencies
 
-- `@sqlrooms/ai`: Core AI functionality
 - `@sqlrooms/room-shell`: Room shell components
 - `@sqlrooms/ui`: UI component library
+- `@sqlrooms/utils`: Utility functions
+- `@sqlrooms/recharts`: Chart components
 - `zustand`: State management
 - `immer`: Immutable state updates
 - `lucide-react`: Icons
 - `recharts`: Charts for usage visualization
+- `zod`: Schema validation
 
 ## Architecture
 
 The package follows a clean separation of concerns with room-shell integration:
 
+- **Independent**: No external AI package dependencies - completely self-contained
 - **Slice**: Pure state management logic with room-shell integration and localStorage persistence
 - **Components**: Reusable UI components with optional features
-- **Functions**: Dynamic behavior through function props
+- **Props-based Integration**: AI functions are passed as props for maximum flexibility
 - **Types**: Well-defined interfaces for configuration and state
 - **Room Integration**: Seamlessly integrates with SQLRooms room architecture
 
-This design allows for maximum reusability while maintaining type safety and clear boundaries between different concerns. The slice-based approach provides consistent state management across the application, while the function-based API enables dynamic behavior while keeping components pure and testable.
+This design allows for maximum reusability while maintaining type safety and clear boundaries between different concerns. The prop-based approach enables you to integrate with any AI system while keeping the UI components pure and testable. The slice-based approach provides consistent state management across the application, while the function-based API enables dynamic behavior.

@@ -14,9 +14,16 @@ import {
   useToast,
 } from '@sqlrooms/ui';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
-import {getDefaultInstructions, useStoreWithAi} from '@sqlrooms/ai';
 
-export const AiModelParameters: FC = () => {
+interface AiModelParametersProps {
+  setMaxSteps: (steps: number) => void;
+  getDefaultInstructions?: (tables: unknown[]) => string;
+}
+
+export const AiModelParameters: FC<AiModelParametersProps> = ({
+  setMaxSteps,
+  getDefaultInstructions,
+}) => {
   const maxSteps = useStoreWithAiChatUi(
     (s) => s.getAiConfig().modelParameters.maxSteps,
   );
@@ -28,9 +35,6 @@ export const AiModelParameters: FC = () => {
   const setAdditionalInstruction = useStoreWithAiChatUi(
     (s) => s.setAdditionalInstruction,
   );
-
-  // maxSteps for ai slice
-  const setMaxSteps = useStoreWithAi((s) => s.ai.setMaxSteps);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {toast} = useToast();
@@ -118,6 +122,10 @@ export const AiModelParameters: FC = () => {
 
   // Compute full instructions on-the-fly
   const getFullInstructions = () => {
+    if (!getDefaultInstructions) {
+      return additionalInstruction || 'No default instructions available.';
+    }
+
     const defaultInstructions = getDefaultInstructions(tables);
 
     if (additionalInstruction) {
