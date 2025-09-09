@@ -10,7 +10,6 @@ import {
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
-import {LLM_MODELS} from '../models';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
