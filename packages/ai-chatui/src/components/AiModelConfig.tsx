@@ -3,9 +3,6 @@ import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
 import {AiModelSelector} from './AiModelSelector';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
-import {useStoreWithAi} from '@sqlrooms/ai';
-
-const CUSTOM_PROVIDER_NAME_FOR_API_KEY = 'custom';
 
 interface AiModelSelectionProps {
   className?: string;
@@ -20,7 +17,6 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
 }) => {
   const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
   const aiConfigType = aiConfig.type;
-  const aiConfigModels = aiConfig.models;
   const aiConfigCustomModel = aiConfig.customModel;
 
   // actions
@@ -29,12 +25,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   const setModelProviderApiKey = useStoreWithAiChatUi(
     (s) => s.setModelProviderApiKey,
   );
-  const setSelectedModel = useStoreWithAiChatUi((s) => s.setSelectedModel);
   const updateProvider = useStoreWithAiChatUi((s) => s.updateProvider);
-
-  // AI slice actions
-  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
-  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
 
   // Memoize the selected model to prevent infinite re-renders
   const selectedModel = useMemo(() => {
@@ -68,39 +59,6 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
 
   const handleTabChange = (value: string) => {
     setAiConfigType(value as 'default' | 'custom');
-
-    if (value === 'default') {
-      if (selectedModel) {
-        setAiModel(selectedModel.provider, selectedModel.modelName);
-        setBaseUrl(selectedModel.baseUrl);
-      } else {
-        // Select the first available model
-        const allModels = Object.values(aiConfigModels).flatMap(
-          (provider) => provider?.models || [],
-        );
-        if (allModels.length > 0) {
-          const firstModel = allModels[0];
-          if (firstModel) {
-            // Find the provider for this model
-            const provider = Object.values(aiConfigModels).find((p) =>
-              p?.models.some((m) => m.id === firstModel.id),
-            );
-            if (provider) {
-              setSelectedModel(firstModel.id);
-              setAiModel(provider.provider, firstModel.modelName);
-              setBaseUrl(provider.baseUrl);
-            }
-          }
-        }
-      }
-    } else {
-      // use 'custom' for other models which are openai compatible
-      setAiModel(
-        CUSTOM_PROVIDER_NAME_FOR_API_KEY,
-        aiConfigCustomModel.modelName,
-      );
-      setBaseUrl(aiConfigCustomModel.baseUrl);
-    }
   };
 
   const onCustomModelBaseUrlChange = (
@@ -112,7 +70,6 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
       aiConfigCustomModel.apiKey,
       aiConfigCustomModel.modelName,
     );
-    setBaseUrl(inputBaseUrl);
   };
 
   const onCustomModelApiKeyChange = (
@@ -149,9 +106,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   ) => {
     const inputBaseUrl = e.target.value;
     if (selectedModel) {
-      // Update the provider's baseUrl using the existing updateProvider function
       updateProvider(selectedModel.provider, {baseUrl: inputBaseUrl});
-      setBaseUrl(inputBaseUrl);
     }
   };
 
@@ -167,7 +122,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
         className="w-full"
       >
         <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="default">Default</TabsTrigger>
+          <TabsTrigger value="default">Provider</TabsTrigger>
           <TabsTrigger value="custom">Custom</TabsTrigger>
         </TabsList>
 

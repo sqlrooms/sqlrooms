@@ -13,7 +13,7 @@ interface AiConfigPanelProps {
   modelUsage?: ModelUsageData;
   hideDefaultApiKeyInput?: boolean;
   hideDefaultBaseUrlInput?: boolean;
-  getDefaultInstructions?: (tables: unknown[]) => string;
+  getDefaultInstructions?: () => string;
 }
 
 export const AiConfigPanel: FC<AiConfigPanelProps> = ({

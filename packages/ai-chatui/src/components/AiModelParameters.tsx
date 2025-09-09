@@ -1,7 +1,6 @@
 import {FC, useRef} from 'react';
 import {Sliders, Wrench, FileText, Upload, Eye} from 'lucide-react';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
-import {useStoreWithAi} from '@sqlrooms/ai';
 import {
   Textarea,
   Input,
@@ -14,10 +13,9 @@ import {
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
-import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 
 interface AiModelParametersProps {
-  getDefaultInstructions?: (tables: unknown[]) => string;
+  getDefaultInstructions?: () => string;
 }
 
 export const AiModelParameters: FC<AiModelParametersProps> = ({
@@ -27,9 +25,6 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
     (s) => s.getAiConfig().modelParameters.maxSteps,
   );
   const setMaxStepsAiChatUi = useStoreWithAiChatUi((s) => s.setMaxSteps);
-
-  // AI slice actions
-  const setMaxSteps = useStoreWithAi((s) => s.ai.setMaxSteps);
 
   const additionalInstruction = useStoreWithAiChatUi(
     (s) => s.getAiConfig().modelParameters.additionalInstruction,
@@ -41,14 +36,10 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {toast} = useToast();
 
-  // Get tables schema from room store
-  const tables = useBaseRoomShellStore((s) => s.db.tables);
-
   const {isOpen, onOpen, onClose} = useDisclosure();
 
   const handleMaxStepsChange = (value: number) => {
     setMaxStepsAiChatUi(value);
-    setMaxSteps(value);
   };
 
   const handleAdditionalInstructionChange = (value: string) => {
@@ -128,7 +119,7 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
       return additionalInstruction || 'No default instructions available.';
     }
 
-    const defaultInstructions = getDefaultInstructions(tables);
+    const defaultInstructions = getDefaultInstructions();
 
     if (additionalInstruction) {
       return `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstruction}`;

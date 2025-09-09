@@ -10,7 +10,6 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
-import {useStoreWithAi} from '@sqlrooms/ai';
 import {capitalize} from '@sqlrooms/utils';
 
 interface AiModelSelectorProps {
@@ -25,10 +24,6 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({className = ''}) => {
   // AI Chat UI slice state and actions
   const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
   const setSelectedModel = useStoreWithAiChatUi((s) => s.setSelectedModel);
-
-  // AI slice actions
-  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
-  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
 
   // Memoize the selected model to prevent infinite re-renders
   const selectedModel = useMemo(() => {
@@ -58,19 +53,6 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({className = ''}) => {
 
   const handleModelChange = (value: string) => {
     setSelectedModel(value);
-
-    // Find the model across all providers
-    for (const providerKey in aiConfig.models) {
-      const provider = aiConfig.models[providerKey];
-      if (provider) {
-        const model = provider.models.find((m) => m.id === value);
-        if (model) {
-          setAiModel(provider.provider, model.modelName);
-          setBaseUrl(provider.baseUrl);
-          break;
-        }
-      }
-    }
   };
 
   const currentModel = selectedModel?.id || '';

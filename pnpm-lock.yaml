@@ -1126,9 +1126,6 @@ importers:
 
   packages/ai-chatui:
     dependencies:
-      '@sqlrooms/ai':
-        specifier: workspace:*
-        version: link:../ai
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../recharts

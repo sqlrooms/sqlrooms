@@ -99,8 +99,17 @@ export interface AiSliceOptions {
    * Maximum number of analysis steps allowed (default: 5)
    */
   maxSteps?: number;
-  baseUrl?: string;
+  /**
+   * Base URL for the AI model, no need to provide unless proxy or ollama
+   */
+  getBaseUrl?: () => string | undefined;
+  /**
+   * Get the API key for the AI model
+   */
   getApiKey?: (modelProvider: string) => string;
+  /**
+   * Default model to use if no model is provided
+   */
   defaultModel?: string;
 }
 
@@ -109,7 +118,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 ): StateCreator<AiSliceState> {
   const {
     getApiKey,
-    baseUrl,
+    getBaseUrl,
     initialAnalysisPrompt = '',
     customTools = {},
     getInstructions,
@@ -355,7 +364,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               customModelName: currentSession.customModelName,
               apiKey:
                 getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              baseUrl: currentSession.baseUrl || baseUrl,
+              baseUrl: currentSession.baseUrl || getBaseUrl?.(),
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,

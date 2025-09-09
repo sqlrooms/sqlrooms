@@ -29,13 +29,13 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {DEFAULT_MODEL} from './models';
 import {
   createAiChatUiSlice,
   AiChatUiSliceConfig,
   createDefaultAiChatUiConfig,
   AiChatUiState,
 } from '@sqlrooms/ai-chatui';
+import {DEFAULT_MODEL, LLM_MODELS} from './models';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -53,25 +53,10 @@ export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
   .merge(AiChatUiSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
-/**
- * Room state
- */
-type CustomRoomState = {
-  selectedModel: {
-    model: string;
-    provider: string;
-  };
-  setCustomSelectedModel: (model: string, provider: string) => void;
-  // /** API keys by provider */
-  // apiKeys: Record<string, string | undefined>;
-  // setProviderApiKey: (provider: string, apiKey: string) => void;
-};
-
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  AiChatUiState &
-  CustomRoomState;
+  AiChatUiState;
 
 /**
  * Create a customized room store
@@ -102,7 +87,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
-          ...createDefaultAiChatUiConfig({}),
+          ...createDefaultAiChatUiConfig({
+            models: LLM_MODELS.reduce((acc: Record<string, any>, provider) => {
+              acc[provider.name] = {
+                provider: provider.name,
+                baseUrl: 'https://api.openai.com/v1',
+                apiKey: '',
+                models: provider.models.map((model) => ({
+                  id: model,
+                  modelName: model,
+                })),
+              };
+              return acc;
+            }, {}),
+            selectedModelId: DEFAULT_MODEL,
+          }),
         },
         room: {
           panels: {
@@ -158,7 +157,29 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
+        // Get max steps from ai-chatui config or default to 5
         maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
+        // Get base URL from ai-chatui config or default to empty string
+        getBaseUrl: () => {
+          const state = get();
+
+          if (state.config.aiChatUi.type === 'custom') {
+            return state.config.aiChatUi.customModel.baseUrl;
+          }
+
+          // Find the model across all providers
+          for (const providerKey in state.config.aiChatUi.models) {
+            const provider = state.config.aiChatUi.models[providerKey];
+            if (provider) {
+              const model = provider.models.find(
+                (model) => model.id === state.config.aiChatUi.selectedModelId,
+              );
+              if (model) {
+                return provider.baseUrl;
+              }
+            }
+          }
+        },
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description
@@ -193,22 +214,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           return defaultInstructions;
         },
       })(set, get, store),
-
-      selectedModel: {
-        model: DEFAULT_MODEL,
-        provider: 'openai',
-      },
-      setCustomSelectedModel: (model: string, provider: string) => {
-        set({selectedModel: {model, provider}});
-      },
-      // apiKeys: {
-      //   openai: undefined,
-      // },
-      // setProviderApiKey: (provider: string, apiKey: string) => {
-      //   set({
-      //     apiKeys: {...get().apiKeys, [provider]: apiKey},
-      //   });
-      // },
     }),
 
     // Persist settings
@@ -217,11 +222,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => {
-        const persisted = {
+        return {
           config: RoomConfig.parse(state.config),
-          selectedModel: state.selectedModel,
         };
-        return persisted;
       },
     },
   ) as StateCreator<RoomState>,

@@ -62,17 +62,6 @@ export function createDefaultAiChatUiConfig(
             },
           ],
         },
-        anthropic: {
-          provider: 'anthropic',
-          baseUrl: 'https://api.anthropic.com/v1',
-          apiKey: '',
-          models: [
-            {
-              id: 'default-claude-3-sonnet',
-              modelName: 'claude-3-5-sonnet',
-            },
-          ],
-        },
       },
       selectedModelId: defaultModelId,
       customModel: {

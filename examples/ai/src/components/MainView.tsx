@@ -9,13 +9,16 @@ import {
   QueryControls,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
-import {DataTable} from '@sqlrooms/duckdb';
+import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
+import {LLM_MODELS} from '../models';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.config.ai.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
+  // Get tables schema from room store
+  const tables = useBaseRoomShellStore((s) => s.db.tables);
 
   const getModelStatus = () => ({
     isReady: true,
@@ -51,8 +54,8 @@ export const MainView: React.FC = () => {
   }, [aiConfig]);
 
   // Wrapper function to handle type conversion for getDefaultInstructions
-  const getDefaultInstructionsWrapper = (tables: unknown[]) => {
-    return getDefaultInstructions(tables as DataTable[]);
+  const getDefaultInstructionsWrapper = () => {
+    return getDefaultInstructions(tables);
   };
 
   // Determine button variant based on model type and API key
