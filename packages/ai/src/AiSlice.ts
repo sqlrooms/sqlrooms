@@ -99,23 +99,13 @@ export interface AiSliceOptions {
    * Maximum number of analysis steps allowed (default: 5)
    */
   maxSteps?: number;
+  baseUrl?: string;
+  getApiKey?: (modelProvider: string) => string;
+  defaultModel?: string;
 }
 
-/**
- * API key configuration for the AI slice
- */
-export type AiSliceApiConfig = {defaultModel?: string} & (
-  | {baseUrl: string; getApiKey?: never}
-  | {getApiKey: (modelProvider: string) => string; baseUrl?: never}
-);
-
-/**
- * Complete configuration for creating an AI slice
- */
-export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
-
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
-  params: CreateAiSliceConfig,
+  params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
     getApiKey,

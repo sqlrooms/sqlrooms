@@ -11,11 +11,8 @@ interface AiConfigPanelProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   modelUsage?: ModelUsageData;
-  getProxyBaseUrl?: () => string;
-  hideApiKeyInputForDefaultModels?: boolean;
-  setBaseUrl: (url: string | undefined) => void;
-  setAiModel: (provider: string, model: string) => void;
-  setMaxSteps: (steps: number) => void;
+  hideDefaultApiKeyInput?: boolean;
+  hideDefaultBaseUrlInput?: boolean;
   getDefaultInstructions?: (tables: unknown[]) => string;
 }
 
@@ -23,11 +20,8 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
   isOpen,
   setIsOpen,
   modelUsage,
-  getProxyBaseUrl,
-  hideApiKeyInputForDefaultModels,
-  setBaseUrl,
-  setAiModel,
-  setMaxSteps,
+  hideDefaultApiKeyInput,
+  hideDefaultBaseUrlInput,
   getDefaultInstructions,
 }) => {
   if (!isOpen) return null;
@@ -44,10 +38,8 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
           <X className="h-4 w-4" />
         </Button>
         <AiModelSelection
-          getProxyBaseUrl={getProxyBaseUrl}
-          hideApiKeyInputForDefaultModels={hideApiKeyInputForDefaultModels}
-          setBaseUrl={setBaseUrl}
-          setAiModel={setAiModel}
+          hideDefaultApiKeyInput={hideDefaultApiKeyInput}
+          hideDefaultBaseUrlInput={hideDefaultBaseUrlInput}
         />
         {modelUsage && (
           <AiModelUsage
@@ -58,10 +50,7 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
             isLoadingWeeklySpend={modelUsage.isLoadingWeeklySpend}
           />
         )}
-        <AiModelParameters
-          setMaxSteps={setMaxSteps}
-          getDefaultInstructions={getDefaultInstructions}
-        />
+        <AiModelParameters getDefaultInstructions={getDefaultInstructions} />
       </div>
     </div>
   );

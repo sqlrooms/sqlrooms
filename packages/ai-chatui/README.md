@@ -62,9 +62,16 @@ const roomConfig = {
   // ... other room configuration
   aiChatUi: {
     type: 'default' as const,
-    models: [
-      {id: 'gpt-4o-mini', model: 'gpt-4o-mini', provider: 'openai', apiKey: ''},
-    ],
+    models: {
+      openai: {
+        provider: 'openai',
+        baseUrl: 'https://api.openai.com/v1',
+        apiKey: '',
+        models: [
+          {id: 'gpt-4o-mini', modelName: 'gpt-4o-mini'},
+        ],
+      },
+    },
     selectedModelId: 'gpt-4o-mini',
     customModel: {baseUrl: '', apiKey: '', modelName: ''},
     modelParameters: {maxSteps: 5, additionalInstruction: ''},
@@ -89,8 +96,6 @@ const modelUsage: ModelUsageData = {
   isLoadingWeeklySpend: false,
 };
 
-// Proxy base URL function (optional - typically used with proxy servers)
-const getProxyBaseUrl = () => 'https://api.example.com/liteLLM/v1';
 
 // AI functions that need to be provided by your application
 const setBaseUrl = (url: string | undefined) => {
@@ -119,8 +124,7 @@ const getDefaultInstructions = (tables: unknown[]) => {
   isOpen={isConfigOpen}
   setIsOpen={setIsConfigOpen}
   modelUsage={modelUsage} // Optional
-  getProxyBaseUrl={getProxyBaseUrl} // Optional - for proxy server base URL
-  hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  hideDefaultApiKeyInput={true} // Optional - hide API key input when using proxy servers
   setBaseUrl={setBaseUrl} // Required
   setAiModel={setAiModel} // Required
   setMaxSteps={setMaxSteps} // Required
@@ -170,8 +174,7 @@ const getDefaultInstructions = (tables: unknown[]) => {
   isOpen={isConfigOpen}
   setIsOpen={setIsConfigOpen}
   modelUsage={modelUsage} // Optional - usage panel will be hidden if not provided
-  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional - for proxy server base URL
-  hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  hideDefaultApiKeyInput={true} // Optional - hide API key input when using proxy servers
   setBaseUrl={setBaseUrl} // Required
   setAiModel={setAiModel} // Required
   setMaxSteps={setMaxSteps} // Required
@@ -195,8 +198,7 @@ const {getAiConfig, setSelectedModel, setModelParameters} =
 <AiConfigPanel
   isOpen={isConfigOpen}
   setIsOpen={setIsConfigOpen}
-  getProxyBaseUrl={() => 'https://api.example.com/liteLLM/v1'} // Optional - for proxy server base URL
-  hideApiKeyInputForDefaultModels={true} // Optional - hide API key input when using proxy servers
+  hideDefaultApiKeyInput={true} // Optional - hide API key input when using proxy servers
   setBaseUrl={setBaseUrl} // Required
   setAiModel={setAiModel} // Required
   setMaxSteps={setMaxSteps} // Required
@@ -227,7 +229,6 @@ The package now requires you to provide AI-related functions as props:
 ### Optional Props
 
 - **`getDefaultInstructions(tables: unknown[])`**: Function to generate default system instructions (optional)
-- **`getProxyBaseUrl()`**: Provides dynamic base URL resolution (optional - typically used with proxy servers)
 
 ### Component Props
 
@@ -238,8 +239,7 @@ interface AiConfigPanelProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   modelUsage?: ModelUsageData;
-  getProxyBaseUrl?: () => string;
-  hideApiKeyInputForDefaultModels?: boolean;
+  hideDefaultApiKeyInput?: boolean;
   setBaseUrl: (url: string | undefined) => void; // Required
   setAiModel: (provider: string, model: string) => void; // Required
   setMaxSteps: (steps: number) => void; // Required
@@ -252,8 +252,7 @@ interface AiConfigPanelProps {
 ```tsx
 interface AiModelSelectionProps {
   className?: string;
-  getProxyBaseUrl?: () => string;
-  hideApiKeyInputForDefaultModels?: boolean;
+  hideDefaultApiKeyInput?: boolean;
   setBaseUrl: (url: string | undefined) => void; // Required
   setAiModel: (provider: string, model: string) => void; // Required
 }
@@ -264,7 +263,6 @@ interface AiModelSelectionProps {
 ```tsx
 interface AiModelSelectorProps {
   className?: string;
-  getProxyBaseUrl?: () => string;
   setBaseUrl: (url: string | undefined) => void; // Required
   setAiModel: (provider: string, model: string) => void; // Required
 }
@@ -292,8 +290,7 @@ Usage tracking is completely optional:
 When using proxy servers (like LiteLLM), several optional features are available:
 
 - **`getModelStatus()`**: Optional function to check proxy server connection status
-- **`getProxyBaseUrl()`**: Optional function to provide dynamic proxy server base URL
-- **`hideApiKeyInputForDefaultModels`**: Optional boolean to hide API key input fields when API keys are managed by the proxy server
+- **`hideDefaultApiKeyInput`**: Optional boolean to hide API key input fields when API keys are managed by the proxy server
 
 These features are particularly useful when:
 

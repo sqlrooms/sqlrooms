@@ -62,9 +62,9 @@ type CustomRoomState = {
     provider: string;
   };
   setCustomSelectedModel: (model: string, provider: string) => void;
-  /** API keys by provider */
-  apiKeys: Record<string, string | undefined>;
-  setProviderApiKey: (provider: string, apiKey: string) => void;
+  // /** API keys by provider */
+  // apiKeys: Record<string, string | undefined>;
+  // setProviderApiKey: (provider: string, apiKey: string) => void;
 };
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -134,10 +134,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         getApiKey: () => {
           const state = get();
           if (state.config.aiChatUi.type === 'default') {
-            const selectedModel = state.config.aiChatUi.models.find(
-              (model) => model.id === state.config.aiChatUi.selectedModelId,
-            );
-            return selectedModel?.apiKey || '';
+            const {models, selectedModelId} = state.config.aiChatUi;
+            if (!selectedModelId) return '';
+
+            // Find the model across all providers
+            for (const providerKey in models) {
+              const provider = models[providerKey];
+              if (provider) {
+                const model = provider.models.find(
+                  (model) => model.id === selectedModelId,
+                );
+                if (model) {
+                  return provider.apiKey || '';
+                }
+              }
+            }
+            return '';
           } else {
             return state.config.aiChatUi.customModel.apiKey;
           }
@@ -146,6 +158,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
+        maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description
@@ -188,14 +201,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       setCustomSelectedModel: (model: string, provider: string) => {
         set({selectedModel: {model, provider}});
       },
-      apiKeys: {
-        openai: undefined,
-      },
-      setProviderApiKey: (provider: string, apiKey: string) => {
-        set({
-          apiKeys: {...get().apiKeys, [provider]: apiKey},
-        });
-      },
+      // apiKeys: {
+      //   openai: undefined,
+      // },
+      // setProviderApiKey: (provider: string, apiKey: string) => {
+      //   set({
+      //     apiKeys: {...get().apiKeys, [provider]: apiKey},
+      //   });
+      // },
     }),
 
     // Persist settings

@@ -1,6 +1,7 @@
 import {FC, useRef} from 'react';
 import {Sliders, Wrench, FileText, Upload, Eye} from 'lucide-react';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
+import {useStoreWithAi} from '@sqlrooms/ai';
 import {
   Textarea,
   Input,
@@ -16,18 +17,19 @@ import {
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 
 interface AiModelParametersProps {
-  setMaxSteps: (steps: number) => void;
   getDefaultInstructions?: (tables: unknown[]) => string;
 }
 
 export const AiModelParameters: FC<AiModelParametersProps> = ({
-  setMaxSteps,
   getDefaultInstructions,
 }) => {
   const maxSteps = useStoreWithAiChatUi(
     (s) => s.getAiConfig().modelParameters.maxSteps,
   );
   const setMaxStepsAiChatUi = useStoreWithAiChatUi((s) => s.setMaxSteps);
+
+  // AI slice actions
+  const setMaxSteps = useStoreWithAi((s) => s.ai.setMaxSteps);
 
   const additionalInstruction = useStoreWithAiChatUi(
     (s) => s.getAiConfig().modelParameters.additionalInstruction,

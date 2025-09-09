@@ -18,6 +18,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",

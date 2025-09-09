@@ -7,7 +7,6 @@ import {
   AnalysisResultsContainer,
   SessionControls,
   QueryControls,
-  useStoreWithAi,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {DataTable} from '@sqlrooms/duckdb';
@@ -24,12 +23,32 @@ export const MainView: React.FC = () => {
   });
 
   const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
-  const selectedModel = useStoreWithAiChatUi((s) => s.getSelectedModel());
 
-  // AI functions from the AI slice
-  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
-  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
-  const setMaxSteps = useStoreWithAi((s) => s.ai.setMaxSteps);
+  // Memoize the selected model to prevent infinite re-renders
+  const selectedModel = useMemo(() => {
+    const {models, selectedModelId} = aiConfig;
+    if (!selectedModelId) return null;
+
+    // Find the model across all providers
+    for (const providerName in models) {
+      const provider = models[providerName];
+      if (provider) {
+        const model = provider.models.find(
+          (model) => model.id === selectedModelId,
+        );
+        if (model) {
+          return {
+            id: model.id,
+            modelName: model.modelName,
+            provider: provider.provider,
+            baseUrl: provider.baseUrl,
+            apiKey: provider.apiKey,
+          };
+        }
+      }
+    }
+    return null;
+  }, [aiConfig]);
 
   // Wrapper function to handle type conversion for getDefaultInstructions
   const getDefaultInstructionsWrapper = (tables: unknown[]) => {
@@ -69,9 +88,6 @@ export const MainView: React.FC = () => {
           <AiConfigPanel
             isOpen={true}
             setIsOpen={setIsConfigPanelOpen}
-            setBaseUrl={setBaseUrl}
-            setAiModel={setAiModel}
-            setMaxSteps={setMaxSteps}
             getDefaultInstructions={getDefaultInstructionsWrapper}
           />
         </div>

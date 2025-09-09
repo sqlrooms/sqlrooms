@@ -1,4 +1,4 @@
-import React, {FC} from 'react';
+import React, {FC, useMemo} from 'react';
 import {
   Select,
   SelectContent,
@@ -10,55 +10,83 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
+import {useStoreWithAi} from '@sqlrooms/ai';
 import {capitalize} from '@sqlrooms/utils';
 
 interface AiModelSelectorProps {
   className?: string;
-  getProxyBaseUrl?: () => string;
-  setBaseUrl: (url: string | undefined) => void;
-  setAiModel: (provider: string, model: string) => void;
 }
 
 export interface AiModelSelectorRef {
   handleTabChange: (value: string) => void;
 }
 
-export const AiModelSelector: FC<AiModelSelectorProps> = ({
-  className = '',
-  getProxyBaseUrl,
-  setBaseUrl,
-  setAiModel,
-}) => {
+export const AiModelSelector: FC<AiModelSelectorProps> = ({className = ''}) => {
   // AI Chat UI slice state and actions
-  const getAiConfig = useStoreWithAiChatUi((s) => s.getAiConfig);
-  const getSelectedModel = useStoreWithAiChatUi((s) => s.getSelectedModel);
+  const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
   const setSelectedModel = useStoreWithAiChatUi((s) => s.setSelectedModel);
 
-  const aiConfig = getAiConfig();
-  const selectedModel = getSelectedModel();
+  // AI slice actions
+  const setBaseUrl = useStoreWithAi((s) => s.ai.setBaseUrl);
+  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
+
+  // Memoize the selected model to prevent infinite re-renders
+  const selectedModel = useMemo(() => {
+    const {models, selectedModelId} = aiConfig;
+    if (!selectedModelId) return null;
+
+    // Find the model across all providers
+    for (const providerKey in models) {
+      const provider = models[providerKey];
+      if (provider) {
+        const model = provider.models.find(
+          (model) => model.id === selectedModelId,
+        );
+        if (model) {
+          return {
+            id: model.id,
+            modelName: model.modelName,
+            provider: provider.provider,
+            baseUrl: provider.baseUrl,
+            apiKey: provider.apiKey,
+          };
+        }
+      }
+    }
+    return null;
+  }, [aiConfig]);
 
   const handleModelChange = (value: string) => {
     setSelectedModel(value);
 
-    const model = aiConfig.models.find((m) => m.id === value);
-    if (model) {
-      setAiModel(model.provider, model.model);
-      setBaseUrl(getProxyBaseUrl?.());
+    // Find the model across all providers
+    for (const providerKey in aiConfig.models) {
+      const provider = aiConfig.models[providerKey];
+      if (provider) {
+        const model = provider.models.find((m) => m.id === value);
+        if (model) {
+          setAiModel(provider.provider, model.modelName);
+          setBaseUrl(provider.baseUrl);
+          break;
+        }
+      }
     }
   };
 
   const currentModel = selectedModel?.id || '';
 
   // Group models by provider
-  const modelsByProvider = aiConfig.models.reduce(
-    (acc, model) => {
-      if (!acc[model.provider]) {
-        acc[model.provider] = [];
+  const modelsByProvider = Object.values(aiConfig.models).reduce(
+    (acc, provider) => {
+      if (provider) {
+        if (!acc[provider.provider]) {
+          acc[provider.provider] = [];
+        }
+        acc[provider.provider]!.push(...provider.models);
       }
-      acc[model.provider]!.push(model);
       return acc;
     },
-    {} as Record<string, typeof aiConfig.models>,
+    {} as Record<string, Array<{id: string; modelName: string}>>,
   );
 
   return (
@@ -67,7 +95,7 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
         <SelectTrigger className="w-full">
           <SelectValue placeholder="Select AI Model">
             {selectedModel
-              ? `${selectedModel.provider} - ${selectedModel.model}`
+              ? `${selectedModel.provider} - ${selectedModel.modelName}`
               : ''}
           </SelectValue>
         </SelectTrigger>
@@ -81,7 +109,7 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
                   </SelectLabel>
                   {providerModels.map((model) => (
                     <SelectItem key={model.id} value={model.id}>
-                      {model.model}
+                      {model.modelName}
                     </SelectItem>
                   ))}
                 </SelectGroup>
