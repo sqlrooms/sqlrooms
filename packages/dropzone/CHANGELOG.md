@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.19 (2025-09-09)
+
+### Bug Fixes
+
+* Unify vite dependency versions in examples ([#135](https://github.com/sqlrooms/sqlrooms/issues/135)) ([a3772b8](https://github.com/sqlrooms/sqlrooms/commit/a3772b8527809e59988f1e09a7ebfc0664e6eacb))
+
 ## 0.24.18 (2025-09-05)
 
 ### Features
