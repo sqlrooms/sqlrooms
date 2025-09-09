@@ -7,6 +7,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {z} from 'zod';
+import {AiChatUiConfig, getSelectedModel} from './utils';
 
 export const AiChatUiSliceConfig = z.object({
   aiChatUi: z.object({
@@ -79,31 +80,7 @@ export function createDefaultAiChatUiConfig(
 }
 
 export type AiChatUiSliceState = {
-  getAiConfig: () => {
-    type: 'default' | 'custom';
-    models: Record<
-      string,
-      {
-        provider: string;
-        baseUrl: string;
-        apiKey: string;
-        models: Array<{
-          id: string;
-          modelName: string;
-        }>;
-      }
-    >;
-    selectedModelId?: string;
-    customModel: {
-      baseUrl: string;
-      apiKey: string;
-      modelName: string;
-    };
-    modelParameters: {
-      maxSteps: number;
-      additionalInstruction: string;
-    };
-  };
+  getAiConfig: () => AiChatUiConfig;
   getSelectedModel: () => {
     id: string;
     modelName: string;
@@ -153,28 +130,7 @@ export function createAiChatUiSlice<
 
       getSelectedModel: () => {
         const state = get();
-        const {models, selectedModelId} = state.config.aiChatUi;
-        if (!selectedModelId) return null;
-
-        // Find the model across all providers
-        for (const providerKey in models) {
-          const provider = models[providerKey];
-          if (provider) {
-            const model = provider.models.find(
-              (model) => model.id === selectedModelId,
-            );
-            if (model) {
-              return {
-                id: model.id,
-                modelName: model.modelName,
-                provider: provider.provider,
-                baseUrl: provider.baseUrl,
-                apiKey: provider.apiKey,
-              };
-            }
-          }
-        }
-        return null;
+        return getSelectedModel(state.config.aiChatUi);
       },
 
       setAiConfigType: (type: 'default' | 'custom') => {

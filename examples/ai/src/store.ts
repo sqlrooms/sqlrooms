@@ -34,6 +34,8 @@ import {
   AiChatUiSliceConfig,
   createDefaultAiChatUiConfig,
   AiChatUiState,
+  getApiKey,
+  getBaseUrl,
 } from '@sqlrooms/ai-chatui';
 import {DEFAULT_MODEL, LLM_MODELS} from './models';
 
@@ -132,26 +134,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createAiSlice({
         getApiKey: () => {
           const state = get();
-          if (state.config.aiChatUi.type === 'default') {
-            const {models, selectedModelId} = state.config.aiChatUi;
-            if (!selectedModelId) return '';
-
-            // Find the model across all providers
-            for (const providerKey in models) {
-              const provider = models[providerKey];
-              if (provider) {
-                const model = provider.models.find(
-                  (model) => model.id === selectedModelId,
-                );
-                if (model) {
-                  return provider.apiKey || '';
-                }
-              }
-            }
-            return '';
-          } else {
-            return state.config.aiChatUi.customModel.apiKey;
-          }
+          return getApiKey(state.config.aiChatUi);
         },
         toolsOptions: {
           // Configure number of rows to share with LLM globally
@@ -162,23 +145,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         // Get base URL from ai-chatui config or default to empty string
         getBaseUrl: () => {
           const state = get();
-
-          if (state.config.aiChatUi.type === 'custom') {
-            return state.config.aiChatUi.customModel.baseUrl;
-          }
-
-          // Find the model across all providers
-          for (const providerKey in state.config.aiChatUi.models) {
-            const provider = state.config.aiChatUi.models[providerKey];
-            if (provider) {
-              const model = provider.models.find(
-                (model) => model.id === state.config.aiChatUi.selectedModelId,
-              );
-              if (model) {
-                return provider.baseUrl;
-              }
-            }
-          }
+          return getBaseUrl(state.config.aiChatUi);
         },
         // Add custom tools
         customTools: {

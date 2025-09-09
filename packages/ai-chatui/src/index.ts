@@ -22,3 +22,7 @@ export {AiModelUsage} from './components/AiModelUsage';
 
 // Export types
 export type {ModelUsageData} from './types';
+
+// Export utility functions
+export {getApiKey, getBaseUrl, getSelectedModel} from './utils';
+export type {AiChatUiConfig} from './utils';

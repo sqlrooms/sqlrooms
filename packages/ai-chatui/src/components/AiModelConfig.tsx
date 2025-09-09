@@ -3,6 +3,7 @@ import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
 import {AiModelSelector} from './AiModelSelector';
 import {useStoreWithAiChatUi} from '../AiConfigSlice';
+import {getSelectedModel, getApiKey, getBaseUrl} from '../utils';
 
 interface AiModelSelectionProps {
   className?: string;
@@ -29,33 +30,12 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
 
   // Memoize the selected model to prevent infinite re-renders
   const selectedModel = useMemo(() => {
-    const {models, selectedModelId} = aiConfig;
-    if (!selectedModelId) return null;
-
-    // Find the model across all providers
-    for (const providerKey in models) {
-      const provider = models[providerKey];
-      if (provider) {
-        const model = provider.models.find(
-          (model) => model.id === selectedModelId,
-        );
-        if (model) {
-          return {
-            id: model.id,
-            modelName: model.modelName,
-            provider: provider.provider,
-            baseUrl: provider.baseUrl,
-            apiKey: provider.apiKey,
-          };
-        }
-      }
-    }
-    return null;
+    return getSelectedModel(aiConfig);
   }, [aiConfig]);
 
   // Get the current API key and baseUrl for the selected model
-  const currentApiKey = selectedModel?.apiKey || '';
-  const currentBaseUrl = selectedModel?.baseUrl || '';
+  const currentApiKey = getApiKey(aiConfig);
+  const currentBaseUrl = getBaseUrl(aiConfig) || '';
 
   const handleTabChange = (value: string) => {
     setAiConfigType(value as 'default' | 'custom');
@@ -106,7 +86,10 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   ) => {
     const inputBaseUrl = e.target.value;
     if (selectedModel) {
-      updateProvider(selectedModel.provider, {baseUrl: inputBaseUrl});
+      updateProvider(selectedModel.provider, {
+        // if empty, set to undefined so llm will use the default base url
+        baseUrl: inputBaseUrl !== '' ? inputBaseUrl : undefined,
+      });
     }
   };
 
