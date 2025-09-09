@@ -260,7 +260,7 @@ export interface DuckDbConnector {
    * ```
    */
   query<T extends TypeMap = any>(
-    query: string,
+    query: string | string[],
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>>;
 
