@@ -1,6 +1,5 @@
 import {FC, useRef} from 'react';
 import {Sliders, Wrench, FileText, Upload, Eye} from 'lucide-react';
-import {useStoreWithAiChatUi} from '../AiConfigSlice';
 import {
   Textarea,
   Input,
@@ -13,6 +12,7 @@ import {
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
+import {useStoreWithAiChatUi} from '../../AiConfigSlice';
 
 interface AiModelParametersProps {
   getDefaultInstructions?: () => string;

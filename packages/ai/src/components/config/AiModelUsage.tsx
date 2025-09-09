@@ -10,7 +10,14 @@ import {
   ResponsiveContainer,
   BarChart,
 } from 'recharts';
-import {ModelUsageData} from '../types';
+
+export interface ModelUsageData {
+  totalSpend: number;
+  maxBudget: number;
+  isLoadingSpend: boolean;
+  weeklySpend?: Array<{date: string; spend: number}>;
+  isLoadingWeeklySpend?: boolean;
+}
 
 type AiModelUsageProps = {
   className?: string;

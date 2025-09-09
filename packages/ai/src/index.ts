@@ -27,3 +27,22 @@ export * from './components/session/SessionActions';
 export * from './components/session/SessionDropdown';
 export * from './components/session/SessionTitle';
 export * from './components/session/SessionType';
+
+// AI Chat UI Configuration exports
+export {
+  createAiModelConfigSlice,
+  useStoreWithAiChatUi,
+  AiModelSliceConfig,
+  createDefaultAiModelConfig,
+} from './AiConfigSlice';
+
+export type {AiChatUiSliceState as AiModelConfigState} from './AiConfigSlice';
+
+export {AiConfigPanel} from './components/config/AiConfigPanel';
+export {AiModelParameters} from './components/config/AiModelParameters';
+export {AiModelSelection} from './components/config/AiModelConfig';
+export {AiModelSelector} from './components/config/AiModelSelector';
+export {AiModelUsage} from './components/config/AiModelUsage';
+export type {ModelUsageData} from './components/config/AiModelUsage';
+export {getApiKey, getBaseUrl, getSelectedModel} from './utils';
+export type {AiChatUiConfig} from './utils';

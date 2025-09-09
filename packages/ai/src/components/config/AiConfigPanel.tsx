@@ -1,11 +1,10 @@
 import {FC} from 'react';
+import {Button} from '@sqlrooms/ui';
+import {X} from 'lucide-react';
 
 import {AiModelSelection} from './AiModelConfig';
 import {AiModelParameters} from './AiModelParameters';
-import {AiModelUsage} from './AiModelUsage';
-import {Button} from '@sqlrooms/ui';
-import {X} from 'lucide-react';
-import {ModelUsageData} from '../types';
+import {AiModelUsage, ModelUsageData} from './AiModelUsage';
 
 interface AiConfigPanelProps {
   isOpen: boolean;

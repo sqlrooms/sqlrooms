@@ -9,8 +9,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {useStoreWithAiChatUi} from '../AiConfigSlice';
 import {capitalize} from '@sqlrooms/utils';
+import {useStoreWithAiChatUi} from '../../AiConfigSlice';
 
 interface AiModelSelectorProps {
   className?: string;

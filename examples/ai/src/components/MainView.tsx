@@ -1,73 +1,27 @@
-import {useMemo, useState} from 'react';
-import {AiConfigPanel, useStoreWithAiChatUi} from '@sqlrooms/ai-chatui';
-import {useRoomStore} from '../store';
+import {useState} from 'react';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {
+  AiConfigPanel,
   AnalysisResultsContainer,
   SessionControls,
   QueryControls,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
+import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.config.ai.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  // Get tables schema from room store
+
   const tables = useBaseRoomShellStore((s) => s.db.tables);
 
-  const getModelStatus = () => ({
-    isReady: true,
-    error: undefined,
-  });
-
-  const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
-
-  // Memoize the selected model to prevent infinite re-renders
-  const selectedModel = useMemo(() => {
-    const {models, selectedModelId} = aiConfig;
-    if (!selectedModelId) return null;
-
-    // Find the model across all providers
-    for (const providerName in models) {
-      const provider = models[providerName];
-      if (provider) {
-        const model = provider.models.find(
-          (model) => model.id === selectedModelId,
-        );
-        if (model) {
-          return {
-            id: model.id,
-            modelName: model.modelName,
-            provider: provider.provider,
-            baseUrl: provider.baseUrl,
-            apiKey: provider.apiKey,
-          };
-        }
-      }
-    }
-    return null;
-  }, [aiConfig]);
-
-  // Wrapper function to handle type conversion for getDefaultInstructions
   const getDefaultInstructionsWrapper = () => {
     return getDefaultInstructions(tables);
   };
-
-  // Determine button variant based on model type and API key
-  const buttonVariant = useMemo(() => {
-    if (
-      aiConfig.type === 'default' &&
-      selectedModel &&
-      (!selectedModel.apiKey || selectedModel.apiKey.trim() === '')
-    ) {
-      return 'destructive';
-    }
-    return 'outline';
-  }, [aiConfig.type, selectedModel]);
 
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
 
@@ -76,7 +30,7 @@ export const MainView: React.FC = () => {
       <div className="relative mb-4">
         <SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
         <Button
-          variant={buttonVariant}
+          variant="outline"
           className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
           onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
           title="Configuration"
@@ -110,26 +64,7 @@ export const MainView: React.FC = () => {
             )}
           </div>
 
-          {!getModelStatus().isReady ? (
-            <div className="flex w-full flex-col items-center justify-center gap-4">
-              <p className="p-6 text-left text-sm text-red-500">
-                ⚠️ The AI assistant is currently unavailable.{' '}
-                {getModelStatus().error && `Error: ${getModelStatus().error}`}{' '}
-                Please try restarting the application or{' '}
-                <a
-                  href={`https://support.sqlrooms.com`}
-                  className="underline hover:text-red-600"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                >
-                  contact support
-                </a>{' '}
-                if the issue persists.
-              </p>
-            </div>
-          ) : (
-            <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'" />
-          )}
+          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'" />
         </>
       )}
     </div>

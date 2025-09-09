@@ -4,6 +4,12 @@ import {
   createAiSlice,
   createDefaultAiConfig,
   getDefaultInstructions,
+  AiModelSliceConfig,
+  AiModelConfigState,
+  createAiModelConfigSlice,
+  createDefaultAiModelConfig,
+  getApiKey,
+  getBaseUrl,
 } from '@sqlrooms/ai';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
@@ -29,14 +35,6 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {
-  createAiChatUiSlice,
-  AiChatUiSliceConfig,
-  createDefaultAiChatUiConfig,
-  AiChatUiState,
-  getApiKey,
-  getBaseUrl,
-} from '@sqlrooms/ai-chatui';
 import {DEFAULT_MODEL, LLM_MODELS} from './models';
 
 export const RoomPanelTypes = z.enum([
@@ -52,13 +50,13 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
  */
 export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
   .merge(SqlEditorSliceConfig)
-  .merge(AiChatUiSliceConfig);
+  .merge(AiModelSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  AiChatUiState;
+  AiModelConfigState;
 
 /**
  * Create a customized room store
@@ -89,7 +87,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
           ...createDefaultSqlEditorConfig(),
-          ...createDefaultAiChatUiConfig({
+          ...createDefaultAiModelConfig({
             models: LLM_MODELS.reduce((acc: Record<string, any>, provider) => {
               acc[provider.name] = {
                 provider: provider.name,
@@ -127,14 +125,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
 
-      // ai-chatui config slice
-      ...createAiChatUiSlice()(set, get, store),
+      // Ai model config slice
+      ...createAiModelConfigSlice()(set, get, store),
 
       // Ai slice
       ...createAiSlice({
         getApiKey: () => {
           const state = get();
-          return getApiKey(state.config.aiChatUi);
+          return getApiKey(state.config.aiModelConfig);
         },
         toolsOptions: {
           // Configure number of rows to share with LLM globally
@@ -142,10 +140,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
         // Get max steps from ai-chatui config or default to 5
         maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
-        // Get base URL from ai-chatui config or default to empty string
+        // Get base URL from Ai chatui config or default to empty string
         getBaseUrl: () => {
           const state = get();
-          return getBaseUrl(state.config.aiChatUi);
+          return getBaseUrl(state.config.aiModelConfig);
         },
         // Add custom tools
         customTools: {
@@ -173,7 +171,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         getInstructions: (tablesSchema: DataTable[]) => {
           const defaultInstructions = getDefaultInstructions(tablesSchema);
           const customInstructions =
-            get().config.aiChatUi.modelParameters.additionalInstruction;
+            get().config.aiModelConfig.modelParameters.additionalInstruction;
 
           if (customInstructions) {
             return `${defaultInstructions}\n\nAdditional Instructions:\n\n${customInstructions}`;

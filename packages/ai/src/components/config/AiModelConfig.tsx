@@ -2,8 +2,8 @@ import {FC, useMemo} from 'react';
 import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
 import {AiModelSelector} from './AiModelSelector';
-import {useStoreWithAiChatUi} from '../AiConfigSlice';
-import {getSelectedModel, getApiKey, getBaseUrl} from '../utils';
+import {useStoreWithAiChatUi} from '../../AiConfigSlice';
+import {getSelectedModel, getApiKey, getBaseUrl} from '../../utils';
 
 interface AiModelSelectionProps {
   className?: string;
