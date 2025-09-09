@@ -220,7 +220,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         const persisted = {
           config: RoomConfig.parse(state.config),
           selectedModel: state.selectedModel,
-          apiKeys: state.apiKeys,
         };
         return persisted;
       },
