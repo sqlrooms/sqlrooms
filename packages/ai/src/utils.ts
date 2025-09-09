@@ -2,38 +2,16 @@
  * Utility functions for AI Chat UI configuration
  */
 
-export interface AiChatUiConfig {
-  type: 'default' | 'custom';
-  models: Record<
-    string,
-    {
-      provider: string;
-      baseUrl: string;
-      apiKey: string;
-      models: Array<{
-        id: string;
-        modelName: string;
-      }>;
-    }
-  >;
-  selectedModelId?: string;
-  customModel: {
-    baseUrl: string;
-    apiKey: string;
-    modelName: string;
-  };
-  modelParameters: {
-    maxSteps: number;
-    additionalInstruction: string;
-  };
-}
+import {AiModelSliceConfig} from './AiConfigSlice';
+
+type AiModelConfig = AiModelSliceConfig['aiModelConfig'];
 
 /**
  * Get the API key for the currently selected model
  * @param config - The AI Chat UI configuration
  * @returns The API key for the selected model, or empty string if not found
  */
-export function getApiKey(config: AiChatUiConfig): string {
+export function getApiKey(config: AiModelConfig): string {
   if (config.type === 'custom') {
     return config.customModel.apiKey;
   }
@@ -62,7 +40,7 @@ export function getApiKey(config: AiChatUiConfig): string {
  * @param config - The AI Chat UI configuration
  * @returns The base URL for the selected model, or undefined if not found
  */
-export function getBaseUrl(config: AiChatUiConfig): string | undefined {
+export function getBaseUrl(config: AiModelConfig): string | undefined {
   if (config.type === 'custom') {
     return config.customModel.baseUrl;
   }
@@ -91,7 +69,7 @@ export function getBaseUrl(config: AiChatUiConfig): string | undefined {
  * @param config - The AI Chat UI configuration
  * @returns The selected model information, or null if not found
  */
-export function getSelectedModel(config: AiChatUiConfig): {
+export function getSelectedModel(config: AiModelConfig): {
   id: string;
   modelName: string;
   provider: string;

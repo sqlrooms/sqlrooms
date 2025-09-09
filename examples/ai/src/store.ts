@@ -88,18 +88,32 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ),
           ...createDefaultSqlEditorConfig(),
           ...createDefaultAiModelConfig({
-            models: LLM_MODELS.reduce((acc: Record<string, any>, provider) => {
-              acc[provider.name] = {
-                provider: provider.name,
-                baseUrl: 'https://api.openai.com/v1',
-                apiKey: '',
-                models: provider.models.map((model) => ({
-                  id: model,
-                  modelName: model,
-                })),
-              };
-              return acc;
-            }, {}),
+            models: LLM_MODELS.reduce(
+              (
+                acc: Record<
+                  string,
+                  {
+                    provider: string;
+                    baseUrl: string;
+                    apiKey: string;
+                    models: Array<{id: string; modelName: string}>;
+                  }
+                >,
+                provider,
+              ) => {
+                acc[provider.name] = {
+                  provider: provider.name,
+                  baseUrl: 'https://api.openai.com/v1',
+                  apiKey: '',
+                  models: provider.models.map((model) => ({
+                    id: model,
+                    modelName: model,
+                  })),
+                };
+                return acc;
+              },
+              {},
+            ),
             selectedModelId: DEFAULT_MODEL,
           }),
         },
@@ -130,6 +144,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai slice
       ...createAiSlice({
+        // Get API key from Ai model config UI or your custom logic
         getApiKey: () => {
           const state = get();
           return getApiKey(state.config.aiModelConfig);
@@ -140,10 +155,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
         // Get max steps from ai-chatui config or default to 5
         maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
-        // Get base URL from Ai chatui config or default to empty string
+        // Get base URL from Ai model config or your default value
         getBaseUrl: () => {
-          const state = get();
-          return getBaseUrl(state.config.aiModelConfig);
+          return getBaseUrl(get().config.aiModelConfig);
         },
         // Add custom tools
         customTools: {
@@ -169,14 +183,18 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
         // Example of customizing the system instructions
         getInstructions: (tablesSchema: DataTable[]) => {
-          const defaultInstructions = getDefaultInstructions(tablesSchema);
+          // get default instructions from sqlrooms/ai
+          let instructions = getDefaultInstructions(tablesSchema);
+          // get custom instructions from Ai model config UI
           const customInstructions =
             get().config.aiModelConfig.modelParameters.additionalInstruction;
 
           if (customInstructions) {
-            return `${defaultInstructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
+            instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
           }
-          return defaultInstructions;
+          // you can add more instructions here if you want
+          instructions = `${instructions}\n\nYour name is George`;
+          return instructions;
         },
       })(set, get, store),
     }),

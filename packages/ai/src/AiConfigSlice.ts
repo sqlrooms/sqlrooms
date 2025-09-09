@@ -7,7 +7,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {AiChatUiConfig, getSelectedModel} from './utils';
+import {getSelectedModel} from './utils';
 
 export const AiModelSliceConfig = z.object({
   aiModelConfig: z.object({
@@ -43,7 +43,6 @@ export type AiModelSliceConfig = z.infer<typeof AiModelSliceConfig>;
 export function createDefaultAiModelConfig(
   props: Partial<AiModelSliceConfig['aiModelConfig']>,
 ): AiModelSliceConfig {
-  const defaultModelId = 'default-gpt-4o-mini';
   return {
     aiModelConfig: {
       type: 'default',
@@ -54,17 +53,13 @@ export function createDefaultAiModelConfig(
           apiKey: '',
           models: [
             {
-              id: defaultModelId,
-              modelName: 'gpt-4o-mini',
-            },
-            {
-              id: 'default-gpt-4',
-              modelName: 'gpt-4',
+              id: 'gpt-4.1',
+              modelName: 'gpt-4.1',
             },
           ],
         },
       },
-      selectedModelId: defaultModelId,
+      selectedModelId: 'gpt-4.1',
       customModel: {
         baseUrl: '',
         apiKey: '',
@@ -80,7 +75,7 @@ export function createDefaultAiModelConfig(
 }
 
 export type AiChatUiSliceState = {
-  getAiConfig: () => AiChatUiConfig;
+  getAiConfig: () => AiModelSliceConfig['aiModelConfig'];
   getSelectedModel: () => {
     id: string;
     modelName: string;

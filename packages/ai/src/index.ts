@@ -45,4 +45,3 @@ export {AiModelSelector} from './components/config/AiModelSelector';
 export {AiModelUsage} from './components/config/AiModelUsage';
 export type {ModelUsageData} from './components/config/AiModelUsage';
 export {getApiKey, getBaseUrl, getSelectedModel} from './utils';
-export type {AiChatUiConfig} from './utils';
