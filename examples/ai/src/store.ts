@@ -35,7 +35,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {DEFAULT_MODEL, LLM_MODELS} from './models';
+import {LLM_MODELS, PROVIDER_DEFAULT_BASE_URLS} from './models';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -83,39 +83,50 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
-          ),
+          // initialize ai config and ai model config
+          ...(() => {
+            const aiConfig = createDefaultAiConfig(
+              AiSliceConfig.shape.ai.parse(exampleSessions),
+            );
+            return {
+              ...aiConfig,
+              ...createDefaultAiModelConfig(
+                {
+                  models: LLM_MODELS.reduce(
+                    (
+                      acc: Record<
+                        string,
+                        {
+                          provider: string;
+                          baseUrl: string;
+                          apiKey: string;
+                          models: Array<{id: string; modelName: string}>;
+                        }
+                      >,
+                      provider,
+                    ) => {
+                      acc[provider.name] = {
+                        provider: provider.name,
+                        baseUrl:
+                          PROVIDER_DEFAULT_BASE_URLS[
+                            provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+                          ],
+                        apiKey: '',
+                        models: provider.models.map((model) => ({
+                          id: model,
+                          modelName: model,
+                        })),
+                      };
+                      return acc;
+                    },
+                    {},
+                  ),
+                },
+                aiConfig.ai.sessions,
+              ),
+            };
+          })(),
           ...createDefaultSqlEditorConfig(),
-          ...createDefaultAiModelConfig({
-            models: LLM_MODELS.reduce(
-              (
-                acc: Record<
-                  string,
-                  {
-                    provider: string;
-                    baseUrl: string;
-                    apiKey: string;
-                    models: Array<{id: string; modelName: string}>;
-                  }
-                >,
-                provider,
-              ) => {
-                acc[provider.name] = {
-                  provider: provider.name,
-                  baseUrl: 'https://api.openai.com/v1',
-                  apiKey: '',
-                  models: provider.models.map((model) => ({
-                    id: model,
-                    modelName: model,
-                  })),
-                };
-                return acc;
-              },
-              {},
-            ),
-            selectedModelId: DEFAULT_MODEL,
-          }),
         },
         room: {
           panels: {
@@ -147,7 +158,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         // Get API key from Ai model config UI or your custom logic
         getApiKey: () => {
           const state = get();
-          return getApiKey(state.config.aiModelConfig);
+          const currentSessionId = state.config.ai.currentSessionId;
+          if (!currentSessionId) return '';
+          return getApiKey(currentSessionId, state.config.aiModelConfig);
         },
         toolsOptions: {
           // Configure number of rows to share with LLM globally
@@ -157,7 +170,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
         // Get base URL from Ai model config or your default value
         getBaseUrl: () => {
-          return getBaseUrl(get().config.aiModelConfig);
+          const state = get();
+          const currentSessionId = state.config.ai.currentSessionId;
+          if (!currentSessionId) return undefined;
+          return getBaseUrl(currentSessionId, state.config.aiModelConfig);
         },
         // Add custom tools
         customTools: {

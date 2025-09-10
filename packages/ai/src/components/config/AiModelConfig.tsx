@@ -1,95 +1,78 @@
-import {FC, useMemo} from 'react';
+import {FC} from 'react';
 import {ServerIcon, KeyIcon, CpuIcon, Cone} from 'lucide-react';
 import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
+import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 import {AiModelSelector} from './AiModelSelector';
-import {useStoreWithAiChatUi} from '../../AiConfigSlice';
-import {getSelectedModel, getApiKey, getBaseUrl} from '../../utils';
 
 interface AiModelSelectionProps {
   className?: string;
   hideDefaultApiKeyInput?: boolean;
   hideDefaultBaseUrlInput?: boolean;
+  currentSessionId: string;
+  onModelChange?: (provider: string, model: string) => void;
 }
 
 export const AiModelSelection: FC<AiModelSelectionProps> = ({
   className = '',
-  hideDefaultApiKeyInput,
-  hideDefaultBaseUrlInput,
+  currentSessionId,
+  onModelChange,
 }) => {
-  const aiConfig = useStoreWithAiChatUi((s) => s.getAiConfig());
-  const aiConfigType = aiConfig.type;
-  const aiConfigCustomModel = aiConfig.customModel;
-
-  // actions
-  const setAiConfigType = useStoreWithAiChatUi((s) => s.setAiConfigType);
-  const setCustomModel = useStoreWithAiChatUi((s) => s.setCustomModel);
-  const setModelProviderApiKey = useStoreWithAiChatUi(
-    (s) => s.setModelProviderApiKey,
+  const aiConfigType = useStoreWithAiModelConfig((s) =>
+    s.getModelTypeBySessionId(currentSessionId),
   );
-  const updateProvider = useStoreWithAiChatUi((s) => s.updateProvider);
+  const aiConfigCustomModel = useStoreWithAiModelConfig((s) =>
+    s.getCustomModelBySessionId(currentSessionId),
+  );
 
-  // Memoize the selected model to prevent infinite re-renders
-  const selectedModel = useMemo(() => {
-    return getSelectedModel(aiConfig);
-  }, [aiConfig]);
-
-  // Get the current API key and baseUrl for the selected model
-  const currentApiKey = getApiKey(aiConfig);
-  const currentBaseUrl = getBaseUrl(aiConfig) || '';
+  const setSessionModelType = useStoreWithAiModelConfig(
+    (s) => s.setSessionModelType,
+  );
+  const setSessionCustomModel = useStoreWithAiModelConfig(
+    (s) => s.setSessionCustomModel,
+  );
 
   const handleTabChange = (value: string) => {
-    setAiConfigType(value as 'default' | 'custom');
+    setSessionModelType(currentSessionId, value as 'default' | 'custom');
   };
 
   const onCustomModelBaseUrlChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputBaseUrl = e.target.value;
-    setCustomModel(
-      inputBaseUrl,
-      aiConfigCustomModel.apiKey,
-      aiConfigCustomModel.modelName,
-    );
+    if (aiConfigCustomModel) {
+      setSessionCustomModel(
+        currentSessionId,
+        inputBaseUrl,
+        aiConfigCustomModel.apiKey,
+        aiConfigCustomModel.modelName,
+      );
+    }
   };
 
   const onCustomModelApiKeyChange = (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
     const inputApiKey = e.target.value;
-    setCustomModel(
-      aiConfigCustomModel.baseUrl,
-      inputApiKey,
-      aiConfigCustomModel.modelName,
-    );
+    if (aiConfigCustomModel) {
+      setSessionCustomModel(
+        currentSessionId,
+        aiConfigCustomModel.baseUrl,
+        inputApiKey,
+        aiConfigCustomModel.modelName,
+      );
+    }
   };
 
   const onCustomModelNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const modelName = e.target.value;
-    setCustomModel(
-      aiConfigCustomModel.baseUrl,
-      aiConfigCustomModel.apiKey,
-      modelName,
-    );
-  };
-
-  const onDefaultModelApiKeyChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const inputApiKey = e.target.value;
-    if (selectedModel) {
-      setModelProviderApiKey(selectedModel.provider, inputApiKey);
-    }
-  };
-
-  const onDefaultModelBaseUrlChange = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
-    const inputBaseUrl = e.target.value;
-    if (selectedModel) {
-      updateProvider(selectedModel.provider, {
-        // if empty, set to undefined so llm will use the default base url
-        baseUrl: inputBaseUrl !== '' ? inputBaseUrl : undefined,
-      });
+    if (aiConfigCustomModel) {
+      setSessionCustomModel(
+        currentSessionId,
+        aiConfigCustomModel.baseUrl,
+        aiConfigCustomModel.apiKey,
+        modelName,
+      );
+      onModelChange?.('custom', modelName);
     }
   };
 
@@ -111,31 +94,11 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
 
         {/* Default Tab */}
         <TabsContent value="default" className="space-y-2">
-          <AiModelSelector className="w-full" />
-          {!hideDefaultApiKeyInput && (
-            <div className="relative mt-2 flex items-center">
-              <KeyIcon className="absolute left-2 h-4 w-4" />
-              <Input
-                className="w-full pl-8 text-xs"
-                type="password"
-                placeholder="API Key"
-                value={currentApiKey}
-                onChange={onDefaultModelApiKeyChange}
-              />
-            </div>
-          )}
-          {!hideDefaultBaseUrlInput && (
-            <div className="relative mt-2 flex items-center">
-              <ServerIcon className="absolute left-2 h-4 w-4" />
-              <Input
-                className="w-full pl-8 text-xs"
-                type="text"
-                placeholder="Base URL"
-                value={currentBaseUrl}
-                onChange={onDefaultModelBaseUrlChange}
-              />
-            </div>
-          )}
+          <AiModelSelector
+            className="w-full"
+            currentSessionId={currentSessionId}
+            onModelChange={onModelChange}
+          />
         </TabsContent>
 
         {/* Custom Tab */}
@@ -147,7 +110,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
                 className="w-full pl-8"
                 type="text"
                 placeholder="Server URL"
-                value={aiConfigCustomModel.baseUrl}
+                value={aiConfigCustomModel?.baseUrl || ''}
                 onChange={onCustomModelBaseUrlChange}
               />
             </div>
@@ -157,7 +120,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
                 className="w-full pl-8 text-xs"
                 type="password"
                 placeholder="API Key"
-                value={aiConfigCustomModel.apiKey}
+                value={aiConfigCustomModel?.apiKey || ''}
                 onChange={onCustomModelApiKeyChange}
               />
             </div>
@@ -167,7 +130,7 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
                 className="w-full pl-8 text-xs"
                 type="text"
                 placeholder="Model Name"
-                value={aiConfigCustomModel.modelName}
+                value={aiConfigCustomModel?.modelName || ''}
                 onChange={onCustomModelNameChange}
               />
             </div>

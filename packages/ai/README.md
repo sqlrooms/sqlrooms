@@ -511,7 +511,7 @@ This package now includes comprehensive AI chat UI componentse. These components
 ```tsx
 import {
   createAiModelConfigSlice,
-  useStoreWithAiChatUi,
+  useStoreWithAiModelConfig,
   AiConfigPanel,
   ModelUsageData,
   AiModelSliceConfig,
@@ -600,7 +600,7 @@ import {
   AiModelUsage,
   AiModelSelector,
   ModelUsageData,
-  useStoreWithAiChatUi,
+  useStoreWithAiModelConfig,
 } from '@sqlrooms/ai';
 
 // Create model usage data (optional)
@@ -640,8 +640,8 @@ const getDefaultInstructions = (tables: unknown[]) => {
 />;
 
 // Access the AI chat UI state
-const {getAiConfig, setSelectedModel} = useStoreWithAiChatUi((state) => ({
-  getAiConfig: state.getAiConfig,
+const {getAiModelConfig, setSelectedModel} = useStoreWithAiModelConfig((state) => ({
+  getAiModelConfig: state.getAiModelConfig,
   setSelectedModel: state.setSelectedModel,
 }));
 ```
@@ -653,7 +653,7 @@ const {getAiConfig, setSelectedModel} = useStoreWithAiChatUi((state) => ({
 The package uses a slice-based configuration system that integrates with SQLRooms room-shell:
 
 - **`createAiModelConfigSlice()`**: Creates the AI chat UI slice for state management
-- **`useStoreWithAiChatUi()`**: Hook to access AI chat UI state from the room store
+- **`useStoreWithAiModelConfig()`**: Hook to access AI chat UI state from the room store
 - **`AiModelSliceConfig`**: TypeScript type for configuration schema
 - **`createDefaultAiModelConfig()`**: Helper to create default configuration
 

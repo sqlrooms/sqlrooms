@@ -62,7 +62,6 @@ export type AiSliceState = {
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setCustomModelName: (customModelName: string) => void;
     setBaseUrl: (baseUrl?: string) => void;
     setMaxSteps: (maxSteps: number) => void;
     createSession: (
@@ -98,7 +97,7 @@ export interface AiSliceOptions {
   /**
    * Maximum number of analysis steps allowed (default: 5)
    */
-  maxSteps?: number;
+  getMaxSteps?: () => number;
   /**
    * Base URL for the AI model, no need to provide unless proxy or ollama
    */
@@ -123,7 +122,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     customTools = {},
     getInstructions,
     toolsOptions,
-    maxSteps = 5,
+    getMaxSteps,
     defaultModel = 'gpt-4o-mini',
   } = params;
 
@@ -132,7 +131,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
-        maxSteps: maxSteps,
+        maxSteps: 5,
 
         tools: {
           ...getDefaultTools(store, toolsOptions),
@@ -158,21 +157,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               if (currentSession) {
                 currentSession.modelProvider = modelProvider;
                 currentSession.model = model;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the custom model name for the current session
-         * @param customModelName - The custom model name to set
-         */
-        setCustomModelName: (customModelName: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.customModelName = customModelName;
               }
             }),
           );
@@ -245,6 +229,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
           set((state) =>
             produce(state, (draft) => {
+              // Add to AI sessions
               draft.config.ai.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -255,6 +240,21 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 createdAt: new Date(),
               });
               draft.config.ai.currentSessionId = newSessionId;
+
+              // // Add to model config sessions
+              // const modelConfigSessions = (draft.config as any).aiModelConfig?.sessions;
+              // if (modelConfigSessions) {
+              //   modelConfigSessions.push({
+              //     id: newSessionId,
+              //     modelType: 'default',
+              //     selectedModelId: model || currentSession?.model || 'gpt-4.1',
+              //     customModel: {
+              //       baseUrl: '',
+              //       apiKey: '',
+              //       modelName: '',
+              //     },
+              //   });
+              // }
             }),
           );
         },
@@ -311,6 +311,18 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                   }
                 }
               }
+
+              // Also remove from model config sessions
+              const modelConfigSessions = (draft.config as any).aiModelConfig
+                ?.sessions;
+              if (modelConfigSessions) {
+                const modelConfigSessionIndex = modelConfigSessions.findIndex(
+                  (s: any) => s.id === sessionId,
+                );
+                if (modelConfigSessionIndex !== -1) {
+                  modelConfigSessions.splice(modelConfigSessionIndex, 1);
+                }
+              }
             }),
           );
         },
@@ -361,7 +373,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || 'openai',
               model: currentSession.model || defaultModel,
-              customModelName: currentSession.customModelName,
               apiKey:
                 getApiKey?.(currentSession.modelProvider || 'openai') || '',
               baseUrl: currentSession.baseUrl || getBaseUrl?.(),

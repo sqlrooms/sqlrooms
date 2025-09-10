@@ -7,21 +7,25 @@ import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage, ModelUsageData} from './AiModelUsage';
 
 interface AiConfigPanelProps {
+  currentSessionId: string;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
   modelUsage?: ModelUsageData;
   hideDefaultApiKeyInput?: boolean;
   hideDefaultBaseUrlInput?: boolean;
   getDefaultInstructions?: () => string;
+  onModelChange?: (provider: string, model: string) => void;
 }
 
 export const AiConfigPanel: FC<AiConfigPanelProps> = ({
+  currentSessionId,
   isOpen,
   setIsOpen,
   modelUsage,
   hideDefaultApiKeyInput,
   hideDefaultBaseUrlInput,
   getDefaultInstructions,
+  onModelChange,
 }) => {
   if (!isOpen) return null;
 
@@ -39,6 +43,8 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
         <AiModelSelection
           hideDefaultApiKeyInput={hideDefaultApiKeyInput}
           hideDefaultBaseUrlInput={hideDefaultBaseUrlInput}
+          currentSessionId={currentSessionId}
+          onModelChange={onModelChange}
         />
         {modelUsage && (
           <AiModelUsage

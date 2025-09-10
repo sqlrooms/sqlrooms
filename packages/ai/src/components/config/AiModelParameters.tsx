@@ -12,7 +12,7 @@ import {
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
-import {useStoreWithAiChatUi} from '../../AiConfigSlice';
+import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 
 interface AiModelParametersProps {
   getDefaultInstructions?: () => string;
@@ -21,15 +21,15 @@ interface AiModelParametersProps {
 export const AiModelParameters: FC<AiModelParametersProps> = ({
   getDefaultInstructions,
 }) => {
-  const maxSteps = useStoreWithAiChatUi(
-    (s) => s.getAiConfig().modelParameters.maxSteps,
+  const maxSteps = useStoreWithAiModelConfig(
+    (s) => s.getAiModelConfig().modelParameters.maxSteps,
   );
-  const setMaxStepsAiChatUi = useStoreWithAiChatUi((s) => s.setMaxSteps);
+  const setMaxStepsAiChatUi = useStoreWithAiModelConfig((s) => s.setMaxSteps);
 
-  const additionalInstruction = useStoreWithAiChatUi(
-    (s) => s.getAiConfig().modelParameters.additionalInstruction,
+  const additionalInstruction = useStoreWithAiModelConfig(
+    (s) => s.getAiModelConfig().modelParameters.additionalInstruction,
   );
-  const setAdditionalInstruction = useStoreWithAiChatUi(
+  const setAdditionalInstruction = useStoreWithAiModelConfig(
     (s) => s.setAdditionalInstruction,
   );
 
@@ -113,7 +113,7 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
     onOpen();
   };
 
-  // Compute full instructions on-the-fly
+  // compose full instructions
   const getFullInstructions = () => {
     if (!getDefaultInstructions) {
       return additionalInstruction || 'No default instructions available.';

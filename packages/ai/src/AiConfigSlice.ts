@@ -7,7 +7,6 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {getSelectedModel} from './utils';
 
 export const AiModelSliceConfig = z.object({
   aiModelConfig: z.object({
@@ -26,23 +25,44 @@ export const AiModelSliceConfig = z.object({
         ),
       }),
     ),
-    selectedModelId: z.string().optional(),
-    customModel: z.object({
-      baseUrl: z.string(),
-      apiKey: z.string(),
-      modelName: z.string(),
-    }),
     modelParameters: z.object({
       maxSteps: z.number(),
       additionalInstruction: z.string(),
     }),
+    // each session will have its own model
+    sessions: z.array(
+      z.object({
+        id: z.string(),
+        modelType: z.enum(['default', 'custom']),
+        selectedModelId: z.string(),
+        customModel: z.object({
+          baseUrl: z.string(),
+          apiKey: z.string(),
+          modelName: z.string(),
+        }),
+      }),
+    ),
   }),
 });
 export type AiModelSliceConfig = z.infer<typeof AiModelSliceConfig>;
 
 export function createDefaultAiModelConfig(
   props: Partial<AiModelSliceConfig['aiModelConfig']>,
+  aiSessions?: Array<{id: string; modelProvider?: string; model?: string}>,
 ): AiModelSliceConfig {
+  // Create model config sessions that align with AI sessions
+  const sessions =
+    aiSessions?.map((session) => ({
+      id: session.id,
+      modelType: 'default' as const,
+      selectedModelId: session.model || 'gpt-4.1',
+      customModel: {
+        baseUrl: '',
+        apiKey: '',
+        modelName: '',
+      },
+    })) || [];
+
   return {
     aiModelConfig: {
       type: 'default',
@@ -59,33 +79,32 @@ export function createDefaultAiModelConfig(
           ],
         },
       },
-      selectedModelId: 'gpt-4.1',
-      customModel: {
-        baseUrl: '',
-        apiKey: '',
-        modelName: '',
-      },
       modelParameters: {
         maxSteps: 5,
         additionalInstruction: '',
       },
+      sessions,
       ...props,
     },
   };
 }
 
-export type AiChatUiSliceState = {
-  getAiConfig: () => AiModelSliceConfig['aiModelConfig'];
-  getSelectedModel: () => {
-    id: string;
-    modelName: string;
-    provider: string;
+export type AiModelConfigSliceState = {
+  getAiModelConfig: () => AiModelSliceConfig['aiModelConfig'];
+  getModelTypeBySessionId: (sessionId: string) => 'default' | 'custom';
+  getCustomModelBySessionId: (sessionId: string) => {
     baseUrl: string;
     apiKey: string;
+    modelName: string;
   } | null;
-  setAiConfigType: (type: 'default' | 'custom') => void;
-  setSelectedModel: (id: string) => void;
-  setCustomModel: (baseUrl: string, apiKey: string, modelName: string) => void;
+  setSessionModelType: (sessionId: string, type: 'default' | 'custom') => void;
+  setSessionSelectedModel: (sessionId: string, id: string) => void;
+  setSessionCustomModel: (
+    sessionId: string,
+    baseUrl: string,
+    apiKey: string,
+    modelName: string,
+  ) => void;
   setMaxSteps: (maxSteps: number) => void;
   setAdditionalInstruction: (additionalInstruction: string) => void;
   setModelProviderApiKey: (provider: string, apiKey: string) => void;
@@ -96,32 +115,57 @@ export type AiChatUiSliceState = {
       apiKey?: string;
     },
   ) => void;
+  addSession: (
+    sessionId: string,
+    modelType?: 'default' | 'custom',
+    selectedModelId?: string,
+  ) => void;
+  removeSession: (sessionId: string) => void;
+  switchToSession: (sessionId: string) => void;
 };
 
 export function createAiModelConfigSlice<
   PC extends BaseRoomConfig & AiModelSliceConfig,
->(): StateCreator<AiChatUiSliceState> {
-  return createSlice<PC, AiChatUiSliceState>((set, get) => {
+>(): StateCreator<AiModelConfigSliceState> {
+  return createSlice<PC, AiModelConfigSliceState>((set, get) => {
     return {
-      getAiConfig: () => {
+      getAiModelConfig: () => {
         const state = get();
         return state.config.aiModelConfig;
       },
 
-      getSelectedModel: () => {
+      getModelTypeBySessionId: (sessionId: string) => {
         const state = get();
-        return getSelectedModel(state.config.aiModelConfig);
+        return (
+          state.config.aiModelConfig.sessions.find(
+            (session) => session.id === sessionId,
+          )?.modelType || 'default'
+        );
       },
 
-      setAiConfigType: (type: 'default' | 'custom') => {
+      getCustomModelBySessionId: (sessionId: string) => {
+        const state = get();
+        return (
+          state.config.aiModelConfig.sessions.find(
+            (session) => session.id === sessionId,
+          )?.customModel || null
+        );
+      },
+
+      setSessionModelType: (sessionId: string, type: 'default' | 'custom') => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.type = type;
+            const session = draft.config.aiModelConfig.sessions.find(
+              (s) => s.id === sessionId,
+            );
+            if (session) {
+              session.modelType = type;
+            }
           }),
         );
       },
 
-      setSelectedModel: (id: string) => {
+      setSessionSelectedModel: (sessionId: string, id: string) => {
         set((state) =>
           produce(state, (draft) => {
             // Check if model exists across all providers
@@ -130,18 +174,33 @@ export function createAiModelConfigSlice<
             ).some((provider) =>
               provider.models.some((model) => model.id === id),
             );
+
             if (modelExists) {
-              draft.config.aiModelConfig.selectedModelId = id;
+              const session = draft.config.aiModelConfig.sessions.find(
+                (s) => s.id === sessionId,
+              );
+              if (session) {
+                session.selectedModelId = id;
+              }
             }
           }),
         );
       },
 
-      setCustomModel: (baseUrl: string, apiKey: string, modelName: string) => {
-        const newCustomModel = {baseUrl, apiKey, modelName};
+      setSessionCustomModel: (
+        sessionId: string,
+        baseUrl: string,
+        apiKey: string,
+        modelName: string,
+      ) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.customModel = newCustomModel;
+            const session = draft.config.aiModelConfig.sessions.find(
+              (s) => s.id === sessionId,
+            );
+            if (session) {
+              session.customModel = {baseUrl, apiKey, modelName};
+            }
           }),
         );
       },
@@ -191,16 +250,56 @@ export function createAiModelConfigSlice<
           }),
         );
       },
+
+      addSession: (
+        sessionId: string,
+        modelType = 'default',
+        selectedModelId = 'gpt-4.1',
+      ) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const newSession = {
+              id: sessionId,
+              modelType: modelType as 'default' | 'custom',
+              selectedModelId,
+              customModel: {
+                baseUrl: '',
+                apiKey: '',
+                modelName: '',
+              },
+            };
+            draft.config.aiModelConfig.sessions.push(newSession);
+          }),
+        );
+      },
+
+      removeSession: (sessionId: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const sessionIndex = draft.config.aiModelConfig.sessions.findIndex(
+              (s) => s.id === sessionId,
+            );
+            if (sessionIndex !== -1) {
+              draft.config.aiModelConfig.sessions.splice(sessionIndex, 1);
+            }
+          }),
+        );
+      },
+
+      switchToSession: () => {
+        // This method doesn't need to do anything as session switching is handled by AiSlice
+        // The UI will automatically update based on the current session ID
+      },
     };
   });
 }
 
 type RoomConfigWithAiChatUi = BaseRoomConfig & AiModelSliceConfig;
 type RoomShellSliceStateWithAiChatUi =
-  RoomShellSliceState<RoomConfigWithAiChatUi> & AiChatUiSliceState;
+  RoomShellSliceState<RoomConfigWithAiChatUi> & AiModelConfigSliceState;
 
 // Hook to access aiModelConfig from the room store
-export function useStoreWithAiChatUi<T>(
+export function useStoreWithAiModelConfig<T>(
   selector: (state: RoomShellSliceStateWithAiChatUi) => T,
 ): T {
   return useBaseRoomShellStore<
