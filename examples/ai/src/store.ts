@@ -166,8 +166,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
-        // Get max steps from ai-chatui config or default to 5
-        maxSteps: get()?.config?.aiChatUi?.modelParameters?.maxSteps || 5,
+        // Get max steps from Ai model config or your default value
+        getMaxSteps: () => {
+          const state = get();
+          return state.config.aiModelConfig.modelParameters.maxSteps || 5;
+        },
         // Get base URL from Ai model config or your default value
         getBaseUrl: () => {
           const state = get();

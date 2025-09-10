@@ -241,20 +241,21 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               });
               draft.config.ai.currentSessionId = newSessionId;
 
-              // // Add to model config sessions
-              // const modelConfigSessions = (draft.config as any).aiModelConfig?.sessions;
-              // if (modelConfigSessions) {
-              //   modelConfigSessions.push({
-              //     id: newSessionId,
-              //     modelType: 'default',
-              //     selectedModelId: model || currentSession?.model || 'gpt-4.1',
-              //     customModel: {
-              //       baseUrl: '',
-              //       apiKey: '',
-              //       modelName: '',
-              //     },
-              //   });
-              // }
+              // Add to model config sessions
+              const modelConfigSessions = (draft.config as any).aiModelConfig
+                ?.sessions;
+              if (modelConfigSessions) {
+                modelConfigSessions.push({
+                  id: newSessionId,
+                  modelType: 'default',
+                  selectedModelId: model || currentSession?.model || 'gpt-4.1',
+                  customModel: {
+                    baseUrl: '',
+                    apiKey: '',
+                    modelName: '',
+                  },
+                });
+              }
             }),
           );
         },
