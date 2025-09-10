@@ -2,7 +2,6 @@ export const DEFAULT_MODEL = 'gpt-4.1';
 
 // Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';
-export const CUSTOM_MODEL_NAME = 'custom';
 
 // Default base URLs for each provider
 export const PROVIDER_DEFAULT_BASE_URLS = {
@@ -46,6 +45,6 @@ export const LLM_MODELS = [
   },
   {
     name: 'ollama',
-    models: ['qwen3:32b', 'qwen3', CUSTOM_MODEL_NAME],
+    models: ['qwen3:32b', 'qwen3'],
   },
 ];

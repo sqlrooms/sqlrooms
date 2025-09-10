@@ -20,9 +20,14 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
   const aiConfigType = useStoreWithAiModelConfig((s) =>
     s.getModelTypeBySessionId(currentSessionId),
   );
-  const aiConfigCustomModel = useStoreWithAiModelConfig((s) =>
-    s.getCustomModelBySessionId(currentSessionId),
-  );
+  // const aiConfigCustomModel = useStoreWithAiModelConfig((s) =>
+  //   s.getCustomModelBySessionId(currentSessionId),
+  // );
+  const aiConfigCustomModel = {
+    baseUrl: '',
+    apiKey: '',
+    modelName: '',
+  };
 
   const setSessionModelType = useStoreWithAiModelConfig(
     (s) => s.setSessionModelType,

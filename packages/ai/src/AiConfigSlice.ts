@@ -18,10 +18,18 @@ export const AiModelSliceConfig = z.object({
         apiKey: z.string(),
         models: z.array(
           z.object({
-            id: z.string(),
+            id: z.string(), // gpt-5 same as modelName
             modelName: z.string(),
           }),
         ),
+      }),
+    ),
+    customModels: z.array(
+      z.object({
+        id: z.string(), // mycoolmodel, collision detection: gpt-5
+        baseUrl: z.string(),
+        apiKey: z.string(),
+        modelName: z.string(), // qwen
       }),
     ),
     modelParameters: z.object({
@@ -32,13 +40,8 @@ export const AiModelSliceConfig = z.object({
     sessions: z.array(
       z.object({
         id: z.string(),
-        modelType: z.enum(['default', 'custom']),
+        // custom model cuid or provider's model cuid
         selectedModelId: z.string(),
-        customModel: z.object({
-          baseUrl: z.string(),
-          apiKey: z.string(),
-          modelName: z.string(),
-        }),
       }),
     ),
   }),
@@ -53,13 +56,7 @@ export function createDefaultAiModelConfig(
   const sessions =
     aiSessions?.map((session) => ({
       id: session.id,
-      modelType: 'default' as const,
       selectedModelId: session.model || 'gpt-4.1',
-      customModel: {
-        baseUrl: '',
-        apiKey: '',
-        modelName: '',
-      },
     })) || [];
 
   return {
@@ -77,6 +74,14 @@ export function createDefaultAiModelConfig(
           ],
         },
       },
+      customModels: [
+        {
+          id: 'mycoolmodel',
+          baseUrl: 'http://localhost:8000',
+          apiKey: '',
+          modelName: 'qwen',
+        },
+      ],
       modelParameters: {
         maxSteps: 5,
         additionalInstruction: '',
@@ -133,21 +138,15 @@ export function createAiModelConfigSlice<
       },
 
       getModelTypeBySessionId: (sessionId: string) => {
-        const state = get();
-        return (
-          state.config.aiModelConfig.sessions.find(
-            (session) => session.id === sessionId,
-          )?.modelType || 'default'
-        );
+        return 'default';
       },
 
       getCustomModelBySessionId: (sessionId: string) => {
-        const state = get();
-        return (
-          state.config.aiModelConfig.sessions.find(
-            (session) => session.id === sessionId,
-          )?.customModel || null
-        );
+        return {
+          baseUrl: '',
+          apiKey: '',
+          modelName: '',
+        };
       },
 
       setSessionModelType: (sessionId: string, type: 'default' | 'custom') => {
@@ -156,9 +155,6 @@ export function createAiModelConfigSlice<
             const session = draft.config.aiModelConfig.sessions.find(
               (s) => s.id === sessionId,
             );
-            if (session) {
-              session.modelType = type;
-            }
           }),
         );
       },
@@ -196,9 +192,6 @@ export function createAiModelConfigSlice<
             const session = draft.config.aiModelConfig.sessions.find(
               (s) => s.id === sessionId,
             );
-            if (session) {
-              session.customModel = {baseUrl, apiKey, modelName};
-            }
           }),
         );
       },
@@ -258,13 +251,7 @@ export function createAiModelConfigSlice<
           produce(state, (draft) => {
             const newSession = {
               id: sessionId,
-              modelType: modelType as 'default' | 'custom',
               selectedModelId,
-              customModel: {
-                baseUrl: '',
-                apiKey: '',
-                modelName: '',
-              },
             };
             draft.config.aiModelConfig.sessions.push(newSession);
           }),

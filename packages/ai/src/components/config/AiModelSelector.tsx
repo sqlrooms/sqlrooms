@@ -63,25 +63,7 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
     return session?.selectedModelId || '';
   });
 
-  const modelType = useStoreWithAiModelConfig((s) =>
-    s.getModelTypeBySessionId(currentSessionId),
-  );
-
-  const customModel = useStoreWithAiModelConfig((s) =>
-    s.getCustomModelBySessionId(currentSessionId),
-  );
-
   const selectedModel = useMemo(() => {
-    if (modelType === 'custom' && customModel) {
-      return {
-        id: 'custom',
-        modelName: customModel.modelName,
-        provider: 'custom',
-        baseUrl: customModel.baseUrl,
-        apiKey: customModel.apiKey,
-      };
-    }
-
     if (!selectedModelId) return null;
     for (const providerKey in aiConfig.models) {
       const provider = aiConfig.models[providerKey];
@@ -99,7 +81,7 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
       }
     }
     return null;
-  }, [modelType, customModel, selectedModelId, aiConfig.models]);
+  }, [selectedModelId, aiConfig.models]);
 
   const currentModel = selectedModel?.id || '';
   const currentApiKey = selectedModel?.apiKey || '';
@@ -146,9 +128,9 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
         <Select value={currentModel} onValueChange={handleModelChange}>
           <SelectTrigger className="w-full">
             <SelectValue placeholder="Select AI Model">
-              {selectedModel
+              {/* {selectedModel
                 ? `${selectedModel.provider} - ${selectedModel.modelName}`
-                : ''}
+                : ''} */}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
