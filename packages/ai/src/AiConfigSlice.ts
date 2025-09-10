@@ -10,7 +10,6 @@ import {z} from 'zod';
 
 export const AiModelSliceConfig = z.object({
   aiModelConfig: z.object({
-    type: z.enum(['default', 'custom']),
     models: z.record(
       z.string(),
       z.object({
@@ -65,7 +64,6 @@ export function createDefaultAiModelConfig(
 
   return {
     aiModelConfig: {
-      type: 'default',
       models: {
         openai: {
           provider: 'openai',
