@@ -92,14 +92,12 @@ async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
   }
 
   try {
-    const viewName = `temp_result_${Date.now()}`; // unique view name to avoid conflicts
-    await connector.query(`CREATE TEMPORARY VIEW ${viewName} AS ${sqlQuery}`);
-    const summaryResult = await connector.query(`SUMMARIZE ${viewName}`);
-    const summaryData = arrowTableToJson(summaryResult);
-    await connector.query(`DROP VIEW IF EXISTS ${viewName}`);
-    return summaryData;
+    const summaryResult = await connector.query(`SUMMARIZE (
+      ${sqlQuery}
+    )`);
+    return arrowTableToJson(summaryResult);
   } catch (error) {
-    console.warn('Failed to get summary:', error);
+    console.warn('Failed to get summary for query:', sqlQuery, error);
     return null;
   }
 }
@@ -229,6 +227,22 @@ export async function runAnalysis({
   return newMessages;
 }
 
+export type DefaultToolsOptions = {
+  /**
+   * Whether to enable read only mode (default: true)
+   */
+  readOnly: boolean;
+  /**
+   * Number of rows to share with LLM (default: 0)
+   */
+
+  numberOfRowsToShareWithLLM: number;
+  /**
+   * Whether to automatically generate a summary of the query result (default: true)
+   */
+  autoSummary: boolean;
+};
+
 /**
  * Default tools available to the AI assistant for data analysis
  * Includes:
@@ -236,8 +250,13 @@ export async function runAnalysis({
  */
 export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
-  numberOfRowsToShareWithLLM: number = 0,
+  options?: DefaultToolsOptions,
 ): Record<string, AiSliceTool> {
+  const {
+    readOnly = true,
+    numberOfRowsToShareWithLLM = 0,
+    autoSummary = true,
+  } = options || {};
   return {
     query: extendedTool({
       description: `A tool for running SQL queries on the tables in the database.
@@ -249,10 +268,48 @@ If a query fails, please don't try to run it again with the same syntax.`,
           const connector = await store.getState().db.getConnector();
           // TODO use options.abortSignal: maybe call db.cancelPendingQuery
           const result = await connector.query(sqlQuery);
-          // Only get summary if the query isn't already a SUMMARIZE query
-          const summaryData = sqlQuery.toLowerCase().includes('summarize')
-            ? arrowTableToJson(result)
-            : await getQuerySummary(connector, sqlQuery);
+
+          const parsedQuery = await store
+            .getState()
+            .db.sqlSelectToJson(sqlQuery);
+
+          if (
+            parsedQuery.error &&
+            // Only SELECT statements can be serialized to json, so we ignore not implemented errors
+            parsedQuery.error_type !== 'not implemented'
+          ) {
+            throw new Error(parsedQuery.error_message);
+          }
+
+          if (readOnly) {
+            if (parsedQuery.error) {
+              throw new Error(
+                `Query is not a valid SELECT statement: ${parsedQuery.error_message}`,
+              );
+            }
+            if (
+              parsedQuery.statements.length !== 1 || // only one statement allowed
+              parsedQuery.statements[0]?.node.type !== 'SELECT_NODE' // only SELECT statements allowed
+            ) {
+              throw new Error('Query is not a valid SELECT statement');
+            }
+          }
+
+          const summaryData = await (async () => {
+            if (!autoSummary) return null;
+            if (parsedQuery.error) return null;
+            const lastNode =
+              parsedQuery.statements[parsedQuery.statements.length - 1]?.node;
+
+            // Only get summary if the last statement isn't already a SUMMARIZE query
+            if (
+              lastNode?.type === 'SELECT_NODE' &&
+              lastNode?.from_table?.show_type === 'SUMMARY'
+            ) {
+              return arrowTableToJson(result);
+            }
+            return await getQuerySummary(connector, sqlQuery);
+          })();
 
           // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
           const firstRows =

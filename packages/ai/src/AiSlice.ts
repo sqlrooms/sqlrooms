@@ -11,7 +11,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {getDefaultTools, runAnalysis} from './analysis';
+import {DefaultToolsOptions, getDefaultTools, runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
@@ -91,10 +91,7 @@ export interface AiSliceOptions {
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
-  /**
-   * Number of rows to share with LLM (default: 0)
-   */
-  numberOfRowsToShareWithLLM?: number;
+  defaultToolsOptions?: DefaultToolsOptions;
 }
 
 /**
@@ -119,7 +116,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     initialAnalysisPrompt = '',
     customTools = {},
     getInstructions,
-    numberOfRowsToShareWithLLM,
+    defaultToolsOptions,
     defaultModel = 'gpt-4o-mini',
   } = params;
 
@@ -130,7 +127,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         isRunningAnalysis: false,
 
         tools: {
-          ...getDefaultTools(store, numberOfRowsToShareWithLLM),
+          ...getDefaultTools(store, defaultToolsOptions),
           ...customTools,
         },
 
@@ -350,10 +347,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               baseUrl: currentSession.baseUrl || baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
-              tools: {
-                ...getDefaultTools(store, numberOfRowsToShareWithLLM),
-                ...customTools,
-              },
+              tools: get().ai.tools,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(

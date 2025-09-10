@@ -217,6 +217,7 @@ export type DuckDbSliceState = {
                 table_name: string;
               };
               select_list: Record<string, unknown>[];
+              type: string;
             };
           }[];
         }
