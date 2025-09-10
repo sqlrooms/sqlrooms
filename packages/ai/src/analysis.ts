@@ -9,6 +9,7 @@ import {
   DataTable,
   DuckDbConnector,
   DuckDbSliceState,
+  splitSqlStatements,
 } from '@sqlrooms/duckdb';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
@@ -308,7 +309,10 @@ If a query fails, please don't try to run it again with the same syntax.`,
             ) {
               return arrowTableToJson(result);
             }
-            return await getQuerySummary(connector, sqlQuery);
+            const statements = splitSqlStatements(sqlQuery);
+            const lastStatement = statements[statements.length - 1];
+            if (!lastStatement) return null;
+            return await getQuerySummary(connector, lastStatement);
           })();
 
           // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
