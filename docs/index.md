@@ -24,6 +24,20 @@ hero:
     src: /media/sqlrooms-ai.webp
     alt: SQLRooms AI
 
+caseStudies:
+  - title: 'Foursquare Spatial Desktop'
+    href: '/case-studies.html#foursquare-spatial-desktop'
+    img: '/media/case-studies/fsq-spatial-desktop-earthquakes.webp'
+    alt: 'Foursquare Spatial Desktop screenshot'
+  - title: 'Flowmap City'
+    href: '/case-studies.html#flowmap-city'
+    img: '/media/case-studies/flowmap-city.webp'
+    alt: 'Flowmap City screenshot'
+  - title: 'Cosmograph'
+    href: '/case-studies.html#cosmograph'
+    img: '/media/case-studies/cosmograph.webp'
+    alt: 'Cosmograph screenshot'
+
 features:
   - title: Local Analytics, No Backend Required
     details: Leverage DuckDB's powerful SQL capabilities, enabling fast in browser data processing without a backend
