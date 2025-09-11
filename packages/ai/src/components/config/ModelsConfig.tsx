@@ -26,10 +26,18 @@ import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 import {useStoreWithAi} from '../../AiSlice';
 
 export interface ModelConfigProps {
+  showProviderModels?: boolean;
+  showCustomModels?: boolean;
+  allowEditProviderModels?: boolean;
+  allowCustomModels?: boolean;
   className?: string;
 }
 
-export const ModelsConfig: FC<ModelConfigProps> = ({className = ''}) => {
+export const ModelsConfig: FC<ModelConfigProps> = ({
+  className = '',
+  allowEditProviderModels = true,
+  allowCustomModels = true,
+}) => {
   const {toast} = useToast();
   const aiConfig = useStoreWithAiModelConfig((s) => s.getAiModelConfig());
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
@@ -316,26 +324,30 @@ export const ModelsConfig: FC<ModelConfigProps> = ({className = ''}) => {
                   className="flex w-full items-center justify-between gap-2 border-b p-1 text-xs"
                 >
                   <span className="text-foreground/90">{m.modelName}</span>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() =>
-                      handleDeleteModel('provider', providerKey, m.modelName)
-                    }
-                    className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
+                  {allowEditProviderModels && (
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() =>
+                        handleDeleteModel('provider', providerKey, m.modelName)
+                      }
+                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                  )}
                 </div>
               ))}
-              <Button
-                size="xs"
-                variant="secondary"
-                onClick={() => handleOpenAddProviderModelDialog(providerKey)}
-              >
-                <CirclePlus className="h-3 w-3" />
-                Add
-              </Button>
+              {allowEditProviderModels && (
+                <Button
+                  size="xs"
+                  variant="secondary"
+                  onClick={() => handleOpenAddProviderModelDialog(providerKey)}
+                >
+                  <CirclePlus className="h-3 w-3" />
+                  Add
+                </Button>
+              )}
             </div>
 
             {/* add model button column - 5% */}
@@ -344,145 +356,149 @@ export const ModelsConfig: FC<ModelConfigProps> = ({className = ''}) => {
         ))}
 
         {/* Custom models */}
-        <div className="flex w-full items-start gap-4">
-          <div className="flex w-20 items-start justify-start text-sm font-medium">
-            Custom
-          </div>
-          <div className="flex flex-1 flex-col items-start gap-2">
-            {customModels.map((cm) => (
-              <div
-                key={cm.modelName}
-                className="flex w-full items-center justify-between gap-2 border-b p-1 text-xs"
-              >
-                <span className="text-foreground/90">{cm.modelName}</span>
-                <div className="flex w-full items-center justify-end">
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() =>
-                      handleDeleteModel('custom', undefined, cm.modelName)
-                    }
-                    className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
-                  >
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                  <Button
-                    size="xs"
-                    variant="ghost"
-                    onClick={() => handleEditCustomModel(cm.modelName)}
-                  >
-                    <Settings className="h-3 w-3" />
-                  </Button>
+        {allowCustomModels && (
+          <div className="flex w-full items-start gap-4">
+            <div className="flex w-20 items-start justify-start text-sm font-medium">
+              Custom
+            </div>
+            <div className="flex flex-1 flex-col items-start gap-2">
+              {customModels.map((cm) => (
+                <div
+                  key={cm.modelName}
+                  className="flex w-full items-center justify-between gap-2 border-b p-1 text-xs"
+                >
+                  <span className="text-foreground/90">{cm.modelName}</span>
+                  <div className="flex w-full items-center justify-end">
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() =>
+                        handleDeleteModel('custom', undefined, cm.modelName)
+                      }
+                      className="h-6 w-6 p-0 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                    >
+                      <Trash2 className="h-3 w-3" />
+                    </Button>
+                    <Button
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => handleEditCustomModel(cm.modelName)}
+                    >
+                      <Settings className="h-3 w-3" />
+                    </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
-            <Button
-              size="xs"
-              variant="secondary"
-              onClick={() => {
-                setCustomName('');
-                setCustomBaseUrl('');
-                setCustomApiKey('');
-                setBaseUrlError(false);
-                openCustomModelDialog();
-              }}
-            >
-              <CirclePlus className="h-3 w-3" />
-              Add
-            </Button>
+              ))}
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => {
+                  setCustomName('');
+                  setCustomBaseUrl('');
+                  setCustomApiKey('');
+                  setBaseUrlError(false);
+                  openCustomModelDialog();
+                }}
+              >
+                <CirclePlus className="h-3 w-3" />
+                Add
+              </Button>
+            </div>
+            <div className="flex w-12 items-start justify-end"></div>
           </div>
-          <div className="flex w-12 items-start justify-end"></div>
-        </div>
+        )}
       </div>
 
       {/* Add Custom Model Dialog */}
-      <Dialog
-        open={isCustomModelDialogOpen}
-        onOpenChange={(open) => {
-          if (open) {
-            openCustomModelDialog();
-          } else {
-            setBaseUrlError(false);
-            closeCustomModelDialog();
-          }
-        }}
-      >
-        <DialogTrigger asChild>
-          {/* handled via onOpen button above */}
-        </DialogTrigger>
-        <DialogContent className="border-0 p-5">
-          <DialogHeader className="mb-1">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Blocks className="h-4 w-4" /> Add Custom Model
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Provide connection details for your model provider.
-            </DialogDescription>
-          </DialogHeader>
+      {allowCustomModels && (
+        <Dialog
+          open={isCustomModelDialogOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              openCustomModelDialog();
+            } else {
+              setBaseUrlError(false);
+              closeCustomModelDialog();
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            {/* handled via onOpen button above */}
+          </DialogTrigger>
+          <DialogContent className="border-0 p-5">
+            <DialogHeader className="mb-1">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Blocks className="h-4 w-4" /> Add Custom Model
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Provide connection details for your model provider.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="custom-name" className="w-20 text-sm">
-                Name
-              </Label>
-              <div className="relative flex-1">
-                <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="custom-name"
-                  value={customName}
-                  onChange={(e) => setCustomName(e.target.value)}
-                  placeholder="e.g., My cool model"
-                  className="pl-8"
-                />
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="custom-name" className="w-20 text-sm">
+                  Name
+                </Label>
+                <div className="relative flex-1">
+                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="custom-name"
+                    value={customName}
+                    onChange={(e) => setCustomName(e.target.value)}
+                    placeholder="e.g., My cool model"
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Label htmlFor="custom-baseUrl" className="w-20 text-sm">
+                  baseUrl
+                </Label>
+                <div className="relative flex-1">
+                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="custom-baseUrl"
+                    value={customBaseUrl}
+                    onChange={(e) => {
+                      setCustomBaseUrl(e.target.value);
+                      if (baseUrlError && e.target.value.trim()) {
+                        setBaseUrlError(false);
+                      }
+                    }}
+                    placeholder="https://api.example.com"
+                    className={`pl-8 ${baseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Label htmlFor="custom-apiKey" className="w-20 text-sm">
+                  API key
+                </Label>
+                <div className="relative flex-1">
+                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="custom-apiKey"
+                    type="password"
+                    value={customApiKey}
+                    onChange={(e) => setCustomApiKey(e.target.value)}
+                    placeholder="Optional"
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end pt-1">
+                <Button size="sm" onClick={handleAddCustomToSession}>
+                  <Plus className="mr-2 h-4 w-4" /> Add
+                </Button>
               </div>
             </div>
-
-            <div className="flex items-center gap-3">
-              <Label htmlFor="custom-baseUrl" className="w-20 text-sm">
-                baseUrl
-              </Label>
-              <div className="relative flex-1">
-                <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="custom-baseUrl"
-                  value={customBaseUrl}
-                  onChange={(e) => {
-                    setCustomBaseUrl(e.target.value);
-                    if (baseUrlError && e.target.value.trim()) {
-                      setBaseUrlError(false);
-                    }
-                  }}
-                  placeholder="https://api.example.com"
-                  className={`pl-8 ${baseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Label htmlFor="custom-apiKey" className="w-20 text-sm">
-                API key
-              </Label>
-              <div className="relative flex-1">
-                <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="custom-apiKey"
-                  type="password"
-                  value={customApiKey}
-                  onChange={(e) => setCustomApiKey(e.target.value)}
-                  placeholder="Optional"
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end pt-1">
-              <Button size="sm" onClick={handleAddCustomToSession}>
-                <Plus className="mr-2 h-4 w-4" /> Add
-              </Button>
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Add Model to Provider Dialog */}
       <Dialog
@@ -534,157 +550,161 @@ export const ModelsConfig: FC<ModelConfigProps> = ({className = ''}) => {
       </Dialog>
 
       {/* Edit Custom Model Dialog */}
-      <Dialog
-        open={isEditCustomModelDialogOpen}
-        onOpenChange={(open) => {
-          if (open) {
-            openEditCustomModelDialog();
-          } else {
-            setEditBaseUrlError(false);
-            closeEditCustomModelDialog();
-          }
-        }}
-      >
-        <DialogTrigger asChild>
-          {/* handled via onOpen button above */}
-        </DialogTrigger>
-        <DialogContent className="border-0 p-5">
-          <DialogHeader className="mb-1">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Settings className="h-4 w-4" /> Edit Custom Model
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Update the connection details for your custom model.
-            </DialogDescription>
-          </DialogHeader>
+      {allowCustomModels && (
+        <Dialog
+          open={isEditCustomModelDialogOpen}
+          onOpenChange={(open) => {
+            if (open) {
+              openEditCustomModelDialog();
+            } else {
+              setEditBaseUrlError(false);
+              closeEditCustomModelDialog();
+            }
+          }}
+        >
+          <DialogTrigger asChild>
+            {/* handled via onOpen button above */}
+          </DialogTrigger>
+          <DialogContent className="border-0 p-5">
+            <DialogHeader className="mb-1">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Settings className="h-4 w-4" /> Edit Custom Model
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Update the connection details for your custom model.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="space-y-2">
-            <div className="flex items-center gap-3">
-              <Label htmlFor="edit-model-name" className="w-20 text-sm">
-                Name
-              </Label>
-              <div className="relative flex-1">
-                <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="edit-model-name"
-                  value={editingModel?.modelName || ''}
-                  onChange={(e) =>
-                    setEditingModel((prev) =>
-                      prev ? {...prev, modelName: e.target.value} : null,
-                    )
-                  }
-                  placeholder="e.g., My cool model"
-                  className="pl-8"
-                />
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3">
-              <Label htmlFor="edit-model-baseUrl" className="w-20 text-sm">
-                baseUrl
-              </Label>
-              <div className="relative flex-1">
-                <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="edit-model-baseUrl"
-                  value={editingModel?.baseUrl || ''}
-                  onChange={(e) => {
-                    setEditingModel((prev) =>
-                      prev ? {...prev, baseUrl: e.target.value} : null,
-                    );
-                    if (editBaseUrlError && e.target.value.trim()) {
-                      setEditBaseUrlError(false);
+            <div className="space-y-2">
+              <div className="flex items-center gap-3">
+                <Label htmlFor="edit-model-name" className="w-20 text-sm">
+                  Name
+                </Label>
+                <div className="relative flex-1">
+                  <Cpu className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="edit-model-name"
+                    value={editingModel?.modelName || ''}
+                    onChange={(e) =>
+                      setEditingModel((prev) =>
+                        prev ? {...prev, modelName: e.target.value} : null,
+                      )
                     }
-                  }}
-                  placeholder="https://api.example.com"
-                  className={`pl-8 ${editBaseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
-                />
+                    placeholder="e.g., My cool model"
+                    className="pl-8"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="flex items-center gap-3">
-              <Label htmlFor="edit-model-apiKey" className="w-20 text-sm">
-                API key
-              </Label>
-              <div className="relative flex-1">
-                <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
-                <Input
-                  id="edit-model-apiKey"
-                  type="password"
-                  value={editingModel?.apiKey || ''}
-                  onChange={(e) =>
-                    setEditingModel((prev) =>
-                      prev ? {...prev, apiKey: e.target.value} : null,
-                    )
-                  }
-                  placeholder="Optional"
-                  className="pl-8"
-                />
+              <div className="flex items-center gap-3">
+                <Label htmlFor="edit-model-baseUrl" className="w-20 text-sm">
+                  baseUrl
+                </Label>
+                <div className="relative flex-1">
+                  <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="edit-model-baseUrl"
+                    value={editingModel?.baseUrl || ''}
+                    onChange={(e) => {
+                      setEditingModel((prev) =>
+                        prev ? {...prev, baseUrl: e.target.value} : null,
+                      );
+                      if (editBaseUrlError && e.target.value.trim()) {
+                        setEditBaseUrlError(false);
+                      }
+                    }}
+                    placeholder="https://api.example.com"
+                    className={`pl-8 ${editBaseUrlError ? 'border-red-500 focus:border-red-500' : ''}`}
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Label htmlFor="edit-model-apiKey" className="w-20 text-sm">
+                  API key
+                </Label>
+                <div className="relative flex-1">
+                  <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <Input
+                    id="edit-model-apiKey"
+                    type="password"
+                    value={editingModel?.apiKey || ''}
+                    onChange={(e) =>
+                      setEditingModel((prev) =>
+                        prev ? {...prev, apiKey: e.target.value} : null,
+                      )
+                    }
+                    placeholder="Optional"
+                    className="pl-8"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-1">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => {
+                    setEditingModel(null);
+                    setEditBaseUrlError(false);
+                    closeEditCustomModelDialog();
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button size="sm" onClick={handleUpdateCustomModel}>
+                  <Settings className="mr-2 h-4 w-4" /> Update
+                </Button>
               </div>
             </div>
+          </DialogContent>
+        </Dialog>
+      )}
+
+      {/* Delete Model Confirmation Dialog */}
+      {(allowEditProviderModels || allowCustomModels) && (
+        <Dialog
+          open={isDeleteModelDialogOpen}
+          onOpenChange={(open) =>
+            open ? openDeleteModelDialog() : closeDeleteModelDialog()
+          }
+        >
+          <DialogTrigger asChild>
+            {/* handled via onOpen button above */}
+          </DialogTrigger>
+          <DialogContent className="border-0 p-5">
+            <DialogHeader className="mb-1">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Trash2 className="h-4 w-4 text-red-500" /> Delete Model
+              </DialogTitle>
+              <DialogDescription className="text-xs">
+                Are you sure you want to delete &quot;{modelToDelete?.modelName}
+                &quot;? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
 
             <div className="flex justify-end gap-2 pt-1">
               <Button
                 size="sm"
                 variant="outline"
                 onClick={() => {
-                  setEditingModel(null);
-                  setEditBaseUrlError(false);
-                  closeEditCustomModelDialog();
+                  setModelToDelete(null);
+                  closeDeleteModelDialog();
                 }}
               >
                 Cancel
               </Button>
-              <Button size="sm" onClick={handleUpdateCustomModel}>
-                <Settings className="mr-2 h-4 w-4" /> Update
+              <Button
+                size="sm"
+                variant="destructive"
+                onClick={confirmDeleteModel}
+              >
+                <Trash2 className="mr-2 h-4 w-4" /> Delete
               </Button>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Model Confirmation Dialog */}
-      <Dialog
-        open={isDeleteModelDialogOpen}
-        onOpenChange={(open) =>
-          open ? openDeleteModelDialog() : closeDeleteModelDialog()
-        }
-      >
-        <DialogTrigger asChild>
-          {/* handled via onOpen button above */}
-        </DialogTrigger>
-        <DialogContent className="border-0 p-5">
-          <DialogHeader className="mb-1">
-            <DialogTitle className="flex items-center gap-2 text-base">
-              <Trash2 className="h-4 w-4 text-red-500" /> Delete Model
-            </DialogTitle>
-            <DialogDescription className="text-xs">
-              Are you sure you want to delete &quot;{modelToDelete?.modelName}
-              &quot;? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="flex justify-end gap-2 pt-1">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => {
-                setModelToDelete(null);
-                closeDeleteModelDialog();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              size="sm"
-              variant="destructive"
-              onClick={confirmDeleteModel}
-            >
-              <Trash2 className="mr-2 h-4 w-4" /> Delete
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
