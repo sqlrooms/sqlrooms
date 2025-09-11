@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.21 (2025-09-11)
+
+### Features
+
+* Ai assistant read only mode ([#137](https://github.com/sqlrooms/sqlrooms/issues/137)) ([c8c64d5](https://github.com/sqlrooms/sqlrooms/commit/c8c64d50b2c72e9e82ef530a653f71e4eef839cc))
+
 ## 0.24.20 (2025-09-11)
 
 ### Features
