@@ -57,13 +57,10 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     tools: Record<string, AiSliceTool>;
     analysisAbortController?: AbortController;
-    maxSteps: number;
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setBaseUrl: (baseUrl?: string) => void;
-    setMaxSteps: (maxSteps: number) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -75,7 +72,6 @@ export type AiSliceState = {
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
-    getMaxSteps: () => number;
   };
 };
 
@@ -94,36 +90,26 @@ export interface AiSliceOptions {
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
   toolsOptions?: DefaultToolsOptions;
-  /**
-   * Maximum number of analysis steps allowed (default: 5)
-   */
-  getMaxSteps?: () => number;
-  /**
-   * Base URL for the AI model, no need to provide unless proxy or ollama
-   */
-  getBaseUrl?: () => string | undefined;
-  /**
-   * Get the API key for the AI model
-   */
-  getApiKey?: (modelProvider: string) => string;
-  /**
-   * Default model to use if no model is provided
-   */
+  defaultProvider?: string;
   defaultModel?: string;
+  getApiKey?: (modelProvider: string) => string;
+  getBaseUrl?: () => string | undefined;
+  getMaxSteps?: () => number;
 }
 
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
   params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    getApiKey,
-    getBaseUrl,
+    defaultProvider = 'openai',
+    defaultModel = 'gpt-4.1',
     initialAnalysisPrompt = '',
     customTools = {},
-    getInstructions,
     toolsOptions,
+    getApiKey,
+    getBaseUrl,
     getMaxSteps,
-    defaultModel = 'gpt-4o-mini',
+    getInstructions,
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
@@ -158,33 +144,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 currentSession.modelProvider = modelProvider;
                 currentSession.model = model;
               }
-            }),
-          );
-        },
-
-        /**
-         * Set the base URL for the current session
-         * @param baseUrl - The server URL to set
-         */
-        setBaseUrl: (baseUrl?: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.baseUrl = baseUrl;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the maximum number of analysis steps
-         * @param maxSteps - The maximum number of steps to set
-         */
-        setMaxSteps: (maxSteps: number) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.maxSteps = maxSteps;
             }),
           );
         },
@@ -344,15 +303,16 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           try {
             await runAnalysis({
               tableSchemas: get().db.tables,
-              modelProvider: currentSession.modelProvider || 'openai',
+              modelProvider: currentSession.modelProvider || defaultProvider,
               model: currentSession.model || defaultModel,
               apiKey:
-                getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              baseUrl: currentSession.baseUrl || getBaseUrl?.(),
+                getApiKey?.(currentSession.modelProvider || defaultProvider) ||
+                '',
+              baseUrl: getBaseUrl?.() || currentSession.baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
-              maxSteps: get().ai.maxSteps,
+              maxSteps: getMaxSteps?.() || 5,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -415,10 +375,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           return Object.entries(get().ai.tools).find(
             ([name]) => name === toolName,
           )?.[1]?.component as React.ComponentType;
-        },
-
-        getMaxSteps: () => {
-          return get().ai.maxSteps;
         },
       },
     };
