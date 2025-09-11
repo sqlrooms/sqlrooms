@@ -188,8 +188,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             currentSession?.model || '',
           );
         },
-        // Configure number of rows to share with LLM globally
-        numberOfRowsToShareWithLLM: 0,
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description

@@ -12,15 +12,6 @@ export const PROVIDER_DEFAULT_BASE_URLS = {
   ollama: OLLAMA_DEFAULT_BASE_URL,
 } as const;
 
-// Default base URLs for each provider
-export const PROVIDER_DEFAULT_BASE_URLS = {
-  openai: 'https://api.openai.com/v1',
-  anthropic: 'https://api.anthropic.com/v1',
-  google: 'https://generativelanguage.googleapis.com/v1beta',
-  deepseek: 'https://api.deepseek.com/v1',
-  ollama: OLLAMA_DEFAULT_BASE_URL,
-} as const;
-
 export const LLM_MODELS = [
   {
     name: 'openai',
