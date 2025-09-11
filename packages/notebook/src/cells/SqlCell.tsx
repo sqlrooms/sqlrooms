@@ -1,9 +1,11 @@
 import React from 'react';
 import {Button} from '@sqlrooms/ui';
+import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../NotebookSlice';
-import {QueryDataTable} from '@sqlrooms/data-table';
+import {AddSqlCellResultToNewTable} from '../cellOperations/AddSqlCellResultToNewTable';
 
 const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
   minimap: {enabled: false},
@@ -20,6 +22,7 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
   const cellStatus = useStoreWithNotebook((s) => s.notebook.cellStatus[id]);
 
   if (!cell || cell.type !== 'sql') return null;
+
   return (
     <CellContainer
       id={id}
@@ -49,10 +52,21 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
               )}
               {cellStatus?.status === 'success' && (
                 <div className="flex-[2] overflow-hidden border-t">
-                  <QueryDataTable
-                    query={`SELECT * FROM ${cellStatus.resultView}`}
-                    fontSize="text-xs"
-                  />
+                  {(() => {
+                    const query = `SELECT * FROM ${cellStatus.resultView}`;
+                    return (
+                      <QueryDataTable
+                        query={query}
+                        fontSize="text-xs"
+                        renderActions={() => (
+                          <>
+                            <QueryDataTableActionsMenu query={query} />
+                            <AddSqlCellResultToNewTable query={cell.sql} />
+                          </>
+                        )}
+                      />
+                    );
+                  })()}
                 </div>
               )}
             </>

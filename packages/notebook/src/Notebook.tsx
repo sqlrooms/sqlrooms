@@ -1,6 +1,13 @@
 import {Button, EditableText} from '@sqlrooms/ui';
 import React from 'react';
+
 import {useStoreWithNotebook} from './NotebookSlice';
+import {AddNewCell} from './cellOperations/AddNewCell';
+import {NotebookCellTypes} from './cellSchemas';
+import {
+  TriggerButton,
+  TriggerSeparator,
+} from './cellOperations/AddNewCellTrigger';
 
 export const TabsBar: React.FC = () => {
   const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
@@ -51,31 +58,49 @@ export const Notebook: React.FC = () => {
     s.config.notebook.tabs.find((t) => t.id === currentTabId),
   );
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
+  const runAllCells = useStoreWithNotebook((s) => s.notebook.runAllCells);
+
+  const handleAddCellAndScroll = (type: NotebookCellTypes) => {
+    if (!tab) return;
+    addCell(tab.id, type);
+  };
+
   if (!tab) return null;
   return (
-    <div className="flex h-full flex-col">
+    <div className="tab-scrollable-content flex h-full flex-col">
       <TabsBar />
-      <div className="flex items-center gap-2 border-b p-2">
-        <Button size="xs" onClick={() => addCell(tab.id, 'sql')}>
-          + SQL
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'markdown')}>
-          + Markdown
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'text')}>
-          + Text
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'vega')}>
-          + Vega
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'input')}>
-          + Input
+      <div className="flex items-center gap-1 px-4 pt-2">
+        <AddNewCell
+          onAdd={handleAddCellAndScroll}
+          triggerComponent={<TriggerButton />}
+          enableShortcut
+        />
+        <Button
+          size="xs"
+          variant="secondary"
+          onClick={() => runAllCells(tab.id)}
+        >
+          Run all cells
         </Button>
       </div>
-      <div className="flex-1 space-y-2 overflow-auto p-2">
-        {tab.cellOrder.map((id) => (
-          <CellView key={id} id={id} />
+
+      <div className="flex flex-col space-y-2 overflow-auto p-2">
+        {tab.cellOrder.map((id, index) => (
+          <div className="flex flex-col gap-2" key={`cellOrder-${id}`}>
+            <AddNewCell
+              onAdd={(type) => addCell(tab.id, type, index)}
+              triggerComponent={<TriggerSeparator />}
+            />
+            <CellView id={id} />
+            <div className="text-secondary text-xs">
+              This line is a temporary anchor to prevent mount bug
+            </div>
+          </div>
         ))}
+        <AddNewCell
+          onAdd={(type) => addCell(tab.id, type)}
+          triggerComponent={<TriggerSeparator />}
+        />
       </div>
     </div>
   );

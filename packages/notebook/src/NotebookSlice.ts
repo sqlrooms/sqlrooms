@@ -19,6 +19,7 @@ import {
   NotebookCellTypes,
   NotebookSliceConfig,
 } from './cellSchemas';
+import {findTab, getCellTypeLabel} from './NotebookUtils';
 
 export type NotebookCellRegistryItem = {
   title: string;
@@ -43,7 +44,8 @@ export type NotebookSliceState = {
     setCurrentTab: (id: string) => void;
     removeTab: (id: string) => void;
 
-    addCell: (tabId: string, type: NotebookCellTypes) => string;
+    addCell: (tabId: string, type: NotebookCellTypes, index?: number) => string;
+    moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
     removeCell: (cellId: string) => void;
     renameCell: (cellId: string, name: string) => void;
     updateCell: (
@@ -184,7 +186,7 @@ export function createNotebookSlice<
         renameTab: (id, title) => {
           set((state) =>
             produce(state, (draft) => {
-              const tab = draft.config.notebook.tabs.find((t) => t.id === id);
+              const tab = findTab(draft.config.notebook, id);
               if (tab) tab.title = title;
             }),
           );
@@ -212,34 +214,31 @@ export function createNotebookSlice<
           );
         },
 
-        addCell: (tabId, type) => {
+        addCell: (tabId, type, index) => {
           const id = createId();
           set((state) =>
             produce(state, (draft) => {
-              const tab = draft.config.notebook.tabs.find(
-                (t) => t.id === tabId,
-              );
-              if (!tab) return;
+              const tab = findTab(draft.config.notebook, tabId);
               const reg = get().notebook.cellRegistry[type];
               if (!reg) return;
               const cell = reg.createCell(id) as NotebookCell;
               // Assign a readable unique name using shared utility
-              const typeToLabel: Record<NotebookCellTypes, string> = {
-                sql: 'SQL',
-                vega: 'Chart',
-                markdown: 'Markdown',
-                text: 'Text',
-                input: 'Input',
-              };
               const usedNames = Object.values(draft.config.notebook.cells).map(
                 (c) => c.name,
               );
-              const baseLabel = typeToLabel[cell.type as NotebookCellTypes];
+              const baseLabel = getCellTypeLabel(cell.type);
               if (baseLabel) {
                 (cell as any).name = generateUniqueName(baseLabel, usedNames);
               }
               draft.config.notebook.cells[id] = cell;
-              tab.cellOrder.push(id);
+
+              const newIndex = index ?? tab.cellOrder.length;
+              tab.cellOrder = [
+                ...tab.cellOrder.slice(0, newIndex),
+                id,
+                ...tab.cellOrder.slice(newIndex),
+              ];
+
               if (type === 'sql') {
                 draft.notebook.cellStatus[id] = {
                   type: 'sql',
@@ -257,6 +256,23 @@ export function createNotebookSlice<
             }),
           );
           return id;
+        },
+
+        moveCell: (tabId, cellId, direction) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tab = findTab(draft.config.notebook, tabId);
+
+              const idx = tab.cellOrder.indexOf(cellId);
+              if (idx >= 0) {
+                const newIndex = direction === 'up' ? idx - 1 : idx + 1;
+                if (newIndex < 0 || newIndex >= tab.cellOrder.length) return;
+
+                tab.cellOrder.splice(idx, 1);
+                tab.cellOrder.splice(newIndex, 0, cellId);
+              }
+            }),
+          );
         },
 
         removeCell: (cellId) => {
@@ -298,7 +314,7 @@ export function createNotebookSlice<
         },
 
         runAllCells: async (tabId) => {
-          const tab = get().config.notebook.tabs.find((t) => t.id === tabId);
+          const tab = findTab(get().config.notebook, tabId);
           if (!tab) return;
           for (const cellId of tab.cellOrder) {
             await get().notebook.runCell(cellId, {cascade: false});
