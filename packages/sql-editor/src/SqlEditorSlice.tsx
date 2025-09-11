@@ -353,6 +353,7 @@ export function createSqlEditorSlice<
             if (signal.aborted) {
               throw new Error('Query aborted');
             }
+            console.log('parsedQuery', parsedLastStatement);
 
             const isValidSelectQuery = !parsedLastStatement.error;
 
