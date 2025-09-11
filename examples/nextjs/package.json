@@ -35,6 +35,6 @@
     "typescript": "5.8.3"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
+    "@duckdb/duckdb-wasm": "1.30.0"
   }
 }

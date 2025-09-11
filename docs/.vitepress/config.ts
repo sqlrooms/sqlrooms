@@ -54,9 +54,11 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
+      {text: 'Concepts', link: '/key-concepts'},
       {text: 'Examples', link: '/examples'},
+      {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},
-      {text: 'Reference', link: '/packages'},
+      // {text: 'Reference', link: '/packages'},
     ],
 
     sidebar: [
@@ -68,12 +70,12 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Modular Architecture',
-            link: '/modular-architecture',
-          },
-          {
             text: 'Key Concepts',
             link: '/key-concepts',
+          },
+          {
+            text: 'Modular Architecture',
+            link: '/modular-architecture',
           },
         ],
       },

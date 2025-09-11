@@ -12,7 +12,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {getDefaultTools, runAnalysis} from './analysis';
+import {DefaultToolsOptions, getDefaultTools, runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
@@ -58,12 +58,13 @@ export type AiSliceState = Slice & {
     isRunningAnalysis: boolean;
     tools: Record<string, AiSliceTool>;
     analysisAbortController?: AbortController;
+    maxSteps: number;
     setAnalysisPrompt: (prompt: string) => void;
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setCustomModelName: (customModelName: string) => void;
-    setBaseUrl: (baseUrl: string) => void;
+    setBaseUrl: (baseUrl?: string) => void;
+    setMaxSteps: (maxSteps: number) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -75,6 +76,7 @@ export type AiSliceState = Slice & {
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
+    getMaxSteps: () => number;
   };
 };
 
@@ -92,44 +94,48 @@ export interface AiSliceOptions {
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
+  toolsOptions?: DefaultToolsOptions;
   /**
-   * Number of rows to share with LLM (default: 0)
+   * Maximum number of analysis steps allowed (default: 5)
    */
-  numberOfRowsToShareWithLLM?: number;
+  getMaxSteps?: () => number;
+  /**
+   * Base URL for the AI model, no need to provide unless proxy or ollama
+   */
+  getBaseUrl?: () => string | undefined;
+  /**
+   * Get the API key for the AI model
+   */
+  getApiKey?: (modelProvider: string) => string;
+  /**
+   * Default model to use if no model is provided
+   */
+  defaultModel?: string;
 }
 
-/**
- * API key configuration for the AI slice
- */
-export type AiSliceApiConfig =
-  | {baseUrl: string; getApiKey?: never}
-  | {getApiKey: (modelProvider: string) => string; baseUrl?: never};
-
-/**
- * Complete configuration for creating an AI slice
- */
-export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
-
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
-  config: CreateAiSliceConfig,
+  params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
     getApiKey,
-    baseUrl,
+    getBaseUrl,
     initialAnalysisPrompt = '',
     customTools = {},
     getInstructions,
-    numberOfRowsToShareWithLLM,
-  } = config;
+    toolsOptions,
+    getMaxSteps,
+    defaultModel = 'gpt-4o-mini',
+  } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
+        maxSteps: 5,
 
         tools: {
-          ...getDefaultTools(store, numberOfRowsToShareWithLLM),
+          ...getDefaultTools(store, toolsOptions),
           ...customTools,
         },
 
@@ -158,31 +164,28 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         },
 
         /**
-         * Set the custom model name for the current session
-         * @param customModelName - The custom model name to set
-         */
-        setCustomModelName: (customModelName: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.customModelName = customModelName;
-              }
-            }),
-          );
-        },
-
-        /**
          * Set the base URL for the current session
          * @param baseUrl - The server URL to set
          */
-        setBaseUrl: (baseUrl: string) => {
+        setBaseUrl: (baseUrl?: string) => {
           set((state) =>
             produce(state, (draft) => {
               const currentSession = getCurrentSessionFromState(draft);
               if (currentSession) {
                 currentSession.baseUrl = baseUrl;
               }
+            }),
+          );
+        },
+
+        /**
+         * Set the maximum number of analysis steps
+         * @param maxSteps - The maximum number of steps to set
+         */
+        setMaxSteps: (maxSteps: number) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.maxSteps = maxSteps;
             }),
           );
         },
@@ -227,6 +230,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
           set((state) =>
             produce(state, (draft) => {
+              // Add to AI sessions
               draft.config.ai.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -342,17 +346,14 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             await runAnalysis({
               tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || 'openai',
-              model: currentSession.model || 'gpt-4o-mini',
-              customModelName: currentSession.customModelName,
+              model: currentSession.model || defaultModel,
               apiKey:
                 getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              baseUrl: currentSession.baseUrl || baseUrl,
+              baseUrl: getBaseUrl?.() || currentSession.baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
-              tools: {
-                ...getDefaultTools(store, numberOfRowsToShareWithLLM),
-                ...customTools,
-              },
+              tools: get().ai.tools,
+              maxSteps: getMaxSteps?.() || get().ai.maxSteps || 5,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -415,6 +416,10 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           return Object.entries(get().ai.tools).find(
             ([name]) => name === toolName,
           )?.[1]?.component as React.ComponentType;
+        },
+
+        getMaxSteps: () => {
+          return get().ai.maxSteps;
         },
       },
     };

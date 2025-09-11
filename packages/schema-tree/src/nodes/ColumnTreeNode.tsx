@@ -9,6 +9,7 @@ import {
   TreeNodeActionsMenu,
   TreeNodeActionsMenuItem,
 } from './TreeNodeActionsMenu';
+import {cn} from '@sqlrooms/ui';
 
 export const ColumnTreeNode: FC<{
   className?: string;
@@ -17,7 +18,11 @@ export const ColumnTreeNode: FC<{
 }> = (props) => {
   const {className, nodeObject, additionalMenuItems} = props;
   return (
-    <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
+    <BaseTreeNode
+      asChild
+      className={cn(className, 'h-[18px]')}
+      nodeObject={nodeObject}
+    >
       <div className="flex w-full items-center space-x-2">
         <ColumnTypeBadge
           className="opacity-50"

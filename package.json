@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.13.1",
+  "packageManager": "pnpm@10.15.0",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -83,7 +83,7 @@
       "react-dom": "19.1.0",
       "@types/react": "19.1.7",
       "@types/react-dom": "19.1.6",
-      "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
+      "@duckdb/duckdb-wasm": "1.30.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

@@ -119,7 +119,6 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
       query: string,
       oldTableName?: string,
     ): Promise<void>;
-    removeSqlQueryDataSource(tableName: string): Promise<void>;
     areDatasetsReady(): boolean;
 
     addRoomFile(
@@ -127,7 +126,20 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
       tableName?: string,
       loadFileOptions?: LoadFileOptions,
     ): Promise<DataTable | undefined>;
-    removeRoomFile(pathname: string): void;
+    /**
+     * @deprecated Use removeDataSource or removeRoomFile instead
+     */
+    removeSqlQueryDataSource(tableName: string): Promise<void>;
+    /**
+     * Removes a data source from the room by tableName.
+     * @param tableName - The name of the table of the data source to remove.
+     */
+    removeDataSource(tableName: string): Promise<void>;
+    /**
+     * Removes a file data source from the room by pathname.
+     * @param pathname - The pathname of the file to remove.
+     */
+    removeRoomFile(pathname: string): Promise<void>;
     setRoomFiles(info: RoomFileInfo[]): void;
     setRoomFileProgress(pathname: string, fileState: RoomFileState): void;
     addDataSource: (
@@ -322,20 +334,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           await get().db.refreshTableSchemas();
         },
 
-        removeSqlQueryDataSource: async (tableName) => {
-          const {db} = get();
-          await db.dropTable(tableName);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) => d.tableName !== tableName,
-              );
-              delete draft.room.dataSourceStates[tableName];
-            }),
-          );
-          await get().db.refreshTableSchemas();
-        },
-
         setRoomFiles: (roomFiles) =>
           set((state) =>
             produce(state, (draft) => {
@@ -387,20 +385,41 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           );
           return get().db.findTableByName(tableName);
         },
-
-        removeRoomFile(pathname) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.roomFiles = draft.room.roomFiles.filter(
-                (f) => f.pathname !== pathname,
-              );
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) =>
-                  d.type !== DataSourceTypes.Enum.file ||
-                  d.fileName !== pathname,
-              );
-            }),
+        removeSqlQueryDataSource: async (tableName) => {
+          await get().room.removeDataSource(tableName);
+        },
+        removeDataSource: async (tableName) => {
+          const {db} = get();
+          const dataSource = get().config.dataSources.find(
+            (d) => d.tableName === tableName,
           );
+          if (dataSource) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.config.dataSources = draft.config.dataSources.filter(
+                  (d) => d.tableName !== tableName,
+                );
+                if (dataSource?.type === DataSourceTypes.Enum.file) {
+                  draft.room.roomFiles = draft.room.roomFiles.filter(
+                    (f) => f.pathname !== dataSource.fileName,
+                  );
+                }
+                delete draft.room.dataSourceStates[tableName];
+              }),
+            );
+            await db.dropTable(tableName);
+            await db.refreshTableSchemas();
+          }
+        },
+
+        removeRoomFile: async (pathname) => {
+          const dataSource = get().config.dataSources.find(
+            (d) =>
+              d.type === DataSourceTypes.Enum.file && d.fileName === pathname,
+          );
+          if (dataSource) {
+            await get().room.removeDataSource(dataSource.tableName);
+          }
         },
 
         setRoomFileProgress(pathname, fileState) {

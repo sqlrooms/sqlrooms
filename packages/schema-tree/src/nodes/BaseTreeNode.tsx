@@ -14,7 +14,7 @@ export function BaseTreeNode<T>(
   return (
     <Comp
       className={cn(
-        'hover:bg-foreground/10 w-full flex-grow cursor-pointer select-none rounded-sm p-[1px]',
+        'hover:bg-foreground/10 h-[22px] w-full flex-grow cursor-pointer select-none rounded-sm p-[1px]',
         className,
       )}
     >
@@ -24,7 +24,7 @@ export function BaseTreeNode<T>(
           className,
         )}
       >
-        {children}
+        <div className="absolute h-full w-full items-center">{children}</div>
       </div>
     </Comp>
   );

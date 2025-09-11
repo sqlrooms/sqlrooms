@@ -60,6 +60,8 @@ export type SqlEditorSliceState = {
     tablesError?: string;
 
     queryResultLimit: number;
+    /** Options for the result limit dropdown */
+    queryResultLimitOptions: number[];
 
     /**
      * Run the currently selected query.
@@ -136,8 +138,10 @@ export function createSqlEditorSlice<
   PC extends BaseRoomConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
 >({
   queryResultLimit = 100,
+  queryResultLimitOptions = [100, 500, 1000],
 }: {
   queryResultLimit?: number;
+  queryResultLimitOptions?: number[];
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => {
     return {
@@ -145,6 +149,7 @@ export function createSqlEditorSlice<
         // Initialize runtime state
         isTablesLoading: false,
         queryResultLimit,
+        queryResultLimitOptions,
 
         exportResultsToCsv: (results, filename) => {
           if (!results) return;
@@ -348,6 +353,7 @@ export function createSqlEditorSlice<
             if (signal.aborted) {
               throw new Error('Query aborted');
             }
+            console.log('parsedQuery', parsedLastStatement);
 
             const isValidSelectQuery = !parsedLastStatement.error;
 

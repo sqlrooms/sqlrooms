@@ -1,4 +1,4 @@
-import {RoomStateProvider, RoomStore} from '../../room-store/dist';
+import {RoomStateProvider, RoomStore} from '@sqlrooms/room-store';
 import {MosaicLayout} from '@sqlrooms/layout';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {
@@ -56,7 +56,10 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   );
 };
 
-export const LayoutComposer: FC<{className?: string}> = ({className}) => {
+export const LayoutComposer: FC<{
+  className?: string;
+  tileClassName?: string;
+}> = ({className, tileClassName}) => {
   const layout = useBaseRoomShellStore((state) => state.config.layout);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
@@ -102,6 +105,7 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
           renderTile={renderTile}
           value={layout.nodes}
           onChange={handleLayoutChange}
+          tileClassName={tileClassName}
         />
       ) : null}
     </div>
