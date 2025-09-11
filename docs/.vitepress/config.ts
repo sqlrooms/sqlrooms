@@ -54,7 +54,7 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
-      {text: 'Key Concepts', link: '/key-concepts'},
+      {text: 'Concepts', link: '/key-concepts'},
       {text: 'Examples', link: '/examples'},
       {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},

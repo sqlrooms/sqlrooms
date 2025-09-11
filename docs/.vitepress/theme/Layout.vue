@@ -26,19 +26,19 @@ function dismiss() {
 const caseStudies = [
   {
     title: 'Foursquare Spatial Desktop',
-    href: 'https://foursquare.com/products/spatial-desktop',
+    href: '/case-studies.html#foursquare-spatial-desktop',
     img: '/media/case-studies/fsq-spatial-desktop-earthquakes.webp',
     alt: 'Foursquare Spatial Desktop screenshot',
   },
   {
     title: 'Flowmap City',
-    href: 'https://www.flowmap.city/',
+    href: '/case-studies.html#flowmap-city',
     img: '/media/case-studies/flowmap-city.webp',
     alt: 'Flowmap City screenshot',
   },
   {
     title: 'Cosmograph',
-    href: 'https://cosmograph.app/',
+    href: '/case-studies.html#cosmograph',
     img: '/media/case-studies/cosmograph.webp',
     alt: 'Cosmograph screenshot',
   },
@@ -117,10 +117,11 @@ onMounted(() => {
       <template #layout-bottom>
         <div v-if="frontmatter.layout === 'home'" class="case-studies">
           <div class="cs-header">
-            <h3>Case studies</h3>
-            <a class="cs-view-all" href="/case-studies">View all</a>
+            <h2>Case Studies</h2>
+            <div class="cs-subtitle">
+              Real-world applications built with SQLRooms
+            </div>
           </div>
-
           <div class="cs-carousel" aria-roledescription="carousel">
             <button class="cs-nav cs-prev" @click="prev" aria-label="Previous">
               ‹
@@ -136,16 +137,14 @@ onMounted(() => {
                 class="cs-slide"
                 :class="{active: idx === currentSlide}"
                 :href="item.href"
-                target="_blank"
-                rel="noopener noreferrer"
                 :aria-hidden="idx !== currentSlide"
                 tabindex="0"
               >
                 <img
                   :src="item.img"
                   :alt="item.alt"
-                  width="450"
-                  height="253"
+                  width="300"
+                  height="200"
                   loading="lazy"
                 />
                 <span class="cs-title">{{ item.title }}</span>
@@ -336,20 +335,35 @@ html:not(.dark) .foursquare-footer img {
 
 /* Case Studies Carousel */
 .case-studies {
-  padding: 2rem 0 0;
+  width: 100%;
+  margin: 2rem 0;
+  padding: 2rem;
   border-top: 1px solid var(--vp-c-divider);
-  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }
 .cs-header {
+  width: 100%;
+  font-weight: bold;
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+  justify-content: center;
+  margin-bottom: 1.4rem;
 }
-.cs-header h3 {
+.cs-header h2 {
   margin: 0;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: var(--vp-c-text-1);
+}
+.cs-subtitle {
   font-size: 1rem;
   color: var(--vp-c-text-2);
+  font-weight: normal;
+  margin-top: 0.25rem;
+  text-align: center;
 }
 .cs-view-all {
   color: var(--vp-c-brand-1);
@@ -362,6 +376,8 @@ html:not(.dark) .foursquare-footer img {
 
 .cs-carousel {
   position: relative;
+  width: 400px;
+  max-width: 90%;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
@@ -370,7 +386,7 @@ html:not(.dark) .foursquare-footer img {
 .cs-viewport {
   position: relative;
   overflow: hidden;
-  height: 260px;
+  height: 300px;
 }
 .cs-slide {
   position: absolute;
