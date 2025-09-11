@@ -27,15 +27,15 @@ hero:
 caseStudies:
   - title: 'Foursquare Spatial Desktop'
     href: '/case-studies.html#foursquare-spatial-desktop'
-    img: '/media/case-studies/fsq-spatial-desktop-earthquakes.webp'
+    img: '/carousel/fsq-spatial-desktop-earthquakes.webp'
     alt: 'Foursquare Spatial Desktop screenshot'
   - title: 'Flowmap City'
     href: '/case-studies.html#flowmap-city'
-    img: '/media/case-studies/flowmap-city.webp'
+    img: '/carousel/flowmap-city.webp'
     alt: 'Flowmap City screenshot'
   - title: 'Cosmograph'
     href: '/case-studies.html#cosmograph'
-    img: '/media/case-studies/cosmograph.webp'
+    img: '/carousel/cosmograph.webp'
     alt: 'Cosmograph screenshot'
 
 features:
