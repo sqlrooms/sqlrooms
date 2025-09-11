@@ -7,6 +7,8 @@ import {
   SessionControls,
   QueryControls,
   getDefaultInstructions,
+  ModelSelector,
+  extractModelsFromConfig,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {useRoomStore} from '../store';
@@ -16,12 +18,16 @@ export const MainView: React.FC = () => {
     (s) => s.config.ai.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
+  const aiModelConfig = useRoomStore((s) => s.config.aiModelConfig);
 
   const tables = useBaseRoomShellStore((s) => s.db.tables);
 
   const getDefaultInstructionsWrapper = () => {
     return getDefaultInstructions(tables);
   };
+
+  // Extract models from aiModelConfig
+  const models = extractModelsFromConfig(aiModelConfig);
 
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
 
@@ -44,7 +50,7 @@ export const MainView: React.FC = () => {
           {currentSessionId && (
             <AiConfigPanel isOpen={true} setIsOpen={setIsConfigPanelOpen}>
               <AiConfigPanel.ProvidersConfig />
-              <AiConfigPanel.ModelsConfig currentSessionId={currentSessionId} />
+              <AiConfigPanel.ModelsConfig />
               <AiConfigPanel.ModelParameters
                 getDefaultInstructions={getDefaultInstructionsWrapper}
               />
@@ -68,7 +74,11 @@ export const MainView: React.FC = () => {
             )}
           </div>
 
-          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'" />
+          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+            <div className="flex items-center justify-end gap-2">
+              <ModelSelector models={models} />
+            </div>
+          </QueryControls>
         </>
       )}
     </div>

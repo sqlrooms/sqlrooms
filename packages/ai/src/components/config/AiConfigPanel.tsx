@@ -2,7 +2,6 @@ import {FC, PropsWithChildren} from 'react';
 import {Button} from '@sqlrooms/ui';
 import {X} from 'lucide-react';
 
-import {AiModelSelection} from './AiModelConfig';
 import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage} from './AiModelUsage';
 import {ProvidersConfig} from './ProvidersConfig';
@@ -40,7 +39,6 @@ export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
 export const AiConfigPanel = Object.assign(AiConfigPanelBase, {
   ProvidersConfig: ProvidersConfig,
   ModelsConfig: ModelsConfig,
-  ModelSelection: AiModelSelection,
   ModelUsage: AiModelUsage,
   ModelParameters: AiModelParameters,
 });

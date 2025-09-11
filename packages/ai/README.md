@@ -1,3 +1,5 @@
+# @sqlrooms/ai
+
 An AI integration package for SQLRooms that provides components and utilities for adding AI-powered features to your data applications. This package enables natural language querying, data analysis, and AI-assisted insights.
 
 ## Features
@@ -408,7 +410,7 @@ Each `toolCallMessages` has the following properties:
 
 ## Rendering
 
-```
+```text
 |--------------------------------|
 | AnalysisResultsContainer       |
 |--------------------------------|
@@ -493,163 +495,73 @@ For more information, visit the SQLRooms documentation.
 
 ## AI Chat UI Configuration
 
-This package now includes comprehensive AI chat UI componentse. These components provide a complete set of UI elements for managing AI model configuration, parameters, and usage tracking.
+This package now includes comprehensive AI chat UI components. These components provide a complete set of UI elements for managing AI model configuration, parameters, and usage tracking.
 
 ### AI Chat UI Features
 
 - **createAiModelConfigSlice**: Function to create a Zustand slice for managing AI model configuration with room-shell integration
-- **AiConfigPanel**: Main configuration panel with model selection, parameters, and optional usage tracking
-- **AiModelSelection**: Component for selecting between default and custom AI models
-- **AiModelParameters**: Component for configuring model parameters like max steps and system instructions
-- **AiModelUsage**: Optional component for displaying billing and usage information
-- **AiModelSelector**: Standalone model selector component
+- **AiConfigPanel**: Main configuration panel with modular sub-components for different configuration aspects
+- **ProvidersConfig**: Component for configuring AI providers (OpenAI, Anthropic, etc.) with API keys and base URLs
+- **ModelsConfig**: Component for managing available models and their parameters
+- **ModelParameters**: Component for configuring model parameters like max steps and system instructions
+- **ModelSelector**: Standalone model selector component for quick model switching
+- **extractModelsFromConfig**: Utility function to extract models from configuration for use in selectors
 
 ### AI Chat UI Usage
-
-#### Basic Setup
-
-```tsx
-import {
-  createAiModelConfigSlice,
-  useStoreWithAiModelConfig,
-  AiConfigPanel,
-  ModelUsageData,
-  AiModelSliceConfig,
-} from '@sqlrooms/ai';
-import {createRoomStore} from '@sqlrooms/room-shell';
-
-// Define your room configuration including AI chat UI
-const roomConfig = {
-  // ... other room configuration
-  aiModelConfig: {
-    type: 'default' as const,
-    models: {
-      openai: {
-        provider: 'openai',
-        baseUrl: 'https://api.openai.com/v1',
-        apiKey: '',
-        models: [{id: 'gpt-4o-mini', modelName: 'gpt-4o-mini'}],
-      },
-    },
-    selectedModelId: 'gpt-4o-mini',
-    customModel: {baseUrl: '', apiKey: '', modelName: ''},
-    modelParameters: {maxSteps: 5, additionalInstruction: ''},
-  },
-};
-
-// Create the room store with AI chat UI slice
-const useAppStore = createRoomStore(roomConfig, (store) => ({
-  // ... other slices
-  aiModelConfig: createAiModelConfigSlice()(store),
-}));
-
-// Create model usage data (optional)
-const modelUsage: ModelUsageData = {
-  totalSpend: 15.5,
-  maxBudget: 100.0,
-  isLoadingSpend: false,
-  weeklySpend: [
-    {date: '2024-01-01', spend: 2.5},
-    {date: '2024-01-02', spend: 3.25},
-  ],
-  isLoadingWeeklySpend: false,
-};
-
-// AI functions that need to be provided by your application
-const setBaseUrl = (url: string | undefined) => {
-  // Your implementation to set the base URL for AI requests
-  console.log('Setting base URL:', url);
-};
-
-const setAiModel = (provider: string, model: string) => {
-  // Your implementation to set the AI model
-  console.log('Setting AI model:', provider, model);
-};
-
-const setMaxSteps = (steps: number) => {
-  // Your implementation to set max steps for AI
-  console.log('Setting max steps:', steps);
-};
-
-// Optional: Default instructions function (if you have access to table schemas)
-const getDefaultInstructions = (tables: unknown[]) => {
-  // Your implementation to generate default instructions
-  return `You are analyzing data with ${tables.length} tables available.`;
-};
-
-// Use the AI config panel
-<AiConfigPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen} />;
-```
 
 #### Individual Components
 
 ```tsx
 import {
   AiConfigPanel,
-  AiModelSelection,
-  AiModelParameters,
-  AiModelUsage,
-  AiModelSelector,
-  ModelUsageData,
-  useStoreWithAiModelConfig,
+  ModelSelector,
+  extractModelsFromConfig,
 } from '@sqlrooms/ai';
+import {useRoomStore} from '../store';
 
-// Create model usage data (optional)
-const modelUsage: ModelUsageData = {
-  totalSpend: 15.5,
-  maxBudget: 100.0,
-  isLoadingSpend: false,
-};
+// Access AI model configuration from store
+const aiModelConfig = useRoomStore((s) => s.config.aiModelConfig);
+const models = extractModelsFromConfig(aiModelConfig);
 
-// AI functions that need to be provided by your application
-const setBaseUrl = (url: string | undefined) => {
-  // Your implementation to set the base URL for AI requests
-};
+// Main configuration panel with sub-components
+<AiConfigPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
+  <AiConfigPanel.ProvidersConfig />
+  <AiConfigPanel.ModelsConfig />
+  <AiConfigPanel.ModelParameters
+    getDefaultInstructions={getDefaultInstructionsWrapper}
+  />
+</AiConfigPanel>
 
-const setAiModel = (provider: string, model: string) => {
-  // Your implementation to set the AI model
-};
-
-const setMaxSteps = (steps: number) => {
-  // Your implementation to set max steps for AI
-};
-
-const getDefaultInstructions = (tables: unknown[]) => {
-  // Your implementation to generate default instructions
-  return `You are analyzing data with ${tables.length} tables available.`;
-};
-
-<AiConfigPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen} />;
-
-// Access the AI chat UI state
-const {getAiModelConfig, setSelectedModel} = useStoreWithAiModelConfig(
-  (state) => ({
-    getAiModelConfig: state.getAiModelConfig,
-    setSelectedModel: state.setSelectedModel,
-  }),
-);
+// Standalone model selector
+<ModelSelector models={models} />
 ```
 
 ### AI Chat UI API Reference
+
+#### Core Components
+
+- **`AiConfigPanel`**: Main configuration panel with modular sub-components
+  - `AiConfigPanel.ProvidersConfig`: Configure AI providers (OpenAI, Anthropic, etc.)
+  - `AiConfigPanel.ModelsConfig`: Manage available models and their parameters
+  - `AiConfigPanel.ModelParameters`: Configure model parameters and instructions
+- **`ModelSelector`**: Standalone model selector for quick switching
+- **`extractModelsFromConfig(config)`**: Utility to extract models from configuration
 
 #### Slice Configuration
 
 The package uses a slice-based configuration system that integrates with SQLRooms room-shell:
 
-- **`createAiModelConfigSlice()`**: Creates the AI chat UI slice for state management
-- **`useStoreWithAiModelConfig()`**: Hook to access AI chat UI state from the room store
+- **`createAiModelConfigSlice()`**: Creates the AI model configuration slice for state management
 - **`AiModelSliceConfig`**: TypeScript type for configuration schema
-- **`createDefaultAiModelConfig()`**: Helper to create default configuration
+- **`createDefaultAiModelConfig(providers)`**: Helper to create default configuration with providers
+- **`getApiKey(config, provider, model)`**: Utility to get API key from configuration
+- **`getBaseUrl(config, provider, model)`**: Utility to get base URL from configuration
 
-#### Required Props
+#### Store Integration
 
-The AI Chat UI components require you to provide AI-related functions as props:
+The AI model configuration integrates with the main AI slice through helper functions:
 
-- **`setBaseUrl(url: string | undefined)`**: Function to set the base URL for AI requests
-- **`setAiModel(provider: string, model: string)`**: Function to set the AI model
-- **`setMaxSteps(steps: number)`**: Function to set max steps for AI processing
-
-#### Optional Props
-
-- **`getDefaultInstructions(tables: unknown[])`**: Function to generate default system instructions (optional)
-- **`modelUsage`**: Optional parameter for billing and usage data
+- **`getApiKey()`**: Function to retrieve API key from current session and model config
+- **`getMaxSteps()`**: Function to get max steps from model configuration
+- **`getBaseUrl()`**: Function to get base URL from current session and model config
+- **`getInstructions(tablesSchema)`**: Function to generate system instructions with optional custom instructions

@@ -83,49 +83,38 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          // initialize ai config and ai model config
-          ...(() => {
-            const aiConfig = createDefaultAiConfig(
-              AiSliceConfig.shape.ai.parse(exampleSessions),
-            );
-            return {
-              ...aiConfig,
-              ...createDefaultAiModelConfig(
-                {
-                  models: LLM_MODELS.reduce(
-                    (
-                      acc: Record<
-                        string,
-                        {
-                          name: string;
-                          baseUrl: string;
-                          apiKey: string;
-                          models: Array<{id: string; modelName: string}>;
-                        }
-                      >,
-                      provider,
-                    ) => {
-                      acc[provider.name] = {
-                        name: provider.name,
-                        baseUrl:
-                          PROVIDER_DEFAULT_BASE_URLS[
-                            provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
-                          ],
-                        apiKey: '',
-                        models: provider.models.map((model) => ({
-                          id: model,
-                          modelName: model,
-                        })),
-                      };
-                      return acc;
-                    },
-                    {},
-                  ),
-                },
-                aiConfig.ai.sessions,
-              ),
-            };
-          })(),
+          ...createDefaultAiConfig(
+            AiSliceConfig.shape.ai.parse(exampleSessions),
+          ),
+          ...createDefaultAiModelConfig({
+            providers: LLM_MODELS.reduce(
+              (
+                acc: Record<
+                  string,
+                  {
+                    baseUrl: string;
+                    apiKey: string;
+                    models: Array<{id: string; modelName: string}>;
+                  }
+                >,
+                provider,
+              ) => {
+                acc[provider.name] = {
+                  baseUrl:
+                    PROVIDER_DEFAULT_BASE_URLS[
+                      provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+                    ],
+                  apiKey: '',
+                  models: provider.models.map((model) => ({
+                    id: model,
+                    modelName: model,
+                  })),
+                };
+                return acc;
+              },
+              {},
+            ),
+          }),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
@@ -157,10 +146,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createAiSlice({
         // Get API key from Ai model config UI or your custom logic
         getApiKey: () => {
+          // get selected model from current session
           const state = get();
           const currentSessionId = state.config.ai.currentSessionId;
           if (!currentSessionId) return '';
-          return getApiKey(currentSessionId, state.config.aiModelConfig);
+          const currentSession = state.config.ai.sessions.find(
+            (s) => s.id === currentSessionId,
+          );
+
+          return getApiKey(
+            state.config.aiModelConfig,
+            currentSession?.modelProvider || '',
+            currentSession?.model || '',
+          );
         },
         toolsOptions: {
           // Configure number of rows to share with LLM globally
@@ -176,7 +174,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           const state = get();
           const currentSessionId = state.config.ai.currentSessionId;
           if (!currentSessionId) return undefined;
-          return getBaseUrl(currentSessionId, state.config.aiModelConfig);
+          const currentSession = state.config.ai.sessions.find(
+            (s) => s.id === currentSessionId,
+          );
+          return getBaseUrl(
+            state.config.aiModelConfig,
+            currentSession?.modelProvider || '',
+            currentSession?.model || '',
+          );
         },
         // Add custom tools
         customTools: {

@@ -10,94 +10,70 @@ import {z} from 'zod';
 
 export const AiModelSliceConfig = z.object({
   aiModelConfig: z.object({
-    models: z.record(
+    providers: z.record(
       z.string(), // provider name
       z.object({
-        name: z.string(),
         baseUrl: z.string(),
         apiKey: z.string(),
         models: z.array(
           z.object({
-            id: z.string(), // gpt-5 same as modelName
             modelName: z.string(),
           }),
         ),
       }),
     ),
+    // custom models using provider 'custom'
     customModels: z.array(
       z.object({
-        id: z.string(), // mycoolmodel, collision detection: gpt-5
         baseUrl: z.string(),
         apiKey: z.string(),
-        modelName: z.string(), // qwen
+        modelName: z.string(),
       }),
     ),
     modelParameters: z.object({
       maxSteps: z.number(),
       additionalInstruction: z.string(),
     }),
-    // each session will have its own model
-    sessions: z.array(
-      z.object({
-        id: z.string(),
-        // custom model cuid or provider's model cuid
-        selectedModelId: z.string(),
-      }),
-    ),
   }),
 });
 export type AiModelSliceConfig = z.infer<typeof AiModelSliceConfig>;
 
 export function createDefaultAiModelConfig(
   props: Partial<AiModelSliceConfig['aiModelConfig']>,
-  aiSessions?: Array<{id: string; modelProvider?: string; model?: string}>,
 ): AiModelSliceConfig {
-  // Create model config sessions that align with AI sessions
-  const sessions =
-    aiSessions?.map((session) => ({
-      id: session.id,
-      selectedModelId: session.model || 'gpt-4.1',
-    })) || [];
-
   return {
     aiModelConfig: {
-      models: {
+      providers: {
         openai: {
-          name: 'OpenAI',
           baseUrl: 'https://api.openai.com/v1',
           apiKey: '',
           models: [
             {
-              id: 'gpt-4.1',
               modelName: 'gpt-4.1',
             },
           ],
         },
         anthropic: {
-          name: 'Anthropic',
           baseUrl: 'https://api.anthropic.com',
           apiKey: '',
           models: [
             {
-              id: 'claude-3-sonnet',
-              modelName: 'claude-3-sonnet',
+              modelName: 'claude-4-sonnet',
             },
           ],
         },
       },
       customModels: [
         {
-          id: 'mycoolmodel',
-          baseUrl: 'http://localhost:8000',
+          baseUrl: 'http://localhost:11434/v1',
           apiKey: '',
-          modelName: 'qwen',
+          modelName: 'qwen3',
         },
       ],
       modelParameters: {
         maxSteps: 5,
         additionalInstruction: '',
       },
-      sessions,
       ...props,
     },
   };
@@ -105,27 +81,8 @@ export function createDefaultAiModelConfig(
 
 export type AiModelConfigSliceState = {
   getAiModelConfig: () => AiModelSliceConfig['aiModelConfig'];
-  getModelProviders: () => Record<
-    string,
-    {name: string; apiKey: string; baseUrl: string}
-  >;
-  getModelTypeBySessionId: (sessionId: string) => 'default' | 'custom';
-  getCustomModelBySessionId: (sessionId: string) => {
-    baseUrl: string;
-    apiKey: string;
-    modelName: string;
-  } | null;
-  setSessionModelType: (sessionId: string, type: 'default' | 'custom') => void;
-  setSessionSelectedModel: (sessionId: string, id: string) => void;
-  setSessionCustomModel: (
-    sessionId: string,
-    baseUrl: string,
-    apiKey: string,
-    modelName: string,
-  ) => void;
   setMaxSteps: (maxSteps: number) => void;
   setAdditionalInstruction: (additionalInstruction: string) => void;
-  setModelProviderApiKey: (provider: string, apiKey: string) => void;
   updateProvider: (
     provider: string,
     updates: {
@@ -133,21 +90,18 @@ export type AiModelConfigSliceState = {
       apiKey?: string;
     },
   ) => void;
-  addProvider: (
-    provider: string,
-    name: string,
+  addProvider: (provider: string, baseUrl: string, apiKey: string) => void;
+  addModelToProvider: (provider: string, modelName: string) => void;
+  removeModelFromProvider: (provider: string, modelName: string) => void;
+  removeProvider: (provider: string) => void;
+  addCustomModel: (baseUrl: string, apiKey: string, modelName: string) => void;
+  updateCustomModel: (
+    oldModelName: string,
     baseUrl: string,
     apiKey: string,
+    newModelName: string,
   ) => void;
-  addModelToProvider: (provider: string, modelName: string) => void;
-  removeProvider: (provider: string) => void;
-  addSession: (
-    sessionId: string,
-    modelType?: 'default' | 'custom',
-    selectedModelId?: string,
-  ) => void;
-  removeSession: (sessionId: string) => void;
-  switchToSession: (sessionId: string) => void;
+  removeCustomModel: (modelName: string) => void;
 };
 
 export function createAiModelConfigSlice<
@@ -158,85 +112,6 @@ export function createAiModelConfigSlice<
       getAiModelConfig: () => {
         const state = get();
         return state.config.aiModelConfig;
-      },
-
-      getModelProviders: () => {
-        const state = get();
-        const providers: Record<
-          string,
-          {name: string; apiKey: string; baseUrl: string}
-        > = {};
-
-        Object.entries(state.config.aiModelConfig.models).forEach(
-          ([key, provider]) => {
-            providers[key] = {
-              name: provider.name,
-              apiKey: provider.apiKey,
-              baseUrl: provider.baseUrl,
-            };
-          },
-        );
-
-        return providers;
-      },
-
-      getModelTypeBySessionId: (sessionId: string) => {
-        return 'default';
-      },
-
-      getCustomModelBySessionId: (sessionId: string) => {
-        return {
-          baseUrl: '',
-          apiKey: '',
-          modelName: '',
-        };
-      },
-
-      setSessionModelType: (sessionId: string, type: 'default' | 'custom') => {
-        set((state) =>
-          produce(state, (draft) => {
-            const session = draft.config.aiModelConfig.sessions.find(
-              (s) => s.id === sessionId,
-            );
-          }),
-        );
-      },
-
-      setSessionSelectedModel: (sessionId: string, id: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            // Check if model exists across all providers
-            const modelExists = Object.values(
-              draft.config.aiModelConfig.models,
-            ).some((provider) =>
-              provider.models.some((model) => model.id === id),
-            );
-
-            if (modelExists) {
-              const session = draft.config.aiModelConfig.sessions.find(
-                (s) => s.id === sessionId,
-              );
-              if (session) {
-                session.selectedModelId = id;
-              }
-            }
-          }),
-        );
-      },
-
-      setSessionCustomModel: (
-        sessionId: string,
-        baseUrl: string,
-        apiKey: string,
-        modelName: string,
-      ) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const session = draft.config.aiModelConfig.sessions.find(
-              (s) => s.id === sessionId,
-            );
-          }),
-        );
       },
 
       setMaxSteps: (maxSteps: number) => {
@@ -256,16 +131,6 @@ export function createAiModelConfigSlice<
         );
       },
 
-      setModelProviderApiKey: (provider: string, apiKey: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            if (draft.config.aiModelConfig.models[provider]) {
-              draft.config.aiModelConfig.models[provider].apiKey = apiKey;
-            }
-          }),
-        );
-      },
-
       updateProvider: (
         provider: string,
         updates: {
@@ -275,9 +140,9 @@ export function createAiModelConfigSlice<
       ) => {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.config.aiModelConfig.models[provider]) {
+            if (draft.config.aiModelConfig.providers[provider]) {
               Object.assign(
-                draft.config.aiModelConfig.models[provider],
+                draft.config.aiModelConfig.providers[provider],
                 updates,
               );
             }
@@ -285,16 +150,10 @@ export function createAiModelConfigSlice<
         );
       },
 
-      addProvider: (
-        provider: string,
-        name: string,
-        baseUrl: string,
-        apiKey: string,
-      ) => {
+      addProvider: (provider: string, baseUrl: string, apiKey: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.models[provider] = {
-              name,
+            draft.config.aiModelConfig.providers[provider] = {
               baseUrl,
               apiKey,
               models: [],
@@ -306,15 +165,14 @@ export function createAiModelConfigSlice<
       addModelToProvider: (provider: string, modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.config.aiModelConfig.models[provider]) {
+            if (draft.config.aiModelConfig.providers[provider]) {
               // Check if model already exists
-              const modelExists = draft.config.aiModelConfig.models[
+              const modelExists = draft.config.aiModelConfig.providers[
                 provider
               ].models.some((model) => model.modelName === modelName);
 
               if (!modelExists) {
-                draft.config.aiModelConfig.models[provider].models.push({
-                  id: modelName,
+                draft.config.aiModelConfig.providers[provider].models.push({
                   modelName: modelName,
                 });
               }
@@ -323,46 +181,101 @@ export function createAiModelConfigSlice<
         );
       },
 
-      removeProvider: (provider: string) => {
+      removeModelFromProvider: (provider: string, modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
-            delete draft.config.aiModelConfig.models[provider];
-          }),
-        );
-      },
-
-      addSession: (
-        sessionId: string,
-        modelType = 'default',
-        selectedModelId = 'gpt-4.1',
-      ) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const newSession = {
-              id: sessionId,
-              selectedModelId,
-            };
-            draft.config.aiModelConfig.sessions.push(newSession);
-          }),
-        );
-      },
-
-      removeSession: (sessionId: string) => {
-        set((state) =>
-          produce(state, (draft) => {
-            const sessionIndex = draft.config.aiModelConfig.sessions.findIndex(
-              (s) => s.id === sessionId,
-            );
-            if (sessionIndex !== -1) {
-              draft.config.aiModelConfig.sessions.splice(sessionIndex, 1);
+            if (draft.config.aiModelConfig.providers[provider]) {
+              draft.config.aiModelConfig.providers[provider].models =
+                draft.config.aiModelConfig.providers[provider].models.filter(
+                  (model) => model.modelName !== modelName,
+                );
             }
           }),
         );
       },
 
-      switchToSession: () => {
-        // This method doesn't need to do anything as session switching is handled by AiSlice
-        // The UI will automatically update based on the current session ID
+      removeProvider: (provider: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            delete draft.config.aiModelConfig.providers[provider];
+          }),
+        );
+      },
+
+      addCustomModel: (baseUrl: string, apiKey: string, modelName: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            const newCustomModel = {
+              baseUrl,
+              apiKey,
+              modelName,
+            };
+
+            // Check if a custom model with the same name already exists
+            const existingModelIndex =
+              draft.config.aiModelConfig.customModels.findIndex(
+                (model) =>
+                  model.modelName.toLowerCase() === modelName.toLowerCase(),
+              );
+
+            if (existingModelIndex !== -1) {
+              // Update existing model
+              draft.config.aiModelConfig.customModels[existingModelIndex] =
+                newCustomModel;
+            } else {
+              // Add new model
+              draft.config.aiModelConfig.customModels.push(newCustomModel);
+            }
+          }),
+        );
+      },
+
+      updateCustomModel: (
+        oldModelName: string,
+        baseUrl: string,
+        apiKey: string,
+        newModelName: string,
+      ) => {
+        set((state) =>
+          produce(state, (draft) => {
+            // Find the model to update
+            const modelIndex =
+              draft.config.aiModelConfig.customModels.findIndex(
+                (model) => model.modelName === oldModelName,
+              );
+
+            if (modelIndex !== -1) {
+              // Check if the new name conflicts with another model (excluding the current one)
+              const conflictingModelIndex =
+                draft.config.aiModelConfig.customModels.findIndex(
+                  (model, index) =>
+                    index !== modelIndex &&
+                    model.modelName.toLowerCase() ===
+                      newModelName.toLowerCase(),
+                );
+
+              if (conflictingModelIndex === -1) {
+                // Update the model
+                draft.config.aiModelConfig.customModels[modelIndex] = {
+                  baseUrl,
+                  apiKey,
+                  modelName: newModelName,
+                };
+              }
+            }
+          }),
+        );
+      },
+
+      removeCustomModel: (modelName: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiModelConfig.customModels =
+              draft.config.aiModelConfig.customModels.filter(
+                (model) => model.modelName !== modelName,
+              );
+          }),
+        );
       },
     };
   });

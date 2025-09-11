@@ -6,124 +6,97 @@ import {AiModelSliceConfig} from './AiConfigSlice';
 
 type AiModelConfig = AiModelSliceConfig['aiModelConfig'];
 
-export function createDefaultSessionConfig(sessionId: string) {
-  return {
-    id: sessionId,
-    modelType: 'default' as const,
-    selectedModelId: 'gpt-4.1',
-    customModel: {
-      baseUrl: '',
-      apiKey: '',
-      modelName: '',
-    },
-  };
-}
-
 /**
  * Get the API key for the currently selected model
  * @param config - The AI Chat UI configuration
  * @returns The API key for the selected model, or empty string if not found
  */
-export function getApiKey(sessionId: string, config: AiModelConfig): string {
-  const session = config.sessions.find((s) => s.id === sessionId);
-  if (!session) {
-    return '';
+export function getApiKey(
+  config: AiModelConfig,
+  modelProvider: string,
+  model: string,
+): string {
+  // If modelProvider is 'custom', find the model in customModels
+  if (modelProvider === 'custom') {
+    const customModel = config.customModels.find(
+      (customModel) => customModel.modelName === model,
+    );
+    return customModel?.apiKey || '';
   }
 
-  if (!session.selectedModelId) {
-    return '';
-  }
-
-  // Find the model across all providers
-  for (const providerKey in config.models) {
-    const provider = config.models[providerKey];
-    if (provider) {
-      const model = provider.models.find(
-        (model) => model.id === session.selectedModelId,
-      );
-      if (model) {
-        return provider.apiKey || '';
-      }
-    }
-  }
-  return '';
+  // Otherwise, find the provider and return its apiKey
+  const provider = config.providers[modelProvider];
+  return provider?.apiKey || '';
 }
 
 /**
- * Get the base URL for the currently selected model
+ * Get the base URL for the specified model
  * @param config - The AI Chat UI configuration
+ * @param modelProvider - The model provider name
+ * @param model - The model name
  * @returns The base URL for the selected model, or undefined if not found
  */
 export function getBaseUrl(
-  sessionId: string,
   config: AiModelConfig,
+  modelProvider: string,
+  model: string,
 ): string | undefined {
-  const session = config.sessions.find((s) => s.id === sessionId);
-  if (!session) {
-    return undefined;
+  // If modelProvider is 'custom', find the model in customModels
+  if (modelProvider === 'custom') {
+    const customModel = config.customModels.find(
+      (customModel) => customModel.modelName === model,
+    );
+    return customModel?.baseUrl;
   }
 
-  if (!session.selectedModelId) {
-    return undefined;
-  }
-
-  // Find the model across all providers
-  for (const providerKey in config.models) {
-    const provider = config.models[providerKey];
-    if (provider) {
-      const model = provider.models.find(
-        (model) => model.id === session.selectedModelId,
-      );
-      if (model) {
-        return provider.baseUrl;
-      }
+  // Otherwise, find the provider and return its baseUrl
+  const provider = config.providers[modelProvider];
+  if (provider) {
+    const modelExists = provider.models.find(
+      (modelItem) => modelItem.modelName === model,
+    );
+    if (modelExists) {
+      return provider.baseUrl;
     }
   }
   return undefined;
 }
 
 /**
- * Get the selected model information
- * @param sessionId - The session ID to get the model for
- * @param config - The AI Chat UI configuration
- * @returns The selected model information, or null if not found
+ * Extract models from aiModelConfig in the format expected by ModelSelector
+ * @param config - The AI model configuration
+ * @returns Array of models with provider, label, and value properties
  */
-export function getSelectedModel(
-  sessionId: string,
-  config: AiModelConfig,
-): {
-  id: string;
-  modelName: string;
+export function extractModelsFromConfig(config: AiModelConfig): Array<{
   provider: string;
-  baseUrl: string;
-  apiKey: string;
-} | null {
-  const session = config.sessions.find((s) => s.id === sessionId);
-  if (!session) {
-    return null;
-  }
+  label: string;
+  value: string;
+}> {
+  const models: Array<{
+    provider: string;
+    label: string;
+    value: string;
+  }> = [];
 
-  if (!session.selectedModelId) {
-    return null;
-  }
+  // Extract models from providers
+  Object.entries(config.providers).forEach(([providerKey, provider]) => {
+    provider.models.forEach((model) => {
+      models.push({
+        provider: providerKey,
+        label: model.modelName,
+        value: model.modelName,
+      });
+    });
+  });
 
-  // Find the model across all providers
-  for (const providerKey in config.models) {
-    const provider = config.models[providerKey];
-    if (provider) {
-      const model = provider.models.find(
-        (model) => model.id === session.selectedModelId,
-      );
-      if (model) {
-        return {
-          id: model.id,
-          modelName: model.modelName,
-          provider: providerKey,
-          baseUrl: provider.baseUrl,
-          apiKey: provider.apiKey,
-        };
-      }
-    }
-  }
-  return null;
+  // Add custom models
+  config.customModels.forEach((customModel) => {
+    models.push({
+      provider: 'custom',
+      label: customModel.modelName,
+      value: customModel.modelName,
+    });
+  });
+
+  return models;
 }

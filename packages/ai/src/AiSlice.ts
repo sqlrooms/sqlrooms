@@ -240,22 +240,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 createdAt: new Date(),
               });
               draft.config.ai.currentSessionId = newSessionId;
-
-              // Add to model config sessions
-              const modelConfigSessions = (draft.config as any).aiModelConfig
-                ?.sessions;
-              if (modelConfigSessions) {
-                modelConfigSessions.push({
-                  id: newSessionId,
-                  modelType: 'default',
-                  selectedModelId: model || currentSession?.model || 'gpt-4.1',
-                  customModel: {
-                    baseUrl: '',
-                    apiKey: '',
-                    modelName: '',
-                  },
-                });
-              }
             }),
           );
         },
@@ -310,18 +294,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                       }
                     }
                   }
-                }
-              }
-
-              // Also remove from model config sessions
-              const modelConfigSessions = (draft.config as any).aiModelConfig
-                ?.sessions;
-              if (modelConfigSessions) {
-                const modelConfigSessionIndex = modelConfigSessions.findIndex(
-                  (s: any) => s.id === sessionId,
-                );
-                if (modelConfigSessionIndex !== -1) {
-                  modelConfigSessions.splice(modelConfigSessionIndex, 1);
                 }
               }
             }),
