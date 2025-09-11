@@ -23,8 +23,8 @@ export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
     <div className="bg-background border-border w-full rounded-lg border shadow-sm">
       <div className="relative flex flex-col gap-12 overflow-y-auto p-6">
         <Button
-          variant="outline"
-          size="sm"
+          variant="ghost"
+          size="icon"
           onClick={() => setIsOpen(false)}
           className="absolute right-2 top-2 z-10"
         >

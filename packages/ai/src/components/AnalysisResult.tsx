@@ -67,7 +67,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
   return (
-    <div className="group flex w-full flex-col gap-2 text-sm">
+    <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
         <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />

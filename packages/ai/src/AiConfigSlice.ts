@@ -51,6 +51,9 @@ export function createDefaultAiModelConfig(
             {
               modelName: 'gpt-4.1',
             },
+            {
+              modelName: 'gpt-5',
+            },
           ],
         },
         anthropic: {
@@ -64,11 +67,11 @@ export function createDefaultAiModelConfig(
         },
       },
       customModels: [
-        {
-          baseUrl: 'http://localhost:11434/v1',
-          apiKey: '',
-          modelName: 'qwen3',
-        },
+        // {
+        //   baseUrl: 'http://localhost:11434/v1',
+        //   apiKey: '',
+        //   modelName: 'qwen3',
+        // },
       ],
       modelParameters: {
         maxSteps: 5,
