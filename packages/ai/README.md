@@ -578,16 +578,7 @@ const getDefaultInstructions = (tables: unknown[]) => {
 };
 
 // Use the AI config panel
-<AiConfigPanel
-  isOpen={isConfigOpen}
-  setIsOpen={setIsConfigOpen}
-  modelUsage={modelUsage} // Optional
-  hideDefaultApiKeyInput={true} // Optional - hide API key input when using proxy servers
-  setBaseUrl={setBaseUrl} // Required
-  setAiModel={setAiModel} // Required
-  setMaxSteps={setMaxSteps} // Required
-  getDefaultInstructions={getDefaultInstructions} // Optional
-/>;
+<AiConfigPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen} />;
 ```
 
 #### Individual Components
@@ -628,22 +619,15 @@ const getDefaultInstructions = (tables: unknown[]) => {
   return `You are analyzing data with ${tables.length} tables available.`;
 };
 
-<AiConfigPanel
-  isOpen={isConfigOpen}
-  setIsOpen={setIsConfigOpen}
-  modelUsage={modelUsage} // Optional - usage panel will be hidden if not provided
-  hideDefaultApiKeyInput={true} // Optional - hide API key input when using proxy servers
-  setBaseUrl={setBaseUrl} // Required
-  setAiModel={setAiModel} // Required
-  setMaxSteps={setMaxSteps} // Required
-  getDefaultInstructions={getDefaultInstructions} // Optional
-/>;
+<AiConfigPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen} />;
 
 // Access the AI chat UI state
-const {getAiModelConfig, setSelectedModel} = useStoreWithAiModelConfig((state) => ({
-  getAiModelConfig: state.getAiModelConfig,
-  setSelectedModel: state.setSelectedModel,
-}));
+const {getAiModelConfig, setSelectedModel} = useStoreWithAiModelConfig(
+  (state) => ({
+    getAiModelConfig: state.getAiModelConfig,
+    setSelectedModel: state.setSelectedModel,
+  }),
+);
 ```
 
 ### AI Chat UI API Reference
@@ -669,4 +653,3 @@ The AI Chat UI components require you to provide AI-related functions as props:
 
 - **`getDefaultInstructions(tables: unknown[])`**: Function to generate default system instructions (optional)
 - **`modelUsage`**: Optional parameter for billing and usage data
-- **`hideDefaultApiKeyInput`**: Optional boolean to hide API key input fields when API keys are managed by the proxy server

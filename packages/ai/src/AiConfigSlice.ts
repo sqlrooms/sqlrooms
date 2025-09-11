@@ -11,9 +11,9 @@ import {z} from 'zod';
 export const AiModelSliceConfig = z.object({
   aiModelConfig: z.object({
     models: z.record(
-      z.string(),
+      z.string(), // provider name
       z.object({
-        provider: z.string(),
+        name: z.string(),
         baseUrl: z.string(),
         apiKey: z.string(),
         models: z.array(
@@ -63,13 +63,24 @@ export function createDefaultAiModelConfig(
     aiModelConfig: {
       models: {
         openai: {
-          provider: 'openai',
+          name: 'OpenAI',
           baseUrl: 'https://api.openai.com/v1',
           apiKey: '',
           models: [
             {
               id: 'gpt-4.1',
               modelName: 'gpt-4.1',
+            },
+          ],
+        },
+        anthropic: {
+          name: 'Anthropic',
+          baseUrl: 'https://api.anthropic.com',
+          apiKey: '',
+          models: [
+            {
+              id: 'claude-3-sonnet',
+              modelName: 'claude-3-sonnet',
             },
           ],
         },
@@ -94,6 +105,10 @@ export function createDefaultAiModelConfig(
 
 export type AiModelConfigSliceState = {
   getAiModelConfig: () => AiModelSliceConfig['aiModelConfig'];
+  getModelProviders: () => Record<
+    string,
+    {name: string; apiKey: string; baseUrl: string}
+  >;
   getModelTypeBySessionId: (sessionId: string) => 'default' | 'custom';
   getCustomModelBySessionId: (sessionId: string) => {
     baseUrl: string;
@@ -118,6 +133,14 @@ export type AiModelConfigSliceState = {
       apiKey?: string;
     },
   ) => void;
+  addProvider: (
+    provider: string,
+    name: string,
+    baseUrl: string,
+    apiKey: string,
+  ) => void;
+  addModelToProvider: (provider: string, modelName: string) => void;
+  removeProvider: (provider: string) => void;
   addSession: (
     sessionId: string,
     modelType?: 'default' | 'custom',
@@ -135,6 +158,26 @@ export function createAiModelConfigSlice<
       getAiModelConfig: () => {
         const state = get();
         return state.config.aiModelConfig;
+      },
+
+      getModelProviders: () => {
+        const state = get();
+        const providers: Record<
+          string,
+          {name: string; apiKey: string; baseUrl: string}
+        > = {};
+
+        Object.entries(state.config.aiModelConfig.models).forEach(
+          ([key, provider]) => {
+            providers[key] = {
+              name: provider.name,
+              apiKey: provider.apiKey,
+              baseUrl: provider.baseUrl,
+            };
+          },
+        );
+
+        return providers;
       },
 
       getModelTypeBySessionId: (sessionId: string) => {
@@ -238,6 +281,52 @@ export function createAiModelConfigSlice<
                 updates,
               );
             }
+          }),
+        );
+      },
+
+      addProvider: (
+        provider: string,
+        name: string,
+        baseUrl: string,
+        apiKey: string,
+      ) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.config.aiModelConfig.models[provider] = {
+              name,
+              baseUrl,
+              apiKey,
+              models: [],
+            };
+          }),
+        );
+      },
+
+      addModelToProvider: (provider: string, modelName: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            if (draft.config.aiModelConfig.models[provider]) {
+              // Check if model already exists
+              const modelExists = draft.config.aiModelConfig.models[
+                provider
+              ].models.some((model) => model.modelName === modelName);
+
+              if (!modelExists) {
+                draft.config.aiModelConfig.models[provider].models.push({
+                  id: modelName,
+                  modelName: modelName,
+                });
+              }
+            }
+          }),
+        );
+      },
+
+      removeProvider: (provider: string) => {
+        set((state) =>
+          produce(state, (draft) => {
+            delete draft.config.aiModelConfig.models[provider];
           }),
         );
       },

@@ -19,7 +19,6 @@ interface AiModelSelectorProps {
   currentSessionId: string;
   hideDefaultApiKeyInput?: boolean;
   hideDefaultBaseUrlInput?: boolean;
-  onModelChange?: (provider: string, model: string) => void;
 }
 
 export const AiModelSelector: FC<AiModelSelectorProps> = ({
@@ -27,7 +26,6 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
   currentSessionId,
   hideDefaultApiKeyInput,
   hideDefaultBaseUrlInput,
-  onModelChange,
 }) => {
   const aiConfig = useStoreWithAiModelConfig((s) => s.getAiModelConfig());
 
@@ -36,10 +34,10 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
       Object.values(aiConfig.models).reduce(
         (acc, provider) => {
           if (provider) {
-            if (!acc[provider.provider]) {
-              acc[provider.provider] = [];
+            if (!acc[provider.name]) {
+              acc[provider.name] = [];
             }
-            acc[provider.provider]!.push(...provider.models);
+            acc[provider.name]!.push(...provider.models);
           }
           return acc;
         },
@@ -73,7 +71,7 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
           return {
             id: model.id,
             modelName: model.modelName,
-            provider: provider.provider,
+            provider: provider.name,
             baseUrl: provider.baseUrl,
             apiKey: provider.apiKey,
           };
@@ -94,11 +92,10 @@ export const AiModelSelector: FC<AiModelSelectorProps> = ({
     for (const providerKey in aiConfig.models) {
       const provider = aiConfig.models[providerKey];
       if (provider && provider.models.some((m) => m.id === value)) {
-        providerForModel = provider.provider;
+        providerForModel = provider.name;
         break;
       }
     }
-    onModelChange?.(providerForModel, value);
   };
 
   const onDefaultModelApiKeyChange = (

@@ -14,7 +14,7 @@ import {
 } from '@sqlrooms/ui';
 import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 
-interface AiModelParametersProps {
+export interface AiModelParametersProps {
   getDefaultInstructions?: () => string;
 }
 

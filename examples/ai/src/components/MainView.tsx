@@ -7,7 +7,6 @@ import {
   SessionControls,
   QueryControls,
   getDefaultInstructions,
-  useStoreWithAi,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {useRoomStore} from '../store';
@@ -19,8 +18,6 @@ export const MainView: React.FC = () => {
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const tables = useBaseRoomShellStore((s) => s.db.tables);
-
-  const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
 
   const getDefaultInstructionsWrapper = () => {
     return getDefaultInstructions(tables);
@@ -45,13 +42,13 @@ export const MainView: React.FC = () => {
       {isConfigPanelOpen ? (
         <div className="flex-grow overflow-auto">
           {currentSessionId && (
-            <AiConfigPanel
-              currentSessionId={currentSessionId}
-              isOpen={true}
-              setIsOpen={setIsConfigPanelOpen}
-              getDefaultInstructions={getDefaultInstructionsWrapper}
-              onModelChange={setAiModel}
-            />
+            <AiConfigPanel isOpen={true} setIsOpen={setIsConfigPanelOpen}>
+              <AiConfigPanel.ProvidersConfig />
+              <AiConfigPanel.ModelsConfig currentSessionId={currentSessionId} />
+              <AiConfigPanel.ModelParameters
+                getDefaultInstructions={getDefaultInstructionsWrapper}
+              />
+            </AiConfigPanel>
           )}
         </div>
       ) : (

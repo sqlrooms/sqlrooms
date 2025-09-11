@@ -4,18 +4,16 @@ import {Input, Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
 import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 import {AiModelSelector} from './AiModelSelector';
 
-interface AiModelSelectionProps {
+export interface AiModelSelectionProps {
   className?: string;
   hideDefaultApiKeyInput?: boolean;
   hideDefaultBaseUrlInput?: boolean;
   currentSessionId: string;
-  onModelChange?: (provider: string, model: string) => void;
 }
 
 export const AiModelSelection: FC<AiModelSelectionProps> = ({
   className = '',
   currentSessionId,
-  onModelChange,
 }) => {
   const aiConfigType = useStoreWithAiModelConfig((s) =>
     s.getModelTypeBySessionId(currentSessionId),
@@ -77,7 +75,6 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
         aiConfigCustomModel.apiKey,
         modelName,
       );
-      onModelChange?.('custom', modelName);
     }
   };
 
@@ -102,7 +99,6 @@ export const AiModelSelection: FC<AiModelSelectionProps> = ({
           <AiModelSelector
             className="w-full"
             currentSessionId={currentSessionId}
-            onModelChange={onModelChange}
           />
         </TabsContent>
 

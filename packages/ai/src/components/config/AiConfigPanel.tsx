@@ -1,31 +1,22 @@
-import {FC} from 'react';
+import {FC, PropsWithChildren} from 'react';
 import {Button} from '@sqlrooms/ui';
 import {X} from 'lucide-react';
 
 import {AiModelSelection} from './AiModelConfig';
 import {AiModelParameters} from './AiModelParameters';
-import {AiModelUsage, ModelUsageData} from './AiModelUsage';
+import {AiModelUsage} from './AiModelUsage';
+import {ProvidersConfig} from './ProvidersConfig';
+import {ModelsConfig} from './ModelsConfig';
 
 interface AiConfigPanelProps {
-  currentSessionId: string;
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
-  modelUsage?: ModelUsageData;
-  hideDefaultApiKeyInput?: boolean;
-  hideDefaultBaseUrlInput?: boolean;
-  getDefaultInstructions?: () => string;
-  onModelChange?: (provider: string, model: string) => void;
 }
 
-export const AiConfigPanel: FC<AiConfigPanelProps> = ({
-  currentSessionId,
+export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
   isOpen,
   setIsOpen,
-  modelUsage,
-  hideDefaultApiKeyInput,
-  hideDefaultBaseUrlInput,
-  getDefaultInstructions,
-  onModelChange,
+  children,
 }) => {
   if (!isOpen) return null;
 
@@ -40,23 +31,16 @@ export const AiConfigPanel: FC<AiConfigPanelProps> = ({
         >
           <X className="h-4 w-4" />
         </Button>
-        <AiModelSelection
-          hideDefaultApiKeyInput={hideDefaultApiKeyInput}
-          hideDefaultBaseUrlInput={hideDefaultBaseUrlInput}
-          currentSessionId={currentSessionId}
-          onModelChange={onModelChange}
-        />
-        {modelUsage && (
-          <AiModelUsage
-            totalSpend={modelUsage.totalSpend}
-            maxBudget={modelUsage.maxBudget}
-            isLoadingSpend={modelUsage.isLoadingSpend}
-            weeklySpend={modelUsage.weeklySpend}
-            isLoadingWeeklySpend={modelUsage.isLoadingWeeklySpend}
-          />
-        )}
-        <AiModelParameters getDefaultInstructions={getDefaultInstructions} />
+        {children}
       </div>
     </div>
   );
 };
+
+export const AiConfigPanel = Object.assign(AiConfigPanelBase, {
+  ProvidersConfig: ProvidersConfig,
+  ModelsConfig: ModelsConfig,
+  ModelSelection: AiModelSelection,
+  ModelUsage: AiModelUsage,
+  ModelParameters: AiModelParameters,
+});

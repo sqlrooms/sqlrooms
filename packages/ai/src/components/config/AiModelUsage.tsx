@@ -21,7 +21,8 @@ export interface ModelUsageData {
 
 type AiModelUsageProps = {
   className?: string;
-} & ModelUsageData;
+  modelUsage?: ModelUsageData;
+};
 
 const fillMissingDays = (weeklySpend: Array<{date: string; spend: number}>) => {
   const today = new Date();
@@ -52,12 +53,18 @@ const fillMissingDays = (weeklySpend: Array<{date: string; spend: number}>) => {
 
 export const AiModelUsage: FC<AiModelUsageProps> = ({
   className = '',
-  totalSpend,
-  maxBudget,
-  isLoadingSpend,
-  weeklySpend = [],
-  isLoadingWeeklySpend,
+  modelUsage,
 }) => {
+  if (!modelUsage) return null;
+
+  const {
+    totalSpend,
+    maxBudget,
+    isLoadingSpend,
+    weeklySpend,
+    isLoadingWeeklySpend,
+  } = modelUsage;
+
   const getCurrentMonthRange = () => {
     const now = new Date();
     const month = now.toLocaleDateString('en-US', {month: 'long'});
@@ -127,7 +134,7 @@ export const AiModelUsage: FC<AiModelUsageProps> = ({
               >
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart
-                    data={fillMissingDays(weeklySpend).map((day) => ({
+                    data={fillMissingDays(weeklySpend || []).map((day) => ({
                       ...day,
                       dayLabel: new Date(day.date).toLocaleDateString('en-US', {
                         weekday: 'short',

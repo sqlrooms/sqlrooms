@@ -97,7 +97,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
                       acc: Record<
                         string,
                         {
-                          provider: string;
+                          name: string;
                           baseUrl: string;
                           apiKey: string;
                           models: Array<{id: string; modelName: string}>;
@@ -106,7 +106,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
                       provider,
                     ) => {
                       acc[provider.name] = {
-                        provider: provider.name,
+                        name: provider.name,
                         baseUrl:
                           PROVIDER_DEFAULT_BASE_URLS[
                             provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS

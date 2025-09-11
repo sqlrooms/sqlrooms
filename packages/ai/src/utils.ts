@@ -30,10 +30,6 @@ export function getApiKey(sessionId: string, config: AiModelConfig): string {
     return '';
   }
 
-  if (session.modelType === 'custom') {
-    return session.customModel.apiKey;
-  }
-
   if (!session.selectedModelId) {
     return '';
   }
@@ -65,10 +61,6 @@ export function getBaseUrl(
   const session = config.sessions.find((s) => s.id === sessionId);
   if (!session) {
     return undefined;
-  }
-
-  if (session.modelType === 'custom') {
-    return session.customModel.baseUrl;
   }
 
   if (!session.selectedModelId) {
@@ -111,16 +103,6 @@ export function getSelectedModel(
     return null;
   }
 
-  if (session.modelType === 'custom') {
-    return {
-      id: 'custom',
-      modelName: session.customModel.modelName,
-      provider: 'custom',
-      baseUrl: session.customModel.baseUrl,
-      apiKey: session.customModel.apiKey,
-    };
-  }
-
   if (!session.selectedModelId) {
     return null;
   }
@@ -136,7 +118,7 @@ export function getSelectedModel(
         return {
           id: model.id,
           modelName: model.modelName,
-          provider: provider.provider,
+          provider: providerKey,
           baseUrl: provider.baseUrl,
           apiKey: provider.apiKey,
         };

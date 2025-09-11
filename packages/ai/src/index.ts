@@ -39,6 +39,8 @@ export {
 export type {AiModelConfigSliceState as AiModelConfigState} from './AiConfigSlice';
 
 export {AiConfigPanel} from './components/config/AiConfigPanel';
+export {ProvidersConfig} from './components/config/ProvidersConfig';
+export {ModelsConfig} from './components/config/ModelsConfig';
 export {AiModelParameters} from './components/config/AiModelParameters';
 export {AiModelSelection} from './components/config/AiModelConfig';
 export {AiModelSelector} from './components/config/AiModelSelector';
