@@ -91,7 +91,7 @@ export interface AiSliceOptions {
    * @returns The instructions string to use
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
-  defaultToolsOptions?: DefaultToolsOptions;
+  toolsOptions?: DefaultToolsOptions;
 }
 
 /**
@@ -116,7 +116,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     initialAnalysisPrompt = '',
     customTools = {},
     getInstructions,
-    defaultToolsOptions,
+    toolsOptions,
     defaultModel = 'gpt-4o-mini',
   } = params;
 
@@ -127,7 +127,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         isRunningAnalysis: false,
 
         tools: {
-          ...getDefaultTools(store, defaultToolsOptions),
+          ...getDefaultTools(store, toolsOptions),
           ...customTools,
         },
 

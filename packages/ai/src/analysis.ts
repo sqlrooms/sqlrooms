@@ -98,7 +98,7 @@ async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
     )`);
     return arrowTableToJson(summaryResult);
   } catch (error) {
-    console.warn('Failed to get summary for query:', sqlQuery, error);
+    console.warn('Failed to get summary for query. Error:', error);
     return null;
   }
 }
@@ -232,16 +232,16 @@ export type DefaultToolsOptions = {
   /**
    * Whether to enable read only mode (default: true)
    */
-  readOnly: boolean;
+  readOnly?: boolean;
   /**
    * Number of rows to share with LLM (default: 0)
    */
 
-  numberOfRowsToShareWithLLM: number;
+  numberOfRowsToShareWithLLM?: number;
   /**
    * Whether to automatically generate a summary of the query result (default: true)
    */
-  autoSummary: boolean;
+  autoSummary?: boolean;
 };
 
 /**
