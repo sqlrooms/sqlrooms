@@ -158,14 +158,7 @@ export const VegaLiteChart: React.FC<{
         refinedSpec &&
         data && (
           <AspectRatio ratio={aspectRatio}>
-            <VegaLite
-              spec={refinedSpec}
-              data={data}
-              onError={(error) => {
-                console.error(error);
-                setChartError(error);
-              }}
-            />
+            <VegaLite spec={refinedSpec} data={data} onError={setChartError} />
           </AspectRatio>
         )
       )}
