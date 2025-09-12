@@ -12,11 +12,15 @@
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "zod": "^3.25.73",
+    "lucide-react": "0.501.0",
+    "zustand": "5.0.5",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/sql-editor": "workspace:*"
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/utils": "workspace:*"
   },
   "devDependencies": {
     "@types/react": "^19.1.7",

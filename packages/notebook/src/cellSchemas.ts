@@ -1,12 +1,6 @@
 import {z} from 'zod';
 
-export const NotebookCellTypes = z.enum([
-  'sql',
-  'markdown',
-  'text',
-  'vega',
-  'input',
-]);
+export const NotebookCellTypes = z.enum(['sql', 'text', 'vega', 'input']);
 export type NotebookCellTypes = z.infer<typeof NotebookCellTypes>;
 
 export const SqlCellSchema = z.object({
@@ -24,14 +18,6 @@ export const TextCellSchema = z.object({
   text: z.string().default(''),
 });
 export type TextCell = z.infer<typeof TextCellSchema>;
-
-export const MarkdownCellSchema = z.object({
-  id: z.string(),
-  name: z.string().default('Markdown'),
-  type: z.literal('markdown'),
-  markdown: z.string().default(''),
-});
-export type MarkdownCell = z.infer<typeof MarkdownCellSchema>;
 
 export const VegaCellSchema = z.object({
   id: z.string(),
@@ -73,7 +59,6 @@ export type InputCell = z.infer<typeof InputCellSchema>;
 export const NotebookCellSchema = z.discriminatedUnion('type', [
   SqlCellSchema,
   TextCellSchema,
-  MarkdownCellSchema,
   VegaCellSchema,
   InputCellSchema,
 ]);
@@ -91,6 +76,7 @@ export const NotebookSliceConfig = z.object({
     tabs: z.array(NotebookTabSchema).default([]),
     currentTabId: z.string().optional(),
     cells: z.record(z.string(), NotebookCellSchema).default({}),
+    currentCellId: z.string().optional(),
   }),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;
