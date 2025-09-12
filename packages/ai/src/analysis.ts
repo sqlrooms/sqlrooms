@@ -118,9 +118,6 @@ type AnalysisParameters = {
   /** Model identifier (e.g., 'gpt-4', 'claude-3') */
   model: string;
 
-  /** Custom model name for Ollama (used when model is 'custom') */
-  customModelName?: string;
-
   /** Authentication key for the model provider's API */
   apiKey: string;
 
@@ -168,7 +165,6 @@ export async function runAnalysis({
   tableSchemas,
   modelProvider,
   model,
-  customModelName,
   apiKey,
   prompt,
   abortController,
@@ -179,15 +175,11 @@ export async function runAnalysis({
   getInstructions,
   baseUrl,
 }: AnalysisParameters) {
-  // Use custom model name if model is 'custom' and customModelName is provided
-  const actualModel =
-    model === 'custom' && customModelName ? customModelName : model;
-
   // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
-    model: actualModel,
+    model,
     apiKey,
     version: 'v1',
     instructions: getInstructions
