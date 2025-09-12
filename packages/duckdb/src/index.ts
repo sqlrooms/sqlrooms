@@ -25,6 +25,7 @@ export {
   isWasmDuckDbConnector,
   type WasmDuckDbConnector,
 } from './connectors/createDuckDbConnector';
+export {createWebSocketDuckDbConnector} from './connectors/WebSocketDuckDbConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';
 export {

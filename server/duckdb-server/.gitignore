@@ -1,0 +1,10 @@
+dist
+build
+**/test-output
+**/__pycache__
+**/.ruff_cache
+**/.pytest_cache
+**/.mypy_cache
+**/.venv
+.DS_Store
+.DS_Store?

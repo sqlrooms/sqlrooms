@@ -188,6 +188,24 @@ def create_app(cache):
                 message = await ws.receive_text()
                 try:
                     query = ujson.loads(message)
+                    # Support explicit per-query cancellation over WebSocket
+                    if isinstance(query, dict) and query.get("type") == "cancel":
+                        qid = query.get("queryId")
+                        if not qid:
+                            await ws.send_text(json.dumps({
+                                "type": "cancelAck",
+                                "cancelled": False,
+                                "error": "Missing queryId in cancel message",
+                            }))
+                        else:
+                            ok = db_async.cancel_query(qid)
+                            await ws.send_text(json.dumps({
+                                "type": "cancelAck",
+                                "queryId": qid,
+                                "cancelled": bool(ok),
+                            }))
+                        continue
+
                     handler = WebSocketHandler(ws)
                     await handle_query(handler, cache, query)
                 except Exception as e:
