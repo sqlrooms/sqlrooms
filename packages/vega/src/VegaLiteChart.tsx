@@ -1,4 +1,4 @@
-import {useSql} from '@sqlrooms/duckdb';
+import {arrowTableToJson, useSql} from '@sqlrooms/duckdb';
 import {
   AspectRatio,
   Button,
@@ -106,8 +106,8 @@ export const VegaLiteChart: React.FC<{
 
   const result = useSql({query: sqlQuery});
   const data = useMemo(() => {
-    if (!result.data) return null;
-    return {[DATA_NAME]: result.data.toArray()};
+    if (!result.data?.arrowTable) return null;
+    return {[DATA_NAME]: arrowTableToJson(result.data.arrowTable)};
   }, [result.data]);
 
   // Reset chart error whenever spec or data changes
