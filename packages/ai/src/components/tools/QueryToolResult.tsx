@@ -1,13 +1,17 @@
 import {DataTableModal} from '@sqlrooms/data-table';
 import {Button, CopyButton, useDisclosure} from '@sqlrooms/ui';
+import * as arrow from 'apache-arrow';
 import {TableIcon} from 'lucide-react';
 
 type QueryToolResultProps = {
   title: string;
   sqlQuery: string;
+  /** Provided in case the query result is already an arrow table */
+  arrowTable?: arrow.Table;
 };
 
-export function QueryToolResult({title, sqlQuery}: QueryToolResultProps) {
+export function QueryToolResult(props: QueryToolResultProps) {
+  const {title, sqlQuery} = props;
   const tableModal = useDisclosure();
   return (
     <>
@@ -30,7 +34,23 @@ export function QueryToolResult({title, sqlQuery}: QueryToolResultProps) {
         </Button>
       </div>
 
-      <DataTableModal title={title} query={sqlQuery} tableModal={tableModal} />
+      {'arrowTable' in props ? (
+        props.arrowTable ? (
+          <DataTableModal
+            title={title}
+            arrowTable={props.arrowTable}
+            tableModal={tableModal}
+          />
+        ) : (
+          <div className="p-4 text-xs">No data</div>
+        )
+      ) : (
+        <DataTableModal
+          title={title}
+          query={sqlQuery}
+          tableModal={tableModal}
+        />
+      )}
     </>
   );
 }
