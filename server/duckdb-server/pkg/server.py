@@ -211,7 +211,7 @@ def create_app(cache):
                 "error": str(e),
             }))
 
-    @app.websocket("/")
+    @app.websocket("/ws")
     async def websocket_endpoint(ws: WebSocket):
         await ws.accept()
         try:
