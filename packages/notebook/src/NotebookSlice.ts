@@ -10,7 +10,6 @@ import {produce} from 'immer';
 import React from 'react';
 import {InputCell} from './cells/InputCell';
 import {generateUniqueName} from '@sqlrooms/utils';
-import {MarkdownCell} from './cells/MarkdownCell';
 import {SqlCell} from './cells/SqlCell';
 import {TextCell} from './cells/TextCell';
 import {VegaCell} from './cells/VegaCell';
@@ -255,6 +254,8 @@ export function createNotebookSlice<
               } else {
                 draft.notebook.cellStatus[id] = {type: 'other'};
               }
+
+              draft.config.notebook.currentCellId = id;
             }),
           );
           return id;
@@ -470,19 +471,6 @@ export function createNotebookSlice<
               ({id, type: 'text', name: 'Text', text: ''}) as NotebookCell,
             renderComponent: (id: string) =>
               React.createElement(TextCell, {id}),
-            findDependencies: () => [],
-          },
-          markdown: {
-            title: 'Markdown',
-            createCell: (id) =>
-              ({
-                id,
-                type: 'markdown',
-                name: 'Markdown',
-                markdown: '',
-              }) as NotebookCell,
-            renderComponent: (id: string) =>
-              React.createElement(MarkdownCell, {id}),
             findDependencies: () => [],
           },
           vega: {

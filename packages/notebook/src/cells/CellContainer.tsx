@@ -28,7 +28,7 @@ export const CellContainer: React.FC<{
     >
       <div className="flex items-center justify-between border-b px-2 py-1">
         <EditableText
-          value={(cell as any).name}
+          value={cell.name}
           onChange={(v) => onRename(id, v)}
           minWidth={20}
         />

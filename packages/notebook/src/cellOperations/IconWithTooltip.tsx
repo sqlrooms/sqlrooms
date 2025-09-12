@@ -55,3 +55,4 @@ export const IconWithTooltip = forwardRef<ElementRef<'div'>, Props>(
     );
   },
 );
+IconWithTooltip.displayName = 'IconWithTooltip';

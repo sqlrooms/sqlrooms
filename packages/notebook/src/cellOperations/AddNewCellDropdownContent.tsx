@@ -10,6 +10,7 @@ import {
 import {FC} from 'react';
 
 import {NotebookCellTypes} from '../cellSchemas';
+import {getCellTypeLabel} from '../NotebookUtils';
 
 type Props = {
   onAddCell: (type: NotebookCellTypes) => void;
@@ -44,7 +45,9 @@ export const AddNewCellDropdownContent: FC<Props> = ({
                   }}
                   className="cursor-pointer"
                 >
-                  <span className="text-xs capitalize">{type}</span>
+                  <span className="text-xs capitalize">
+                    {getCellTypeLabel(type)}
+                  </span>
                 </CommandItem>
               );
             })}
