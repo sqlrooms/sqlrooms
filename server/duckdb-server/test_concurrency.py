@@ -6,6 +6,7 @@ This script will send multiple concurrent requests to test that they don't block
 
 import asyncio
 import aiohttp
+import json
 import time
 import tempfile
 import os
@@ -13,20 +14,62 @@ import subprocess
 from pathlib import Path
 
 async def send_query(session, port, query, query_id):
-    """Send a query to the DuckDB server and measure response time."""
+    """Send a query over WebSocket and measure response time."""
     start_time = time.time()
-    
+
+    qid = f"q_{query_id}_{int(start_time*1000)}"
     payload = {
-        "type": "json",
-        "sql": query
+        "type": "arrow",
+        "sql": query,
+        "queryId": qid,
     }
-    
+
     try:
-        async with session.post(f'http://localhost:{port}/', json=payload) as response:
-            result = await response.text()
-            elapsed = (time.time() - start_time) * 1000  # Convert to milliseconds
-            print(f"Query {query_id}: {elapsed:.1f}ms - Status: {response.status}")
-            return elapsed, response.status == 200
+        async with session.ws_connect(f'ws://localhost:{port}/') as ws:
+            await ws.send_str(json.dumps(payload))
+            # Wait for correlated response
+            while True:
+                msg = await ws.receive()
+                if msg.type == aiohttp.WSMsgType.TEXT:
+                    try:
+                        data = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if not isinstance(data, dict):
+                        continue
+                    if data.get("type") == "error" and data.get("queryId") == qid:
+                        elapsed = (time.time() - start_time) * 1000
+                        print(f"Query {query_id}: {elapsed:.1f}ms - ERROR: {data.get('error')}")
+                        return elapsed, False
+                    # ignore unrelated messages (e.g., other queries or cancel acks)
+                elif msg.type == aiohttp.WSMsgType.BINARY:
+                    # Decode [4-byte BE len][header JSON][Arrow bytes]
+                    buf = msg.data
+                    if len(buf) < 4:
+                        continue
+                    header_len = int.from_bytes(buf[0:4], byteorder='big')
+                    header_start = 4
+                    header_end = header_start + header_len
+                    if header_end > len(buf):
+                        continue
+                    try:
+                        header = json.loads(buf[header_start:header_end].decode('utf-8'))
+                    except Exception:
+                        continue
+                    if header.get('type') != 'arrow' or header.get('queryId') != qid:
+                        continue
+                    # We received the matching result
+                    elapsed = (time.time() - start_time) * 1000
+                    print(f"Query {query_id}: {elapsed:.1f}ms - OK (binary)")
+                    return elapsed, True
+                elif msg.type in (aiohttp.WSMsgType.CLOSE, aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.CLOSING):
+                    elapsed = (time.time() - start_time) * 1000
+                    print(f"Query {query_id}: {elapsed:.1f}ms - ERROR: websocket closed")
+                    return elapsed, False
+                elif msg.type == aiohttp.WSMsgType.ERROR:
+                    elapsed = (time.time() - start_time) * 1000
+                    print(f"Query {query_id}: {elapsed:.1f}ms - ERROR: {ws.exception()}")
+                    return elapsed, False
     except Exception as e:
         elapsed = (time.time() - start_time) * 1000
         print(f"Query {query_id}: {elapsed:.1f}ms - ERROR: {str(e)}")

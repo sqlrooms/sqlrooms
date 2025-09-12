@@ -3,8 +3,6 @@ import time
 from functools import partial
 from pathlib import Path
 import os
-import threading
-import shutil
 import asyncio
 import concurrent.futures
 from typing import Optional, Callable, Any
@@ -180,6 +178,39 @@ def create_app(cache):
         allow_headers=["*"],
     )
 
+    async def _process_query(ws: WebSocket, cache, query: dict):
+        # Extract or assign query id for correlation
+        query_id = query.get("queryId") or db_async.generate_query_id()
+        try:
+            # Run DB work concurrently so we can keep receiving other messages
+            result = await run_duckdb(cache, query, query_id=query_id)
+            if result["type"] == "arrow":
+                # Build binary frame: [4-byte BE header length][header JSON][arrow bytes]
+                header_obj = {"type": "arrow", "queryId": query_id}
+                header_bytes = json.dumps(header_obj).encode("utf-8")
+                header_len = len(header_bytes).to_bytes(4, byteorder="big")
+                payload = header_len + header_bytes + result["data"]
+                await ws.send_bytes(payload)
+            else:
+                await ws.send_text(json.dumps({
+                    "type": "error",
+                    "queryId": query_id,
+                    "error": "Unexpected result type",
+                }))
+        except concurrent.futures.CancelledError:
+            await ws.send_text(json.dumps({
+                "type": "error",
+                "queryId": query_id,
+                "error": "Query was cancelled",
+            }))
+        except Exception as e:
+            logger.exception("Error executing query")
+            await ws.send_text(json.dumps({
+                "type": "error",
+                "queryId": query_id,
+                "error": str(e),
+            }))
+
     @app.websocket("/")
     async def websocket_endpoint(ws: WebSocket):
         await ws.accept()
@@ -206,8 +237,10 @@ def create_app(cache):
                             }))
                         continue
 
-                    handler = WebSocketHandler(ws)
-                    await handle_query(handler, cache, query)
+                    # For query messages (e.g., { type: 'arrow', sql, queryId? }),
+                    # spawn a background task so this connection can continue
+                    # receiving messages (e.g., more queries, cancel requests, notifications).
+                    asyncio.create_task(_process_query(ws, cache, query))
                 except Exception as e:
                     logger.exception("Error processing WebSocket message")
                     await ws.send_text(json.dumps({"error": str(e)}))

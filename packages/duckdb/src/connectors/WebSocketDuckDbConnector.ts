@@ -31,24 +31,156 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
  * Create a DuckDB connector that talks to a FastAPI backend over WebSockets.
  *
  * Protocol expectations (as implemented by `server.py`):
- * - Client sends a text JSON message: { type: 'arrow', sql: string, queryId?: string }
- * - Server responds with a single binary message containing Arrow IPC stream bytes
- *   or a text JSON message: { error: string }
- * - Cancellation: client sends { type: 'cancel', queryId } and closes socket.
+ * - Persistent connection; messages are correlated via `queryId`.
+ * - Client sends JSON: { type: 'arrow', sql: string, queryId?: string }
+ * - Server responds JSON: { type: 'arrow', queryId: string, data: base64(Arrow IPC stream) }
+ *   or { type: 'error', queryId: string, error: string }
+ * - Cancellation: client sends { type: 'cancel', queryId } and keeps socket open.
  */
 export function createWebSocketDuckDbConnector(
   options: WebSocketDuckDbConnectorOptions = {},
 ): WebSocketDuckDbConnector {
   const {wsUrl = 'ws://localhost:4000/', initializationQuery = ''} = options;
 
+  // Persistent socket and per-query waiters
+  let socket: WebSocket | null = null;
+  let opening: Promise<void> | null = null;
+  const pending = new Map<
+    string,
+    {
+      resolve: (table: arrow.Table<any>) => void;
+      reject: (err: any) => void;
+    }
+  >();
+
+  const closeAndRejectAll = (reason: string) => {
+    for (const [qid, waiter] of pending.entries()) {
+      try {
+        waiter.reject(new Error(reason));
+      } catch {}
+      pending.delete(qid);
+    }
+  };
+
+  const ensureSocket = (): Promise<void> => {
+    if (socket && socket.readyState === WebSocket.OPEN)
+      return Promise.resolve();
+    if (opening) return opening;
+    opening = new Promise<void>((resolve, reject) => {
+      try {
+        const ws = new WebSocket(wsUrl);
+        socket = ws;
+        ws.binaryType = 'arraybuffer';
+
+        ws.onopen = () => {
+          opening = null;
+          resolve();
+        };
+
+        ws.onmessage = (event: MessageEvent) => {
+          (async () => {
+            if (typeof event.data === 'string') {
+              // JSON control messages (errors, cancelAck)
+              let parsed: any;
+              try {
+                parsed = JSON.parse(event.data);
+              } catch {
+                return;
+              }
+              const t = parsed?.type;
+              if (t === 'cancelAck') return;
+              const qid: string | undefined = parsed?.queryId;
+              if (!qid) return;
+              const waiter = pending.get(qid);
+              if (!waiter) return;
+              if (t === 'error') {
+                pending.delete(qid);
+                waiter.reject(new Error(parsed?.error || 'Unknown error'));
+              }
+              return;
+            }
+
+            // Binary result: [4-byte BE header length][header JSON][Arrow bytes]
+            let buffer: ArrayBuffer;
+            if (event.data instanceof ArrayBuffer) buffer = event.data;
+            else if (event.data instanceof Blob)
+              buffer = await event.data.arrayBuffer();
+            else return;
+
+            const view = new DataView(buffer, 0, 4);
+            const headerLen = view.getUint32(0, false);
+            const headerStart = 4;
+            const headerEnd = headerStart + headerLen;
+            const headerBytes = new Uint8Array(
+              buffer.slice(headerStart, headerEnd),
+            );
+            const headerStr = new TextDecoder().decode(headerBytes);
+            let header: any;
+            try {
+              header = JSON.parse(headerStr);
+            } catch {
+              return;
+            }
+            const qid = header?.queryId as string | undefined;
+            if (!qid) return;
+            const waiter = pending.get(qid);
+            if (!waiter) return;
+
+            const arrowBytes = new Uint8Array(buffer.slice(headerEnd));
+            try {
+              const reader = await arrow.RecordBatchReader.from(arrowBytes);
+              const batches: arrow.RecordBatch[] = [];
+              for await (const batch of reader) batches.push(batch);
+              const table = batches.length
+                ? new arrow.Table(reader.schema, batches)
+                : (arrow.tableFromArrays({}) as unknown as arrow.Table);
+              pending.delete(qid);
+              waiter.resolve(table);
+            } catch (e) {
+              pending.delete(qid);
+              waiter.reject(e);
+            }
+          })();
+        };
+
+        ws.onerror = () => {
+          if (opening) {
+            opening = null;
+            reject(new Error('WebSocket connection error'));
+          } else {
+            closeAndRejectAll('WebSocket error');
+          }
+          try {
+            ws.close();
+          } catch {}
+        };
+
+        ws.onclose = () => {
+          if (opening) {
+            opening = null;
+            reject(new Error('WebSocket closed during open'));
+          }
+          closeAndRejectAll('WebSocket closed');
+          socket = null;
+        };
+      } catch (e) {
+        opening = null;
+        reject(e);
+      }
+    });
+    return opening;
+  };
+
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
-      // No persistent connection required; connections are per-query.
-      // This keeps concurrency simple since server replies are not correlated.
+      await ensureSocket();
     },
 
     async destroyInternal() {
-      // No state to clean up (per-query sockets are short-lived)
+      try {
+        socket?.close();
+      } catch {}
+      socket = null;
     },
 
     async executeQueryInternal<T extends arrow.TypeMap = any>(
@@ -59,126 +191,50 @@ export function createWebSocketDuckDbConnector(
       if (signal.aborted) {
         throw new DOMException('Query was cancelled', 'AbortError');
       }
-
+      await ensureSocket();
+      const qid =
+        queryId || `q_${Date.now()}_${Math.random().toString(36).slice(2)}`;
       return new Promise<arrow.Table<T>>((resolve, reject) => {
-        let ws: WebSocket | null = null;
-        let settled = false;
-        let sent = false;
-
-        const settleReject = (err: any) => {
-          if (settled) return;
-          settled = true;
-          try {
-            signal.removeEventListener('abort', onAbort);
-          } catch {}
-          reject(err instanceof Error ? err : new Error(String(err)));
-        };
-
-        const settleResolve = (value: arrow.Table<T>) => {
-          if (settled) return;
-          settled = true;
-          try {
-            signal.removeEventListener('abort', onAbort);
-          } catch {}
-          resolve(value);
-        };
-
         const onAbort = () => {
           try {
-            if (ws && ws.readyState === WebSocket.OPEN && sent && queryId) {
-              try {
-                ws.send(JSON.stringify({type: 'cancel', queryId}));
-              } catch {}
+            if (socket && socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({type: 'cancel', queryId: qid}));
             }
-            ws?.close();
           } catch {}
-          settleReject(new DOMException('Query was cancelled', 'AbortError'));
+          pending.delete(qid);
+          reject(new DOMException('Query was cancelled', 'AbortError'));
         };
-
         signal.addEventListener('abort', onAbort, {once: true});
 
-        try {
-          ws = new WebSocket(wsUrl);
-          ws.binaryType = 'arraybuffer';
-
-          ws.onopen = () => {
+        pending.set(qid, {
+          resolve: (t) => {
             try {
-              const message = JSON.stringify({
-                type: 'arrow',
-                sql: query,
-                queryId,
-              });
-              ws!.send(message);
-              sent = true;
-            } catch (err) {
-              settleReject(err);
-            }
-          };
-
-          ws.onmessage = async (event: MessageEvent) => {
-            try {
-              if (typeof event.data === 'string') {
-                // Expect JSON error shape { error: string }
-                try {
-                  const parsed = JSON.parse(event.data);
-                  if (parsed && parsed.error) {
-                    settleReject(new Error(parsed.error));
-                  } else if (parsed && parsed.type === 'cancelAck') {
-                    // Ignore; local abort already rejected the promise
-                  } else {
-                    settleReject(
-                      new Error('Unexpected text message from server'),
-                    );
-                  }
-                } catch (e) {
-                  settleReject(new Error('Invalid JSON message from server'));
-                }
-                return;
-              }
-
-              let buffer: ArrayBuffer;
-              if (event.data instanceof ArrayBuffer) {
-                buffer = event.data;
-              } else if (event.data instanceof Blob) {
-                buffer = await event.data.arrayBuffer();
-              } else {
-                reject(new Error('Unsupported binary message type'));
-                return;
-              }
-
-              const uint8 = new Uint8Array(buffer);
-              const reader = await arrow.RecordBatchReader.from(uint8);
-              const batches: arrow.RecordBatch<T>[] = [];
-              for await (const batch of reader) {
-                batches.push(batch as arrow.RecordBatch<T>);
-              }
-              const table = batches.length
-                ? new arrow.Table(reader.schema, batches)
-                : (arrow.tableFromArrays({}) as unknown as arrow.Table<T>);
-              settleResolve(table);
-            } catch (err) {
-              settleReject(err);
-            } finally {
-              try {
-                ws?.close();
-              } catch {}
-            }
-          };
-
-          ws.onerror = (ev) => {
-            settleReject(new Error('WebSocket error'));
-            try {
-              ws?.close();
+              signal.removeEventListener('abort', onAbort);
             } catch {}
-          };
+            resolve(t as arrow.Table<T>);
+          },
+          reject: (e) => {
+            try {
+              signal.removeEventListener('abort', onAbort);
+            } catch {}
+            reject(e);
+          },
+        });
 
-          ws.onclose = (ev) => {
-            // If server closes before sending a result and we haven't resolved/rejected,
-            // the Promise will hang; however, typical flows resolve in onmessage.
-          };
-        } catch (err) {
-          signal.removeEventListener('abort', onAbort);
-          reject(err instanceof Error ? err : new Error(String(err)));
+        try {
+          socket!.send(
+            JSON.stringify({
+              type: 'arrow',
+              sql: query,
+              queryId: qid,
+            }),
+          );
+        } catch (e) {
+          pending.delete(qid);
+          try {
+            signal.removeEventListener('abort', onAbort);
+          } catch {}
+          reject(e);
         }
       });
     },
