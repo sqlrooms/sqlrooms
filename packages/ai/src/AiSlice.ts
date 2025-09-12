@@ -38,7 +38,7 @@ export function createDefaultAiConfig(
           id: defaultSessionId,
           name: 'Default Session',
           modelProvider: 'openai',
-          model: 'gpt-4o-mini',
+          model: 'gpt-4.1',
           analysisResults: [],
           createdAt: new Date(),
         },
@@ -124,7 +124,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     getInstructions,
     toolsOptions,
     getMaxSteps,
-    defaultModel = 'gpt-4o-mini',
+    defaultModel = 'gpt-4.1',
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
