@@ -21,6 +21,9 @@ export interface WebSocketDuckDbConnectorOptions {
 
   /** SQL to run after initialization */
   initializationQuery?: string;
+
+  /** Optional handler for server notifications `{ type: 'notify', payload }` */
+  onNotification?: (payload: any) => void;
 }
 
 export interface WebSocketDuckDbConnector extends DuckDbConnector {
@@ -89,6 +92,13 @@ export function createWebSocketDuckDbConnector(
               }
               const t = parsed?.type;
               if (t === 'cancelAck') return;
+              if (t === 'notify') {
+                const payload = parsed?.payload;
+                try {
+                  options.onNotification?.(payload);
+                } catch {}
+                return;
+              }
               const qid: string | undefined = parsed?.queryId;
               if (!qid) return;
               const waiter = pending.get(qid);

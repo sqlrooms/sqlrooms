@@ -237,6 +237,15 @@ def create_app(cache):
                             }))
                         continue
 
+                    # Simple notify echo for client-driven notifications
+                    if isinstance(query, dict) and query.get("type") == "notify":
+                        payload = query.get("payload")
+                        await ws.send_text(json.dumps({
+                            "type": "notify",
+                            "payload": payload,
+                        }))
+                        continue
+
                     # For query messages (e.g., { type: 'arrow', sql, queryId? }),
                     # spawn a background task so this connection can continue
                     # receiving messages (e.g., more queries, cancel requests, notifications).
