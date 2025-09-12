@@ -1,5 +1,5 @@
 import React from 'react';
-import {EditableText} from '@sqlrooms/ui';
+import {cn, EditableText} from '@sqlrooms/ui';
 
 import {useStoreWithNotebook} from '../NotebookSlice';
 import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
@@ -13,10 +13,19 @@ export const CellContainer: React.FC<{
 }> = ({id, typeLabel, rightControls, children}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
+  const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
+  const currentCellId = useStoreWithNotebook(
+    (s) => s.config.notebook.currentCellId,
+  );
 
   if (!cell) return null;
   return (
-    <div className="rounded border">
+    <div
+      className={cn('rounded border', {
+        'border-primary': currentCellId === id,
+      })}
+      onClick={() => setCurrentCell(id)}
+    >
       <div className="flex items-center justify-between border-b px-2 py-1">
         <EditableText
           value={(cell as any).name}

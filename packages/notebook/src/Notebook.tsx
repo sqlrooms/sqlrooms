@@ -58,7 +58,9 @@ export const Notebook: React.FC = () => {
     s.config.notebook.tabs.find((t) => t.id === currentTabId),
   );
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
-  const runAllCells = useStoreWithNotebook((s) => s.notebook.runAllCells);
+  const runAllCellsCascade = useStoreWithNotebook(
+    (s) => s.notebook.runAllCellsCascade,
+  );
 
   const handleAddCellAndScroll = (type: NotebookCellTypes) => {
     if (!tab) return;
@@ -78,7 +80,7 @@ export const Notebook: React.FC = () => {
         <Button
           size="xs"
           variant="secondary"
-          onClick={() => runAllCells(tab.id)}
+          onClick={() => runAllCellsCascade(tab.id)}
         >
           Run all cells
         </Button>

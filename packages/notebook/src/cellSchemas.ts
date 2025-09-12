@@ -1,3 +1,4 @@
+import {current} from 'immer';
 import {z} from 'zod';
 
 export const NotebookCellTypes = z.enum([
@@ -27,7 +28,7 @@ export type TextCell = z.infer<typeof TextCellSchema>;
 
 export const MarkdownCellSchema = z.object({
   id: z.string(),
-  name: z.string().default('Markdown'),
+  name: z.string().default('Text'),
   type: z.literal('markdown'),
   markdown: z.string().default(''),
 });
@@ -91,6 +92,7 @@ export const NotebookSliceConfig = z.object({
     tabs: z.array(NotebookTabSchema).default([]),
     currentTabId: z.string().optional(),
     cells: z.record(z.string(), NotebookCellSchema).default({}),
+    currentCellId: z.string().optional(),
   }),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;

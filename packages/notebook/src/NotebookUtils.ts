@@ -19,7 +19,7 @@ export const getCellTypeLabel = (type: NotebookCellTypes) => {
   const typeToLabel: Record<NotebookCellTypes, string> = {
     sql: 'SQL',
     vega: 'Chart',
-    markdown: 'Markdown',
+    markdown: 'Text',
     text: 'Text',
     input: 'Input',
   };

@@ -1500,12 +1500,21 @@ importers:
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      lucide-react:
+        specifier: ^0.543.0
+        version: 0.543.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       zod:
         specifier: ^3.25.73
         version: 3.25.73
@@ -8709,6 +8718,11 @@ packages:
 
   lucide-react@0.542.0:
     resolution: {integrity: sha512-w3hD8/SQB7+lzU2r4VdFyzzOzKnUjTZIF/MQJGSSvni7Llewni4vuViRppfRAa2guOsY5k4jZyxw/i9DQHv+dw==}
+    peerDependencies:
+      react: 19.1.0
+
+  lucide-react@0.543.0:
+    resolution: {integrity: sha512-fpVfuOQO0V3HBaOA1stIiP/A2fPCXHIleRZL16Mx3HmjTYwNSbimhnFBygs2CAfU1geexMX5ItUcWBGUaqw5CA==}
     peerDependencies:
       react: 19.1.0
 
@@ -20557,6 +20571,10 @@ snapshots:
       react: 19.1.0
 
   lucide-react@0.542.0(react@19.1.0):
+    dependencies:
+      react: 19.1.0
+
+  lucide-react@0.543.0(react@19.1.0):
     dependencies:
       react: 19.1.0
 

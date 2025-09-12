@@ -52,9 +52,11 @@ export type NotebookSliceState = {
       cellId: string,
       updater: (cell: NotebookCell) => NotebookCell,
     ) => void;
+    setCurrentCell: (id: string) => void;
 
     runCell: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
     runAllCells: (tabId: string) => Promise<void>;
+    runAllCellsCascade: (tabId: string) => Promise<void>;
     cancelRunCell: (cellId: string) => void;
 
     // registry of cell behaviors and renderers
@@ -309,15 +311,39 @@ export function createNotebookSlice<
           void cascadeFrom(cellId);
         },
 
+        setCurrentCell: (id) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.notebook.currentCellId = id;
+            }),
+          );
+        },
+
         cancelRunCell: (_cellId) => {
           // Future: wire to AbortController per cell
         },
 
         runAllCells: async (tabId) => {
           const tab = findTab(get().config.notebook, tabId);
-          if (!tab) return;
           for (const cellId of tab.cellOrder) {
             await get().notebook.runCell(cellId, {cascade: false});
+          }
+        },
+
+        runAllCellsCascade: async (tabId) => {
+          const tab = findTab(get().config.notebook, tabId);
+          const cellsMap = get().config.notebook.cells;
+          const statusMap = get().notebook.cellStatus;
+          const rootCells: string[] = tab.cellOrder.filter((cellId) => {
+            const cell = cellsMap[cellId];
+            if (!cell) return false;
+            const reg = get().notebook.cellRegistry[cell.type];
+            if (!reg) return true;
+            const deps = reg.findDependencies(cell, cellsMap, statusMap);
+            return deps.length === 0;
+          });
+          for (const cellId of rootCells) {
+            await get().notebook.runCell(cellId, {cascade: true});
           }
         },
 
