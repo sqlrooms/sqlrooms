@@ -17,12 +17,13 @@ export const CellContainer: React.FC<{
   const currentCellId = useStoreWithNotebook(
     (s) => s.config.notebook.currentCellId,
   );
+  const isCurrent = currentCellId === id;
 
   if (!cell) return null;
   return (
     <div
-      className={cn('rounded border', {
-        'border-primary': currentCellId === id,
+      className={cn('group rounded border', {
+        'border-primary': isCurrent,
       })}
       onClick={() => setCurrentCell(id)}
     >
@@ -33,10 +34,17 @@ export const CellContainer: React.FC<{
           minWidth={20}
         />
 
-        <div className="flex items-center gap-1 text-xs">
-          <span className="uppercase text-gray-500">{typeLabel}</span>
-          <DeleteCellDialog cell={cell} />
-          <MoveCellButtons id={id} />
+        <div className="flex items-center gap-2 text-xs">
+          <div
+            className={cn('flex items-center gap-2', {
+              'group-hover:flex': !isCurrent,
+              hidden: !isCurrent,
+            })}
+          >
+            <span className="uppercase text-gray-500">{typeLabel}</span>
+            <DeleteCellDialog cell={cell} />
+            <MoveCellButtons id={id} />
+          </div>
           {rightControls}
         </div>
       </div>

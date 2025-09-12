@@ -41,14 +41,14 @@ export const TabsBar: React.FC = () => {
   );
 };
 
-export const CellView: React.FC<{id: string}> = ({id}) => {
+export const CellView: React.FC<{id: string}> = React.memo(({id}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const render = useStoreWithNotebook(
     (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
   );
   if (!cell || !render) return null;
   return render(id);
-};
+});
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
@@ -86,17 +86,14 @@ export const Notebook: React.FC = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col space-y-2 overflow-auto p-2">
+      <div className="flex flex-col gap-2 overflow-auto p-2">
         {tab.cellOrder.map((id, index) => (
-          <div className="flex flex-col gap-2" key={`cellOrder-${id}`}>
+          <div className="flex flex-col space-y-2" key={`cellOrder-${id}`}>
             <AddNewCell
               onAdd={(type) => addCell(tab.id, type, index)}
               triggerComponent={<TriggerSeparator />}
             />
             <CellView id={id} />
-            <div className="text-secondary text-xs">
-              This line is a temporary anchor to prevent mount bug
-            </div>
           </div>
         ))}
         <AddNewCell

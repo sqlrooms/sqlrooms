@@ -1,6 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
+import {Button, cn} from '@sqlrooms/ui';
 
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../NotebookSlice';
@@ -14,6 +15,7 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
   );
   const [isEditing, setIsEditing] = useState(currentCellId === id);
   const [draft, setDraft] = useState(cell?.type === 'text' ? cell.text : '');
+  const [showPreview, setShowPreview] = useState(true);
 
   useEffect(() => {
     if (currentCellId !== id && isEditing && cell?.type === 'text') {
@@ -25,23 +27,38 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
   if (!cell || cell.type !== 'text') return null;
 
   return (
-    <CellContainer id={id} typeLabel={getCellTypeLabel(cell.type)}>
+    <CellContainer
+      id={id}
+      typeLabel={getCellTypeLabel(cell.type)}
+      rightControls={
+        <Button
+          size="xs"
+          variant="outline"
+          onClick={() => setShowPreview((prev) => !prev)}
+          className={cn({hidden: !isEditing}, 'w-[100px]')}
+        >
+          {showPreview ? 'Hide Preview' : 'Show Preview'}
+        </Button>
+      }
+    >
       <div
-        className="divide-x-muted grid min-h-20 grid-cols-2 divide-x"
+        className="divide-x-muted flex min-h-20"
         onDoubleClick={() => setIsEditing((prev) => !prev)}
       >
         {isEditing && (
           <textarea
-            className="bg-background w-full px-3 py-2 text-xs outline-none"
+            className="bg-background w-full flex-1 px-3 py-2 text-xs outline-none"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Write text...(Double click to save and preview)"
             autoFocus
           />
         )}
-        <div className="prose dark:prose-invert max-w-none px-3 py-2 text-sm">
-          <Markdown remarkPlugins={[remarkGfm]}>{draft}</Markdown>
-        </div>
+        {(showPreview || !isEditing) && (
+          <div className="prose dark:prose-invert max-w-none flex-1 px-3 py-2 text-sm">
+            <Markdown remarkPlugins={[remarkGfm]}>{draft}</Markdown>
+          </div>
+        )}
       </div>
     </CellContainer>
   );

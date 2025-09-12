@@ -26,13 +26,13 @@ export const IconWithTooltip = forwardRef<ElementRef<'div'>, Props>(
       ...restOfProps
     } = props;
     return (
-      <Tooltip>
+      <Tooltip delayDuration={100}>
         <TooltipTrigger asChild>
           <div
             ref={ref}
             {...restOfProps}
             className={cn(
-              'text-foreground flex w-full cursor-pointer items-center justify-center rounded',
+              'flex w-full cursor-pointer items-center justify-center rounded',
               disabled && 'pointer-events-none cursor-not-allowed opacity-50',
               className,
             )}
