@@ -1,8 +1,17 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
+import {
+  AspectRatio,
+  Button,
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  useAspectRatioDimensions,
+} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
-import {useMemo, useRef} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
+import {TriangleAlertIcon} from 'lucide-react';
 
 const DATA_NAME = 'queryResult';
 
@@ -72,6 +81,7 @@ export const VegaLiteChart: React.FC<{
   spec,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const [chartError, setChartError] = useState<Error | null>(null);
   const dimensions = useAspectRatioDimensions({
     containerRef,
     width,
@@ -100,6 +110,11 @@ export const VegaLiteChart: React.FC<{
     return {[DATA_NAME]: result.data.toArray()};
   }, [result.data]);
 
+  // Reset chart error whenever spec or data changes
+  useEffect(() => {
+    setChartError(null);
+  }, [spec, dimensions.width, dimensions.height, result.data]);
+
   return (
     <div
       ref={containerRef}
@@ -113,16 +128,47 @@ export const VegaLiteChart: React.FC<{
           {result.error.message}
         </div>
       )}
-      <AspectRatio ratio={aspectRatio}>
-        {result.isLoading ? (
-          <div className="text-muted-foreground flex h-full w-full flex-col items-center justify-center gap-4">
-            Running query for chart data…
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-          </div>
-        ) : (
-          refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />
-        )}
-      </AspectRatio>
+      {result.isLoading ? (
+        <div className="text-muted-foreground align-center flex gap-2 px-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+          Running query for chart data…
+        </div>
+      ) : chartError ? (
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button className="w-fit" variant="ghost" size="xs">
+              <p className="flex items-center gap-2 text-xs text-orange-500">
+                <TriangleAlertIcon />
+                Chart rendering failed
+              </p>
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent>
+            <div className="flex flex-col gap-2">
+              <div className="border-b text-sm font-medium text-red-500">
+                Chart error
+              </div>
+              <div className="whitespace-pre-wrap font-mono text-xs text-red-500">
+                {chartError.message}
+              </div>
+            </div>
+          </PopoverContent>
+        </Popover>
+      ) : (
+        refinedSpec &&
+        data && (
+          <AspectRatio ratio={aspectRatio}>
+            <VegaLite
+              spec={refinedSpec}
+              data={data}
+              onError={(error) => {
+                console.error(error);
+                setChartError(error);
+              }}
+            />
+          </AspectRatio>
+        )
+      )}
     </div>
   );
 };
