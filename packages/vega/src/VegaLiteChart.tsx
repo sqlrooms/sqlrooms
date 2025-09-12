@@ -114,7 +114,14 @@ export const VegaLiteChart: React.FC<{
         </div>
       )}
       <AspectRatio ratio={aspectRatio}>
-        {refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />}
+        {result.isLoading ? (
+          <div className="text-muted-foreground flex h-full w-full flex-col items-center justify-center gap-4">
+            Running query for chart data…
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+          </div>
+        ) : (
+          refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />
+        )}
       </AspectRatio>
     </div>
   );
