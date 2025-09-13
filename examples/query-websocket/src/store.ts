@@ -82,6 +82,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createRoomShellSlice<RoomConfig>({
         connector: createWebSocketDuckDbConnector({
           wsUrl: 'ws://localhost:4000',
+          subscribeChannels: ['table:earthquakes'],
           onNotification: (payload) => {
             console.log('Notification from server:', payload);
           },

@@ -22,6 +22,9 @@ DATABASE_PATH: Optional[str] = None
 active_queries: Dict[str, Tuple[concurrent.futures.Future, duckdb.DuckDBPyConnection]] = {}
 active_queries_lock = threading.Lock()
 
+# Shutdown state flag
+SHUTTING_DOWN: bool = False
+
 
 def generate_query_id() -> str:
     """Generate a unique query id string (UUID4)."""
@@ -95,6 +98,40 @@ def init_global_connection(database_path: str) -> None:
     logger.info(f"Initialized global DuckDB connection to {database_path} with {cpu_count} threads")
 
 
+def begin_shutdown() -> None:
+    """Mark shutdown in progress to reject new work and start teardown."""
+    global SHUTTING_DOWN
+    SHUTTING_DOWN = True
+
+
+def is_shutting_down() -> bool:
+    return SHUTTING_DOWN
+
+
+def force_checkpoint_and_close() -> None:
+    """Force a DuckDB checkpoint and close the global connection (best-effort)."""
+    global GLOBAL_CON
+    con = GLOBAL_CON
+    GLOBAL_CON = None
+    if con is None:
+        return
+    try:
+        try:
+            con.execute("FORCE CHECKPOINT")
+        except Exception:
+            # Fallback to CHECKPOINT
+            try:
+                con.execute("CHECKPOINT")
+            except Exception:
+                pass
+        try:
+            con.close()
+        except Exception:
+            pass
+    except Exception as e:
+        logger.warning(f"Error during checkpoint/close: {e}")
+
+
 async def run_db_task(
     execute_with_cursor: Callable[[duckdb.DuckDBPyConnection], Any],
     *,
@@ -107,6 +144,8 @@ async def run_db_task(
     - Registers future and cursor; on cancel, raises CancelledError
     - Ensures cursor is closed
     """
+    if SHUTTING_DOWN:
+        raise RuntimeError("Shutdown in progress")
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
     cursor: duckdb.DuckDBPyConnection = GLOBAL_CON.cursor()
@@ -123,7 +162,15 @@ async def run_db_task(
                 pass
 
     qid = query_id or generate_query_id()
-    future = EXECUTOR.submit(_runner, cursor)
+    try:
+        future = EXECUTOR.submit(_runner, cursor)
+    except RuntimeError as e:
+        # Executor likely shut down during restart/shutdown
+        try:
+            cursor.close()
+        except Exception:
+            pass
+        raise RuntimeError("Executor is shut down") from e
     register_query(qid, future, cursor)
     try:
         return await asyncio.wrap_future(future)

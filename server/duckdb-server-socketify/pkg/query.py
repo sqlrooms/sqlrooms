@@ -8,6 +8,7 @@ logger = logging.getLogger(__name__)
 from functools import partial
 from typing import Optional
 from . import db_async
+from diskcache import Lock as DiskCacheLock
 
 
 def get_key(sql, command):
@@ -19,19 +20,29 @@ def retrieve(cache, query, get):
     command = query.get("type")
 
     key = get_key(sql, command)
-    result = cache.get(key)
+    if cache is None:
+        return get(sql)
 
-    if result:
-        logger.debug("Cache hit")
-    else:
-        result = get(sql)
+    # Prevent concurrent computes for the same key (avoids DDL races)
+    lock_name = f"lock:{key}"
+    with DiskCacheLock(cache, lock_name):
+        result = cache.get(key)
+        if result is not None:
+            logger.debug("Cache hit")
+            return result
+        value = get(sql)
         if query.get("persist", False):
-            cache[key] = result
-    return result
+            cache[key] = value
+        return value
 
 
 def get_arrow(con, sql):
-    return con.query(sql).arrow()
+    result = con.query(sql)
+    if result is None:
+        empty_schema = pa.schema([pa.field('empty', pa.null())])
+        arrow_result = pa.Table.from_batches([], schema=empty_schema)
+        return arrow_result
+    return result.arrow()
 
 
 def arrow_to_bytes(arrow):
@@ -56,6 +67,7 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
 
     The actual DB work runs in a thread, using a per-task cursor. Cancellation is handled by db_async.
     """
+    logger.debug(f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}")
     def _execute_with_cursor(con):
         command = query["type"]
         if command == "arrow":

@@ -1,5 +1,5 @@
 [project]
-name = "duckdb-server"
+name = "sqlrooms-duckdb-server"
 description = "A DuckDB server for Mosaic"
 dynamic = ["version"]
 readme = "README.md"

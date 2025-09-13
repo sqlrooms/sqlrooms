@@ -14,8 +14,7 @@ import {splitFilePath} from '@sqlrooms/utils';
 
 export interface WebSocketDuckDbConnectorOptions {
   /**
-   * WebSocket endpoint of the FastAPI DuckDB server.
-   * Defaults to `ws://localhost:4000/`.
+   * WebSocket endpoint of the DuckDB server.
    */
   wsUrl?: string;
 
@@ -24,6 +23,9 @@ export interface WebSocketDuckDbConnectorOptions {
 
   /** Optional handler for server notifications `{ type: 'notify', payload }` */
   onNotification?: (payload: any) => void;
+
+  /** Optional list of channels to subscribe to upon (re)connect */
+  subscribeChannels?: string[];
 }
 
 export interface WebSocketDuckDbConnector extends DuckDbConnector {
@@ -31,23 +33,30 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
 }
 
 /**
- * Create a DuckDB connector that talks to a FastAPI backend over WebSockets.
+ * Create a DuckDB connector that talks to a WebSocket backend.
  *
- * Protocol expectations (as implemented by `server.py`):
+ * Protocol expectations (as implemented by the servers):
  * - Persistent connection; messages are correlated via `queryId`.
- * - Client sends JSON: { type: 'arrow', sql: string, queryId?: string }
- * - Server responds JSON: { type: 'arrow', queryId: string, data: base64(Arrow IPC stream) }
- *   or { type: 'error', queryId: string, error: string }
- * - Cancellation: client sends { type: 'cancel', queryId } and keeps socket open.
+ * - Client sends JSON: `{ type: 'arrow', sql: string, queryId?: string }`.
+ * - Server responds with a binary frame for Arrow results using framing:
+ *   `[4-byte big-endian header length][header JSON { type, queryId }][Arrow IPC stream bytes]`.
+ * - Errors are sent as JSON text frames: `{ type: 'error', queryId, error }`.
+ * - Cancellation: client sends `{ type: 'cancel', queryId }` and keeps socket open.
+ * - Notifications: server may push `{ type: 'notify', payload }` as JSON text.
  */
 export function createWebSocketDuckDbConnector(
   options: WebSocketDuckDbConnectorOptions = {},
 ): WebSocketDuckDbConnector {
-  const {wsUrl = 'ws://localhost:4000', initializationQuery = ''} = options;
+  const {
+    wsUrl = 'ws://localhost:4000',
+    initializationQuery = '',
+    subscribeChannels,
+  } = options;
 
   // Persistent socket and per-query waiters
   let socket: WebSocket | null = null;
   let opening: Promise<void> | null = null;
+  let lastSubscribedChannels: string[] | undefined = subscribeChannels;
   const pending = new Map<
     string,
     {
@@ -65,6 +74,16 @@ export function createWebSocketDuckDbConnector(
     }
   };
 
+  const resubscribe = () => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!lastSubscribedChannels || lastSubscribedChannels.length === 0) return;
+    for (const ch of lastSubscribedChannels) {
+      try {
+        socket.send(JSON.stringify({type: 'subscribe', channel: ch}));
+      } catch {}
+    }
+  };
+
   const ensureSocket = (): Promise<void> => {
     if (socket && socket.readyState === WebSocket.OPEN)
       return Promise.resolve();
@@ -77,13 +96,15 @@ export function createWebSocketDuckDbConnector(
 
         ws.onopen = () => {
           opening = null;
+          // Subscribe to requested channels on open
+          resubscribe();
           resolve();
         };
 
         ws.onmessage = (event: MessageEvent) => {
           (async () => {
             if (typeof event.data === 'string') {
-              // JSON control messages (errors, cancelAck)
+              // JSON control messages (errors, cancelAck, notify)
               let parsed: any;
               try {
                 parsed = JSON.parse(event.data);
@@ -184,6 +205,8 @@ export function createWebSocketDuckDbConnector(
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
       await ensureSocket();
+      // Subscribe on initialize, too (if socket was already open)
+      resubscribe();
     },
 
     async destroyInternal() {
