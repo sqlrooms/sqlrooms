@@ -6,6 +6,7 @@ import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
 import {ToolInvocation} from 'ai';
+import {ToolCalling} from './ToolCalling';
 
 type ToolResultProps = {
   toolInvocation: ToolInvocation;
@@ -44,7 +45,10 @@ export const ToolResult: React.FC<ToolResultProps> = ({
     llmResult.success === true;
 
   return !isCompleted ? (
-    <div className="text-sm text-gray-500">{text}</div>
+    <div className="flex flex-col gap-2">
+      <div className="text-sm text-gray-500">{text}</div>
+      <ToolCalling toolName={toolName} />
+    </div>
   ) : (
     <MessageContainer
       isSuccess={isSuccess}
