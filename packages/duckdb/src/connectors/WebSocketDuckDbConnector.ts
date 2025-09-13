@@ -43,7 +43,7 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
 export function createWebSocketDuckDbConnector(
   options: WebSocketDuckDbConnectorOptions = {},
 ): WebSocketDuckDbConnector {
-  const {wsUrl = 'ws://localhost:4000/ws', initializationQuery = ''} = options;
+  const {wsUrl = 'ws://localhost:4000', initializationQuery = ''} = options;
 
   // Persistent socket and per-query waiters
   let socket: WebSocket | null = null;

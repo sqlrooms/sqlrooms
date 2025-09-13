@@ -10,13 +10,6 @@ from typing import Optional
 from . import db_async
 from .cache import retrieve
 
-def insert_table_from_arrow_file(con, query):
-    file_name = query.get("fileName")
-    table_name = query.get("tableName")
-    with pa.memory_map(file_name, 'r') as source:
-        arrow_file_data = pa.ipc.open_file(source).read_all()
-    con.execute(f"CREATE OR REPLACE TABLE {table_name} AS SELECT * FROM arrow_file_data")
-
 def get_arrow(con, sql):
     try:
         logger.debug(f"Executing DuckDB query: {sql[:100]}{'...' if len(sql) > 100 else ''}")
@@ -50,13 +43,8 @@ def arrow_to_bytes(arrow):
     return sink.getvalue().to_pybytes()
 
 
-
 def get_arrow_bytes(con, sql):
     return arrow_to_bytes(get_arrow(con, sql))
-
-
-def get_json(con, sql):
-    raise NotImplementedError("JSON output is disabled; use 'arrow' over WebSocket")
 
 
 async def run_duckdb(cache, query, query_id: Optional[str] = None):
@@ -67,13 +55,6 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
     applied inside the worker. Cancellation is handled by db_async.
     """
     def _execute_with_cursor(con: duckdb.DuckDBPyConnection):
-        # Per-cursor configuration
-        try:
-            con.execute("SET enable_geoparquet_conversion = false")
-        except Exception:
-            pass
-
-        sql = query.get("sql")
         command = query["type"]
         logger.debug(f"run_duckdb executing command '{command}'")
         if command == "arrow":

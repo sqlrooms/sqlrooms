@@ -81,9 +81,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Base room slice
       ...createRoomShellSlice<RoomConfig>({
         connector: createWebSocketDuckDbConnector({
-          wsUrl: 'ws://localhost:4000/ws',
+          wsUrl: 'ws://localhost:4000',
+          onNotification: (payload) => {
+            console.log('Notification from server:', payload);
+          },
         }),
         config: {
+          dataSources: [
+            {
+              type: 'url',
+              url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+              tableName: 'earthquakes',
+            },
+          ],
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {

@@ -22,33 +22,6 @@ shutdown_requested = False
 
 from . import db_async
 
-def make_error_response(code, message):
-    error_body = {
-        "success": False,
-        "error": {
-            "message": message,
-        }
-    }
-    return json.dumps(error_body)
-
-# Wait briefly for .wal file to disappear automatically after checkpoint
-def _wait_for_wal_disappear(db_path: Optional[str], timeout_sec: float = 1.0, interval_sec: float = 0.05) -> None:
-    try:
-        if not db_path:
-            return
-        wal_path = f"{db_path}.wal"
-        start = time.time()
-        # Wait up to timeout for DuckDB to remove the WAL after FORCE CHECKPOINT
-        while os.path.exists(wal_path) and (time.time() - start) < timeout_sec:
-            time.sleep(interval_sec)
-    except Exception:
-        # Best-effort; ignore any issues here
-        pass
-
- 
-
- 
-
 class Handler:
     def done(self):
         raise Exception("NotImplementedException")
@@ -66,53 +39,6 @@ class WebSocketHandler(Handler):
         await self.ws.send_bytes(buffer)
     async def error(self, error):
         await self.ws.send_text(json.dumps({"error": str(error)}))
-
-def deactivate_backend(cache) -> None:
-    """Temporarily deactivate the backend for a connection change.
-    - Block new queries
-    - Cancel active queries and close their cursors
-    - Clear cache
-    - FORCE CHECKPOINT and close current GLOBAL_CON
-    """
-    global shutdown_requested
-    # Block new queries while we switch connections
-    shutdown_requested = True
-
-    # Cancel/close any active queries
-    db_async.cancel_all_queries()
-
-    # Best-effort: clear cache to avoid stale results
-    if cache:
-        try:
-            logger.info("Clearing cache before reconnection...")
-            cache.clear()
-            logger.info("Cache cleared")
-        except Exception as e:
-            logger.warning(f"Failed to clear cache (ignored): {e}")
-
-    # Flush pending changes to disk and close current connection
-    if db_async.GLOBAL_CON:
-        try:
-            logger.info("Forcing checkpoint before closing current connection...")
-            db_async.GLOBAL_CON.execute("FORCE CHECKPOINT")
-            _wait_for_wal_disappear(db_async.DATABASE_PATH)
-        except Exception as e:
-            logger.warning(f"FORCE CHECKPOINT failed (continuing): {e}")
-        try:
-            logger.info("Closing current DuckDB connection...")
-            db_async.GLOBAL_CON.close()
-            logger.info("Closed current DuckDB connection")
-        except Exception as e:
-            logger.warning(f"Error closing current connection (continuing): {e}")
-
-def activate_backend(new_database_path: str) -> None:
-    """Activate the backend by opening a connection to the provided database and resume queries."""
-    global shutdown_requested
-    logger.info(f"Re-initializing global DuckDB connection to {new_database_path}")
-    db_async.init_global_connection(new_database_path)
-    logger.info("Global connection re-initialized to new project file")
-    # Resume accepting queries
-    shutdown_requested = False
 
 async def handle_query(handler: Handler, cache, query, query_id: Optional[str] = None):
     global shutdown_requested
@@ -211,7 +137,7 @@ def create_app(cache):
                 "error": str(e),
             }))
 
-    @app.websocket("/ws")
+    @app.websocket("/")
     async def websocket_endpoint(ws: WebSocket):
         await ws.accept()
         try:

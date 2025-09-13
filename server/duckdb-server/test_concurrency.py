@@ -25,7 +25,7 @@ async def send_query(session, port, query, query_id):
     }
 
     try:
-        async with session.ws_connect(f'ws://localhost:{port}/ws') as ws:
+        async with session.ws_connect(f'ws://localhost:{port}') as ws:
             await ws.send_str(json.dumps(payload))
             # Wait for correlated response
             while True:
