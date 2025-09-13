@@ -382,3 +382,105 @@ async def test_mixed_workload(server_proc):
         ]
         results = await asyncio.gather(*tasks)
         assert all(results)
+
+
+@pytest.mark.asyncio
+async def test_update_vs_alter_conflict_tolerant(server_proc):
+    """
+    Try to provoke a transaction conflict by running a long UPDATE statement
+    while concurrently ALTERing the same table. Depending on timing DuckDB may
+    either raise a transaction conflict (preferred) or serialize/queue one
+    operation so both succeed. This test tolerates both outcomes but asserts
+    that at least one of the following holds:
+      - one operation returns an error mentioning conflict/alter
+      - both operations succeed (non-flaky fallback)
+    """
+    port = server_proc['port']
+    table = 't_conflict'
+    timeout = aiohttp.ClientTimeout(total=3)
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        # Setup table with some rows
+        async with session.ws_connect(f'ws://localhost:{port}') as ws:
+            cmds = [
+                f"DROP TABLE IF EXISTS {table}",
+                f"CREATE TABLE {table}(x INT, v INT)",
+                f"INSERT INTO {table} SELECT x, 0 FROM generate_series(1, 10000) AS t(x)",
+            ]
+            for sql in cmds:
+                qid = f"setup_{int(time.time()*1000)}"
+                await ws.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(100):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        assert payload.get('type') in ('ok', 'error')
+                        if payload.get('type') == 'error':
+                            pytest.fail(f"setup failed: {payload.get('error')}")
+                        break
+
+        # Long-running update that forces heavy compute on RHS to keep it busy
+        async def long_update():
+            qid = f"upd_{int(time.time()*1000)}"
+            sql = (
+                f"UPDATE {table} SET v = v + 1 "
+                f"WHERE x IN (SELECT x FROM generate_series(1, 30000) WHERE x <= 10000)"
+            )
+            async with session.ws_connect(f'ws://localhost:{port}') as ws1:
+                await ws1.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(160):
+                    try:
+                        msg = await asyncio.wait_for(ws1.receive(), timeout=0.1)
+                    except asyncio.TimeoutError:
+                        continue
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        return payload.get('type'), payload.get('error', '')
+            return 'error', 'timeout'
+
+        # ALTER that should conflict if it lands mid-update
+        async def do_alter():
+            qid = f"alt_{int(time.time()*1000)}"
+            sql = f"ALTER TABLE {table} ADD COLUMN z INT"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws2:
+                await ws2.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(160):
+                    try:
+                        msg = await asyncio.wait_for(ws2.receive(), timeout=0.1)
+                    except asyncio.TimeoutError:
+                        continue
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        return payload.get('type'), payload.get('error', '')
+            return 'error', 'timeout'
+
+        # Launch both nearly simultaneously
+        upd_task = asyncio.create_task(long_update())
+        # tiny delay to try and overlap ALTER during UPDATE
+        await asyncio.sleep(0.005)
+        alt_task = asyncio.create_task(do_alter())
+        upd_type, upd_err = await upd_task
+        alt_type, alt_err = await alt_task
+
+        # Acceptable outcomes: at least one error mentions conflict/alter, or both ok
+        conflict_keywords = ('conflict', 'altered', 'alter', 'Transaction')
+        one_conflict = (
+            (upd_type == 'error' and any(k.lower() in upd_err.lower() for k in conflict_keywords)) or
+            (alt_type == 'error' and any(k.lower() in alt_err.lower() for k in conflict_keywords))
+        )
+        both_ok = (upd_type == 'ok' and alt_type == 'ok')
+        assert one_conflict or both_ok
