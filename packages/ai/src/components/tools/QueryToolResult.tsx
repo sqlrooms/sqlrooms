@@ -26,7 +26,7 @@ export function QueryToolResult({title, sqlQuery}: QueryToolResultProps) {
       <div className="flex items-center gap-2">
         <Button variant="ghost" size="sm" onClick={tableModal.onOpen}>
           <TableIcon className="h-4 w-4" />
-          <h3 className="ml-1 text-xs">Show Query Result</h3>
+          <h3 className="ml-1 text-xs">{`Show Query Result: ${title}`}</h3>
         </Button>
       </div>
 

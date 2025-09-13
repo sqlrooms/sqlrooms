@@ -1,4 +1,3 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   Dialog,
@@ -7,18 +6,16 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
   CopyButton,
 } from '@sqlrooms/ui';
+import {shorten} from '@sqlrooms/utils';
 import {StreamMessagePart} from '@openassistant/core';
 import {
-  ClipboardIcon,
-  CodeIcon,
   SquareTerminalIcon,
   TrashIcon,
-  CheckIcon,
+  Wrench,
+  Loader2,
+  CircleArrowRightIcon,
 } from 'lucide-react';
 import {useState} from 'react';
 import {AnalysisResultSchema} from '../schemas';
@@ -36,14 +33,14 @@ type AnalysisResultProps = {
 };
 
 /**
- * Stringify the result of the analysis, excluding toolCallMessages.
- * Used to display raw result data in a code view.
- *
- * @param result - The complete analysis result
- * @returns A JSON string representation of the result without toolCallMessages
+ * Truncates tool invocation arguments for display
+ * @param args - The tool invocation arguments object
+ * @param maxLength - Maximum length for the displayed string (default: 50)
+ * @returns Truncated JSON string representation of the arguments
  */
-const stringifyResult = (result: AnalysisResultSchema) => {
-  return JSON.stringify(result, null, 2);
+const truncateArgs = (args: unknown, maxLength: number = 50): string => {
+  const jsonString = JSON.stringify(args, null, 2);
+  return shorten(jsonString, maxLength);
 };
 
 /**
@@ -136,6 +133,19 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           )}
           {part.type === 'tool-invocation' && (
             <div>
+              <div className="flex items-center gap-2 pl-2 text-xs text-gray-100">
+                {!result.isCompleted && part.toolInvocation.state === 'call' ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-gray-200" />
+                ) : (
+                  <CircleArrowRightIcon className="h-4 w-4" />
+                )}
+                <span className="text-gray-200">
+                  {part.toolInvocation.toolName}
+                </span>
+                <span className="text-gray-200">
+                  {truncateArgs(part.toolInvocation.args)}
+                </span>
+              </div>
               <ToolResult
                 key={part.toolInvocation.toolCallId}
                 toolInvocation={part.toolInvocation}

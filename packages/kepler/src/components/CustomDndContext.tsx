@@ -1,9 +1,19 @@
 import React, {useCallback, useMemo, PropsWithChildren} from 'react';
 import styled from 'styled-components';
-import {DndContext as DndKitContext, DragOverlay, Modifiers} from '@dnd-kit/core';
+import {
+  DndContext as DndKitContext,
+  DragOverlay,
+  Modifiers,
+} from '@dnd-kit/core';
 import {restrictToVerticalAxis} from '@dnd-kit/modifiers';
 import {VisState} from '@kepler.gl/schemas';
-import {LayerPanelHeaderFactory, DND_MODIFIERS, DND_EMPTY_MODIFIERS, SORTABLE_LAYER_TYPE, SORTABLE_EFFECT_TYPE} from '@kepler.gl/components';
+import {
+  LayerPanelHeaderFactory,
+  DND_MODIFIERS,
+  DND_EMPTY_MODIFIERS,
+  SORTABLE_LAYER_TYPE,
+  SORTABLE_EFFECT_TYPE,
+} from '@kepler.gl/components';
 
 import useDndLayers from '../hooks/useDndLayers';
 import useDndEffects from '../hooks/useDndEffects';
@@ -20,9 +30,15 @@ export type DndContextProps = PropsWithChildren<{
 }>;
 
 export function CustomDndContextFactory(
-  LayerPanelHeader: ReturnType<typeof LayerPanelHeaderFactory>
+  LayerPanelHeader: ReturnType<typeof LayerPanelHeaderFactory>,
 ): React.FC<DndContextProps> {
-  const LayerPanelOverlay = ({layer, datasets}: {layer: any; datasets: any}) => {
+  const LayerPanelOverlay = ({
+    layer,
+    datasets,
+  }: {
+    layer: any;
+    datasets: any;
+  }) => {
     const color =
       layer.config.dataId && datasets[layer.config.dataId]
         ? datasets[layer.config.dataId].color
@@ -51,24 +67,27 @@ export function CustomDndContextFactory(
 
   const DndContext = ({children, visState}: DndContextProps) => {
     // Get the current map ID from the store
-    const mapId = useStoreWithKepler((state: any) => state.config.kepler.currentMapId);
-    const {datasets, layerOrder, layers, splitMaps, effects, effectOrder} = visState || {};
+    const mapId = useStoreWithKepler(
+      (state: any) => state.config.kepler.currentMapId,
+    );
+    const {datasets, layerOrder, layers, splitMaps, effects, effectOrder} =
+      visState || {};
 
     // Use our custom hooks that include mapId
     const {
       activeLayer,
       onDragStart: onLayerDragStart,
-      onDragEnd: onLayerDragEnd
+      onDragEnd: onLayerDragEnd,
     } = useDndLayers(mapId, layers || [], layerOrder || []);
-    
-    const {onDragStart: onEffectDragStart, onDragEnd: onEffectDragEnd} = useDndEffects(
-      mapId,
-      effects || [],
-      effectOrder || []
-    );
+
+    const {onDragStart: onEffectDragStart, onDragEnd: onEffectDragEnd} =
+      useDndEffects(mapId, effects || [], effectOrder || []);
 
     const isSplit = useMemo(() => (splitMaps?.length || 0) > 1, [splitMaps]);
-    const dndModifiers = useMemo(() => (isSplit ? DND_EMPTY_MODIFIERS : DND_MODIFIERS), [isSplit]);
+    const dndModifiers = useMemo(
+      () => (isSplit ? DND_EMPTY_MODIFIERS : DND_MODIFIERS),
+      [isSplit],
+    );
 
     const onDragStart = useCallback(
       (event: any) => {
@@ -84,7 +103,7 @@ export function CustomDndContextFactory(
             console.log(`activeType ${activeType} unknown`);
         }
       },
-      [onLayerDragStart, onEffectDragStart]
+      [onLayerDragStart, onEffectDragStart],
     );
 
     const onDragEnd = useCallback(
@@ -101,12 +120,16 @@ export function CustomDndContextFactory(
             console.log(`activeType ${activeType} unknown`);
         }
       },
-      [onLayerDragEnd, onEffectDragEnd]
+      [onLayerDragEnd, onEffectDragEnd],
     );
 
     return (
-      <DndKitContext onDragStart={onDragStart} onDragEnd={onDragEnd} modifiers={dndModifiers}>
-        {children}
+      <DndKitContext
+        onDragStart={onDragStart}
+        onDragEnd={onDragEnd}
+        modifiers={dndModifiers}
+      >
+        {children as any}
         {activeLayer ? (
           <DragOverlay modifiers={dndModifiers} dropAnimation={null}>
             <DragItem>
@@ -121,4 +144,4 @@ export function CustomDndContextFactory(
   return DndContext;
 }
 
-CustomDndContextFactory.deps = [LayerPanelHeaderFactory]; 
+CustomDndContextFactory.deps = [LayerPanelHeaderFactory];
