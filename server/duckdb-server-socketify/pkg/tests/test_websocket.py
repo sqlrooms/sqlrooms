@@ -14,14 +14,11 @@ import pytest
 
 @pytest.fixture(scope="module")
 def server_proc():
-    temp_db = tempfile.NamedTemporaryFile(suffix='.duckdb', delete=False)
-    temp_db.close()
     port = 30011
     out = tempfile.NamedTemporaryFile(delete=False)
     err = tempfile.NamedTemporaryFile(delete=False)
     proc = subprocess.Popen([
         sys.executable, '-m', 'pkg',
-        '--db-path', temp_db.name,
         '--port', str(port)
     ], stdout=out, stderr=err)
     # Wait until port is accepting connections or timeout
@@ -52,7 +49,6 @@ def server_proc():
     yield {
         'proc': proc,
         'port': port,
-        'db': temp_db.name,
     }
     try:
         proc.terminate()
@@ -62,8 +58,6 @@ def server_proc():
             proc.kill()
         except Exception:
             pass
-    if os.path.exists(temp_db.name):
-        os.unlink(temp_db.name)
     try:
         os.unlink(out.name)
     except Exception:

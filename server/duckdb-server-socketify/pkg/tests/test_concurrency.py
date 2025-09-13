@@ -64,14 +64,11 @@ async def send_query(session, port, query, query_id):
 
 @pytest.fixture(scope="module")
 def server_proc():
-    temp_db = tempfile.NamedTemporaryFile(suffix='.duckdb', delete=False)
-    temp_db.close()
     port = 30012
     out = tempfile.NamedTemporaryFile(delete=False)
     err = tempfile.NamedTemporaryFile(delete=False)
     proc = subprocess.Popen([
         sys.executable, '-m', 'pkg',
-        '--db-path', temp_db.name,
         '--port', str(port)
     ], stdout=out, stderr=err)
     started = False
@@ -101,7 +98,6 @@ def server_proc():
     yield {
         'proc': proc,
         'port': port,
-        'db': temp_db.name,
     }
     try:
         proc.terminate()
@@ -111,8 +107,6 @@ def server_proc():
             proc.kill()
         except Exception:
             pass
-    if os.path.exists(temp_db.name):
-        os.unlink(temp_db.name)
     try:
         os.unlink(out.name)
     except Exception:
@@ -145,3 +139,246 @@ async def test_concurrency(server_proc):
         concurrency_ratio = max_individual / total_time if total_time > 0 else 0
         # Expect decent concurrency
         assert concurrency_ratio > 0.7
+
+
+@pytest.mark.asyncio
+async def test_concurrent_writes(server_proc):
+    port = server_proc['port']
+    table = 't_concurrent'
+    async with aiohttp.ClientSession() as session:
+        # Setup table
+        async with session.ws_connect(f'ws://localhost:{port}') as ws:
+            for sql in [f"DROP TABLE IF EXISTS {table}", f"CREATE TABLE {table}(x INT)"]:
+                qid = f"setup_{int(time.time()*1000)}"
+                await ws.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                # wait for ok/error
+                for _ in range(20):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        assert payload.get('type') in ('ok', 'error')
+                        if payload.get('type') == 'error':
+                            pytest.fail(f"setup failed: {payload.get('error')}")
+                        break
+
+        # Concurrent inserts across disjoint ranges
+        async def do_insert(a: int, b: int, idx: int):
+            qid = f"ins_{idx}_{int(time.time()*1000)}"
+            sql = f"INSERT INTO {table} SELECT x FROM generate_series({a}, {b}) AS t(x)"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws2:
+                await ws2.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(200):
+                    msg = await ws2.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        if payload.get('type') == 'error':
+                            return False
+                        return True
+            return False
+
+        ranges = [(1, 20000), (20001, 40000), (40001, 60000), (60001, 80000), (80001, 100000)]
+        results = await asyncio.gather(*(do_insert(a, b, i) for i, (a, b) in enumerate(ranges)))
+        assert all(results)
+
+        # Verify row count
+        qid = f"chk_{int(time.time()*1000)}"
+        sql = f"SELECT COUNT(*) AS n FROM {table}"
+        async with session.ws_connect(f'ws://localhost:{port}') as ws3:
+            await ws3.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
+            for _ in range(200):
+                msg = await ws3.receive()
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    continue
+                try:
+                    payload = json.loads(msg.data)
+                except Exception:
+                    continue
+                if payload.get('queryId') == qid and payload.get('type') == 'json':
+                    data_json = payload.get('data')
+                    try:
+                        arr = json.loads(data_json)
+                    except Exception:
+                        pytest.fail('invalid json payload')
+                    assert isinstance(arr, list) and len(arr) == 1
+                    expected = sum(b - a + 1 for a, b in ranges)
+                    assert arr[0].get('n') == expected
+                    break
+            else:
+                pytest.fail('did not receive count json response')
+
+
+@pytest.mark.asyncio
+async def test_concurrent_ctas_long_ops(server_proc):
+    """
+    Concurrently create multiple tables using CTAS (CREATE TABLE AS SELECT)
+    where the SELECT side performs a more expensive operation (generate_series
+    over a large range). This validates that:
+      - write workloads run in parallel without blocking each other excessively
+      - catalog operations for different tables do not conflict
+      - server returns "ok" for exec messages and the results are visible
+    """
+    port = server_proc['port']
+    tables = [f"t_ctas_{i}" for i in range(5)]
+    ranges = [(1, 50000), (1, 60000), (1, 70000), (1, 80000), (1, 90000)]
+
+    async with aiohttp.ClientSession() as session:
+        # Drop pre-existing tables if present
+        async with session.ws_connect(f'ws://localhost:{port}') as ws:
+            for t in tables:
+                qid = f"drop_{t}_{int(time.time()*1000)}"
+                await ws.send_str(json.dumps({"type": "exec", "sql": f"DROP TABLE IF EXISTS {t}", "queryId": qid}))
+                # Wait for ack
+                for _ in range(50):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        break
+
+        # Helper to CTAS with a heavy generate_series
+        async def do_ctas(t: str, a: int, b: int):
+            qid = f"ctas_{t}_{int(time.time()*1000)}"
+            sql = f"CREATE TABLE {t} AS SELECT x FROM generate_series({a}, {b}) AS t(x)"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws2:
+                await ws2.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(400):
+                    msg = await ws2.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        return payload.get('type') == 'ok'
+            return False
+
+        # Launch CTAS concurrently
+        results = await asyncio.gather(*(do_ctas(t, a, b) for t, (a, b) in zip(tables, ranges)))
+        assert all(results)
+
+        # Verify each table has expected number of rows
+        async with session.ws_connect(f'ws://localhost:{port}') as ws3:
+            for t, (a, b) in zip(tables, ranges):
+                qid = f"count_{t}_{int(time.time()*1000)}"
+                await ws3.send_str(json.dumps({"type": "json", "sql": f"SELECT COUNT(*) AS n FROM {t}", "queryId": qid}))
+                for _ in range(200):
+                    msg = await ws3.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid and payload.get('type') == 'json':
+                        arr = json.loads(payload.get('data', '[]'))
+                        assert isinstance(arr, list) and len(arr) == 1
+                        expected = b - a + 1
+                        assert arr[0].get('n') == expected
+                        break
+                else:
+                    pytest.fail(f'did not receive count for {t}')
+
+
+@pytest.mark.asyncio
+async def test_mixed_workload(server_proc):
+    """
+    Mixed workload: concurrent reads, inserts, and CTAS.
+    Validates the server can handle parallel heterogeneous operations
+    without starving reads or causing catalog conflicts.
+    """
+    port = server_proc['port']
+    table = 't_mixed'
+    async with aiohttp.ClientSession() as session:
+        # Prepare base table
+        async with session.ws_connect(f'ws://localhost:{port}') as ws:
+            for sql in [f"DROP TABLE IF EXISTS {table}", f"CREATE TABLE {table}(x INT)", f"INSERT INTO {table} VALUES (1),(2),(3)"]:
+                qid = f"setup_{int(time.time()*1000)}"
+                await ws.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(50):
+                    msg = await ws.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        assert payload.get('type') in ('ok', 'error')
+                        if payload.get('type') == 'error':
+                            pytest.fail(f"setup failed: {payload.get('error')}")
+                        break
+
+        async def read_sum(idx: int):
+            qid = f"read_{idx}_{int(time.time()*1000)}"
+            sql = f"SELECT SUM(x) AS s FROM {table}"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws1:
+                await ws1.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
+                for _ in range(200):
+                    msg = await ws1.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid and payload.get('type') == 'json':
+                        return True
+            return False
+
+        async def insert_range(a: int, b: int, idx: int):
+            qid = f"ins_m_{idx}_{int(time.time()*1000)}"
+            sql = f"INSERT INTO {table} SELECT x FROM generate_series({a},{b}) AS t(x)"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws2:
+                await ws2.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(400):
+                    msg = await ws2.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        return payload.get('type') == 'ok'
+            return False
+
+        async def ctas_heavy(tname: str, n: int):
+            qid = f"ctas_m_{int(time.time()*1000)}"
+            sql = f"CREATE TABLE {tname} AS SELECT x FROM generate_series(1, {n}) AS t(x)"
+            async with session.ws_connect(f'ws://localhost:{port}') as ws3:
+                await ws3.send_str(json.dumps({"type": "exec", "sql": sql, "queryId": qid}))
+                for _ in range(600):
+                    msg = await ws3.receive()
+                    if msg.type != aiohttp.WSMsgType.TEXT:
+                        continue
+                    try:
+                        payload = json.loads(msg.data)
+                    except Exception:
+                        continue
+                    if payload.get('queryId') == qid:
+                        return payload.get('type') == 'ok'
+            return False
+
+        tasks = [
+            *(read_sum(i) for i in range(5)),
+            insert_range(1, 20000, 1),
+            insert_range(20001, 40000, 2),
+            ctas_heavy('t_mixed_ctas', 50000),
+        ]
+        results = await asyncio.gather(*tasks)
+        assert all(results)
