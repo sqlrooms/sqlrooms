@@ -2,7 +2,6 @@ import logging
 import sys
 import argparse
 import os
-import time
 import signal
 import threading
 

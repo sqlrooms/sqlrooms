@@ -25,7 +25,7 @@ A Python-based server that runs a local DuckDB instance and support queries over
 We recommend running the server in an isolated environment with [uvx](https://docs.astral.sh/uv/). For example, to directly run the server, use:
 
 ```bash
-i vx duckdb-server --db-path /absolute/path/to/my.db --port 3000 --extensions httpfs,spatial
+uvx duckdb-server --db-path /absolute/path/to/my.db --port 3000 --extensions httpfs,spatial
 ```
 
 Alternatively, you can install the server with `pip install duckdb-server`. Then you can start the server with `duckdb-server --db-path /absolute/path/to/my.db --port 3000`.
