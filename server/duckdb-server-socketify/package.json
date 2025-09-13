@@ -3,7 +3,7 @@
   "version": "0.2.0",
   "private": true,
   "scripts": {
-    "dev": "uv run watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg --db-path /tmp/duckdb-server.db --port 4000",
+    "dev": "uv run watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg --port 4000",
     "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",
     "release": "uv build && uvx twine upload --skip-existing ./dist/sqlrooms_duckdb_server*"
   }

@@ -4,7 +4,7 @@ import logging
 import os
 import threading
 import uuid
-from typing import Callable, Optional, Any, Dict, Tuple
+from typing import Callable, Optional, Any, Dict, Tuple, List
 
 import duckdb
 
@@ -74,24 +74,28 @@ def cancel_all_queries() -> None:
         active_queries.clear()
 
 
-def init_global_connection(database_path: str) -> None:
-    """Initialize the global DuckDB connection and optimize for concurrent access."""
+def init_global_connection(database_path: str, extensions: Optional[List[str]] = None) -> None:
+    """Initialize the global DuckDB connection and optimize for concurrent access.
+
+    extensions: optional list like ["httpfs", "iceberg", "spatial", "h3@community"].
+    """
     global GLOBAL_CON, DATABASE_PATH
     GLOBAL_CON = duckdb.connect(database_path)
     DATABASE_PATH = database_path
 
-    # Load useful extensions often used with SQLRooms
-    try:
-        GLOBAL_CON.install_extension("httpfs")
-        GLOBAL_CON.load_extension("httpfs")
-        GLOBAL_CON.install_extension("iceberg")
-        GLOBAL_CON.load_extension("iceberg")
-        GLOBAL_CON.install_extension("spatial")
-        GLOBAL_CON.load_extension("spatial")
-        GLOBAL_CON.install_extension("h3", repository="community")
-        GLOBAL_CON.load_extension("h3")
-    except Exception as e:
-        logger.warning(f"Failed to install/load some extensions: {e}")
+    if extensions is None:
+        extensions = ["httpfs"]
+
+    for spec in extensions:
+        try:
+            name, repo = (spec.split("@", 1) + [None])[:2]
+            if repo:
+                GLOBAL_CON.install_extension(name, repository=repo)
+            else:
+                GLOBAL_CON.install_extension(name)
+            GLOBAL_CON.load_extension(name)
+        except Exception as e:
+            logger.warning(f"Failed to install/load extension '{spec}': {e}")
 
     cpu_count = os.cpu_count() or 4
     GLOBAL_CON.execute(f"SET threads TO {cpu_count}")
