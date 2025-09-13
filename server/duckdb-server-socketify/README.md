@@ -8,20 +8,46 @@ A Python-based server that runs a local DuckDB instance and support queries over
 
 > **Note:** This package provides a local DuckDB server. To instead use SQLRooms with DuckDB-WASM in the browser, stick to the default [`WasmDuckDbConnector`](https://sqlrooms.org/api/duckdb/interfaces/WasmDuckDbConnector.html).
 
+## Features
+
+- WebSocket and HTTP endpoints
+- Arrow IPC results (binary framed) and JSON responses
+- Concurrent query execution using a shared thread pool (per-task cursors)
+- Per-query cancellation via `duckdb.interrupt` (WebSocket `type:"cancel"`)
+- WebSocket multiplexing with `queryId` correlation
+- Subscribe/notify over WebSocket using Socketify publish/subscribe
+- Disk-backed result cache with per-key locking (prevents duplicate compute)
+- One-time retry on transaction conflicts (e.g., concurrent UPDATE vs ALTER)
+- Graceful shutdown (SIGINT/SIGTERM): cancel queries, FORCE CHECKPOINT, close, stop executor
+
 ## Installation and usage
 
 We recommend running the server in an isolated environment with [uvx](https://docs.astral.sh/uv/). For example, to directly run the server, use:
 
 ```bash
-uvx duckdb-server --db-path /absolute/path/to/my.db --port 3000
+i vx duckdb-server --db-path /absolute/path/to/my.db --port 3000 --extensions httpfs,spatial
 ```
 
 Alternatively, you can install the server with `pip install duckdb-server`. Then you can start the server with `duckdb-server --db-path /absolute/path/to/my.db --port 3000`.
 
 ### Command-line arguments
 
-- `--db-path` (required): Path to DuckDB database file
-- `--port` (default: 3000): Port to listen on
+- `--db-path` (optional): Path to DuckDB database file. Defaults to `:memory:`.
+- `--port` (default: `3000`): Port to listen on.
+- `--extensions` (optional): Comma-separated list of extensions to preload. Examples:
+  - `httpfs`
+  - `spatial`
+  - `h3@community`
+
+Examples:
+
+```bash
+# In-memory DB with httpfs only (default)
+uv run duckdb-server --port 4000
+
+# File-backed DB with multiple extensions
+uv run duckdb-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
+```
 
 ## Developer Setup
 
@@ -115,11 +141,12 @@ Supported messages:
 - DuckDB work runs in a shared thread pool with per-task cursors.
 - Per-query cancellation is supported via `duckdb.interrupt`.
 - WebSocket multiplexing uses `queryId` correlation in headers/payloads.
+- One-time retry on transaction conflicts (e.g., concurrent UPDATE vs ALTER).
 
 ## Notes
 
 - CORS: HTTP responses add permissive CORS headers. Adjust as needed.
-- Graceful shutdown: SIGINT/SIGTERM cancel in-flight queries and stop the executor.
+- Graceful shutdown: SIGINT/SIGTERM cancel in-flight queries, FORCE CHECKPOINT, close connection, stop executor.
 
 ## Publishing
 
