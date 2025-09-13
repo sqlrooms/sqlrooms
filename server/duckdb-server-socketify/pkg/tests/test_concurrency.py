@@ -385,15 +385,15 @@ async def test_mixed_workload(server_proc):
 
 
 @pytest.mark.asyncio
-async def test_update_vs_alter_conflict_tolerant(server_proc):
+async def test_update_vs_alter_with_retry(server_proc):
     """
-    Try to provoke a transaction conflict by running a long UPDATE statement
-    while concurrently ALTERing the same table. Depending on timing DuckDB may
-    either raise a transaction conflict (preferred) or serialize/queue one
-    operation so both succeed. This test tolerates both outcomes but asserts
-    that at least one of the following holds:
-      - one operation returns an error mentioning conflict/alter
-      - both operations succeed (non-flaky fallback)
+    Provoke a transaction conflict by overlapping UPDATE and ALTER on the same
+    table. The server is expected to recover by retrying the conflicting
+    transaction once and ultimately returning success for both operations.
+
+    After completion, verify final state:
+      - column 'z' has been added by ALTER
+      - all rows had 'v' incremented to 1 by UPDATE
     """
     port = server_proc['port']
     table = 't_conflict'
@@ -476,11 +476,54 @@ async def test_update_vs_alter_conflict_tolerant(server_proc):
         upd_type, upd_err = await upd_task
         alt_type, alt_err = await alt_task
 
-        # Acceptable outcomes: at least one error mentions conflict/alter, or both ok
-        conflict_keywords = ('conflict', 'altered', 'alter', 'Transaction')
-        one_conflict = (
-            (upd_type == 'error' and any(k.lower() in upd_err.lower() for k in conflict_keywords)) or
-            (alt_type == 'error' and any(k.lower() in alt_err.lower() for k in conflict_keywords))
-        )
-        both_ok = (upd_type == 'ok' and alt_type == 'ok')
-        assert one_conflict or both_ok
+        # With server-side one-time retry enabled, both should succeed
+        assert upd_type == 'ok', f"update failed: {upd_err}"
+        assert alt_type == 'ok', f"alter failed: {alt_err}"
+
+        # Verify schema includes added column 'z'
+        qid = f"schema_{int(time.time()*1000)}"
+        sql = f"SELECT name FROM pragma_table_info('{table}')"
+        async with session.ws_connect(f'ws://localhost:{port}') as ws4:
+            await ws4.send_str(json.dumps({"type": "json", "sql": sql, "queryId": qid}))
+            for _ in range(100):
+                try:
+                    msg = await asyncio.wait_for(ws4.receive(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    continue
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    continue
+                try:
+                    payload = json.loads(msg.data)
+                except Exception:
+                    continue
+                if payload.get('queryId') == qid and payload.get('type') == 'json':
+                    arr = json.loads(payload.get('data', '[]'))
+                    names = {row.get('name') for row in arr if isinstance(row, dict)}
+                    assert 'z' in names
+                    break
+            else:
+                pytest.fail('did not receive schema response')
+
+        # Verify all rows have v == 1
+        qid2 = f"chk_v_{int(time.time()*1000)}"
+        sql2 = f"SELECT COUNT(*) AS c FROM {table} WHERE v = 1"
+        async with session.ws_connect(f'ws://localhost:{port}') as ws5:
+            await ws5.send_str(json.dumps({"type": "json", "sql": sql2, "queryId": qid2}))
+            for _ in range(100):
+                try:
+                    msg = await asyncio.wait_for(ws5.receive(), timeout=0.1)
+                except asyncio.TimeoutError:
+                    continue
+                if msg.type != aiohttp.WSMsgType.TEXT:
+                    continue
+                try:
+                    payload = json.loads(msg.data)
+                except Exception:
+                    continue
+                if payload.get('queryId') == qid2 and payload.get('type') == 'json':
+                    arr = json.loads(payload.get('data', '[]'))
+                    assert isinstance(arr, list) and len(arr) == 1
+                    assert arr[0].get('c') == 10000
+                    break
+            else:
+                pytest.fail('did not receive v==1 count response')

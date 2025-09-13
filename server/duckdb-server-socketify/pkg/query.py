@@ -2,6 +2,8 @@ import logging
 from hashlib import sha256
 
 import pyarrow as pa
+import time
+import duckdb
 
 logger = logging.getLogger(__name__)
 
@@ -68,7 +70,17 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
     The actual DB work runs in a thread, using a per-task cursor. Cancellation is handled by db_async.
     """
     logger.debug(f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}")
-    def _execute_with_cursor(con):
+
+    def _is_conflict_error(exc: Exception) -> bool:
+        msg = str(exc).lower()
+        return (
+            "conflict" in msg
+            or "transaction" in msg
+            or "altered" in msg
+            or isinstance(exc, duckdb.Error)
+        )
+
+    def _execute_once(con):
         command = query["type"]
         if command == "arrow":
             buffer = retrieve(cache, query, partial(get_arrow_bytes, con))
@@ -82,5 +94,18 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
             return {"type": "ok"}
         else:
             raise ValueError(f"Unknown command {command}")
+
+    def _execute_with_cursor(con):
+        attempts = 0
+        while True:
+            try:
+                return _execute_once(con)
+            except Exception as e:
+                if attempts < 1 and _is_conflict_error(e):
+                    attempts += 1
+                    logger.warning(f"Transaction conflict detected; retrying once. Error: {e}")
+                    time.sleep(0.01)
+                    continue
+                raise
 
     return await db_async.run_db_task(_execute_with_cursor, query_id=query_id)
