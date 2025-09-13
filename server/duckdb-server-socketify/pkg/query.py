@@ -72,13 +72,8 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
     logger.debug(f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}")
 
     def _is_conflict_error(exc: Exception) -> bool:
-        msg = str(exc).lower()
-        return (
-            "conflict" in msg
-            or "transaction" in msg
-            or "altered" in msg
-            or isinstance(exc, duckdb.Error)
-        )
+        msg = str(exc)
+        return ("Transaction conflict" in msg)
 
     def _execute_once(con):
         command = query["type"]
