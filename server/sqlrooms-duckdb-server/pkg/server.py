@@ -1,7 +1,6 @@
 import logging
 import sys
 import time
-from functools import partial
 import asyncio
 import json
 import concurrent.futures
@@ -14,47 +13,6 @@ from pkg.query import run_duckdb
 from . import db_async
 
 logger = logging.getLogger(__name__)
-
-SLOW_QUERY_THRESHOLD = 5000
-
-
-class Handler:
-    def done(self):
-        raise Exception("NotImplementedException")
-
-    def arrow(self, _buffer):
-        raise Exception("NotImplementedException")
-
-    def json(self, _data):
-        raise Exception("NotImplementedException")
-
-    def error(self, _error):
-        raise Exception("NotImplementedException")
-
-
-class SocketHandler(Handler):
-    def __init__(self, ws):
-        self.ws = ws
-
-    def check(self, ok):
-        if not ok:
-            logger.warning(f"WebSocket backpressure: {self.ws.get_buffered_amount()}")
-
-    def done(self):
-        ok = self.ws.send({}, OpCode.TEXT)
-        self.check(ok)
-
-    def arrow(self, buffer):
-        ok = self.ws.send(buffer, OpCode.BINARY)
-        self.check(ok)
-
-    def json(self, data):
-        ok = self.ws.send(data, OpCode.TEXT)
-        self.check(ok)
-
-    def error(self, error):
-        ok = self.ws.send({"error": str(error)}, OpCode.TEXT)
-        self.check(ok)
 
 
 def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
