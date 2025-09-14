@@ -8,6 +8,7 @@ import concurrent.futures
 
 import ujson
 from socketify import App, CompressOptions, OpCode
+from .auth import AuthManager
 
 from pkg.query import run_duckdb
 from . import db_async
@@ -88,6 +89,13 @@ def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
     return header_len + header_bytes + arrow_bytes
 
 
+def _ws_send(ws, payload, opcode):
+    ok = ws.send(payload, opcode)
+    if not ok:
+        logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
+    return ok
+
+
 async def handle_query_ws(ws, cache, query):
     start = time.time()
     query_id = query.get("queryId") or db_async.generate_query_id()
@@ -96,21 +104,13 @@ async def handle_query_ws(ws, cache, query):
         rtype = result.get("type")
         if rtype == "arrow":
             payload = _build_arrow_frame(query_id, result["data"])  # bytes
-            ok = ws.send(payload, OpCode.BINARY)
-            if not ok:
-                logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
+            _ws_send(ws, payload, OpCode.BINARY)
         elif rtype == "json":
-            ok = ws.send({"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
-            if not ok:
-                logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
+            _ws_send(ws, {"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
         elif rtype == "ok":
-            ok = ws.send({"type": "ok", "queryId": query_id}, OpCode.TEXT)
-            if not ok:
-                logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
+            _ws_send(ws, {"type": "ok", "queryId": query_id}, OpCode.TEXT)
         else:
-            ok = ws.send({"type": "error", "queryId": query_id, "error": "Unexpected result type"}, OpCode.TEXT)
-            if not ok:
-                logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
+            _ws_send(ws, {"type": "error", "queryId": query_id, "error": "Unexpected result type"}, OpCode.TEXT)
     except concurrent.futures.CancelledError:
         ws.send({"type": "error", "queryId": query_id, "error": "Query was cancelled"}, OpCode.TEXT)
     except Exception as e:
@@ -127,7 +127,7 @@ def on_error(error, res, req):
         res.end(f"Error {error}")
 
 
-def server(cache, port=3000):
+def server(cache, port=4000, auth_token: str | None = None):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
     app = App()
@@ -135,14 +135,27 @@ def server(cache, port=3000):
     # faster serialization than standard json
     app.json_serializer(ujson)
 
-    def ws_message(ws, message, opcode):
-        try:
-            query = ujson.loads(message)
-        except Exception as e:
-            logger.exception("Error reading message from WebSocket")
-            ws.send({"type": "error", "error": str(e)}, OpCode.TEXT)
-            return
+    # Auth helper
+    auth = AuthManager(auth_token)
 
+    def _http_unauthorized(res):
+        res.write_status(401)
+        # CORS headers for browsers
+        res.write_header("Access-Control-Allow-Origin", "*")
+        res.write_header("Access-Control-Request-Method", "*")
+        res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
+        res.write_header("Access-Control-Allow-Headers", "*")
+        res.write_header("Access-Control-Max-Age", "2592000")
+        res.write_header("Content-Type", "application/json")
+        res.end('{"type":"error","error":"unauthorized"}')
+
+    def _check_http_auth(req) -> bool:
+        return auth.check_http(req)
+
+    def ws_open(ws):
+        auth.on_open(ws)
+
+    def _process_message(ws, query):
         # Cancellation message: { type: 'cancel', queryId }
         if isinstance(query, dict) and query.get("type") == "cancel":
             qid = query.get("queryId")
@@ -167,37 +180,70 @@ def server(cache, port=3000):
             channel = query.get("channel")
             payload = {"type": "notify", "channel": channel, "payload": query.get("payload")}
             if channel:
-                # Publish to all subscribers
                 app.publish(channel, ujson.dumps(payload))
-                # Also push to the sender connection immediately
                 ws.send(payload, OpCode.TEXT)
-                # Acknowledge publish
                 ws.send({"type": "notifyAck", "channel": channel}, OpCode.TEXT)
             else:
                 ws.send({"type": "error", "error": "Missing channel"}, OpCode.TEXT)
             return
 
-        # Query messages: spawn async task so socket can receive more messages
+        # Query messages: only accept valid types with sql
+        if isinstance(query, dict) and query.get("type") in ("arrow", "json", "exec") and isinstance(query.get("sql"), str):
+            try:
+                asyncio.create_task(handle_query_ws(ws, cache, query))
+            except Exception as e:
+                logger.exception("Failed to schedule query task")
+                ws.send({"type": "error", "error": str(e)}, OpCode.TEXT)
+            return
+
+        ws.send({"type": "error", "error": "invalid message"}, OpCode.TEXT)
+
+    def ws_message(ws, message, opcode):
         try:
-            asyncio.create_task(handle_query_ws(ws, cache, query))
-        except Exception as e:
-            logger.exception("Failed to schedule query task")
-            ws.send({"type": "error", "error": str(e)}, OpCode.TEXT)
+            # Ensure text for JSON parse
+            if isinstance(message, (bytes, bytearray, memoryview)):
+                msg_str = bytes(message).decode("utf-8", "ignore")
+            else:
+                msg_str = message
+            query = ujson.loads(msg_str)
+        except Exception:
+            ws.send({"type": "error", "error": "invalid json"}, OpCode.TEXT)
+            return
+
+        # Delegate auth handling; if it handled the message (auth/unauthorized), stop
+        if auth.handle_ws_message(ws, query):
+            return
+
+        _process_message(ws, query)
 
     async def http_handler(res, req):
+        method = req.get_method()
+
+        # Handle preflight early
+        if method == "OPTIONS":
+            res.write_header("Access-Control-Allow-Origin", "*")
+            res.write_header("Access-Control-Request-Method", "*")
+            res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
+            res.write_header("Access-Control-Allow-Headers", "*")
+            res.write_header("Access-Control-Max-Age", "2592000")
+            res.end("")
+            return
+
+        # Enforce auth before writing headers, so we can set status properly
+        if method in ("GET", "POST") and not _check_http_auth(req):
+            _http_unauthorized(res)
+            return
+
+        # Authorized path: add CORS headers then handle
         res.write_header("Access-Control-Allow-Origin", "*")
         res.write_header("Access-Control-Request-Method", "*")
         res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
         res.write_header("Access-Control-Allow-Headers", "*")
         res.write_header("Access-Control-Max-Age", "2592000")
 
-        method = req.get_method()
-
         handler = HTTPHandler(res)
 
-        if method == "OPTIONS":
-            handler.done()
-        elif method == "GET":
+        if method == "GET":
             data = ujson.loads(req.get_query("query"))
             try:
                 result = await run_duckdb(cache, data)
@@ -234,10 +280,12 @@ def server(cache, port=3000):
         "/*",
         {
             "compression": CompressOptions.SHARED_COMPRESSOR,
+            "open": ws_open,
             "message": ws_message,
             "drain": lambda ws: logger.warning(
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
+            "close": lambda ws, code, message: auth.on_close(ws),
         },
     )
 

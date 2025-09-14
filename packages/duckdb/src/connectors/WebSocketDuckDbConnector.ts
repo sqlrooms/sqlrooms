@@ -26,6 +26,9 @@ export interface WebSocketDuckDbConnectorOptions {
 
   /** Optional list of channels to subscribe to upon (re)connect */
   subscribeChannels?: string[];
+
+  /** Optional bearer token to authenticate with the server */
+  authToken?: string;
 }
 
 export interface WebSocketDuckDbConnector extends DuckDbConnector {
@@ -51,6 +54,7 @@ export function createWebSocketDuckDbConnector(
     wsUrl = 'ws://localhost:4000',
     initializationQuery = '',
     subscribeChannels,
+    authToken,
   } = options;
 
   // Persistent socket and per-query waiters
@@ -74,6 +78,7 @@ export function createWebSocketDuckDbConnector(
     }
   };
 
+  // Guard to avoid duplicate subscribe sends on open + initialize
   const resubscribe = () => {
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
     if (!lastSubscribedChannels || lastSubscribedChannels.length === 0) return;
@@ -94,17 +99,27 @@ export function createWebSocketDuckDbConnector(
         socket = ws;
         ws.binaryType = 'arraybuffer';
 
+        let authAcked = !authToken;
+
         ws.onopen = () => {
-          opening = null;
-          // Subscribe to requested channels on open
-          resubscribe();
-          resolve();
+          // If auth is required, perform first-message auth and wait for ack
+          try {
+            if (authToken) {
+              try {
+                ws.send(JSON.stringify({type: 'auth', token: authToken}));
+              } catch {}
+            } else {
+              // No auth required; resolve immediately
+              opening = null;
+              resubscribe();
+              resolve();
+            }
+          } catch {}
         };
 
         ws.onmessage = (event: MessageEvent) => {
           (async () => {
             if (typeof event.data === 'string') {
-              // JSON control messages (errors, cancelAck, notify)
               let parsed: any;
               try {
                 parsed = JSON.parse(event.data);
@@ -112,6 +127,20 @@ export function createWebSocketDuckDbConnector(
                 return;
               }
               const t = parsed?.type;
+              if (!authAcked) {
+                if (t === 'authAck') {
+                  authAcked = true;
+                  opening = null;
+                  // Subscribe once authed
+                  resubscribe();
+                  resolve();
+                } else if (t === 'error') {
+                  const msg = parsed?.error || 'Unauthorized';
+                  opening = null;
+                  reject(new Error(msg));
+                }
+                return;
+              }
               if (t === 'cancelAck') return;
               if (t === 'notify') {
                 const payload = parsed?.payload;
@@ -119,6 +148,19 @@ export function createWebSocketDuckDbConnector(
                   options.onNotification?.(payload);
                 } catch {}
                 return;
+              }
+              // After initialization: if we ever receive a global unauthorized error, throw and close
+              if (t === 'error') {
+                const errMsg = String(parsed?.error || '').toLowerCase();
+                const hasQid = typeof parsed?.queryId === 'string';
+                if (!hasQid && errMsg.includes('unauthorized')) {
+                  closeAndRejectAll('Unauthorized');
+                  try {
+                    ws.close();
+                  } catch {}
+                  socket = null;
+                  return;
+                }
               }
               const qid: string | undefined = parsed?.queryId;
               if (!qid) return;

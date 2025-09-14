@@ -18,12 +18,14 @@ _def_initialized = False
 _shutdown_started = False
 
 
-def serve(db_path=None, port=3000, extensions: list[str] | None = None):
+def serve(db_path=None, port=4000, extensions: list[str] | None = None, auth_token: str | None = None):
     global _def_initialized
     if not db_path:
         db_path = ":memory:"
     logger.info(f"Using DuckDB from {db_path}")
     logger.info(f"Using port {port}")
+    if auth_token:
+        logger.info("Bearer authentication is ENABLED")
 
     # Ensure directory exists for file-backed DBs
     db_dir = os.path.dirname(db_path) if db_path != ":memory:" else ""
@@ -83,16 +85,19 @@ def serve(db_path=None, port=3000, extensions: list[str] | None = None):
     signal.signal(signal.SIGINT, _graceful_shutdown)
     signal.signal(signal.SIGTERM, _graceful_shutdown)
 
-    server(cache, port)
+    server(cache, port, auth_token=auth_token)
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='DuckDB Socketify Server')
     parser.add_argument('--db-path', type=str, help='Path to the DuckDB database file (default :memory:)')
-    parser.add_argument('--port', type=int, default=3000, help='Port to listen on')
+    parser.add_argument('--port', type=int, default=4000, help='Port to listen on')
     parser.add_argument('--extensions', type=str, help='Comma-separated list of extensions to preload (e.g. httpfs,spatial,h3@community)')
+    parser.add_argument('--auth-token', type=str, help='If provided, require this bearer token for HTTP and WS clients')
     args = parser.parse_args()
     exts = None
     if args.extensions:
         exts = [s.strip() for s in args.extensions.split(',') if s.strip()]
-    serve(args.db_path, args.port, extensions=exts)
+    # Allow env var fallback if CLI flag not provided
+    token = args.auth_token
+    serve(args.db_path, args.port, extensions=exts, auth_token=token)

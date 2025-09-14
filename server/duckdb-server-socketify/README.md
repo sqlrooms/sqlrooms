@@ -19,25 +19,29 @@ A Python-based server that runs a local DuckDB instance and support queries over
 - Disk-backed result cache with per-key locking (prevents duplicate compute)
 - One-time retry on transaction conflicts (e.g., concurrent UPDATE vs ALTER)
 - Graceful shutdown (SIGINT/SIGTERM): cancel queries, FORCE CHECKPOINT, close, stop executor
+- Optional bearer authentication for HTTP and WebSocket endpoints
 
 ## Installation and usage
 
 We recommend running the server in an isolated environment with [uvx](https://docs.astral.sh/uv/). For example, to directly run the server, use:
 
 ```bash
-uvx duckdb-server --db-path /absolute/path/to/my.db --port 3000 --extensions httpfs,spatial
+uvx duckdb-server --db-path /absolute/path/to/my.db --port 4000 --extensions httpfs,spatial
 ```
 
-Alternatively, you can install the server with `pip install duckdb-server`. Then you can start the server with `duckdb-server --db-path /absolute/path/to/my.db --port 3000`.
+Alternatively, you can install the server with `pip install duckdb-server`. Then you can start the server with `duckdb-server --db-path /absolute/path/to/my.db --port 4000`.
 
 ### Command-line arguments
 
 - `--db-path` (optional): Path to DuckDB database file. Defaults to `:memory:`.
-- `--port` (default: `3000`): Port to listen on.
+- `--port` (default: `4000`): Port to listen on.
 - `--extensions` (optional): Comma-separated list of extensions to preload. Examples:
+
   - `httpfs`
   - `spatial`
   - `h3@community`
+
+- `--auth-token` (optional): If provided, enables bearer authentication. HTTP requests must include `Authorization: Bearer <TOKEN>`. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
 
 Examples:
 
@@ -82,17 +86,43 @@ The server supports queries via HTTP GET and POST, and WebSockets.
   - `type=exec`: JSON `{"type":"ok"}`
   - Errors: `500` with JSON body `{ "type": "error", "error": string }`
 
+Authentication (optional):
+
+- If started with an auth token (CLI `--auth-token`), all HTTP requests must include:
+
+  ```http
+  Authorization: Bearer <TOKEN>
+  ```
+
 Example:
 
 ```bash
 curl -s -X POST -H 'Content-Type: application/json' \
-  -d '{"type":"json","sql":"select 1 as x"}' http://localhost:3000/
+  -d '{"type":"json","sql":"select 1 as x"}' http://localhost:4000/
+```
+
+With auth:
+
+```bash
+curl -s -X POST -H 'Content-Type: application/json' \
+  -H 'Authorization: Bearer secret123' \
+  -d '{"type":"json","sql":"select 1 as x"}' http://localhost:4000/
 ```
 
 ### WebSocket
 
 - URL: `ws://localhost:<port>/`
 - Messages are JSON text frames unless returning Arrow bytes.
+
+Authentication (optional):
+
+- If started with an auth token, the client must send the first message:
+
+  ```json
+  {"type": "auth", "token": "<TOKEN>"}
+  ```
+
+- On success, server replies `{ "type": "authAck" }`. Any other message before auth results in an error and the connection is closed.
 
 Supported messages:
 
@@ -147,6 +177,7 @@ Supported messages:
 
 - CORS: HTTP responses add permissive CORS headers. Adjust as needed.
 - Graceful shutdown: SIGINT/SIGTERM cancel in-flight queries, FORCE CHECKPOINT, close connection, stop executor.
+- Auth token can be supplied via CLI `--auth-token`.
 
 ## Publishing
 
