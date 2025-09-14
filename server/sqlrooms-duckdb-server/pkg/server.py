@@ -57,31 +57,6 @@ class SocketHandler(Handler):
         self.check(ok)
 
 
-class HTTPHandler(Handler):
-    def __init__(self, res):
-        self.res = res
-
-    def done(self):
-        self.res.end("")
-
-    def arrow(self, buffer):
-        self.res.write_header("Content-Type", "application/octet-stream")
-        self.res.end(buffer)
-
-    def json(self, data):
-        self.res.write_header("Content-Type", "application/json")
-        self.res.end(data)
-
-    def error(self, error):
-        self.res.write_status(500)
-        self.res.write_header("Content-Type", "application/json")
-        try:
-            body = ujson.dumps({"type": "error", "error": str(error)})
-        except Exception:
-            body = '{"type":"error","error":"internal"}'
-        self.res.end(body)
-
-
 def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
     header_obj = {"type": "arrow", "queryId": query_id}
     header_bytes = json.dumps(header_obj).encode("utf-8")
@@ -137,20 +112,6 @@ def server(cache, port=4000, auth_token: str | None = None):
 
     # Auth helper
     auth = AuthManager(auth_token)
-
-    def _http_unauthorized(res):
-        res.write_status(401)
-        # CORS headers for browsers
-        res.write_header("Access-Control-Allow-Origin", "*")
-        res.write_header("Access-Control-Request-Method", "*")
-        res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
-        res.write_header("Access-Control-Allow-Headers", "*")
-        res.write_header("Access-Control-Max-Age", "2592000")
-        res.write_header("Content-Type", "application/json")
-        res.end('{"type":"error","error":"unauthorized"}')
-
-    def _check_http_auth(req) -> bool:
-        return auth.check_http(req)
 
     def ws_open(ws):
         auth.on_open(ws)
@@ -216,65 +177,47 @@ def server(cache, port=4000, auth_token: str | None = None):
 
         _process_message(ws, query)
 
-    async def http_handler(res, req):
-        method = req.get_method()
-
-        # Handle preflight early
-        if method == "OPTIONS":
-            res.write_header("Access-Control-Allow-Origin", "*")
-            res.write_header("Access-Control-Request-Method", "*")
-            res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
-            res.write_header("Access-Control-Allow-Headers", "*")
-            res.write_header("Access-Control-Max-Age", "2592000")
-            res.end("")
-            return
-
-        # Enforce auth before writing headers, so we can set status properly
-        if method in ("GET", "POST") and not _check_http_auth(req):
-            _http_unauthorized(res)
-            return
-
-        # Authorized path: add CORS headers then handle
-        res.write_header("Access-Control-Allow-Origin", "*")
-        res.write_header("Access-Control-Request-Method", "*")
-        res.write_header("Access-Control-Allow-Methods", "OPTIONS, POST, GET")
-        res.write_header("Access-Control-Allow-Headers", "*")
-        res.write_header("Access-Control-Max-Age", "2592000")
-
-        handler = HTTPHandler(res)
-
-        if method == "GET":
-            data = ujson.loads(req.get_query("query"))
+    # Minimal HTTP endpoints for health and version only
+    def _healthz(res, req):
+        try:
+            res.end("ok")
+        except Exception:
             try:
-                result = await run_duckdb(cache, data)
-                rtype = result.get("type")
-                if rtype == "arrow":
-                    handler.arrow(result["data"])
-                elif rtype == "json":
-                    handler.json(result["data"])
-                elif rtype == "ok":
-                    handler.json(ujson.dumps({"type": "ok"}))
-                else:
-                    handler.error("Unexpected result type")
-            except Exception as e:
-                logger.exception("Error processing HTTP GET")
-                handler.error(e)
-        elif method == "POST":
-            data = await res.get_json()
+                res.write_status(500)
+                res.end("error")
+            except Exception:
+                pass
+
+    def _readyz(res, req):
+        try:
+            if db_async.GLOBAL_CON is None:
+                res.write_status(503)
+                res.end("not ready")
+            else:
+                res.end("ok")
+        except Exception:
             try:
-                result = await run_duckdb(cache, data)
-                rtype = result.get("type")
-                if rtype == "arrow":
-                    handler.arrow(result["data"])
-                elif rtype == "json":
-                    handler.json(result["data"])
-                elif rtype == "ok":
-                    handler.json(ujson.dumps({"type": "ok"}))
-                else:
-                    handler.error("Unexpected result type")
-            except Exception as e:
-                logger.exception("Error processing HTTP POST")
-                handler.error(e)
+                res.write_status(500)
+                res.end("error")
+            except Exception:
+                pass
+
+    def _version(res, req):
+        try:
+            import duckdb as _duckdb  # local import to avoid unused import warnings
+            body = ujson.dumps({
+                "name": "sqlrooms-duckdb-server",
+                "python": sys.version,
+                "duckdb": getattr(_duckdb, "__version__", "unknown"),
+            })
+            res.write_header("Content-Type", "application/json")
+            res.end(body)
+        except Exception:
+            try:
+                res.write_status(500)
+                res.end('{"error":"version"}')
+            except Exception:
+                pass
 
     app.ws(
         "/*",
@@ -289,14 +232,17 @@ def server(cache, port=4000, auth_token: str | None = None):
         },
     )
 
-    app.any("/", http_handler)
+    # WS-only server; expose health/version endpoints
+    app.get("/healthz", _healthz)
+    app.get("/readyz", _readyz)
+    app.get("/version", _version)
 
     app.set_error_handler(on_error)
 
     app.listen(
         port,
         lambda config: sys.stdout.write(
-            f"DuckDB Server listening at ws://localhost:{config.port} and http://localhost:{config.port}\n"
+            f"DuckDB Server listening at ws://localhost:{config.port} (WS only). Health at http://localhost:{config.port}/healthz\n"
         ),
     )
     app.run()

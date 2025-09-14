@@ -2,7 +2,7 @@
 
 [![PyPi](https://img.shields.io/pypi/v/sqlrooms-duckdb-server.svg)](https://pypi.org/project/sqlrooms-duckdb-server/)
 
-A Python-based server that runs a local DuckDB instance and support queries over Web Sockets or HTTP, returning data in either [Apache Arrow](https://arrow.apache.org/) or JSON format.
+A Python-based server that runs a local DuckDB instance and supports queries over WebSockets, returning data in either [Apache Arrow](https://arrow.apache.org/) or JSON format.
 
 > **Note:** This server was initially created as a fork of [Mosaic DuckDB Server](https://github.com/uwdata/mosaic/tree/main/packages/server/duckdb-server), with additional features and improvements.
 
@@ -10,7 +10,7 @@ A Python-based server that runs a local DuckDB instance and support queries over
 
 ## Features
 
-- WebSocket and HTTP endpoints
+- WebSocket endpoint (WS-only)
 - Arrow IPC results (binary framed) and JSON responses
 - Concurrent query execution using a shared thread pool (per-task cursors)
 - Per-query cancellation via `duckdb.interrupt` (WebSocket `type:"cancel"`)
@@ -41,7 +41,7 @@ Alternatively, you can install the server with `pip install duckdb-server`. Then
   - `spatial`
   - `h3@community`
 
-- `--auth-token` (optional): If provided, enables bearer authentication. HTTP requests must include `Authorization: Bearer <TOKEN>`. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
+- `--auth-token` (optional): If provided, enables bearer authentication. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
 
 Examples:
 
@@ -71,43 +71,13 @@ To set up a local certificate for SSL, use https://github.com/FiloSottile/mkcert
 
 ## API
 
-The server supports queries via HTTP GET and POST, and WebSockets.
+The server supports queries via WebSockets only. Minimal HTTP endpoints are provided for health and diagnostics.
 
-### HTTP
+### Health Endpoints (HTTP)
 
-- Endpoint: `/`
-- Methods: `GET`, `POST`
-- Request JSON:
-  - `type`: one of `exec | json | arrow`
-  - `sql`: SQL string
-- Responses:
-  - `type=json`: `application/json` body (array of records)
-  - `type=arrow`: `application/octet-stream` Arrow IPC stream
-  - `type=exec`: JSON `{"type":"ok"}`
-  - Errors: `500` with JSON body `{ "type": "error", "error": string }`
-
-Authentication (optional):
-
-- If started with an auth token (CLI `--auth-token`), all HTTP requests must include:
-
-  ```http
-  Authorization: Bearer <TOKEN>
-  ```
-
-Example:
-
-```bash
-curl -s -X POST -H 'Content-Type: application/json' \
-  -d '{"type":"json","sql":"select 1 as x"}' http://localhost:4000/
-```
-
-With auth:
-
-```bash
-curl -s -X POST -H 'Content-Type: application/json' \
-  -H 'Authorization: Bearer secret123' \
-  -d '{"type":"json","sql":"select 1 as x"}' http://localhost:4000/
-```
+- `GET /healthz`: returns `ok` when the process is healthy.
+- `GET /readyz`: returns `ok` when DuckDB is initialized; `503` otherwise.
+- `GET /version`: returns JSON with version info.
 
 ### WebSocket
 
@@ -175,7 +145,6 @@ Supported messages:
 
 ## Notes
 
-- CORS: HTTP responses add permissive CORS headers. Adjust as needed.
 - Graceful shutdown: SIGINT/SIGTERM cancel in-flight queries, FORCE CHECKPOINT, close connection, stop executor.
 - Auth token can be supplied via CLI `--auth-token`.
 

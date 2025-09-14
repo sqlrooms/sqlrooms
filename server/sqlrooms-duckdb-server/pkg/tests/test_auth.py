@@ -71,30 +71,6 @@ def server_proc_auth():
         pass
 
 
-@pytest.mark.asyncio
-async def test_http_auth_required(server_proc_auth):
-    port = server_proc_auth['port']
-    url = f"http://localhost:{port}/"
-    payload = {"type": "json", "sql": "select 1 as x"}
-
-    timeout = aiohttp.ClientTimeout(total=3)
-    async with aiohttp.ClientSession(timeout=timeout) as session:
-        # Missing Authorization header -> 401
-        async with session.post(url, json=payload) as resp:
-            assert resp.status == 401
-            text = await resp.text()
-            # Should be a small json error
-            assert 'unauthorized' in text.lower()
-
-        # With correct Authorization header -> 200 and valid json array
-        headers = {"Authorization": f"Bearer {server_proc_auth['token']}"}
-        async with session.post(url, json=payload, headers=headers) as resp:
-            assert resp.status == 200
-            text = await resp.text()
-            data = json.loads(text)
-            assert isinstance(data, list)
-            assert len(data) == 1 and 'x' in data[0]
-
 
 @pytest.mark.asyncio
 async def test_ws_auth_flow(server_proc_auth):
