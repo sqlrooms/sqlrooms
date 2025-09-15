@@ -18,7 +18,7 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
 import {DatabaseIcon} from 'lucide-react';
 import exampleCanvas from './example-canvas.json';
-import {createVegaChartTool} from '../../../packages/vega/dist/VegaChartTool';
+import {createVegaChartTool} from '@sqlrooms/vega';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;

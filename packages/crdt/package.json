@@ -1,0 +1,31 @@
+{
+  "name": "@sqlrooms/crdt",
+  "version": "0.1.0",
+  "description": "Generic CRDT utilities for SQLRooms with Yjs integration (createCrdtSlice)",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "clean": "rimraf dist",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "yjs": "^13.6.18",
+    "immer": "^10.1.1"
+  },
+  "peerDependencies": {
+    "zustand": "^4.5.2",
+    "zod": "^3.23.8",
+    "typescript": ">=5.4.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.6.2",
+    "rimraf": "^6.0.1"
+  }
+}
