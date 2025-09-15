@@ -1,7 +1,6 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
 import {WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
-import * as Y from 'yjs';
 import {StoreApi} from 'zustand';
 
 export type SyncSliceState = CrdtSliceState & {
@@ -9,7 +8,7 @@ export type SyncSliceState = CrdtSliceState & {
     schema: string;
     /** Ensure schema/tables exist */
     ensureSchema: () => Promise<void>;
-    /** Apply local Yjs update and buffer for persistence */
+    /** Apply local Loro update and buffer for persistence */
     applyLocalUpdate: (
       key: string,
       update: Uint8Array,
@@ -125,9 +124,11 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
           update: Uint8Array,
           userId?: string,
         ) => {
-          // Apply locally with origin 'local'
-          const doc = get().crdt.getDoc(key);
-          Y.applyUpdate(doc, update, 'local');
+          // Apply locally
+          const doc = get().crdt.getDoc(key) as unknown as {
+            import: (u: Uint8Array) => void;
+          };
+          doc.import(update);
 
           // Buffer for persistence; caller provides a stable docId per key
           buffer.push({
@@ -182,8 +183,10 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
             for (const row of snapRows) {
               if (row?.hex) {
                 const bytes = hexToU8(String(row.hex));
-                const doc = get().crdt.getDoc(key);
-                Y.applyUpdate(doc, bytes, 'snapshot');
+                const doc = get().crdt.getDoc(key) as unknown as {
+                  import: (u: Uint8Array) => void;
+                };
+                doc.import(bytes);
                 since = row.created_at as string;
               }
             }
@@ -198,8 +201,10 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
               const hex = row?.hex as string | undefined;
               if (!hex) continue;
               const bytes = hexToU8(hex);
-              const doc = get().crdt.getDoc(key);
-              Y.applyUpdate(doc, bytes, 'recover');
+              const doc = get().crdt.getDoc(key) as unknown as {
+                import: (u: Uint8Array) => void;
+              };
+              doc.import(bytes);
             }
           }
         },

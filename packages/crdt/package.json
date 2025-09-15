@@ -1,23 +1,32 @@
 {
   "name": "@sqlrooms/crdt",
   "version": "0.1.0",
-  "description": "Generic CRDT utilities for SQLRooms with Yjs integration (createCrdtSlice)",
-  "license": "MIT",
+  "description": "Generic CRDT utilities for SQLRooms with Loro integration",
   "main": "dist/index.js",
-  "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
+  "module": "dist/index.js",
+  "type": "module",
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rimraf dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@sqlrooms/room-shell": "workspace:*",
-    "yjs": "^13.6.18",
+    "loro-crdt": "^1.0.0",
     "immer": "^10.1.1"
   },
   "peerDependencies": {

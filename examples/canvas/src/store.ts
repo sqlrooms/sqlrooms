@@ -5,6 +5,7 @@ import {
   createCanvasSlice,
   createDefaultCanvasConfig,
 } from '@sqlrooms/canvas';
+import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -13,12 +14,11 @@ import {
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
+import {createSyncSlice} from '@sqlrooms/sync';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
-import {DatabaseIcon} from 'lucide-react';
-import exampleCanvas from './example-canvas.json';
-import {createVegaChartTool} from '@sqlrooms/vega';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
@@ -35,6 +35,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
     (set, get, store) => ({
       ...createRoomShellSlice<RoomConfig>({
+        connector: createWebSocketDuckDbConnector({
+          wsUrl: 'ws://localhost:4000',
+          subscribeChannels: ['table:earthquakes'],
+          onNotification: (payload) => {
+            console.log('Notification from server:', payload);
+          },
+        }),
         config: {
           ...createDefaultCanvasConfig(),
           // CanvasSliceConfig.parse(exampleCanvas).canvas,
@@ -70,6 +77,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               placement: 'sidebar',
             },
           },
+        },
+      })(set, get, store),
+
+      ...createSyncSlice<RoomConfig>({
+        crdtOptions: {
+          selector: (state) => ({config: state.config}),
         },
       })(set, get, store),
 

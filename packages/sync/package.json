@@ -1,24 +1,32 @@
 {
   "name": "@sqlrooms/sync",
   "version": "0.1.0",
-  "description": "SQLRooms synchronization slice: Yjs CRDT + DuckDB/Ducklake persistence (events & snapshots)",
-  "license": "MIT",
+  "description": "SQLRooms synchronization slice: Loro CRDT + DuckDB/Ducklake persistence (events & snapshots)",
   "main": "dist/index.js",
-  "module": "dist/index.js",
   "types": "dist/index.d.ts",
-  "sideEffects": false,
+  "module": "dist/index.js",
+  "type": "module",
+  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
   "files": [
     "dist"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.json",
-    "clean": "rimraf dist",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc",
+    "test": "jest",
+    "test:watch": "jest --watch"
   },
   "dependencies": {
     "@sqlrooms/crdt": "workspace:*",
-    "immer": "^10.1.1",
-    "yjs": "^13.6.18"
+    "immer": "^10.1.1"
   },
   "peerDependencies": {
     "zustand": "^4.5.2",

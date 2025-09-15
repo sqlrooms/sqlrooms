@@ -1,5 +1,8 @@
 import type {StoreApi} from 'zustand';
-import type * as Y from 'yjs';
+// Prefer real Loro types; fallback to local shim for type safety
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore
+import type {LoroDoc} from 'loro-crdt';
 
 /**
  * Describes the shape of the docs mapping returned by the selector.
@@ -13,14 +16,14 @@ export type CrdtDocsSelection = Record<string, unknown>;
 export interface CreateCrdtSliceOptions<TState> {
   /**
    * Select which parts of the Zustand room state should be mirrored into CRDT documents.
-   * Default: (state) => ({ config: (state as any).config })
+   * Default: (state) => ({ config: state.config })
    */
   selector?: (state: TState) => CrdtDocsSelection;
 
   /**
-   * Optional hook invoked after a Yjs Doc is created for a key.
+   * Optional hook invoked after a Loro document is created for a key.
    */
-  onDocCreated?: (key: string, doc: Y.Doc) => void;
+  onDocCreated?: (key: string, doc: LoroDoc) => void;
 
   /**
    * Optional equality check to avoid producing CRDT updates when selected slices are deep-equal.
@@ -34,22 +37,21 @@ export interface CreateCrdtSliceOptions<TState> {
  */
 export interface CrdtSliceState {
   crdt: {
-    /** Map of logical key -> Yjs document */
-    docs: Map<string, Y.Doc>;
+    /** Plain object of logical key -> Loro document */
+    docs: Record<string, LoroDoc>;
 
     /**
-     * Apply a CRDT update coming from a remote source to the corresponding Yjs doc.
-     * Implementations should pass origin = "remote" when applying.
+     * Apply a CRDT update coming from a remote source to the corresponding Loro doc.
      */
     applyRemoteUpdate: (key: string, update: Uint8Array) => void;
 
     /**
-     * Get or lazily create a Y.Doc for the given logical key.
+     * Get or lazily create a LoroDoc for the given logical key.
      */
-    getDoc: (key: string) => Y.Doc;
+    getDoc: (key: string) => LoroDoc;
 
     /**
-     * Encode the current state of a doc as a Yjs update for persistence or syncing.
+     * Encode the current state of a doc as a Loro export (bytes) for persistence or syncing.
      */
     encodeDocAsUpdate: (key: string) => Uint8Array;
 
@@ -57,6 +59,11 @@ export interface CrdtSliceState {
      * Stop any subscriptions/observers created by the slice.
      */
     teardown: () => void;
+
+    /**
+     * Initialize the connector (creates a WasmDuckDbConnector if none exists)
+     */
+    initialize: () => Promise<void>;
   };
 }
 

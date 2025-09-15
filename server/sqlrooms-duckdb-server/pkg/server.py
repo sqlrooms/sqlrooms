@@ -4,10 +4,12 @@ import time
 import asyncio
 import json
 import concurrent.futures
+import base64
 
 import ujson
 from socketify import App, CompressOptions, OpCode
 from .auth import AuthManager
+from .crdt import LoroDocManager
 
 from pkg.query import run_duckdb
 from . import db_async
@@ -70,6 +72,8 @@ def server(cache, port=4000, auth_token: str | None = None):
 
     # Auth helper
     auth = AuthManager(auth_token)
+    # CRDT manager
+    crdt_mgr = LoroDocManager()
 
     def ws_open(ws):
         auth.on_open(ws)
@@ -104,6 +108,86 @@ def server(cache, port=4000, auth_token: str | None = None):
                 ws.send({"type": "notifyAck", "channel": channel}, OpCode.TEXT)
             else:
                 ws.send({"type": "error", "error": "Missing channel"}, OpCode.TEXT)
+            return
+
+        # CRDT: initialize/snapshot/export current state
+        # { type: 'crdtInit', docId, branch? }
+        if isinstance(query, dict) and query.get("type") == "crdtInit":
+            doc_id = query.get("docId")
+            branch = query.get("branch") or "main"
+            if not isinstance(doc_id, str):
+                ws.send({"type": "error", "error": "Missing docId"}, OpCode.TEXT)
+                return
+            channel = f"crdt:{doc_id}:{branch}"
+            try:
+                ws.subscribe(channel)
+            except Exception:
+                pass
+            try:
+                state_bytes = crdt_mgr.export_state(doc_id, branch)
+                b64 = base64.b64encode(state_bytes).decode("ascii")
+                ws.send({
+                    "type": "crdtState",
+                    "docId": doc_id,
+                    "branch": branch,
+                    "data": b64,
+                }, OpCode.TEXT)
+                ws.send({"type": "crdtInitAck", "docId": doc_id, "branch": branch}, OpCode.TEXT)
+            except Exception as e:
+                logger.exception("CRDT init failed")
+                ws.send({"type": "error", "error": f"crdtInit failed: {e}"}, OpCode.TEXT)
+            return
+
+        # CRDT: request export
+        # { type: 'crdtExport', docId, branch? }
+        if isinstance(query, dict) and query.get("type") == "crdtExport":
+            doc_id = query.get("docId")
+            branch = query.get("branch") or "main"
+            if not isinstance(doc_id, str):
+                ws.send({"type": "error", "error": "Missing docId"}, OpCode.TEXT)
+                return
+            try:
+                state_bytes = crdt_mgr.export_state(doc_id, branch)
+                b64 = base64.b64encode(state_bytes).decode("ascii")
+                ws.send({
+                    "type": "crdtState",
+                    "docId": doc_id,
+                    "branch": branch,
+                    "data": b64,
+                }, OpCode.TEXT)
+            except Exception as e:
+                logger.exception("CRDT export failed")
+                ws.send({"type": "error", "error": f"crdtExport failed: {e}"}, OpCode.TEXT)
+            return
+
+        # CRDT: apply update and broadcast
+        # { type: 'crdtUpdate', docId, branch?, data: base64 }
+        if isinstance(query, dict) and query.get("type") == "crdtUpdate":
+            doc_id = query.get("docId")
+            branch = query.get("branch") or "main"
+            data_b64 = query.get("data")
+            if not isinstance(doc_id, str) or not isinstance(data_b64, str):
+                ws.send({"type": "error", "error": "Missing docId or data"}, OpCode.TEXT)
+                return
+            try:
+                update_bytes = base64.b64decode(data_b64)
+                crdt_mgr.import_update(doc_id, branch, update_bytes)
+                channel = f"crdt:{doc_id}:{branch}"
+                payload = {
+                    "type": "notify",
+                    "channel": channel,
+                    "payload": {
+                        "type": "crdtUpdate",
+                        "docId": doc_id,
+                        "branch": branch,
+                        "data": data_b64,
+                    },
+                }
+                app.publish(channel, ujson.dumps(payload))
+                ws.send({"type": "crdtAck", "docId": doc_id, "branch": branch}, OpCode.TEXT)
+            except Exception as e:
+                logger.exception("CRDT update failed")
+                ws.send({"type": "error", "error": f"crdtUpdate failed: {e}"}, OpCode.TEXT)
             return
 
         # Query messages: only accept valid types with sql

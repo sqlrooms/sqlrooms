@@ -29,10 +29,20 @@ export interface WebSocketDuckDbConnectorOptions {
 
   /** Optional bearer token to authenticate with the server */
   authToken?: string;
+
+  /** Optional CRDT init requests to auto-join on connect */
+  crdtInit?: {docId: string; branch?: string}[];
 }
 
 export interface WebSocketDuckDbConnector extends DuckDbConnector {
   readonly type: 'ws';
+  /** Minimal CRDT helpers for WS messaging */
+  readonly crdt: {
+    /** Request server to send current state and subscribe to broadcasts */
+    init: (docId: string, branch?: string) => void;
+    /** Send a CRDT update to the server (Uint8Array) */
+    sendUpdate: (docId: string, update: Uint8Array, branch?: string) => void;
+  };
 }
 
 /**
@@ -55,6 +65,7 @@ export function createWebSocketDuckDbConnector(
     initializationQuery = '',
     subscribeChannels,
     authToken,
+    crdtInit,
   } = options;
 
   // Persistent socket and per-query waiters
@@ -89,6 +100,22 @@ export function createWebSocketDuckDbConnector(
     }
   };
 
+  const reinitCrdt = () => {
+    if (!socket || socket.readyState !== WebSocket.OPEN) return;
+    if (!crdtInit || crdtInit.length === 0) return;
+    for (const req of crdtInit) {
+      try {
+        socket.send(
+          JSON.stringify({
+            type: 'crdtInit',
+            docId: req.docId,
+            branch: req.branch ?? 'main',
+          }),
+        );
+      } catch {}
+    }
+  };
+
   const ensureSocket = (): Promise<void> => {
     if (socket && socket.readyState === WebSocket.OPEN)
       return Promise.resolve();
@@ -112,6 +139,7 @@ export function createWebSocketDuckDbConnector(
               // No auth required; resolve immediately
               opening = null;
               resubscribe();
+              reinitCrdt();
               resolve();
             }
           } catch {}
@@ -133,6 +161,7 @@ export function createWebSocketDuckDbConnector(
                   opening = null;
                   // Subscribe once authed
                   resubscribe();
+                  reinitCrdt();
                   resolve();
                 } else if (t === 'error') {
                   const msg = parsed?.error || 'Unauthorized';
@@ -146,6 +175,19 @@ export function createWebSocketDuckDbConnector(
                 const payload = parsed?.payload;
                 try {
                   options.onNotification?.(payload);
+                } catch {}
+                return;
+              }
+              // CRDT state response
+              if (t === 'crdtState') {
+                // Library doesn't maintain local CRDT docs; pass through via notification
+                try {
+                  options.onNotification?.({
+                    type: 'crdtState',
+                    docId: parsed?.docId,
+                    branch: parsed?.branch,
+                    data: parsed?.data,
+                  });
                 } catch {}
                 return;
               }
@@ -370,6 +412,34 @@ export function createWebSocketDuckDbConnector(
     ...base,
     get type() {
       return 'ws' as const;
+    },
+    crdt: {
+      init: (docId: string, branch?: string) => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        try {
+          socket.send(
+            JSON.stringify({
+              type: 'crdtInit',
+              docId,
+              branch: branch ?? 'main',
+            }),
+          );
+        } catch {}
+      },
+      sendUpdate: (docId: string, update: Uint8Array, branch?: string) => {
+        if (!socket || socket.readyState !== WebSocket.OPEN) return;
+        const b64 = btoa(String.fromCharCode(...update));
+        try {
+          socket.send(
+            JSON.stringify({
+              type: 'crdtUpdate',
+              docId,
+              branch: branch ?? 'main',
+              data: b64,
+            }),
+          );
+        } catch {}
+      },
     },
   };
 }
