@@ -14,6 +14,7 @@ import {
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {AiSliceState, AiSliceTool} from './AiSlice';
 import {QueryToolResult} from './components/tools/QueryToolResult';
+import {createOpenUrlTool} from './components/tools/OpenUrlTool';
 import {AnalysisResultSchema, QueryToolParameters} from './schemas';
 import {convertToCoreMessages} from 'ai';
 
@@ -29,6 +30,10 @@ You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
 - When using 'query' tool, please assign parameter 'type' with value 'query'
+- Use 'openUrl' tool to fetch and analyze content from web URLs when needed:
+  * Useful for getting external data, documentation, or current information
+  * The tool will extract clean text from HTML and provide metadata
+  * Use when you need to analyze data from external sources
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
 - Some key DuckDB-specific functions to use:
   * regexp_matches() for regex (not regexp_like)
@@ -348,5 +353,6 @@ If a query fails, please don't try to run it again with the same syntax.`,
       },
       component: QueryToolResult,
     }),
+    openUrl: createOpenUrlTool(),
   };
 }

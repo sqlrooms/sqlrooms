@@ -3,6 +3,7 @@ import {
   AiSliceState,
   createAiSlice,
   createDefaultAiConfig,
+  createOpenUrlTool,
   getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {DataTable} from '@sqlrooms/duckdb';
@@ -146,6 +147,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
             component: EchoToolResult,
           },
+
+          openUrl: createOpenUrlTool(),
         },
         // Example of customizing the system instructions
         getInstructions: (tablesSchema: DataTable[]) => {
