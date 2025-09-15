@@ -1,6 +1,8 @@
+import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {produce} from 'immer';
-import type {StateCreator, StoreApi} from 'zustand';
 import * as Y from 'yjs';
+import type {StateCreator, StoreApi} from 'zustand';
+
 import {
   CrdtDocsSelection,
   CrdtSliceInternals,
@@ -32,9 +34,10 @@ function defaultIsEqual(prev: unknown, next: unknown): boolean {
  *     selector: (state) => ({ config: state.config, canvas: state.config.canvas }),
  *   })(set, get, store)
  */
-export function createCrdtSlice<TState>(
-  options?: CreateCrdtSliceOptions<TState>,
-): StateCreator<TState & CrdtSliceState> {
+export function createCrdtSlice<
+  PC extends BaseRoomConfig,
+  TState extends CrdtSliceState,
+>(options: CreateCrdtSliceOptions<TState>): StateCreator<CrdtSliceState> {
   const selector = options?.selector ?? defaultSelector<TState>;
   const isEqual = options?.isEqual ?? defaultIsEqual;
 
@@ -44,7 +47,7 @@ export function createCrdtSlice<TState>(
     storeApi: undefined as unknown as StoreApi<TState>,
   };
 
-  function ensureDoc(state: TState & CrdtSliceState, key: string): Y.Doc {
+  function ensureDoc(state: CrdtSliceState, key: string): Y.Doc {
     const existing = state.crdt.docs.get(key);
     if (existing) return existing;
     const doc = new Y.Doc();
@@ -60,20 +63,20 @@ export function createCrdtSlice<TState>(
     root.set('data', value as any);
   }
 
-  return (set, get, store) => {
+  return createSlice<PC, CrdtSliceState>((set, get, store) => {
     // Seed crdt state
     const slice: CrdtSliceState = {
       crdt: {
         docs: new Map<string, Y.Doc>(),
         applyRemoteUpdate: (key: string, update: Uint8Array) => {
-          const doc = ensureDoc(get() as TState & CrdtSliceState, key);
+          const doc = ensureDoc(get(), key);
           Y.applyUpdate(doc, update, 'remote');
         },
         getDoc: (key: string) => {
-          return ensureDoc(get() as TState & CrdtSliceState, key);
+          return ensureDoc(get(), key);
         },
         encodeDocAsUpdate: (key: string) => {
-          const doc = ensureDoc(get() as TState & CrdtSliceState, key);
+          const doc = ensureDoc(get(), key);
           return Y.encodeStateAsUpdate(doc);
         },
         teardown: () => {
@@ -99,7 +102,7 @@ export function createCrdtSlice<TState>(
     const initialSelection = selector(store.getState() as unknown as TState);
     internals.prevSelection = initialSelection;
     for (const [key, value] of Object.entries(initialSelection)) {
-      const doc = ensureDoc(get() as TState & CrdtSliceState, key);
+      const doc = ensureDoc(get(), key);
       writeJsonToDoc(doc, value);
     }
 
@@ -113,7 +116,7 @@ export function createCrdtSlice<TState>(
       for (const [key, nextVal] of Object.entries(nextSelection)) {
         const prevVal = (prev as any)[key];
         if (!isEqual(prevVal, nextVal, key)) {
-          const doc = ensureDoc(get() as TState & CrdtSliceState, key);
+          const doc = ensureDoc(get(), key);
           writeJsonToDoc(doc, nextVal);
         }
       }
@@ -121,7 +124,7 @@ export function createCrdtSlice<TState>(
       // Handle removed keys: destroy docs to free memory
       for (const key of Object.keys(prev)) {
         if (!(key in nextSelection)) {
-          const st = get() as TState & CrdtSliceState;
+          const st = get();
           const doc = st.crdt.docs.get(key);
           if (doc) {
             doc.destroy();
@@ -133,6 +136,6 @@ export function createCrdtSlice<TState>(
       internals.prevSelection = nextSelection;
     });
 
-    return slice as unknown as TState & CrdtSliceState;
-  };
+    return slice;
+  });
 }

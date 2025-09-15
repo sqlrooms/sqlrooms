@@ -1836,6 +1836,31 @@ importers:
         specifier: ^3.25.73
         version: 3.25.73
 
+  packages/sync:
+    dependencies:
+      '@sqlrooms/crdt':
+        specifier: workspace:*
+        version: link:../crdt
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      yjs:
+        specifier: ^13.6.18
+        version: 13.6.27
+      zod:
+        specifier: ^3.23.8
+        version: 3.25.73
+      zustand:
+        specifier: ^4.5.2
+        version: 4.5.7(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)
+    devDependencies:
+      rimraf:
+        specifier: ^6.0.1
+        version: 6.0.1
+      typescript:
+        specifier: 5.8.3
+        version: 5.8.3
+
   packages/ui:
     dependencies:
       '@hookform/resolvers':
