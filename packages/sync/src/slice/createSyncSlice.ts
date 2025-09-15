@@ -1,4 +1,5 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
+import {WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import * as Y from 'yjs';
 import {StoreApi} from 'zustand';
@@ -86,7 +87,11 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
         schema,
 
         ensureSchema: async () => {
-          const connector = await get().db.getConnector();
+          const connector =
+            (await get().db.getConnector()) as WebSocketDuckDbConnector;
+          if (connector.type !== 'ws') {
+            throw new Error('Connector is not a WebSocketDuckDbConnector');
+          }
           const s = schema;
           const sql = `
             CREATE SCHEMA IF NOT EXISTS ${s};
