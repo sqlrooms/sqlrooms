@@ -14,6 +14,7 @@ export const TriggerSeparator: React.FC = () => (
       className="px-2"
       icon={<PlusIcon strokeWidth={1} size="16px" />}
       title="Add new cell"
+      side="top"
     />
     <Separator className="w-full bg-gray-500" />
   </div>

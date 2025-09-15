@@ -2,12 +2,9 @@ import {Button, EditableText} from '@sqlrooms/ui';
 import React from 'react';
 
 import {useStoreWithNotebook} from './NotebookSlice';
-import {AddNewCell} from './cellOperations/AddNewCell';
+import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {NotebookCellTypes} from './cellSchemas';
-import {
-  TriggerButton,
-  TriggerSeparator,
-} from './cellOperations/AddNewCellTrigger';
+import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
 
 export const TabsBar: React.FC = () => {
   const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
@@ -72,11 +69,7 @@ export const Notebook: React.FC = () => {
     <div className="tab-scrollable-content flex h-full flex-col">
       <TabsBar />
       <div className="flex items-center gap-1 px-4 pt-2">
-        <AddNewCell
-          onAdd={handleAddCellAndScroll}
-          triggerComponent={<TriggerButton />}
-          enableShortcut
-        />
+        <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
           variant="secondary"
@@ -86,20 +79,14 @@ export const Notebook: React.FC = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-2 overflow-auto p-2">
+      <div className="flex flex-col gap-1 overflow-auto p-2">
         {tab.cellOrder.map((id, index) => (
-          <div className="flex flex-col space-y-2" key={`cellOrder-${id}`}>
-            <AddNewCell
-              onAdd={(type) => addCell(tab.id, type, index)}
-              triggerComponent={<TriggerSeparator />}
-            />
+          <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
+            <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />
             <CellView id={id} />
           </div>
         ))}
-        <AddNewCell
-          onAdd={(type) => addCell(tab.id, type)}
-          triggerComponent={<TriggerSeparator />}
-        />
+        <AddNewCellTabs onAdd={(type) => addCell(tab.id, type)} />
       </div>
     </div>
   );
