@@ -2,7 +2,7 @@ import {useState} from 'react';
 import {Button, SkeletonPane} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {
-  AiConfigPanel,
+  AiSettingsPanel,
   AnalysisResultsContainer,
   SessionControls,
   QueryControls,
@@ -26,7 +26,6 @@ export const MainView: React.FC = () => {
     return getDefaultInstructions(tables);
   };
 
-  // Extract models from aiModelConfig
   const models = extractModelsFromConfig(aiModelConfig);
 
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
@@ -48,13 +47,13 @@ export const MainView: React.FC = () => {
       {isConfigPanelOpen ? (
         <div className="flex-grow overflow-auto">
           {currentSessionId && (
-            <AiConfigPanel isOpen={true} setIsOpen={setIsConfigPanelOpen}>
-              <AiConfigPanel.ProvidersConfig />
-              <AiConfigPanel.ModelsConfig />
-              <AiConfigPanel.ModelParameters
+            <AiSettingsPanel isOpen={true} setIsOpen={setIsConfigPanelOpen}>
+              <AiSettingsPanel.ProvidersConfig />
+              <AiSettingsPanel.ModelsConfig />
+              <AiSettingsPanel.ModelParameters
                 getDefaultInstructions={getDefaultInstructionsWrapper}
               />
-            </AiConfigPanel>
+            </AiSettingsPanel>
           )}
         </div>
       ) : (

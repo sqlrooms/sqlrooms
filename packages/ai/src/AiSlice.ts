@@ -37,7 +37,7 @@ export function createDefaultAiConfig(
           id: defaultSessionId,
           name: 'Default Session',
           modelProvider: 'openai',
-          model: 'gpt-4o-mini',
+          model: 'gpt-4.1',
           analysisResults: [],
           createdAt: new Date(),
         },

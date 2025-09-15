@@ -2,9 +2,9 @@
  * Utility functions for AI Chat UI configuration
  */
 
-import {AiModelSliceConfig} from './AiConfigSlice';
+import {AiSettingsSliceConfig} from './AiConfigSlice';
 
-type AiModelConfig = AiModelSliceConfig['aiModelConfig'];
+type AiModelConfig = AiSettingsSliceConfig['aiModelConfig'];
 
 /**
  * Get the API key for the currently selected model

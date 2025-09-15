@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 
-export const ProvidersConfig: FC = () => {
+export const AiProvidersConfig: FC = () => {
   const {toast} = useToast();
   const updateProvider = useStoreWithAiModelConfig(
     (state) => state.updateProvider,

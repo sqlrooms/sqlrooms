@@ -8,7 +8,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 
-export const AiModelSliceConfig = z.object({
+export const AiSettingsSliceConfig = z.object({
   aiModelConfig: z.object({
     providers: z.record(
       z.string(), // provider name
@@ -36,11 +36,11 @@ export const AiModelSliceConfig = z.object({
     }),
   }),
 });
-export type AiModelSliceConfig = z.infer<typeof AiModelSliceConfig>;
+export type AiSettingsSliceConfig = z.infer<typeof AiSettingsSliceConfig>;
 
-export function createDefaultAiModelConfig(
-  props: Partial<AiModelSliceConfig['aiModelConfig']>,
-): AiModelSliceConfig {
+export function createDefaultAiSettings(
+  props: Partial<AiSettingsSliceConfig['aiModelConfig']>,
+): AiSettingsSliceConfig {
   return {
     aiModelConfig: {
       providers: {
@@ -83,7 +83,7 @@ export function createDefaultAiModelConfig(
 }
 
 export type AiModelConfigSliceState = {
-  getAiModelConfig: () => AiModelSliceConfig['aiModelConfig'];
+  getAiModelConfig: () => AiSettingsSliceConfig['aiModelConfig'];
   setMaxSteps: (maxSteps: number) => void;
   setAdditionalInstruction: (additionalInstruction: string) => void;
   updateProvider: (
@@ -107,8 +107,8 @@ export type AiModelConfigSliceState = {
   removeCustomModel: (modelName: string) => void;
 };
 
-export function createAiModelConfigSlice<
-  PC extends BaseRoomConfig & AiModelSliceConfig,
+export function createAiSettingsSlice<
+  PC extends BaseRoomConfig & AiSettingsSliceConfig,
 >(): StateCreator<AiModelConfigSliceState> {
   return createSlice<PC, AiModelConfigSliceState>((set, get) => {
     return {
@@ -284,7 +284,7 @@ export function createAiModelConfigSlice<
   });
 }
 
-type RoomConfigWithAiChatUi = BaseRoomConfig & AiModelSliceConfig;
+type RoomConfigWithAiChatUi = BaseRoomConfig & AiSettingsSliceConfig;
 type RoomShellSliceStateWithAiChatUi =
   RoomShellSliceState<RoomConfigWithAiChatUi> & AiModelConfigSliceState;
 
@@ -293,7 +293,7 @@ export function useStoreWithAiModelConfig<T>(
   selector: (state: RoomShellSliceStateWithAiChatUi) => T,
 ): T {
   return useBaseRoomShellStore<
-    BaseRoomConfig & AiModelSliceConfig,
+    BaseRoomConfig & AiSettingsSliceConfig,
     RoomShellSliceState<RoomConfigWithAiChatUi>,
     T
   >((state) => selector(state as unknown as RoomShellSliceStateWithAiChatUi));

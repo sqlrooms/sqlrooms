@@ -25,7 +25,7 @@ import {
 import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
 import {useStoreWithAi} from '../../AiSlice';
 
-export interface ModelConfigProps {
+export interface AiModelConfigProps {
   showProviderModels?: boolean;
   showCustomModels?: boolean;
   allowEditProviderModels?: boolean;
@@ -33,7 +33,7 @@ export interface ModelConfigProps {
   className?: string;
 }
 
-export const ModelsConfig: FC<ModelConfigProps> = ({
+export const AiModelsConfig: FC<AiModelConfigProps> = ({
   className = '',
   allowEditProviderModels = true,
   allowCustomModels = true,
@@ -708,5 +708,3 @@ export const ModelsConfig: FC<ModelConfigProps> = ({
     </div>
   );
 };
-
-ModelsConfig.displayName = 'ModelConfig';

@@ -4,8 +4,8 @@ import {X} from 'lucide-react';
 
 import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage} from './AiModelUsage';
-import {ProvidersConfig} from './ProvidersConfig';
-import {ModelsConfig} from './ModelsConfig';
+import {AiProvidersConfig} from './AiProvidersConfig';
+import {AiModelsConfig} from './AiModelsConfig';
 
 interface AiConfigPanelProps {
   isOpen: boolean;
@@ -36,9 +36,9 @@ export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
   );
 };
 
-export const AiConfigPanel = Object.assign(AiConfigPanelBase, {
-  ProvidersConfig: ProvidersConfig,
-  ModelsConfig: ModelsConfig,
+export const AiSettingsPanel = Object.assign(AiConfigPanelBase, {
+  ProvidersConfig: AiProvidersConfig,
+  ModelsConfig: AiModelsConfig,
   ModelUsage: AiModelUsage,
   ModelParameters: AiModelParameters,
 });

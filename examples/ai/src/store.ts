@@ -4,10 +4,10 @@ import {
   createAiSlice,
   createDefaultAiConfig,
   getDefaultInstructions,
-  AiModelSliceConfig,
+  AiSettingsSliceConfig,
   AiModelConfigState,
-  createAiModelConfigSlice,
-  createDefaultAiModelConfig,
+  createAiSettingsSlice,
+  createDefaultAiSettings,
   getApiKey,
   getBaseUrl,
 } from '@sqlrooms/ai';
@@ -50,7 +50,7 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
  */
 export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
   .merge(SqlEditorSliceConfig)
-  .merge(AiModelSliceConfig);
+  .merge(AiSettingsSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -86,7 +86,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ...createDefaultAiConfig(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
-          ...createDefaultAiModelConfig({
+          ...createDefaultAiSettings({
             providers: LLM_MODELS.reduce(
               (
                 acc: Record<
@@ -140,7 +140,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createSqlEditorSlice()(set, get, store),
 
       // Ai model config slice
-      ...createAiModelConfigSlice()(set, get, store),
+      ...createAiSettingsSlice()(set, get, store),
 
       // Ai slice
       ...createAiSlice({
