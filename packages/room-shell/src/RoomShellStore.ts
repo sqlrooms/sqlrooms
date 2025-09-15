@@ -56,7 +56,6 @@ export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
   DuckDbSliceConfig &
   LayoutSliceConfig = {
   title: '',
-  layout: DEFAULT_MOSAIC_LAYOUT,
   description: '',
   dataSources: [],
   ...createDefaultDuckDbConfig(),
@@ -279,9 +278,12 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         ) => {
           set((state) =>
             produce(state, (draft) => {
-              const dataSources = draft.config.dataSources;
+              if (draft.config.dataSources) {
+                draft.config.dataSources = [];
+              }
+              const dataSources = draft.config.dataSources!;
               const tableName = dataSource.tableName;
-              const index = dataSources.findIndex(
+              const index = dataSources?.findIndex(
                 (d) => d.tableName === tableName,
               );
               if (index >= 0) {
@@ -314,6 +316,9 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
                 sqlQuery: query,
                 tableName: newTableName,
               };
+              if (!draft.config.dataSources) {
+                draft.config.dataSources = [];
+              }
               if (oldTableName) {
                 draft.config.dataSources = draft.config.dataSources.map(
                   (dataSource) =>
@@ -389,13 +394,13 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         },
         removeDataSource: async (tableName) => {
           const {db} = get();
-          const dataSource = get().config.dataSources.find(
+          const dataSource = get().config.dataSources?.find(
             (d) => d.tableName === tableName,
           );
           if (dataSource) {
             set((state) =>
               produce(state, (draft) => {
-                draft.config.dataSources = draft.config.dataSources.filter(
+                draft.config.dataSources = draft.config.dataSources?.filter(
                   (d) => d.tableName !== tableName,
                 );
                 if (dataSource?.type === DataSourceTypes.Enum.file) {
@@ -412,7 +417,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         },
 
         removeRoomFile: async (pathname) => {
-          const dataSource = get().config.dataSources.find(
+          const dataSource = get().config.dataSources?.find(
             (d) =>
               d.type === DataSourceTypes.Enum.file && d.fileName === pathname,
           );
@@ -442,9 +447,12 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           const {dataSourceStates} = get().room;
           const {config} = get();
           const dataSources = config.dataSources;
-          return dataSources.every(
-            (ds) =>
-              dataSourceStates[ds.tableName]?.status === DataSourceStatus.READY,
+          return Boolean(
+            dataSources?.every(
+              (ds) =>
+                dataSourceStates[ds.tableName]?.status ===
+                DataSourceStatus.READY,
+            ),
           );
         },
       },
@@ -466,7 +474,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
-          for (const ds of dataSources) {
+          for (const ds of dataSources ?? []) {
             const tableName = ds.tableName;
             const table = tables.find((t) => t.tableName === tableName);
             if (table) {
@@ -489,13 +497,13 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
     async function maybeDownloadDataSources() {
       const {roomFilesProgress, dataSourceStates} = get().room;
       const {dataSources} = get().config;
-      const pendingDataSources = dataSources.filter(
+      const pendingDataSources = dataSources?.filter(
         (ds) =>
           !dataSourceStates[ds.tableName] ||
           dataSourceStates[ds.tableName]?.status === DataSourceStatus.PENDING,
       );
 
-      const filesToDownload = pendingDataSources.filter((ds) => {
+      const filesToDownload = pendingDataSources?.filter((ds) => {
         switch (ds.type) {
           case DataSourceTypes.Enum.file:
             return !roomFilesProgress[ds.fileName];
@@ -510,15 +518,15 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
         await downloadRoomFiles(filesToDownload);
       }
 
-      const queriesToRun = pendingDataSources.filter(
+      const queriesToRun = pendingDataSources?.filter(
         (ds) => ds.type === DataSourceTypes.Enum.sql,
       );
 
-      if (queriesToRun.length > 0) {
+      if (queriesToRun?.length) {
         await runDataSourceQueries(queriesToRun);
       }
 
-      if (get().config.dataSources.length > 0) {
+      if (get().config.dataSources?.length) {
         set((state) =>
           produce(state, (draft) => {
             draft.room.isDataAvailable = true;
