@@ -1153,6 +1153,9 @@ importers:
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      lucide-react:
+        specifier: ^0.474.0
+        version: 0.474.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -1673,6 +1676,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      '@tanstack/react-table':
+        specifier: ^8.21.3
+        version: 8.21.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0

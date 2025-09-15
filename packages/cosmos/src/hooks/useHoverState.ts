@@ -1,7 +1,6 @@
 import {useRelativeCoordinates} from '@sqlrooms/ui';
 import {useState, useCallback, useMemo} from 'react';
 import {hasClientCoordinates} from '../utils/coordinates';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
 
 /**
  * Represents the state of a hovered point in the graph.
@@ -14,6 +13,18 @@ export type HoverState = {
   /** The [x, y] coordinates of the hovered point relative to the container */
   position: [number, number];
 } | null;
+
+/** Narrow event handlers to avoid leaking deep dependency types */
+export type HoverEventHandlers = {
+  onPointMouseOver: (
+    index: number,
+    pointPosition: [number, number],
+    event: unknown,
+  ) => void;
+  onPointMouseOut: () => void;
+  onZoomStart: () => void;
+  onDragStart: () => void;
+};
 
 /**
  * A custom hook that manages hover state for graph points.
@@ -51,12 +62,10 @@ export type HoverState = {
  */
 export const useHoverState = (
   calcRelativeCoordinates: ReturnType<typeof useRelativeCoordinates>,
-) => {
+): {hoveredPoint: HoverState; eventHandlers: HoverEventHandlers} => {
   const [hoveredPoint, setHoveredPoint] = useState<HoverState>(null);
 
-  const onPointMouseOver = useCallback<
-    Required<GraphConfigInterface>['onPointMouseOver']
-  >(
+  const onPointMouseOver = useCallback<HoverEventHandlers['onPointMouseOver']>(
     (index, _pointPosition, event) => {
       if (hasClientCoordinates(event)) {
         setHoveredPoint({
@@ -70,7 +79,7 @@ export const useHoverState = (
 
   const clearHoverState = useCallback(() => setHoveredPoint(null), []);
 
-  const eventHandlers = useMemo(
+  const eventHandlers = useMemo<HoverEventHandlers>(
     () => ({
       onPointMouseOver,
       onPointMouseOut: clearHoverState,

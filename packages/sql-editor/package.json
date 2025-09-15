@@ -26,6 +26,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@tanstack/react-table": "^8.21.3",
     "@hookform/resolvers": "^3.10.0",
     "@monaco-editor/react": "^4.7.0",
     "@sqlrooms/data-table": "workspace:*",
