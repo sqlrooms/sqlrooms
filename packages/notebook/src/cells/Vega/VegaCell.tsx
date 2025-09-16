@@ -8,15 +8,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
-import {VegaLiteChart, VisualizationSpec} from '@sqlrooms/vega';
+import {VegaLiteChart} from '@sqlrooms/vega';
 
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../NotebookSlice';
 import {getCellTypeLabel} from '../../NotebookUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
+import {VegaCell as VegaCellType} from '../../cellSchemas';
+import {IconWithTooltip} from '../../cellOperations/IconWithTooltip';
 
 export const VegaCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook(
+    (s) => s.config.notebook.cells[id],
+  ) as VegaCellType;
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
     (s) => s.config.notebook.currentCellId,
@@ -25,22 +29,18 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     useStoreWithNotebook((s) => s.config.notebook.cells),
   ).filter((c) => c.type === 'sql');
 
-  const selectedSqlStatus = useStoreWithNotebook((s) =>
-    cell && cell.type === 'vega' && cell.sqlId
-      ? s.notebook.cellStatus[cell.sqlId]
-      : undefined,
+  const selectedSqlStatus = useStoreWithNotebook(
+    (s) => s.notebook.cellStatus[cell.sqlId],
   );
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [chartSpec, setChartSpec] = useState<VisualizationSpec>({
-    data: {name: 'queryResult'},
-    mark: 'bar',
-    padding: 20,
-    encoding: {
-      x: {field: 'MagType'},
-      y: {field: 'Depth', aggregate: 'sum'},
+  const [draftSpec, setDraftSpec] = useState(
+    cell.vegaSpec ?? {
+      data: {name: 'queryResult'},
+      mark: 'bar',
+      padding: 20,
     },
-  });
+  );
+  const [isEditing, setIsEditing] = useState(false);
 
   if (!cell || cell.type !== 'vega') return null;
 
@@ -51,8 +51,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
 
   const isCurrent = currentCellId === id;
 
-  const handleValueChange = (value: string) =>
+  const handleValueChange = (value: string) => {
     update(id, (c) => ({...c, sqlId: value}) as typeof cell);
+    // Auto open the chart config panel if not opened yet
+    if (!isEditing) setIsEditing(true);
+  };
 
   return (
     <CellContainer
@@ -61,7 +64,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       leftControls={
         <Select value={cell.sqlId} onValueChange={handleValueChange}>
           <SelectTrigger className="h-7 text-xs">
-            <SelectValue placeholder="Select a sql cell" />
+            <SelectValue placeholder="Select a SQL cell" />
           </SelectTrigger>
           <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
             {availableSqlCells.map((sql) => (
@@ -73,33 +76,58 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
         </Select>
       }
       rightControls={
-        <Button
-          size="xs"
-          variant="secondary"
-          onClick={() => setIsEditing((prev) => !prev)}
-          className={cn({hidden: !isCurrent}, 'group-hover:flex')}
-        >
-          {isEditing ? 'Done' : 'Edit Chart'}
-        </Button>
+        isEditing ? (
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => {
+              update(id, (c) => ({...c, vegaSpec: draftSpec}));
+              setIsEditing(false);
+            }}
+          >
+            Done
+          </Button>
+        ) : (
+          <IconWithTooltip
+            title={!cell.sqlId ? 'Select a SQL cell first' : ''}
+            icon={
+              <Button
+                size="xs"
+                variant="secondary"
+                onClick={() => setIsEditing(true)}
+                className={cn({hidden: !isCurrent}, 'group-hover:flex')}
+                disabled={!cell.sqlId}
+              >
+                Edit chart
+              </Button>
+            }
+          />
+        )
       }
     >
       <div className="flex">
         {isEditing && (
           <VegaConfigPanel
             sqlQuery={selectedSqlQuery}
-            spec={chartSpec}
-            onSpecChange={setChartSpec}
+            spec={draftSpec}
+            onSpecChange={setDraftSpec}
           />
         )}
         <div
           onDoubleClick={() => setIsEditing((prev) => !prev)}
-          className="h-full w-full"
+          className="flex h-full w-full"
         >
-          <VegaLiteChart
-            sqlQuery={selectedSqlQuery}
-            spec={chartSpec}
-            aspectRatio={2 / 1}
-          />
+          {draftSpec?.encoding ? (
+            <VegaLiteChart
+              sqlQuery={selectedSqlQuery}
+              spec={draftSpec}
+              aspectRatio={2 / 1}
+            />
+          ) : (
+            <div className="flex h-72 w-full items-center justify-center text-xs text-gray-400">
+              Empty chart, please 1) select a SQL cell and then 2) edit chart.
+            </div>
+          )}
         </div>
       </div>
     </CellContainer>
