@@ -22,10 +22,10 @@ import {
   Settings,
   Trash2,
 } from 'lucide-react';
-import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
+import {useStoreWithAiSettings} from '../../AiSettingsSlice';
 import {useStoreWithAi} from '../../AiSlice';
 
-export interface AiModelConfigProps {
+export interface AiModelsSettingsProps {
   showProviderModels?: boolean;
   showCustomModels?: boolean;
   allowEditProviderModels?: boolean;
@@ -33,27 +33,23 @@ export interface AiModelConfigProps {
   className?: string;
 }
 
-export const AiModelsConfig: FC<AiModelConfigProps> = ({
+export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   className = '',
   allowEditProviderModels = true,
   allowCustomModels = true,
 }) => {
   const {toast} = useToast();
-  const aiConfig = useStoreWithAiModelConfig((s) => s.getAiModelConfig());
+  const aiConfig = useStoreWithAiSettings((s) => s.getAiSettings());
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
-  const addModelToProvider = useStoreWithAiModelConfig(
+  const addModelToProvider = useStoreWithAiSettings(
     (s) => s.addModelToProvider,
   );
-  const removeModelFromProvider = useStoreWithAiModelConfig(
+  const removeModelFromProvider = useStoreWithAiSettings(
     (s) => s.removeModelFromProvider,
   );
-  const addCustomModel = useStoreWithAiModelConfig((s) => s.addCustomModel);
-  const updateCustomModel = useStoreWithAiModelConfig(
-    (s) => s.updateCustomModel,
-  );
-  const removeCustomModel = useStoreWithAiModelConfig(
-    (s) => s.removeCustomModel,
-  );
+  const addCustomModel = useStoreWithAiSettings((s) => s.addCustomModel);
+  const updateCustomModel = useStoreWithAiSettings((s) => s.updateCustomModel);
+  const removeCustomModel = useStoreWithAiSettings((s) => s.removeCustomModel);
 
   const providers = useMemo(
     () => Object.entries(aiConfig.providers),

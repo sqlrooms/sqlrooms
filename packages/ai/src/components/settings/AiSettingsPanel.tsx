@@ -4,19 +4,17 @@ import {X} from 'lucide-react';
 
 import {AiModelParameters} from './AiModelParameters';
 import {AiModelUsage} from './AiModelUsage';
-import {AiProvidersConfig} from './AiProvidersConfig';
-import {AiModelsConfig} from './AiModelsConfig';
+import {AiProvidersSettings} from './AiProvidersSettings';
+import {AiModelsSettings} from './AiModelsSettings';
 
-interface AiConfigPanelProps {
+interface AiSettingsPanelProps {
   isOpen: boolean;
   setIsOpen: (isOpen: boolean) => void;
 }
 
-export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
-  isOpen,
-  setIsOpen,
-  children,
-}) => {
+export const AiSettingsPanelBase: FC<
+  PropsWithChildren<AiSettingsPanelProps>
+> = ({isOpen, setIsOpen, children}) => {
   if (!isOpen) return null;
 
   return (
@@ -36,9 +34,9 @@ export const AiConfigPanelBase: FC<PropsWithChildren<AiConfigPanelProps>> = ({
   );
 };
 
-export const AiSettingsPanel = Object.assign(AiConfigPanelBase, {
-  ProvidersConfig: AiProvidersConfig,
-  ModelsConfig: AiModelsConfig,
+export const AiSettingsPanel = Object.assign(AiSettingsPanelBase, {
+  ProvidersConfig: AiProvidersSettings,
+  ModelsConfig: AiModelsSettings,
   ModelUsage: AiModelUsage,
   ModelParameters: AiModelParameters,
 });

@@ -12,7 +12,7 @@ import {
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
-import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
+import {useStoreWithAiSettings} from '../../AiSettingsSlice';
 
 export interface AiModelParametersProps {
   getDefaultInstructions?: () => string;
@@ -21,15 +21,15 @@ export interface AiModelParametersProps {
 export const AiModelParameters: FC<AiModelParametersProps> = ({
   getDefaultInstructions,
 }) => {
-  const maxSteps = useStoreWithAiModelConfig(
-    (s) => s.getAiModelConfig().modelParameters.maxSteps,
+  const maxSteps = useStoreWithAiSettings(
+    (s) => s.getAiSettings().modelParameters.maxSteps,
   );
-  const setMaxStepsAiChatUi = useStoreWithAiModelConfig((s) => s.setMaxSteps);
+  const setMaxStepsAiChatUi = useStoreWithAiSettings((s) => s.setMaxSteps);
 
-  const additionalInstruction = useStoreWithAiModelConfig(
-    (s) => s.getAiModelConfig().modelParameters.additionalInstruction,
+  const additionalInstruction = useStoreWithAiSettings(
+    (s) => s.getAiSettings().modelParameters.additionalInstruction,
   );
-  const setAdditionalInstruction = useStoreWithAiModelConfig(
+  const setAdditionalInstruction = useStoreWithAiSettings(
     (s) => s.setAdditionalInstruction,
   );
 

@@ -9,7 +9,7 @@ import {produce} from 'immer';
 import {z} from 'zod';
 
 export const AiSettingsSliceConfig = z.object({
-  aiModelConfig: z.object({
+  aiSettings: z.object({
     providers: z.record(
       z.string(), // provider name
       z.object({
@@ -39,10 +39,10 @@ export const AiSettingsSliceConfig = z.object({
 export type AiSettingsSliceConfig = z.infer<typeof AiSettingsSliceConfig>;
 
 export function createDefaultAiSettings(
-  props: Partial<AiSettingsSliceConfig['aiModelConfig']>,
+  props: Partial<AiSettingsSliceConfig['aiSettings']>,
 ): AiSettingsSliceConfig {
   return {
-    aiModelConfig: {
+    aiSettings: {
       providers: {
         openai: {
           baseUrl: 'https://api.openai.com/v1',
@@ -82,8 +82,8 @@ export function createDefaultAiSettings(
   };
 }
 
-export type AiModelConfigSliceState = {
-  getAiModelConfig: () => AiSettingsSliceConfig['aiModelConfig'];
+export type AiSettingsConfigSliceState = {
+  getAiSettings: () => AiSettingsSliceConfig['aiSettings'];
   setMaxSteps: (maxSteps: number) => void;
   setAdditionalInstruction: (additionalInstruction: string) => void;
   updateProvider: (
@@ -109,18 +109,18 @@ export type AiModelConfigSliceState = {
 
 export function createAiSettingsSlice<
   PC extends BaseRoomConfig & AiSettingsSliceConfig,
->(): StateCreator<AiModelConfigSliceState> {
-  return createSlice<PC, AiModelConfigSliceState>((set, get) => {
+>(): StateCreator<AiSettingsConfigSliceState> {
+  return createSlice<PC, AiSettingsConfigSliceState>((set, get) => {
     return {
-      getAiModelConfig: () => {
+      getAiSettings: () => {
         const state = get();
-        return state.config.aiModelConfig;
+        return state.config.aiSettings;
       },
 
       setMaxSteps: (maxSteps: number) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.modelParameters.maxSteps = maxSteps;
+            draft.config.aiSettings.modelParameters.maxSteps = maxSteps;
           }),
         );
       },
@@ -128,7 +128,7 @@ export function createAiSettingsSlice<
       setAdditionalInstruction: (additionalInstruction: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.modelParameters.additionalInstruction =
+            draft.config.aiSettings.modelParameters.additionalInstruction =
               additionalInstruction;
           }),
         );
@@ -143,9 +143,9 @@ export function createAiSettingsSlice<
       ) => {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.config.aiModelConfig.providers[provider]) {
+            if (draft.config.aiSettings.providers[provider]) {
               Object.assign(
-                draft.config.aiModelConfig.providers[provider],
+                draft.config.aiSettings.providers[provider],
                 updates,
               );
             }
@@ -156,7 +156,7 @@ export function createAiSettingsSlice<
       addProvider: (provider: string, baseUrl: string, apiKey: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.providers[provider] = {
+            draft.config.aiSettings.providers[provider] = {
               baseUrl,
               apiKey,
               models: [],
@@ -168,14 +168,14 @@ export function createAiSettingsSlice<
       addModelToProvider: (provider: string, modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.config.aiModelConfig.providers[provider]) {
+            if (draft.config.aiSettings.providers[provider]) {
               // Check if model already exists
-              const modelExists = draft.config.aiModelConfig.providers[
+              const modelExists = draft.config.aiSettings.providers[
                 provider
               ].models.some((model) => model.modelName === modelName);
 
               if (!modelExists) {
-                draft.config.aiModelConfig.providers[provider].models.push({
+                draft.config.aiSettings.providers[provider].models.push({
                   modelName: modelName,
                 });
               }
@@ -187,9 +187,9 @@ export function createAiSettingsSlice<
       removeModelFromProvider: (provider: string, modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
-            if (draft.config.aiModelConfig.providers[provider]) {
-              draft.config.aiModelConfig.providers[provider].models =
-                draft.config.aiModelConfig.providers[provider].models.filter(
+            if (draft.config.aiSettings.providers[provider]) {
+              draft.config.aiSettings.providers[provider].models =
+                draft.config.aiSettings.providers[provider].models.filter(
                   (model) => model.modelName !== modelName,
                 );
             }
@@ -200,7 +200,7 @@ export function createAiSettingsSlice<
       removeProvider: (provider: string) => {
         set((state) =>
           produce(state, (draft) => {
-            delete draft.config.aiModelConfig.providers[provider];
+            delete draft.config.aiSettings.providers[provider];
           }),
         );
       },
@@ -216,18 +216,18 @@ export function createAiSettingsSlice<
 
             // Check if a custom model with the same name already exists
             const existingModelIndex =
-              draft.config.aiModelConfig.customModels.findIndex(
+              draft.config.aiSettings.customModels.findIndex(
                 (model) =>
                   model.modelName.toLowerCase() === modelName.toLowerCase(),
               );
 
             if (existingModelIndex !== -1) {
               // Update existing model
-              draft.config.aiModelConfig.customModels[existingModelIndex] =
+              draft.config.aiSettings.customModels[existingModelIndex] =
                 newCustomModel;
             } else {
               // Add new model
-              draft.config.aiModelConfig.customModels.push(newCustomModel);
+              draft.config.aiSettings.customModels.push(newCustomModel);
             }
           }),
         );
@@ -242,15 +242,14 @@ export function createAiSettingsSlice<
         set((state) =>
           produce(state, (draft) => {
             // Find the model to update
-            const modelIndex =
-              draft.config.aiModelConfig.customModels.findIndex(
-                (model) => model.modelName === oldModelName,
-              );
+            const modelIndex = draft.config.aiSettings.customModels.findIndex(
+              (model) => model.modelName === oldModelName,
+            );
 
             if (modelIndex !== -1) {
               // Check if the new name conflicts with another model (excluding the current one)
               const conflictingModelIndex =
-                draft.config.aiModelConfig.customModels.findIndex(
+                draft.config.aiSettings.customModels.findIndex(
                   (model, index) =>
                     index !== modelIndex &&
                     model.modelName.toLowerCase() ===
@@ -259,7 +258,7 @@ export function createAiSettingsSlice<
 
               if (conflictingModelIndex === -1) {
                 // Update the model
-                draft.config.aiModelConfig.customModels[modelIndex] = {
+                draft.config.aiSettings.customModels[modelIndex] = {
                   baseUrl,
                   apiKey,
                   modelName: newModelName,
@@ -273,8 +272,8 @@ export function createAiSettingsSlice<
       removeCustomModel: (modelName: string) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.aiModelConfig.customModels =
-              draft.config.aiModelConfig.customModels.filter(
+            draft.config.aiSettings.customModels =
+              draft.config.aiSettings.customModels.filter(
                 (model) => model.modelName !== modelName,
               );
           }),
@@ -284,17 +283,17 @@ export function createAiSettingsSlice<
   });
 }
 
-type RoomConfigWithAiChatUi = BaseRoomConfig & AiSettingsSliceConfig;
-type RoomShellSliceStateWithAiChatUi =
-  RoomShellSliceState<RoomConfigWithAiChatUi> & AiModelConfigSliceState;
+type RoomConfigWithAiSettings = BaseRoomConfig & AiSettingsSliceConfig;
+type RoomShellSliceStateWithAiSettings =
+  RoomShellSliceState<RoomConfigWithAiSettings> & AiSettingsConfigSliceState;
 
-// Hook to access aiModelConfig from the room store
-export function useStoreWithAiModelConfig<T>(
-  selector: (state: RoomShellSliceStateWithAiChatUi) => T,
+// Hook to access aiSettings from the room store
+export function useStoreWithAiSettings<T>(
+  selector: (state: RoomShellSliceStateWithAiSettings) => T,
 ): T {
   return useBaseRoomShellStore<
     BaseRoomConfig & AiSettingsSliceConfig,
-    RoomShellSliceState<RoomConfigWithAiChatUi>,
+    RoomShellSliceState<RoomConfigWithAiSettings>,
     T
-  >((state) => selector(state as unknown as RoomShellSliceStateWithAiChatUi));
+  >((state) => selector(state as unknown as RoomShellSliceStateWithAiSettings));
 }

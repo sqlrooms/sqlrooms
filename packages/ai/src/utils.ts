@@ -2,9 +2,9 @@
  * Utility functions for AI Chat UI configuration
  */
 
-import {AiSettingsSliceConfig} from './AiConfigSlice';
+import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
-type AiModelConfig = AiSettingsSliceConfig['aiModelConfig'];
+type AiModelConfig = AiSettingsSliceConfig['aiSettings'];
 
 /**
  * Get the API key for the currently selected model
@@ -63,7 +63,7 @@ export function getBaseUrl(
 }
 
 /**
- * Extract models from aiModelConfig in the format expected by ModelSelector
+ * Extract models from aiSettings in the format expected by ModelSelector
  * @param config - The AI model configuration
  * @returns Array of models with provider, label, and value properties
  */

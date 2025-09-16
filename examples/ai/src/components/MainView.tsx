@@ -18,7 +18,7 @@ export const MainView: React.FC = () => {
     (s) => s.config.ai.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  const aiModelConfig = useRoomStore((s) => s.config.aiModelConfig);
+  const aiSettings = useRoomStore((s) => s.config.aiSettings);
 
   const tables = useBaseRoomShellStore((s) => s.db.tables);
 
@@ -26,7 +26,7 @@ export const MainView: React.FC = () => {
     return getDefaultInstructions(tables);
   };
 
-  const models = extractModelsFromConfig(aiModelConfig);
+  const models = extractModelsFromConfig(aiSettings);
 
   const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
 

@@ -155,7 +155,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           );
 
           return getApiKey(
-            state.config.aiModelConfig,
+            state.config.aiSettings,
             currentSession?.modelProvider || '',
             currentSession?.model || '',
           );
@@ -167,7 +167,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         // Get max steps from Ai model config or your default value
         getMaxSteps: () => {
           const state = get();
-          return state.config.aiModelConfig.modelParameters.maxSteps || 5;
+          return state.config.aiSettings.modelParameters.maxSteps || 5;
         },
         // Get base URL from Ai model config or your default value
         getBaseUrl: () => {
@@ -178,7 +178,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             (s) => s.id === currentSessionId,
           );
           return getBaseUrl(
-            state.config.aiModelConfig,
+            state.config.aiSettings,
             currentSession?.modelProvider || '',
             currentSession?.model || '',
           );
@@ -211,7 +211,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           let instructions = getDefaultInstructions(tablesSchema);
           // get custom instructions from Ai model config UI
           const customInstructions =
-            get().config.aiModelConfig.modelParameters.additionalInstruction;
+            get().config.aiSettings.modelParameters.additionalInstruction;
 
           if (customInstructions) {
             instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;

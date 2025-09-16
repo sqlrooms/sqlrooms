@@ -520,8 +520,8 @@ import {
 import {useRoomStore} from '../store';
 
 // Access AI model configuration from store
-const aiModelConfig = useRoomStore((s) => s.config.aiModelConfig);
-const models = extractModelsFromConfig(aiModelConfig);
+const aiSettings = useRoomStore((s) => s.config.aiSettings);
+const models = extractModelsFromConfig(aiSettings);
 
 // Main configuration panel with sub-components
 <AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>

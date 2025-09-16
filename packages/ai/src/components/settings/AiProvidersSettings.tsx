@@ -22,19 +22,19 @@ import {
   Trash2,
   CirclePlus,
 } from 'lucide-react';
-import {useStoreWithAiModelConfig} from '../../AiConfigSlice';
+import {useStoreWithAiSettings} from '../../AiSettingsSlice';
 
-export const AiProvidersConfig: FC = () => {
+export const AiProvidersSettings: FC = () => {
   const {toast} = useToast();
-  const updateProvider = useStoreWithAiModelConfig(
+  const updateProvider = useStoreWithAiSettings(
     (state) => state.updateProvider,
   );
-  const addProvider = useStoreWithAiModelConfig((state) => state.addProvider);
-  const removeProvider = useStoreWithAiModelConfig(
+  const addProvider = useStoreWithAiSettings((state) => state.addProvider);
+  const removeProvider = useStoreWithAiSettings(
     (state) => state.removeProvider,
   );
-  const providers = useStoreWithAiModelConfig(
-    (state) => state.config.aiModelConfig.providers,
+  const providers = useStoreWithAiSettings(
+    (state) => state.config.aiSettings.providers,
   );
   const modelProviders = React.useMemo(() => {
     const result: Record<string, {apiKey: string; baseUrl: string}> = {};
