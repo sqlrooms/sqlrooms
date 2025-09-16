@@ -37,7 +37,7 @@ export function createDefaultAiConfig(
           id: defaultSessionId,
           name: 'Default Session',
           modelProvider: 'openai',
-          model: 'gpt-4o-mini',
+          model: 'gpt-4.1',
           analysisResults: [],
           createdAt: new Date(),
         },
@@ -61,8 +61,6 @@ export type AiSliceState = {
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setCustomModelName: (customModelName: string) => void;
-    setBaseUrl: (baseUrl: string) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -92,32 +90,26 @@ export interface AiSliceOptions {
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
   toolsOptions?: DefaultToolsOptions;
+  defaultProvider?: string;
+  defaultModel?: string;
+  getApiKey?: (modelProvider: string) => string;
+  getBaseUrl?: () => string | undefined;
+  getMaxSteps?: () => number;
 }
 
-/**
- * API key configuration for the AI slice
- */
-export type AiSliceApiConfig = {defaultModel?: string} & (
-  | {baseUrl: string; getApiKey?: never}
-  | {getApiKey: (modelProvider: string) => string; baseUrl?: never}
-);
-
-/**
- * Complete configuration for creating an AI slice
- */
-export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
-
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
-  params: CreateAiSliceConfig,
+  params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    getApiKey,
-    baseUrl,
+    defaultProvider = 'openai',
+    defaultModel = 'gpt-4.1',
     initialAnalysisPrompt = '',
     customTools = {},
-    getInstructions,
     toolsOptions,
-    defaultModel = 'gpt-4o-mini',
+    getApiKey,
+    getBaseUrl,
+    getMaxSteps,
+    getInstructions,
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
@@ -125,6 +117,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
+        maxSteps: 5,
 
         tools: {
           ...getDefaultTools(store, toolsOptions),
@@ -150,36 +143,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               if (currentSession) {
                 currentSession.modelProvider = modelProvider;
                 currentSession.model = model;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the custom model name for the current session
-         * @param customModelName - The custom model name to set
-         */
-        setCustomModelName: (customModelName: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.customModelName = customModelName;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the base URL for the current session
-         * @param baseUrl - The server URL to set
-         */
-        setBaseUrl: (baseUrl: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.baseUrl = baseUrl;
               }
             }),
           );
@@ -225,6 +188,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
           set((state) =>
             produce(state, (draft) => {
+              // Add to AI sessions
               draft.config.ai.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -339,15 +303,16 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           try {
             await runAnalysis({
               tableSchemas: get().db.tables,
-              modelProvider: currentSession.modelProvider || 'openai',
+              modelProvider: currentSession.modelProvider || defaultProvider,
               model: currentSession.model || defaultModel,
-              customModelName: currentSession.customModelName,
               apiKey:
-                getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              baseUrl: currentSession.baseUrl || baseUrl,
+                getApiKey?.(currentSession.modelProvider || defaultProvider) ||
+                '',
+              baseUrl: getBaseUrl?.() || currentSession.baseUrl,
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
+              maxSteps: getMaxSteps?.() || 5,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
