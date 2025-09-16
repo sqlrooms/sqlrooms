@@ -6,6 +6,7 @@ import {
   registerEntry,
   requestMapStyles,
   wrapTo,
+  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
@@ -123,6 +124,7 @@ export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
     forwardDispatch: {
       [mapId: string]: Dispatch;
     };
+    addLayer: (mapId: string, layer: any, datasetId: string) => void;
     initialize: (config?: PC) => Promise<void>;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -233,6 +235,11 @@ export function createKeplerSlice<
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
         forwardDispatch: {},
+
+        addLayer: (mapId, layer, datasetId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
+        },
 
         async initialize(config?: PC) {
           const currentMapId =
