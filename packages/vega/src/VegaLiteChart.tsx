@@ -204,6 +204,7 @@ export const ArrowChart: React.FC<{
           triggerLabel="Chart rendering failed"
           title="Chart error"
           align="start"
+          details={spec}
         />
       ) : (
         refinedSpec &&
