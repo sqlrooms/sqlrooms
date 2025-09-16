@@ -1,12 +1,10 @@
 <script setup>
-import {ref, onMounted} from 'vue';
+import {ref} from 'vue';
 import {useData} from 'vitepress';
 
 const {frontmatter} = useData();
 
 const currentSlide = ref(0);
-const isAutoPlay = ref(true);
-let intervalId;
 
 function goTo(index) {
   const items = frontmatter.value?.caseStudies ?? [];
@@ -22,15 +20,6 @@ function next() {
 function prev() {
   goTo(currentSlide.value - 1);
 }
-
-onMounted(() => {
-  const prefersReduced = window.matchMedia(
-    '(prefers-reduced-motion: reduce)',
-  ).matches;
-  if (!prefersReduced && isAutoPlay.value) {
-    intervalId = window.setInterval(next, 5000);
-  }
-});
 </script>
 
 <template>

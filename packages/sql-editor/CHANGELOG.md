@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.22 (2025-09-16)
+
+### Features
+
+* Ai charts and queries improvements ([#144](https://github.com/sqlrooms/sqlrooms/issues/144)) ([a006873](https://github.com/sqlrooms/sqlrooms/commit/a00687369e758ca2e70e11f59059c03fd258d0a9))
+
 ## 0.24.21 (2025-09-11)
 
 ### Features

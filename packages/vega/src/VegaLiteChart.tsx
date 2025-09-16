@@ -1,10 +1,21 @@
-import {useSql} from '@sqlrooms/duckdb';
-import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
+import {ToolErrorMessage} from '@sqlrooms/ai';
+import {arrowTableToJson, useSql} from '@sqlrooms/duckdb';
+import {
+  AspectRatio,
+  Button,
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  useAspectRatioDimensions,
+} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
-import {useMemo, useRef} from 'react';
+import * as arrow from 'apache-arrow';
+import {TriangleAlertIcon} from 'lucide-react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
 
-const DATA_NAME = 'queryResult';
+const DEFAULT_DATA_NAME = 'queryResult';
 
 /**
  * A component that renders a Vega-Lite chart with SQL data and responsive sizing.
@@ -56,13 +67,14 @@ const DATA_NAME = 'queryResult';
  *   }}
  * />
  */
-export const VegaLiteChart: React.FC<{
+const VegaLiteSqlChart: React.FC<{
   className?: string;
   width?: number | 'auto';
   height?: number | 'auto';
   aspectRatio?: number;
   sqlQuery: string;
   spec: string | VisualizationSpec;
+  dataName?: string;
 }> = ({
   className,
   width = 'auto',
@@ -70,6 +82,7 @@ export const VegaLiteChart: React.FC<{
   aspectRatio = 3 / 2,
   sqlQuery,
   spec,
+  dataName = DEFAULT_DATA_NAME,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useAspectRatioDimensions({
@@ -84,7 +97,7 @@ export const VegaLiteChart: React.FC<{
     if (!parsed) return null;
     return {
       ...parsed,
-      data: {name: DATA_NAME},
+      data: {name: dataName},
       width: dimensions.width,
       height: dimensions.height,
       autosize: {
@@ -95,10 +108,7 @@ export const VegaLiteChart: React.FC<{
   }, [spec, dimensions]);
 
   const result = useSql({query: sqlQuery});
-  const data = useMemo(() => {
-    if (!result.data) return null;
-    return {[DATA_NAME]: result.data.toArray()};
-  }, [result.data]);
+  const arrowTable = result.data?.arrowTable;
 
   return (
     <div
@@ -113,9 +123,102 @@ export const VegaLiteChart: React.FC<{
           {result.error.message}
         </div>
       )}
-      <AspectRatio ratio={aspectRatio}>
-        {refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />}
-      </AspectRatio>
+      {result.isLoading ? (
+        <div className="text-muted-foreground align-center flex gap-2 px-2">
+          <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
+          Running query for chart data…
+        </div>
+      ) : (
+        refinedSpec &&
+        arrowTable && <ArrowChart spec={refinedSpec} arrowTable={arrowTable} />
+      )}
     </div>
   );
 };
+
+export const ArrowChart: React.FC<{
+  className?: string;
+  width?: number | 'auto';
+  height?: number | 'auto';
+  aspectRatio?: number;
+  spec: string | VisualizationSpec;
+  arrowTable: arrow.Table | undefined;
+  dataName?: string;
+}> = ({
+  className,
+  width = 'auto',
+  height = 'auto',
+  aspectRatio = 3 / 2,
+  spec,
+  arrowTable,
+  dataName = DEFAULT_DATA_NAME,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [chartError, setChartError] = useState<Error | null>(null);
+  const dimensions = useAspectRatioDimensions({
+    containerRef,
+    width,
+    height,
+    aspectRatio,
+  });
+
+  const refinedSpec = useMemo(() => {
+    const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
+    if (!parsed) {
+      setChartError(new Error('Invalid Vega-Lite specification'));
+      return null;
+    }
+    return {
+      ...parsed,
+      data: {name: dataName},
+      width: dimensions.width,
+      height: dimensions.height,
+      autosize: {
+        type: 'fit',
+        contains: 'padding',
+      },
+    } as VisualizationSpec;
+  }, [spec, dimensions]);
+
+  const data = useMemo(() => {
+    if (!arrowTable) return null;
+    return {queryResult: arrowTableToJson(arrowTable)};
+  }, [arrowTable]);
+
+  // Reset chart error whenever spec or data changes
+  useEffect(() => {
+    setChartError(null);
+  }, [spec, data]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={cn(
+        'flex h-full w-full flex-col gap-2 overflow-hidden',
+        className,
+      )}
+    >
+      {chartError ? (
+        <ToolErrorMessage
+          error={chartError}
+          triggerLabel="Chart rendering failed"
+          title="Chart error"
+          align="start"
+          details={spec}
+        />
+      ) : (
+        refinedSpec &&
+        data && (
+          <AspectRatio ratio={aspectRatio}>
+            <VegaLite spec={refinedSpec} data={data} onError={setChartError} />
+          </AspectRatio>
+        )
+      )}
+    </div>
+  );
+};
+
+export const VegaLiteChart = Object.assign(VegaLiteSqlChart, {
+  SqlChart: VegaLiteSqlChart,
+  ArrowChart: ArrowChart,
+});

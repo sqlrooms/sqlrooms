@@ -54,10 +54,14 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
-      {text: 'Concepts', link: '/key-concepts'},
+      //{text: 'Concepts', link: '/key-concepts'},
       {text: 'Examples', link: '/examples'},
       {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},
+      // {
+      //   text: 'Join Slack',
+      //   link: '/join-slack',
+      // },
       // {text: 'Reference', link: '/packages'},
     ],
 
@@ -144,6 +148,7 @@ export default defineConfig({
     ],
 
     socialLinks: [
+      {icon: 'slack', link: '/join-slack'},
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
