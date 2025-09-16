@@ -11,6 +11,8 @@ import {
 } from '@sqlrooms/ui';
 import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
+import * as arrow from 'apache-arrow';
+import {DataTableArrowPaginated} from './DataTableArrowPaginated';
 
 /**
  * A modal component for displaying a table with data from a SQL query.
@@ -38,12 +40,21 @@ import QueryDataTable from './QueryDataTable';
  * };
  * ```
  */
-const DataTableModal: FC<{
-  className?: string;
-  title: string | undefined;
-  query: string | undefined;
-  tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
-}> = ({className, title, query, tableModal}) => {
+const DataTableModal: FC<
+  {
+    className?: string;
+    title: string | undefined;
+    tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
+  } & (
+    | {
+        query: string | undefined;
+      }
+    | {
+        arrowTable: arrow.Table | undefined;
+      }
+  )
+> = (props) => {
+  const {className, title, tableModal} = props;
   return (
     <Dialog
       open={tableModal.isOpen}
@@ -58,7 +69,17 @@ const DataTableModal: FC<{
           <DialogDescription className="hidden">{title}</DialogDescription>
         </DialogHeader>
         <div className="bg-muted flex-1 overflow-hidden">
-          {tableModal.isOpen && query ? <QueryDataTable query={query} /> : null}
+          {tableModal.isOpen && (
+            <>
+              {'query' in props && props.query ? (
+                <QueryDataTable query={props.query} />
+              ) : 'arrowTable' in props && props.arrowTable ? (
+                <DataTableArrowPaginated table={props.arrowTable} />
+              ) : (
+                <div className="p-4 text-xs">No data</div>
+              )}
+            </>
+          )}
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={tableModal.onClose}>

@@ -32,7 +32,6 @@ const TableCard: FC<{
   if (!value) return null;
 
   const numRows = value.rowCount ?? rowCount;
-  console.log(value, numRows);
   return (
     <Card
       className={cn(

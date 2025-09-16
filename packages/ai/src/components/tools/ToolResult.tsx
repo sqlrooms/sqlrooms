@@ -1,11 +1,10 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, useDisclosure} from '@sqlrooms/ui';
-import {TriangleAlertIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
 import {ToolInvocation} from 'ai';
+import {ToolErrorMessage} from './ToolErrorMessage';
 
 type ToolResultProps = {
   toolInvocation: ToolInvocation;
@@ -73,33 +72,13 @@ export const ToolResult: React.FC<ToolResultProps> = ({
         </ToolCallErrorBoundary>
       )}
       {isCompleted && (errorMessage || !isSuccess) && (
-        <div className="flex flex-col gap-2">
-          <Button
-            className="w-fit"
-            variant="ghost"
-            size="xs"
-            onClick={() => toggleShowDetails()}
-          >
-            <p className="flex items-center gap-2 text-xs text-orange-500">
-              <TriangleAlertIcon />
-              Tool call failed
-            </p>
-          </Button>
-          {showDetails && (
-            <div className="h-[300px] w-full overflow-hidden rounded-md border">
-              <JsonMonacoEditor
-                value={toolInvocation}
-                readOnly={true}
-                options={{
-                  lineNumbers: 'off',
-                  minimap: {enabled: false},
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                }}
-              />
-            </div>
-          )}
-        </div>
+        <ToolErrorMessage
+          error={errorMessage ?? 'Tool call failed'}
+          details={toolInvocation}
+          title="Tool call error"
+          triggerLabel="Tool call failed"
+          editorHeightPx={300}
+        />
       )}
     </MessageContainer>
   );
