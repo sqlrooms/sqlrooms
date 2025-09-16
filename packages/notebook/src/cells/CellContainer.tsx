@@ -9,8 +9,9 @@ export const CellContainer: React.FC<{
   id: string;
   typeLabel: string;
   rightControls?: React.ReactNode;
+  leftControls?: React.ReactNode;
   children?: React.ReactNode;
-}> = ({id, typeLabel, rightControls, children}) => {
+}> = ({id, typeLabel, rightControls, leftControls, children}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
@@ -28,12 +29,14 @@ export const CellContainer: React.FC<{
       onClick={() => setCurrentCell(id)}
     >
       <div className="flex items-center justify-between border-b px-2 py-1">
-        <EditableText
-          value={cell.name}
-          onChange={(v) => onRename(id, v)}
-          minWidth={20}
-        />
-
+        <div className="flex items-center gap-2">
+          <EditableText
+            value={cell.name}
+            onChange={(v) => onRename(id, v)}
+            minWidth={20}
+          />
+          {leftControls}
+        </div>
         <div className="flex items-center gap-2 text-xs">
           <div
             className={cn('flex items-center gap-2', {

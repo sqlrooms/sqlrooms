@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {Button, cn} from '@sqlrooms/ui';
+import {Button} from '@sqlrooms/ui';
 
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../NotebookSlice';
@@ -15,12 +15,11 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
   );
   const [isEditing, setIsEditing] = useState(currentCellId === id);
   const [draft, setDraft] = useState(cell?.type === 'text' ? cell.text : '');
-  const [showPreview, setShowPreview] = useState(true);
 
   useEffect(() => {
     if (currentCellId !== id && isEditing && cell?.type === 'text') {
       setIsEditing(false);
-      update(id, (c) => ({...c, markdown: draft}));
+      update(id, (c) => ({...c, text: draft}));
     }
   }, [currentCellId, id, isEditing, draft, update, cell?.type]);
 
@@ -31,14 +30,27 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
       id={id}
       typeLabel={getCellTypeLabel(cell.type)}
       rightControls={
-        <Button
-          size="xs"
-          variant="outline"
-          onClick={() => setShowPreview((prev) => !prev)}
-          className={cn({hidden: !isEditing}, 'w-[100px]')}
-        >
-          {showPreview ? 'Hide Preview' : 'Show Preview'}
-        </Button>
+        currentCellId === id &&
+        (isEditing ? (
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => {
+              update(id, (c) => ({...c, text: draft}));
+              setIsEditing(false);
+            }}
+          >
+            Done
+          </Button>
+        ) : (
+          <Button
+            size="xs"
+            variant="secondary"
+            onClick={() => setIsEditing(true)}
+          >
+            Edit text
+          </Button>
+        ))
       }
     >
       <div
@@ -47,18 +59,17 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
       >
         {isEditing && (
           <textarea
-            className="bg-background w-full flex-1 px-3 py-2 text-xs outline-none"
+            className="bg-accent w-full flex-1 px-3 py-2 text-xs outline-none"
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             placeholder="Write text...(Double click to save and preview)"
             autoFocus
           />
         )}
-        {(showPreview || !isEditing) && (
-          <div className="prose dark:prose-invert max-w-none flex-1 px-3 py-2 text-sm">
-            <Markdown remarkPlugins={[remarkGfm]}>{draft}</Markdown>
-          </div>
-        )}
+
+        <div className="prose dark:prose-invert max-w-none flex-1 px-3 py-2 text-sm">
+          <Markdown remarkPlugins={[remarkGfm]}>{draft}</Markdown>
+        </div>
       </div>
     </CellContainer>
   );

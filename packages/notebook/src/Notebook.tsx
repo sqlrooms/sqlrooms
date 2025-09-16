@@ -38,14 +38,14 @@ export const TabsBar: React.FC = () => {
   );
 };
 
-export const CellView: React.FC<{id: string}> = React.memo(({id}) => {
+export const CellView: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const render = useStoreWithNotebook(
     (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
   );
   if (!cell || !render) return null;
   return render(id);
-});
+};
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
@@ -68,7 +68,7 @@ export const Notebook: React.FC = () => {
   return (
     <div className="tab-scrollable-content flex h-full flex-col">
       <TabsBar />
-      <div className="flex items-center gap-1 px-4 pt-2">
+      <div className="flex items-center gap-1 px-4 py-2">
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
@@ -79,7 +79,7 @@ export const Notebook: React.FC = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col gap-1 overflow-auto p-2">
+      <div className="flex flex-col gap-1 overflow-auto px-2">
         {tab.cellOrder.map((id, index) => (
           <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />

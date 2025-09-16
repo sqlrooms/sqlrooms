@@ -23,7 +23,7 @@ export const VegaCellSchema = z.object({
   id: z.string(),
   name: z.string().default('Chart'),
   type: z.literal('vega'),
-  sql: z.string().default(''),
+  sqlId: z.string().default(''),
   vegaSpec: z.any().optional(),
 });
 export type VegaCell = z.infer<typeof VegaCellSchema>;

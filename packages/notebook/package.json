@@ -41,6 +41,7 @@
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/vega": "workspace:*",
     "immer": "^10.1.1",
     "lucide-react": "^0.543.0",
     "react-markdown": "^10.1.0",

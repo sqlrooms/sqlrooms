@@ -12,7 +12,7 @@ import {InputCell} from './cells/InputCell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {SqlCell} from './cells/SqlCell';
 import {TextCell} from './cells/TextCell';
-import {VegaCell} from './cells/VegaCell';
+import {VegaCell} from './cells/Vega/VegaCell';
 import {
   NotebookCell,
   NotebookCellTypes,
@@ -476,7 +476,7 @@ export function createNotebookSlice<
           vega: {
             title: 'Vega',
             createCell: (id) =>
-              ({id, type: 'vega', name: 'Chart', sql: ''}) as NotebookCell,
+              ({id, type: 'vega', name: 'Chart', sqlId: ''}) as NotebookCell,
             renderComponent: (id: string) =>
               React.createElement(VegaCell, {id}),
             findDependencies: findDependenciesCommon,
