@@ -67,7 +67,7 @@ export function getBaseUrl(
  * @param config - The AI model configuration
  * @returns Array of models with provider, label, and value properties
  */
-export function extractModelsFromConfig(config: AiModelConfig): Array<{
+export function extractModelsFromSettings(config: AiModelConfig): Array<{
   provider: string;
   label: string;
   value: string;

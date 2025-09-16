@@ -82,7 +82,7 @@ export function createDefaultAiSettings(
   };
 }
 
-export type AiSettingsConfigSliceState = {
+export type AiSettingsSliceState = {
   getAiSettings: () => AiSettingsSliceConfig['aiSettings'];
   setMaxSteps: (maxSteps: number) => void;
   setAdditionalInstruction: (additionalInstruction: string) => void;
@@ -109,8 +109,8 @@ export type AiSettingsConfigSliceState = {
 
 export function createAiSettingsSlice<
   PC extends BaseRoomConfig & AiSettingsSliceConfig,
->(): StateCreator<AiSettingsConfigSliceState> {
-  return createSlice<PC, AiSettingsConfigSliceState>((set, get) => {
+>(): StateCreator<AiSettingsSliceState> {
+  return createSlice<PC, AiSettingsSliceState>((set, get) => {
     return {
       getAiSettings: () => {
         const state = get();
@@ -285,7 +285,7 @@ export function createAiSettingsSlice<
 
 type RoomConfigWithAiSettings = BaseRoomConfig & AiSettingsSliceConfig;
 type RoomShellSliceStateWithAiSettings =
-  RoomShellSliceState<RoomConfigWithAiSettings> & AiSettingsConfigSliceState;
+  RoomShellSliceState<RoomConfigWithAiSettings> & AiSettingsSliceState;
 
 // Hook to access aiSettings from the room store
 export function useStoreWithAiSettings<T>(

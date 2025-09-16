@@ -35,8 +35,8 @@ export const AiSettingsPanelBase: FC<
 };
 
 export const AiSettingsPanel = Object.assign(AiSettingsPanelBase, {
-  ProvidersConfig: AiProvidersSettings,
-  ModelsConfig: AiModelsSettings,
+  ProvidersSettings: AiProvidersSettings,
+  ModelsSettings: AiModelsSettings,
   ModelUsage: AiModelUsage,
-  ModelParameters: AiModelParameters,
+  ModelParametersSettings: AiModelParameters,
 });

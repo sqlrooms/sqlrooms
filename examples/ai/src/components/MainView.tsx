@@ -8,7 +8,7 @@ import {
   QueryControls,
   getDefaultInstructions,
   ModelSelector,
-  extractModelsFromConfig,
+  extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {useRoomStore} from '../store';
@@ -26,9 +26,9 @@ export const MainView: React.FC = () => {
     return getDefaultInstructions(tables);
   };
 
-  const models = extractModelsFromConfig(aiSettings);
+  const models = extractModelsFromSettings(aiSettings);
 
-  const [isConfigPanelOpen, setIsConfigPanelOpen] = useState(false);
+  const [isAiSettingsPanelOpen, setIsAiSettingsPanelOpen] = useState(false);
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -37,20 +37,20 @@ export const MainView: React.FC = () => {
         <Button
           variant="outline"
           className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
-          onClick={() => setIsConfigPanelOpen(!isConfigPanelOpen)}
+          onClick={() => setIsAiSettingsPanelOpen(!isAiSettingsPanelOpen)}
           title="Configuration"
         >
           <Settings className="h-4 w-4" />
         </Button>
       </div>
 
-      {isConfigPanelOpen ? (
+      {isAiSettingsPanelOpen ? (
         <div className="flex-grow overflow-auto">
           {currentSessionId && (
-            <AiSettingsPanel isOpen={true} setIsOpen={setIsConfigPanelOpen}>
-              <AiSettingsPanel.ProvidersConfig />
-              <AiSettingsPanel.ModelsConfig />
-              <AiSettingsPanel.ModelParameters
+            <AiSettingsPanel isOpen={true} setIsOpen={setIsAiSettingsPanelOpen}>
+              <AiSettingsPanel.ProvidersSettings />
+              <AiSettingsPanel.ModelsSettings />
+              <AiSettingsPanel.ModelParametersSettings
                 getDefaultInstructions={getDefaultInstructionsWrapper}
               />
             </AiSettingsPanel>

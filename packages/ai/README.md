@@ -501,11 +501,11 @@ This package now includes comprehensive AI settings components. These components
 
 - **createAiSettingsSlice**: Function to create a Zustand slice for managing AI model configuration with room-shell integration
 - **AiSettingsPanel**: Main configuration panel with modular sub-components for different configuration aspects
-- **ProvidersConfig**: Component for configuring AI providers (OpenAI, Anthropic, etc.) with API keys and base URLs
-- **ModelsConfig**: Component for managing available models and their parameters
-- **ModelParameters**: Component for configuring model parameters like max steps and system instructions
+- **ProvidersSettings**: Component for configuring AI providers (OpenAI, Anthropic, etc.) with API keys and base URLs
+- **ModelsSettings**: Component for managing available models and their parameters
+- **ModelParametersSettings**: Component for configuring model parameters like max steps and system instructions
 - **ModelSelector**: Standalone model selector component for quick model switching
-- **extractModelsFromConfig**: Utility function to extract models from configuration for use in selectors
+- **extractModelsFromSettings**: Utility function to extract models from configuration for use in selectors
 
 ### AI Settings Usage
 
@@ -515,19 +515,19 @@ This package now includes comprehensive AI settings components. These components
 import {
   AiSettingsPanel,
   ModelSelector,
-  extractModelsFromConfig,
+  extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {useRoomStore} from '../store';
 
 // Access AI model configuration from store
 const aiSettings = useRoomStore((s) => s.config.aiSettings);
-const models = extractModelsFromConfig(aiSettings);
+const models = extractModelsFromSettings(aiSettings);
 
 // Main configuration panel with sub-components
 <AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
-  <AiSettingsPanel.ProvidersConfig />
-  <AiSettingsPanel.ModelsConfig />
-  <AiSettingsPanel.ModelParameters
+  <AiSettingsPanel.ProvidersSettings />
+  <AiSettingsPanel.ModelsSettings />
+  <AiSettingsPanel.ModelParametersSettings
     getDefaultInstructions={getDefaultInstructionsWrapper}
   />
 </AiSettingsPanel>
@@ -541,11 +541,11 @@ const models = extractModelsFromConfig(aiSettings);
 #### Core Components
 
 - **`AiSettingsPanel`**: Main configuration panel with modular sub-components
-  - `AiSettingsPanel.ProvidersConfig`: Configure AI providers (OpenAI, Anthropic, etc.)
-  - `AiSettingsPanel.ModelsConfig`: Manage available models and their parameters
-  - `AiSettingsPanel.ModelParameters`: Configure model parameters and instructions
+  - `AiSettingsPanel.ProvidersSettings`: Configure AI providers (OpenAI, Anthropic, etc.)
+  - `AiSettingsPanel.ModelsSettings`: Manage available models and their parameters
+  - `AiSettingsPanel.ModelParametersSettings`: Configure model parameters and instructions
 - **`ModelSelector`**: Standalone model selector for quick switching
-- **`extractModelsFromConfig(config)`**: Utility to extract models from configuration
+- **`extractModelsFromSettings(config)`**: Utility to extract models from configuration
 
 #### Slice Configuration
 

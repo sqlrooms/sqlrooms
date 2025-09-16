@@ -5,7 +5,7 @@ import {
   createDefaultAiConfig,
   getDefaultInstructions,
   AiSettingsSliceConfig,
-  AiModelConfigState,
+  AiSettingsSliceState,
   createAiSettingsSlice,
   createDefaultAiSettings,
   getApiKey,
@@ -56,7 +56,7 @@ export type RoomConfig = z.infer<typeof RoomConfig>;
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  AiModelConfigState;
+  AiSettingsSliceState;
 
 /**
  * Create a customized room store
@@ -88,17 +88,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ),
           ...createDefaultAiSettings({
             providers: LLM_MODELS.reduce(
-              (
-                acc: Record<
-                  string,
-                  {
-                    baseUrl: string;
-                    apiKey: string;
-                    models: Array<{id: string; modelName: string}>;
-                  }
-                >,
-                provider,
-              ) => {
+              (acc: Record<string, unknown>, provider) => {
                 acc[provider.name] = {
                   baseUrl:
                     PROVIDER_DEFAULT_BASE_URLS[
@@ -113,7 +103,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
                 return acc;
               },
               {},
-            ),
+            ) as AiSettingsSliceConfig['aiSettings']['providers'],
           }),
           ...createDefaultSqlEditorConfig(),
         },
