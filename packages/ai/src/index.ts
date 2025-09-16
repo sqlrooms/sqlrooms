@@ -27,6 +27,7 @@ export * from './components/session/SessionActions';
 export * from './components/session/SessionDropdown';
 export * from './components/session/SessionTitle';
 export * from './components/session/SessionType';
+export * from './components/tools/ToolErrorMessage';
 
 export {
   createAiSettingsSlice,
