@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import {
   Button,
   cn,
@@ -57,6 +57,13 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     if (!isEditing) setIsEditing(true);
   };
 
+  useEffect(() => {
+    if (currentCellId !== id && isEditing) {
+      setIsEditing(false);
+      update(id, (c) => ({...c, vegaSpec: draftSpec}));
+    }
+  }, [currentCellId, id, isEditing, draftSpec, update]);
+
   return (
     <CellContainer
       id={id}
@@ -85,7 +92,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
               setIsEditing(false);
             }}
           >
-            Done
+            Save
           </Button>
         ) : (
           <IconWithTooltip

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import Markdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import {Button} from '@sqlrooms/ui';
+import {Button, cn} from '@sqlrooms/ui';
 
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../NotebookSlice';
@@ -14,14 +14,18 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
     (s) => s.config.notebook.currentCellId,
   );
   const [isEditing, setIsEditing] = useState(currentCellId === id);
-  const [draft, setDraft] = useState(cell?.type === 'text' ? cell.text : '');
+  const [draftText, setDraftText] = useState(
+    cell?.type === 'text' ? cell.text : '',
+  );
 
   useEffect(() => {
-    if (currentCellId !== id && isEditing && cell?.type === 'text') {
+    if (currentCellId !== id && isEditing) {
       setIsEditing(false);
-      update(id, (c) => ({...c, text: draft}));
+      update(id, (c) => ({...c, text: draftText}));
     }
-  }, [currentCellId, id, isEditing, draft, update, cell?.type]);
+  }, [currentCellId, id, isEditing, draftText, update]);
+
+  const isCurrent = currentCellId === id;
 
   if (!cell || cell.type !== 'text') return null;
 
@@ -30,27 +34,27 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
       id={id}
       typeLabel={getCellTypeLabel(cell.type)}
       rightControls={
-        currentCellId === id &&
-        (isEditing ? (
+        isEditing ? (
           <Button
             size="xs"
             variant="secondary"
             onClick={() => {
-              update(id, (c) => ({...c, text: draft}));
+              update(id, (c) => ({...c, text: draftText}));
               setIsEditing(false);
             }}
           >
-            Done
+            Save
           </Button>
         ) : (
           <Button
             size="xs"
             variant="secondary"
             onClick={() => setIsEditing(true)}
+            className={cn({hidden: !isCurrent}, 'group-hover:flex')}
           >
             Edit text
           </Button>
-        ))
+        )
       }
     >
       <div
@@ -60,15 +64,15 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
         {isEditing && (
           <textarea
             className="bg-accent w-full flex-1 px-3 py-2 text-xs outline-none"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
+            value={draftText}
+            onChange={(e) => setDraftText(e.target.value)}
             placeholder="Write text...(Double click to save and preview)"
             autoFocus
           />
         )}
 
         <div className="prose dark:prose-invert max-w-none flex-1 px-3 py-2 text-sm">
-          <Markdown remarkPlugins={[remarkGfm]}>{draft}</Markdown>
+          <Markdown remarkPlugins={[remarkGfm]}>{draftText}</Markdown>
         </div>
       </div>
     </CellContainer>
