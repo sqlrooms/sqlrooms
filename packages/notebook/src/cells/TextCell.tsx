@@ -50,7 +50,7 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
             size="xs"
             variant="secondary"
             onClick={() => setIsEditing(true)}
-            className={cn({hidden: !isCurrent}, 'group-hover:flex')}
+            className={cn({hidden: !isCurrent}, 'h-6 group-hover:flex')}
           >
             Edit text
           </Button>

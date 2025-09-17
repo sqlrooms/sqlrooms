@@ -4,7 +4,9 @@ import {PlusIcon} from 'lucide-react';
 import {IconWithTooltip} from './IconWithTooltip';
 
 export const TriggerButton: React.FC = () => (
-  <Button size="xs">Add new cell</Button>
+  <Button size="xs" className="h-7">
+    Add new
+  </Button>
 );
 
 export const TriggerSeparator: React.FC = () => (

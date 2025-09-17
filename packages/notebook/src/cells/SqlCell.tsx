@@ -34,12 +34,17 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
           <IconWithTooltip
             title="Generate code with AI"
             icon={
-              <Button variant="ghost" size="xs" className="w-6">
+              <Button variant="ghost" size="xs" className="h-6 w-6">
                 <BotIcon strokeWidth={1.5} size={16} />
               </Button>
             }
           />
-          <Button size="xs" variant="secondary" onClick={() => run(id)}>
+          <Button
+            size="xs"
+            variant="secondary"
+            className="h-6"
+            onClick={() => run(id)}
+          >
             Run
           </Button>
         </>
@@ -47,7 +52,7 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
     >
       <div className="flex h-full w-full flex-col">
         <SqlMonacoEditor
-          className="h-48"
+          className="h-48 py-1"
           value={cell.sql}
           options={EDITOR_OPTIONS}
           onChange={(v) =>

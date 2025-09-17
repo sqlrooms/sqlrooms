@@ -19,7 +19,7 @@ export const MoveCellButtons: FC<Props> = ({id}) => {
     <div className="flex gap-1">
       <Button
         variant="ghost"
-        className="w-6"
+        className="h-6 w-6"
         size="xs"
         onClick={() => moveCell(currentTabId, id, 'up')}
       >
@@ -27,7 +27,7 @@ export const MoveCellButtons: FC<Props> = ({id}) => {
       </Button>
       <Button
         variant="ghost"
-        className="w-6"
+        className="h-6 w-6"
         size="xs"
         onClick={() => moveCell(currentTabId, id, 'down')}
       >

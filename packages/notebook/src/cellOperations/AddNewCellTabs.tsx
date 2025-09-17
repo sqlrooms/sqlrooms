@@ -16,7 +16,7 @@ export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
   );
 
   return (
-    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 py-1 opacity-0 transition-opacity hover:opacity-100">
+    <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 opacity-0 transition-opacity hover:opacity-100">
       <Separator className="w-full bg-gray-500" />
       <div className="flex gap-1">
         {NotebookCellTypes.options.map((type: NotebookCellTypes) => {
@@ -25,7 +25,7 @@ export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
               key={type}
               disabled={!currentTabId}
               onClick={() => onAdd(type)}
-              className="gap-1 py-0 capitalize text-gray-500"
+              className="h-6 gap-1 py-0 capitalize text-gray-500"
               variant="ghost"
               size="xs"
             >

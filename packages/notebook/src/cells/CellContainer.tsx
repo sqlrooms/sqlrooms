@@ -28,7 +28,7 @@ export const CellContainer: React.FC<{
       })}
       onClick={() => setCurrentCell(id)}
     >
-      <div className="flex items-center justify-between border-b px-2 py-1">
+      <div className="flex items-center justify-between border-b px-2">
         <div className="flex items-center gap-2">
           <EditableText
             value={cell.name}

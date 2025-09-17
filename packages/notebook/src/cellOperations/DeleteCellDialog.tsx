@@ -25,7 +25,7 @@ export const DeleteCellDialog: FC<Props> = ({cell}) => {
   return (
     <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
       <DialogTrigger asChild>
-        <Button variant="ghost" className="w-6" size="xs">
+        <Button variant="ghost" className="h-6 w-6" size="xs">
           <Trash2Icon
             size={16}
             strokeWidth={1.5}

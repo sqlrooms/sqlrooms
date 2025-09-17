@@ -5,6 +5,8 @@ import {useStoreWithNotebook} from './NotebookSlice';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {NotebookCellTypes} from './cellSchemas';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
+import {ParameterBar} from './cells/ParameterBar';
+import {PlusIcon} from 'lucide-react';
 
 export const TabsBar: React.FC = () => {
   const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
@@ -15,12 +17,14 @@ export const TabsBar: React.FC = () => {
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);
   const renameTab = useStoreWithNotebook((s) => s.notebook.renameTab);
   return (
-    <div className="flex items-center gap-2 border-b p-2">
+    <div className="bg-muted flex items-center gap-2">
       {tabs.map((t) => (
         <button
           key={t.id}
-          className={`rounded px-2 py-1 ${
-            t.id === currentTabId ? 'bg-muted' : 'hover:bg-muted'
+          className={`rounded-t px-2 py-0 ${
+            t.id === currentTabId
+              ? 'bg-background border-muted border-x-2 border-t-2'
+              : 'hover:bg-background'
           }`}
           onClick={() => setCurrent(t.id)}
         >
@@ -31,8 +35,8 @@ export const TabsBar: React.FC = () => {
           />
         </button>
       ))}
-      <Button size="xs" variant="outline" onClick={() => addTab()}>
-        + Add
+      <Button size="xs" variant="ghost" onClick={() => addTab()}>
+        <PlusIcon size={14} strokeWidth={2} />
       </Button>
     </div>
   );
@@ -66,20 +70,22 @@ export const Notebook: React.FC = () => {
 
   if (!tab) return null;
   return (
-    <div className="tab-scrollable-content flex h-full flex-col">
+    <div className="flex h-full flex-col">
       <TabsBar />
-      <div className="flex items-center gap-1 px-4 py-2">
+      <div className="ml-auto mr-0 flex items-center gap-1 px-4 py-2">
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
           variant="secondary"
           onClick={() => runAllCellsCascade(tab.id)}
+          className="h-7"
         >
-          Run all cells
+          Run all
         </Button>
       </div>
+      <ParameterBar />
 
-      <div className="flex flex-col gap-1 overflow-auto px-2">
+      <div className="tab-scrollable-content flex flex-col gap-1 overflow-auto px-2">
         {tab.cellOrder.map((id, index) => (
           <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />

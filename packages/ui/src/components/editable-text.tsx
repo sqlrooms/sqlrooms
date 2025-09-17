@@ -177,7 +177,7 @@ export const EditableText: FC<{
       <Input
         ref={inputRef}
         className={cn(
-          'disabled:opacity-1 rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
+          'disabled:opacity-1 rounded-sm border-transparent px-1 py-0 shadow-none outline-none ring-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
           {'select-none bg-transparent': !isInternalEditing},
           className,
         )}

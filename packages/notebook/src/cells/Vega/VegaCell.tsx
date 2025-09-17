@@ -70,7 +70,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       typeLabel={getCellTypeLabel(cell.type)}
       leftControls={
         <Select value={cell.sqlId} onValueChange={handleValueChange}>
-          <SelectTrigger className="h-7 text-xs">
+          <SelectTrigger className="h-6 text-xs shadow-none">
             <SelectValue placeholder="Select a SQL cell" />
           </SelectTrigger>
           <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
@@ -102,7 +102,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
                 size="xs"
                 variant="secondary"
                 onClick={() => setIsEditing(true)}
-                className={cn({hidden: !isCurrent}, 'group-hover:flex')}
+                className={cn({hidden: !isCurrent}, 'h-6 group-hover:flex')}
                 disabled={!cell.sqlId}
               >
                 Edit chart
