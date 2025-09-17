@@ -3,7 +3,13 @@ import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useChat} from '@ai-sdk/react';
-import {convertToModelMessages, DefaultChatTransport, streamText} from 'ai';
+import {
+  convertToModelMessages,
+  DefaultChatTransport,
+  LanguageModel,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  streamText,
+} from 'ai';
 import {createOpenAI} from '@ai-sdk/openai';
 
 const openai = createOpenAI({
@@ -84,7 +90,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     const m = JSON.parse(init?.body as string);
 
     const result = streamText({
-      model: openai('gpt-4.1'),
+      model: openai('gpt-4.1') as unknown as LanguageModel,
       messages: convertToModelMessages(m.messages),
       tools: {},
       system: '',
@@ -104,16 +110,16 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       const toolName =
         (toolCall as any).toolName || (toolCall as any).name || 'unknown';
       if (toolName === 'localQuery') {
-        const args = toolCall.input as Record<string, unknown>;
-        const result = await localQueryTool.execute?.(args, {
-          toolCallId: toolCall.toolCallId,
-        });
-        addToolResult({
-          tool: 'localQuery',
-          toolCallId: toolCall.toolCallId,
-          output: result,
-        });
-        console.log('result', result);
+        // // const args = toolCall.input as Record<string, unknown>;
+        // const result = await localQueryTool.execute?.(args, {
+        //   toolCallId: toolCall.toolCallId,
+        // });
+        // addToolResult({
+        //   tool: 'localQuery',
+        //   toolCallId: toolCall.toolCallId,
+        //   output: result,
+        // });
+        // console.log('result', result);
       }
     },
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
