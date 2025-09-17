@@ -349,6 +349,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               abortController,
               tools: get().ai.tools,
               getInstructions,
+              historyAnalysis: currentSession.analysisResults,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
                   makeResultsAppender({
