@@ -11,7 +11,6 @@ export const AddSqlCellResultToNewTable: React.FC<{
   const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
     (state) => state.room.addOrUpdateSqlQueryDataSource,
   );
-  console.log(query);
   return (
     <>
       <div className="flex gap-2">

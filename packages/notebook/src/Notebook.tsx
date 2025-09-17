@@ -85,7 +85,7 @@ export const Notebook: React.FC = () => {
       </div>
       <ParameterBar />
 
-      <div className="tab-scrollable-content flex flex-col gap-1 overflow-auto px-2">
+      <div className="tab-scrollable-content flex flex-col gap-1 overflow-auto px-6">
         {tab.cellOrder.map((id, index) => (
           <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />

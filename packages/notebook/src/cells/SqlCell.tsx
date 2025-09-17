@@ -1,5 +1,5 @@
 import React from 'react';
-import {Button} from '@sqlrooms/ui';
+import {Button, Spinner} from '@sqlrooms/ui';
 import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {BotIcon} from 'lucide-react';
@@ -21,6 +21,7 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
+  const cancel = useStoreWithNotebook((s) => s.notebook.cancelRunCell);
   const cellStatus = useStoreWithNotebook((s) => s.notebook.cellStatus[id]);
 
   if (!cell || cell.type !== 'sql') return null;
@@ -39,14 +40,30 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
               </Button>
             }
           />
-          <Button
-            size="xs"
-            variant="secondary"
-            className="h-6"
-            onClick={() => run(id)}
-          >
-            Run
-          </Button>
+
+          {cellStatus?.type === 'sql' &&
+          (cellStatus?.status === 'running' ||
+            cellStatus?.status === 'cancel') ? (
+            <Button
+              size="xs"
+              variant="secondary"
+              className="flex h-6 gap-1"
+              onClick={() => cancel(id)}
+              disabled={cellStatus?.status === 'cancel'}
+            >
+              <Spinner />
+              Interrupt
+            </Button>
+          ) : (
+            <Button
+              size="xs"
+              variant="secondary"
+              className="flex h-6 gap-1"
+              onClick={() => run(id)}
+            >
+              Run
+            </Button>
+          )}
         </>
       }
     >

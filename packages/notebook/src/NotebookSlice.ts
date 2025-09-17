@@ -66,7 +66,7 @@ export type NotebookSliceState = {
       string,
       | {
           type: 'sql';
-          status: 'idle' | 'running' | 'success' | 'error';
+          status: 'idle' | 'running' | 'success' | 'cancel' | 'error';
           lastError?: string;
           referencedTables?: string[];
           resultView?: string;
@@ -75,6 +75,8 @@ export type NotebookSliceState = {
           type: 'other';
         }
     >;
+
+    activeAbortControllers: Record<string, AbortController>;
   };
 };
 
@@ -168,6 +170,7 @@ export function createNotebookSlice<
           ),
 
         cellStatus: {},
+        activeAbortControllers: {},
 
         addTab: () => {
           const id = createId();
@@ -202,6 +205,17 @@ export function createNotebookSlice<
         },
 
         removeTab: (id) => {
+          const tab = get().config.notebook.tabs.find((t) => t.id === id);
+          if (tab) {
+            for (const cellId of tab.cellOrder) {
+              const abortController =
+                get().notebook.activeAbortControllers[cellId];
+              if (abortController) {
+                abortController.abort();
+              }
+            }
+          }
+
           set((state) =>
             produce(state, (draft) => {
               draft.config.notebook.tabs = draft.config.notebook.tabs.filter(
@@ -279,10 +293,16 @@ export function createNotebookSlice<
         },
 
         removeCell: (cellId) => {
+          const abortController = get().notebook.activeAbortControllers[cellId];
+          if (abortController) {
+            abortController.abort();
+          }
+
           set((state) =>
             produce(state, (draft) => {
               delete draft.config.notebook.cells[cellId];
               delete draft.notebook.cellStatus[cellId];
+              delete draft.notebook.activeAbortControllers[cellId];
               for (const tab of draft.config.notebook.tabs) {
                 tab.cellOrder = tab.cellOrder.filter((id) => id !== cellId);
               }
@@ -320,8 +340,21 @@ export function createNotebookSlice<
           );
         },
 
-        cancelRunCell: (_cellId) => {
-          // Future: wire to AbortController per cell
+        cancelRunCell: (cellId) => {
+          const abortController = get().notebook.activeAbortControllers[cellId];
+          if (abortController) {
+            abortController.abort();
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.notebook.activeAbortControllers[cellId];
+                const cellStatus = draft.notebook.cellStatus[cellId];
+                if (cellStatus?.type === 'sql') {
+                  cellStatus.status = 'cancel';
+                  cellStatus.lastError = 'Query cancelled by user';
+                }
+              }),
+            );
+          }
         },
 
         runAllCells: async (tabId) => {
@@ -373,8 +406,11 @@ export function createNotebookSlice<
               const cell = get().config.notebook.cells[id];
               if (!cell || cell.type !== 'sql') return;
               const rawSql = cell.sql || '';
+
+              const abortController = new AbortController();
               set((state) =>
                 produce(state, (draft) => {
+                  draft.notebook.activeAbortControllers[id] = abortController;
                   draft.notebook.cellStatus[id] = {
                     type: 'sql',
                     status: 'running',
@@ -382,6 +418,7 @@ export function createNotebookSlice<
                   };
                 }),
               );
+
               try {
                 const inputs: any[] = [];
                 const cellsMap2 = get().config.notebook.cells;
@@ -408,6 +445,7 @@ export function createNotebookSlice<
                   get().notebook.schemaName || 'notebook';
                 await connector.query(
                   `CREATE SCHEMA IF NOT EXISTS ${schemaName}`,
+                  {signal: abortController.signal},
                 );
 
                 const parsed = await get().db.sqlSelectToJson(renderedSql);
@@ -431,6 +469,7 @@ export function createNotebookSlice<
                 const tableName = `${schemaName}.${escapeId(cell.name)}`;
                 await connector.query(
                   `CREATE OR REPLACE VIEW ${tableName} AS ${renderedSql}`,
+                  {signal: abortController.signal},
                 );
 
                 set((state) =>
@@ -460,6 +499,13 @@ export function createNotebookSlice<
                       r.status = 'error';
                       r.lastError = message;
                     }
+                  }),
+                );
+              } finally {
+                // Clean up the abort controller
+                set((state) =>
+                  produce(state, (draft) => {
+                    delete draft.notebook.activeAbortControllers[id];
                   }),
                 );
               }
