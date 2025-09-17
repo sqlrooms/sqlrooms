@@ -67,7 +67,7 @@ export const VegaLiteChart: React.FC<{
   className,
   width = 'auto',
   height = 'auto',
-  aspectRatio = 3 / 2,
+  aspectRatio,
   sqlQuery,
   spec,
 }) => {

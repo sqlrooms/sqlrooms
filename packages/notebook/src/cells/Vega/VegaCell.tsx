@@ -112,7 +112,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
         )
       }
     >
-      <div className="flex">
+      <div className="flex h-[500px]">
         {isEditing && (
           <VegaConfigPanel
             sqlQuery={selectedSqlQuery}
@@ -125,13 +125,9 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           className="flex h-full w-full"
         >
           {draftSpec?.encoding ? (
-            <VegaLiteChart
-              sqlQuery={selectedSqlQuery}
-              spec={draftSpec}
-              aspectRatio={2 / 1}
-            />
+            <VegaLiteChart sqlQuery={selectedSqlQuery} spec={draftSpec} />
           ) : (
-            <div className="flex h-72 w-full items-center justify-center text-xs text-gray-400">
+            <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
               Empty chart, please 1) select a SQL cell and then 2) edit chart.
             </div>
           )}
