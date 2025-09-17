@@ -2,6 +2,13 @@ import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {useChat} from '@ai-sdk/react';
+import {convertToModelMessages, DefaultChatTransport, streamText} from 'ai';
+import {createOpenAI} from '@ai-sdk/openai';
+
+const openai = createOpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -71,6 +78,46 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       onRun?.();
     }
   }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+
+  // Custom fetch function that handles the AI processing locally
+  const customFetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
+    const m = JSON.parse(init?.body as string);
+
+    const result = streamText({
+      model: openai('gpt-4.1'),
+      messages: convertToModelMessages(m.messages),
+      tools: {},
+      system: '',
+      abortSignal: init?.signal as AbortSignal | undefined,
+    });
+    return result.toUIMessageStreamResponse();
+  };
+
+  const {error, messages, sendMessage, addToolResult} = useChat({
+    transport: new DefaultChatTransport({
+      fetch: customFetch,
+    }),
+    // local tools are handled by the client
+    onToolCall: async ({toolCall}) => {
+      // In Vercel AI v5, the toolCall structure might have changed
+      // We can check if it's the localQuery tool by checking the tool name or type
+      const toolName =
+        (toolCall as any).toolName || (toolCall as any).name || 'unknown';
+      if (toolName === 'localQuery') {
+        const args = toolCall.input as Record<string, unknown>;
+        const result = await localQueryTool.execute?.(args, {
+          toolCallId: toolCall.toolCallId,
+        });
+        addToolResult({
+          tool: 'localQuery',
+          toolCallId: toolCall.toolCallId,
+          output: result,
+        });
+        console.log('result', result);
+      }
+    },
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
 
   return (
     <div
