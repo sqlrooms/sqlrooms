@@ -10,6 +10,10 @@ import {
   needsV0_24_14Migration,
   migrateFromV0_24_14,
 } from './analysisSession-v0.24.14';
+import {
+  needsV0_25_0Migration,
+  migrateFromV0_25_0,
+} from './analysisSession-v0.25.0';
 
 /**
  * Centralized migration function for stream messages
@@ -47,6 +51,11 @@ export const migrateAnalysisSession = <T extends z.ZodTypeAny>(schema: T) =>
     // Migration from v0.24.14 (ollamaBaseUrl to baseUrl)
     if (needsV0_24_14Migration(migratedData)) {
       migratedData = migrateFromV0_24_14(migratedData);
+    }
+
+    // Migration from v0.25.0 (add toolAdditionalData field)
+    if (needsV0_25_0Migration(migratedData)) {
+      migratedData = migrateFromV0_25_0(migratedData);
     }
 
     // Future migrations can be added here:

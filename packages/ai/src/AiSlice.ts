@@ -10,21 +10,15 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {
-  DefaultToolsOptions,
-  getDefaultTools,
-  getDefaultInstructions,
-} from './analysis';
+import {DefaultToolsOptions, getDefaultTools} from './analysis';
 import {AnalysisSessionSchema} from './schemas';
+import {UIMessage, DefaultChatTransport} from 'ai';
+
 import {
-  UIMessage,
-  DefaultChatTransport,
-  LanguageModel,
-  convertToModelMessages,
-  streamText,
-} from 'ai';
-import {createOpenAI} from '@ai-sdk/openai';
-import {convertToVercelAiTool} from './utils';
+  createLocalChatTransportFactory,
+  createRemoteChatTransportFactory,
+  createChatHandlers,
+} from './llm';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -49,6 +43,7 @@ export function createDefaultAiConfig(
           analysisResults: [],
           createdAt: new Date(),
           uiMessages: [],
+          toolAdditionalData: {},
         },
       ],
       currentSessionId: defaultSessionId,
@@ -66,8 +61,6 @@ export type AiSliceState = {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
     tools: Record<string, AiSliceTool>;
-    /** Map of toolCallId to additionalData emitted by tools */
-    toolAdditionalData?: Record<string, unknown>;
     analysisAbortController?: AbortController;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
@@ -77,7 +70,8 @@ export type AiSliceState = {
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-    setToolAdditionalData?: (
+    setSessionToolAdditionalData: (
+      sessionId: string,
       updater:
         | Record<string, unknown>
         | ((prev: Record<string, unknown>) => Record<string, unknown>),
@@ -94,7 +88,16 @@ export type AiSliceState = {
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
     /** Returns a chat transport configured with current provider/model, apiKey and baseUrl */
-    getChatTransport: () => DefaultChatTransport<UIMessage>;
+    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+    /** Returns a chat transport that proxies to a remote endpoint (UIMessage stream) */
+    getRemoteChatTransport: (
+      endpoint: string,
+      headers?: Record<string, string>,
+    ) => DefaultChatTransport<UIMessage>;
+    /** Optional remote endpoint to use for chat; if empty, local transport is used */
+    endPoint: string;
+    /** Optional headers to send with remote endpoint */
+    headers: Record<string, string>;
     /** Chat handler: tool calls from the model */
     onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
     /** Chat handler: final assistant message */
@@ -105,6 +108,8 @@ export type AiSliceState = {
     }) => void;
     /** Chat handler: error */
     onChatError: (error: unknown) => void;
+    /** Initialize toolAdditionalData from the current session */
+    initializeToolAdditionalData: () => void;
   };
 };
 
@@ -151,13 +156,13 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         maxSteps: 5,
+        endPoint: '',
+        headers: {},
 
         tools: {
           ...getDefaultTools(store, toolsOptions),
           ...customTools,
         },
-
-        toolAdditionalData: {},
 
         setAnalysisPrompt: (prompt: string) => {
           set((state) =>
@@ -198,18 +203,28 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           );
         },
 
-        setToolAdditionalData: (updater) => {
+        setSessionToolAdditionalData: (
+          sessionId: string,
+          updater:
+            | Record<string, unknown>
+            | ((prev: Record<string, unknown>) => Record<string, unknown>),
+        ) => {
           set((state) =>
             produce(state, (draft) => {
-              const prev = draft.ai.toolAdditionalData || {};
-              draft.ai.toolAdditionalData =
-                typeof updater === 'function'
-                  ? (
-                      updater as (
-                        p: Record<string, unknown>,
-                      ) => Record<string, unknown>
-                    )(prev)
-                  : updater;
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === sessionId,
+              );
+              if (session) {
+                const prev = session.toolAdditionalData || {};
+                session.toolAdditionalData =
+                  typeof updater === 'function'
+                    ? (
+                        updater as (
+                          p: Record<string, unknown>,
+                        ) => Record<string, unknown>
+                      )(prev)
+                    : updater;
+              }
             }),
           );
         },
@@ -220,7 +235,10 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         getCurrentSession: () => {
           const state = get();
           const {currentSessionId, sessions} = state.config.ai;
-          return sessions.find((session) => session.id === currentSessionId);
+          const session = sessions.find(
+            (session) => session.id === currentSessionId,
+          );
+          return session;
         },
 
         /**
@@ -264,6 +282,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
+                toolAdditionalData: {},
               });
               draft.config.ai.currentSessionId = newSessionId;
             }),
@@ -347,7 +366,8 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 ?.analysisResults.push({
                   id: resultId,
                   prompt: textContent,
-                  streamMessage: JSON.parse(JSON.stringify(message)), // Deep copy to avoid read-only issues
+                  // Ignore streamMessage to reduce payload size
+                  streamMessage: {},
                   isCompleted: true,
                 });
             }),
@@ -361,11 +381,33 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         startAnalysis: async (
           sendMessage: (message: {text: string}) => void,
         ) => {
+          const promptText = get().ai.analysisPrompt;
+          const currentSession = get().ai.getCurrentSession();
+          if (!currentSession) {
+            console.error('No current session found');
+            return;
+          }
+
+          const newResultId = createId();
+
           set((state) =>
             produce(state, (draft) => {
+              // mark running and create controller
               draft.ai.isRunningAnalysis = true;
-              // Create a fresh controller for this analysis run
               draft.ai.analysisAbortController = new AbortController();
+
+              // create a new analysis result for this prompt (ignore streamMessage)
+              const session = draft.config.ai.sessions.find(
+                (s) => s.id === currentSession.id,
+              );
+              if (session) {
+                session.analysisResults.push({
+                  id: newResultId,
+                  prompt: promptText,
+                  streamMessage: {},
+                  isCompleted: false,
+                });
+              }
             }),
           );
 
@@ -408,105 +450,25 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           )?.[1]?.component as React.ComponentType;
         },
 
-        getChatTransport: () => {
-          const state = get();
-          const currentSession = state.ai.getCurrentSession();
-          const provider = currentSession?.modelProvider || defaultProvider;
-          const modelId = currentSession?.model || defaultModel;
-          const apiKey = getApiKey?.(provider) || '';
-          const baseUrl = getBaseUrl?.();
+        getLocalChatTransport: () =>
+          createLocalChatTransportFactory({
+            get,
+            defaultProvider,
+            defaultModel,
+            getApiKey,
+            getBaseUrl,
+            getInstructions,
+          })(),
 
-          const openai = createOpenAI({
-            apiKey,
-            baseURL: baseUrl,
-          });
+        getRemoteChatTransport: (
+          endpoint: string,
+          headers?: Record<string, string>,
+        ) => createRemoteChatTransportFactory()(endpoint, headers),
 
-          const fetchImpl = async (
-            _input: RequestInfo | URL,
-            init?: RequestInit,
-          ) => {
-            try {
-              const body = init?.body as string;
-              const parsed = body ? JSON.parse(body) : {};
-              const messagesCopy = JSON.parse(
-                JSON.stringify(parsed.messages || []),
-              );
+        ...createChatHandlers({get, set}),
 
-              // Build tool wrappers for AI SDK v5 streamText
-              const onToolCompleted = (
-                toolCallId: string,
-                additionalData: unknown,
-              ) => {
-                get().ai.setToolAdditionalData?.((prev) => ({
-                  ...prev,
-                  [toolCallId]: additionalData,
-                }));
-              };
-
-              const tools = Object.entries(get().ai.tools || {}).reduce(
-                (
-                  acc: Record<string, ReturnType<typeof convertToVercelAiTool>>,
-                  [name, tool],
-                ) => {
-                  acc[name] = convertToVercelAiTool({
-                    tool,
-                    onToolCompleted,
-                  });
-                  return acc;
-                },
-                {} as Record<string, ReturnType<typeof convertToVercelAiTool>>,
-              );
-
-              // get system instructions
-              const tableSchemas = get().db.tables;
-              const systemInstructions = getInstructions
-                ? getInstructions(tableSchemas)
-                : getDefaultInstructions(tableSchemas);
-
-              const result = streamText({
-                model: openai(modelId) as unknown as LanguageModel,
-                messages: convertToModelMessages(messagesCopy),
-                tools: tools,
-                system: systemInstructions,
-                abortSignal: get().ai.analysisAbortController?.signal,
-              });
-
-              return result.toUIMessageStreamResponse();
-            } catch (error) {
-              console.error('Error in getChatTransport.fetch:', error);
-              throw error;
-            }
-          };
-
-          return new DefaultChatTransport({fetch: fetchImpl});
-        },
-
-        onChatToolCall: async ({toolCall}) => {
-          void toolCall;
-          // no-op for now; UI messages are synced on finish via useChat
-        },
-
-        onChatFinish: ({message, messages}) => {
-          try {
-            void message; // kept for potential analytics; we store full messages
-            const currentSessionId = get().config.ai.currentSessionId;
-            if (!currentSessionId) return;
-            get().ai.setSessionUiMessages(currentSessionId, messages);
-            set((state) =>
-              produce(state, (draft) => {
-                draft.ai.isRunningAnalysis = false;
-                draft.ai.analysisPrompt = '';
-                draft.ai.analysisAbortController = undefined;
-              }),
-            );
-          } catch (err) {
-            console.error('onChatFinish error:', err);
-          }
-        },
-
-        onChatError: (error: unknown) => {
-          console.error('Chat error:', error);
-        },
+        /** no-op kept for backward compatibility */
+        initializeToolAdditionalData: () => {},
       },
     };
   });
@@ -521,8 +483,6 @@ function getCurrentSessionFromState<PC extends BaseRoomConfig & AiSliceConfig>(
   const {currentSessionId, sessions} = state.config.ai;
   return sessions.find((session) => session.id === currentSessionId);
 }
-
-// Legacy helpers removed as runAnalysis is deprecated
 
 // Keep typed hook for selecting from store with Ai slice
 type RoomConfigWithAi = BaseRoomConfig & AiSliceConfig;

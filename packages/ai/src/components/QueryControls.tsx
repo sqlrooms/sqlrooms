@@ -9,7 +9,6 @@ import {
 } from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useChat} from '@ai-sdk/react';
-import type {UIMessage as AIUIMessage} from 'ai';
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
@@ -32,7 +31,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const startAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
   const isDataAvailable = useStoreWithAi((s) => s.room.isDataAvailable);
@@ -40,34 +39,46 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
   const sessionId = currentSession?.id;
-  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
 
-  const getChatTransport = useStoreWithAi((s) => s.ai.getChatTransport);
-  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
-    // Recreate transport when the session changes
-    void sessionId;
-    return getChatTransport();
-  }, [getChatTransport, sessionId]);
-
+  const getLocalChatTransport = useStoreWithAi(
+    (s) => s.ai.getLocalChatTransport,
+  );
+  const getRemoteChatTransport = useStoreWithAi(
+    (s) => s.ai.getRemoteChatTransport,
+  );
+  const endPoint = useStoreWithAi((s) => s.ai.endPoint);
+  const headers = useStoreWithAi((s) => s.ai.headers);
   const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
 
-  const chat = useChat({
+  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+    // Recreate transport when the model changes
+    void model;
+    const trimmed = (endPoint || '').trim();
+    if (trimmed.length > 0) {
+      return getRemoteChatTransport(trimmed, headers);
+    }
+    return getLocalChatTransport();
+  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
+
+  const {messages, sendMessage} = useChat({
     id: sessionId,
     transport,
-    // centralized handlers from slice
-    onToolCall: ({toolCall}) => onChatToolCall({toolCall}),
+    messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+    onToolCall: onChatToolCall,
     onFinish: onChatFinish,
     onError: onChatError,
+    // Automatically submit when all tool results are available
+    // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
-  const {sendMessage, messages} = chat;
-
+  // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
     if (!sessionId) return;
-    setSessionUiMessages(sessionId, messages as unknown as AIUIMessage[]);
-  }, [sessionId, messages, setSessionUiMessages]);
+    setSessionUiMessages(sessionId, messages as UIMessage[]);
+  }, [messages, sessionId, setSessionUiMessages]);
 
   useEffect(() => {
     if (!isDataAvailable) return;
@@ -95,11 +106,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis(sendMessage);
+          startAnalysis(sendMessage);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
+    [isRunningAnalysis, model, analysisPrompt, startAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -109,7 +120,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis(sendMessage);
+      startAnalysis(sendMessage);
       onRun?.();
     }
   }, [
@@ -118,7 +129,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     onCancel,
     sendMessage,
     onRun,
-    runAnalysis,
+    startAnalysis,
   ]);
 
   return (

@@ -6,7 +6,7 @@ import {ToolResult} from './tools/ToolResult';
 export const UiMessages: React.FC = () => {
   const messages = useStoreWithAi((s) => s.ai.getCurrentSession()?.uiMessages);
   const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.toolAdditionalData || {},
+    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
 
   if (!messages || messages.length === 0) return null;

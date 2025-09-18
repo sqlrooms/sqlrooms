@@ -34,7 +34,7 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import exampleSessions from './example-sessions.json';
+// import exampleSessions from './example-sessions.json';
 import {LLM_MODELS, PROVIDER_DEFAULT_BASE_URLS} from './models';
 
 export const RoomPanelTypes = z.enum([
@@ -215,15 +215,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     }),
 
     // Persist settings
-    // {
-    //   // Local storage key
-    //   name: 'ai-example-app-state-storage',
-    //   // Subset of the state to persist
-    //   partialize: (state) => {
-    //     return {
-    //       config: RoomConfig.parse(state.config),
-    //     };
-    //   },
-    // },
+    {
+      // Local storage key
+      name: 'ai-example-app-state-storage',
+      // Subset of the state to persist
+      partialize: (state) => {
+        return {
+          config: RoomConfig.parse(state.config),
+        };
+      },
+    },
   ) as StateCreator<RoomState>,
 );

@@ -101,11 +101,54 @@ const DynamicToolUIPartSchema = z.union([
   DynamicToolOutputErrorSchema,
 ]);
 
+// Additional UIPart types from AI SDK v5
+const StepStartUIPartSchema = z.object({
+  type: z.literal('step-start'),
+});
+
+const SourceUrlUIPartSchema = z.object({
+  type: z.literal('source-url'),
+  sourceId: z.string(),
+  url: z.string(),
+  title: z.string().optional(),
+  providerMetadata: ProviderMetadataSchema.optional(),
+});
+
+const SourceDocumentUIPartSchema = z.object({
+  type: z.literal('source-document'),
+  sourceId: z.string(),
+  mediaType: z.string(),
+  title: z.string(),
+  filename: z.string().optional(),
+  providerMetadata: ProviderMetadataSchema.optional(),
+});
+
+const FileUIPartSchema = z.object({
+  type: z.literal('file'),
+  mediaType: z.string(),
+  filename: z.string().optional(),
+  url: z.string().optional(),
+  data: z.string().optional(),
+  providerMetadata: ProviderMetadataSchema.optional(),
+});
+
+// Generic data part schema (for data-* types)
+const DataUIPartSchema = z.object({
+  type: z.string().regex(/^data-/),
+  id: z.string().optional(),
+  data: z.unknown(),
+});
+
 const UIMessagePartSchema = z.union([
   TextUIPartSchema,
   ReasoningUIPartSchema,
   ToolUIPartSchema,
   DynamicToolUIPartSchema,
+  StepStartUIPartSchema,
+  SourceUrlUIPartSchema,
+  SourceDocumentUIPartSchema,
+  FileUIPartSchema,
+  DataUIPartSchema,
 ]);
 
 // Create a Zod schema for UIMessage (AI SDK v5)
