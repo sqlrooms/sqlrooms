@@ -1,20 +1,20 @@
-import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
+import {
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useChat} from '@ai-sdk/react';
+import type {UIMessage as AIUIMessage} from 'ai';
 import {
-  convertToModelMessages,
   DefaultChatTransport,
-  LanguageModel,
   lastAssistantMessageIsCompleteWithToolCalls,
-  streamText,
 } from 'ai';
-import {createOpenAI} from '@ai-sdk/openai';
-
-const openai = createOpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+import type {UIMessage} from 'ai';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -39,6 +39,35 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
+  const sessionId = currentSession?.id;
+  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
+
+  const getChatTransport = useStoreWithAi((s) => s.ai.getChatTransport);
+  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+    // Recreate transport when the session changes
+    void sessionId;
+    return getChatTransport();
+  }, [getChatTransport, sessionId]);
+
+  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
+  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+
+  const chat = useChat({
+    id: sessionId,
+    transport,
+    // centralized handlers from slice
+    onToolCall: ({toolCall}) => onChatToolCall({toolCall}),
+    onFinish: onChatFinish,
+    onError: onChatError,
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+  const {sendMessage, messages} = chat;
+
+  useEffect(() => {
+    if (!sessionId) return;
+    setSessionUiMessages(sessionId, messages as unknown as AIUIMessage[]);
+  }, [sessionId, messages, setSessionUiMessages]);
 
   useEffect(() => {
     if (!isDataAvailable) return;
@@ -66,11 +95,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis();
+          runAnalysis(sendMessage);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -80,50 +109,17 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis();
+      runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
-
-  // Custom fetch function that handles the AI processing locally
-  const customFetch = async (_input: RequestInfo | URL, init?: RequestInit) => {
-    const m = JSON.parse(init?.body as string);
-
-    const result = streamText({
-      model: openai('gpt-4.1') as unknown as LanguageModel,
-      messages: convertToModelMessages(m.messages),
-      tools: {},
-      system: '',
-      abortSignal: init?.signal as AbortSignal | undefined,
-    });
-    return result.toUIMessageStreamResponse();
-  };
-
-  const {error, messages, sendMessage, addToolResult} = useChat({
-    transport: new DefaultChatTransport({
-      fetch: customFetch,
-    }),
-    // local tools are handled by the client
-    onToolCall: async ({toolCall}) => {
-      // In Vercel AI v5, the toolCall structure might have changed
-      // We can check if it's the localQuery tool by checking the tool name or type
-      const toolName =
-        (toolCall as any).toolName || (toolCall as any).name || 'unknown';
-      if (toolName === 'localQuery') {
-        // // const args = toolCall.input as Record<string, unknown>;
-        // const result = await localQueryTool.execute?.(args, {
-        //   toolCallId: toolCall.toolCallId,
-        // });
-        // addToolResult({
-        //   tool: 'localQuery',
-        //   toolCallId: toolCall.toolCallId,
-        //   output: result,
-        // });
-        // console.log('result', result);
-      }
-    },
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
-  });
+  }, [
+    isRunningAnalysis,
+    cancelAnalysis,
+    onCancel,
+    sendMessage,
+    onRun,
+    runAnalysis,
+  ]);
 
   return (
     <div

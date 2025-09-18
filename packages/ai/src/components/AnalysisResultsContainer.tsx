@@ -4,6 +4,7 @@ import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
+import {UiMessages} from './UiMessages';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
@@ -32,6 +33,9 @@ export const AnalysisResultsContainer: React.FC<{
         ref={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
+        {/* Render new UI message-based chat view */}
+        <UiMessages />
+        {/* Keep legacy analysis results for backward compatibility */}
         {currentSession?.analysisResults.map((result) => (
           <AnalysisResult
             key={result.id}

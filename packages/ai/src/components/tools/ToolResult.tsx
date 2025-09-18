@@ -3,11 +3,31 @@ import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
-import {ToolInvocation} from 'ai';
 import {ToolErrorMessage} from './ToolErrorMessage';
 
+// Tool invocation type that can handle both migrated and AI SDK formats
+type ToolInvocationData = {
+  toolCallId: string;
+  toolName?: string;
+  name?: string;
+  args?: any;
+  input?: any;
+  state?:
+    | 'call'
+    | 'result'
+    | 'partial-call'
+    | 'input-streaming'
+    | 'input-available'
+    | 'output-available'
+    | 'output-error';
+  result?: any;
+  output?: any;
+  errorText?: string;
+  [key: string]: any;
+};
+
 type ToolResultProps = {
-  toolInvocation: ToolInvocation;
+  toolInvocation: ToolInvocationData;
   additionalData: unknown;
   isCompleted: boolean;
   errorMessage?: string;
@@ -22,8 +42,13 @@ export const ToolResult: React.FC<ToolResultProps> = ({
   const {isOpen: showDetails, onToggle: toggleShowDetails} =
     useDisclosure(false);
 
-  const {toolName, args, state} = toolInvocation;
-  const llmResult = state === 'result' ? toolInvocation.result : null;
+  const toolName = toolInvocation.toolName || toolInvocation.name || 'unknown';
+  const args = toolInvocation.args || toolInvocation.input || {};
+  const state = toolInvocation.state || 'call';
+  const llmResult =
+    state === 'result' || state === 'output-available'
+      ? toolInvocation.result || toolInvocation.output
+      : null;
 
   // show reason text before tool call complete
   const text = args.reasoning || '';

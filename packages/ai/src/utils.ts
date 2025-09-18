@@ -2,7 +2,9 @@
  * Utility functions for AI Chat UI configuration
  */
 
+import {Tool} from 'ai';
 import {AiSettingsSliceConfig} from './AiSettingsSlice';
+import {AiSliceTool} from './AiSlice';
 
 type AiModelConfig = AiSettingsSliceConfig['aiSettings'];
 
@@ -99,4 +101,31 @@ export function extractModelsFromSettings(config: AiModelConfig): Array<{
   });
 
   return models;
+}
+
+export function convertToVercelAiTool({
+  tool,
+  onToolCompleted,
+}: {
+  tool: AiSliceTool;
+  onToolCompleted: (toolCallId: string, additionalData: unknown) => void;
+}): Tool {
+  const vercelAiTool = {
+    description: tool.description,
+    inputSchema: tool.parameters,
+    // outputSchema: tool.outputSchema,
+    execute: async (args: Record<string, unknown>, options: any) => {
+      const result = await tool.execute(args as any, {
+        ...options,
+        context: tool.context,
+      });
+
+      if (onToolCompleted) {
+        onToolCompleted(options.toolCallId, result.additionalData);
+      }
+
+      return result.llmResult;
+    },
+  };
+  return vercelAiTool;
 }

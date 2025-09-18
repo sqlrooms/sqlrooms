@@ -84,7 +84,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           ],
           ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
+            // AiSliceConfig.shape.ai.parse(exampleSessions),
+            {},
           ),
           ...createDefaultAiSettings({
             providers: LLM_MODELS.reduce(
@@ -214,15 +215,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     }),
 
     // Persist settings
-    {
-      // Local storage key
-      name: 'ai-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => {
-        return {
-          config: RoomConfig.parse(state.config),
-        };
-      },
-    },
+    // {
+    //   // Local storage key
+    //   name: 'ai-example-app-state-storage',
+    //   // Subset of the state to persist
+    //   partialize: (state) => {
+    //     return {
+    //       config: RoomConfig.parse(state.config),
+    //     };
+    //   },
+    // },
   ) as StateCreator<RoomState>,
 );
