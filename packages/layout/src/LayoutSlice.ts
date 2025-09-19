@@ -14,6 +14,7 @@ import {
   DEFAULT_MOSAIC_LAYOUT,
   MAIN_VIEW,
   isMosaicLayoutParent,
+  MosaicLayoutConfig,
 } from '@sqlrooms/layout-config';
 
 export type RoomPanelInfo = {
@@ -24,10 +25,7 @@ export type RoomPanelInfo = {
 };
 
 export const LayoutSliceConfig = z.object({
-  layout: z
-    .any()
-    .describe('Mosaic layout configuration.')
-    .default(DEFAULT_MOSAIC_LAYOUT),
+  layout: MosaicLayoutConfig,
 });
 
 export type LayoutSliceConfig = z.infer<typeof LayoutSliceConfig>;
@@ -41,7 +39,7 @@ export function createDefaultLayoutConfig(): LayoutSliceConfig {
 export type LayoutSliceState = {
   layout: {
     panels: Record<string, RoomPanelInfo>;
-    setLayout(layout: LayoutConfig): void;
+    setLayout(layout: LayoutConfig | undefined): void;
     togglePanel: (panel: string, show?: boolean) => void;
     togglePanelPin: (panel: string) => void;
   };
@@ -60,7 +58,7 @@ export function createLayoutSlice<
       setLayout: (layout) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.config.layout = layout;
+            draft.config.layout = layout ?? DEFAULT_MOSAIC_LAYOUT;
           }),
         ),
       togglePanel: (panel, show) => {
@@ -136,7 +134,7 @@ export function createLayoutSlice<
         set((state) =>
           produce(state, (draft) => {
             const layout = draft.config.layout;
-            const pinned = layout.pinned ?? [];
+            const pinned = layout?.pinned ?? [];
             if (pinned.includes(panel)) {
               layout.pinned = pinned.filter((p: string) => p !== panel);
             } else {
