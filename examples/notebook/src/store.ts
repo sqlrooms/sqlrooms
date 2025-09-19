@@ -71,11 +71,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       })(set, get, store),
 
-      ...createNotebookSlice<RoomConfig>({
-        // getApiKey: () => get().apiKey,
-        // numberOfRowsToShareWithLLM: 2,
-        // defaultModel: 'gpt-4.1-mini',
-      })(set, get, store),
+      ...createNotebookSlice<RoomConfig>()(set, get, store),
+      // {
+      // getApiKey: () => get().apiKey,
+      // numberOfRowsToShareWithLLM: 2,
+      // defaultModel: 'gpt-4.1-mini',
+      // }
 
       apiKey: '',
       setApiKey: (apiKey) => set({apiKey}),
