@@ -28,7 +28,7 @@ export const ParameterBar = () => {
           </Button>
         )}
       </div>
-      <div>Parameter Bar</div>
+      <div>Parameter Bar Placeholder</div>
     </div>
   );
 };

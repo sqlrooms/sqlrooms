@@ -8,7 +8,7 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import React from 'react';
-import {InputCell} from './cells/InputCell';
+import {InputCell} from './cells/Input/InputCell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {SqlCell} from './cells/SqlCell';
 import {TextCell} from './cells/TextCell';
@@ -52,6 +52,7 @@ export type NotebookSliceState = {
       updater: (cell: NotebookCell) => NotebookCell,
     ) => void;
     setCurrentCell: (id: string) => void;
+    addNewInput: (cellId: string) => void;
 
     runCell: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
     runAllCells: (tabId: string) => Promise<void>;
@@ -340,6 +341,30 @@ export function createNotebookSlice<
           );
         },
 
+        addNewInput(cellId) {
+          // set((state) =>
+          //   produce(state, (draft) => {
+          //     const cell = draft.config.notebook.cells[cellId];
+          //     if (!cell || cell.type !== 'input') return;
+          //     const name = generateUniqueName('param', []);
+          //     cell.inputs = [
+          //       ...cell.inputs,
+          //       {
+          //         id: createId(),
+          //         name,
+          //         type: 'input',
+          //         input: {
+          //           kind: 'dropdown',
+          //           varName: name,
+          //           options: [],
+          //           value: '',
+          //         },
+          //       },
+          //     ];
+          //   }),
+          // );
+        },
+
         cancelRunCell: (cellId) => {
           const abortController = get().notebook.activeAbortControllers[cellId];
           if (abortController) {
@@ -534,7 +559,7 @@ export function createNotebookSlice<
                 id,
                 type: 'input',
                 name: 'Input',
-                input: {kind: 'text', varName: 'var', value: ''},
+                input: {kind: 'text', varName: 'param_1', value: ''},
               }) as NotebookCell,
             renderComponent: (id: string) =>
               React.createElement(InputCell, {id}),

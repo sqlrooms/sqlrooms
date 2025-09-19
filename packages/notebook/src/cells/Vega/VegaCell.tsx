@@ -42,8 +42,6 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
   );
   const [isEditing, setIsEditing] = useState(false);
 
-  if (!cell || cell.type !== 'vega') return null;
-
   const selectedSqlQuery =
     selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
       ? `SELECT * FROM ${selectedSqlStatus.resultView}`
@@ -63,6 +61,8 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       update(id, (c) => ({...c, vegaSpec: draftSpec}));
     }
   }, [currentCellId, id, isEditing, draftSpec, update]);
+
+  if (!cell || cell.type !== 'vega') return null;
 
   return (
     <CellContainer

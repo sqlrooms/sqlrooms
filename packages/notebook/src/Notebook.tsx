@@ -70,7 +70,7 @@ export const Notebook: React.FC = () => {
 
   if (!tab) return null;
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <TabsBar />
       <div className="ml-auto mr-0 flex items-center gap-1 px-4 py-2">
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
@@ -85,7 +85,7 @@ export const Notebook: React.FC = () => {
       </div>
       <ParameterBar />
 
-      <div className="tab-scrollable-content flex flex-col gap-1 overflow-auto px-6">
+      <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
         {tab.cellOrder.map((id, index) => (
           <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />

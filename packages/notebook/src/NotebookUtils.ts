@@ -1,7 +1,9 @@
 import {
+  ParameterTypes,
   NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
+  ParameterUnion,
 } from './cellSchemas';
 
 export const findTab = (
@@ -23,4 +25,35 @@ export const getCellTypeLabel = (type: NotebookCellTypes) => {
     input: 'Input',
   };
   return typeToLabel[type];
+};
+
+export const initializeParameter = (
+  type: ParameterTypes,
+  oldParameter: ParameterUnion,
+): ParameterUnion => {
+  const name = oldParameter.varName;
+  switch (type) {
+    case 'text':
+      return {
+        kind: 'text',
+        varName: name,
+        value: '',
+      };
+    case 'slider':
+      return {
+        kind: 'slider',
+        varName: name,
+        min: 0,
+        max: 100,
+        step: 1,
+        value: 0,
+      };
+    case 'dropdown':
+      return {
+        kind: 'dropdown',
+        varName: name,
+        options: [],
+        value: '',
+      };
+  }
 };
