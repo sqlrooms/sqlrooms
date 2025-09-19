@@ -23,7 +23,7 @@ const RenderInput: React.FC<{
     case 'text':
       return (
         <Input
-          className="h-8 w-full rounded border px-2 py-1"
+          className="h-8 w-full rounded border px-2 py-1 text-sm"
           value={input.value}
           onChange={(e) => updateInput({value: e.target.value})}
         />

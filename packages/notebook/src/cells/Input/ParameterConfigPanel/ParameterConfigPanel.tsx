@@ -1,4 +1,4 @@
-import {FC} from 'react';
+import {FC, useEffect} from 'react';
 import {FormProvider, useForm, UseFormReturn} from 'react-hook-form';
 import {
   Button,
@@ -36,23 +36,43 @@ export const ParameterConfigPanel: FC<Props> = ({
 }) => {
   const methods = useForm<ParameterUnion>({
     defaultValues: input,
+    mode: 'onChange',
+    reValidateMode: 'onChange',
   });
 
   const {
     handleSubmit,
-    setValue,
-    formState: {isSubmitting},
+    reset,
+    formState: {isSubmitting, errors},
   } = methods;
+
+  // Keep form in sync when `input` prop changes externally
+  useEffect(() => {
+    reset(input);
+  }, [input, reset]);
 
   const onSubmit = (data: ParameterUnion) => {
     if (data.kind === 'dropdown' && !data.value && data.options.length > 0) {
       const newValue = data.options[0] ?? '';
-      setValue('value', newValue);
       updateInput({...data, value: newValue});
-    } else {
-      updateInput(data);
+      return;
+    } else if (data.kind === 'slider') {
+      const clampedValue = Math.min(Math.max(data.value, data.min), data.max);
+      updateInput({...data, value: clampedValue});
+      return;
     }
+
+    updateInput(data);
   };
+
+  const onInteractOutside = (e: {preventDefault: () => void}) => {
+    if (Object.keys(errors).length > 0) {
+      e.preventDefault();
+      return;
+    }
+    handleSubmit(onSubmit)();
+  };
+
   return (
     <div className={cn(className)}>
       <FormProvider {...methods}>
@@ -70,12 +90,15 @@ export const ParameterConfigPanel: FC<Props> = ({
           </PopoverTrigger>
           <PopoverContent
             className="flex flex-col gap-5"
-            onInteractOutside={() => handleSubmit(onSubmit)()}
+            onInteractOutside={onInteractOutside}
           >
             <form className="flex flex-col gap-5">
               <div className="flex flex-col gap-2">
                 <Label>Name</Label>
-                <Input className="h-8" {...methods.register('varName')} />
+                <Input
+                  className="h-8 text-sm"
+                  {...methods.register('varName')}
+                />
               </div>
 
               <ParameterTypeDropdown methods={methods} />
@@ -114,12 +137,13 @@ const ParameterConfig: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
 const ParameterTypeDropdown: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
   methods,
 }) => {
-  const {watch, reset, getValues} = methods;
+  const {watch, reset, getValues, trigger} = methods;
   const kind = watch('kind');
 
   const onTypeChange = (kind: ParameterTypes) => {
     const newParameter = initializeParameter(kind, getValues());
-    reset(newParameter);
+    reset(newParameter, {keepErrors: false});
+    trigger();
   };
 
   return (

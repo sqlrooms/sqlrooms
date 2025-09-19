@@ -7,7 +7,7 @@ export const TextConfig = () => {
   return (
     <>
       <Label>Value</Label>
-      <Input className="h-8" {...register('value')} />
+      <Input className="h-8 text-sm" {...register('value')} />
     </>
   );
 };

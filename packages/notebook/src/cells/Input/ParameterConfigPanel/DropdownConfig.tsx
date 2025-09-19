@@ -1,14 +1,30 @@
 import {useState} from 'react';
-import {Button, Input, Label} from '@sqlrooms/ui';
+import {
+  Button,
+  Input,
+  Label,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@sqlrooms/ui';
 import {OctagonAlertIcon, XIcon} from 'lucide-react';
 import {useFormContext, useFieldArray} from 'react-hook-form';
 
 export const DropdownConfig = () => {
-  const {control, watch} = useFormContext();
+  const {
+    control,
+    setValue,
+    watch,
+    setError,
+    clearErrors,
+    formState: {errors},
+  } = useFormContext();
   const options = watch('options') || [];
+  const dropdownValue = watch('value') || '';
 
   const [option, setOption] = useState('');
-  const [warning, setWarning] = useState('');
 
   const {remove, append} = useFieldArray({control, name: 'options'});
 
@@ -17,13 +33,18 @@ export const DropdownConfig = () => {
     if (!trimmedOption) return;
 
     if (options.includes(trimmedOption)) {
-      setWarning('This value already exists');
+      setError('options', {
+        type: 'manual',
+        message: 'This value already exists',
+      });
       return;
     }
 
     append(trimmedOption);
     setOption('');
-    setWarning('');
+    if (errors.options) {
+      clearErrors('options');
+    }
   };
 
   const handleRemoveOption = (index: number) => {
@@ -59,11 +80,16 @@ export const DropdownConfig = () => {
 
           <div className="flex gap-1">
             <Input
-              className="h-8"
+              className="h-8 text-sm"
               value={option}
               onChange={(e) => {
                 setOption(e.target.value);
-                if (warning) setWarning('');
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  handleAddOption();
+                }
               }}
             />
             <Button
@@ -76,19 +102,19 @@ export const DropdownConfig = () => {
             </Button>
           </div>
 
-          {warning && (
+          {errors.options && (
             <div className="flex items-center gap-1 text-xs text-red-500">
               <OctagonAlertIcon size={16} strokeWidth={1.5} />
-              {warning}
+              {errors.options.message as string}
             </div>
           )}
         </div>
       </div>
 
-      {/* <div className="flex flex-col gap-2">
-        <Label>Default Value</Label>
+      <div className="flex flex-col gap-2">
+        <Label>Value</Label>
         <Select
-          value={defaultValue}
+          value={dropdownValue}
           onValueChange={(v) => setValue('value', v)}
         >
           <SelectTrigger className="h-8 shadow-none">
@@ -102,7 +128,7 @@ export const DropdownConfig = () => {
             ))}
           </SelectContent>
         </Select>
-      </div> */}
+      </div>
     </>
   );
 };
