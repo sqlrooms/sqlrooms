@@ -1,16 +1,15 @@
-import {useState} from 'react';
-import {Button, SkeletonPane} from '@sqlrooms/ui';
-import {Settings} from 'lucide-react';
 import {
   AiSettingsPanel,
   AnalysisResultsContainer,
-  SessionControls,
-  QueryControls,
-  getDefaultInstructions,
   ModelSelector,
+  QueryControls,
+  SessionControls,
   extractModelsFromSettings,
+  getDefaultInstructions,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
+import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
+import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {
@@ -28,7 +27,7 @@ export const MainView: React.FC = () => {
 
   const models = extractModelsFromSettings(aiSettings);
 
-  const [isAiSettingsPanelOpen, setIsAiSettingsPanelOpen] = useState(false);
+  const settingsPanelOpen = useDisclosure();
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -37,17 +36,17 @@ export const MainView: React.FC = () => {
         <Button
           variant="outline"
           className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
-          onClick={() => setIsAiSettingsPanelOpen(!isAiSettingsPanelOpen)}
+          onClick={settingsPanelOpen.onToggle}
           title="Configuration"
         >
           <Settings className="h-4 w-4" />
         </Button>
       </div>
 
-      {isAiSettingsPanelOpen ? (
+      {settingsPanelOpen.isOpen ? (
         <div className="flex-grow overflow-auto">
           {currentSessionId && (
-            <AiSettingsPanel isOpen={true} setIsOpen={setIsAiSettingsPanelOpen}>
+            <AiSettingsPanel disclosure={settingsPanelOpen}>
               <AiSettingsPanel.ProvidersSettings />
               <AiSettingsPanel.ModelsSettings />
               <AiSettingsPanel.ModelParametersSettings
