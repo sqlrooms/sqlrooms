@@ -14,6 +14,10 @@ import {
   needsV0_25_0Migration,
   migrateFromV0_25_0,
 } from './analysisSession-v0.25.0';
+import {
+  needsV0_26_0Migration,
+  migrateFromV0_26_0,
+} from './analysisSession-v0.26.0';
 
 /**
  * Centralized migration function for stream messages
@@ -56,6 +60,11 @@ export const migrateAnalysisSession = <T extends z.ZodTypeAny>(schema: T) =>
     // Migration from v0.25.0 (add toolAdditionalData field)
     if (needsV0_25_0Migration(migratedData)) {
       migratedData = migrateFromV0_25_0(migratedData);
+    }
+
+    // Migration from v0.26.0 (convert legacy streamMessage to uiMessages/toolAdditionalData)
+    if (needsV0_26_0Migration(migratedData)) {
+      migratedData = migrateFromV0_26_0(migratedData);
     }
 
     // Future migrations can be added here:

@@ -4,14 +4,12 @@ import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
-import {UiMessages} from './UiMessages';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
 }> = ({className}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -21,28 +19,14 @@ export const AnalysisResultsContainer: React.FC<{
     dataToObserve: currentSession?.analysisResults,
   });
 
-  const onDeleteAnalysisResult = (id: string) => {
-    if (currentSession) {
-      deleteAnalysisResult(currentSession.id, id);
-    }
-  };
-
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
         ref={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
-        {/* Render new UI message-based chat view */}
-        <UiMessages />
-        {/* Keep legacy analysis results for backward compatibility */}
-        {currentSession?.analysisResults.map((result) => (
-          <AnalysisResult
-            key={result.id}
-            result={result}
-            onDeleteAnalysisResult={onDeleteAnalysisResult}
-          />
-        ))}
+        {/* Unified view (renders UI messages; legacy results handled via migration) */}
+        <AnalysisResult />
         {isRunningAnalysis && <SkeletonPane className="p-4" />}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />

@@ -18,6 +18,7 @@ import {
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   createChatHandlers,
+  type LlmDeps,
 } from './llm';
 
 export const AiSliceConfig = z.object({
@@ -133,6 +134,8 @@ export interface AiSliceOptions {
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string | undefined;
   getMaxSteps?: () => number;
+  /** Provide a pre-configured model client for a provider (e.g., Azure). */
+  getModelClientForProvider?: LlmDeps['getModelClientForProvider'];
 }
 
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
@@ -148,6 +151,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     getBaseUrl,
     // getMaxSteps,
     getInstructions,
+    getModelClientForProvider,
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
@@ -458,6 +462,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             getApiKey,
             getBaseUrl,
             getInstructions,
+            getModelClientForProvider,
           })(),
 
         getRemoteChatTransport: (

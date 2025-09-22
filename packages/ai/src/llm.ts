@@ -4,11 +4,13 @@ import {
   convertToModelMessages,
   streamText,
 } from 'ai';
+import type {LanguageModel} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {DataTable, DuckDbSliceState} from '@sqlrooms/duckdb';
 import {getDefaultInstructions} from './analysis';
 import {convertToVercelAiTool} from './utils';
 import {produce} from 'immer';
+import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AiSliceState, AiSliceTool} from './AiSlice';
 import type {AnalysisSessionSchema as AnalysisSession} from './schemas';
 
@@ -30,6 +32,17 @@ export type LlmDeps = {
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string | undefined;
   getInstructions?: (tablesSchema: DataTable[]) => string;
+  /**
+   * Optional: supply a pre-configured client for a given provider, e.g. Azure created via createAzure.
+   * If provided and returns a client for the active provider, it will be used to create the model
+   * instead of the default OpenAI-compatible client.
+   */
+  getModelClientForProvider?: (
+    provider: string,
+  ) =>
+    | ((modelId: string) => LanguageModel)
+    | {chatModel: (modelId: string) => LanguageModel}
+    | undefined;
 };
 
 export function createLocalChatTransportFactory({
@@ -39,6 +52,7 @@ export function createLocalChatTransportFactory({
   getApiKey,
   getBaseUrl,
   getInstructions,
+  getModelClientForProvider,
 }: LlmDeps) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -50,12 +64,30 @@ export function createLocalChatTransportFactory({
       const apiKey = getApiKey?.(provider) || '';
       const baseUrl = getBaseUrl?.();
 
-      const openai = createOpenAICompatible({
-        apiKey,
-        name: provider,
-        baseURL: baseUrl || 'https://api.openai.com/v1',
-      });
-      const model = openai.chatModel(modelId);
+      // Prefer a user-supplied client for this provider if available
+      const customClient = getModelClientForProvider?.(provider);
+      let model: LanguageModel | undefined;
+      if (customClient) {
+        if (typeof customClient === 'function') {
+          model = customClient(modelId);
+        } else if (
+          typeof (customClient as {chatModel?: unknown}).chatModel ===
+          'function'
+        ) {
+          model = (
+            customClient as {chatModel: (id: string) => LanguageModel}
+          ).chatModel(modelId);
+        }
+      }
+      // Fallback to OpenAI-compatible if no custom client/model resolved
+      if (!model) {
+        const openai = createOpenAICompatible({
+          apiKey,
+          name: provider,
+          baseURL: baseUrl || 'https://api.openai.com/v1',
+        });
+        model = openai.chatModel(modelId);
+      }
 
       const body = init?.body as string;
       const parsed = body ? JSON.parse(body) : {};
@@ -139,18 +171,14 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
         // mark the current analysis result as completed if present
         set((state: GetState) =>
           produce(state, (draft: GetState) => {
-            const session = draft.ai.getCurrentSession?.();
-            if (!session) return;
             const targetSession = draft.config.ai.sessions.find(
-              (s: AnalysisSession) => s.id === session.id,
+              (s: AnalysisSession) => s.id === currentSessionId,
             );
+            if (!targetSession) return;
             // update the last analysis result
-            const result =
-              targetSession?.analysisResults[
-                targetSession.analysisResults.length - 1
-              ];
-            if (result) {
-              result.isCompleted = true;
+            const lastResult = targetSession.analysisResults.slice(-1)[0];
+            if (lastResult) {
+              lastResult.isCompleted = true;
             }
           }),
         );
@@ -167,22 +195,23 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
     },
     onChatError: (error: unknown) => {
       try {
-        const errMsg = error instanceof Error ? error.message : String(error);
+        let errMsg = getErrorMessageForDisplay(error);
+        if (!errMsg || errMsg.trim().length === 0) {
+          errMsg = 'Unknown error';
+        }
+        const currentSessionId = get().config.ai.currentSessionId;
         set((state: GetState) =>
           produce(state, (draft: GetState) => {
-            const session = draft.ai.getCurrentSession?.();
-            if (!session) return;
+            if (!currentSessionId) return;
             const targetSession = draft.config.ai.sessions.find(
-              (s: AnalysisSession) => s.id === session.id,
+              (s: AnalysisSession) => s.id === currentSessionId,
             );
-            const result =
-              targetSession?.analysisResults[
-                targetSession.analysisResults.length - 1
-              ];
-            if (result) {
-              // attach error message and mark completed
-              result.errorMessage = {error: errMsg};
-              result.isCompleted = true;
+            if (targetSession) {
+              const last = targetSession.analysisResults.slice(-1)[0];
+              if (last) {
+                last.errorMessage = {error: errMsg};
+                last.isCompleted = true;
+              }
             }
             draft.ai.isRunningAnalysis = false;
             draft.ai.analysisAbortController = undefined;
