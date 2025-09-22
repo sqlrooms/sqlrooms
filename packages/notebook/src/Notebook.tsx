@@ -1,5 +1,5 @@
 import {Button, EditableText} from '@sqlrooms/ui';
-import React from 'react';
+import React, {useEffect} from 'react';
 
 import {useStoreWithNotebook} from './NotebookSlice';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
@@ -55,6 +55,9 @@ export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
     (s) => s.config.notebook.currentTabId,
   );
+  const currentCellId = useStoreWithNotebook(
+    (s) => s.config.notebook.currentCellId,
+  );
   const tab = useStoreWithNotebook((s) =>
     s.config.notebook.tabs.find((t) => t.id === currentTabId),
   );
@@ -62,11 +65,26 @@ export const Notebook: React.FC = () => {
   const runAllCellsCascade = useStoreWithNotebook(
     (s) => s.notebook.runAllCellsCascade,
   );
+  const run = useStoreWithNotebook((s) => s.notebook.runCell);
 
   const handleAddCellAndScroll = (type: NotebookCellTypes) => {
     if (!tab) return;
     addCell(tab.id, type);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!currentCellId) return;
+
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        run(currentCellId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCellId, run]);
 
   if (!tab) return null;
   return (
