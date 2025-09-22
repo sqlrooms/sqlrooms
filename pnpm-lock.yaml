@@ -1006,11 +1006,11 @@ importers:
         specifier: ^1.1.3
         version: 1.1.3
       '@openassistant/core':
-        specifier: 0.5.14-alpha.2
-        version: 0.5.14-alpha.2(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)
+        specifier: 0.5.17
+        version: 0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/deepseek@0.1.17(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@ai-sdk/xai@1.2.18(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)
       '@openassistant/utils':
-        specifier: 0.5.14-alpha.2
-        version: 0.5.14-alpha.2
+        specifier: 0.5.17
+        version: 0.5.17
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -1051,11 +1051,14 @@ importers:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
       react-markdown:
-        specifier: ^9.1.0
-        version: 9.1.0(@types/react@19.1.7)(react@19.1.0)
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
       rehype-raw:
         specifier: ^7.0.0
         version: 7.0.0
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
       zod:
         specifier: ^3.25.73
         version: 3.25.73
@@ -1827,6 +1830,12 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
+  '@ai-sdk/deepseek@0.1.17':
+    resolution: {integrity: sha512-UGVPYJSgV8Z4mbEUhqh/uRM2mBUS5VoWA3MUN+gg4xPjh3IvwQwVHAYWNzEhmlTbySIv3DE6x7oTyuS73gHGbg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
   '@ai-sdk/deepseek@0.2.14':
     resolution: {integrity: sha512-TISD1FzBWuQkHEHoVustoJILV33ZNgfYxeTkq1xU2vHEZuWTGZV7/IlXixyFsfqDCdVgrbLeIABk5FuCw7niLg==}
     engines: {node: '>=18'}
@@ -1839,8 +1848,20 @@ packages:
     peerDependencies:
       zod: ^3.0.0
 
+  '@ai-sdk/openai-compatible@0.1.17':
+    resolution: {integrity: sha512-e60+yxQ29e8RlsTWBW4kLuQJMpVJzH5+cpOeUXLXU6M9wc8BOQCyYg4jYh2ldnfvYCKXYxb2kYeLW7L9fqhhMw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
   '@ai-sdk/openai-compatible@0.2.14':
     resolution: {integrity: sha512-icjObfMCHKSIbywijaoLdZ1nSnuRnWgMEMLgwoxPJgxsUHMx0aVORnsLUid4SPtdhHI3X2masrt6iaEQLvOSFw==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+
+  '@ai-sdk/openai-compatible@0.2.16':
+    resolution: {integrity: sha512-LkvfcM8slJedRyJa/MiMiaOzcMjV1zNDwzTHEGz7aAsgsQV0maLfmJRi/nuSwf5jmp0EouC+JXXDUj2l94HgQw==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
@@ -1850,6 +1871,15 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.0.0
+
+  '@ai-sdk/provider-utils@2.1.15':
+    resolution: {integrity: sha512-ndMVtDm2xS86t45CJZSfyl7UblZFewRB8gZkXQHeNi7BhjCYkhE+XQMwfDl6UOAO7kaV60IC1R4JLDWxWiiHug==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
+    peerDependenciesMeta:
+      zod:
+        optional: true
 
   '@ai-sdk/provider-utils@2.1.6':
     resolution: {integrity: sha512-Pfyaj0QZS22qyVn5Iz7IXcJ8nKIKlu2MeSAdKJzTwkAks7zdLaKVB+396Rqcp1bfQnxl7vaduQVMQiXUrgK8Gw==}
@@ -1865,6 +1895,10 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.23.8
+
+  '@ai-sdk/provider@1.0.12':
+    resolution: {integrity: sha512-88Uu1zJIE1UUOVJWfE2ybJXgiH8JJ97QY9fbmplErEbfa/k/1kF+tWMVAAJolF2aOGmazQGyQLhv4I9CCuVACw==}
+    engines: {node: '>=18'}
 
   '@ai-sdk/provider@1.0.7':
     resolution: {integrity: sha512-q1PJEZ0qD9rVR+8JFEd01/QM++csMT5UVwYXSN2u54BrVw/D8TZLTeg2FEfKK00DgAx0UtWd8XOhhwITP9BT5g==}
@@ -1889,6 +1923,12 @@ packages:
     engines: {node: '>=18'}
     peerDependencies:
       zod: ^3.23.8
+
+  '@ai-sdk/xai@1.2.18':
+    resolution: {integrity: sha512-T70WEu+UKXD/Fdj9ck+ujIqUp5ru06mJ/7usePXeXL5EeTi8KXevXF9AMIDdhyD5MZPT2jI8t19lEr8Bhuh/Bg==}
+    engines: {node: '>=18'}
+    peerDependencies:
+      zod: ^3.0.0
 
   '@algolia/autocomplete-core@1.17.7':
     resolution: {integrity: sha512-BjiPOW6ks90UKl7TwMv7oNQMnzU+t/wk9mgIDi6b1tXpUek7MW0lbNOUHpvam9pe3lVCf4xPFT+lK7s+e+fs7Q==}
@@ -3966,8 +4006,8 @@ packages:
   '@open-wc/dedupe-mixin@1.4.0':
     resolution: {integrity: sha512-Sj7gKl1TLcDbF7B6KUhtvr+1UCxdhMbNY5KxdU5IfMFWqL8oy1ZeAcCANjoB1TL0AJTcPmcCFsCbHf8X2jGDUA==}
 
-  '@openassistant/core@0.5.14-alpha.2':
-    resolution: {integrity: sha512-bPl+Opt7zjP4BJ2g8uHqsz3wWpx1PV7uhQnX5nJDoQwOMZuZrQpVbz2fX5PNi5zB6ihIfWOliXlB5t9CjvOXlw==}
+  '@openassistant/core@0.5.17':
+    resolution: {integrity: sha512-HuIXGeFXI0Wzc0G7KYBWcOyJSUAxb0L6CO7Cwb7spE/4xogvrWVHFWLcUFG64s+BojzHq/saCwJDwmLmzXC0gw==}
     peerDependencies:
       '@ai-sdk/anthropic': ^1.1.14
       '@ai-sdk/deepseek': ^0.1.8
@@ -3990,8 +4030,8 @@ packages:
   '@openassistant/utils@0.5.13':
     resolution: {integrity: sha512-kJtqgiHZeN6rpcMo4e9LnRPyprEwBBvSuTA9EPfL0J46yOAgc4goJa+oY1zAx5rFrsFblXb6PCWmxucpdvQZpQ==}
 
-  '@openassistant/utils@0.5.14-alpha.2':
-    resolution: {integrity: sha512-eMzBQ+nYFrDnX0fwRjKwmO38lParx2D9bSjNCGPQ7aKG9MP1G9bjOhoLP0gA9Y/bYm5HfZ+Ubhk0YS1CHVOs/w==}
+  '@openassistant/utils@0.5.17':
+    resolution: {integrity: sha512-p4yJJHOLg6ABMKhTyuQuE5TJMYnktizPavODVt4zPBArvOoIUqEGuA3Cy6mjEI5rIallcthSfhNy3izJh1FSiQ==}
 
   '@opentelemetry/api@1.9.0':
     resolution: {integrity: sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg==}
@@ -6945,6 +6985,10 @@ packages:
     resolution: {integrity: sha512-TtpcNJ3XAzx3Gq8sWRzJaVajRs0uVxA2YAkdb1jm2YkPz4G6egUFAyA3n5vtEIZefPk5Wa4UXbKuS5fKkJWdgA==}
     engines: {node: '>=10'}
 
+  escape-string-regexp@5.0.0:
+    resolution: {integrity: sha512-/veY75JbMK4j1yjvuUxuVsiS/hr/4iHs9FTT6cgTexxdE0Ly/glccBAkloH/DofkjRbZU3bnoj38mOmhkZ0lHw==}
+    engines: {node: '>=12'}
+
   escodegen@2.1.0:
     resolution: {integrity: sha512-2NlIDTwUWJN0mRPQOdtQBzbUHvdGY2P1VXSyU83Q3xKxM7WHX2Ql8dKq782Q9TgQUNOLEzEYu9bzLNj1q88I5w==}
     engines: {node: '>=6.0'}
@@ -8479,6 +8523,9 @@ packages:
     resolution: {integrity: sha512-a54IwgWPaeBCAAsv13YgmALOF1elABB08FxO9i+r4VFk5Vl4pKokRPeX8u5TCgSsPi6ec1otfLjdOpVcgbpshg==}
     hasBin: true
 
+  markdown-table@3.0.4:
+    resolution: {integrity: sha512-wiYz4+JrLyb/DqW2hkFJxP7Vd7JuTDm77fvbM8VfEQdmSMqcImWeeRbHwZjBjIFki/VaMK2BhFi7oUUZeM5bqw==}
+
   marked@15.0.12:
     resolution: {integrity: sha512-8dD6FusOQSrpv9Z1rdNMdlSgQOIP880DHqnohobOmYLElGEqAL/JvxvuxZO16r4HtjTlfPRDC1hbvxC9dPN2nA==}
     engines: {node: '>= 18'}
@@ -8491,8 +8538,29 @@ packages:
   md5@2.3.0:
     resolution: {integrity: sha512-T1GITYmFaKuO91vxyoQMFETst+O71VUPEU3ze5GNzDm0OWdP8v1ziTaAEPUr/3kLsY3Sftgz242A1SetQiDL7g==}
 
+  mdast-util-find-and-replace@3.0.2:
+    resolution: {integrity: sha512-Tmd1Vg/m3Xz43afeNxDIhWRtFZgM2VLyaf4vSTYwudTyeuTneoL3qtWMA5jeLyz/O1vDJmmV4QuScFCA2tBPwg==}
+
   mdast-util-from-markdown@2.0.2:
     resolution: {integrity: sha512-uZhTV/8NBuw0WHkPTrCqDOl0zVe1BIng5ZtHoDk49ME1qqcjYmmLmOf0gELgcRMxN4w2iuIeVso5/6QymSrgmA==}
+
+  mdast-util-gfm-autolink-literal@2.0.1:
+    resolution: {integrity: sha512-5HVP2MKaP6L+G6YaxPNjuL0BPrq9orG3TsrZ9YXbA3vDw/ACI4MEsnoDpn6ZNm7GnZgtAcONJyPhOP8tNJQavQ==}
+
+  mdast-util-gfm-footnote@2.1.0:
+    resolution: {integrity: sha512-sqpDWlsHn7Ac9GNZQMeUzPQSMzR6Wv0WKRNvQRg0KqHh02fpTz69Qc1QSseNX29bhz1ROIyNyxExfawVKTm1GQ==}
+
+  mdast-util-gfm-strikethrough@2.0.0:
+    resolution: {integrity: sha512-mKKb915TF+OC5ptj5bJ7WFRPdYtuHv0yTRxK2tJvi+BDqbkiG7h7u/9SI89nRAYcmap2xHQL9D+QG/6wSrTtXg==}
+
+  mdast-util-gfm-table@2.0.0:
+    resolution: {integrity: sha512-78UEvebzz/rJIxLvE7ZtDd/vIQ0RHv+3Mh5DR96p7cS7HsBhYIICDBCu8csTNWNO6tBWfqXPWekRuj2FNOGOZg==}
+
+  mdast-util-gfm-task-list-item@2.0.0:
+    resolution: {integrity: sha512-IrtvNvjxC1o06taBAVJznEnkiHxLFTzgonUdy8hzFVeDun0uTjxxrRGVaNFqkU1wJR3RBPEfsxmU6jDWPofrTQ==}
+
+  mdast-util-gfm@3.1.0:
+    resolution: {integrity: sha512-0ulfdQOM3ysHhCJ1p06l0b0VKlhU0wuQs3thxZQagjcjPrlFRqY215uZGHHJan9GEAXd9MbfPjFJz+qMkVR6zQ==}
 
   mdast-util-mdx-expression@2.0.1:
     resolution: {integrity: sha512-J6f+9hUp+ldTZqKRSg7Vw5V6MqjATc+3E4gf3CFNcuZNWD8XdyI6zQ8GqH7f8169MM6P7hMBRDVGnn7oHB9kXQ==}
@@ -8531,6 +8599,27 @@ packages:
 
   micromark-core-commonmark@2.0.3:
     resolution: {integrity: sha512-RDBrHEMSxVFLg6xvnXmb1Ayr2WzLAWjeSATAoxwKYJV94TeNavgoIdA0a9ytzDSVzBy2YKFK+emCPOEibLeCrg==}
+
+  micromark-extension-gfm-autolink-literal@2.1.0:
+    resolution: {integrity: sha512-oOg7knzhicgQ3t4QCjCWgTmfNhvQbDDnJeVu9v81r7NltNCVmhPy1fJRX27pISafdjL+SVc4d3l48Gb6pbRypw==}
+
+  micromark-extension-gfm-footnote@2.1.0:
+    resolution: {integrity: sha512-/yPhxI1ntnDNsiHtzLKYnE3vf9JZ6cAisqVDauhp4CEHxlb4uoOTxOCJ+9s51bIB8U1N1FJ1RXOKTIlD5B/gqw==}
+
+  micromark-extension-gfm-strikethrough@2.1.0:
+    resolution: {integrity: sha512-ADVjpOOkjz1hhkZLlBiYA9cR2Anf8F4HqZUO6e5eDcPQd0Txw5fxLzzxnEkSkfnD0wziSGiv7sYhk/ktvbf1uw==}
+
+  micromark-extension-gfm-table@2.1.1:
+    resolution: {integrity: sha512-t2OU/dXXioARrC6yWfJ4hqB7rct14e8f7m0cbI5hUmDyyIlwv5vEtooptH8INkbLzOatzKuVbQmAYcbWoyz6Dg==}
+
+  micromark-extension-gfm-tagfilter@2.0.0:
+    resolution: {integrity: sha512-xHlTOmuCSotIA8TW1mDIM6X2O1SiX5P9IuDtqGonFhEK0qgRI4yeC6vMxEV2dgyr2TiD+2PQ10o+cOhdVAcwfg==}
+
+  micromark-extension-gfm-task-list-item@2.1.0:
+    resolution: {integrity: sha512-qIBZhqxqI6fjLDYFTBIa4eivDMnP+OZqsNwmQ3xNLE4Cxwc+zfQEfbs6tzAo2Hjq+bh6q5F+Z8/cksrLFYWQQw==}
+
+  micromark-extension-gfm@3.0.0:
+    resolution: {integrity: sha512-vsKArQsicm7t0z2GugkCKtZehqUm31oeGBV/KVSorWSy8ZlNAv7ytjFhvaryUiCUJYqs+NoE6AFhpQvBTM6Q4w==}
 
   micromark-factory-destination@2.0.1:
     resolution: {integrity: sha512-Xe6rDdJlkmbFRExpTOmRj9N3MaWmbAgdpSrBQvCFqhezUn4AHqJHbaEnfbVYYiexVSs//tqOdY/DxhjdCiJnIA==}
@@ -9451,8 +9540,8 @@ packages:
       maplibre-gl:
         optional: true
 
-  react-markdown@9.1.0:
-    resolution: {integrity: sha512-xaijuJB0kzGiUdG7nc2MOMDUDBWPyGAjZtUrow9XxUeua8IqeP+VlIfAZ3bphpcLTnSZXz6z9jcVC/TCwbfgdw==}
+  react-markdown@10.1.0:
+    resolution: {integrity: sha512-qKxVopLT/TyA6BX3Ue5NwabOsAzm0Q7kAPwq6L+wWDwisYs7R8vZ0nRXqq6rkueboxpkjvLGU9fWifiX/ZZFxQ==}
     peerDependencies:
       '@types/react': '>=18'
       react: 19.1.0
@@ -9622,11 +9711,17 @@ packages:
   rehype-raw@7.0.0:
     resolution: {integrity: sha512-/aE8hCfKlQeA8LmyeyQvQF3eBiLRGNlfBJEvWH7ivp9sBqs7TNqBL5X3v157rM4IFETqDnIOO+z5M/biZbo9Ww==}
 
+  remark-gfm@4.0.1:
+    resolution: {integrity: sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==}
+
   remark-parse@11.0.0:
     resolution: {integrity: sha512-FCxlKLNGknS5ba/1lmpYijMUzX2esxW5xQqjWxw2eHFfS2MSdaHVINFmhjo+qN1WhZhNimq0dZATN9pH0IDrpA==}
 
   remark-rehype@11.1.2:
     resolution: {integrity: sha512-Dh7l57ianaEoIpzbp0PC9UKAdCSVklD8E5Rpw7ETfbTl3FqcOOgq5q2LVDhgGCkaBv7p24JXikPdvhhmHvKMsw==}
+
+  remark-stringify@11.0.0:
+    resolution: {integrity: sha512-1OSmLd3awB/t8qdoEOMazZkNsfVTeY4fTsgzcQFdXNq8ToTN4ZGwrMnlda4K6smTFKD+GRV6O48i6Z4iKgPPpw==}
 
   remove@0.1.5:
     resolution: {integrity: sha512-AJMA9oWvJzdTjwIGwSQZsjGQiRx73YTmiOWmfCp1fpLa/D4n7jKcpoA+CZiVLJqKcEKUuh1Suq80c5wF+L/qVQ==}
@@ -9925,6 +10020,7 @@ packages:
   source-map@0.8.0-beta.0:
     resolution: {integrity: sha512-2ymg6oRBpebeZi9UUNsgQ89bhx01TcTkmNTGnNO88imTmbSgy4nfujrgVEFKWpMTEGA11EDkTt7mqObTPdigIA==}
     engines: {node: '>= 8'}
+    deprecated: The work that was done in this beta branch won't be included in future versions
 
   sourcemap-codec@1.4.8:
     resolution: {integrity: sha512-9NykojV5Uih4lgo5So5dtw+f0JgJX30KCNI8gwhz2J9A15wD0Ml6tjHKwf6fTSa6fAdVBdZeNOs9eJ71qCk8vA==}
@@ -11187,6 +11283,14 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
       zod: 3.25.73
 
+  '@ai-sdk/deepseek@0.1.17(zod@3.25.73)':
+    dependencies:
+      '@ai-sdk/openai-compatible': 0.1.17(zod@3.25.73)
+      '@ai-sdk/provider': 1.0.12
+      '@ai-sdk/provider-utils': 2.1.15(zod@3.25.73)
+      zod: 3.25.73
+    optional: true
+
   '@ai-sdk/deepseek@0.2.14(zod@3.25.73)':
     dependencies:
       '@ai-sdk/openai-compatible': 0.2.14(zod@3.25.73)
@@ -11200,17 +11304,41 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
       zod: 3.25.73
 
+  '@ai-sdk/openai-compatible@0.1.17(zod@3.25.73)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.12
+      '@ai-sdk/provider-utils': 2.1.15(zod@3.25.73)
+      zod: 3.25.73
+    optional: true
+
   '@ai-sdk/openai-compatible@0.2.14(zod@3.25.73)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
       zod: 3.25.73
 
+  '@ai-sdk/openai-compatible@0.2.16(zod@3.25.73)':
+    dependencies:
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
+      zod: 3.25.73
+    optional: true
+
   '@ai-sdk/openai@1.3.22(zod@3.25.73)':
     dependencies:
       '@ai-sdk/provider': 1.1.3
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
       zod: 3.25.73
+
+  '@ai-sdk/provider-utils@2.1.15(zod@3.25.73)':
+    dependencies:
+      '@ai-sdk/provider': 1.0.12
+      eventsource-parser: 3.0.3
+      nanoid: 3.3.11
+      secure-json-parse: 2.7.0
+    optionalDependencies:
+      zod: 3.25.73
+    optional: true
 
   '@ai-sdk/provider-utils@2.1.6(zod@3.25.73)':
     dependencies:
@@ -11227,6 +11355,11 @@ snapshots:
       nanoid: 3.3.11
       secure-json-parse: 2.7.0
       zod: 3.25.73
+
+  '@ai-sdk/provider@1.0.12':
+    dependencies:
+      json-schema: 0.4.0
+    optional: true
 
   '@ai-sdk/provider@1.0.7':
     dependencies:
@@ -11252,6 +11385,14 @@ snapshots:
       '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
       zod: 3.25.73
       zod-to-json-schema: 3.24.5(zod@3.25.73)
+
+  '@ai-sdk/xai@1.2.18(zod@3.25.73)':
+    dependencies:
+      '@ai-sdk/openai-compatible': 0.2.16(zod@3.25.73)
+      '@ai-sdk/provider': 1.1.3
+      '@ai-sdk/provider-utils': 2.2.8(zod@3.25.73)
+      zod: 3.25.73
+    optional: true
 
   '@algolia/autocomplete-core@1.17.7(@algolia/client-search@5.27.0)(algoliasearch@5.27.0)(search-insights@2.17.3)':
     dependencies:
@@ -14189,7 +14330,7 @@ snapshots:
 
   '@open-wc/dedupe-mixin@1.4.0': {}
 
-  '@openassistant/core@0.5.14-alpha.2(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)':
+  '@openassistant/core@0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/deepseek@0.1.17(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@ai-sdk/xai@1.2.18(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)':
     dependencies:
       '@ai-sdk/openai': 1.3.22(zod@3.25.73)
       '@ai-sdk/react': 1.2.12(react@19.1.0)(zod@3.25.73)
@@ -14203,7 +14344,9 @@ snapshots:
       zod-to-json-schema: 3.24.5(zod@3.25.73)
     optionalDependencies:
       '@ai-sdk/anthropic': 1.2.12(zod@3.25.73)
+      '@ai-sdk/deepseek': 0.1.17(zod@3.25.73)
       '@ai-sdk/google': 1.2.19(zod@3.25.73)
+      '@ai-sdk/xai': 1.2.18(zod@3.25.73)
       ollama-ai-provider-v2: 0.0.6(zod@3.25.73)
     transitivePeerDependencies:
       - '@opentelemetry/api'
@@ -14216,7 +14359,7 @@ snapshots:
     dependencies:
       zod: 3.25.73
 
-  '@openassistant/utils@0.5.14-alpha.2':
+  '@openassistant/utils@0.5.17':
     dependencies:
       zod: 3.25.73
 
@@ -17781,6 +17924,8 @@ snapshots:
 
   escape-string-regexp@4.0.0: {}
 
+  escape-string-regexp@5.0.0: {}
+
   escodegen@2.1.0:
     dependencies:
       esprima: 4.0.1
@@ -19679,6 +19824,8 @@ snapshots:
       punycode.js: 2.3.1
       uc.micro: 2.1.0
 
+  markdown-table@3.0.4: {}
+
   marked@15.0.12: {}
 
   math-intrinsics@1.1.0: {}
@@ -19688,6 +19835,13 @@ snapshots:
       charenc: 0.0.2
       crypt: 0.0.2
       is-buffer: 1.1.6
+
+  mdast-util-find-and-replace@3.0.2:
+    dependencies:
+      '@types/mdast': 4.0.4
+      escape-string-regexp: 5.0.0
+      unist-util-is: 6.0.0
+      unist-util-visit-parents: 6.0.1
 
   mdast-util-from-markdown@2.0.2:
     dependencies:
@@ -19703,6 +19857,63 @@ snapshots:
       micromark-util-symbol: 2.0.1
       micromark-util-types: 2.0.2
       unist-util-stringify-position: 4.0.0
+    transitivePeerDependencies:
+      - supports-color
+
+  mdast-util-gfm-autolink-literal@2.0.1:
+    dependencies:
+      '@types/mdast': 4.0.4
+      ccount: 2.0.1
+      devlop: 1.1.0
+      mdast-util-find-and-replace: 3.0.2
+      micromark-util-character: 2.1.1
+
+  mdast-util-gfm-footnote@2.1.0:
+    dependencies:
+      '@types/mdast': 4.0.4
+      devlop: 1.1.0
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-to-markdown: 2.1.2
+      micromark-util-normalize-identifier: 2.0.1
+    transitivePeerDependencies:
+      - supports-color
+
+  mdast-util-gfm-strikethrough@2.0.0:
+    dependencies:
+      '@types/mdast': 4.0.4
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-to-markdown: 2.1.2
+    transitivePeerDependencies:
+      - supports-color
+
+  mdast-util-gfm-table@2.0.0:
+    dependencies:
+      '@types/mdast': 4.0.4
+      devlop: 1.1.0
+      markdown-table: 3.0.4
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-to-markdown: 2.1.2
+    transitivePeerDependencies:
+      - supports-color
+
+  mdast-util-gfm-task-list-item@2.0.0:
+    dependencies:
+      '@types/mdast': 4.0.4
+      devlop: 1.1.0
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-to-markdown: 2.1.2
+    transitivePeerDependencies:
+      - supports-color
+
+  mdast-util-gfm@3.1.0:
+    dependencies:
+      mdast-util-from-markdown: 2.0.2
+      mdast-util-gfm-autolink-literal: 2.0.1
+      mdast-util-gfm-footnote: 2.1.0
+      mdast-util-gfm-strikethrough: 2.0.0
+      mdast-util-gfm-table: 2.0.0
+      mdast-util-gfm-task-list-item: 2.0.0
+      mdast-util-to-markdown: 2.1.2
     transitivePeerDependencies:
       - supports-color
 
@@ -19803,6 +20014,64 @@ snapshots:
       micromark-util-resolve-all: 2.0.1
       micromark-util-subtokenize: 2.1.0
       micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-autolink-literal@2.1.0:
+    dependencies:
+      micromark-util-character: 2.1.1
+      micromark-util-sanitize-uri: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-footnote@2.1.0:
+    dependencies:
+      devlop: 1.1.0
+      micromark-core-commonmark: 2.0.3
+      micromark-factory-space: 2.0.1
+      micromark-util-character: 2.1.1
+      micromark-util-normalize-identifier: 2.0.1
+      micromark-util-sanitize-uri: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-strikethrough@2.1.0:
+    dependencies:
+      devlop: 1.1.0
+      micromark-util-chunked: 2.0.1
+      micromark-util-classify-character: 2.0.1
+      micromark-util-resolve-all: 2.0.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-table@2.1.1:
+    dependencies:
+      devlop: 1.1.0
+      micromark-factory-space: 2.0.1
+      micromark-util-character: 2.1.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-tagfilter@2.0.0:
+    dependencies:
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm-task-list-item@2.1.0:
+    dependencies:
+      devlop: 1.1.0
+      micromark-factory-space: 2.0.1
+      micromark-util-character: 2.1.1
+      micromark-util-symbol: 2.0.1
+      micromark-util-types: 2.0.2
+
+  micromark-extension-gfm@3.0.0:
+    dependencies:
+      micromark-extension-gfm-autolink-literal: 2.1.0
+      micromark-extension-gfm-footnote: 2.1.0
+      micromark-extension-gfm-strikethrough: 2.1.0
+      micromark-extension-gfm-table: 2.1.1
+      micromark-extension-gfm-tagfilter: 2.0.0
+      micromark-extension-gfm-task-list-item: 2.1.0
+      micromark-util-combine-extensions: 2.0.1
       micromark-util-types: 2.0.2
 
   micromark-factory-destination@2.0.1:
@@ -20712,7 +20981,7 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.6.0
 
-  react-markdown@9.1.0(@types/react@19.1.7)(react@19.1.0):
+  react-markdown@10.1.0(@types/react@19.1.7)(react@19.1.0):
     dependencies:
       '@types/hast': 3.0.4
       '@types/mdast': 4.0.4
@@ -20951,6 +21220,17 @@ snapshots:
       hast-util-raw: 9.1.0
       vfile: 6.0.3
 
+  remark-gfm@4.0.1:
+    dependencies:
+      '@types/mdast': 4.0.4
+      mdast-util-gfm: 3.1.0
+      micromark-extension-gfm: 3.0.0
+      remark-parse: 11.0.0
+      remark-stringify: 11.0.0
+      unified: 11.0.5
+    transitivePeerDependencies:
+      - supports-color
+
   remark-parse@11.0.0:
     dependencies:
       '@types/mdast': 4.0.4
@@ -20967,6 +21247,12 @@ snapshots:
       mdast-util-to-hast: 13.2.0
       unified: 11.0.5
       vfile: 6.0.3
+
+  remark-stringify@11.0.0:
+    dependencies:
+      '@types/mdast': 4.0.4
+      mdast-util-to-markdown: 2.1.2
+      unified: 11.0.5
 
   remove@0.1.5:
     dependencies:

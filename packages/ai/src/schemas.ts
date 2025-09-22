@@ -23,7 +23,7 @@ const migrateStreamMessage = z.preprocess(
       'parts' in data
     ) {
       // migrate from old streamMessage to new streamMessage
-      const parts = (data as any).parts as any[];
+      const parts = (data as {parts: Record<string, unknown>[]}).parts;
 
       const newParts = [];
       for (const part of parts) {
@@ -34,7 +34,10 @@ const migrateStreamMessage = z.preprocess(
             text,
           });
         } else if (part.type === 'tool') {
-          const toolCallMessages = part.toolCallMessages;
+          const toolCallMessages = part.toolCallMessages as Record<
+            string,
+            unknown
+          >[];
           for (const toolCallMessage of toolCallMessages) {
             const toolCallId = toolCallMessage.toolCallId;
             const toolName = toolCallMessage.toolName;
@@ -81,14 +84,38 @@ export const AnalysisResultSchema = z.object({
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
-export const AnalysisSessionSchema = z.object({
-  id: z.string().cuid2(),
-  name: z.string(),
-  modelProvider: z.string(),
-  model: z.string(),
-  customModelName: z.string().optional(),
-  ollamaBaseUrl: z.string().optional(),
-  analysisResults: z.array(AnalysisResultSchema),
-  createdAt: z.coerce.date().optional(),
-});
+// migrate from old ollamaBaseUrl to new baseUrl
+const migrateAnalysisSession = z.preprocess(
+  (data) => {
+    if (
+      data &&
+      typeof data === 'object' &&
+      'ollamaBaseUrl' in data &&
+      !('baseUrl' in data)
+    ) {
+      // migrate from old ollamaBaseUrl to new baseUrl
+      const {ollamaBaseUrl, ...rest} = data as {ollamaBaseUrl: string} & Record<
+        string,
+        unknown
+      >;
+      return {
+        ...rest,
+        baseUrl: ollamaBaseUrl,
+      };
+    }
+    return data;
+  },
+  z.object({
+    id: z.string().cuid2(),
+    name: z.string(),
+    modelProvider: z.string(),
+    model: z.string(),
+    customModelName: z.string().optional(),
+    baseUrl: z.string().optional(),
+    analysisResults: z.array(AnalysisResultSchema),
+    createdAt: z.coerce.date().optional(),
+  }),
+);
+
+export const AnalysisSessionSchema = migrateAnalysisSession;
 export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;
