@@ -2,6 +2,11 @@ import type {StoreApi} from 'zustand';
 // Prefer real Loro types; fallback to local shim for type safety
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
+import {
+  BaseRoomConfig,
+  RoomShellSliceState,
+  RoomState,
+} from '@sqlrooms/room-shell';
 import type {LoroDoc} from 'loro-crdt';
 
 /**
@@ -13,7 +18,10 @@ export type CrdtDocsSelection = Record<string, unknown>;
 /**
  * Options for createCrdtSlice
  */
-export interface CreateCrdtSliceOptions<TState> {
+export interface CreateCrdtSliceOptions<
+  PC extends BaseRoomConfig,
+  TState extends CrdtSliceState & RoomShellSliceState<PC>,
+> {
   /**
    * Select which parts of the Zustand room state should be mirrored into CRDT documents.
    * Default: (state) => ({ config: state.config })
@@ -35,7 +43,7 @@ export interface CreateCrdtSliceOptions<TState> {
 /**
  * Runtime state and actions exposed by the CRDT slice.
  */
-export interface CrdtSliceState {
+export type CrdtSliceState = {
   crdt: {
     /** Plain object of logical key -> Loro document */
     docs: Record<string, LoroDoc>;
@@ -65,7 +73,7 @@ export interface CrdtSliceState {
      */
     initialize: () => Promise<void>;
   };
-}
+};
 
 /**
  * Internal subscriptions managed by the slice, held outside of the Zustand state tree.

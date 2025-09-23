@@ -12,12 +12,10 @@ import {
   createRoomStore,
   LayoutTypes,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {createSyncSlice} from '@sqlrooms/sync';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
 
 export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
@@ -32,81 +30,81 @@ export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  persist(
-    (set, get, store) => ({
-      ...createRoomShellSlice<RoomConfig>({
-        connector: createWebSocketDuckDbConnector({
-          wsUrl: 'ws://localhost:4000',
-          subscribeChannels: ['table:earthquakes'],
-          onNotification: (payload) => {
-            console.log('Notification from server:', payload);
-          },
-        }),
-        config: {
-          ...createDefaultCanvasConfig(),
-          // CanvasSliceConfig.parse(exampleCanvas).canvas,
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
-          dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
-            },
-          ],
+  // persist(
+  (set, get, store) => ({
+    ...createRoomShellSlice<RoomConfig>({
+      connector: createWebSocketDuckDbConnector({
+        wsUrl: 'ws://localhost:4000',
+        subscribeChannels: ['table:earthquakes'],
+        onNotification: (payload) => {
+          console.log('Notification from server:', payload);
         },
-        room: {
-          panels: {
-            main: {
-              title: 'Canvas',
-              icon: () => null,
-              component: Canvas,
-              placement: 'main',
-            },
-            data: {
-              title: 'Data',
-              icon: DatabaseIcon,
-              component: DataSourcesPanel,
-              placement: 'sidebar',
-            },
-          },
-        },
-      })(set, get, store),
-
-      ...createSyncSlice<RoomConfig>({
-        crdtOptions: {
-          selector: (state) => ({config: state.config}),
-        },
-      })(set, get, store),
-
-      ...createCanvasSlice<RoomConfig>({
-        getApiKey: () => get().apiKey,
-        toolsOptions: {
-          numberOfRowsToShareWithLLM: 2,
-        },
-        defaultModel: 'gpt-4.1-mini',
-      })(set, get, store),
-
-      apiKey: '',
-      setApiKey: (apiKey) => set({apiKey}),
-    }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'canvas-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        apiKey: state.apiKey,
-        config: RoomConfig.parse(state.config),
       }),
-    },
-  ) as StateCreator<RoomState>,
+      config: {
+        ...createDefaultCanvasConfig(),
+        // CanvasSliceConfig.parse(exampleCanvas).canvas,
+        layout: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            splitPercentage: 20,
+            first: 'data',
+            second: 'main',
+          },
+        },
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+          },
+        ],
+      },
+      room: {
+        panels: {
+          main: {
+            title: 'Canvas',
+            icon: () => null,
+            component: Canvas,
+            placement: 'main',
+          },
+          data: {
+            title: 'Data',
+            icon: DatabaseIcon,
+            component: DataSourcesPanel,
+            placement: 'sidebar',
+          },
+        },
+      },
+    })(set, get, store),
+
+    ...createSyncSlice<RoomConfig>({
+      crdtOptions: {
+        selector: (state) => ({config: state.config}),
+      },
+    })(set, get, store),
+
+    ...createCanvasSlice<RoomConfig>({
+      getApiKey: () => get().apiKey,
+      toolsOptions: {
+        numberOfRowsToShareWithLLM: 2,
+      },
+      defaultModel: 'gpt-4.1-mini',
+    })(set, get, store),
+
+    apiKey: '',
+    setApiKey: (apiKey) => set({apiKey}),
+  }),
+
+  // Persist settings
+  // {
+  //   // Local storage key
+  //   name: 'canvas-example-app-state-storage',
+  //   // Subset of the state to persist
+  //   partialize: (state) => ({
+  //     apiKey: state.apiKey,
+  //     config: RoomConfig.parse(state.config),
+  //   }),
+  // },
+  // ) as StateCreator<RoomState>,
 );

@@ -43,6 +43,8 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
     /** Send a CRDT update to the server (Uint8Array) */
     sendUpdate: (docId: string, update: Uint8Array, branch?: string) => void;
   };
+  /** Internal: attach an extra notification listener */
+  __addNotificationListener?: (fn: (payload: any) => void) => void;
 }
 
 /**
@@ -72,6 +74,7 @@ export function createWebSocketDuckDbConnector(
   let socket: WebSocket | null = null;
   let opening: Promise<void> | null = null;
   let lastSubscribedChannels: string[] | undefined = subscribeChannels;
+  const notificationListeners = new Set<(payload: any) => void>();
   const pending = new Map<
     string,
     {
@@ -176,6 +179,9 @@ export function createWebSocketDuckDbConnector(
                 try {
                   options.onNotification?.(payload);
                 } catch {}
+                try {
+                  for (const fn of notificationListeners) fn(payload);
+                } catch {}
                 return;
               }
               // CRDT state response
@@ -188,6 +194,15 @@ export function createWebSocketDuckDbConnector(
                     branch: parsed?.branch,
                     data: parsed?.data,
                   });
+                } catch {}
+                try {
+                  for (const fn of notificationListeners)
+                    fn({
+                      type: 'crdtState',
+                      docId: parsed?.docId,
+                      branch: parsed?.branch,
+                      data: parsed?.data,
+                    });
                 } catch {}
                 return;
               }
@@ -412,6 +427,12 @@ export function createWebSocketDuckDbConnector(
     ...base,
     get type() {
       return 'ws' as const;
+    },
+    // Internal: allow attaching additional notification listeners
+    __addNotificationListener: (fn: (payload: any) => void) => {
+      try {
+        notificationListeners.add(fn);
+      } catch {}
     },
     crdt: {
       init: (docId: string, branch?: string) => {

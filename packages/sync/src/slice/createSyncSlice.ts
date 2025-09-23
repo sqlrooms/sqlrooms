@@ -1,5 +1,5 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
-import {WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import {DuckDbConnector, WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {StoreApi} from 'zustand';
 
@@ -29,6 +29,12 @@ interface BufferedEvent {
   userId?: string;
   createdAt: Date;
   updateData: Uint8Array;
+}
+
+export function isWebSocketDuckDbConnector(
+  connector: DuckDbConnector,
+): connector is WebSocketDuckDbConnector {
+  return (connector as any).type === 'ws';
 }
 
 /**
@@ -76,19 +82,91 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
   };
 
   return createSlice<PC, SyncSliceState>((set, get, store) => {
+    const base = createCrdtSlice<PC, any>({
+      selector: options.crdtSelector,
+    })(set, get, store as unknown as StoreApi<any>);
+
+    // Wrap initialize to also init WS CRDT channels and forward updates
+    const originalInitialize = base.crdt.initialize;
+    let unsubscribeForward: (() => void) | undefined;
+    const forwardSelector =
+      options.crdtSelector || ((s: any) => ({config: s.config}));
+
+    base.crdt.initialize = async () => {
+      await originalInitialize?.();
+      try {
+        const connector = await get().db.getConnector();
+        if (!isWebSocketDuckDbConnector(connector)) {
+          throw new Error('Connector is not a WebSocketDuckDbConnector');
+        }
+        const initial = forwardSelector(store.getState());
+        // Request server state and subscribe
+        for (const key of Object.keys(initial)) {
+          try {
+            connector.crdt.init(key, 'main');
+          } catch {}
+          // Forward local changes as CRDT updates
+          unsubscribeForward = store.subscribe((nextState, prevState) => {
+            const nextSel = forwardSelector(nextState);
+            const prevSel = forwardSelector(prevState);
+            for (const [key, nextVal] of Object.entries(nextSel)) {
+              const prevVal = prevSel[key as keyof typeof prevSel];
+              if (prevVal !== nextVal) {
+                try {
+                  const doc = get().crdt.getDoc(key);
+                  const bytes: Uint8Array = doc.export({mode: 'update'});
+                  connector.crdt.sendUpdate(key, bytes, 'main');
+                } catch {}
+              }
+            }
+          });
+
+          // Listen for server CRDT updates and apply to local docs
+          const listener = (payload: any) => {
+            try {
+              if (
+                payload?.type === 'crdtUpdate' &&
+                typeof payload?.docId === 'string' &&
+                typeof payload?.data === 'string'
+              ) {
+                const key = payload.docId as string;
+                const b64 = payload.data as string;
+                const bytes = Uint8Array.from(atob(b64), (c) =>
+                  c.charCodeAt(0),
+                );
+                get().crdt.applyRemoteUpdate(key, bytes);
+              } else if (
+                payload?.type === 'crdtState' &&
+                typeof payload?.docId === 'string' &&
+                typeof payload?.data === 'string'
+              ) {
+                const key = payload.docId as string;
+                const b64 = payload.data as string;
+                const bytes = Uint8Array.from(atob(b64), (c) =>
+                  c.charCodeAt(0),
+                );
+                get().crdt.applyRemoteUpdate(key, bytes);
+              }
+            } catch {}
+          };
+          // Attach a per-connector listener using internal API
+          try {
+            (connector as any).__addNotificationListener?.(listener);
+          } catch {}
+        }
+      } catch {}
+    };
+
     // Then, add sync API
     return {
-      ...createCrdtSlice<PC, SyncSliceState>({
-        selector: options.crdtSelector,
-      })(set, get, store as unknown as StoreApi<CrdtSliceState>),
+      ...base,
 
       sync: {
         schema,
 
         ensureSchema: async () => {
-          const connector =
-            (await get().db.getConnector()) as WebSocketDuckDbConnector;
-          if (connector.type !== 'ws') {
+          const connector = await get().db.getConnector();
+          if (!isWebSocketDuckDbConnector(connector)) {
             throw new Error('Connector is not a WebSocketDuckDbConnector');
           }
           const s = schema;
