@@ -1,4 +1,3 @@
-import typing as _t
 from socketify import OpCode
 
 
@@ -117,5 +116,3 @@ class AuthManager:
             self._ws_authed.discard(self._key(ws))
         except Exception:
             pass
-
-

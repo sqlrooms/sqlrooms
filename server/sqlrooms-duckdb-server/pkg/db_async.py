@@ -19,7 +19,9 @@ GLOBAL_CON: Optional[duckdb.DuckDBPyConnection] = None
 DATABASE_PATH: Optional[str] = None
 
 # Track active queries for cancellation: query_id -> (Future, cursor)
-active_queries: Dict[str, Tuple[concurrent.futures.Future, duckdb.DuckDBPyConnection]] = {}
+active_queries: Dict[
+    str, Tuple[concurrent.futures.Future, duckdb.DuckDBPyConnection]
+] = {}
 active_queries_lock = threading.Lock()
 
 # Shutdown state flag
@@ -31,7 +33,9 @@ def generate_query_id() -> str:
     return str(uuid.uuid4())
 
 
-def register_query(query_id: str, future: concurrent.futures.Future, cursor: duckdb.DuckDBPyConnection) -> None:
+def register_query(
+    query_id: str, future: concurrent.futures.Future, cursor: duckdb.DuckDBPyConnection
+) -> None:
     """Register an in-flight query for cancellation tracking."""
     with active_queries_lock:
         active_queries[query_id] = (future, cursor)
@@ -74,7 +78,9 @@ def cancel_all_queries() -> None:
         active_queries.clear()
 
 
-def init_global_connection(database_path: str, extensions: Optional[List[str]] = None) -> None:
+def init_global_connection(
+    database_path: str, extensions: Optional[List[str]] = None
+) -> None:
     """Initialize the global DuckDB connection and optimize for concurrent access.
 
     extensions: optional list like ["httpfs", "iceberg", "spatial", "h3@community"].
@@ -99,7 +105,9 @@ def init_global_connection(database_path: str, extensions: Optional[List[str]] =
 
     cpu_count = os.cpu_count() or 4
     GLOBAL_CON.execute(f"SET threads TO {cpu_count}")
-    logger.info(f"Initialized global DuckDB connection to {database_path} with {cpu_count} threads")
+    logger.info(
+        f"Initialized global DuckDB connection to {database_path} with {cpu_count} threads"
+    )
 
 
 def begin_shutdown() -> None:

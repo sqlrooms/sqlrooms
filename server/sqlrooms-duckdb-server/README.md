@@ -2,7 +2,7 @@
 
 [![PyPi](https://img.shields.io/pypi/v/sqlrooms-duckdb-server.svg)](https://pypi.org/project/sqlrooms-duckdb-server/)
 
-A Python-based server that runs a local DuckDB instance and supports queries over WebSockets, returning data in either [Apache Arrow](https://arrow.apache.org/) or JSON format.
+A Python-based server that runs a local DuckDB instance and supports queries over WebSockets, returning data in either [Apache Arrow](https://arrow.apache.org/) or JSON format. The server was originally developed for use with [SQLRooms](https://sqlrooms.org), but can be readily used as a generic DuckDB server in other contexts.
 
 > **Note:** This server was initially created as a fork of [Mosaic DuckDB Server](https://github.com/uwdata/mosaic/tree/main/packages/server/duckdb-server), with additional features and improvements.
 
@@ -150,4 +150,4 @@ Supported messages:
 
 ## Publishing
 
-Run the build with `uv build`. Then publish with `uvx twine upload --skip-existing ../../dist/*`. We publish using tokens so when asked, set the username to `__token__` and then use your token as the password. Alternatively, create a [`.pypirc` file](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#create-an-account).
+Run the build with `uv build`. Then test publish with `pnpm prerelease`. We publish using tokens so when asked, set the username to `__token__` and then use your token as the password. Alternatively, create a [`.pypirc` file](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#create-an-account).

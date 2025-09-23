@@ -44,13 +44,28 @@ async def handle_query_ws(ws, cache, query):
                 payload = _build_arrow_frame(query_id, data)  # bytes
                 _ws_send(ws, payload, OpCode.BINARY)
         elif rtype == "json":
-            _ws_send(ws, {"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
+            _ws_send(
+                ws,
+                {"type": "json", "queryId": query_id, "data": result["data"]},
+                OpCode.TEXT,
+            )
         elif rtype == "ok":
             _ws_send(ws, {"type": "ok", "queryId": query_id}, OpCode.TEXT)
         else:
-            _ws_send(ws, {"type": "error", "queryId": query_id, "error": "Unexpected result type"}, OpCode.TEXT)
+            _ws_send(
+                ws,
+                {
+                    "type": "error",
+                    "queryId": query_id,
+                    "error": "Unexpected result type",
+                },
+                OpCode.TEXT,
+            )
     except concurrent.futures.CancelledError:
-        ws.send({"type": "error", "queryId": query_id, "error": "Query was cancelled"}, OpCode.TEXT)
+        ws.send(
+            {"type": "error", "queryId": query_id, "error": "Query was cancelled"},
+            OpCode.TEXT,
+        )
     except Exception as e:
         logger.exception("Error executing query")
         ws.send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
@@ -86,7 +101,10 @@ def server(cache, port=4000, auth_token: str | None = None):
             cancelled = False
             if qid:
                 cancelled = db_async.cancel_query(qid)
-            ws.send({"type": "cancelAck", "queryId": qid, "cancelled": bool(cancelled)}, OpCode.TEXT)
+            ws.send(
+                {"type": "cancelAck", "queryId": qid, "cancelled": bool(cancelled)},
+                OpCode.TEXT,
+            )
             return
 
         # Subscribe to a channel/topic: { type: 'subscribe', channel }
@@ -102,7 +120,11 @@ def server(cache, port=4000, auth_token: str | None = None):
         # Publish a notification: { type: 'notify', channel, payload }
         if isinstance(query, dict) and query.get("type") == "notify":
             channel = query.get("channel")
-            payload = {"type": "notify", "channel": channel, "payload": query.get("payload")}
+            payload = {
+                "type": "notify",
+                "channel": channel,
+                "payload": query.get("payload"),
+            }
             if channel:
                 app.publish(channel, ujson.dumps(payload))
                 ws.send(payload, OpCode.TEXT)
@@ -112,7 +134,11 @@ def server(cache, port=4000, auth_token: str | None = None):
             return
 
         # Query messages: only accept valid types with sql
-        if isinstance(query, dict) and query.get("type") in ("arrow", "json", "exec") and isinstance(query.get("sql"), str):
+        if (
+            isinstance(query, dict)
+            and query.get("type") in ("arrow", "json", "exec")
+            and isinstance(query.get("sql"), str)
+        ):
             try:
                 asyncio.create_task(handle_query_ws(ws, cache, query))
             except Exception as e:
@@ -168,11 +194,14 @@ def server(cache, port=4000, auth_token: str | None = None):
     def _version(res, req):
         try:
             import duckdb as _duckdb  # local import to avoid unused import warnings
-            body = ujson.dumps({
-                "name": "sqlrooms-duckdb-server",
-                "python": sys.version,
-                "duckdb": getattr(_duckdb, "__version__", "unknown"),
-            })
+
+            body = ujson.dumps(
+                {
+                    "name": "sqlrooms-duckdb-server",
+                    "python": sys.version,
+                    "duckdb": getattr(_duckdb, "__version__", "unknown"),
+                }
+            )
             res.write_header("Content-Type", "application/json")
             res.end(body)
         except Exception:

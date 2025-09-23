@@ -1,16 +1,13 @@
 import logging
 from hashlib import sha256
-
-import pyarrow as pa
-import time
-import duckdb
-
-logger = logging.getLogger(__name__)
-
 from functools import partial
 from typing import Optional
 from . import db_async
 from diskcache import Lock as DiskCacheLock
+import pyarrow as pa
+import time
+
+logger = logging.getLogger(__name__)
 
 
 def get_key(sql, command):
@@ -50,13 +47,14 @@ def get_arrow(con, sql):
             logger.error(f"Failed to convert result to Arrow: {str(e)}")
             raise
 
+
 def arrow_to_bytes(table):
     if table is None:
         return None
     sink = pa.BufferOutputStream()
     with pa.ipc.new_stream(sink, table.schema) as writer:
         # Prefer write_table if available for efficiency
-        if hasattr(writer, 'write_table'):
+        if hasattr(writer, "write_table"):
             writer.write_table(table)
         else:
             for batch in table.to_batches():
@@ -79,11 +77,13 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
 
     The actual DB work runs in a thread, using a per-task cursor. Cancellation is handled by db_async.
     """
-    logger.debug(f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}")
+    logger.debug(
+        f"Executing DuckDB query:\n{query['sql'][:256]}{'...' if len(query['sql']) > 256 else ''}"
+    )
 
     def _is_conflict_error(exc: Exception) -> bool:
         msg = str(exc)
-        return ("Transaction conflict" in msg)
+        return "Transaction conflict" in msg
 
     def _execute_once(con):
         command = query["type"]
@@ -108,7 +108,9 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
             except Exception as e:
                 if attempts < 1 and _is_conflict_error(e):
                     attempts += 1
-                    logger.warning(f"Transaction conflict detected; retrying once. Error: {e}")
+                    logger.warning(
+                        f"Transaction conflict detected; retrying once. Error: {e}"
+                    )
                     time.sleep(0.01)
                     continue
                 raise
