@@ -1,7 +1,8 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
-import {DuckDbConnector, WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import {DuckDbConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {StoreApi} from 'zustand';
+import {u8ToHex, hexToU8} from '../SyncDuckDbConnector';
 
 export type SyncSliceState = CrdtSliceState & {
   sync: {
@@ -31,10 +32,16 @@ interface BufferedEvent {
   updateData: Uint8Array;
 }
 
-export function isWebSocketDuckDbConnector(
+export function connectorHasCrdt(
   connector: DuckDbConnector,
-): connector is WebSocketDuckDbConnector {
-  return (connector as any).type === 'ws';
+): connector is DuckDbConnector & {
+  crdt: {
+    init: (docId: string, branch?: string) => void;
+    sendUpdate: (docId: string, update: Uint8Array, branch?: string) => void;
+  };
+  __addNotificationListener?: (fn: (payload: any) => void) => void;
+} {
+  return connector != null && typeof (connector as any).crdt === 'object';
 }
 
 /**
@@ -50,7 +57,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
   flushCount?: number;
   /** Time threshold (ms) to flush buffered updates */
   flushMs?: number;
-  crdtOptions: Parameters<typeof createCrdtSlice<PC, CrdtSliceState>>[0];
+  crdtOptions?: Parameters<typeof createCrdtSlice<PC, any>>[0];
 }) {
   const schema = options?.schema ?? 'crdt';
   const flushCount = Math.max(1, options.flushCount ?? 200);
@@ -59,19 +66,6 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
   // Buffer and timer
   let buffer: BufferedEvent[] = [];
   let flushTimer: number | null = null;
-
-  const u8ToHex = (u8: Uint8Array): string =>
-    Array.from(u8)
-      .map((b) => b.toString(16).padStart(2, '0'))
-      .join('');
-  const hexToU8 = (hex: string): Uint8Array => {
-    const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
-    const arr = new Uint8Array(clean.length / 2);
-    for (let i = 0; i < arr.length; i++) {
-      arr[i] = parseInt(clean.substr(i * 2, 2), 16);
-    }
-    return arr;
-  };
 
   const scheduleFlush = (flush: () => Promise<void>) => {
     if (flushTimer != null) return;
@@ -84,6 +78,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
   return createSlice<PC, SyncSliceState>((set, get, store) => {
     const base = createCrdtSlice<PC, any>({
       selector: options.crdtSelector,
+      ...(options.crdtOptions || {}),
     })(set, get, store as unknown as StoreApi<any>);
 
     // Wrap initialize to also init WS CRDT channels and forward updates
@@ -96,9 +91,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
       await originalInitialize?.();
       try {
         const connector = await get().db.getConnector();
-        if (!isWebSocketDuckDbConnector(connector)) {
-          throw new Error('Connector is not a WebSocketDuckDbConnector');
-        }
+        if (!connectorHasCrdt(connector)) return;
         const initial = forwardSelector(store.getState());
         // Request server state and subscribe
         for (const key of Object.keys(initial)) {
@@ -166,9 +159,6 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
 
         ensureSchema: async () => {
           const connector = await get().db.getConnector();
-          if (!isWebSocketDuckDbConnector(connector)) {
-            throw new Error('Connector is not a WebSocketDuckDbConnector');
-          }
           const s = schema;
           const sql = `
             CREATE SCHEMA IF NOT EXISTS ${s};

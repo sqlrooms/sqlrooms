@@ -26,6 +26,7 @@
   },
   "dependencies": {
     "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
     "immer": "^10.1.1"
   },
   "peerDependencies": {
