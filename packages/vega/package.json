@@ -18,19 +18,19 @@
     "access": "public"
   },
   "dependencies": {
-    "@openassistant/utils": "^0.5.13",
+    "@openassistant/utils": "^0.5.18",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "react-vega": "^7.6.0",
+    "react-vega": "^7.7.1",
     "vega": "^5.33.0",
     "vega-lite": "^5.23.0",
-    "zod": "^3.25.73"
+    "zod": "^3.25.76"
   },
   "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "react": "19.1.0",
+    "react-dom": "19.1.0"
   },
   "scripts": {
     "dev": "tsc -w",
