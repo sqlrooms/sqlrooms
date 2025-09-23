@@ -36,8 +36,13 @@ async def handle_query_ws(ws, cache, query):
         result = await run_duckdb(cache, query, query_id=query_id)
         rtype = result.get("type")
         if rtype == "arrow":
-            payload = _build_arrow_frame(query_id, result["data"])  # bytes
-            _ws_send(ws, payload, OpCode.BINARY)
+            data = result.get("data")
+            if data is None:
+                # Some statements executed with type "arrow" may produce no result
+                _ws_send(ws, {"type": "ok", "queryId": query_id}, OpCode.TEXT)
+            else:
+                payload = _build_arrow_frame(query_id, data)  # bytes
+                _ws_send(ws, payload, OpCode.BINARY)
         elif rtype == "json":
             _ws_send(ws, {"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
         elif rtype == "ok":

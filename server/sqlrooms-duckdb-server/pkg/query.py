@@ -41,16 +41,26 @@ def retrieve(cache, query, get):
 def get_arrow(con, sql):
     result = con.query(sql)
     if result is None:
-        empty_schema = pa.schema([pa.field('empty', pa.null())])
-        arrow_result = pa.Table.from_batches([], schema=empty_schema)
-        return arrow_result
-    return result.arrow()
+        return None
+    else:
+        try:
+            arrow_result = result.to_arrow_table()
+            return arrow_result
+        except Exception as e:
+            logger.error(f"Failed to convert result to Arrow: {str(e)}")
+            raise
 
-
-def arrow_to_bytes(arrow):
+def arrow_to_bytes(table):
+    if table is None:
+        return None
     sink = pa.BufferOutputStream()
-    with pa.ipc.new_stream(sink, arrow.schema) as writer:
-        writer.write(arrow)
+    with pa.ipc.new_stream(sink, table.schema) as writer:
+        # Prefer write_table if available for efficiency
+        if hasattr(writer, 'write_table'):
+            writer.write_table(table)
+        else:
+            for batch in table.to_batches():
+                writer.write_batch(batch)
     return sink.getvalue().to_pybytes()
 
 

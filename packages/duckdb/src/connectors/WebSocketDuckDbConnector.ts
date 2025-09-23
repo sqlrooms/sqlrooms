@@ -169,6 +169,13 @@ export function createWebSocketDuckDbConnector(
               if (t === 'error') {
                 pending.delete(qid);
                 waiter.reject(new Error(parsed?.error || 'Unknown error'));
+              } else if (t === 'ok') {
+                // Server acknowledged an arrow query with no result set
+                pending.delete(qid);
+                const empty = arrow.tableFromArrays(
+                  {},
+                ) as unknown as arrow.Table;
+                waiter.resolve(empty);
               }
               return;
             }
