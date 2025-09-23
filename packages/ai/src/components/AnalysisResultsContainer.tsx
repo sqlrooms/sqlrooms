@@ -1,6 +1,6 @@
 import {cn, ScrollArea, ScrollBar, SkeletonPane} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useRef} from 'react';
+import React, {useRef, useMemo} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
@@ -9,14 +9,26 @@ export const AnalysisResultsContainer: React.FC<{
   className?: string;
 }> = ({className}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages,
+  );
+  const getAnalysisResults = useStoreWithAi((s) => s.ai.getAnalysisResults);
+  const currentAnalysisResults = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.analysisResults,
+  );
+
+  // Memoize the analysis results to prevent infinite re-renders
+  // We depend on uiMessages and currentAnalysisResults (error message) which is the actual data that changes
+  const analysisResults = useMemo(() => {
+    return getAnalysisResults();
+  }, [uiMessages, currentAnalysisResults]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
     endRef,
-    dataToObserve: currentSession?.analysisResults,
+    dataToObserve: analysisResults,
   });
 
   return (
@@ -25,8 +37,10 @@ export const AnalysisResultsContainer: React.FC<{
         ref={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
-        {/* Unified view (renders UI messages; legacy results handled via migration) */}
-        <AnalysisResult />
+        {/* Render analysis results */}
+        {analysisResults.map((result) => (
+          <AnalysisResult key={result.id} result={result} />
+        ))}
         {isRunningAnalysis && <SkeletonPane className="p-4" />}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />

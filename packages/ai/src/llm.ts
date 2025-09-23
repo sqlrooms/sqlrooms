@@ -6,8 +6,7 @@ import {
 } from 'ai';
 import type {LanguageModel} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import {DataTable, DuckDbSliceState} from '@sqlrooms/duckdb';
-import {getDefaultInstructions} from './analysis';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {convertToVercelAiTool} from './utils';
 import {produce} from 'immer';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
@@ -29,9 +28,9 @@ export type LlmDeps = {
   get: GetFn;
   defaultProvider: string;
   defaultModel: string;
-  getApiKey?: (modelProvider: string) => string;
-  getBaseUrl?: () => string | undefined;
-  getInstructions?: (tablesSchema: DataTable[]) => string;
+  apiKey: string;
+  baseUrl?: string;
+  instructions: string;
   /**
    * Optional: supply a pre-configured client for a given provider, e.g. Azure created via createAzure.
    * If provided and returns a client for the active provider, it will be used to create the model
@@ -49,9 +48,9 @@ export function createLocalChatTransportFactory({
   get,
   defaultProvider,
   defaultModel,
-  getApiKey,
-  getBaseUrl,
-  getInstructions,
+  apiKey,
+  baseUrl,
+  instructions,
   getModelClientForProvider,
 }: LlmDeps) {
   return () => {
@@ -61,8 +60,6 @@ export function createLocalChatTransportFactory({
       const currentSession = state.ai.getCurrentSession();
       const provider = currentSession?.modelProvider || defaultProvider;
       const modelId = currentSession?.model || defaultModel;
-      const apiKey = getApiKey?.(provider) || '';
-      const baseUrl = getBaseUrl?.();
 
       // Prefer a user-supplied client for this provider if available
       const customClient = getModelClientForProvider?.(provider);
@@ -121,10 +118,7 @@ export function createLocalChatTransportFactory({
       );
 
       // get system instructions
-      const tableSchemas: DataTable[] = state.db.tables;
-      const systemInstructions = getInstructions
-        ? getInstructions(tableSchemas)
-        : getDefaultInstructions(tableSchemas);
+      const systemInstructions = instructions;
 
       const result = streamText({
         model,
@@ -168,17 +162,41 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
         const currentSessionId = get().config.ai.currentSessionId;
         if (!currentSessionId) return;
         get().ai.setSessionUiMessages(currentSessionId, messages);
-        // mark the current analysis result as completed if present
+
+        // Create analysis result with the user message ID for proper correlation
         set((state: GetState) =>
           produce(state, (draft: GetState) => {
             const targetSession = draft.config.ai.sessions.find(
               (s: AnalysisSession) => s.id === currentSessionId,
             );
             if (!targetSession) return;
-            // update the last analysis result
-            const lastResult = targetSession.analysisResults.slice(-1)[0];
-            if (lastResult) {
-              lastResult.isCompleted = true;
+
+            // Find the last user message to get its ID and prompt
+            const lastUserMessage = messages
+              .filter((msg) => msg.role === 'user')
+              .slice(-1)[0];
+
+            if (lastUserMessage) {
+              // Check if analysis result already exists for this user message
+              const existingResult = targetSession.analysisResults.find(
+                (result) => result.id === lastUserMessage.id,
+              );
+
+              if (!existingResult) {
+                // Extract text content from user message
+                const promptText = lastUserMessage.parts
+                  .filter((part) => part.type === 'text')
+                  .map((part) => (part as {text: string}).text)
+                  .join('');
+
+                // Create analysis result with the same ID as the user message
+                targetSession.analysisResults.push({
+                  id: lastUserMessage.id,
+                  prompt: promptText,
+                  response: [],
+                  isCompleted: true,
+                });
+              }
             }
           }),
         );
@@ -207,10 +225,36 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
               (s: AnalysisSession) => s.id === currentSessionId,
             );
             if (targetSession) {
-              const last = targetSession.analysisResults.slice(-1)[0];
-              if (last) {
-                last.errorMessage = {error: errMsg};
-                last.isCompleted = true;
+              // Find the last user message to create analysis result with correct ID
+              const lastUserMessage = targetSession.uiMessages
+                .filter((msg) => msg.role === 'user')
+                .slice(-1)[0];
+
+              if (lastUserMessage) {
+                // Check if analysis result already exists for this user message
+                const existingResult = targetSession.analysisResults.find(
+                  (result) => result.id === lastUserMessage.id,
+                );
+
+                if (!existingResult) {
+                  // Extract text content from user message
+                  const promptText = lastUserMessage.parts
+                    .filter((part) => part.type === 'text')
+                    .map((part) => (part as {text: string}).text)
+                    .join('');
+
+                  // Create analysis result with the same ID as the user message
+                  targetSession.analysisResults.push({
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    response: [],
+                    errorMessage: {error: errMsg},
+                    isCompleted: true,
+                  });
+                } else {
+                  // Update existing result with error message
+                  existingResult.errorMessage = {error: errMsg};
+                }
               }
             }
             draft.ai.isRunningAnalysis = false;

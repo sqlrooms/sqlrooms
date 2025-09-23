@@ -1,6 +1,6 @@
 import {z} from 'zod';
-import {migrateStreamMessage, migrateAnalysisSession} from './migration';
-import {UIMessageSchema} from './schema/UIMessageSchema';
+import {migrateAnalysisSession} from './migration';
+import {UIMessageSchema, UIMessagePartSchema} from './schema/UIMessageSchema';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -15,9 +15,11 @@ export const ErrorMessageSchema = z.object({
 export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 
 export const AnalysisResultSchema = z.object({
-  id: z.string().cuid2(),
+  id: z.string(), // Allow any string ID to match UI message IDs
   prompt: z.string(),
-  streamMessage: migrateStreamMessage,
+  // deprecated
+  // streamMessage: migrateStreamMessage,
+  response: z.array(UIMessagePartSchema),
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });

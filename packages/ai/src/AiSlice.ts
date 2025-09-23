@@ -10,7 +10,8 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {AnalysisSessionSchema} from './schemas';
+import {AnalysisSessionSchema, AnalysisResultSchema} from './schemas';
+import {UIMessagePart} from './schema/UIMessageSchema';
 import {UIMessage, DefaultChatTransport} from 'ai';
 
 import {
@@ -84,11 +85,22 @@ export type AiSliceState = {
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
+    getAnalysisResults: () => AnalysisResultSchema[];
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
-    /** Returns a chat transport configured with current provider/model, apiKey and baseUrl */
+    getApiKeyFromSettings: () => string;
+    getBaseUrlFromSettings: () => string | undefined;
+    getMaxStepsFromSettings: () => number;
+    getInstructionsFromSettings: () => string;
+    setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
+    setSessionToolAdditionalData: (
+      sessionId: string,
+      updater:
+        | Record<string, unknown>
+        | ((prev: Record<string, unknown>) => Record<string, unknown>),
+    ) => void;
+    // TODO: move the following methods to AiChatSlice
     getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
-    /** Returns a chat transport that proxies to a remote endpoint (UIMessage stream) */
     getRemoteChatTransport: (
       endpoint: string,
       headers?: Record<string, string>,
@@ -97,7 +109,7 @@ export type AiSliceState = {
     endPoint: string;
     /** Optional headers to send with remote endpoint */
     headers: Record<string, string>;
-    /** Chat handler: tool calls from the model */
+    /** Chat handler: tool calls locally */
     onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
     /** Chat handler: final assistant message */
     onChatFinish: (args: {
@@ -107,12 +119,6 @@ export type AiSliceState = {
     }) => void;
     /** Chat handler: error */
     onChatError: (error: unknown) => void;
-    /** Initialize toolAdditionalData from the current session */
-    initializeToolAdditionalData: () => void;
-    getApiKeyFromSettings: () => string;
-    getBaseUrlFromSettings: () => string | undefined;
-    getMaxStepsFromSettings: () => number;
-    getInstructionsFromSettings: () => string;
   };
 };
 
@@ -248,6 +254,74 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         },
 
         /**
+         * Get analysis results from the current session's UI messages
+         */
+        getAnalysisResults: (): AnalysisResultSchema[] => {
+          const currentSession = get().ai.getCurrentSession();
+          if (!currentSession?.uiMessages?.length) return [];
+
+          const results: AnalysisResultSchema[] = [];
+          let i = 0;
+
+          while (i < currentSession.uiMessages.length) {
+            const userMessage = currentSession.uiMessages[i];
+
+            // Skip non-user messages
+            if (!userMessage || userMessage.role !== 'user') {
+              i++;
+              continue;
+            }
+
+            // Extract user prompt text
+            const prompt = userMessage.parts
+              .filter(
+                (part): part is {type: 'text'; text: string} =>
+                  part.type === 'text',
+              )
+              .map((part) => part.text)
+              .join('');
+
+            // Find the assistant response
+            let response: UIMessagePart[] = [];
+            let isCompleted = false;
+            let nextIndex = i + 1;
+
+            for (let j = i + 1; j < currentSession.uiMessages.length; j++) {
+              const nextMessage = currentSession.uiMessages[j];
+              if (!nextMessage) continue;
+
+              if (nextMessage.role === 'assistant') {
+                response = nextMessage.parts;
+                isCompleted = true;
+                nextIndex = j + 1; // Skip past the assistant message
+                break;
+              } else if (nextMessage.role === 'user') {
+                // Stop at next user message
+                nextIndex = j;
+                break;
+              }
+            }
+
+            // Check if there's a related item in currentSession.analysisResults
+            const relatedAnalysisResult = currentSession.analysisResults?.find(
+              (result) => result.id === userMessage.id,
+            );
+
+            results.push({
+              id: userMessage.id,
+              prompt,
+              response,
+              errorMessage: relatedAnalysisResult?.errorMessage,
+              isCompleted,
+            });
+
+            i = nextIndex;
+          }
+
+          return results;
+        },
+
+        /**
          * Create a new session with the given name and model settings
          */
         createSession: (
@@ -372,8 +446,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 ?.analysisResults.push({
                   id: resultId,
                   prompt: textContent,
-                  // Ignore streamMessage to reduce payload size
-                  streamMessage: {},
+                  response: [],
                   isCompleted: true,
                 });
             }),
@@ -387,37 +460,22 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         startAnalysis: async (
           sendMessage: (message: {text: string}) => void,
         ) => {
-          const promptText = get().ai.analysisPrompt;
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) {
             console.error('No current session found');
             return;
           }
 
-          const newResultId = createId();
-
           set((state) =>
             produce(state, (draft) => {
               // mark running and create controller
               draft.ai.isRunningAnalysis = true;
               draft.ai.analysisAbortController = new AbortController();
-
-              // create a new analysis result for this prompt (ignore streamMessage)
-              const session = draft.config.ai.sessions.find(
-                (s) => s.id === currentSession.id,
-              );
-              if (session) {
-                session.analysisResults.push({
-                  id: newResultId,
-                  prompt: promptText,
-                  streamMessage: {},
-                  isCompleted: false,
-                });
-              }
             }),
           );
 
           // Delegate to chat hook; lifecycle managed by onChatFinish/onChatError
+          // Analysis result will be created in onChatFinish with the correct message ID
           sendMessage({text: get().ai.analysisPrompt});
         },
 
@@ -434,6 +492,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
         /**
          * Delete an analysis result from a session
+         * Also removes the corresponding prompt-response pair from uiMessages
          */
         deleteAnalysisResult: (sessionId: string, resultId: string) => {
           set((state) =>
@@ -442,9 +501,32 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 (s) => s.id === sessionId,
               );
               if (session) {
+                // Remove from analysisResults by matching the ID
                 session.analysisResults = session.analysisResults.filter(
                   (r) => r.id !== resultId,
                 );
+
+                // Remove corresponding prompt-response pair from uiMessages
+                const userMessageIndex = session.uiMessages.findIndex(
+                  (msg) => msg.id === resultId && msg.role === 'user',
+                );
+
+                if (userMessageIndex !== -1) {
+                  // Find the next user message (or end of array) to determine response boundary
+                  let nextUserIndex = userMessageIndex + 1;
+                  while (
+                    nextUserIndex < session.uiMessages.length &&
+                    session.uiMessages[nextUserIndex]?.role !== 'user'
+                  ) {
+                    nextUserIndex++;
+                  }
+
+                  // Remove the user message and all assistant messages until the next user message
+                  session.uiMessages.splice(
+                    userMessageIndex,
+                    nextUserIndex - userMessageIndex,
+                  );
+                }
               }
             }),
           );
@@ -461,9 +543,9 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             get,
             defaultProvider,
             defaultModel,
-            getApiKey,
-            getBaseUrl,
-            getInstructions,
+            apiKey: get().ai.getApiKeyFromSettings(),
+            baseUrl: get().ai.getBaseUrlFromSettings(),
+            instructions: get().ai.getInstructionsFromSettings(),
             getModelClientForProvider,
           })(),
 
@@ -474,8 +556,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
         ...createChatHandlers({get, set}),
 
-        /** no-op kept for backward compatibility */
-        initializeToolAdditionalData: () => {},
         getBaseUrlFromSettings: () => {
           // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.();

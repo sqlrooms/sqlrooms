@@ -139,7 +139,7 @@ const DataUIPartSchema = z.object({
   data: z.unknown(),
 });
 
-const UIMessagePartSchema = z.union([
+export const UIMessagePartSchema = z.union([
   TextUIPartSchema,
   ReasoningUIPartSchema,
   ToolUIPartSchema,
@@ -158,3 +158,6 @@ export const UIMessageSchema = z.object({
   metadata: z.unknown().optional(),
   parts: z.array(UIMessagePartSchema),
 });
+
+// Export the type for UIMessagePart
+export type UIMessagePart = z.infer<typeof UIMessagePartSchema>;
