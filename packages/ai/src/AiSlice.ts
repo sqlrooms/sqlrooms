@@ -314,16 +314,13 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || defaultProvider,
               model: currentSession.model || defaultModel,
-              apiKey:
-                getApiKey?.(currentSession.modelProvider || defaultProvider) ||
-                get().ai.getApiKeyFromSettings(),
-              baseUrl: getBaseUrl?.() || get().ai.getBaseUrlFromSettings(),
+              apiKey: get().ai.getApiKeyFromSettings(),
+              baseUrl: get().ai.getBaseUrlFromSettings(),
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
-              maxSteps: maxSteps || get().ai.getMaxStepsFromSettings() || 5,
-              getInstructions:
-                getInstructions || get().ai.getInstructionsFromSettings,
+              maxSteps: get().ai.getMaxStepsFromSettings(),
+              getInstructions: get().ai.getInstructionsFromSettings,
               historyAnalysis: currentSession.analysisResults,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -389,6 +386,13 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         },
 
         getBaseUrlFromSettings: () => {
+          // First try the getBaseUrl function if provided
+          const baseUrlFromFunction = getBaseUrl?.();
+          if (baseUrlFromFunction) {
+            return baseUrlFromFunction;
+          }
+
+          // Fall back to settings
           const store = get();
           if (hasAiSettings(store.config)) {
             const currentSession = getCurrentSessionFromState(store);
@@ -410,9 +414,18 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
         getApiKeyFromSettings: () => {
           const store = get();
-          if (hasAiSettings(store.config)) {
-            const currentSession = getCurrentSessionFromState(store);
-            if (currentSession) {
+          const currentSession = getCurrentSessionFromState(store);
+          if (currentSession) {
+            // First try the getApiKey function if provided
+            const apiKeyFromFunction = getApiKey?.(
+              currentSession.modelProvider || defaultProvider,
+            );
+            if (apiKeyFromFunction) {
+              return apiKeyFromFunction;
+            }
+
+            // Fall back to settings
+            if (hasAiSettings(store.config)) {
               if (currentSession.modelProvider === 'custom') {
                 const customModel = store.config.aiSettings.customModels.find(
                   (m: {modelName: string}) =>
@@ -433,15 +446,32 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
         getMaxStepsFromSettings: () => {
           const store = get();
-          if (hasAiSettings(store.config)) {
-            return store.config.aiSettings.modelParameters.maxSteps || 5;
+          // First try the maxSteps parameter if provided
+          if (maxSteps && Number.isFinite(maxSteps) && maxSteps > 0) {
+            return maxSteps;
           }
-          return maxSteps || 5;
+
+          // Fall back to settings
+          if (hasAiSettings(store.config)) {
+            const settingsMaxSteps =
+              store.config.aiSettings.modelParameters.maxSteps;
+            if (Number.isFinite(settingsMaxSteps) && settingsMaxSteps > 0) {
+              return settingsMaxSteps;
+            }
+          }
+          return 5;
         },
 
         getInstructionsFromSettings: () => {
           const store = get();
           const tablesSchema = store.db?.tables || [];
+
+          // First try the getInstructions function if provided
+          if (getInstructions) {
+            return getInstructions(tablesSchema);
+          }
+
+          // Fall back to settings
           if (hasAiSettings(store.config)) {
             let instructions = tablesSchema
               ? getDefaultInstructions(tablesSchema)
