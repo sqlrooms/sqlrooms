@@ -87,6 +87,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           <Button
             size="xs"
             variant="secondary"
+            className="h-6"
             onClick={() => {
               update(id, (c) => ({...c, vegaSpec: draftSpec}));
               setIsEditing(false);

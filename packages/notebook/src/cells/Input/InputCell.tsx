@@ -12,12 +12,16 @@ import {
 
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../NotebookSlice';
-import {ParameterConfigPanel} from './ParameterConfigPanel/ParameterConfigPanel';
-import {ParameterUnion} from '../../cellSchemas';
+import {InputConfigPanel} from './InputConfigPanel/InputConfigPanel';
+import {
+  InputUnion,
+  InputCell as InputCellType,
+  NotebookCell,
+} from '../../cellSchemas';
 
 const RenderInput: React.FC<{
-  input: ParameterUnion;
-  updateInput: (patch: Partial<ParameterUnion>) => void;
+  input: InputUnion;
+  updateInput: (patch: Partial<InputUnion>) => void;
 }> = ({input, updateInput}) => {
   switch (input.kind) {
     case 'text':
@@ -66,33 +70,46 @@ const RenderInput: React.FC<{
   }
 };
 
-export const InputCell: React.FC<{id: string}> = ({id}) => {
+export const InputItem: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const remove = useStoreWithNotebook((s) => s.notebook.removeCell);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   if (!cell || cell.type !== 'input') return null;
   const input = cell.input;
-  const updateInput = (patch: Partial<typeof input>) =>
-    update(
-      id,
-      (c) =>
-        ({
-          ...c,
-          input: {...(c as any).input, ...(patch as any)},
-        }) as typeof cell,
-    );
+
+  const updateInput = (patch: Partial<InputUnion>) =>
+    update(id, (cell) => {
+      const typed = cell as InputCellType;
+      return {
+        ...typed,
+        input: {...typed.input, ...patch},
+      } as NotebookCell;
+    });
 
   return (
+    <div className="mx-2 flex w-[200px] flex-col gap-1 py-1 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <EditableText
+          value={input.varName}
+          onChange={(varName) => updateInput({varName})}
+          className="h-6 text-xs font-semibold"
+        />
+        <InputConfigPanel
+          input={input}
+          updateInput={updateInput}
+          onRemove={() => remove(id)}
+        />
+      </div>
+      <RenderInput input={input} updateInput={updateInput} />
+    </div>
+  );
+};
+
+export const InputCell: React.FC<{id: string}> = ({id}) => {
+  return (
     <CellContainer id={id} typeLabel="Input">
-      <div className="flex w-[200px] flex-col gap-1 p-2 text-sm">
-        <div className="flex items-center justify-between gap-2">
-          <EditableText
-            value={input.varName}
-            onChange={(varName) => updateInput({varName})}
-            className="h-6 text-xs font-semibold"
-          />
-          <ParameterConfigPanel input={input} updateInput={updateInput} />
-        </div>
-        <RenderInput input={input} updateInput={updateInput} />
+      <div className="p-2">
+        <InputItem id={id} />
       </div>
     </CellContainer>
   );

@@ -23,7 +23,7 @@ import {findTab, getCellTypeLabel} from './NotebookUtils';
 export type NotebookCellRegistryItem = {
   title: string;
   createCell: (id: string) => NotebookCell;
-  renderComponent: (id: string) => any;
+  renderComponent: (id: string) => React.ReactElement;
   findDependencies: (
     cell: NotebookCell,
     cells: Record<string, NotebookCell>,
@@ -42,6 +42,7 @@ export type NotebookSliceState = {
     renameTab: (id: string, title: string) => void;
     setCurrentTab: (id: string) => void;
     removeTab: (id: string) => void;
+    toggleShowInputBar: (id: string) => void;
 
     addCell: (tabId: string, type: NotebookCellTypes, index?: number) => string;
     moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
@@ -52,7 +53,6 @@ export type NotebookSliceState = {
       updater: (cell: NotebookCell) => NotebookCell,
     ) => void;
     setCurrentCell: (id: string) => void;
-    addNewInput: (cellId: string) => void;
 
     runCell: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
     runAllCells: (tabId: string) => Promise<void>;
@@ -90,7 +90,15 @@ export function createDefaultNotebookConfig(
   const defaultTabId = createId();
   return {
     notebook: {
-      tabs: [{id: defaultTabId, title: 'Notebook 1', cellOrder: []}],
+      tabs: [
+        {
+          id: defaultTabId,
+          title: 'Notebook 1',
+          cellOrder: [],
+          inputBarOrder: [],
+          showInputBar: true,
+        },
+      ],
       currentTabId: defaultTabId,
       cells: {},
       ...props,
@@ -181,6 +189,8 @@ export function createNotebookSlice<
                 id,
                 title: `Notebook ${draft.config.notebook.tabs.length + 1}`,
                 cellOrder: [],
+                inputBarOrder: [],
+                showInputBar: true,
               });
               draft.config.notebook.currentTabId = id;
             }),
@@ -230,6 +240,15 @@ export function createNotebookSlice<
           );
         },
 
+        toggleShowInputBar: (id) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const tab = findTab(draft.config.notebook, id);
+              if (tab) tab.showInputBar = !tab.showInputBar;
+            }),
+          );
+        },
+
         addCell: (tabId, type, index) => {
           const id = createId();
           set((state) =>
@@ -248,6 +267,7 @@ export function createNotebookSlice<
               }
               draft.config.notebook.cells[id] = cell;
 
+              // cellOrder
               const newIndex = index ?? tab.cellOrder.length;
               tab.cellOrder = [
                 ...tab.cellOrder.slice(0, newIndex),
@@ -255,6 +275,16 @@ export function createNotebookSlice<
                 ...tab.cellOrder.slice(newIndex),
               ];
 
+              // inputBarOrder
+              if (type === 'input') {
+                tab.inputBarOrder = [
+                  ...tab.inputBarOrder.slice(0, newIndex),
+                  id,
+                  ...tab.inputBarOrder.slice(newIndex),
+                ];
+              }
+
+              // cellStatus
               if (type === 'sql') {
                 draft.notebook.cellStatus[id] = {
                   type: 'sql',
@@ -306,6 +336,9 @@ export function createNotebookSlice<
               delete draft.notebook.activeAbortControllers[cellId];
               for (const tab of draft.config.notebook.tabs) {
                 tab.cellOrder = tab.cellOrder.filter((id) => id !== cellId);
+                tab.inputBarOrder = tab.inputBarOrder.filter(
+                  (id) => id !== cellId,
+                );
               }
             }),
           );
@@ -339,30 +372,6 @@ export function createNotebookSlice<
               draft.config.notebook.currentCellId = id;
             }),
           );
-        },
-
-        addNewInput(cellId) {
-          // set((state) =>
-          //   produce(state, (draft) => {
-          //     const cell = draft.config.notebook.cells[cellId];
-          //     if (!cell || cell.type !== 'input') return;
-          //     const name = generateUniqueName('param', []);
-          //     cell.inputs = [
-          //       ...cell.inputs,
-          //       {
-          //         id: createId(),
-          //         name,
-          //         type: 'input',
-          //         input: {
-          //           kind: 'dropdown',
-          //           varName: name,
-          //           options: [],
-          //           value: '',
-          //         },
-          //       },
-          //     ];
-          //   }),
-          // );
         },
 
         cancelRunCell: (cellId) => {

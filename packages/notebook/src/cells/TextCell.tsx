@@ -38,6 +38,7 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
           <Button
             size="xs"
             variant="secondary"
+            className="h-6"
             onClick={() => {
               update(id, (c) => ({...c, text: draftText}));
               setIsEditing(false);

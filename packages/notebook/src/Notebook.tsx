@@ -1,12 +1,13 @@
 import {Button, EditableText} from '@sqlrooms/ui';
 import React, {useEffect} from 'react';
+import {PlusIcon} from 'lucide-react';
 
 import {useStoreWithNotebook} from './NotebookSlice';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {NotebookCellTypes} from './cellSchemas';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
-import {ParameterBar} from './cells/ParameterBar';
-import {PlusIcon} from 'lucide-react';
+import {InputBar, ShowInputBarToggle} from './cells/InputBar';
+import {CellView} from './cells/CellView';
 
 export const TabsBar: React.FC = () => {
   const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
@@ -40,15 +41,6 @@ export const TabsBar: React.FC = () => {
       </Button>
     </div>
   );
-};
-
-export const CellView: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
-  const render = useStoreWithNotebook(
-    (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
-  );
-  if (!cell || !render) return null;
-  return render(id);
 };
 
 export const Notebook: React.FC = () => {
@@ -90,7 +82,7 @@ export const Notebook: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <TabsBar />
-      <div className="ml-auto mr-0 flex items-center gap-1 px-4 py-2">
+      <div className="ml-auto mr-0 flex items-center gap-1 px-4 pt-2">
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
@@ -100,8 +92,12 @@ export const Notebook: React.FC = () => {
         >
           Run all
         </Button>
+        <ShowInputBarToggle />
       </div>
-      <ParameterBar />
+      <InputBar
+        inputBarOrder={tab.inputBarOrder}
+        showInputBar={tab.showInputBar}
+      />
 
       <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
         {tab.cellOrder.map((id, index) => (

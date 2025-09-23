@@ -84,6 +84,9 @@ export const DropdownConfig = () => {
               value={option}
               onChange={(e) => {
                 setOption(e.target.value);
+                if (errors.options) {
+                  clearErrors('options');
+                }
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter') {

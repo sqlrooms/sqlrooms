@@ -1,40 +1,40 @@
 import {z} from 'zod';
 
-/** Notebook parameters in Input Cell */
-export const ParameterTypes = z.enum(['text', 'slider', 'dropdown']);
-export type ParameterTypes = z.infer<typeof ParameterTypes>;
+/** Notebook input types in Input Cell */
+export const InputTypes = z.enum(['text', 'slider', 'dropdown']);
+export type InputTypes = z.infer<typeof InputTypes>;
 
-const ParameterText = z.object({
-  kind: z.literal(ParameterTypes.enum.text),
+const InputText = z.object({
+  kind: z.literal(InputTypes.enum.text),
   varName: z.string(),
   value: z.string().default(''),
 });
-export type ParameterText = z.infer<typeof ParameterText>;
+export type InputText = z.infer<typeof InputText>;
 
-const ParameterSlider = z.object({
-  kind: z.literal(ParameterTypes.enum.slider),
+const InputSlider = z.object({
+  kind: z.literal(InputTypes.enum.slider),
   varName: z.string(),
   min: z.number().default(0),
   max: z.number().default(100),
   step: z.number().default(1),
   value: z.number().default(0),
 });
-export type ParameterSlider = z.infer<typeof ParameterSlider>;
+export type InputSlider = z.infer<typeof InputSlider>;
 
-const ParameterDropdown = z.object({
-  kind: z.literal(ParameterTypes.enum.dropdown),
+const InputDropdown = z.object({
+  kind: z.literal(InputTypes.enum.dropdown),
   varName: z.string(),
   options: z.array(z.string()).default([]),
   value: z.string().default(''),
 });
-export type ParameterDropdown = z.infer<typeof ParameterDropdown>;
+export type InputDropdown = z.infer<typeof InputDropdown>;
 
-export const ParameterUnion = z.discriminatedUnion('kind', [
-  ParameterText,
-  ParameterSlider,
-  ParameterDropdown,
+export const InputUnion = z.discriminatedUnion('kind', [
+  InputText,
+  InputSlider,
+  InputDropdown,
 ]);
-export type ParameterUnion = z.infer<typeof ParameterUnion>;
+export type InputUnion = z.infer<typeof InputUnion>;
 
 /** Notebook Cell */
 export const NotebookCellTypes = z.enum(['sql', 'text', 'vega', 'input']);
@@ -69,7 +69,7 @@ export const InputCellSchema = z.object({
   id: z.string(),
   name: z.string().default('Input'),
   type: z.literal('input'),
-  input: ParameterUnion,
+  input: InputUnion,
 });
 export type InputCell = z.infer<typeof InputCellSchema>;
 
@@ -86,6 +86,8 @@ export const NotebookTabSchema = z.object({
   id: z.string(),
   title: z.string().default('Notebook'),
   cellOrder: z.array(z.string()).default([]),
+  inputBarOrder: z.array(z.string()).default([]),
+  showInputBar: z.boolean().default(true),
 });
 export type NotebookTab = z.infer<typeof NotebookTabSchema>;
 

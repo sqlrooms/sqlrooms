@@ -11,7 +11,8 @@ export const CellContainer: React.FC<{
   rightControls?: React.ReactNode;
   leftControls?: React.ReactNode;
   children?: React.ReactNode;
-}> = ({id, typeLabel, rightControls, leftControls, children}) => {
+  className?: string;
+}> = ({id, typeLabel, rightControls, leftControls, children, className}) => {
   const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
@@ -23,9 +24,13 @@ export const CellContainer: React.FC<{
   if (!cell) return null;
   return (
     <div
-      className={cn('group rounded border', {
-        'border-primary': isCurrent,
-      })}
+      className={cn(
+        'group rounded border',
+        {
+          'border-primary': isCurrent,
+        },
+        className,
+      )}
       onClick={() => setCurrentCell(id)}
     >
       <div className="flex items-center justify-between border-b px-2">

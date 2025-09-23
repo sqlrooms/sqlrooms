@@ -19,22 +19,24 @@ import {SettingsIcon} from 'lucide-react';
 
 import {TextConfig} from './TextConfig';
 import {DropdownConfig} from './DropdownConfig';
-import {initializeParameter} from '../../../NotebookUtils';
-import {ParameterTypes, ParameterUnion} from '../../../cellSchemas';
+import {initializeInput} from '../../../NotebookUtils';
+import {InputTypes, InputUnion} from '../../../cellSchemas';
 import {SliderConfig} from './SliderConfig';
 
 type Props = {
   className?: string;
-  input: ParameterUnion;
-  updateInput: (patch: ParameterUnion) => void;
+  input: InputUnion;
+  updateInput: (patch: InputUnion) => void;
+  onRemove?: () => void;
 };
 
-export const ParameterConfigPanel: FC<Props> = ({
+export const InputConfigPanel: FC<Props> = ({
   className,
   input,
   updateInput,
+  onRemove,
 }) => {
-  const methods = useForm<ParameterUnion>({
+  const methods = useForm<InputUnion>({
     defaultValues: input,
     mode: 'onChange',
     reValidateMode: 'onChange',
@@ -51,7 +53,7 @@ export const ParameterConfigPanel: FC<Props> = ({
     reset(input);
   }, [input, reset]);
 
-  const onSubmit = (data: ParameterUnion) => {
+  const onSubmit = (data: InputUnion) => {
     if (data.kind === 'dropdown' && !data.value && data.options.length > 0) {
       const newValue = data.options[0] ?? '';
       updateInput({...data, value: newValue});
@@ -101,17 +103,18 @@ export const ParameterConfigPanel: FC<Props> = ({
                 />
               </div>
 
-              <ParameterTypeDropdown methods={methods} />
+              <InputTypeDropdown methods={methods} />
 
-              <ParameterConfig methods={methods} />
+              <InputConfig methods={methods} />
             </form>
             <Button
               type="button"
               variant="outline"
               size="xs"
               className="w-full border-red-500 text-red-500 hover:bg-red-500/10 hover:text-red-600"
+              onClick={onRemove}
             >
-              Remove parameter
+              Remove input
             </Button>
           </PopoverContent>
         </Popover>
@@ -120,9 +123,7 @@ export const ParameterConfigPanel: FC<Props> = ({
   );
 };
 
-const ParameterConfig: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
-  methods,
-}) => {
+const InputConfig: FC<{methods: UseFormReturn<InputUnion>}> = ({methods}) => {
   const draftInput = methods.watch();
   switch (draftInput.kind) {
     case 'text':
@@ -134,15 +135,15 @@ const ParameterConfig: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
   }
 };
 
-const ParameterTypeDropdown: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
+const InputTypeDropdown: FC<{methods: UseFormReturn<InputUnion>}> = ({
   methods,
 }) => {
   const {watch, reset, getValues, trigger} = methods;
   const kind = watch('kind');
 
-  const onTypeChange = (kind: ParameterTypes) => {
-    const newParameter = initializeParameter(kind, getValues());
-    reset(newParameter, {keepErrors: false});
+  const onTypeChange = (kind: InputTypes) => {
+    const newInput = initializeInput(kind, getValues());
+    reset(newInput, {keepErrors: false});
     trigger();
   };
 
@@ -154,7 +155,7 @@ const ParameterTypeDropdown: FC<{methods: UseFormReturn<ParameterUnion>}> = ({
           <SelectValue />
         </SelectTrigger>
         <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-          {ParameterTypes.options.map((option) => (
+          {InputTypes.options.map((option) => (
             <SelectItem className="text-xs" key={option} value={option}>
               {option}
             </SelectItem>
