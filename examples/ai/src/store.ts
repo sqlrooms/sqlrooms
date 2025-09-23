@@ -1,15 +1,13 @@
 import {
-  AiSliceConfig,
-  AiSliceState,
-  createAiSlice,
-  createDefaultAiConfig,
-  getDefaultInstructions,
   AiSettingsSliceConfig,
   AiSettingsSliceState,
+  AiSliceConfig,
+  AiSliceState,
   createAiSettingsSlice,
+  createAiSlice,
+  createDefaultAiConfig,
   createDefaultAiSettings,
 } from '@sqlrooms/ai';
-import {DataTable} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -33,7 +31,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {LLM_MODELS, PROVIDER_DEFAULT_BASE_URLS} from './models';
+import {AI_SETTINGS, migrateRoomConfig} from './config';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -46,9 +44,13 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
-  .merge(SqlEditorSliceConfig)
-  .merge(AiSettingsSliceConfig);
+export const RoomConfig = z.preprocess(
+  // (Optional) Migrate room older versions of the example app config to prevent errors
+  migrateRoomConfig,
+  BaseRoomConfig.merge(AiSliceConfig)
+    .merge(SqlEditorSliceConfig)
+    .merge(AiSettingsSliceConfig),
+);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -84,25 +86,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ...createDefaultAiConfig(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
-          ...createDefaultAiSettings({
-            providers: LLM_MODELS.reduce(
-              (acc: Record<string, unknown>, provider) => {
-                acc[provider.name] = {
-                  baseUrl:
-                    PROVIDER_DEFAULT_BASE_URLS[
-                      provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
-                    ],
-                  apiKey: '',
-                  models: provider.models.map((model) => ({
-                    id: model,
-                    modelName: model,
-                  })),
-                };
-                return acc;
-              },
-              {},
-            ) as AiSettingsSliceConfig['aiSettings']['providers'],
-          }),
+          ...createDefaultAiSettings(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
