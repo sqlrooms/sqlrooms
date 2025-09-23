@@ -44,4 +44,4 @@ export {AiModelsSettings} from './components/settings/AiModelsSettings';
 export {AiModelParameters} from './components/settings/AiModelParameters';
 export {AiModelUsage} from './components/settings/AiModelUsage';
 export type {ModelUsageData} from './components/settings/AiModelUsage';
-export {getApiKey, getBaseUrl, extractModelsFromSettings} from './utils';
+export {extractModelsFromSettings} from './utils';

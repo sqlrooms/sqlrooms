@@ -8,8 +8,6 @@ import {
   AiSettingsSliceState,
   createAiSettingsSlice,
   createDefaultAiSettings,
-  getApiKey,
-  getBaseUrl,
 } from '@sqlrooms/ai';
 import {DataTable} from '@sqlrooms/duckdb';
 import {
@@ -134,45 +132,38 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai slice
       ...createAiSlice({
-        // Get API key from Ai model config UI or your custom logic
-        getApiKey: () => {
-          // get selected model from current session
-          const state = get();
-          const currentSessionId = state.config.ai.currentSessionId;
-          if (!currentSessionId) return '';
-          const currentSession = state.config.ai.sessions.find(
-            (s) => s.id === currentSessionId,
-          );
+        // You can configure the Api key in the Ai Settings panel,
+        // or (optional) provide API key with your own custom logic here
+        // getApiKey: (modelProvider: string) => {
+        //  return your api key here
+        // },
 
-          return getApiKey(
-            state.config.aiSettings,
-            currentSession?.modelProvider || '',
-            currentSession?.model || '',
-          );
-        },
+        // You can configure the base URL in the Ai Settings panel,
+        // or (optional) provide base URL with your own custom logic here
+        // getBaseUrl: () => {
+        //   // return your base url
+        // },
+
+        // You can configure the max steps of using tools in the Ai Settings panel,
+        // or (optional) provide max steps here
+        // maxSteps: 5,
+
+        // You can configure custom instructions in the Ai Settings panel,
+        // or (optional) provide custom instructions with your own custom logic here
+        // Example of customizing the system instructions
+        // getInstructions: (tablesSchema: DataTable[]) => {
+        //   // get default instructions from sqlrooms/ai
+        //   let instructions = getDefaultInstructions(tablesSchema);
+        //   // you can add more instructions here if you want
+        //   instructions = `${instructions}\n\nYour name is George`;
+        //   return instructions;
+        // },
+
         toolsOptions: {
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
-        // Get max steps from Ai model config or your default value
-        getMaxSteps: () => {
-          const state = get();
-          return state.config.aiSettings.modelParameters.maxSteps || 5;
-        },
-        // Get base URL from Ai model config or your default value
-        getBaseUrl: () => {
-          const state = get();
-          const currentSessionId = state.config.ai.currentSessionId;
-          if (!currentSessionId) return undefined;
-          const currentSession = state.config.ai.sessions.find(
-            (s) => s.id === currentSessionId,
-          );
-          return getBaseUrl(
-            state.config.aiSettings,
-            currentSession?.modelProvider || '',
-            currentSession?.model || '',
-          );
-        },
+
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description
@@ -194,21 +185,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
             component: EchoToolResult,
           },
-        },
-        // Example of customizing the system instructions
-        getInstructions: (tablesSchema: DataTable[]) => {
-          // get default instructions from sqlrooms/ai
-          let instructions = getDefaultInstructions(tablesSchema);
-          // get custom instructions from Ai model config UI
-          const customInstructions =
-            get().config.aiSettings.modelParameters.additionalInstruction;
-
-          if (customInstructions) {
-            instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
-          }
-          // you can add more instructions here if you want
-          instructions = `${instructions}\n\nYour name is George`;
-          return instructions;
         },
       })(set, get, store),
     }),
