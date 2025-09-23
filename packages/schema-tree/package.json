@@ -28,7 +28,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.474.0"
+    "lucide-react": "^0.544.0"
   },
   "peerDependencies": {
     "react": "19.1.0",
