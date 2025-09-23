@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.24 (2025-09-23)
+
+### Features
+
+* Python websockets DuckDB server ([#143](https://github.com/sqlrooms/sqlrooms/issues/143)) ([4bf9e0e](https://github.com/sqlrooms/sqlrooms/commit/4bf9e0ed7ed4c68db06c6f91f11c3aa0d7d5fe5c))
+
+## 0.24.23 (2025-09-17)
+
+### Bug Fixes
+
+* history messages not updated when switch chat sessions [#146](https://github.com/sqlrooms/sqlrooms/issues/146) ([1eba099](https://github.com/sqlrooms/sqlrooms/commit/1eba0990d3e0495e5fd3bf3ba76ab03060730219))
+
 ## 0.24.22 (2025-09-16)
 
 ### Features

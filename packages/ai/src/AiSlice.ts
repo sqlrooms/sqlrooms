@@ -10,7 +10,6 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {DefaultToolsOptions, getDefaultTools} from './analysis';
 import {AnalysisSessionSchema} from './schemas';
 import {UIMessage, DefaultChatTransport} from 'ai';
 
@@ -20,6 +19,12 @@ import {
   createChatHandlers,
   type LlmDeps,
 } from './llm';
+import {
+  DefaultToolsOptions,
+  getDefaultInstructions,
+  getDefaultTools,
+} from './analysis';
+import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -70,13 +75,6 @@ export type AiSliceState = {
     ) => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-    setSessionToolAdditionalData: (
-      sessionId: string,
-      updater:
-        | Record<string, unknown>
-        | ((prev: Record<string, unknown>) => Record<string, unknown>),
-    ) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -111,6 +109,10 @@ export type AiSliceState = {
     onChatError: (error: unknown) => void;
     /** Initialize toolAdditionalData from the current session */
     initializeToolAdditionalData: () => void;
+    getApiKeyFromSettings: () => string;
+    getBaseUrlFromSettings: () => string | undefined;
+    getMaxStepsFromSettings: () => number;
+    getInstructionsFromSettings: () => string;
   };
 };
 
@@ -131,11 +133,11 @@ export interface AiSliceOptions {
   toolsOptions?: DefaultToolsOptions;
   defaultProvider?: string;
   defaultModel?: string;
-  getApiKey?: (modelProvider: string) => string;
-  getBaseUrl?: () => string | undefined;
-  getMaxSteps?: () => number;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getModelClientForProvider?: LlmDeps['getModelClientForProvider'];
+  maxSteps?: number;
+  getApiKey?: (modelProvider: string) => string;
+  getBaseUrl?: () => string;
 }
 
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
@@ -147,11 +149,11 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
     initialAnalysisPrompt = '',
     customTools = {},
     toolsOptions,
+    getModelClientForProvider,
     getApiKey,
     getBaseUrl,
-    // getMaxSteps,
+    maxSteps,
     getInstructions,
-    getModelClientForProvider,
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
@@ -474,9 +476,125 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
         /** no-op kept for backward compatibility */
         initializeToolAdditionalData: () => {},
+        getBaseUrlFromSettings: () => {
+          // First try the getBaseUrl function if provided
+          const baseUrlFromFunction = getBaseUrl?.();
+          if (baseUrlFromFunction) {
+            return baseUrlFromFunction;
+          }
+
+          // Fall back to settings
+          const store = get();
+          if (hasAiSettings(store.config)) {
+            const currentSession = getCurrentSessionFromState(store);
+            if (currentSession) {
+              if (currentSession.modelProvider === 'custom') {
+                const customModel = store.config.aiSettings.customModels.find(
+                  (m: {modelName: string}) =>
+                    m.modelName === currentSession.model,
+                );
+                return customModel?.baseUrl;
+              }
+              const provider =
+                store.config.aiSettings.providers[currentSession.modelProvider];
+              return provider?.baseUrl;
+            }
+          }
+          return undefined;
+        },
+
+        getApiKeyFromSettings: () => {
+          const store = get();
+          const currentSession = getCurrentSessionFromState(store);
+          if (currentSession) {
+            // First try the getApiKey function if provided
+            const apiKeyFromFunction = getApiKey?.(
+              currentSession.modelProvider || defaultProvider,
+            );
+            if (apiKeyFromFunction) {
+              return apiKeyFromFunction;
+            }
+
+            // Fall back to settings
+            if (hasAiSettings(store.config)) {
+              if (currentSession.modelProvider === 'custom') {
+                const customModel = store.config.aiSettings.customModels.find(
+                  (m: {modelName: string}) =>
+                    m.modelName === currentSession.model,
+                );
+                return customModel?.apiKey || '';
+              } else {
+                const provider =
+                  store.config.aiSettings.providers?.[
+                    currentSession.modelProvider
+                  ];
+                return provider?.apiKey || '';
+              }
+            }
+          }
+          return '';
+        },
+
+        getMaxStepsFromSettings: () => {
+          const store = get();
+          // First try the maxSteps parameter if provided
+          if (maxSteps && Number.isFinite(maxSteps) && maxSteps > 0) {
+            return maxSteps;
+          }
+
+          // Fall back to settings
+          if (hasAiSettings(store.config)) {
+            const settingsMaxSteps =
+              store.config.aiSettings.modelParameters.maxSteps;
+            if (Number.isFinite(settingsMaxSteps) && settingsMaxSteps > 0) {
+              return settingsMaxSteps;
+            }
+          }
+          return 5;
+        },
+
+        getInstructionsFromSettings: () => {
+          const store = get();
+          const tablesSchema = store.db?.tables || [];
+
+          // First try the getInstructions function if provided
+          if (getInstructions) {
+            return getInstructions(tablesSchema);
+          }
+
+          // Fall back to settings
+          if (hasAiSettings(store.config)) {
+            let instructions = tablesSchema
+              ? getDefaultInstructions(tablesSchema)
+              : '';
+            // get additional instructions from settings
+            const customInstructions =
+              store.config.aiSettings.modelParameters.additionalInstruction;
+            if (customInstructions) {
+              instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
+            }
+            return instructions;
+          }
+          return '';
+        },
       },
     };
   });
+}
+
+/**
+ * Helper function to type guard the store config if we have aiSettings
+ * @param storeConfig
+ * @returns
+ */
+function hasAiSettings(
+  storeConfig: unknown,
+): storeConfig is {aiSettings: AiSettingsSliceConfig['aiSettings']} {
+  return (
+    typeof storeConfig === 'object' &&
+    storeConfig !== null &&
+    'aiSettings' in storeConfig
+  );
 }
 
 /**

@@ -1,5 +1,5 @@
 import {FC, PropsWithChildren} from 'react';
-import {Button} from '@sqlrooms/ui';
+import {Button, UseDisclosureReturnValue} from '@sqlrooms/ui';
 import {X} from 'lucide-react';
 
 import {AiModelParameters} from './AiModelParameters';
@@ -8,13 +8,13 @@ import {AiProvidersSettings} from './AiProvidersSettings';
 import {AiModelsSettings} from './AiModelsSettings';
 
 interface AiSettingsPanelProps {
-  isOpen: boolean;
-  setIsOpen: (isOpen: boolean) => void;
+  disclosure: UseDisclosureReturnValue;
 }
 
 export const AiSettingsPanelBase: FC<
   PropsWithChildren<AiSettingsPanelProps>
-> = ({isOpen, setIsOpen, children}) => {
+> = ({disclosure, children}) => {
+  const {isOpen, onClose} = disclosure;
   if (!isOpen) return null;
 
   return (
@@ -23,7 +23,7 @@ export const AiSettingsPanelBase: FC<
         <Button
           variant="ghost"
           size="icon"
-          onClick={() => setIsOpen(false)}
+          onClick={onClose}
           className="absolute right-2 top-2 z-10"
         >
           <X className="h-4 w-4" />
