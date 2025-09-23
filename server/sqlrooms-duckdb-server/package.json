@@ -1,0 +1,13 @@
+{
+  "name": "sqlrooms-duckdb-server",
+  "version": "0.2.1",
+  "private": true,
+  "scripts": {
+    "dev": "uv run watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg",
+    "check-fix": "uv run ruff check --fix",
+    "format": "uv run ruff format",
+    "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",
+    "release": "uv build && uvx twine upload --skip-existing ./dist/sqlrooms_duckdb_server*",
+    "test": "uv run pytest -s --log-cli-level=DEBUG"
+  }
+}
