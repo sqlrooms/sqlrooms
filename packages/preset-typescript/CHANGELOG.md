@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.25 (2025-09-23)
+
+### Features
+
+* add AI settings ui ([#132](https://github.com/sqlrooms/sqlrooms/issues/132)) ([34d27f8](https://github.com/sqlrooms/sqlrooms/commit/34d27f81a9167c1fe0f489e2aa8f698fdcd0b041))
+
 ## 0.24.24 (2025-09-23)
 
 ### Features
