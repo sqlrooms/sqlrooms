@@ -47,7 +47,7 @@ export const LLM_MODELS = [
   },
   {
     name: 'ollama',
-    models: ['qwen3:32b', 'qwen3'],
+    models: ['qwen3:32b', 'gpt-oss'],
   },
 ];
 
