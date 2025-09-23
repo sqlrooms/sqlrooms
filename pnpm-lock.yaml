@@ -1184,6 +1184,9 @@ importers:
       ai:
         specifier: ^4.3.19
         version: 4.3.19(react@19.1.0)(zod@3.25.73)
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
       immer:
         specifier: ^10.1.1
         version: 10.1.1

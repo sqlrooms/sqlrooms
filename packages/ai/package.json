@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ai",
-  "version": "0.24.21",
+  "version": "0.24.23",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -38,6 +38,7 @@
     "zod": "^3.25.73"
   },
   "peerDependencies": {
+    "apache-arrow": "17.0.0",
     "react": ">=18",
     "react-dom": ">=18"
   },
