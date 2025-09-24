@@ -126,7 +126,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           className="flex h-full w-full"
         >
           {draftSpec?.encoding ? (
-            <VegaLiteChart sqlQuery={selectedSqlQuery} spec={draftSpec} />
+            <VegaLiteChart
+              sqlQuery={selectedSqlQuery}
+              spec={draftSpec}
+              className="rounded-b"
+            />
           ) : (
             <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
               Empty chart, please 1) select a SQL cell and then 2) edit chart.

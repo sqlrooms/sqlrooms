@@ -17,6 +17,7 @@ import {
   NotebookCell,
   NotebookCellTypes,
   NotebookSliceConfig,
+  InputCell as InputCellType,
 } from './cellSchemas';
 import {findTab, getCellTypeLabel} from './NotebookUtils';
 
@@ -264,6 +265,18 @@ export function createNotebookSlice<
               const baseLabel = getCellTypeLabel(cell.type);
               if (baseLabel) {
                 (cell as any).name = generateUniqueName(baseLabel, usedNames);
+              }
+
+              if (type === 'input') {
+                const usedInputNames = Object.values(
+                  draft.config.notebook.cells,
+                )
+                  .filter((c) => c.type === 'input')
+                  .map((c) => c.input.varName);
+                (cell as InputCellType).input.varName = generateUniqueName(
+                  (cell as InputCellType).input.varName,
+                  usedInputNames,
+                );
               }
               draft.config.notebook.cells[id] = cell;
 
@@ -568,7 +581,7 @@ export function createNotebookSlice<
                 id,
                 type: 'input',
                 name: 'Input',
-                input: {kind: 'text', varName: 'param_1', value: ''},
+                input: {kind: 'text', varName: 'input_1', value: ''},
               }) as NotebookCell,
             renderComponent: (id: string) =>
               React.createElement(InputCell, {id}),

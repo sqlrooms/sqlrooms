@@ -18,8 +18,9 @@ export const AddSqlCellResultToNewTable: React.FC<{
           variant="secondary"
           size="xs"
           onClick={() => setCreateTableModalOpen(true)}
+          className="h-7"
         >
-          <PlusIcon className="h-4 w-4" />
+          <PlusIcon size={16} />
           New table
         </Button>
       </div>

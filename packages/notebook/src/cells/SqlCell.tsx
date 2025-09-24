@@ -83,25 +83,23 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
                 {cellStatus.lastError}
               </div>
             )}
-            {cellStatus?.status === 'success' && (
-              <div className="overflow-hidden border-t">
-                {(() => {
-                  const query = `SELECT * FROM ${cellStatus.resultView}`;
-                  return (
-                    <QueryDataTable
-                      query={query}
-                      fontSize="text-xs"
-                      renderActions={() => (
-                        <>
-                          <QueryDataTableActionsMenu query={query} />
-                          <AddSqlCellResultToNewTable query={cell.sql} />
-                        </>
-                      )}
+
+            <div className="overflow-hidden border-t">
+              <QueryDataTable
+                query={`SELECT * FROM ${cellStatus.resultView}`}
+                fontSize="text-xs"
+                pageSize={10}
+                className="overflow-hidden rounded"
+                renderActions={() => (
+                  <>
+                    <QueryDataTableActionsMenu
+                      query={`SELECT * FROM ${cellStatus.resultView}`}
                     />
-                  );
-                })()}
-              </div>
-            )}
+                    <AddSqlCellResultToNewTable query={cell.sql} />
+                  </>
+                )}
+              />
+            </div>
           </>
         )}
       </div>
