@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.26 (2025-09-25)
+
+### Bug Fixes
+
+* Schema tree styling allows for font size changes ([39319f8](https://github.com/sqlrooms/sqlrooms/commit/39319f83b77d62f054b103986d28994b9bb0912b))
+
 ## 0.24.25 (2025-09-23)
 
 ### Features
