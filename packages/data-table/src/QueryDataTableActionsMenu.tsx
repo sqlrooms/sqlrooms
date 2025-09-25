@@ -32,7 +32,7 @@ export const QueryDataTableActionsMenu: FC<{
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
-          variant="outline"
+          variant="ghost"
           size="xs"
           disabled={isExporting}
           className="h-7 w-7"

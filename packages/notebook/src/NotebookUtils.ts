@@ -1,3 +1,7 @@
+import {useState, useEffect} from 'react';
+import dayjs from 'dayjs';
+import relativeTime from 'dayjs/plugin/relativeTime';
+
 import {
   InputTypes,
   NotebookCellTypes,
@@ -57,3 +61,37 @@ export const initializeInput = (
       };
   }
 };
+
+dayjs.extend(relativeTime);
+
+export function useRelativeTimeDisplay(pastDate: number | null): string | null {
+  const [relativeTimeStr, setRelativeTimeStr] = useState('');
+
+  useEffect(() => {
+    if (!pastDate) {
+      setRelativeTimeStr('');
+      return;
+    }
+
+    const updateRelativeTime = () => {
+      const now = dayjs();
+      const past = dayjs(pastDate);
+
+      const diffInDays = now.diff(past, 'day');
+
+      if (diffInDays >= 7) {
+        // Show full date for older than a week
+        setRelativeTimeStr(past.format('YYYY-MM-DD'));
+      } else {
+        setRelativeTimeStr(past.fromNow());
+      }
+    };
+
+    updateRelativeTime();
+    const interval = setInterval(updateRelativeTime, 60000); // Update every minute
+
+    return () => clearInterval(interval);
+  }, [pastDate]);
+
+  return relativeTimeStr;
+}

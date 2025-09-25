@@ -72,6 +72,7 @@ export type NotebookSliceState = {
           lastError?: string;
           referencedTables?: string[];
           resultView?: string;
+          lastRunTime?: number;
         }
       | {
           type: 'other';
@@ -530,6 +531,7 @@ export function createNotebookSlice<
                         schema: get().notebook.schemaName,
                         database: get().db.currentDatabase,
                       }).toString();
+                      r.lastRunTime = Date.now();
                     }
                   }),
                 );

@@ -42,6 +42,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
+    "dayjs": "^1.11.13",
     "immer": "^10.1.1",
     "lucide-react": "^0.543.0",
     "react-hook-form": "^7.57.0",

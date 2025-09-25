@@ -8,6 +8,7 @@ import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../NotebookSlice';
 import {AddSqlCellResultToNewTable} from '../cellOperations/AddSqlCellResultToNewTable';
 import {IconWithTooltip} from '../cellOperations/IconWithTooltip';
+import {useRelativeTimeDisplay} from '../NotebookUtils';
 
 const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
   minimap: {enabled: false},
@@ -23,6 +24,12 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
   const cancel = useStoreWithNotebook((s) => s.notebook.cancelRunCell);
   const cellStatus = useStoreWithNotebook((s) => s.notebook.cellStatus[id]);
+
+  const lastRunTime = useRelativeTimeDisplay(
+    cellStatus && cellStatus.type === 'sql' && cellStatus.status === 'success'
+      ? (cellStatus.lastRunTime ?? null)
+      : null,
+  );
 
   if (!cell || cell.type !== 'sql') return null;
 
@@ -92,6 +99,11 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
                 className="overflow-hidden rounded"
                 renderActions={() => (
                   <>
+                    {lastRunTime && (
+                      <div className="border-l px-2 text-xs">
+                        Refreshed {lastRunTime}
+                      </div>
+                    )}
                     <QueryDataTableActionsMenu
                       query={`SELECT * FROM ${cellStatus.resultView}`}
                     />
