@@ -1,11 +1,13 @@
 import {
+  AiSettingsSliceConfig,
+  AiSettingsSliceState,
   AiSliceConfig,
   AiSliceState,
+  createAiSettingsSlice,
   createAiSlice,
   createDefaultAiConfig,
-  getDefaultInstructions,
+  createDefaultAiSettings,
 } from '@sqlrooms/ai';
-import {DataTable} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -29,7 +31,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {DEFAULT_MODEL} from './models';
+import {AI_SETTINGS, migrateRoomConfig} from './config';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -42,27 +44,19 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig =
-  BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export const RoomConfig = z.preprocess(
+  // (Optional) Migrate room older versions of the example app config to prevent errors
+  migrateRoomConfig,
+  BaseRoomConfig.merge(AiSliceConfig)
+    .merge(SqlEditorSliceConfig)
+    .merge(AiSettingsSliceConfig),
+);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
-/**
- * Room state
- */
-type CustomRoomState = {
-  selectedModel: {
-    model: string;
-    provider: string;
-  };
-  setSelectedModel: (model: string, provider: string) => void;
-  /** API keys by provider */
-  apiKeys: Record<string, string | undefined>;
-  setProviderApiKey: (provider: string, apiKey: string) => void;
-};
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  CustomRoomState;
+  AiSettingsSliceState;
 
 /**
  * Create a customized room store
@@ -92,6 +86,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ...createDefaultAiConfig(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
+          ...createDefaultAiSettings(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
@@ -116,15 +111,43 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
 
+      // Ai model config slice
+      ...createAiSettingsSlice()(set, get, store),
+
       // Ai slice
       ...createAiSlice({
-        getApiKey: (modelProvider: string) => {
-          return get()?.apiKeys[modelProvider] || '';
-        },
+        // You can configure the Api key in the Ai Settings panel,
+        // or (optional) provide API key with your own custom logic here
+        // getApiKey: (modelProvider: string) => {
+        //  return your api key here
+        // },
+
+        // You can configure the base URL in the Ai Settings panel,
+        // or (optional) provide base URL with your own custom logic here
+        // getBaseUrl: () => {
+        //   // return your base url
+        // },
+
+        // You can configure the max steps of using tools in the Ai Settings panel,
+        // or (optional) provide max steps here
+        // maxSteps: 5,
+
+        // You can configure custom instructions in the Ai Settings panel,
+        // or (optional) provide custom instructions with your own custom logic here
+        // Example of customizing the system instructions
+        // getInstructions: (tablesSchema: DataTable[]) => {
+        //   // get default instructions from sqlrooms/ai
+        //   let instructions = getDefaultInstructions(tablesSchema);
+        //   // you can add more instructions here if you want
+        //   instructions = `${instructions}\n\nYour name is George`;
+        //   return instructions;
+        // },
+
         toolsOptions: {
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
+
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description
@@ -147,29 +170,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             component: EchoToolResult,
           },
         },
-        // Example of customizing the system instructions
-        getInstructions: (tablesSchema: DataTable[]) => {
-          // You can use getDefaultInstructions() and append to it
-          const defaultInstructions = getDefaultInstructions(tablesSchema);
-          return `${defaultInstructions}. Please be polite and concise.`;
-        },
       })(set, get, store),
-
-      selectedModel: {
-        model: DEFAULT_MODEL,
-        provider: 'openai',
-      },
-      setSelectedModel: (model: string, provider: string) => {
-        set({selectedModel: {model, provider}});
-      },
-      apiKeys: {
-        openai: undefined,
-      },
-      setProviderApiKey: (provider: string, apiKey: string) => {
-        set({
-          apiKeys: {...get().apiKeys, [provider]: apiKey},
-        });
-      },
     }),
 
     // Persist settings
@@ -177,11 +178,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Local storage key
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-        selectedModel: state.selectedModel,
-        apiKeys: state.apiKeys,
-      }),
+      partialize: (state) => {
+        return {
+          config: RoomConfig.parse(state.config),
+        };
+      },
     },
   ) as StateCreator<RoomState>,
 );

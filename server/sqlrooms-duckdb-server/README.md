@@ -26,17 +26,16 @@ A Python-based server that runs a local DuckDB instance and supports queries ove
 We recommend running the server in an isolated environment with [uvx](https://docs.astral.sh/uv/). For example, to directly run the server, use:
 
 ```bash
-uvx duckdb-server --db-path /absolute/path/to/my.db --port 4000 --extensions httpfs,spatial
+uvx sqlrooms-duckdb-server
 ```
 
-Alternatively, you can install the server with `pip install duckdb-server`. Then you can start the server with `duckdb-server --db-path /absolute/path/to/my.db --port 4000`.
+Alternatively, you can install the server with `pip install sqlrooms-duckdb-server`. Then you can start the server with `sqlrooms-duckdb-server --db-path /absolute/path/to/my.db --port 4000`.
 
 ### Command-line arguments
 
 - `--db-path` (optional): Path to DuckDB database file. Defaults to `:memory:`.
 - `--port` (default: `4000`): Port to listen on.
 - `--extensions` (optional): Comma-separated list of extensions to preload. Examples:
-
   - `httpfs`
   - `spatial`
   - `h3@community`
@@ -47,10 +46,10 @@ Examples:
 
 ```bash
 # In-memory DB with httpfs only (default)
-uv run duckdb-server --port 4000
+uv run sqlrooms-duckdb-server
 
 # File-backed DB with multiple extensions
-uv run duckdb-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
+uv run sqlrooms-duckdb-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
 ```
 
 ## Developer Setup
@@ -60,7 +59,7 @@ We use [uv](https://docs.astral.sh/uv/) to manage our development setup.
 Start the server with:
 
 ```bash
-uv run duckdb-server --db-path /absolute/path/to/my.db
+uv run sqlrooms-duckdb-server --db-path /absolute/path/to/my.db
 ```
 
 Run `uv run ruff check --fix` and `uv run ruff format` to lint the code.
@@ -105,7 +104,6 @@ Supported messages:
   ```
 
 - Result correlation (Arrow): binary frame
-
   - Layout: `[4-byte big-endian length][header JSON][arrow bytes]`
   - Header JSON example: `{ "type": "arrow", "queryId": "q1" }`
 
@@ -126,10 +124,12 @@ Supported messages:
   - If the query is already finishing, you may receive the final result instead of an error.
 
 - Subscribe/Notify (server-side notifications):
+
   ```json
   {"type":"subscribe","channel":"table:orders"}
   {"type":"notify","channel":"table:orders","payload":{"op":"update"}}
   ```
+
   - Subscribe ack: `{ "type":"subscribed","channel":"table:orders" }`
   - Notify:
     - Broadcast to subscribers via `app.publish`

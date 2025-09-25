@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/cosmos",
-  "version": "0.24.24",
+  "version": "0.24.25",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",

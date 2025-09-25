@@ -11,12 +11,18 @@ import {
 } from '@sqlrooms/room-shell';
 import {produce, WritableDraft} from 'immer';
 import {z} from 'zod';
-import {DefaultToolsOptions, getDefaultTools, runAnalysis} from './analysis';
+import {
+  DefaultToolsOptions,
+  getDefaultInstructions,
+  getDefaultTools,
+  runAnalysis,
+} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
   ErrorMessageSchema,
 } from './schemas';
+import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
 export const AiSliceConfig = z.object({
   ai: z.object({
@@ -37,7 +43,7 @@ export function createDefaultAiConfig(
           id: defaultSessionId,
           name: 'Default Session',
           modelProvider: 'openai',
-          model: 'gpt-4o-mini',
+          model: 'gpt-4.1',
           analysisResults: [],
           createdAt: new Date(),
         },
@@ -61,8 +67,6 @@ export type AiSliceState = {
     startAnalysis: () => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
-    setCustomModelName: (customModelName: string) => void;
-    setBaseUrl: (baseUrl: string) => void;
     createSession: (
       name?: string,
       modelProvider?: string,
@@ -74,6 +78,10 @@ export type AiSliceState = {
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
+    getApiKeyFromSettings: () => string;
+    getBaseUrlFromSettings: () => string | undefined;
+    getMaxStepsFromSettings: () => number;
+    getInstructionsFromSettings: () => string;
   };
 };
 
@@ -92,32 +100,26 @@ export interface AiSliceOptions {
    */
   getInstructions?: (tablesSchema: DataTable[]) => string;
   toolsOptions?: DefaultToolsOptions;
+  defaultProvider?: string;
+  defaultModel?: string;
+  maxSteps?: number;
+  getApiKey?: (modelProvider: string) => string;
+  getBaseUrl?: () => string;
 }
 
-/**
- * API key configuration for the AI slice
- */
-export type AiSliceApiConfig = {defaultModel?: string} & (
-  | {baseUrl: string; getApiKey?: never}
-  | {getApiKey: (modelProvider: string) => string; baseUrl?: never}
-);
-
-/**
- * Complete configuration for creating an AI slice
- */
-export type CreateAiSliceConfig = AiSliceOptions & AiSliceApiConfig;
-
 export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
-  params: CreateAiSliceConfig,
+  params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    getApiKey,
-    baseUrl,
+    defaultProvider = 'openai',
+    defaultModel = 'gpt-4.1',
     initialAnalysisPrompt = '',
     customTools = {},
-    getInstructions,
     toolsOptions,
-    defaultModel = 'gpt-4o-mini',
+    getApiKey,
+    getBaseUrl,
+    maxSteps,
+    getInstructions,
   } = params;
 
   return createSlice<PC, AiSliceState>((set, get, store) => {
@@ -150,36 +152,6 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               if (currentSession) {
                 currentSession.modelProvider = modelProvider;
                 currentSession.model = model;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the custom model name for the current session
-         * @param customModelName - The custom model name to set
-         */
-        setCustomModelName: (customModelName: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.customModelName = customModelName;
-              }
-            }),
-          );
-        },
-
-        /**
-         * Set the base URL for the current session
-         * @param baseUrl - The server URL to set
-         */
-        setBaseUrl: (baseUrl: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
-              if (currentSession) {
-                currentSession.baseUrl = baseUrl;
               }
             }),
           );
@@ -225,6 +197,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
           set((state) =>
             produce(state, (draft) => {
+              // Add to AI sessions
               draft.config.ai.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -339,16 +312,15 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           try {
             await runAnalysis({
               tableSchemas: get().db.tables,
-              modelProvider: currentSession.modelProvider || 'openai',
+              modelProvider: currentSession.modelProvider || defaultProvider,
               model: currentSession.model || defaultModel,
-              customModelName: currentSession.customModelName,
-              apiKey:
-                getApiKey?.(currentSession.modelProvider || 'openai') || '',
-              baseUrl: currentSession.baseUrl || baseUrl,
+              apiKey: get().ai.getApiKeyFromSettings(),
+              baseUrl: get().ai.getBaseUrlFromSettings(),
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
-              getInstructions,
+              maxSteps: get().ai.getMaxStepsFromSettings(),
+              getInstructions: get().ai.getInstructionsFromSettings,
               historyAnalysis: currentSession.analysisResults,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -412,9 +384,126 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             ([name]) => name === toolName,
           )?.[1]?.component as React.ComponentType;
         },
+
+        getBaseUrlFromSettings: () => {
+          // First try the getBaseUrl function if provided
+          const baseUrlFromFunction = getBaseUrl?.();
+          if (baseUrlFromFunction) {
+            return baseUrlFromFunction;
+          }
+
+          // Fall back to settings
+          const store = get();
+          if (hasAiSettings(store.config)) {
+            const currentSession = getCurrentSessionFromState(store);
+            if (currentSession) {
+              if (currentSession.modelProvider === 'custom') {
+                const customModel = store.config.aiSettings.customModels.find(
+                  (m: {modelName: string}) =>
+                    m.modelName === currentSession.model,
+                );
+                return customModel?.baseUrl;
+              }
+              const provider =
+                store.config.aiSettings.providers[currentSession.modelProvider];
+              return provider?.baseUrl;
+            }
+          }
+          return undefined;
+        },
+
+        getApiKeyFromSettings: () => {
+          const store = get();
+          const currentSession = getCurrentSessionFromState(store);
+          if (currentSession) {
+            // First try the getApiKey function if provided
+            const apiKeyFromFunction = getApiKey?.(
+              currentSession.modelProvider || defaultProvider,
+            );
+            if (apiKeyFromFunction) {
+              return apiKeyFromFunction;
+            }
+
+            // Fall back to settings
+            if (hasAiSettings(store.config)) {
+              if (currentSession.modelProvider === 'custom') {
+                const customModel = store.config.aiSettings.customModels.find(
+                  (m: {modelName: string}) =>
+                    m.modelName === currentSession.model,
+                );
+                return customModel?.apiKey || '';
+              } else {
+                const provider =
+                  store.config.aiSettings.providers?.[
+                    currentSession.modelProvider
+                  ];
+                return provider?.apiKey || '';
+              }
+            }
+          }
+          return '';
+        },
+
+        getMaxStepsFromSettings: () => {
+          const store = get();
+          // First try the maxSteps parameter if provided
+          if (maxSteps && Number.isFinite(maxSteps) && maxSteps > 0) {
+            return maxSteps;
+          }
+
+          // Fall back to settings
+          if (hasAiSettings(store.config)) {
+            const settingsMaxSteps =
+              store.config.aiSettings.modelParameters.maxSteps;
+            if (Number.isFinite(settingsMaxSteps) && settingsMaxSteps > 0) {
+              return settingsMaxSteps;
+            }
+          }
+          return 5;
+        },
+
+        getInstructionsFromSettings: () => {
+          const store = get();
+          const tablesSchema = store.db?.tables || [];
+
+          // First try the getInstructions function if provided
+          if (getInstructions) {
+            return getInstructions(tablesSchema);
+          }
+
+          // Fall back to settings
+          if (hasAiSettings(store.config)) {
+            let instructions = tablesSchema
+              ? getDefaultInstructions(tablesSchema)
+              : '';
+            // get additional instructions from settings
+            const customInstructions =
+              store.config.aiSettings.modelParameters.additionalInstruction;
+            if (customInstructions) {
+              instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
+            }
+            return instructions;
+          }
+          return '';
+        },
       },
     };
   });
+}
+
+/**
+ * Helper function to type guard the store config if we have aiSettings
+ * @param storeConfig
+ * @returns
+ */
+function hasAiSettings(
+  storeConfig: unknown,
+): storeConfig is {aiSettings: AiSettingsSliceConfig['aiSettings']} {
+  return (
+    typeof storeConfig === 'object' &&
+    storeConfig !== null &&
+    'aiSettings' in storeConfig
+  );
 }
 
 /**

@@ -28,3 +28,20 @@ export * from './components/session/SessionDropdown';
 export * from './components/session/SessionTitle';
 export * from './components/session/SessionType';
 export * from './components/tools/ToolErrorMessage';
+
+export {
+  createAiSettingsSlice,
+  useStoreWithAiSettings,
+  AiSettingsSliceConfig,
+  createDefaultAiSettings,
+} from './AiSettingsSlice';
+
+export type {AiSettingsSliceState} from './AiSettingsSlice';
+
+export {AiSettingsPanel} from './components/settings/AiSettingsPanel';
+export {AiProvidersSettings} from './components/settings/AiProvidersSettings';
+export {AiModelsSettings} from './components/settings/AiModelsSettings';
+export {AiModelParameters} from './components/settings/AiModelParameters';
+export {AiModelUsage} from './components/settings/AiModelUsage';
+export type {ModelUsageData} from './components/settings/AiModelUsage';
+export {extractModelsFromSettings} from './utils';
