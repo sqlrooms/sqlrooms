@@ -49,9 +49,9 @@
     "zustand": "^5.0.8"
   },
   "peerDependencies": {
-    "apache-arrow": "17.0.0",
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "apache-arrow": ">=17",
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "devDependencies": {
     "@types/d3-dsv": "^3.0.7",

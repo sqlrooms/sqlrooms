@@ -24,8 +24,8 @@
     "zod": "^3.25.76"
   },
   "peerDependencies": {
-    "react": "19.1.0",
-    "react-dom": "19.1.0"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",
