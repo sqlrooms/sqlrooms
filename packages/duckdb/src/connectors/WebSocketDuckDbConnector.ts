@@ -12,6 +12,11 @@ import {
 import {load, loadObjects, loadSpatial} from './load/load';
 import {splitFilePath} from '@sqlrooms/utils';
 
+/**
+ * Options for the WebSocket DuckDB connector.
+ *
+ * @public
+ */
 export interface WebSocketDuckDbConnectorOptions {
   /**
    * WebSocket endpoint of the DuckDB server.
@@ -46,6 +51,11 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
  * - Errors are sent as JSON text frames: `{ type: 'error', queryId, error }`.
  * - Cancellation: client sends `{ type: 'cancel', queryId }` and keeps socket open.
  * - Notifications: server may push `{ type: 'notify', payload }` as JSON text.
+ */
+/**
+ * Create a WebSocket-based DuckDB connector.
+ *
+ * @public
  */
 export function createWebSocketDuckDbConnector(
   options: WebSocketDuckDbConnectorOptions = {},

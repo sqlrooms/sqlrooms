@@ -6,7 +6,6 @@ import {cn, Spinner} from '@sqlrooms/ui';
 /**
  * A customizable file dropzone component that handles file uploads through drag-and-drop or click interactions.
  *
- * @component
  * @example
  * ```tsx
  * // Basic usage

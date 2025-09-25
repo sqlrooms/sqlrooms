@@ -8,9 +8,20 @@ import {createWebSocketDuckDbConnector} from './WebSocketDuckDbConnector';
 
 export type DuckDbConnectorType = 'wasm' | 'ws';
 
+/**
+ * Options for creating a DuckDB connector instance.
+ *
+ * @public
+ */
 export type DuckDbConnectorOptions =
   | ({type: 'wasm'} & WasmDuckDbConnectorOptions)
-  | ({type: 'ws'} & {wsUrl?: string; initializationQuery?: string});
+  | {
+      type: 'ws';
+      /** WebSocket server URL */
+      wsUrl?: string;
+      /** SQL to run after connection */
+      initializationQuery?: string;
+    };
 
 export function createDuckDbConnector(
   options: DuckDbConnectorOptions,

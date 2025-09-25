@@ -16,6 +16,7 @@ export {
   createDuckDbSlice,
   type DuckDbSliceState,
   useStoreWithDuckDb,
+  type SchemaAndDatabase,
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/BaseDuckDbConnector';
