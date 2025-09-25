@@ -1,15 +1,15 @@
+import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
+import {Settings} from 'lucide-react';
 import {
   AiSettingsPanel,
   AnalysisResultsContainer,
-  ModelSelector,
-  QueryControls,
   SessionControls,
-  extractModelsFromSettings,
+  QueryControls,
   getDefaultInstructions,
+  ModelSelector,
+  extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
-import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
-import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {

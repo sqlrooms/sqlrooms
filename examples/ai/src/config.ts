@@ -3,7 +3,7 @@ import {AiSettingsSliceConfig, createDefaultAiSettings} from '@sqlrooms/ai';
 export const DEFAULT_MODEL = 'gpt-4.1';
 
 // Constants for commonly used values
-export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';
+export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/v1';
 
 // Default base URLs for each provider
 export const PROVIDER_DEFAULT_BASE_URLS = {

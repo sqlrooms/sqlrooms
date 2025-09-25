@@ -1,7 +1,19 @@
-import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
+import {
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {useChat} from '@ai-sdk/react';
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
+import type {UIMessage} from 'ai';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -19,13 +31,54 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const startAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
   const isDataAvailable = useStoreWithAi((s) => s.room.isDataAvailable);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
+  const sessionId = currentSession?.id;
+
+  const getLocalChatTransport = useStoreWithAi(
+    (s) => s.ai.getLocalChatTransport,
+  );
+  const getRemoteChatTransport = useStoreWithAi(
+    (s) => s.ai.getRemoteChatTransport,
+  );
+  const endPoint = useStoreWithAi((s) => s.ai.endPoint);
+  const headers = useStoreWithAi((s) => s.ai.headers);
+  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
+  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
+
+  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+    // Recreate transport when the model changes
+    void model;
+    const trimmed = (endPoint || '').trim();
+    if (trimmed.length > 0) {
+      return getRemoteChatTransport(trimmed, headers);
+    }
+    return getLocalChatTransport();
+  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
+
+  const {messages, sendMessage} = useChat({
+    id: sessionId,
+    transport,
+    messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+    onToolCall: onChatToolCall,
+    onFinish: onChatFinish,
+    onError: onChatError,
+    // Automatically submit when all tool results are available
+    // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+  // Sync streaming updates into the store so UiMessages renders incrementally
+  useEffect(() => {
+    if (!sessionId) return;
+    setSessionUiMessages(sessionId, messages as UIMessage[]);
+  }, [messages, sessionId, setSessionUiMessages]);
 
   useEffect(() => {
     if (!isDataAvailable) return;
@@ -53,11 +106,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis();
+          startAnalysis(sendMessage);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, model, analysisPrompt, startAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -67,10 +120,17 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis();
+      startAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+  }, [
+    isRunningAnalysis,
+    cancelAnalysis,
+    onCancel,
+    sendMessage,
+    onRun,
+    startAnalysis,
+  ]);
 
   return (
     <div
