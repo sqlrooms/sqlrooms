@@ -63,6 +63,7 @@ const DataTableModal: FC<
       <DialogContent
         className={cn('h-[80vh] max-w-[75vw]', className)}
         aria-describedby="data-table-modal"
+        onClick={(e) => e.stopPropagation()}
       >
         <DialogHeader>
           <DialogTitle>{title ?? ''}</DialogTitle>
