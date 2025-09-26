@@ -126,8 +126,10 @@ export default function DataTablePaginated<Data extends object>({
   }, [pagination?.pageIndex]);
 
   return (
-    <div className={cn(`relative flex h-full w-full flex-col`, className)}>
-      <div className="border-border flex-1 overflow-hidden border font-mono">
+    <div
+      className={cn(`relative flex h-full w-full flex-col border`, className)}
+    >
+      <div className="flex-1 overflow-hidden font-mono">
         <ScrollArea className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>
@@ -182,7 +184,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
+                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap py-2" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -235,25 +237,27 @@ export default function DataTablePaginated<Data extends object>({
         </ScrollArea>
       </div>
       {pagination || footerActions ? (
-        <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
+        <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border-t p-2">
           {pagination ? (
             <>
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-1">
                 <Button
-                  variant="outline"
-                  size="icon"
+                  variant="ghost"
+                  size="xs"
+                  className="h-7 w-7"
                   onClick={() => table.setPageIndex(0)}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <ChevronDoubleLeftIcon className="h-4 w-4" />
+                  <ChevronDoubleLeftIcon size={16} />
                 </Button>
                 <Button
-                  variant="outline"
-                  size="icon"
+                  variant="ghost"
+                  size="xs"
+                  className="h-7 w-7"
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
-                  <ChevronLeftIcon className="h-4 w-4" />
+                  <ChevronLeftIcon size={16} />
                 </Button>
                 <div className={`ml-1 flex items-center gap-1 ${fontSize}`}>
                   <div>Page</div>
@@ -261,7 +265,7 @@ export default function DataTablePaginated<Data extends object>({
                     type="number"
                     min={1}
                     max={table.getPageCount()}
-                    className="h-8 w-16"
+                    className="h-7 w-16"
                     value={internalPageIndex + 1}
                     onChange={(e) => {
                       const value = e.target.value;
@@ -282,26 +286,28 @@ export default function DataTablePaginated<Data extends object>({
                   <div>{`of ${formatCount(table.getPageCount())}`}</div>
                 </div>
                 <Button
-                  variant="outline"
-                  size="icon"
+                  variant="ghost"
+                  size="xs"
+                  className="h-7 w-7"
                   onClick={() => table.nextPage()}
                   disabled={!table.getCanNextPage()}
                 >
-                  <ChevronRightIcon className="h-4 w-4" />
+                  <ChevronRightIcon size={16} />
                 </Button>
                 <Button
-                  variant="outline"
-                  size="icon"
+                  variant="ghost"
+                  size="xs"
+                  className="h-7 w-7"
                   onClick={() => table.setPageIndex(table.getPageCount() - 1)}
                   disabled={!table.getCanNextPage()}
                 >
-                  <ChevronDoubleRightIcon className="h-4 w-4" />
+                  <ChevronDoubleRightIcon size={16} />
                 </Button>
                 <Select
                   value={String(table.getState().pagination.pageSize)}
                   onValueChange={(value) => table.setPageSize(Number(value))}
                 >
-                  <SelectTrigger className="h-8 w-[110px]">
+                  <SelectTrigger className="h-7 w-[110px]">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
