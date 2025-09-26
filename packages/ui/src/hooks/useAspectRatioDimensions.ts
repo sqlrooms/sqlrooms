@@ -23,7 +23,7 @@ export interface Dimensions {
 export interface UseAspectRatioDimensionsProps {
   width: number | 'auto';
   height: number | 'auto';
-  aspectRatio: number;
+  aspectRatio?: number;
   containerRef: React.RefObject<HTMLElement | null>;
 }
 
@@ -57,12 +57,16 @@ export function useAspectRatioDimensions({
   aspectRatio,
   containerRef,
 }: UseAspectRatioDimensionsProps): Dimensions {
-  const {width: containerWidth = 0} = useResizeObserver({
-    ref: containerRef as RefObject<HTMLElement>,
-    box: 'border-box',
-  });
+  const {width: containerWidth = 0, height: containerHeight = 0} =
+    useResizeObserver({
+      ref: containerRef as RefObject<HTMLElement>,
+      box: 'border-box',
+    });
 
   return useMemo(() => {
+    if (!aspectRatio) {
+      return {width: containerWidth, height: containerHeight};
+    }
     if (width !== 'auto' && height !== 'auto') {
       return {width, height};
     }

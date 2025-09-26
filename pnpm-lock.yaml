@@ -881,6 +881,9 @@ importers:
 
   examples/notebook:
     dependencies:
+      '@sqlrooms/dropzone':
+        specifier: workspace:*
+        version: link:../../packages/dropzone
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
@@ -896,6 +899,12 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../packages/utils
+      lucide-react:
+        specifier: 0.501.0
+        version: 0.501.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
@@ -905,6 +914,9 @@ importers:
       zod:
         specifier: ^3.25.73
         version: 3.25.73
+      zustand:
+        specifier: 5.0.5
+        version: 5.0.5(@types/react@19.1.7)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
       '@types/react':
         specifier: ^19.1.7
@@ -1564,6 +1576,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -1579,15 +1594,33 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../utils
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../vega
+      dayjs:
+        specifier: ^1.11.13
+        version: 1.11.13
       immer:
         specifier: ^10.1.1
         version: 10.1.1
+      lucide-react:
+        specifier: ^0.474.0
+        version: 0.474.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
       react-dom:
         specifier: 19.1.0
         version: 19.1.0(react@19.1.0)
+      react-hook-form:
+        specifier: ^7.57.0
+        version: 7.57.0(react@19.1.0)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
+      remark-gfm:
+        specifier: ^4.0.1
+        version: 4.0.1
       zod:
         specifier: ^3.25.73
         version: 3.25.73

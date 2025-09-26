@@ -1,6 +1,13 @@
 import {Button, EditableText} from '@sqlrooms/ui';
-import React from 'react';
+import React, {useEffect} from 'react';
+import {PlusIcon} from 'lucide-react';
+
 import {useStoreWithNotebook} from './NotebookSlice';
+import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
+import {NotebookCellTypes} from './cellSchemas';
+import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
+import {InputBar, ShowInputBarToggle} from './cells/InputBar';
+import {CellView} from './cells/CellView';
 
 export const TabsBar: React.FC = () => {
   const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
@@ -11,12 +18,14 @@ export const TabsBar: React.FC = () => {
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);
   const renameTab = useStoreWithNotebook((s) => s.notebook.renameTab);
   return (
-    <div className="flex items-center gap-2 border-b p-2">
+    <div className="bg-muted flex items-center gap-2">
       {tabs.map((t) => (
         <button
           key={t.id}
-          className={`rounded px-2 py-1 ${
-            t.id === currentTabId ? 'bg-muted' : 'hover:bg-muted'
+          className={`rounded-t px-2 py-0 ${
+            t.id === currentTabId
+              ? 'bg-background border-muted border-x-2 border-t-2'
+              : 'hover:bg-background'
           }`}
           onClick={() => setCurrent(t.id)}
         >
@@ -27,55 +36,77 @@ export const TabsBar: React.FC = () => {
           />
         </button>
       ))}
-      <Button size="xs" variant="outline" onClick={() => addTab()}>
-        + Add
+      <Button size="xs" variant="ghost" onClick={() => addTab()}>
+        <PlusIcon size={14} strokeWidth={2} />
       </Button>
     </div>
   );
-};
-
-export const CellView: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
-  const render = useStoreWithNotebook(
-    (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
-  );
-  if (!cell || !render) return null;
-  return render(id);
 };
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
     (s) => s.config.notebook.currentTabId,
   );
+  const currentCellId = useStoreWithNotebook(
+    (s) => s.config.notebook.currentCellId,
+  );
   const tab = useStoreWithNotebook((s) =>
     s.config.notebook.tabs.find((t) => t.id === currentTabId),
   );
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
+  const runAllCellsCascade = useStoreWithNotebook(
+    (s) => s.notebook.runAllCellsCascade,
+  );
+  const run = useStoreWithNotebook((s) => s.notebook.runCell);
+
+  const handleAddCellAndScroll = (type: NotebookCellTypes) => {
+    if (!tab) return;
+    addCell(tab.id, type);
+  };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!currentCellId) return;
+
+      if (e.key === 'Enter' && e.shiftKey) {
+        e.preventDefault();
+        run(currentCellId);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentCellId, run]);
+
   if (!tab) return null;
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex h-full min-h-0 flex-col">
       <TabsBar />
-      <div className="flex items-center gap-2 border-b p-2">
-        <Button size="xs" onClick={() => addCell(tab.id, 'sql')}>
-          + SQL
+      <div className="ml-auto mr-0 flex items-center gap-1 px-4 pt-2">
+        <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
+        <Button
+          size="xs"
+          variant="secondary"
+          onClick={() => runAllCellsCascade(tab.id)}
+          className="h-7"
+        >
+          Run all
         </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'markdown')}>
-          + Markdown
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'text')}>
-          + Text
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'vega')}>
-          + Vega
-        </Button>
-        <Button size="xs" onClick={() => addCell(tab.id, 'input')}>
-          + Input
-        </Button>
+        <ShowInputBarToggle />
       </div>
-      <div className="flex-1 space-y-2 overflow-auto p-2">
-        {tab.cellOrder.map((id) => (
-          <CellView key={id} id={id} />
+      <InputBar
+        inputBarOrder={tab.inputBarOrder}
+        showInputBar={tab.showInputBar}
+      />
+
+      <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
+        {tab.cellOrder.map((id, index) => (
+          <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
+            <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />
+            <CellView id={id} />
+          </div>
         ))}
+        <AddNewCellTabs onAdd={(type) => addCell(tab.id, type)} />
       </div>
     </div>
   );

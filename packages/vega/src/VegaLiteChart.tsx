@@ -79,7 +79,7 @@ const VegaLiteSqlChart: React.FC<{
   className,
   width = 'auto',
   height = 'auto',
-  aspectRatio = 3 / 2,
+  aspectRatio,
   sqlQuery,
   spec,
   dataName = DEFAULT_DATA_NAME,

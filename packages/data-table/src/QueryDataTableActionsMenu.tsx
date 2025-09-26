@@ -31,11 +31,16 @@ export const QueryDataTableActionsMenu: FC<{
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="outline" size="xs" disabled={isExporting}>
+        <Button
+          variant="ghost"
+          size="xs"
+          disabled={isExporting}
+          className="h-7 w-7"
+        >
           {isExporting ? (
             <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
           ) : (
-            <DownloadIcon className="h-4 w-4" />
+            <DownloadIcon size={16} />
           )}
         </Button>
       </DropdownMenuTrigger>
