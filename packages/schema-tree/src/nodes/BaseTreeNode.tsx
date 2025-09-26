@@ -23,7 +23,9 @@ export function BaseTreeNode<T>(
           className,
         )}
       >
-        <div className="absolute h-full w-full items-center">{children}</div>
+        <div className="absolute flex h-full w-full items-center">
+          {children}
+        </div>
       </div>
     </Comp>
   );
