@@ -1,8 +1,9 @@
-export const DEFAULT_MODEL = 'gpt-4o-mini';
+import {AiSettingsSliceConfig, createDefaultAiSettings} from '@sqlrooms/ai';
+
+export const DEFAULT_MODEL = 'gpt-4.1';
 
 // Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';
-export const CUSTOM_MODEL_NAME = 'custom';
 
 // Default base URLs for each provider
 export const PROVIDER_DEFAULT_BASE_URLS = {
@@ -46,6 +47,37 @@ export const LLM_MODELS = [
   },
   {
     name: 'ollama',
-    models: ['qwen3:32b', 'qwen3', CUSTOM_MODEL_NAME],
+    models: ['qwen3:32b', 'gpt-oss'],
   },
 ];
+
+export const AI_SETTINGS = {
+  providers: LLM_MODELS.reduce((acc: Record<string, unknown>, provider) => {
+    acc[provider.name] = {
+      baseUrl:
+        PROVIDER_DEFAULT_BASE_URLS[
+          provider.name as keyof typeof PROVIDER_DEFAULT_BASE_URLS
+        ],
+      apiKey: '',
+      models: provider.models.map((model) => ({
+        id: model,
+        modelName: model,
+      })),
+    };
+    return acc;
+  }, {}) as AiSettingsSliceConfig['aiSettings']['providers'],
+};
+
+/**
+ * Migrate room older versions of the example app config
+ */
+export function migrateRoomConfig(config: unknown) {
+  if (typeof config !== 'object' || config === null) {
+    return config;
+  }
+  let next = config;
+  if (!('aiSettings' in config)) {
+    next = {...config, ...createDefaultAiSettings(AI_SETTINGS)};
+  }
+  return next;
+}

@@ -49,6 +49,6 @@
     "vite": "^6.3.5"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.29.1-dev269.0"
+    "@duckdb/duckdb-wasm": "1.30.0"
   }
 }

@@ -1,0 +1,55 @@
+[project]
+name = "sqlrooms-duckdb-server"
+description = "A DuckDB server for SQLRooms"
+dynamic = ["version"]
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "diskcache",
+  "duckdb>=1.4.0,<1.5.0",
+  "pandas",
+  "pyarrow",
+  "socketify",
+  "ujson"
+]
+
+[project.scripts]
+sqlrooms-duckdb-server = "pkg.__main__:serve"
+
+[project.urls]
+homepage = "https://github.com/sqlrooms/sqlrooms"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+  "mypy",
+  "pytest-cov",
+  "pytest",
+  "pytest-asyncio",
+  "ruff",
+  "types-ujson",
+  "watchdog",
+  "aiohttp",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["pkg"]
+
+[tool.hatch.version]
+path = "package.json"
+pattern = "\"version\": \"(?P<version>.+?)\""
+
+# https://mypy.readthedocs.io/en/stable/config_file.html
+[tool.mypy]
+files = "pkg/**/*.py"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
