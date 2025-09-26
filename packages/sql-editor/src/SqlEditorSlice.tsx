@@ -349,7 +349,6 @@ export function createSqlEditorSlice<
 
             const parsedLastStatement =
               await get().db.sqlSelectToJson(lastQueryStatement);
-            console.log('parsedLastStatement', parsedLastStatement);
 
             if (signal.aborted) {
               throw new Error('Query aborted');
