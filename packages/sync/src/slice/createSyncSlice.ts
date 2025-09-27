@@ -2,6 +2,7 @@ import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
 import {isControlMessagesConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {StoreApi} from 'zustand';
+import type {VersionVector} from 'loro-crdt';
 const u8ToHex = (u8: Uint8Array): string =>
   Array.from(u8)
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -74,6 +75,8 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
     }, flushMs) as unknown as number;
   };
 
+  const docVersions = new Map<string, VersionVector | undefined>();
+
   return createSlice<PC, SyncSliceState>((set, get, store) => {
     const base = createCrdtSlice<PC, any>({
       selector: options.crdtSelector,
@@ -85,6 +88,19 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
     let unsubscribeForward: (() => void) | undefined;
     const forwardSelector =
       options.crdtSelector || ((s: any) => ({config: s.config}));
+
+    /**
+     * Snapshot the latest known version vector for a doc so future exports can
+     * request only the incremental diff.
+     */
+    const updateKnownVersion = (key: string) => {
+      try {
+        const doc = get().crdt.getDoc(key);
+        docVersions.set(key, doc.oplogVersion());
+      } catch (error) {
+        console.error('Failed to record CRDT version for', key, error);
+      }
+    };
 
     base.crdt.initialize = async () => {
       await originalInitialize?.();
@@ -117,7 +133,14 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
               if (prevVal !== nextVal) {
                 try {
                   const doc = get().crdt.getDoc(key);
-                  const bytes: Uint8Array = doc.export({mode: 'update'});
+                  const knownVersion = docVersions.get(key);
+                  const bytes: Uint8Array = knownVersion
+                    ? doc.export({mode: 'update', from: knownVersion})
+                    : doc.export({mode: 'update'});
+                  if (bytes.length === 0) {
+                    updateKnownVersion(key);
+                    continue;
+                  }
                   const b64 = btoa(String.fromCharCode(...bytes));
                   connector.sendControlMessage({
                     type: 'crdtUpdate',
@@ -125,6 +148,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
                     branch: 'main',
                     data: b64,
                   });
+                  updateKnownVersion(key);
                 } catch (e) {
                   console.error('Failed to send CRDT update', key, e);
                 }
@@ -146,6 +170,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
                   c.charCodeAt(0),
                 );
                 get().crdt.applyRemoteUpdate(key, bytes);
+                updateKnownVersion(key);
               } else if (
                 payload?.type === 'crdtState' &&
                 typeof payload?.docId === 'string' &&
@@ -157,6 +182,7 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
                   c.charCodeAt(0),
                 );
                 get().crdt.applyRemoteUpdate(key, bytes);
+                updateKnownVersion(key);
               }
             } catch (e) {
               console.error('Failed to apply CRDT update', payload);

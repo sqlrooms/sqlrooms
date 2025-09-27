@@ -81,6 +81,7 @@ export function createWebSocketDuckDbConnector(
   >();
 
   const closeAndRejectAll = (reason: string) => {
+    console.log('closeAndRejectAll', reason);
     for (const [qid, waiter] of pending.entries()) {
       try {
         waiter.reject(new Error(reason));
@@ -129,6 +130,7 @@ export function createWebSocketDuckDbConnector(
         };
 
         ws.onmessage = (event: MessageEvent) => {
+          console.log('onmessage', event);
           (async () => {
             if (typeof event.data === 'string') {
               let parsed: any;
@@ -154,6 +156,7 @@ export function createWebSocketDuckDbConnector(
               }
               if (t === 'cancelAck') return;
               if (t === 'notify') {
+                console.log('notify', parsed);
                 const payload = parsed?.payload;
                 try {
                   options.onNotification?.(payload);

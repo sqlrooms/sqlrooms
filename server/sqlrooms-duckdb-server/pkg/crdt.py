@@ -3,7 +3,7 @@ import threading
 from dataclasses import dataclass
 from typing import Dict, Optional, Tuple
 
-from loro import LoroDoc
+from loro import LoroDoc, ExportMode
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +53,10 @@ class LoroDocManager:
 
     def export_state(self, doc_id: str, branch: str = "main") -> bytes:
         doc = self.get_or_create(doc_id, branch)
-        return doc.export()
+        return doc.export(ExportMode.Snapshot())
 
     def export_update(self, doc_id: str, branch: str = "main") -> bytes:
         doc = self.get_or_create(doc_id, branch)
-        return doc.export()
+        return doc.export(ExportMode.Updates())
 
 

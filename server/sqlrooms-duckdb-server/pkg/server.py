@@ -76,7 +76,12 @@ def server(cache, port=4000, auth_token: str | None = None):
     crdt_mgr = LoroDocManager()
 
     def ws_open(ws):
+        logger.info("WebSocket opened")
         auth.on_open(ws)
+
+    def ws_close(ws, code, message):
+        logger.info(f"WebSocket closed: {code} {message}")
+        auth.on_close(ws)
 
     def _process_message(ws, query):
         # Cancellation message: { type: 'cancel', queryId }
@@ -270,7 +275,7 @@ def server(cache, port=4000, auth_token: str | None = None):
             "drain": lambda ws: logger.warning(
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
-            "close": lambda ws, code, message: auth.on_close(ws),
+            "close": ws_close,
         },
     )
 
