@@ -5,6 +5,7 @@ export type RoomStore<PC> = StoreApi<RoomState<PC>>;
 
 export type RoomStateProps<PC> = {
   initialized: boolean;
+  initializationError: unknown | undefined;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
   captureException: (exception: unknown, captureContext?: unknown) => void;
@@ -57,6 +58,7 @@ export function createRoomSlice<PC>(props: {
   const initialRoomState: RoomStateProps<PC> = {
     ...roomStateProps,
     initialized: false,
+    initializationError: undefined,
     lastSavedConfig: undefined,
     tasksProgress: {},
     captureException: (exception: unknown) => {
@@ -208,6 +210,11 @@ export function createRoomStoreCreator<TState extends RoomState<any>>() {
               }
             });
           } catch (error) {
+            store.setState((state) =>
+              produce(state, (draft) => {
+                draft.room.initializationError = error;
+              }),
+            );
             store.getState().room.captureException(error);
           }
         })();

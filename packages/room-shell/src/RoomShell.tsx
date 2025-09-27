@@ -16,6 +16,32 @@ import {
   SidebarButton,
 } from './RoomShellSidebarButtons';
 import {useBaseRoomShellStore} from './RoomShellStore';
+import {InitializationFailedDialog} from './InitializationFailedDialog';
+
+function RoomShellContent({
+  className,
+  children,
+}: React.PropsWithChildren<{
+  className?: string;
+}>) {
+  const initializationError = useBaseRoomShellStore(
+    (state) => state.room.initializationError,
+  );
+
+  return (
+    <div className={cn('flex h-full w-full', className)}>
+      {initializationError ? (
+        <InitializationFailedDialog error={initializationError} />
+      ) : null}
+      <ErrorBoundary>
+        <Suspense fallback={<SpinnerPane h="100%" />}>
+          <TooltipProvider>{children}</TooltipProvider>
+          <Toaster />
+        </Suspense>
+      </ErrorBoundary>
+    </div>
+  );
+}
 
 export function RoomShellBase<PC extends BaseRoomConfig>({
   className,
@@ -27,14 +53,7 @@ export function RoomShellBase<PC extends BaseRoomConfig>({
 }>) {
   return (
     <RoomStateProvider roomStore={roomStore}>
-      <div className={cn('flex h-full w-full', className)}>
-        <ErrorBoundary>
-          <Suspense fallback={<SpinnerPane h="100%" />}>
-            <TooltipProvider>{children}</TooltipProvider>
-            <Toaster />
-          </Suspense>
-        </ErrorBoundary>
-      </div>
+      <RoomShellContent className={className}>{children}</RoomShellContent>
     </RoomStateProvider>
   );
 }
