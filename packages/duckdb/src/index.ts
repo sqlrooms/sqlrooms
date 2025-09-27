@@ -29,6 +29,10 @@ export {
   createWebSocketDuckDbConnector,
   type WebSocketDuckDbConnector,
 } from './connectors/WebSocketDuckDbConnector';
+export {
+  isControlMessagesConnector,
+  type ControlMessagesConnector,
+} from './connectors/ControlMessagesConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';
 export {

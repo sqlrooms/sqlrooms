@@ -1,8 +1,19 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
-import {DuckDbConnector} from '@sqlrooms/duckdb';
+import {isControlMessagesConnector} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {StoreApi} from 'zustand';
-import {u8ToHex, hexToU8} from '../SyncDuckDbConnector';
+const u8ToHex = (u8: Uint8Array): string =>
+  Array.from(u8)
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+const hexToU8 = (hex: string): Uint8Array => {
+  const clean = hex.startsWith('0x') ? hex.slice(2) : hex;
+  const arr = new Uint8Array(clean.length / 2);
+  for (let i = 0; i < arr.length; i++) {
+    arr[i] = parseInt(clean.substr(i * 2, 2), 16);
+  }
+  return arr;
+};
 
 export type SyncSliceState = CrdtSliceState & {
   sync: {
@@ -30,18 +41,6 @@ interface BufferedEvent {
   userId?: string;
   createdAt: Date;
   updateData: Uint8Array;
-}
-
-export function connectorHasCrdt(
-  connector: DuckDbConnector,
-): connector is DuckDbConnector & {
-  crdt: {
-    init: (docId: string, branch?: string) => void;
-    sendUpdate: (docId: string, update: Uint8Array, branch?: string) => void;
-  };
-  __addNotificationListener?: (fn: (payload: any) => void) => void;
-} {
-  return connector != null && typeof (connector as any).crdt === 'object';
 }
 
 /**
@@ -91,13 +90,24 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
       await originalInitialize?.();
       try {
         const connector = await get().db.getConnector();
-        if (!connectorHasCrdt(connector)) return;
+        if (!isControlMessagesConnector(connector)) {
+          throw new Error(
+            'Provided connector does not support control messages, ' +
+              'use e.g. WebSocketDuckDbConnector instead',
+          );
+        }
         const initial = forwardSelector(store.getState());
         // Request server state and subscribe
         for (const key of Object.keys(initial)) {
           try {
-            connector.crdt.init(key, 'main');
-          } catch {}
+            connector.sendControlMessage({
+              type: 'crdtInit',
+              docId: key,
+              branch: 'main',
+            });
+          } catch (e) {
+            console.error('Failed to send CRDT init', key);
+          }
           // Forward local changes as CRDT updates
           unsubscribeForward = store.subscribe((nextState, prevState) => {
             const nextSel = forwardSelector(nextState);
@@ -108,8 +118,16 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
                 try {
                   const doc = get().crdt.getDoc(key);
                   const bytes: Uint8Array = doc.export({mode: 'update'});
-                  connector.crdt.sendUpdate(key, bytes, 'main');
-                } catch {}
+                  const b64 = btoa(String.fromCharCode(...bytes));
+                  connector.sendControlMessage({
+                    type: 'crdtUpdate',
+                    docId: key,
+                    branch: 'main',
+                    data: b64,
+                  });
+                } catch (e) {
+                  console.error('Failed to send CRDT update', key, e);
+                }
               }
             }
           });
@@ -140,12 +158,16 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
                 );
                 get().crdt.applyRemoteUpdate(key, bytes);
               }
-            } catch {}
+            } catch (e) {
+              console.error('Failed to apply CRDT update', payload);
+            }
           };
           // Attach a per-connector listener using internal API
           try {
-            (connector as any).__addNotificationListener?.(listener);
-          } catch {}
+            connector.addNotificationListener(listener);
+          } catch (e) {
+            console.error('Failed to add CRDT listener');
+          }
         }
       } catch {}
     };

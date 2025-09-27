@@ -4,4 +4,3 @@
  */
 
 export * from './slice/createSyncSlice';
-export * from './SyncDuckDbConnector';

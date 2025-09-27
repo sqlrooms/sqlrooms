@@ -338,4 +338,10 @@ export interface DuckDbConnector {
     tableName: string,
     opts?: StandardLoadOptions,
   ): Promise<void>;
+
+  /** Internal hook for WebSocket connectors to send control messages */
+  sendControlMessage?: (message: any) => void;
+
+  /** Internal hook to add notification listeners on WebSocket connectors */
+  addNotificationListener?: (fn: (payload: any) => void) => void;
 }

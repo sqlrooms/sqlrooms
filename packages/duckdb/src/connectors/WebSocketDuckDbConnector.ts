@@ -11,7 +11,13 @@ import {
 } from '@sqlrooms/room-config';
 import {load, loadObjects, loadSpatial} from './load/load';
 import {splitFilePath} from '@sqlrooms/utils';
+import {ControlMessagesConnector} from './ControlMessagesConnector';
 
+/**
+ * Options for the WebSocket DuckDB connector.
+ *
+ * @public
+ */
 export interface WebSocketDuckDbConnectorOptions {
   /**
    * WebSocket endpoint of the DuckDB server.
@@ -31,13 +37,8 @@ export interface WebSocketDuckDbConnectorOptions {
   authToken?: string;
 }
 
-export interface WebSocketDuckDbConnector extends DuckDbConnector {
-  readonly type: 'ws';
-  /** Internal: attach an extra notification listener */
-  __addNotificationListener?: (fn: (payload: any) => void) => void;
-  /** Send a control message over the WebSocket connection */
-  sendControlMessage?: (message: any) => void;
-}
+export type WebSocketDuckDbConnector = DuckDbConnector &
+  ControlMessagesConnector;
 
 /**
  * Create a DuckDB connector that talks to a WebSocket backend.
@@ -50,6 +51,11 @@ export interface WebSocketDuckDbConnector extends DuckDbConnector {
  * - Errors are sent as JSON text frames: `{ type: 'error', queryId, error }`.
  * - Cancellation: client sends `{ type: 'cancel', queryId }` and keeps socket open.
  * - Notifications: server may push `{ type: 'notify', payload }` as JSON text.
+ */
+/**
+ * Create a WebSocket-based DuckDB connector.
+ *
+ * @public
  */
 export function createWebSocketDuckDbConnector(
   options: WebSocketDuckDbConnectorOptions = {},
@@ -147,15 +153,15 @@ export function createWebSocketDuckDbConnector(
                 return;
               }
               if (t === 'cancelAck') return;
-              // Forward any non-query control messages to listeners as notifications
-              if (typeof parsed?.queryId !== 'string') {
+              if (t === 'notify') {
+                const payload = parsed?.payload;
                 try {
-                  options.onNotification?.(parsed);
+                  options.onNotification?.(payload);
                 } catch {}
                 try {
-                  for (const fn of notificationListeners) fn(parsed);
+                  for (const fn of notificationListeners) fn(payload);
                 } catch {}
-                // Continue to handle global errors below
+                return;
               }
               // After initialization: if we ever receive a global unauthorized error, throw and close
               if (t === 'error') {
@@ -177,6 +183,13 @@ export function createWebSocketDuckDbConnector(
               if (t === 'error') {
                 pending.delete(qid);
                 waiter.reject(new Error(parsed?.error || 'Unknown error'));
+              } else if (t === 'ok') {
+                // Server acknowledged an arrow query with no result set
+                pending.delete(qid);
+                const empty = arrow.tableFromArrays(
+                  {},
+                ) as unknown as arrow.Table;
+                waiter.resolve(empty);
               }
               return;
             }
@@ -283,7 +296,9 @@ export function createWebSocketDuckDbConnector(
             if (socket && socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({type: 'cancel', queryId: qid}));
             }
-          } catch {}
+          } catch (e) {
+            console.error('Failed to send cancel message', qid, e);
+          }
           pending.delete(qid);
           reject(new DOMException('Query was cancelled', 'AbortError'));
         };
@@ -293,13 +308,17 @@ export function createWebSocketDuckDbConnector(
           resolve: (t) => {
             try {
               signal.removeEventListener('abort', onAbort);
-            } catch {}
+            } catch (e) {
+              console.error('Failed to remove abort listener', qid, e);
+            }
             resolve(t as arrow.Table<T>);
           },
           reject: (e) => {
             try {
               signal.removeEventListener('abort', onAbort);
-            } catch {}
+            } catch (e) {
+              console.error('Failed to remove abort listener', qid, e);
+            }
             reject(e);
           },
         });
@@ -316,7 +335,9 @@ export function createWebSocketDuckDbConnector(
           pending.delete(qid);
           try {
             signal.removeEventListener('abort', onAbort);
-          } catch {}
+          } catch (e) {
+            console.error('Failed to remove abort listener', qid, e);
+          }
           reject(e);
         }
       });
@@ -379,17 +400,15 @@ export function createWebSocketDuckDbConnector(
     get type() {
       return 'ws' as const;
     },
-    // Internal: allow attaching additional notification listeners
-    __addNotificationListener: (fn: (payload: any) => void) => {
-      try {
-        notificationListeners.add(fn);
-      } catch {}
-    },
     sendControlMessage: (message: any) => {
-      if (!socket || socket.readyState !== WebSocket.OPEN) return;
-      try {
-        socket.send(JSON.stringify(message));
-      } catch {}
+      if (!socket || socket.readyState !== WebSocket.OPEN) {
+        throw new Error('WebSocket not open');
+      }
+      console.log('sendControlMessage', message);
+      socket.send(JSON.stringify(message));
+    },
+    addNotificationListener: (fn: (payload: any) => void) => {
+      notificationListeners.add(fn);
     },
   };
 }
