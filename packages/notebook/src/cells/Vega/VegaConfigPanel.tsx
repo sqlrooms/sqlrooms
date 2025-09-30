@@ -36,9 +36,10 @@ const aggregationOptions = [
 export const VegaConfigPanel: React.FC<{
   sqlQuery: string;
   spec: any;
+  lastRunTime?: number;
   onSpecChange: (spec: any) => void;
-}> = ({sqlQuery, spec, onSpecChange}) => {
-  const {data: sqlData} = useSql({query: sqlQuery});
+}> = ({sqlQuery, spec, lastRunTime, onSpecChange}) => {
+  const {data: sqlData} = useSql({query: sqlQuery, version: lastRunTime});
 
   const fieldNames =
     sqlData?.arrowTable?.schema?.fields?.map((field) => field.name) || [];

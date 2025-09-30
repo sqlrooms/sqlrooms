@@ -91,27 +91,31 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
               </div>
             )}
 
-            <div className="overflow-hidden border-t">
-              <QueryDataTable
-                query={`SELECT * FROM ${cellStatus.resultView}`}
-                fontSize="text-xs"
-                pageSize={10}
-                className="overflow-hidden rounded"
-                renderActions={() => (
-                  <>
-                    {lastRunTime && (
-                      <div className="border-l px-2 text-xs">
-                        Refreshed {lastRunTime}
-                      </div>
-                    )}
-                    <QueryDataTableActionsMenu
-                      query={`SELECT * FROM ${cellStatus.resultView}`}
-                    />
-                    <AddSqlCellResultToNewTable query={cell.sql} />
-                  </>
-                )}
-              />
-            </div>
+            {cellStatus.resultView && (
+              <div className="overflow-hidden border-t">
+                <QueryDataTable
+                  query={`SELECT * FROM ${cellStatus.resultView}`}
+                  fontSize="text-xs"
+                  pageSize={10}
+                  className="overflow-hidden rounded-b"
+                  lastRunTime={cellStatus.lastRunTime}
+                  isLoading={cellStatus.status === 'running'}
+                  renderActions={() => (
+                    <>
+                      {lastRunTime && (
+                        <div className="hidden border-l px-2 text-xs lg:inline-flex">
+                          Refreshed {lastRunTime}
+                        </div>
+                      )}
+                      <QueryDataTableActionsMenu
+                        query={`SELECT * FROM ${cellStatus.resultView}`}
+                      />
+                      <AddSqlCellResultToNewTable query={cell.sql} />
+                    </>
+                  )}
+                />
+              </div>
+            )}
           </>
         )}
       </div>

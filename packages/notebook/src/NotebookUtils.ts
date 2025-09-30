@@ -64,7 +64,7 @@ export const initializeInput = (
 
 dayjs.extend(relativeTime);
 
-export function useRelativeTimeDisplay(pastDate: number | null): string | null {
+export function useRelativeTimeDisplay(pastDate: number | null): string {
   const [relativeTimeStr, setRelativeTimeStr] = useState('');
 
   useEffect(() => {

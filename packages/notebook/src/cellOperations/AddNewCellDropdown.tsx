@@ -47,7 +47,7 @@ export const AddNewCellDropdown: FC<Props> = ({
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger>{triggerComponent}</PopoverTrigger>
+      <PopoverTrigger asChild>{triggerComponent}</PopoverTrigger>
 
       <AddNewCellDropdownContent
         onAddCell={onAdd}

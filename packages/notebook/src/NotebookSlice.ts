@@ -303,12 +303,7 @@ export function createNotebookSlice<
                 draft.notebook.cellStatus[id] = {
                   type: 'sql',
                   status: 'idle',
-                  referencedTables: [],
-                  resultView: makeQualifiedTableName({
-                    table: cell.name,
-                    schema: get().notebook.schemaName,
-                    database: get().db.currentDatabase,
-                  }).toString(),
+                  referencedTables: []
                 };
               } else {
                 draft.notebook.cellStatus[id] = {type: 'other'};
@@ -462,6 +457,10 @@ export function createNotebookSlice<
                   draft.notebook.cellStatus[id] = {
                     type: 'sql',
                     status: 'running',
+                    resultView:
+                      draft.notebook.cellStatus[id]?.type === 'sql'
+                        ? draft.notebook.cellStatus[id].resultView
+                        : undefined,
                     lastError: undefined,
                   };
                 }),
@@ -519,6 +518,9 @@ export function createNotebookSlice<
                   `CREATE OR REPLACE VIEW ${tableName} AS ${renderedSql}`,
                   {signal: abortController.signal},
                 );
+
+                const delay = new Promise((res) => setTimeout(res, 3000));
+                await delay;
 
                 set((state) =>
                   produce(state, (draft) => {

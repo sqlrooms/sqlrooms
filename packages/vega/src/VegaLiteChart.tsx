@@ -75,6 +75,7 @@ const VegaLiteSqlChart: React.FC<{
   sqlQuery: string;
   spec: string | VisualizationSpec;
   dataName?: string;
+  lastRunTime?: number;
 }> = ({
   className,
   width = 'auto',
@@ -83,6 +84,7 @@ const VegaLiteSqlChart: React.FC<{
   sqlQuery,
   spec,
   dataName = DEFAULT_DATA_NAME,
+  lastRunTime,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useAspectRatioDimensions({
@@ -107,7 +109,7 @@ const VegaLiteSqlChart: React.FC<{
     } as VisualizationSpec;
   }, [spec, dimensions]);
 
-  const result = useSql({query: sqlQuery});
+  const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
 
   return (
@@ -148,7 +150,7 @@ export const ArrowChart: React.FC<{
   className,
   width = 'auto',
   height = 'auto',
-  aspectRatio = 3 / 2,
+  aspectRatio,
   spec,
   arrowTable,
   dataName = DEFAULT_DATA_NAME,

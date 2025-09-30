@@ -149,7 +149,10 @@ export type DuckDbSliceState = {
      * @param query - The SQL query to execute
      * @returns The QueryHandle for the query or null if disabled
      */
-    executeSql: (query: string) => Promise<QueryHandle | null>;
+    executeSql: (
+      query: string,
+      version?: number,
+    ) => Promise<QueryHandle | null>;
 
     /**
      * @deprecated Use .tables or .loadTableSchemas() instead
@@ -571,9 +574,12 @@ export function createDuckDbSlice({
           return JSON.parse(parsedQuery);
         },
 
-        async executeSql(query: string): Promise<QueryHandle | null> {
+        async executeSql(
+          query: string,
+          version?: number,
+        ): Promise<QueryHandle | null> {
           // Create a unique key for this query
-          const queryKey = `${query}`;
+          const queryKey = `${query}::${version ?? 0}`;
           const connector = await get().db.getConnector();
 
           // Check if we already have a cached query for this key

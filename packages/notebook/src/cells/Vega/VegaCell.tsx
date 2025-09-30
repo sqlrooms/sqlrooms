@@ -32,6 +32,10 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
   const selectedSqlStatus = useStoreWithNotebook(
     (s) => s.notebook.cellStatus[cell.sqlId],
   );
+  const lastRunTime =
+    selectedSqlStatus?.type === 'sql'
+      ? selectedSqlStatus?.lastRunTime
+      : undefined;
 
   const [draftSpec, setDraftSpec] = useState(
     cell.vegaSpec ?? {
@@ -117,6 +121,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
         {isEditing && (
           <VegaConfigPanel
             sqlQuery={selectedSqlQuery}
+            lastRunTime={lastRunTime}
             spec={draftSpec}
             onSpecChange={setDraftSpec}
           />
@@ -128,6 +133,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           {draftSpec?.encoding ? (
             <VegaLiteChart
               sqlQuery={selectedSqlQuery}
+              lastRunTime={lastRunTime}
               spec={draftSpec}
               className="rounded-b"
             />

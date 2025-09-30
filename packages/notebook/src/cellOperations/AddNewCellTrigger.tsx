@@ -1,23 +1,14 @@
-import {Button, Separator} from '@sqlrooms/ui';
-import {PlusIcon} from 'lucide-react';
+import {Button} from '@sqlrooms/ui';
+import React from 'react';
 
-import {IconWithTooltip} from './IconWithTooltip';
-
-export const TriggerButton: React.FC = () => (
-  <Button size="xs" className="h-7">
-    Add new
-  </Button>
-);
-
-export const TriggerSeparator: React.FC = () => (
-  <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 py-1 opacity-60 transition-opacity hover:opacity-100">
-    <Separator className="w-full bg-gray-500" />
-    <IconWithTooltip
-      className="px-2"
-      icon={<PlusIcon strokeWidth={1} size="16px" />}
-      title="Add new cell"
-      side="top"
-    />
-    <Separator className="w-full bg-gray-500" />
-  </div>
-);
+export const TriggerButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentProps<typeof Button>
+>(({children = 'Add new', ...props}, ref) => {
+  return (
+    <Button ref={ref} size="xs" className="h-7" {...props}>
+      {children}
+    </Button>
+  );
+});
+TriggerButton.displayName = 'TriggerButton';
