@@ -57,7 +57,9 @@ export type DuckDbSliceState = {
      */
     schemaTrees?: DbSchemaNode[];
     /**
-     * Cache of currently running query handles
+     * Cache of currently running query handles.
+     * This is only used for running queries to deduplicate them (especially for useSql),
+     * the cache is cleared when the query is completed.
      */
     queryCache: {[key: string]: QueryHandle};
     /**
