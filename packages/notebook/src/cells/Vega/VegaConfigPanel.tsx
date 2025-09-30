@@ -12,6 +12,7 @@ import {
   Label,
   Separator,
 } from '@sqlrooms/ui';
+import {useSql} from '@sqlrooms/duckdb';
 
 const markOptions = [
   {value: 'bar', label: 'Bar'},
@@ -34,10 +35,12 @@ const aggregationOptions = [
 
 export const VegaConfigPanel: React.FC<{
   spec: any;
-  arrowTable: any;
+  sqlQuery: string;
   lastRunTime?: number;
   onSpecChange: (spec: any) => void;
-}> = ({arrowTable, spec, onSpecChange}) => {
+}> = ({sqlQuery, lastRunTime, spec, onSpecChange}) => {
+  const result = useSql({query: sqlQuery, version: lastRunTime});
+  const arrowTable = result.data?.arrowTable;
   const fieldNames =
     arrowTable?.schema?.fields?.map((field: any) => field.name) || [];
 

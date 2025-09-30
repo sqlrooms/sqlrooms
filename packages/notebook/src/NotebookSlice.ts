@@ -519,6 +519,9 @@ export function createNotebookSlice<
                   {signal: abortController.signal},
                 );
 
+                const delay = new Promise((res) => setTimeout(res, 3000));
+                await delay;
+
                 set((state) =>
                   produce(state, (draft) => {
                     const r = draft.notebook.cellStatus[id];

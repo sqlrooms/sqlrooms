@@ -9,7 +9,6 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
-import {useSql} from '@sqlrooms/duckdb';
 
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../NotebookSlice';
@@ -52,11 +51,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
       ? `SELECT * FROM ${selectedSqlStatus.resultView}`
       : '';
-  const {data} = useSql({
-    query: selectedSqlQuery,
-    version: lastRunTime,
-  });
-  const arrowTable = data?.arrowTable;
+
   const isCurrent = currentCellId === id;
 
   const handleValueChange = (value: string) => {
@@ -126,7 +121,8 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       <div className="flex h-[500px]">
         {isEditing && (
           <VegaConfigPanel
-            arrowTable={arrowTable}
+            sqlQuery={selectedSqlQuery}
+            lastRunTime={lastRunTime}
             spec={draftSpec}
             onSpecChange={setDraftSpec}
           />
@@ -135,16 +131,25 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           onDoubleClick={() => setIsEditing((prev) => !prev)}
           className="flex h-full w-full"
         >
-          {draftSpec?.encoding ? (
-            <VegaLiteChart.ArrowChart
-              arrowTable={arrowTable}
+          {!draftSpec?.encoding ? (
+            <div className="flex h-full w-full items-center justify-center text-gray-400">
+              Empty chart, please 1) select a SQL cell and then 2) edit chart.
+            </div>
+          ) : !selectedSqlStatus ? (
+            <div className="flex h-full w-full items-center justify-center text-gray-400">
+              No chart data available, please run the SQL cell first.
+            </div>
+          ) : (
+            <VegaLiteChart
+              sqlQuery={selectedSqlQuery}
+              isLoading={
+                selectedSqlStatus?.type === 'sql' &&
+                selectedSqlStatus.status === 'running'
+              }
+              lastRunTime={lastRunTime}
               spec={draftSpec}
               className="rounded-b"
             />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center text-xs text-gray-400">
-              Empty chart, please 1) select a SQL cell and then 2) edit chart.
-            </div>
           )}
         </div>
       </div>

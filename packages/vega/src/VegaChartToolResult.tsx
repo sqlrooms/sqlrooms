@@ -1,7 +1,6 @@
 import {QueryToolResult} from '@sqlrooms/ai';
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-import {Suspense} from 'react';
 import {VisualizationSpec} from 'react-vega';
 import {VegaLiteChart} from './VegaLiteChart';
 

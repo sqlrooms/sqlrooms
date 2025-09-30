@@ -1,17 +1,8 @@
 import {ToolErrorMessage} from '@sqlrooms/ai';
 import {arrowTableToJson, useSql} from '@sqlrooms/duckdb';
-import {
-  AspectRatio,
-  Button,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  useAspectRatioDimensions,
-} from '@sqlrooms/ui';
+import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
-import {TriangleAlertIcon} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
 
@@ -76,6 +67,7 @@ const VegaLiteSqlChart: React.FC<{
   spec: string | VisualizationSpec;
   dataName?: string;
   lastRunTime?: number;
+  isLoading?: boolean;
 }> = ({
   className,
   width = 'auto',
@@ -85,6 +77,7 @@ const VegaLiteSqlChart: React.FC<{
   spec,
   dataName = DEFAULT_DATA_NAME,
   lastRunTime,
+  isLoading,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const dimensions = useAspectRatioDimensions({
@@ -111,6 +104,10 @@ const VegaLiteSqlChart: React.FC<{
 
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
+  const data = useMemo(() => {
+    if (!arrowTable) return null;
+    return {queryResult: arrowTableToJson(arrowTable)};
+  }, [arrowTable]);
 
   return (
     <div
@@ -120,20 +117,20 @@ const VegaLiteSqlChart: React.FC<{
         className,
       )}
     >
-      {result.error && (
-        <div className="whitespace-pre-wrap font-mono text-sm text-red-500">
-          {result.error.message}
-        </div>
-      )}
-      {result.isLoading ? (
-        <div className="text-muted-foreground align-center flex gap-2 px-2">
+      {isLoading || result.isLoading ? (
+        <div className="text-muted-foreground flex items-center justify-center gap-2 p-2">
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
           Running query for chart data…
         </div>
-      ) : (
-        refinedSpec &&
-        arrowTable && <ArrowChart spec={refinedSpec} arrowTable={arrowTable} />
-      )}
+      ) : refinedSpec && data ? (
+        <AspectRatio ratio={aspectRatio}>
+          <VegaLite spec={refinedSpec} data={data} />
+        </AspectRatio>
+      ) : result.error ? (
+        <div className="whitespace-pre-wrap p-2 font-mono text-sm text-red-500">
+          {result.error.message}
+        </div>
+      ) : null}
     </div>
   );
 };
@@ -150,7 +147,7 @@ export const ArrowChart: React.FC<{
   className,
   width = 'auto',
   height = 'auto',
-  aspectRatio,
+  aspectRatio = 3 / 2,
   spec,
   arrowTable,
   dataName = DEFAULT_DATA_NAME,
