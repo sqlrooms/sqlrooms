@@ -12,7 +12,6 @@ import {
   Label,
   Separator,
 } from '@sqlrooms/ui';
-import {useSql} from '@sqlrooms/duckdb';
 
 const markOptions = [
   {value: 'bar', label: 'Bar'},
@@ -34,15 +33,13 @@ const aggregationOptions = [
 ];
 
 export const VegaConfigPanel: React.FC<{
-  sqlQuery: string;
   spec: any;
+  arrowTable: any;
   lastRunTime?: number;
   onSpecChange: (spec: any) => void;
-}> = ({sqlQuery, spec, lastRunTime, onSpecChange}) => {
-  const {data: sqlData} = useSql({query: sqlQuery, version: lastRunTime});
-
+}> = ({arrowTable, spec, onSpecChange}) => {
   const fieldNames =
-    sqlData?.arrowTable?.schema?.fields?.map((field) => field.name) || [];
+    arrowTable?.schema?.fields?.map((field: any) => field.name) || [];
 
   const handleMarkChange = (mark: string) => {
     onSpecChange({
@@ -139,7 +136,7 @@ export const VegaConfigPanel: React.FC<{
                   <SelectValue placeholder="Select field" />
                 </SelectTrigger>
                 <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                  {fieldNames.map((field) => (
+                  {fieldNames.map((field: string) => (
                     <SelectItem key={field} value={field}>
                       {field}
                     </SelectItem>
@@ -160,7 +157,7 @@ export const VegaConfigPanel: React.FC<{
                     <SelectValue placeholder="Select field" />
                   </SelectTrigger>
                   <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-                    {fieldNames.map((field) => (
+                    {fieldNames.map((field: string) => (
                       <SelectItem key={field} value={field}>
                         {field}
                       </SelectItem>

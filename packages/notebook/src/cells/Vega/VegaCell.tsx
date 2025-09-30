@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from '@sqlrooms/ui';
 import {VegaLiteChart} from '@sqlrooms/vega';
+import {useSql} from '@sqlrooms/duckdb';
 
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../NotebookSlice';
@@ -32,6 +33,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
   const selectedSqlStatus = useStoreWithNotebook(
     (s) => s.notebook.cellStatus[cell.sqlId],
   );
+
   const lastRunTime =
     selectedSqlStatus?.type === 'sql'
       ? selectedSqlStatus?.lastRunTime
@@ -50,7 +52,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     selectedSqlStatus?.type === 'sql' && selectedSqlStatus.resultView
       ? `SELECT * FROM ${selectedSqlStatus.resultView}`
       : '';
-
+  const {data} = useSql({
+    query: selectedSqlQuery,
+    version: lastRunTime,
+  });
+  const arrowTable = data?.arrowTable;
   const isCurrent = currentCellId === id;
 
   const handleValueChange = (value: string) => {
@@ -120,8 +126,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       <div className="flex h-[500px]">
         {isEditing && (
           <VegaConfigPanel
-            sqlQuery={selectedSqlQuery}
-            lastRunTime={lastRunTime}
+            arrowTable={arrowTable}
             spec={draftSpec}
             onSpecChange={setDraftSpec}
           />
@@ -131,9 +136,8 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           className="flex h-full w-full"
         >
           {draftSpec?.encoding ? (
-            <VegaLiteChart
-              sqlQuery={selectedSqlQuery}
-              lastRunTime={lastRunTime}
+            <VegaLiteChart.ArrowChart
+              arrowTable={arrowTable}
               spec={draftSpec}
               className="rounded-b"
             />

@@ -129,7 +129,12 @@ export default function DataTablePaginated<Data extends object>({
     <div
       className={cn(`relative flex h-full w-full flex-col border`, className)}
     >
-      <div className="flex-1 overflow-hidden font-mono">
+      <div
+        className={cn(
+          'flex-1 overflow-hidden font-mono',
+          isFetching && 'pointer-events-none opacity-50',
+        )}
+      >
         <ScrollArea className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>

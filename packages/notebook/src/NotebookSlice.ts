@@ -303,7 +303,7 @@ export function createNotebookSlice<
                 draft.notebook.cellStatus[id] = {
                   type: 'sql',
                   status: 'idle',
-                  referencedTables: []
+                  referencedTables: [],
                 };
               } else {
                 draft.notebook.cellStatus[id] = {type: 'other'};
@@ -518,9 +518,6 @@ export function createNotebookSlice<
                   `CREATE OR REPLACE VIEW ${tableName} AS ${renderedSql}`,
                   {signal: abortController.signal},
                 );
-
-                const delay = new Promise((res) => setTimeout(res, 3000));
-                await delay;
 
                 set((state) =>
                   produce(state, (draft) => {
