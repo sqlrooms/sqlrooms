@@ -34,8 +34,10 @@
     "version-patch": "lerna version patch --yes --sync-workspace-lock",
     "version-minor": "lerna version minor --yes --sync-workspace-lock",
     "version-major": "lerna version major --yes --sync-workspace-lock",
+    "version-prerelease": "node scripts/version-prerelease.mjs",
     "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
     "publish-release": "turbo run publish && lerna publish from-package --yes",
+    "publish-prerelease": "turbo run publish && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
     "update-readme": "node scripts/update-readme.mjs"
   },
   "engines": {
