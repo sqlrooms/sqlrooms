@@ -8,6 +8,24 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.25.0
+
+- Discuss config separated from RoomConfig to make it easier to persist separately and to simplify typing (`state.discuss.config` instead of `state.config.discuss`)
+
+```tsx
+const discussConfig = useRoomStore((state) => state.discuss.config);
+```
+
+After:
+
+```tsx
+const discussConfig = useRoomStore((state) => state.config.discuss);
+```
+
+If you were persisting this state, you will likely need a migration.
+
+You should also remove `.merge(DiscussSliceConfig)` when defining your `RoomConfig`
+
 ## 0.19.0
 
 We are trying to make the package structure more logical, especially, for new users of the SQLRooms framework. Sorry for the more renaming.
