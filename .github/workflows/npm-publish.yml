@@ -1,9 +1,9 @@
 name: NPM Publish
 
 on:
-  push:
-    branches:
-      - main
+  # push:
+  #   branches:
+  #     - main
 
   workflow_dispatch:
     inputs:
@@ -23,6 +23,15 @@ on:
         required: false
         default: 'rc'
         type: string
+      prerelease_bump:
+        description: 'Prerelease bump type'
+        required: false
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
 
 jobs:
   publish:
@@ -73,6 +82,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
+          PRERELEASE_BUMP: ${{ inputs.prerelease_bump != '' && inputs.prerelease_bump || 'patch' }}
 
       - name: Bump version
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}

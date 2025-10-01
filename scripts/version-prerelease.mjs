@@ -6,13 +6,25 @@ const preid =
     ? process.env.PREID.trim()
     : 'rc';
 
+const prereleaseBump =
+  process.env.PRERELEASE_BUMP && process.env.PRERELEASE_BUMP.trim()
+    ? process.env.PRERELEASE_BUMP.trim()
+    : 'patch';
+
+const bumpCommand =
+  prereleaseBump === 'minor'
+    ? 'preminor'
+    : prereleaseBump === 'major'
+      ? 'premajor'
+      : 'prerelease';
+
 const result = spawnSync(
   'pnpm',
   [
     'exec',
     'lerna',
     'version',
-    'prerelease',
+    bumpCommand,
     '--conventional-commits',
     '--yes',
     '--sync-workspace-lock',
@@ -28,4 +40,3 @@ const result = spawnSync(
 if (result.status !== 0) {
   process.exit(result.status ?? 1);
 }
-
