@@ -26,7 +26,7 @@ on:
       prerelease_bump:
         description: 'Prerelease bump type'
         required: false
-        default: 'patch'
+        default: 'minor'
         type: choice
         options:
           - patch
@@ -82,7 +82,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
-          PRERELEASE_BUMP: ${{ inputs.prerelease_bump != '' && inputs.prerelease_bump || 'patch' }}
+          PRERELEASE_BUMP: ${{ inputs.prerelease_bump != '' && inputs.prerelease_bump || 'minor' }}
 
       - name: Bump version
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
