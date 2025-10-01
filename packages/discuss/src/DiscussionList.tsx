@@ -38,7 +38,7 @@ export const DiscussionList = forwardRef<HTMLDivElement, DiscussionListProps>(
       (state) => state.discuss.highlightedDiscussionId,
     );
     const discussions = useStoreWithDiscussion(
-      (state) => state.config.discuss.discussions,
+      (state) => state.discuss.config.discussions,
     );
     const replyToItem = useStoreWithDiscussion(
       (state) => state.discuss.replyToItem,

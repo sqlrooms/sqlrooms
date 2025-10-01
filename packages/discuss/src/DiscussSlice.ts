@@ -34,17 +34,13 @@ export const Discussion = z.object({
 export type Discussion = z.infer<typeof Discussion>;
 
 export const DiscussSliceConfig = z.object({
-  discuss: z.object({
-    discussions: z.array(Discussion),
-  }),
+  discussions: z.array(Discussion),
 });
 export type DiscussSliceConfig = z.infer<typeof DiscussSliceConfig>;
 
 export function createDefaultDiscussConfig(): DiscussSliceConfig {
   return {
-    discuss: {
-      discussions: [],
-    },
+    discussions: [],
   };
 }
 
@@ -68,6 +64,7 @@ export type DeleteItem = {
 export type DiscussSliceState = {
   discuss: {
     userId: string;
+    config: DiscussSliceConfig;
 
     // UI-connected actions - preferred API for most use cases
     /**
@@ -127,6 +124,11 @@ export type DiscussSliceState = {
      */
     handleDeleteConfirm: () => void;
 
+    /**
+     * Sets the config for the discuss slice.
+     */
+    setConfig: (config: DiscussSliceConfig) => void;
+
     // Helpers
     /**
      * Helper function to get the user ID of the entity being replied to.
@@ -158,15 +160,25 @@ export type DiscussSliceState = {
 export type RoomStateWithDiscussion = RoomShellSliceState<BaseRoomConfig> &
   DiscussSliceState;
 
-export function createDiscussSlice<
-  PC extends BaseRoomConfig & DiscussSliceConfig,
->({userId}: {userId: string}): StateCreator<DiscussSliceState> {
+export function createDiscussSlice<PC extends BaseRoomConfig>({
+  userId,
+}: {
+  userId: string;
+}): StateCreator<DiscussSliceState> {
   return createSlice<PC, DiscussSliceState>((set, get) => ({
     discuss: {
       userId,
-
+      config: createDefaultDiscussConfig(),
       // Direct CRUD operations - These are exposed for advanced use cases
       // For normal usage with UI integration, prefer submitEdit
+
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.discuss.config = config;
+          }),
+        );
+      },
 
       /**
        * Directly adds a new discussion without managing UI state.
@@ -190,7 +202,7 @@ export function createDiscussSlice<
 
         set((state) =>
           produce(state, (draft) => {
-            draft.config.discuss.discussions.push(newDiscussion);
+            draft.discuss.config.discussions.push(newDiscussion);
           }),
         );
       },
@@ -202,11 +214,11 @@ export function createDiscussSlice<
       removeDiscussion: (id) => {
         set((state) =>
           produce(state, (draft) => {
-            const index = draft.config.discuss.discussions.findIndex(
+            const index = draft.discuss.config.discussions.findIndex(
               (a) => a.id === id,
             );
             if (index !== -1) {
-              draft.config.discuss.discussions.splice(index, 1);
+              draft.discuss.config.discussions.splice(index, 1);
             }
           }),
         );
@@ -219,7 +231,7 @@ export function createDiscussSlice<
       editDiscussion: (id, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.config.discuss.discussions.find(
+            const discussion = draft.discuss.config.discussions.find(
               (a) => a.id === id,
             );
             if (discussion) {
@@ -244,7 +256,7 @@ export function createDiscussSlice<
 
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.config.discuss.discussions.find(
+            const discussion = draft.discuss.config.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -261,7 +273,7 @@ export function createDiscussSlice<
       editComment: (discussionId, commentId, text) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.config.discuss.discussions.find(
+            const discussion = draft.discuss.config.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -287,7 +299,7 @@ export function createDiscussSlice<
       removeComment: (discussionId, commentId) => {
         set((state) =>
           produce(state, (draft) => {
-            const discussion = draft.config.discuss.discussions.find(
+            const discussion = draft.discuss.config.discussions.find(
               (a) => a.id === discussionId,
             );
             if (discussion) {
@@ -448,7 +460,7 @@ export function createDiscussSlice<
       getReplyToUserId: () => {
         const state = get();
         const {replyToItem} = state.discuss;
-        const {discussions} = state.config.discuss;
+        const {discussions} = state.discuss.config;
 
         if (!replyToItem) return '';
 
@@ -480,7 +492,7 @@ export function createDiscussSlice<
       getEditingItemText: () => {
         const state = get();
         const {editingItem} = state.discuss;
-        const {discussions} = state.config.discuss;
+        const {discussions} = state.discuss.config;
 
         if (!editingItem) return '';
 
