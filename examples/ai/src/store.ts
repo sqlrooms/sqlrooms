@@ -30,7 +30,6 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import exampleSessions from './example-sessions.json';
 import {AI_SETTINGS, migrateRoomConfig} from './config';
 
 export const RoomPanelTypes = z.enum([
@@ -84,7 +83,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           ],
           ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
+            // AiSliceConfig.shape.ai.parse(exampleSessions),
+            {},
           ),
           ...createDefaultAiSettings(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
@@ -147,7 +147,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           // Configure number of rows to share with LLM globally
           numberOfRowsToShareWithLLM: 0,
         },
-
         // Add custom tools
         customTools: {
           // Add the VegaChart tool from the vega package with a custom description
