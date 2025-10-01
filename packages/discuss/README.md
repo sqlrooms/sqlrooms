@@ -126,7 +126,7 @@ import {useStoreWithDiscussion} from '@sqlrooms/discuss';
 function MyComponent() {
   // Get discussions
   const discussions = useStoreWithDiscussion(
-    (state) => state.config.discuss.discussions,
+    (state) => state.discuss.config.discussions,
   );
 
   // Get actions
@@ -160,7 +160,7 @@ import {formatTimeRelative} from '@sqlrooms/utils';
 
 const DiscussionPanel = () => {
   const discussions = useStoreWithDiscussion(
-    (state) => state.config.discuss.discussions,
+    (state) => state.discuss.config.discussions,
   );
 
   return (
@@ -226,7 +226,7 @@ function DataVisualization() {
   // Highlight related discussion when hovering over data
   const handleDataPointHover = (dataId: string) => {
     const discussions =
-      useStoreWithDiscussion.getState().config.discuss.discussions;
+      useStoreWithDiscussion.getState().discuss.config.discussions;
     const relatedDiscussion = discussions.find((d) => d.anchorId === dataId);
     if (relatedDiscussion) {
       setHighlightedDiscussionId(relatedDiscussion.id);

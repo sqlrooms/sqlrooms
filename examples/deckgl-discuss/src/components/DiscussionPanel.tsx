@@ -11,7 +11,7 @@ import {RoomPanelTypes, useRoomStore} from '../store';
  * with highlighting functionality.
  */
 const DiscussionPanel = () => {
-  const discussions = useRoomStore((state) => state.config.discuss.discussions);
+  const discussions = useRoomStore((state) => state.discuss.config.discussions);
 
   const table = useRoomStore((s) => s.db.findTableByName('airports'));
   const {data} = useSql<{name: string; abbrev: string}>({
