@@ -17,6 +17,12 @@ on:
           - patch
           - minor
           - major
+          - prerelease
+      preid:
+        description: 'Prerelease identifier'
+        required: false
+        default: 'rc'
+        type: string
 
 jobs:
   publish:
@@ -61,10 +67,23 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Bump prerelease version
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease' }}
+        run: pnpm run version-prerelease
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+          PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
+
       - name: Bump version
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
         run: pnpm run version-${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
+      - name: Publish prerelease
+        if: ${{ github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease' }}
+        run: pnpm publish-prerelease
+
       - name: Publish
+        if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
         run: pnpm publish-release
