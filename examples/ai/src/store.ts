@@ -6,7 +6,7 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiConfig,
-  createDefaultAiSettings,
+  createDefaultAiSettingsConfig,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -31,7 +31,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {AI_SETTINGS, migrateRoomConfig} from './config';
+import {AI_SETTINGS, DEFAULT_MODEL} from './config';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -44,13 +44,8 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig = z.preprocess(
-  // (Optional) Migrate room older versions of the example app config to prevent errors
-  migrateRoomConfig,
-  BaseRoomConfig.merge(AiSliceConfig)
-    .merge(SqlEditorSliceConfig)
-    .merge(AiSettingsSliceConfig),
-);
+export const RoomConfig =
+  BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -86,7 +81,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ...createDefaultAiConfig(
             AiSliceConfig.shape.ai.parse(exampleSessions),
           ),
-          ...createDefaultAiSettings(AI_SETTINGS),
+          ...createDefaultAiSettingsConfig(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
@@ -112,7 +107,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createSqlEditorSlice()(set, get, store),
 
       // Ai model config slice
-      ...createAiSettingsSlice()(set, get, store),
+      ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
       // Ai slice
       ...createAiSlice({
@@ -178,11 +173,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Local storage key
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
-      partialize: (state) => {
-        return {
-          config: RoomConfig.parse(state.config),
-        };
-      },
+      partialize: (state) => ({
+        config: RoomConfig.parse(state.config),
+        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
+      }),
+      // Combining the persisted state with the current one when loading from local storage
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        config: RoomConfig.parse(persistedState.config),
+        aiSettings: {
+          ...currentState.aiSettings,
+          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
+        },
+      }),
     },
   ) as StateCreator<RoomState>,
 );

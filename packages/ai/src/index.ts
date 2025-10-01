@@ -33,7 +33,7 @@ export {
   createAiSettingsSlice,
   useStoreWithAiSettings,
   AiSettingsSliceConfig,
-  createDefaultAiSettings,
+  createDefaultAiSettingsConfig,
 } from './AiSettingsSlice';
 
 export type {AiSettingsSliceState} from './AiSettingsSlice';

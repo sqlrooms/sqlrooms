@@ -4,14 +4,14 @@
 
 import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
-type AiModelConfig = AiSettingsSliceConfig['aiSettings'];
-
 /**
  * Extract models from aiSettings in the format expected by ModelSelector
  * @param config - The AI model configuration
  * @returns Array of models with provider, label, and value properties
  */
-export function extractModelsFromSettings(config: AiModelConfig): Array<{
+export function extractModelsFromSettings(
+  config: AiSettingsSliceConfig,
+): Array<{
   provider: string;
   label: string;
   value: string;
