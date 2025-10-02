@@ -39,17 +39,23 @@ export const AiModelsSettings: FC<AiModelsSettingsProps> = ({
   allowCustomModels = true,
 }) => {
   const {toast} = useToast();
-  const aiConfig = useStoreWithAiSettings((s) => s.getAiSettings());
+  const aiConfig = useStoreWithAiSettings((s) => s.aiSettings.config);
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
   const addModelToProvider = useStoreWithAiSettings(
-    (s) => s.addModelToProvider,
+    (s) => s.aiSettings.addModelToProvider,
   );
   const removeModelFromProvider = useStoreWithAiSettings(
-    (s) => s.removeModelFromProvider,
+    (s) => s.aiSettings.removeModelFromProvider,
   );
-  const addCustomModel = useStoreWithAiSettings((s) => s.addCustomModel);
-  const updateCustomModel = useStoreWithAiSettings((s) => s.updateCustomModel);
-  const removeCustomModel = useStoreWithAiSettings((s) => s.removeCustomModel);
+  const addCustomModel = useStoreWithAiSettings(
+    (s) => s.aiSettings.addCustomModel,
+  );
+  const updateCustomModel = useStoreWithAiSettings(
+    (s) => s.aiSettings.updateCustomModel,
+  );
+  const removeCustomModel = useStoreWithAiSettings(
+    (s) => s.aiSettings.removeCustomModel,
+  );
 
   const providers = useMemo(
     () => Object.entries(aiConfig.providers),

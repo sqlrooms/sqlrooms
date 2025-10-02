@@ -22,15 +22,17 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
   getDefaultInstructions,
 }) => {
   const maxSteps = useStoreWithAiSettings(
-    (s) => s.getAiSettings().modelParameters.maxSteps,
+    (s) => s.aiSettings.config.modelParameters.maxSteps,
   );
-  const setMaxStepsAiChatUi = useStoreWithAiSettings((s) => s.setMaxSteps);
+  const setMaxStepsAiChatUi = useStoreWithAiSettings(
+    (s) => s.aiSettings.setMaxSteps,
+  );
 
   const additionalInstruction = useStoreWithAiSettings(
-    (s) => s.getAiSettings().modelParameters.additionalInstruction,
+    (s) => s.aiSettings.config.modelParameters.additionalInstruction,
   );
   const setAdditionalInstruction = useStoreWithAiSettings(
-    (s) => s.setAdditionalInstruction,
+    (s) => s.aiSettings.setAdditionalInstruction,
   );
 
   const fileInputRef = useRef<HTMLInputElement>(null);

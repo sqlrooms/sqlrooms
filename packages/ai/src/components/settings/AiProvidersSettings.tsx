@@ -27,14 +27,16 @@ import {useStoreWithAiSettings} from '../../AiSettingsSlice';
 export const AiProvidersSettings: FC = () => {
   const {toast} = useToast();
   const updateProvider = useStoreWithAiSettings(
-    (state) => state.updateProvider,
+    (state) => state.aiSettings.updateProvider,
   );
-  const addProvider = useStoreWithAiSettings((state) => state.addProvider);
+  const addProvider = useStoreWithAiSettings(
+    (state) => state.aiSettings.addProvider,
+  );
   const removeProvider = useStoreWithAiSettings(
-    (state) => state.removeProvider,
+    (state) => state.aiSettings.removeProvider,
   );
   const providers = useStoreWithAiSettings(
-    (state) => state.config.aiSettings.providers,
+    (state) => state.aiSettings.config.providers,
   );
   const modelProviders = React.useMemo(() => {
     const result: Record<string, {apiKey: string; baseUrl: string}> = {};

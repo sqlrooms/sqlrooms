@@ -17,7 +17,7 @@ export const MainView: React.FC = () => {
     (s) => s.config.ai.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  const aiSettings = useRoomStore((s) => s.config.aiSettings);
+  const aiSettings = useRoomStore((s) => s.aiSettings.config);
 
   const tables = useBaseRoomShellStore((s) => s.db.tables);
 

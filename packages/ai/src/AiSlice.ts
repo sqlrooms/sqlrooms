@@ -394,18 +394,18 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
           // Fall back to settings
           const store = get();
-          if (hasAiSettings(store.config)) {
+          if (hasAiSettingsConfig(store)) {
             const currentSession = getCurrentSessionFromState(store);
             if (currentSession) {
               if (currentSession.modelProvider === 'custom') {
-                const customModel = store.config.aiSettings.customModels.find(
+                const customModel = store.aiSettings.config.customModels.find(
                   (m: {modelName: string}) =>
                     m.modelName === currentSession.model,
                 );
                 return customModel?.baseUrl;
               }
               const provider =
-                store.config.aiSettings.providers[currentSession.modelProvider];
+                store.aiSettings.config.providers[currentSession.modelProvider];
               return provider?.baseUrl;
             }
           }
@@ -425,16 +425,16 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
             }
 
             // Fall back to settings
-            if (hasAiSettings(store.config)) {
+            if (hasAiSettingsConfig(store)) {
               if (currentSession.modelProvider === 'custom') {
-                const customModel = store.config.aiSettings.customModels.find(
+                const customModel = store.aiSettings.config.customModels.find(
                   (m: {modelName: string}) =>
                     m.modelName === currentSession.model,
                 );
                 return customModel?.apiKey || '';
               } else {
                 const provider =
-                  store.config.aiSettings.providers?.[
+                  store.aiSettings.config.providers?.[
                     currentSession.modelProvider
                   ];
                 return provider?.apiKey || '';
@@ -452,9 +452,9 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           }
 
           // Fall back to settings
-          if (hasAiSettings(store.config)) {
+          if (hasAiSettingsConfig(store)) {
             const settingsMaxSteps =
-              store.config.aiSettings.modelParameters.maxSteps;
+              store.aiSettings.config.modelParameters.maxSteps;
             if (Number.isFinite(settingsMaxSteps) && settingsMaxSteps > 0) {
               return settingsMaxSteps;
             }
@@ -472,13 +472,13 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           }
 
           // Fall back to settings
-          if (hasAiSettings(store.config)) {
+          if (hasAiSettingsConfig(store)) {
             let instructions = tablesSchema
               ? getDefaultInstructions(tablesSchema)
               : '';
             // get additional instructions from settings
             const customInstructions =
-              store.config.aiSettings.modelParameters.additionalInstruction;
+              store.aiSettings.config.modelParameters.additionalInstruction;
             if (customInstructions) {
               instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
             }
@@ -493,16 +493,19 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
 
 /**
  * Helper function to type guard the store config if we have aiSettings
- * @param storeConfig
+ * @param store
  * @returns
  */
-function hasAiSettings(
-  storeConfig: unknown,
-): storeConfig is {aiSettings: AiSettingsSliceConfig['aiSettings']} {
+function hasAiSettingsConfig(
+  store: unknown,
+): store is {aiSettings: {config: AiSettingsSliceConfig}} {
   return (
-    typeof storeConfig === 'object' &&
-    storeConfig !== null &&
-    'aiSettings' in storeConfig
+    typeof store === 'object' &&
+    store !== null &&
+    'aiSettings' in store &&
+    store.aiSettings !== null &&
+    typeof store.aiSettings === 'object' &&
+    'config' in store.aiSettings
   );
 }
 
