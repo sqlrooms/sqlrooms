@@ -1,5 +1,5 @@
 import {extendedTool} from '@openassistant/utils';
-import {AiSliceState, AiSliceTool} from '../../../../ai-core/dist';
+import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
 import {
   arrowTableToJson,
   DuckDbConnector,
