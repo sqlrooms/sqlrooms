@@ -1,4 +1,4 @@
-import {AiSliceState, AiSliceTool} from '../../../ai-core/dist';
+import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {StoreApi} from '@sqlrooms/room-shell';
 import {createQueryTool, QueryToolOptions} from './query/queryTool';
