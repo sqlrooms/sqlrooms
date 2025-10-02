@@ -31,7 +31,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import exampleSessions from './example-sessions.json';
-import {AI_SETTINGS, DEFAULT_MODEL} from './config';
+import {AI_SETTINGS} from './config';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
