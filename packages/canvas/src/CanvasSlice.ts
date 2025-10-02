@@ -1,10 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {
-  AiSliceConfig,
-  AiSliceState,
-  createAiSlice,
-  createDefaultAiConfig,
-} from '@sqlrooms/ai';
+import {AiSliceState, createAiSlice} from '@sqlrooms/ai';
 import {escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
@@ -92,19 +87,17 @@ export type SqlNodeQueryResult =
   | {status: 'error'; error: string}
   | {status: 'success'; tableName: string; lastQueryStatement: string};
 
-export const CanvasSliceConfig = z
-  .object({
-    canvas: z.object({
-      viewport: z.object({
-        x: z.number(),
-        y: z.number(),
-        zoom: z.number(),
-      }),
-      nodes: z.array(CanvasNodeSchema).default([]),
-      edges: z.array(CanvasEdgeSchema).default([]),
+export const CanvasSliceConfig = z.object({
+  canvas: z.object({
+    viewport: z.object({
+      x: z.number(),
+      y: z.number(),
+      zoom: z.number(),
     }),
-  })
-  .merge(AiSliceConfig);
+    nodes: z.array(CanvasNodeSchema).default([]),
+    edges: z.array(CanvasEdgeSchema).default([]),
+  }),
+});
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = AiSliceState & {
@@ -146,7 +139,6 @@ export function createDefaultCanvasConfig(
       edges: [],
       ...props,
     },
-    ...createDefaultAiConfig({}),
   };
 }
 

@@ -95,7 +95,6 @@ SQLRooms uses [Zod](https://zod.dev/) for runtime type validation. When combinin
 Here's an example from the AI example application showing how to combine configuration types:
 
 ```typescript
-import {AiSliceConfig} from '@sqlrooms/ai';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {z} from 'zod';
@@ -103,13 +102,11 @@ import {z} from 'zod';
 /**
  * Room config for saving - combining multiple slice configs
  */
-export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
-  .merge(SqlEditorSliceConfig)
-  .merge(
-    z.object({
-      // Custom app config
-    }),
-  );
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig).merge(
+  z.object({
+    // Custom app config
+  }),
+);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 ```
 
@@ -126,8 +123,6 @@ When using the combined configuration type in your store, you can ensure that al
 // Using the combined RoomConfig in the store
 ...createRoomShellSlice<RoomConfig>({
   config: {
-    // AI slice configuration
-    ...createDefaultAiConfig(),
     // SQL Editor slice configuration
     ...createDefaultSqlEditorConfig(),
     // Other configuration properties...

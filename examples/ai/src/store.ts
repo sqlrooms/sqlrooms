@@ -5,7 +5,6 @@ import {
   AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiConfig,
   createDefaultAiSettingsConfig,
 } from '@sqlrooms/ai';
 import {
