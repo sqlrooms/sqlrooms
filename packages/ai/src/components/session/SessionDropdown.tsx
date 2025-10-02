@@ -29,8 +29,8 @@ export interface SessionDropdownProps {
 export const SessionDropdown: React.FC<SessionDropdownProps> = ({
   className,
 }) => {
-  const sessions = useStoreWithAi((s) => s.config.ai.sessions);
-  const currentSessionId = useStoreWithAi((s) => s.config.ai.currentSessionId);
+  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
+  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const switchSession = useStoreWithAi((s) => s.ai.switchSession);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
 

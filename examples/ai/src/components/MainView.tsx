@@ -14,7 +14,7 @@ import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
-    (s) => s.config.ai.currentSessionId || null,
+    (s) => s.ai.config.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const aiSettings = useRoomStore((s) => s.aiSettings.config);

@@ -75,7 +75,7 @@ export const MyCustomView: React.FC = () => {
   const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
   // Access AI slice config (persistable state)
-  const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
+  const currentSessionId = useRoomStore((s) => s.ai.config.currentSessionId);
 
   // Access custom app state
   const apiKey = useRoomStore((s) => s.apiKey);
