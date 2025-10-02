@@ -25,13 +25,13 @@ const nodeTypes = {
 
 export const Canvas: React.FC = () => {
   const nodes = useStoreWithCanvas(
-    (s) => s.config.canvas.nodes,
+    (s) => s.canvas.config.nodes,
   ) as unknown as Node<CanvasNodeData>[];
-  const edges = useStoreWithCanvas((s) => s.config.canvas.edges) as Edge[];
+  const edges = useStoreWithCanvas((s) => s.canvas.config.edges) as Edge[];
   const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
-  const viewport = useStoreWithCanvas((s) => s.config.canvas.viewport);
+  const viewport = useStoreWithCanvas((s) => s.canvas.config.viewport);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
 

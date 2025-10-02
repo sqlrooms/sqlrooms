@@ -88,20 +88,19 @@ export type SqlNodeQueryResult =
   | {status: 'success'; tableName: string; lastQueryStatement: string};
 
 export const CanvasSliceConfig = z.object({
-  canvas: z.object({
-    viewport: z.object({
-      x: z.number(),
-      y: z.number(),
-      zoom: z.number(),
-    }),
-    nodes: z.array(CanvasNodeSchema).default([]),
-    edges: z.array(CanvasEdgeSchema).default([]),
+  viewport: z.object({
+    x: z.number(),
+    y: z.number(),
+    zoom: z.number(),
   }),
+  nodes: z.array(CanvasNodeSchema).default([]),
+  edges: z.array(CanvasEdgeSchema).default([]),
 });
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = AiSliceState & {
   canvas: {
+    config: CanvasSliceConfig;
     isAssistantOpen: boolean;
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
@@ -130,30 +129,32 @@ export type CanvasSliceState = AiSliceState & {
 };
 
 export function createDefaultCanvasConfig(
-  props: Partial<CanvasSliceConfig['canvas']> = {},
+  props?: Partial<CanvasSliceConfig>,
 ): CanvasSliceConfig {
   return {
-    canvas: {
-      viewport: {x: 0, y: 0, zoom: 1},
-      nodes: [],
-      edges: [],
-      ...props,
-    },
+    viewport: {x: 0, y: 0, zoom: 1},
+    nodes: [],
+    edges: [],
+    ...props,
   };
 }
 
 export function createCanvasSlice<
-  PC extends BaseRoomConfig & CanvasSliceConfig,
->(props: Parameters<typeof createAiSlice<PC>>[0]) {
+  PC extends BaseRoomConfig = BaseRoomConfig,
+>(props: {
+  config?: Partial<CanvasSliceConfig>;
+  ai?: Parameters<typeof createAiSlice<PC>>[0];
+}) {
   return createSlice<PC, CanvasSliceState>((set, get, store) => ({
     ...createAiSlice({
-      ...props,
+      ...props.ai,
       customTools: {
         chart: createVegaChartTool(),
-        ...props.customTools,
+        ...props.ai?.customTools,
       },
     })(set, get, store),
     canvas: {
+      config: createDefaultCanvasConfig(props.config),
       isAssistantOpen: false,
       sqlResults: {},
       setAssistantOpen: (isAssistantOpen) => {
@@ -166,14 +167,14 @@ export function createCanvasSlice<
 
       async initialize() {
         // Execute SQL nodes in topological order based on edges
-        const nodes = get().config.canvas.nodes;
-        const edges = get().config.canvas.edges;
+        const nodes = get().canvas.config.nodes;
+        const edges = get().canvas.config.edges;
 
         const order = topoSortAll(nodes, edges);
 
         // Execute SQL nodes sequentially to ensure parents finish before children
         for (const nodeId of order) {
-          const node = findNodeById(get().config.canvas.nodes, nodeId);
+          const node = findNodeById(get().canvas.config.nodes, nodeId);
           if (!node || !isSqlData(node.data)) continue;
           const sqlText = node.data.sql || '';
           if (!sqlText.trim()) continue;
@@ -197,7 +198,7 @@ export function createCanvasSlice<
         set((state) =>
           produce(state, (draft) => {
             const parent = parentId
-              ? findNodeById(draft.config.canvas.nodes, parentId)
+              ? findNodeById(draft.canvas.config.nodes, parentId)
               : undefined;
             const position: XYPosition = initialPosition
               ? initialPosition
@@ -207,8 +208,8 @@ export function createCanvasSlice<
                     y: parent.position.y,
                   }
                 : {
-                    x: draft.config.canvas.viewport.x + 100,
-                    y: draft.config.canvas.viewport.y + 100,
+                    x: draft.canvas.config.viewport.x + 100,
+                    y: draft.canvas.config.viewport.y + 100,
                   };
             const firstTable = draft.db.tables.find(
               (t) => t.table.schema === 'main',
@@ -231,12 +232,12 @@ export function createCanvasSlice<
             };
 
             const newSqlTitle = getUniqueSqlTitle(
-              draft.config.canvas.nodes,
+              draft.canvas.config.nodes,
               'Query',
             );
             const initialSql = getInitialSqlForNewSqlNode();
 
-            draft.config.canvas.nodes.push({
+            draft.canvas.config.nodes.push({
               id: newId,
               position,
               width: DEFAULT_NODE_WIDTH,
@@ -254,7 +255,7 @@ export function createCanvasSlice<
                   }) as CanvasNodeData,
             });
             if (parentId) {
-              draft.config.canvas.edges.push({
+              draft.canvas.config.edges.push({
                 id: `${parentId}-${newId}`,
                 source: parentId,
                 target: newId,
@@ -266,8 +267,8 @@ export function createCanvasSlice<
       },
 
       executeDownstreamFrom: async (nodeId: string) => {
-        const allNodes = get().config.canvas.nodes;
-        const allEdges = get().config.canvas.edges;
+        const allNodes = get().canvas.config.nodes;
+        const allEdges = get().canvas.config.edges;
         const downstreamOrder = topoSortDownstream(nodeId, allNodes, allEdges);
         for (const childId of downstreamOrder) {
           const child = findNodeById(allNodes, childId);
@@ -282,9 +283,9 @@ export function createCanvasSlice<
       addEdge: (connection) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.edges = addEdge(
+            draft.canvas.config.edges = addEdge(
               connection,
-              draft.config.canvas.edges,
+              draft.canvas.config.edges,
             );
           }),
         );
@@ -293,7 +294,7 @@ export function createCanvasSlice<
       updateNode: (nodeId, updater) => {
         set((state) =>
           produce(state, (draft) => {
-            const node = findNodeById(draft.config.canvas.nodes, nodeId);
+            const node = findNodeById(draft.canvas.config.nodes, nodeId);
             if (node) {
               node.data = updater(node.data as CanvasNodeData);
             }
@@ -302,12 +303,12 @@ export function createCanvasSlice<
       },
 
       renameNode: async (nodeId: string, newTitle: string) => {
-        const node = findNodeById(get().config.canvas.nodes, nodeId);
+        const node = findNodeById(get().canvas.config.nodes, nodeId);
         if (!node) throw new Error('Node not found');
         if (!isSqlData(node.data)) {
           set((state) =>
             produce(state, (draft) => {
-              const dnode = findNodeById(draft.config.canvas.nodes, nodeId);
+              const dnode = findNodeById(draft.canvas.config.nodes, nodeId);
               if (dnode) dnode.data.title = newTitle;
             }),
           );
@@ -319,7 +320,7 @@ export function createCanvasSlice<
 
         // Ensure title uniqueness among SQL nodes by adjusting to a unique variant
         const uniqueTitle = getUniqueSqlTitle(
-          get().config.canvas.nodes,
+          get().canvas.config.nodes,
           newTitle,
           nodeId,
         );
@@ -342,7 +343,7 @@ export function createCanvasSlice<
         const newQualified = `${CANVAS_SCHEMA_NAME}.${escapeId(uniqueTitle)}`;
         set((state) =>
           produce(state, (draft) => {
-            const dnode = findNodeById(draft.config.canvas.nodes, nodeId);
+            const dnode = findNodeById(draft.canvas.config.nodes, nodeId);
             if (dnode) dnode.data.title = uniqueTitle;
             const r = draft.canvas.sqlResults[nodeId];
             if (r && r.status === 'success') r.tableName = newQualified;
@@ -357,7 +358,7 @@ export function createCanvasSlice<
 
       deleteNode: (nodeId) => {
         const current = get();
-        const node = findNodeById(current.config.canvas.nodes, nodeId);
+        const node = findNodeById(current.canvas.config.nodes, nodeId);
         let tableToDrop: string | undefined;
         if (node && isSqlData(node.data)) {
           const title = node.data.title || 'result';
@@ -370,17 +371,17 @@ export function createCanvasSlice<
 
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.nodes = draft.config.canvas.nodes.filter(
+            draft.canvas.config.nodes = draft.canvas.config.nodes.filter(
               (n) => n.id !== nodeId,
             );
-            draft.config.canvas.edges = draft.config.canvas.edges.filter(
+            draft.canvas.config.edges = draft.canvas.config.edges.filter(
               (e) => e.source !== nodeId && e.target !== nodeId,
             );
             // Clear stored result for the node
             delete draft.canvas.sqlResults[nodeId];
-            if (draft.config.canvas.nodes.length === 0) {
-              draft.config.canvas.viewport.x = 0;
-              draft.config.canvas.viewport.y = 0;
+            if (draft.canvas.config.nodes.length === 0) {
+              draft.canvas.config.viewport.x = 0;
+              draft.canvas.config.viewport.y = 0;
             }
           }),
         );
@@ -406,9 +407,9 @@ export function createCanvasSlice<
       applyNodeChanges: (changes) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.nodes = applyNodeChanges(
+            draft.canvas.config.nodes = applyNodeChanges(
               changes,
-              draft.config.canvas.nodes,
+              draft.canvas.config.nodes,
             );
           }),
         );
@@ -417,9 +418,9 @@ export function createCanvasSlice<
       applyEdgeChanges: (changes) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.edges = applyEdgeChanges(
+            draft.canvas.config.edges = applyEdgeChanges(
               changes,
-              draft.config.canvas.edges,
+              draft.canvas.config.edges,
             );
           }),
         );
@@ -428,7 +429,7 @@ export function createCanvasSlice<
       setViewport: (viewport) => {
         set((state) =>
           produce(state, (draft) => {
-            draft.config.canvas.viewport = viewport;
+            draft.canvas.config.viewport = viewport;
           }),
         );
       },
@@ -437,7 +438,7 @@ export function createCanvasSlice<
         nodeId: string,
         opts?: {cascade?: boolean},
       ) => {
-        const node = findNodeById(get().config.canvas.nodes, nodeId);
+        const node = findNodeById(get().canvas.config.nodes, nodeId);
         if (!node || !isSqlData(node.data)) return;
         const sql = node.data.sql || '';
         const title = node.data.title || 'result';

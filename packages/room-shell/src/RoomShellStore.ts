@@ -147,12 +147,13 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
     ) => Promise<void>;
   };
 
-export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
-  initialize?: () => Promise<void>;
-  config: PC;
-  room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
-} & DuckDbSliceState &
-  LayoutSliceState;
+export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
+  RoomState<PC> & {
+    initialize?: () => Promise<void>;
+    config: PC;
+    room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
+  } & DuckDbSliceState &
+    LayoutSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -169,9 +170,9 @@ const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 
-export function createRoomShellSlice<PC extends BaseRoomConfig>(
-  props: InitialState<PC>,
-): StateCreator<RoomShellSliceState<PC>> {
+export function createRoomShellSlice<
+  PC extends BaseRoomConfig = BaseRoomConfig,
+>(props: InitialState<PC>): StateCreator<RoomShellSliceState<PC>> {
   const slice: StateCreator<RoomShellSliceState<PC>> = (set, get, store) => {
     const {
       connector,
