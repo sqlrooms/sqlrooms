@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/schema-tree",
-  "version": "0.24.28-rc.1",
+  "version": "0.25.0-rc.0",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
