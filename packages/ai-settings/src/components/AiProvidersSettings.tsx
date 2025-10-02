@@ -22,7 +22,7 @@ import {
   Trash2,
   CirclePlus,
 } from 'lucide-react';
-import {useStoreWithAiSettings} from '../../AiSettingsSlice';
+import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export const AiProvidersSettings: FC = () => {
   const {toast} = useToast();

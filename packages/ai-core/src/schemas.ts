@@ -1,13 +1,6 @@
 import {z} from 'zod';
 import {StreamMessagePartSchema} from '@openassistant/core';
 
-export const QueryToolParameters = z.object({
-  type: z.literal('query'),
-  sqlQuery: z.string(),
-  reasoning: z.string(),
-});
-export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
-
 export const ErrorMessageSchema = z.object({
   error: z.string(),
 });

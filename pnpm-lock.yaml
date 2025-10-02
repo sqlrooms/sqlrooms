@@ -1148,6 +1148,60 @@ importers:
 
   packages/ai:
     dependencies:
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../ai-settings
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../room-shell
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
+      ai:
+        specifier: ^4.3.19
+        version: 4.3.19(react@19.1.0)(zod@3.25.73)
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      lucide-react:
+        specifier: ^0.475.0
+        version: 0.475.0(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
+      recharts:
+        specifier: ^2.12.7
+        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      rehype-raw:
+        specifier: ^7.0.0
+        version: 7.0.0
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
+
+  packages/ai-core:
+    dependencies:
       '@ai-sdk/provider':
         specifier: ^1.1.3
         version: 1.1.3
@@ -1160,15 +1214,72 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
-      '@sqlrooms/data-table':
-        specifier: workspace:*
-        version: link:../data-table
-      '@sqlrooms/duckdb':
-        specifier: workspace:*
-        version: link:../duckdb
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
+      '@sqlrooms/recharts':
+        specifier: workspace:*
+        version: link:../recharts
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../room-shell
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../utils
+      ai:
+        specifier: ^4.3.19
+        version: 4.3.19(react@19.1.0)(zod@3.25.73)
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+      immer:
+        specifier: ^10.1.1
+        version: 10.1.1
+      lucide-react:
+        specifier: ^0.475.0
+        version: 0.475.0(react@19.1.0)
+      react:
+        specifier: 19.1.0
+        version: 19.1.0
+      react-dom:
+        specifier: 19.1.0
+        version: 19.1.0(react@19.1.0)
+      react-markdown:
+        specifier: ^10.1.0
+        version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
+      recharts:
+        specifier: ^2.12.7
+        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
+      rehype-raw:
+        specifier: ^7.0.0
+        version: 7.0.0
+      remark-gfm:
+        specifier: ^4.0.0
+        version: 4.0.1
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
+
+  packages/ai-settings:
+    dependencies:
+      '@ai-sdk/provider':
+        specifier: ^1.1.3
+        version: 1.1.3
+      '@openassistant/core':
+        specifier: 0.5.17
+        version: 0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/deepseek@0.1.17(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@ai-sdk/xai@1.2.18(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)
+      '@openassistant/utils':
+        specifier: 0.5.17
+        version: 0.5.17
+      '@paralleldrive/cuid2':
+        specifier: ^2.2.2
+        version: 2.2.2
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../recharts

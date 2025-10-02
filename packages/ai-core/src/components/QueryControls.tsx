@@ -22,13 +22,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
-  const isDataAvailable = useStoreWithAi((s) => s.room.isDataAvailable);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
 
   useEffect(() => {
-    if (!isDataAvailable) return;
     // Focus the textarea when the component mounts
     // Using a small timeout ensures the data is loaded and
     // add timeout to prevent aria hidden warning caused by the
@@ -40,7 +38,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [isDataAvailable]);
+  }, []);
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {

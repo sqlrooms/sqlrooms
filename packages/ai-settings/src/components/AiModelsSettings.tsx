@@ -1,14 +1,14 @@
-import React, {FC, useMemo, useState} from 'react';
+import {useStoreWithAi} from '@sqlrooms/ai-core';
 import {
   Button,
-  Input,
-  Label,
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
   DialogTrigger,
+  Input,
+  Label,
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
@@ -22,8 +22,8 @@ import {
   Settings,
   Trash2,
 } from 'lucide-react';
-import {useStoreWithAiSettings} from '../../AiSettingsSlice';
-import {useStoreWithAi} from '../../AiSlice';
+import {FC, useMemo, useState} from 'react';
+import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export interface AiModelsSettingsProps {
   showProviderModels?: boolean;

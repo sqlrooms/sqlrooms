@@ -1,28 +1,22 @@
 import {StreamMessage} from '@openassistant/core';
 import {ExtendedTool} from '@openassistant/utils';
 import {createId} from '@paralleldrive/cuid2';
-import {DataTable} from '@sqlrooms/duckdb';
+import type {AiSettingsSliceConfig} from '@sqlrooms/ai-settings';
 import {
   BaseRoomConfig,
-  createSlice,
-  RoomShellSliceState,
-  useBaseRoomShellStore,
+  createBaseSlice,
+  RoomState,
+  useBaseRoomStore,
   type StateCreator,
-} from '@sqlrooms/room-shell';
-import {produce, WritableDraft} from 'immer';
+} from '@sqlrooms/room-store';
+import {produce} from 'immer';
 import {z} from 'zod';
-import {
-  DefaultToolsOptions,
-  getDefaultInstructions,
-  getDefaultTools,
-  runAnalysis,
-} from './analysis';
+import {runAnalysis} from './analysis';
 import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
   ErrorMessageSchema,
 } from './schemas';
-import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
 export const AiSliceConfig = z.object({
   sessions: z.array(AnalysisSessionSchema),
@@ -90,14 +84,13 @@ export interface AiSliceOptions {
   /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
   /** Custom tools to add to the AI assistant */
-  customTools?: Record<string, AiSliceTool>;
+  tools: Record<string, AiSliceTool>;
   /**
    * Function to get custom instructions for the AI assistant
    * @param tablesSchema - The schema of the tables in the database
    * @returns The instructions string to use
    */
-  getInstructions?: (tablesSchema: DataTable[]) => string;
-  toolsOptions?: DefaultToolsOptions;
+  getInstructions: () => string;
   defaultProvider?: string;
   defaultModel?: string;
   maxSteps?: number;
@@ -112,15 +105,14 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
     initialAnalysisPrompt = '',
-    customTools = {},
-    toolsOptions,
+    tools,
     getApiKey,
     getBaseUrl,
     maxSteps,
     getInstructions,
   } = params;
 
-  return createSlice<PC, AiSliceState>((set, get, store) => {
+  return createBaseSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),
@@ -128,10 +120,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
 
-        tools: {
-          ...getDefaultTools(store, toolsOptions),
-          ...customTools,
-        },
+        tools,
 
         setAnalysisPrompt: (prompt: string) => {
           set((state) =>
@@ -311,7 +300,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
 
           try {
             await runAnalysis({
-              tableSchemas: get().db.tables,
               modelProvider: currentSession.modelProvider || defaultProvider,
               model: currentSession.model || defaultModel,
               apiKey: get().ai.getApiKeyFromSettings(),
@@ -464,27 +452,19 @@ export function createAiSlice<PC extends BaseRoomConfig>(
 
         getInstructionsFromSettings: () => {
           const store = get();
-          const tablesSchema = store.db?.tables || [];
 
-          // First try the getInstructions function if provided
-          if (getInstructions) {
-            return getInstructions(tablesSchema);
-          }
+          let instructions = getInstructions();
 
           // Fall back to settings
           if (hasAiSettingsConfig(store)) {
-            let instructions = tablesSchema
-              ? getDefaultInstructions(tablesSchema)
-              : '';
             // get additional instructions from settings
-            const customInstructions =
-              store.aiSettings.config.modelParameters.additionalInstruction;
-            if (customInstructions) {
-              instructions = `${instructions}\n\nAdditional Instructions:\n\n${customInstructions}`;
+            const {additionalInstruction} =
+              store.aiSettings.config.modelParameters;
+            if (additionalInstruction) {
+              instructions = `${instructions}\n\nAdditional Instructions:\n\n${additionalInstruction}`;
             }
-            return instructions;
           }
-          return '';
+          return instructions;
         },
       },
     };
@@ -609,9 +589,9 @@ function makeResultsAppender({
 export function useStoreWithAi<
   T,
   PC extends BaseRoomConfig,
-  S extends RoomShellSliceState<PC> & AiSliceState,
+  S extends RoomState<PC> & AiSliceState,
 >(selector: (state: S) => T): T {
-  return useBaseRoomShellStore<PC, RoomShellSliceState<PC>, T>((state) =>
+  return useBaseRoomStore<PC, RoomState<PC>, T>((state) =>
     selector(state as unknown as S),
   );
 }

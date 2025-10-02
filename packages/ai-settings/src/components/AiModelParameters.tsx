@@ -12,7 +12,7 @@ import {
   useDisclosure,
   useToast,
 } from '@sqlrooms/ui';
-import {useStoreWithAiSettings} from '../../AiSettingsSlice';
+import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
 export interface AiModelParametersProps {
   getDefaultInstructions?: () => string;

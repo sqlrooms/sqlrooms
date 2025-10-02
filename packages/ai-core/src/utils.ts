@@ -2,7 +2,7 @@
  * Utility functions for AI Chat UI configuration
  */
 
-import {AiSettingsSliceConfig} from './AiSettingsSlice';
+import {AiSettingsSliceConfig} from '@sqlrooms/ai-settings';
 
 /**
  * Extract models from aiSettings in the format expected by ModelSelector
