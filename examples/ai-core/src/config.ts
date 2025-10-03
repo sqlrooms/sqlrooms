@@ -1,4 +1,4 @@
-import {AiSettingsSliceConfig} from '@sqlrooms/ai';
+import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 
 // Constants for commonly used values
 export const OLLAMA_DEFAULT_BASE_URL = 'http://localhost:11434/api';

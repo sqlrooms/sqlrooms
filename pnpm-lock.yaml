@@ -228,6 +228,12 @@ importers:
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core
+      '@sqlrooms/ai-settings':
+        specifier: workspace:*
+        version: link:../../packages/ai-settings
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../../packages/room-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../../packages/room-store
@@ -16127,7 +16133,7 @@ snapshots:
     dependencies:
       '@types/estree': 1.0.8
       estree-walker: 2.0.2
-      picomatch: 4.0.2
+      picomatch: 4.0.3
     optionalDependencies:
       rollup: 2.79.2
 

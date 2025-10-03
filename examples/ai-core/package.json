@@ -12,6 +12,8 @@
   },
   "dependencies": {
     "@sqlrooms/ai-core": "workspace:*",
+    "@sqlrooms/ai-settings": "workspace:*",
+    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "ai": "^4.3.19",
