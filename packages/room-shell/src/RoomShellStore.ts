@@ -41,6 +41,7 @@ import {
 import {castDraft, produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
+import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -52,13 +53,10 @@ export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
   RoomShellSliceState<PC>
 >;
 
-export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
+const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
   DuckDbSliceConfig &
   LayoutSliceConfig = {
-  title: '',
-  layout: DEFAULT_MOSAIC_LAYOUT,
-  description: '',
-  dataSources: [],
+  ...createDefaultBaseRoomConfig(),
   ...createDefaultDuckDbConfig(),
   ...createDefaultLayoutConfig(),
 };

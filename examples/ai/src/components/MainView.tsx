@@ -4,10 +4,7 @@ import {
   ModelSelector,
   QueryControls,
   SessionControls,
-  extractModelsFromSettings,
-  getDefaultInstructions,
 } from '@sqlrooms/ai';
-import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -17,15 +14,6 @@ export const MainView: React.FC = () => {
     (s) => s.ai.config.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-  const aiSettings = useRoomStore((s) => s.aiSettings.config);
-
-  const tables = useBaseRoomShellStore((s) => s.db.tables);
-
-  const getDefaultInstructionsWrapper = () => {
-    return getDefaultInstructions(tables);
-  };
-
-  const models = extractModelsFromSettings(aiSettings);
 
   const settingsPanelOpen = useDisclosure();
 
@@ -49,9 +37,7 @@ export const MainView: React.FC = () => {
             <AiSettingsPanel disclosure={settingsPanelOpen}>
               <AiSettingsPanel.ProvidersSettings />
               <AiSettingsPanel.ModelsSettings />
-              <AiSettingsPanel.ModelParametersSettings
-                getDefaultInstructions={getDefaultInstructionsWrapper}
-              />
+              <AiSettingsPanel.ModelParametersSettings />
             </AiSettingsPanel>
           )}
         </div>
@@ -74,7 +60,7 @@ export const MainView: React.FC = () => {
 
           <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
             <div className="flex items-center justify-end gap-2">
-              <ModelSelector models={models} />
+              <ModelSelector />
             </div>
           </QueryControls>
         </>

@@ -1,5 +1,10 @@
 import {createId} from '@paralleldrive/cuid2';
-import {AiSliceState, createAiSlice} from '@sqlrooms/ai';
+import {
+  AiSliceState,
+  createAiSlice,
+  createDefaultAiTools,
+  createDefaultAiInstructions,
+} from '@sqlrooms/ai';
 import {escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
@@ -143,15 +148,19 @@ export function createCanvasSlice<
   PC extends BaseRoomConfig = BaseRoomConfig,
 >(props: {
   config?: Partial<CanvasSliceConfig>;
-  ai?: Parameters<typeof createAiSlice<PC>>[0];
+  ai?: Partial<Parameters<typeof createAiSlice<PC>>[0]>;
 }) {
   return createSlice<PC, CanvasSliceState>((set, get, store) => ({
     ...createAiSlice({
-      ...props.ai,
-      customTools: {
-        chart: createVegaChartTool(),
-        ...props.ai?.customTools,
+      getInstructions: () => {
+        return createDefaultAiInstructions(store);
       },
+      tools: {
+        ...createDefaultAiTools(store),
+        chart: createVegaChartTool(),
+        ...props.ai?.tools,
+      },
+      ...props.ai,
     })(set, get, store),
     canvas: {
       config: createDefaultCanvasConfig(props.config),
