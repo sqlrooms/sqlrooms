@@ -140,9 +140,6 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../../packages/room-config
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell

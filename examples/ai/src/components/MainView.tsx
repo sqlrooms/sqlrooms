@@ -4,12 +4,11 @@ import {
   ModelSelector,
   QueryControls,
   SessionControls,
-  createDefaultAiInstructions,
   extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
-import {roomStore, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
 export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
@@ -17,10 +16,6 @@ export const MainView: React.FC = () => {
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
   const aiSettings = useRoomStore((s) => s.aiSettings.config);
-
-  const createDefaultAiInstructionsWrapper = () => {
-    return createDefaultAiInstructions(roomStore);
-  };
 
   const models = extractModelsFromSettings(aiSettings);
 
@@ -46,9 +41,7 @@ export const MainView: React.FC = () => {
             <AiSettingsPanel disclosure={settingsPanelOpen}>
               <AiSettingsPanel.ProvidersSettings />
               <AiSettingsPanel.ModelsSettings />
-              <AiSettingsPanel.ModelParametersSettings
-                createDefaultAiInstructions={createDefaultAiInstructionsWrapper}
-              />
+              <AiSettingsPanel.ModelParametersSettings />
             </AiSettingsPanel>
           )}
         </div>
