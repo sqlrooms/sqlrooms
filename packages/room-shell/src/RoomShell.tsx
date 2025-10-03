@@ -60,7 +60,7 @@ export const LayoutComposer: FC<{
   className?: string;
   tileClassName?: string;
 }> = ({className, tileClassName}) => {
-  const layout = useBaseRoomShellStore((state) => state.config.layout);
+  const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const ErrorBoundary = useBaseRoomShellStore(

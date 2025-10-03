@@ -53,12 +53,9 @@ export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
   RoomShellSliceState<PC>
 >;
 
-const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
-  DuckDbSliceConfig &
-  LayoutSliceConfig = {
+const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig & DuckDbSliceConfig = {
   ...createDefaultBaseRoomConfig(),
   ...createDefaultDuckDbConfig(),
-  ...createDefaultLayoutConfig(),
 };
 
 export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
@@ -198,7 +195,9 @@ export function createRoomShellSlice<
     const roomState: RoomShellSliceState<PC> = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
-      ...createLayoutSlice({panels: roomStateProps.panels})(set, get, store),
+      ...createLayoutSlice({
+        panels: roomStateProps.panels,
+      })(set, get, store),
       room: {
         ...initialRoomState,
         ...roomSliceState.room,

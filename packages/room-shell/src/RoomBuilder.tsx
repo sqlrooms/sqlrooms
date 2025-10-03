@@ -5,7 +5,7 @@ import type {MosaicNode} from 'react-mosaic-component';
 import {useBaseRoomShellStore} from './RoomShellStore';
 
 export const RoomShell: React.FC = () => {
-  const layout = useBaseRoomShellStore((state) => state.config.layout);
+  const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const loadingProgress = useBaseRoomShellStore((state) =>
