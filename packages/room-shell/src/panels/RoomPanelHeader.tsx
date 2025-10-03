@@ -18,7 +18,7 @@ const RoomPanelHeader: FC<{
     (state) => state.layout.togglePanelPin,
   );
   const pinnedPanels = useBaseRoomShellStore(
-    (state) => state.config.layout.pinned,
+    (state) => state.layout.config.pinned,
   );
   const isPinned = useMemo(
     () => pinnedPanels?.includes(type),
