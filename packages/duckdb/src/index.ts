@@ -38,5 +38,4 @@ export {
   createTypedRowAccessor,
 } from './typedRowAccessor';
 export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
-export * from '@sqlrooms/duckdb-config';
 export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';

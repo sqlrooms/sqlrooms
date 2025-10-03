@@ -1,4 +1,3 @@
-import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
   createBaseSlice,
   RoomState,
@@ -235,7 +234,7 @@ export function createDuckDbSlice({
 }: {
   connector?: DuckDbConnector;
 }): StateCreator<DuckDbSliceState> {
-  return createBaseSlice<DuckDbSliceConfig, DuckDbSliceState>((set, get) => {
+  return createBaseSlice<{}, DuckDbSliceState>((set, get) => {
     return {
       db: {
         connector, // Will be initialized during init
@@ -608,12 +607,12 @@ export function createDuckDbSlice({
   });
 }
 
-type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> & DuckDbSliceState;
+type RoomStateWithDuckDb = RoomState<{}> & DuckDbSliceState;
 
 export function useStoreWithDuckDb<T>(
   selector: (state: RoomStateWithDuckDb) => T,
 ): T {
-  return useBaseRoomStore<DuckDbSliceConfig, RoomState<DuckDbSliceConfig>, T>(
-    (state) => selector(state as unknown as RoomStateWithDuckDb),
+  return useBaseRoomStore<{}, RoomState<{}>, T>((state) =>
+    selector(state as unknown as RoomStateWithDuckDb),
   );
 }

@@ -1,5 +1,4 @@
 import {
-  DuckDbSliceConfig,
   getSqlErrorWithPointer,
   splitSqlStatements,
   makeLimitQuery,
@@ -135,7 +134,7 @@ export type SqlEditorSliceState = {
 };
 
 export function createSqlEditorSlice<
-  PC extends BaseRoomConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
+  PC extends BaseRoomConfig & SqlEditorSliceConfig,
 >({
   queryResultLimit = 100,
   queryResultLimitOptions = [100, 500, 1000],

@@ -1,20 +1,15 @@
 import {
   DataTable,
   DuckDbConnector,
-  DuckDbSliceConfig,
   DuckDbSliceState,
   LoadFileOptions,
-  createDefaultDuckDbConfig,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
 import {
-  LayoutSliceConfig,
   LayoutSliceState,
   RoomPanelInfo,
-  createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
-import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   BaseRoomConfig,
   DataSource,
@@ -22,6 +17,7 @@ import {
   FileDataSource,
   SqlQueryDataSource,
   UrlDataSource,
+  createDefaultBaseRoomConfig,
 } from '@sqlrooms/room-config';
 import {
   RoomState,
@@ -41,7 +37,6 @@ import {
 import {castDraft, produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
-import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -53,10 +48,7 @@ export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
   RoomShellSliceState<PC>
 >;
 
-const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig & DuckDbSliceConfig = {
-  ...createDefaultBaseRoomConfig(),
-  ...createDefaultDuckDbConfig(),
-};
+const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig = createDefaultBaseRoomConfig();
 
 export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
   RoomStateProps<PC> & {
