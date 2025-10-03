@@ -6,7 +6,6 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
-  createDefaultAiSettingsConfig,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
@@ -31,8 +30,8 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
-import exampleSessions from './example-sessions.json';
 import {AI_SETTINGS} from './config';
+import exampleSessions from './example-sessions.json';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -78,14 +77,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          ...createDefaultAiSettingsConfig(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
-              // icon: FolderIcon,
               icon: DatabaseIcon,
               component: DataSourcesPanel,
               placement: 'sidebar',
@@ -109,33 +106,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Ai slice
       ...createAiSlice({
         config: AiSliceConfig.parse(exampleSessions),
-
-        // You can configure the Api key in the Ai Settings panel,
-        // or (optional) provide API key with your own custom logic here
-        // getApiKey: (modelProvider: string) => {
-        //  return your api key here
-        // },
-
-        // You can configure the base URL in the Ai Settings panel,
-        // or (optional) provide base URL with your own custom logic here
-        // getBaseUrl: () => {
-        //   // return your base url
-        // },
-
-        // You can configure the max steps of using tools in the Ai Settings panel,
-        // or (optional) provide max steps here
-        // maxSteps: 5,
-
-        // You can configure custom instructions in the Ai Settings panel,
-        // or (optional) provide custom instructions with your own custom logic here
-        // Example of customizing the system instructions
-        // getInstructions: (tablesSchema: DataTable[]) => {
-        //   // get default instructions from sqlrooms/ai
-        //   let instructions = createDefaultAiInstructions(tablesSchema);
-        //   // you can add more instructions here if you want
-        //   instructions = `${instructions}\n\nYour name is George`;
-        //   return instructions;
-        // },
 
         getInstructions: () => {
           return createDefaultAiInstructions(store);
