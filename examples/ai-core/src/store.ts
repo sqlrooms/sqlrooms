@@ -64,14 +64,12 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
       name: 'ai-core-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: BaseRoomConfig.parse(state.config),
         ai: AiSliceConfig.parse(state.ai.config),
         aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
       }),
       // Combining the persisted state with the current one when loading from local storage
       merge: (persistedState: any, currentState) => ({
         ...currentState,
-        config: BaseRoomConfig.parse(persistedState.config),
         ai: {
           ...currentState.ai,
           config: AiSliceConfig.parse(persistedState.ai),
