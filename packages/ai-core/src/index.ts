@@ -3,12 +3,7 @@
  * @packageDocumentation
  */
 
-export {
-  AiSliceConfig,
-  createAiSlice,
-  useStoreWithAi,
-  createDefaultAiConfig,
-} from './AiSlice';
+export {createAiSlice, useStoreWithAi} from './AiSlice';
 
 export type {AiSliceState} from './AiSlice';
 export {QueryControls} from './components/QueryControls';
@@ -27,4 +22,4 @@ export * from './components/session/SessionTitle';
 export * from './components/session/SessionType';
 export * from './components/tools/ToolErrorMessage';
 
-export {extractModelsFromSettings} from './utils';
+export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';

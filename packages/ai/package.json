@@ -18,6 +18,7 @@
     "access": "public"
   },
   "dependencies": {
+    "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",

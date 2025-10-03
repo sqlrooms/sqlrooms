@@ -1,7 +1,13 @@
 import {StreamMessage} from '@openassistant/core';
 import {ExtendedTool} from '@openassistant/utils';
 import {createId} from '@paralleldrive/cuid2';
-import type {AiSettingsSliceConfig} from '@sqlrooms/ai-settings';
+import {
+  AiSliceConfig,
+  AnalysisResultSchema,
+  AnalysisSessionSchema,
+  createDefaultAiConfig,
+  ErrorMessageSchema,
+} from '@sqlrooms/ai-config';
 import {
   BaseRoomConfig,
   createBaseSlice,
@@ -12,37 +18,7 @@ import {
 import {produce} from 'immer';
 import {z} from 'zod';
 import {runAnalysis} from './analysis';
-import {
-  AnalysisResultSchema,
-  AnalysisSessionSchema,
-  ErrorMessageSchema,
-} from './schemas';
-
-export const AiSliceConfig = z.object({
-  sessions: z.array(AnalysisSessionSchema),
-  currentSessionId: z.string().optional(),
-});
-export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
-
-export function createDefaultAiConfig(
-  props?: Partial<AiSliceConfig>,
-): AiSliceConfig {
-  const defaultSessionId = createId();
-  return {
-    sessions: [
-      {
-        id: defaultSessionId,
-        name: 'Default Session',
-        modelProvider: 'openai',
-        model: 'gpt-4.1',
-        analysisResults: [],
-        createdAt: new Date(),
-      },
-    ],
-    currentSessionId: defaultSessionId,
-    ...props,
-  };
-}
+import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 
 // template for the tool: Argument, LLM Result, Additional Data, Context
 export type AiSliceTool = ExtendedTool<z.ZodTypeAny, unknown, unknown, unknown>;
@@ -469,24 +445,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
       },
     };
   });
-}
-
-/**
- * Helper function to type guard the store config if we have aiSettings
- * @param store
- * @returns
- */
-function hasAiSettingsConfig(
-  store: unknown,
-): store is {aiSettings: {config: AiSettingsSliceConfig}} {
-  return (
-    typeof store === 'object' &&
-    store !== null &&
-    'aiSettings' in store &&
-    store.aiSettings !== null &&
-    typeof store.aiSettings === 'object' &&
-    'config' in store.aiSettings
-  );
 }
 
 /**

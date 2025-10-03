@@ -1,27 +1,17 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {StreamMessagePart} from '@openassistant/core';
+import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {
   Button,
+  CopyButton,
   Dialog,
   DialogContent,
   DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  CopyButton,
 } from '@sqlrooms/ui';
-import {StreamMessagePart} from '@openassistant/core';
-import {
-  ClipboardIcon,
-  CodeIcon,
-  SquareTerminalIcon,
-  TrashIcon,
-  CheckIcon,
-} from 'lucide-react';
+import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
 import {useState} from 'react';
-import {AnalysisResultSchema} from '../schemas';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
 import {ToolResult} from './tools/ToolResult';

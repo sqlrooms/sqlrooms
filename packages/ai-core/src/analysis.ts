@@ -3,9 +3,9 @@ import {
   rebuildMessages,
   StreamMessage,
 } from '@openassistant/core';
+import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {convertToCoreMessages} from 'ai';
 import {AiSliceTool} from './AiSlice';
-import {AnalysisResultSchema} from './schemas';
 
 /**
  * Configuration options for running an AI analysis session

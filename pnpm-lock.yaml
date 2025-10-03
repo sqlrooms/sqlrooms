@@ -1148,6 +1148,9 @@ importers:
 
   packages/ai:
     dependencies:
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../ai-core
@@ -1200,6 +1203,18 @@ importers:
         specifier: ^3.25.73
         version: 3.25.73
 
+  packages/ai-config:
+    dependencies:
+      '@openassistant/core':
+        specifier: 0.5.17
+        version: 0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/deepseek@0.1.17(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@ai-sdk/xai@1.2.18(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)
+      '@paralleldrive/cuid2':
+        specifier: ^2.2.2
+        version: 2.2.2
+      zod:
+        specifier: ^3.25.73
+        version: 3.25.73
+
   packages/ai-core:
     dependencies:
       '@ai-sdk/provider':
@@ -1214,18 +1229,18 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/recharts':
-        specifier: workspace:*
-        version: link:../recharts
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
-      '@sqlrooms/room-shell':
+      '@sqlrooms/room-store':
         specifier: workspace:*
-        version: link:../room-shell
+        version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -1253,9 +1268,6 @@ importers:
       react-markdown:
         specifier: ^10.1.0
         version: 10.1.0(@types/react@19.1.7)(react@19.1.0)
-      recharts:
-        specifier: ^2.12.7
-        version: 2.15.3(react-dom@19.1.0(react@19.1.0))(react@19.1.0)
       rehype-raw:
         specifier: ^7.0.0
         version: 7.0.0
@@ -1271,15 +1283,12 @@ importers:
       '@ai-sdk/provider':
         specifier: ^1.1.3
         version: 1.1.3
-      '@openassistant/core':
-        specifier: 0.5.17
-        version: 0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.73))(@ai-sdk/deepseek@0.1.17(zod@3.25.73))(@ai-sdk/google@1.2.19(zod@3.25.73))(@ai-sdk/xai@1.2.18(zod@3.25.73))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.73))(react@19.1.0)(ws@8.18.2)
-      '@openassistant/utils':
-        specifier: 0.5.17
-        version: 0.5.17
-      '@paralleldrive/cuid2':
-        specifier: ^2.2.2
-        version: 2.2.2
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../recharts
