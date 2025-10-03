@@ -24,8 +24,8 @@ export interface DeleteSessionButtonProps {
 export const DeleteSessionButton: React.FC<DeleteSessionButtonProps> = ({
   className,
 }) => {
-  const sessions = useStoreWithAi((s) => s.config.ai.sessions);
-  const currentSessionId = useStoreWithAi((s) => s.config.ai.currentSessionId);
+  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
+  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToDeleteId, setSessionToDeleteId] = useState<string | null>(

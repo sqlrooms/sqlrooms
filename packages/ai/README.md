@@ -60,7 +60,7 @@ npm install ollama-ai-provider-v2
 ### Setting Up AI Integration
 
 ```tsx
-import {createAiSlice, createDefaultAiConfig} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {createRoomStore} from '@sqlrooms/room-shell';
 
 // Create a room store with AI capabilities
@@ -69,7 +69,6 @@ const {roomStore, useRoomStore} = createRoomStore({
   ...createRoomShellSlice({
     config: {
       // Your room configuration
-      ...createDefaultAiConfig(), // Default AI configuration
     },
   }),
   // Add AI slice
@@ -104,11 +103,7 @@ function MyApp() {
 For more complex applications, you can combine multiple slices:
 
 ```tsx
-import {
-  createAiSlice,
-  createDefaultAiConfig,
-  AiSliceConfig,
-} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {
   createSqlEditorSlice,
   createDefaultSqlEditorConfig,
@@ -126,26 +121,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     // Base room slice
     ...createRoomShellSlice({
       config: {
-        // Your base configuration
-        ...createDefaultAiConfig({
-          // Optional: Pre-configured AI sessions
-          sessions: [
-            {
-              id: 'default-session',
-              name: 'Default Analysis',
-              modelProvider: 'openai',
-              model: 'gpt-4o',
-              analysisResults: [],
-              createdAt: new Date(),
-            },
-          ],
-          currentSessionId: 'default-session',
-        }),
         ...createDefaultSqlEditorConfig(),
       },
     }),
     // AI slice
     ...createAiSlice({
+      config: {
+        // Optional: Pre-configured AI sessions
+        sessions: [
+          {
+            id: 'default-session',
+            name: 'Default Analysis',
+            modelProvider: 'openai',
+            model: 'gpt-4o',
+            analysisResults: [],
+            createdAt: new Date(),
+          },
+        ],
+        currentSessionId: 'default-session',
+      }
       getApiKey: (modelProvider) => {
         // Return API key based on provider
         return apiKeys[modelProvider] || '';

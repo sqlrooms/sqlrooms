@@ -1,90 +1,88 @@
 {
-  "canvas": {
-    "viewport": {
-      "x": 108.19750748399463,
-      "y": 157.10285126250642,
-      "zoom": 0.6020686906157079
+  "viewport": {
+    "x": 108.19750748399463,
+    "y": 157.10285126250642,
+    "zoom": 0.6020686906157079
+  },
+  "nodes": [
+    {
+      "id": "i83p6y6aqz2luzr1mr62g0cr",
+      "position": {"x": 100, "y": 100},
+      "type": "sql",
+      "data": {
+        "title": "Query",
+        "type": "sql",
+        "sql": "SELECT * FROM earthquakes"
+      },
+      "width": 800,
+      "height": 600
     },
-    "nodes": [
-      {
-        "id": "i83p6y6aqz2luzr1mr62g0cr",
-        "position": {"x": 100, "y": 100},
+    {
+      "id": "bnu61kaq2975k8otchw25dkl",
+      "position": {"x": 980.0687194218185, "y": -179.0379280945404},
+      "type": "sql",
+      "data": {
+        "title": "Query 1",
         "type": "sql",
-        "data": {
-          "title": "Query",
-          "type": "sql",
-          "sql": "SELECT * FROM earthquakes"
-        },
-        "width": 800,
-        "height": 600
+        "sql": "SELECT * FROM canvas.\"Query\""
       },
-      {
-        "id": "bnu61kaq2975k8otchw25dkl",
-        "position": {"x": 980.0687194218185, "y": -179.0379280945404},
-        "type": "sql",
-        "data": {
-          "title": "Query 1",
-          "type": "sql",
-          "sql": "SELECT * FROM canvas.\"Query\""
-        },
-        "width": 800,
-        "height": 600
-      },
-      {
-        "id": "jl5dlsn83zifpy2f0bdajine",
-        "position": {"x": 1900, "y": 100},
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": "jl5dlsn83zifpy2f0bdajine",
+      "position": {"x": 1900, "y": 100},
+      "type": "vega",
+      "data": {
+        "title": "Chart",
         "type": "vega",
-        "data": {
-          "title": "Chart",
-          "type": "vega",
-          "vegaSpec": {
-            "description": "A simple bar chart",
-            "mark": "bar",
-            "encoding": {
-              "x": {"field": "category", "type": "ordinal"},
-              "y": {"field": "value", "type": "quantitative"}
-            },
-            "data": {
-              "values": [
-                {"category": "A", "value": 28},
-                {"category": "B", "value": 55},
-                {"category": "C", "value": 43}
-              ]
-            }
+        "vegaSpec": {
+          "description": "A simple bar chart",
+          "mark": "bar",
+          "encoding": {
+            "x": {"field": "category", "type": "ordinal"},
+            "y": {"field": "value", "type": "quantitative"}
+          },
+          "data": {
+            "values": [
+              {"category": "A", "value": 28},
+              {"category": "B", "value": 55},
+              {"category": "C", "value": 43}
+            ]
           }
-        },
-        "width": 800,
-        "height": 600
+        }
       },
-      {
-        "id": "f1173uk33s5w3yxm86n931zk",
-        "position": {"x": 1003.3218800963637, "y": 563.4022734427189},
+      "width": 800,
+      "height": 600
+    },
+    {
+      "id": "f1173uk33s5w3yxm86n931zk",
+      "position": {"x": 1003.3218800963637, "y": 563.4022734427189},
+      "type": "sql",
+      "data": {
+        "title": "Query 2",
         "type": "sql",
-        "data": {
-          "title": "Query 2",
-          "type": "sql",
-          "sql": "SELECT * FROM canvas.\"Query\""
-        },
-        "width": 800,
-        "height": 600
-      }
-    ],
-    "edges": [
-      {
-        "id": "i83p6y6aqz2luzr1mr62g0cr-bnu61kaq2975k8otchw25dkl",
-        "source": "i83p6y6aqz2luzr1mr62g0cr",
-        "target": "bnu61kaq2975k8otchw25dkl"
+        "sql": "SELECT * FROM canvas.\"Query\""
       },
-      {
-        "id": "bnu61kaq2975k8otchw25dkl-jl5dlsn83zifpy2f0bdajine",
-        "source": "bnu61kaq2975k8otchw25dkl",
-        "target": "jl5dlsn83zifpy2f0bdajine"
-      },
-      {
-        "id": "i83p6y6aqz2luzr1mr62g0cr-f1173uk33s5w3yxm86n931zk",
-        "source": "i83p6y6aqz2luzr1mr62g0cr",
-        "target": "f1173uk33s5w3yxm86n931zk"
-      }
-    ]
-  }
+      "width": 800,
+      "height": 600
+    }
+  ],
+  "edges": [
+    {
+      "id": "i83p6y6aqz2luzr1mr62g0cr-bnu61kaq2975k8otchw25dkl",
+      "source": "i83p6y6aqz2luzr1mr62g0cr",
+      "target": "bnu61kaq2975k8otchw25dkl"
+    },
+    {
+      "id": "bnu61kaq2975k8otchw25dkl-jl5dlsn83zifpy2f0bdajine",
+      "source": "bnu61kaq2975k8otchw25dkl",
+      "target": "jl5dlsn83zifpy2f0bdajine"
+    },
+    {
+      "id": "i83p6y6aqz2luzr1mr62g0cr-f1173uk33s5w3yxm86n931zk",
+      "source": "i83p6y6aqz2luzr1mr62g0cr",
+      "target": "f1173uk33s5w3yxm86n931zk"
+    }
+  ]
 }

@@ -25,32 +25,28 @@ import {
 import {AiSettingsSliceConfig} from './AiSettingsSlice';
 
 export const AiSliceConfig = z.object({
-  ai: z.object({
-    sessions: z.array(AnalysisSessionSchema),
-    currentSessionId: z.string().optional(),
-  }),
+  sessions: z.array(AnalysisSessionSchema),
+  currentSessionId: z.string().optional(),
 });
 export type AiSliceConfig = z.infer<typeof AiSliceConfig>;
 
 export function createDefaultAiConfig(
-  props: Partial<AiSliceConfig['ai']>,
+  props?: Partial<AiSliceConfig>,
 ): AiSliceConfig {
   const defaultSessionId = createId();
   return {
-    ai: {
-      sessions: [
-        {
-          id: defaultSessionId,
-          name: 'Default Session',
-          modelProvider: 'openai',
-          model: 'gpt-4.1',
-          analysisResults: [],
-          createdAt: new Date(),
-        },
-      ],
-      currentSessionId: defaultSessionId,
-      ...props,
-    },
+    sessions: [
+      {
+        id: defaultSessionId,
+        name: 'Default Session',
+        modelProvider: 'openai',
+        model: 'gpt-4.1',
+        analysisResults: [],
+        createdAt: new Date(),
+      },
+    ],
+    currentSessionId: defaultSessionId,
+    ...props,
   };
 }
 
@@ -59,6 +55,7 @@ export type AiSliceTool = ExtendedTool<z.ZodTypeAny, unknown, unknown, unknown>;
 
 export type AiSliceState = {
   ai: {
+    config: AiSliceConfig;
     analysisPrompt: string;
     isRunningAnalysis: boolean;
     tools: Record<string, AiSliceTool>;
@@ -89,6 +86,7 @@ export type AiSliceState = {
  * Configuration options for creating an AI slice
  */
 export interface AiSliceOptions {
+  config?: Partial<AiSliceConfig>;
   /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
   /** Custom tools to add to the AI assistant */
@@ -107,7 +105,7 @@ export interface AiSliceOptions {
   getBaseUrl?: () => string;
 }
 
-export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
+export function createAiSlice<PC extends BaseRoomConfig>(
   params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
@@ -125,6 +123,8 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
   return createSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
+        config: createDefaultAiConfig(params.config),
+
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
 
@@ -162,7 +162,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
          */
         getCurrentSession: () => {
           const state = get();
-          const {currentSessionId, sessions} = state.config.ai;
+          const {currentSessionId, sessions} = state.ai.config;
           return sessions.find((session) => session.id === currentSessionId);
         },
 
@@ -198,7 +198,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
           set((state) =>
             produce(state, (draft) => {
               // Add to AI sessions
-              draft.config.ai.sessions.unshift({
+              draft.ai.config.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
                 modelProvider:
@@ -207,7 +207,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
                 analysisResults: [],
                 createdAt: new Date(),
               });
-              draft.config.ai.currentSessionId = newSessionId;
+              draft.ai.config.currentSessionId = newSessionId;
             }),
           );
         },
@@ -218,7 +218,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         switchSession: (sessionId: string) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.ai.currentSessionId = sessionId;
+              draft.ai.config.currentSessionId = sessionId;
             }),
           );
         },
@@ -229,7 +229,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         renameSession: (sessionId: string, name: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const session = draft.config.ai.sessions.find(
+              const session = draft.ai.config.sessions.find(
                 (s) => s.id === sessionId,
               );
               if (session) {
@@ -245,20 +245,20 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         deleteSession: (sessionId: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const sessionIndex = draft.config.ai.sessions.findIndex(
+              const sessionIndex = draft.ai.config.sessions.findIndex(
                 (s) => s.id === sessionId,
               );
               if (sessionIndex !== -1) {
                 // Don't delete the last session
-                if (draft.config.ai.sessions.length > 1) {
-                  draft.config.ai.sessions.splice(sessionIndex, 1);
+                if (draft.ai.config.sessions.length > 1) {
+                  draft.ai.config.sessions.splice(sessionIndex, 1);
                   // If we deleted the current session, switch to another one
-                  if (draft.config.ai.currentSessionId === sessionId) {
+                  if (draft.ai.config.currentSessionId === sessionId) {
                     // Make sure there's at least one session before accessing its id
-                    if (draft.config.ai.sessions.length > 0) {
-                      const firstSession = draft.config.ai.sessions[0];
+                    if (draft.ai.config.sessions.length > 0) {
+                      const firstSession = draft.ai.config.sessions[0];
                       if (firstSession) {
-                        draft.config.ai.currentSessionId = firstSession.id;
+                        draft.ai.config.currentSessionId = firstSession.id;
                       }
                     }
                   }
@@ -287,8 +287,8 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               draft.ai.analysisAbortController = abortController;
               draft.ai.isRunningAnalysis = true;
 
-              const session = draft.config.ai.sessions.find(
-                (s) => s.id === draft.config.ai.currentSessionId,
+              const session = draft.ai.config.sessions.find(
+                (s) => s.id === draft.ai.config.currentSessionId,
               );
 
               if (session) {
@@ -367,7 +367,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
         deleteAnalysisResult: (sessionId: string, resultId: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const session = draft.config.ai.sessions.find(
+              const session = draft.ai.config.sessions.find(
                 (s) => s.id === sessionId,
               );
               if (session) {
@@ -512,10 +512,10 @@ function hasAiSettingsConfig(
 /**
  * Helper function to get the current session from state
  */
-function getCurrentSessionFromState<PC extends BaseRoomConfig & AiSliceConfig>(
-  state: RoomShellSliceState<PC> | WritableDraft<RoomShellSliceState<PC>>,
+function getCurrentSessionFromState<PC extends BaseRoomConfig>(
+  state: AiSliceState,
 ): AnalysisSessionSchema | undefined {
-  const {currentSessionId, sessions} = state.config.ai;
+  const {currentSessionId, sessions} = state.ai.config;
   return sessions.find((session) => session.id === currentSessionId);
 }
 
@@ -537,7 +537,7 @@ function findResultById(
  * @param isCompleted - Whether the analysis is completed
  * @returns The new state
  */
-function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
+function makeResultsAppender({
   resultId,
   streamMessage,
   errorMessage,
@@ -548,7 +548,7 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
   errorMessage?: ErrorMessageSchema;
   isCompleted?: boolean;
 }) {
-  return (state: RoomShellSliceState<PC>) =>
+  return (state: AiSliceState) =>
     produce(state, (draft) => {
       const currentSession = getCurrentSessionFromState(draft);
       if (!currentSession) {
@@ -606,16 +606,12 @@ function makeResultsAppender<PC extends BaseRoomConfig & AiSliceConfig>({
     });
 }
 
-type RoomConfigWithAi = BaseRoomConfig & AiSliceConfig;
-type RoomShellSliceStateWithAi = RoomShellSliceState<RoomConfigWithAi> &
-  AiSliceState;
-
-export function useStoreWithAi<T>(
-  selector: (state: RoomShellSliceStateWithAi) => T,
-): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & AiSliceConfig,
-    RoomShellSliceState<RoomConfigWithAi>,
-    T
-  >((state) => selector(state as unknown as RoomShellSliceStateWithAi));
+export function useStoreWithAi<
+  T,
+  PC extends BaseRoomConfig,
+  S extends RoomShellSliceState<PC> & AiSliceState,
+>(selector: (state: S) => T): T {
+  return useBaseRoomShellStore<PC, RoomShellSliceState<PC>, T>((state) =>
+    selector(state as unknown as S),
+  );
 }

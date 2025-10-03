@@ -5,7 +5,6 @@ import {
   AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiConfig,
   createDefaultAiSettingsConfig,
 } from '@sqlrooms/ai';
 import {
@@ -44,8 +43,7 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig =
-  BaseRoomConfig.merge(AiSliceConfig).merge(SqlEditorSliceConfig);
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -78,9 +76,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
-          ),
           ...createDefaultAiSettingsConfig(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
@@ -111,6 +106,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai slice
       ...createAiSlice({
+        config: AiSliceConfig.parse(exampleSessions),
+
         // You can configure the Api key in the Ai Settings panel,
         // or (optional) provide API key with your own custom logic here
         // getApiKey: (modelProvider: string) => {
@@ -175,12 +172,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Subset of the state to persist
       partialize: (state) => ({
         config: RoomConfig.parse(state.config),
+        ai: AiSliceConfig.parse(state.ai.config),
         aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
       }),
       // Combining the persisted state with the current one when loading from local storage
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         config: RoomConfig.parse(persistedState.config),
+        ai: {
+          ...currentState.ai,
+          config: AiSliceConfig.parse(persistedState.ai),
+        },
         aiSettings: {
           ...currentState.aiSettings,
           config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
