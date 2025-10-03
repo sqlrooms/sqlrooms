@@ -148,11 +148,10 @@ export function createCanvasSlice<
   PC extends BaseRoomConfig = BaseRoomConfig,
 >(props: {
   config?: Partial<CanvasSliceConfig>;
-  ai?: Parameters<typeof createAiSlice<PC>>[0];
+  ai?: Partial<Parameters<typeof createAiSlice<PC>>[0]>;
 }) {
   return createSlice<PC, CanvasSliceState>((set, get, store) => ({
     ...createAiSlice({
-      ...props.ai,
       getInstructions: () => {
         return createDefaultAiInstructions(store);
       },
@@ -161,6 +160,7 @@ export function createCanvasSlice<
         chart: createVegaChartTool(),
         ...props.ai?.tools,
       },
+      ...props.ai,
     })(set, get, store),
     canvas: {
       config: createDefaultCanvasConfig(props.config),
