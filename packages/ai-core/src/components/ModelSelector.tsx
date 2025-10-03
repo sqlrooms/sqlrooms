@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useMemo} from 'react';
 import {
   Select,
   SelectContent,
@@ -11,6 +11,9 @@ import {
 } from '@sqlrooms/ui';
 import {useStoreWithAi} from '../AiSlice';
 import {capitalize} from '@sqlrooms/utils';
+import {hasAiSettingsConfig} from '../hasAiSettingsConfig';
+import {extractModelsFromSettings} from '../utils';
+
 interface Model {
   provider: string;
   label: string;
@@ -19,15 +22,25 @@ interface Model {
 
 interface ModelSelectorProps {
   className?: string;
-  models: Model[];
+  models?: Model[];
 }
 
 export const ModelSelector: React.FC<ModelSelectorProps> = ({
   className,
-  models,
+  models: passedModels,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const setAiModel = useStoreWithAi((s) => s.ai.setAiModel);
+
+  const aiSettingsConfig = useStoreWithAi((s) =>
+    hasAiSettingsConfig(s) ? s.aiSettings.config : undefined,
+  );
+  const settingsModels = useMemo(
+    () => (aiSettingsConfig ? extractModelsFromSettings(aiSettingsConfig) : []),
+    [aiSettingsConfig],
+  );
+
+  const models = passedModels ?? settingsModels;
 
   const handleModelChange = (value: string) => {
     const selectedModel = models.find((model) => model.value === value);

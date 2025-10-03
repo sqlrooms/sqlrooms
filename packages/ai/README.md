@@ -499,7 +499,6 @@ This package now includes comprehensive AI settings components. These components
 - **ModelsSettings**: Component for managing available models and their parameters
 - **ModelParametersSettings**: Component for configuring model parameters like max steps and system instructions
 - **ModelSelector**: Standalone model selector component for quick model switching
-- **extractModelsFromSettings**: Utility function to extract models from configuration for use in selectors
 
 ### AI Settings Usage
 
@@ -509,25 +508,18 @@ This package now includes comprehensive AI settings components. These components
 import {
   AiSettingsPanel,
   ModelSelector,
-  extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {useRoomStore} from '../store';
-
-// Access AI model configuration from store
-const aiSettings = useRoomStore((s) => s.aiSettings.config);
-const models = extractModelsFromSettings(aiSettings);
 
 // Main configuration panel with sub-components
 <AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
   <AiSettingsPanel.ProvidersSettings />
   <AiSettingsPanel.ModelsSettings />
-  <AiSettingsPanel.ModelParametersSettings
-    createDefaultAiInstructions={createDefaultAiInstructionsWrapper}
-  />
+  <AiSettingsPanel.ModelParametersSettings  />
 </AiSettingsPanel>
 
 // Standalone model selector
-<ModelSelector models={models} />
+<ModelSelector />
 ```
 
 ### AI Settings API Reference
@@ -539,7 +531,6 @@ const models = extractModelsFromSettings(aiSettings);
   - `AiSettingsPanel.ModelsSettings`: Manage available models and their parameters
   - `AiSettingsPanel.ModelParametersSettings`: Configure model parameters and instructions
 - **`ModelSelector`**: Standalone model selector for quick switching
-- **`extractModelsFromSettings(config)`**: Utility to extract models from configuration
 
 #### Slice Configuration
 

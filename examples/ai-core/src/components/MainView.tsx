@@ -1,11 +1,10 @@
 import {
-  AiSettingsPanel,
   AnalysisResultsContainer,
   ModelSelector,
   QueryControls,
   SessionControls,
-  extractModelsFromSettings,
-} from '@sqlrooms/ai';
+} from '@sqlrooms/ai-core';
+import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -14,9 +13,6 @@ export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
-  const aiSettings = useRoomStore((s) => s.aiSettings.config);
-
-  const models = extractModelsFromSettings(aiSettings);
 
   const settingsPanelOpen = useDisclosure();
 
@@ -58,7 +54,7 @@ export const MainView: React.FC = () => {
 
           <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
             <div className="flex items-center justify-end gap-2">
-              <ModelSelector models={models} />
+              <ModelSelector />
             </div>
           </QueryControls>
         </>
