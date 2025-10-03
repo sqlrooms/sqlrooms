@@ -4,7 +4,7 @@ import {StoreApi} from '@sqlrooms/room-shell';
 import {createQueryTool, QueryToolOptions} from './query/queryTool';
 
 export type DefaultToolsOptions = {
-  query: QueryToolOptions;
+  query?: QueryToolOptions;
 };
 
 /**
@@ -12,7 +12,7 @@ export type DefaultToolsOptions = {
  * Includes:
  * - query: Executes SQL queries against DuckDB
  */
-export function createDefaultTools(
+export function createDefaultAiTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: DefaultToolsOptions,
 ): Record<string, AiSliceTool> {

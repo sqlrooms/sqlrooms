@@ -522,7 +522,7 @@ const models = extractModelsFromSettings(aiSettings);
   <AiSettingsPanel.ProvidersSettings />
   <AiSettingsPanel.ModelsSettings />
   <AiSettingsPanel.ModelParametersSettings
-    getDefaultInstructions={getDefaultInstructionsWrapper}
+    createDefaultAiInstructions={createDefaultAiInstructionsWrapper}
   />
 </AiSettingsPanel>
 

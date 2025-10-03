@@ -1,54 +1,14 @@
-import {
-  useBaseRoomShellStore,
-  createSlice,
-  BaseRoomConfig,
-  RoomShellSliceState,
-  type StateCreator,
-} from '@sqlrooms/room-shell';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
+import {AiSliceState} from '@sqlrooms/ai-core';
+import {
+  BaseRoomConfig,
+  createBaseSlice,
+  RoomState,
+  useBaseRoomStore,
+  type StateCreator,
+} from '@sqlrooms/room-store';
 import {produce} from 'immer';
-
-export function createDefaultAiSettingsConfig(
-  props?: Partial<AiSettingsSliceConfig>,
-): AiSettingsSliceConfig {
-  return {
-    providers: {
-      openai: {
-        baseUrl: 'https://api.openai.com/v1',
-        apiKey: '',
-        models: [
-          {
-            modelName: 'gpt-4.1',
-          },
-          {
-            modelName: 'gpt-5',
-          },
-        ],
-      },
-      anthropic: {
-        baseUrl: 'https://api.anthropic.com',
-        apiKey: '',
-        models: [
-          {
-            modelName: 'claude-4-sonnet',
-          },
-        ],
-      },
-    },
-    customModels: [
-      // {
-      //   baseUrl: 'http://localhost:11434/v1',
-      //   apiKey: '',
-      //   modelName: 'qwen3',
-      // },
-    ],
-    modelParameters: {
-      maxSteps: 5,
-      additionalInstruction: '',
-    },
-    ...props,
-  };
-}
+import {createDefaultAiSettingsConfig} from './defaultSettings';
 
 export type AiSettingsSliceState = {
   aiSettings: {
@@ -89,7 +49,7 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   props?: CreateAiSettingsSliceParams,
 ): StateCreator<AiSettingsSliceState> {
   const config = createDefaultAiSettingsConfig(props?.config);
-  return createSlice<PC, AiSettingsSliceState>((set, get) => ({
+  return createBaseSlice<PC, AiSettingsSliceState>((set, get) => ({
     aiSettings: {
       config,
 
@@ -259,17 +219,15 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   }));
 }
 
-type RoomConfigWithAiSettings = BaseRoomConfig & AiSettingsSliceConfig;
-type RoomShellSliceStateWithAiSettings =
-  RoomShellSliceState<RoomConfigWithAiSettings> & AiSettingsSliceState;
+type RoomStateWithAiSettings = RoomState<BaseRoomConfig> &
+  AiSliceState &
+  AiSettingsSliceState;
 
 // Hook to access aiSettings from the room store
 export function useStoreWithAiSettings<T>(
-  selector: (state: RoomShellSliceStateWithAiSettings) => T,
+  selector: (state: RoomStateWithAiSettings) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & AiSettingsSliceConfig,
-    RoomShellSliceState<RoomConfigWithAiSettings>,
-    T
-  >((state) => selector(state as unknown as RoomShellSliceStateWithAiSettings));
+  return useBaseRoomStore<BaseRoomConfig, RoomState<BaseRoomConfig>, T>(
+    (state) => selector(state as unknown as RoomStateWithAiSettings),
+  );
 }

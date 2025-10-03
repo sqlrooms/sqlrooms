@@ -14,13 +14,7 @@ import {
 } from '@sqlrooms/ui';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
-export interface AiModelParametersProps {
-  getDefaultInstructions?: () => string;
-}
-
-export const AiModelParameters: FC<AiModelParametersProps> = ({
-  getDefaultInstructions,
-}) => {
+export const AiModelParameters: FC = () => {
   const maxSteps = useStoreWithAiSettings(
     (s) => s.aiSettings.config.modelParameters.maxSteps,
   );
@@ -47,6 +41,10 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
   const handleAdditionalInstructionChange = (value: string) => {
     setAdditionalInstruction(value);
   };
+
+  const getFullInstructions = useStoreWithAiSettings(
+    (s) => s.ai.getFullInstructions,
+  );
 
   const handleFileUpload = async (
     event: React.ChangeEvent<HTMLInputElement>,
@@ -113,21 +111,6 @@ export const AiModelParameters: FC<AiModelParametersProps> = ({
 
   const handleViewFullInstructions = () => {
     onOpen();
-  };
-
-  // compose full instructions
-  const getFullInstructions = () => {
-    if (!getDefaultInstructions) {
-      return additionalInstruction || 'No default instructions available.';
-    }
-
-    const defaultInstructions = getDefaultInstructions();
-
-    if (additionalInstruction) {
-      return `${defaultInstructions}\n\nAdditional Instructions:\n\n${additionalInstruction}`;
-    } else {
-      return `${defaultInstructions}.`;
-    }
   };
 
   return (

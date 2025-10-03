@@ -3,13 +3,10 @@
  * @packageDocumentation
  */
 
-export {
-  createAiSettingsSlice,
-  useStoreWithAiSettings,
-  createDefaultAiSettingsConfig,
-} from './AiSettingsSlice';
+export {createAiSettingsSlice, useStoreWithAiSettings} from './AiSettingsSlice';
 
 export type {AiSettingsSliceState} from './AiSettingsSlice';
+export {createDefaultAiSettingsConfig} from './defaultSettings';
 
 export {AiSettingsPanel} from './components/AiSettingsPanel';
 export {AiProvidersSettings} from './components/AiProvidersSettings';

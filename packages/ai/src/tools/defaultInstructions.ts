@@ -1,4 +1,6 @@
-import {DataTable} from '@sqlrooms/duckdb';
+import {AiSliceState} from '@sqlrooms/ai-core';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
+import {StoreApi} from '@sqlrooms/room-shell';
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -60,6 +62,9 @@ Please use the following schema for the tables:
 /**
  * Returns the default system instructions for the AI assistant
  */
-export function getDefaultInstructions(tablesSchema: DataTable[]): string {
-  return `${DEFAULT_INSTRUCTIONS}\n${JSON.stringify(tablesSchema)}`;
+export function createDefaultAiInstructions(
+  store: StoreApi<AiSliceState & DuckDbSliceState>,
+): string {
+  const tables = store.getState().db.tables;
+  return `${DEFAULT_INSTRUCTIONS}\n${JSON.stringify(tables)}`;
 }

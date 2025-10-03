@@ -8,6 +8,12 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.25.0-rc.1
+
+- createAiSlice init parameters changed:
+  - Instead of customTools and toolsOptions use tools + createDefaultAiTools(store, toolsOptions)
+  - getInstructions must be provided, but can use createDefaultAiInstructions(store)
+
 ## 0.24.28-rc.1
 
 - Discuss config separated from RoomConfig to make it easier to persist separately and to simplify typing (`state.discuss.config` instead of `state.config.discuss`)

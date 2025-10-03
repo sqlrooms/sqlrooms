@@ -5,9 +5,10 @@
 
 export {QueryToolResult} from './tools/query/QueryToolResult';
 export {QueryToolParameters} from './tools/query/queryTool';
-export {createDefaultTools} from './tools/defaultTools';
+export {createDefaultAiTools} from './tools/defaultTools';
 export type {DefaultToolsOptions} from './tools/defaultTools';
-export {getDefaultInstructions} from './instructions';
+export {createDefaultAiInstructions} from './tools/defaultInstructions';
 
 export * from '@sqlrooms/ai-core';
+export * from '@sqlrooms/ai-config';
 export * from '@sqlrooms/ai-settings';

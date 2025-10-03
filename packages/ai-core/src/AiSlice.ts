@@ -48,7 +48,7 @@ export type AiSliceState = {
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
-    getInstructionsFromSettings: () => string;
+    getFullInstructions: () => string;
   };
 };
 
@@ -59,11 +59,11 @@ export interface AiSliceOptions {
   config?: Partial<AiSliceConfig>;
   /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
-  /** Custom tools to add to the AI assistant */
+  /** Tools to add to the AI assistant */
   tools: Record<string, AiSliceTool>;
+
   /**
    * Function to get custom instructions for the AI assistant
-   * @param tablesSchema - The schema of the tables in the database
    * @returns The instructions string to use
    */
   getInstructions: () => string;
@@ -284,7 +284,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
               abortController,
               tools: get().ai.tools,
               maxSteps: get().ai.getMaxStepsFromSettings(),
-              getInstructions: get().ai.getInstructionsFromSettings,
+              getInstructions: get().ai.getFullInstructions,
               historyAnalysis: currentSession.analysisResults,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
@@ -426,7 +426,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           return 5;
         },
 
-        getInstructionsFromSettings: () => {
+        getFullInstructions: () => {
           const store = get();
 
           let instructions = getInstructions();

@@ -5,7 +5,9 @@ import {
   AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
+  createDefaultAiInstructions,
   createDefaultAiSettingsConfig,
+  createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -129,19 +131,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         // Example of customizing the system instructions
         // getInstructions: (tablesSchema: DataTable[]) => {
         //   // get default instructions from sqlrooms/ai
-        //   let instructions = getDefaultInstructions(tablesSchema);
+        //   let instructions = createDefaultAiInstructions(tablesSchema);
         //   // you can add more instructions here if you want
         //   instructions = `${instructions}\n\nYour name is George`;
         //   return instructions;
         // },
 
-        toolsOptions: {
-          // Configure number of rows to share with LLM globally
-          numberOfRowsToShareWithLLM: 0,
+        getInstructions: () => {
+          return createDefaultAiInstructions(store);
         },
 
         // Add custom tools
-        customTools: {
+        tools: {
+          ...createDefaultAiTools(store, {query: {}}),
+
           // Add the VegaChart tool from the vega package with a custom description
           chart: createVegaChartTool(),
 

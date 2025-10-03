@@ -2,8 +2,8 @@ import {createId} from '@paralleldrive/cuid2';
 import {
   AiSliceState,
   createAiSlice,
-  createDefaultTools,
-  getDefaultInstructions,
+  createDefaultAiTools,
+  createDefaultAiInstructions,
 } from '@sqlrooms/ai';
 import {escapeId} from '@sqlrooms/duckdb';
 import {
@@ -154,10 +154,10 @@ export function createCanvasSlice<
     ...createAiSlice({
       ...props.ai,
       getInstructions: () => {
-        return getDefaultInstructions(get().db.tables);
+        return createDefaultAiInstructions(store);
       },
       tools: {
-        ...createDefaultTools(store),
+        ...createDefaultAiTools(store),
         chart: createVegaChartTool(),
         ...props.ai?.tools,
       },
