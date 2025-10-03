@@ -1,20 +1,14 @@
 import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
 import type {Config} from 'tailwindcss';
 
-const preset = sqlroomsTailwindPreset();
 const config = {
-  ...preset,
+  presets: [sqlroomsTailwindPreset()],
   content: [
     'src/**/*.{ts,tsx}',
-    '**/node_modules/@sqlrooms/*/dist/**/*.js',
-    '**/node_modules/@sqlrooms/*/src/**/*.{ts,tsx}',
+    // If you make a precise list of packages used, instead of @sqlrooms/*,
+    // it would help Vite start faster in dev mode
+    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
   ],
-  theme: {
-    ...preset.theme,
-    extend: {
-      ...preset.theme?.extend,
-    },
-  },
 } satisfies Config;
 
 export default config;
