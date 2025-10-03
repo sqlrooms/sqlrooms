@@ -19,3 +19,11 @@ export const BaseRoomConfig = z
   .describe('Room configuration.');
 
 export type BaseRoomConfig = z.infer<typeof BaseRoomConfig>;
+
+export function createDefaultBaseRoomConfig(): BaseRoomConfig {
+  return {
+    title: DEFAULT_ROOM_TITLE,
+    layout: DEFAULT_MOSAIC_LAYOUT,
+    dataSources: [],
+  };
+}

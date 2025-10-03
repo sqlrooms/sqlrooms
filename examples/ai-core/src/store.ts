@@ -5,8 +5,6 @@ import {
   AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiInstructions,
-  createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -15,7 +13,6 @@ import {
   RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
-import {createVegaChartTool} from '@sqlrooms/vega';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import EchoToolResult from './components/EchoToolResult';
@@ -30,11 +27,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<BaseRoomConfig>({config: {}, room: {}})(
-        set,
-        get,
-        store,
-      ),
+      ...createRoomSlice<BaseRoomConfig>()(set, get, store),
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
@@ -42,16 +35,11 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
       // Ai slice
       ...createAiSlice({
         getInstructions: () => {
-          return createDefaultAiInstructions(store);
+          return `You are an AI assistant that can answer questions and help with tasks.`;
         },
 
         // Add custom tools
         tools: {
-          ...createDefaultAiTools(store, {query: {}}),
-
-          // Add the VegaChart tool from the vega package with a custom description
-          chart: createVegaChartTool(),
-
           // Example of adding a simple echo tool
           echo: {
             description: 'A simple echo tool that returns the input text',
