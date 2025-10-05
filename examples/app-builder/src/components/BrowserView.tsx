@@ -1,5 +1,6 @@
 import {useEffect} from 'react';
 import {useRoomStore} from '../store/store';
+import {Spinner} from '@sqlrooms/ui';
 
 export const BrowserView = () => {
   const initialize = useRoomStore((s) => s.wc.initialize);
@@ -15,7 +16,16 @@ export const BrowserView = () => {
           className="h-full w-full overflow-auto bg-white"
           src={serverStatus.url}
         />
-      ) : null}
+      ) : (
+        <div className="flex h-full w-full items-center justify-center">
+          <div className="text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Spinner />
+              <p>{serverStatus.type}</p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

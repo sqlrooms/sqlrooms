@@ -2,12 +2,15 @@ import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {createBaseSlice, StateCreator} from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
+import {editableFileContents, editableFilePath} from './initialFilesTree';
 
 export type WebContainerSliceState = {
   wc: {
     filesTree: FileSystemTree;
     instance: WebContainer | null;
     output: string;
+    openedFiles: {path: string; content: string; dirty: boolean}[];
+    activeFilePath: string | null;
     serverStatus:
       | {type: 'not-initialized'}
       | {type: 'initializing'}
@@ -24,6 +27,12 @@ export type WebContainerSliceState = {
      * @returns The exit code of the start dev server command
      */
     startDevServer: () => Promise<void>;
+    writeEditableFile: (content: string) => Promise<void>;
+    openFile: (path: string, content?: string) => Promise<void>;
+    closeFile: (path: string) => void;
+    setActiveFile: (path: string) => void;
+    updateFileContent: (path: string, content: string) => void;
+    saveAllOpenFiles: () => Promise<void>;
   };
 };
 
@@ -37,6 +46,14 @@ export function createWebContainerSlice(props: {
           instance: null,
           output: '',
           filesTree: props.filesTree,
+          openedFiles: [
+            {
+              path: editableFilePath,
+              content: editableFileContents,
+              dirty: false,
+            },
+          ],
+          activeFilePath: editableFilePath,
           iframeUrl: undefined,
           serverStatus: {type: 'not-initialized'},
           initialize: async () => {
@@ -71,6 +88,11 @@ export function createWebContainerSlice(props: {
               throw new Error('WebContainer instance not found');
             }
             // Install dependencies
+            set((state) =>
+              produce(state, (draft) => {
+                draft.wc.serverStatus = {type: 'install-deps'};
+              }),
+            );
             const installProcess = await instance.spawn('npm', ['install']);
             installProcess.output.pipeTo(
               new WritableStream({
@@ -119,6 +141,98 @@ export function createWebContainerSlice(props: {
                 }),
               );
             });
+          },
+
+          async writeEditableFile(content) {
+            const instance = get().wc.instance;
+            if (!instance) {
+              throw new Error('WebContainer instance not found');
+            }
+            await instance.fs.writeFile(editableFilePath, content);
+          },
+
+          async openFile(path, content) {
+            const state = get();
+            const existing = state.wc.openedFiles.find((f) => f.path === path);
+            if (existing) {
+              set((s) => ({wc: {...s.wc, activeFilePath: path}}));
+              return;
+            }
+            let fileContent = content;
+            if (fileContent === undefined) {
+              try {
+                const instance = state.wc.instance;
+                if (instance) {
+                  const data = await instance.fs.readFile(path, 'utf-8');
+                  fileContent =
+                    typeof data === 'string'
+                      ? data
+                      : new TextDecoder().decode(data as any);
+                }
+              } catch (e) {
+                fileContent = '';
+              }
+            }
+            set((s) =>
+              produce(s, (draft) => {
+                draft.wc.openedFiles.push({
+                  path,
+                  content: fileContent ?? '',
+                  dirty: false,
+                });
+                draft.wc.activeFilePath = path;
+              }),
+            );
+          },
+
+          closeFile(path) {
+            set((s) =>
+              produce(s, (draft) => {
+                const wasActive = draft.wc.activeFilePath === path;
+                draft.wc.openedFiles = draft.wc.openedFiles.filter(
+                  (f) => f.path !== path,
+                );
+                if (wasActive) {
+                  const len = draft.wc.openedFiles.length;
+                  draft.wc.activeFilePath =
+                    len > 0 ? draft.wc.openedFiles[len - 1].path : null;
+                }
+              }),
+            );
+          },
+
+          setActiveFile(path) {
+            set((s) => ({wc: {...s.wc, activeFilePath: path}}));
+          },
+
+          updateFileContent(path, content) {
+            set((s) =>
+              produce(s, (draft) => {
+                const file = draft.wc.openedFiles.find((f) => f.path === path);
+                if (file) {
+                  file.content = content;
+                  file.dirty = true;
+                }
+              }),
+            );
+          },
+
+          async saveAllOpenFiles() {
+            const instance = get().wc.instance;
+            if (!instance) {
+              throw new Error('WebContainer instance not found');
+            }
+            const files = get().wc.openedFiles;
+            for (const f of files) {
+              await instance.fs.writeFile(f.path, f.content);
+            }
+            set((s) =>
+              produce(s, (draft) => {
+                for (const f of draft.wc.openedFiles) {
+                  f.dirty = false;
+                }
+              }),
+            );
           },
         },
       }),
