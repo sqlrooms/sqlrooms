@@ -1,5 +1,6 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
+import llmstxt from 'vitepress-plugin-llms';
 
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
@@ -30,6 +31,23 @@ const PACKAGE_CATEGORIES = {
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  vite: {
+    plugins: [
+      // @ts-ignore
+      llmstxt({
+        // generateLLMsFullTxt: true,
+        // ignoreFiles: ['sponsors/*'],
+        // customLLMsTxtTemplate: `# {title}\n\n{foo}`,
+        // title: 'Awesome tool',
+        // customTemplateVariables: {
+        //   foo: 'bar',
+        // },
+        // experimental: {
+        //   depth: 2, // Generate llms.txt and llms-full.txt in root and first-level subdirectories
+        // },
+      }),
+    ],
+  },
   ignoreDeadLinks: true,
   title: 'SQLRooms',
   description: 'Build powerful analytics apps with DuckDB',
@@ -133,8 +151,12 @@ export default defineConfig({
 
       {
         text: 'Reference',
-        items: Object.entries(PACKAGE_CATEGORIES).map(
-          ([category, packages]) => {
+        items: [
+          {
+            text: 'LLMs',
+            link: '/llms',
+          },
+          ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
             return {
               text: category,
               link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
@@ -142,8 +164,8 @@ export default defineConfig({
                 packages.includes(item.text),
               ),
             };
-          },
-        ),
+          }),
+        ],
       },
     ],
 
