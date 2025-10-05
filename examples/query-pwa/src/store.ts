@@ -86,8 +86,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createRoomShellSlice<RoomConfig>({
         connector: createWasmDuckDbConnector({
           // Uncomment to use OPFS for persistent data storage
-          path: 'opfs://sqlrooms-query-pwa.db',
-          accessMode: DuckDBAccessMode.READ_WRITE,
+          // path: 'opfs://sqlrooms-query-pwa.db',
+          // accessMode: DuckDBAccessMode.READ_WRITE,
           bundles: BUNDLES,
           initializationQuery: `
             INSTALL json FROM '${EXTENSIONS_PATH}';
