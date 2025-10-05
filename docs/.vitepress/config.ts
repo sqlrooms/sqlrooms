@@ -153,7 +153,7 @@ export default defineConfig({
         text: 'Reference',
         items: [
           {
-            text: 'LLMs',
+            text: 'Docs for LLMs',
             link: '/llms',
           },
           ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {

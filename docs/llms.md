@@ -1,55 +1,59 @@
-# LLMs
+# Docs for LLMs
 
-This page provides access to machine-readable documentation files for Large Language Models (LLMs) and AI assistants.
+This page provides access to machine-readable documentation files for Large Language Models and AI assistants supporting the [llms.txt convention](https://llmstxt.org/).
 
-## Available Files
+## [/llms.txt](/llms.txt)
 
-### llms.txt
-
-A concise version of the SQLRooms documentation that includes links to additional resources. This version is optimized for LLMs that can follow links and download additional documentation as needed.
-
-**Use this when:**
-
-- Working with AI assistants that can access URLs (like Claude, ChatGPT with browsing)
-- You want the LLM to fetch specific documentation on-demand
-- You prefer a smaller initial context with the ability to expand
-
-[llms.txt](/llms.txt)
+A concise version of the SQLRooms documentation that includes links to additional resources.
 
 ```
 https://sqlrooms.org/llms.txt
 ```
 
-### llms-full.txt
+## [/llms-full.txt](/llms-full.txt)
 
-A comprehensive version containing the complete SQLRooms documentation and API reference concatenated into a single file. This includes all content without external links.
-
-**Use this when:**
-
-- Working with AI assistants that cannot access external URLs
-- You want all documentation available in a single context
-- You need offline access to the complete documentation
-- Working with local LLMs or restricted environments
-
-[llms-full.txt](/llms-full.txt)
+A comprehensive version containing the complete SQLRooms documentation and API reference concatenated into a single file.
 
 ```
 https://sqlrooms.org/llms-full.txt
 ```
 
-## About These Files
+## Package-level documentation
 
-These files are automatically generated from the SQLRooms documentation and API reference using the [vitepress-plugin-llms](https://github.com/davidmyersdev/vitepress-plugin-llms) plugin. They provide structured, machine-readable content that can be used by LLMs and AI assistants to better understand and work with the SQLRooms framework.
+### [`@sqlrooms/ai`](https://sqlrooms.org/api/ai.md)
 
-The files contain:
+```
+https://sqlrooms.org/api/ai.md
+```
 
-- Complete documentation content
-- API reference for all packages
-- Code examples and usage patterns
-- Configuration options and best practices
+### [`@sqlrooms/duckdb`](https://sqlrooms.org/api/duckdb.md)
 
-These resources are particularly useful for:
+```
+https://sqlrooms.org/api/duckdb.md
+```
 
-- AI-assisted development with SQLRooms
-- Automated code generation and analysis
-- Documentation-aware tooling and integrations
+### [`@sqlrooms/room-shell`](https://sqlrooms.org/api/room-shell.md)
+
+```
+https://sqlrooms.org/api/room-shell.md
+```
+
+### [`@sqlrooms/ui`](https://sqlrooms.org/api/ui.md)
+
+```
+https://sqlrooms.org/api/ui.md
+```
+
+### [`@sqlrooms/sql-editor`](https://sqlrooms.org/api/sql-editor.md)
+
+```
+https://sqlrooms.org/api/sql-editor.md
+```
+
+### [`@sqlrooms/schema-tree`](https://sqlrooms.org/api/schema-tree.md)
+
+```
+https://sqlrooms.org/api/schema-tree.md
+```
+
+and so on for all the other packages…
