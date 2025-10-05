@@ -18,16 +18,16 @@
     "access": "public"
   },
   "dependencies": {
-    "@openassistant/utils": "^0.5.13",
+    "@openassistant/utils": "^0.5.18",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.475.0",
-    "react-vega": "^7.6.0",
-    "vega": "^5.33.0",
-    "vega-lite": "^5.23.0",
-    "zod": "^3.25.73"
+    "react-vega": "^7.7.1",
+    "vega": "^6.2.0",
+    "vega-lite": "^6.4.0",
+    "zod": "^3.25.76"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0",

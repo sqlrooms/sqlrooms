@@ -30,7 +30,7 @@
     "d3-color": "^3.1.0",
     "d3-format": "^3.1.0",
     "d3-time-format": "^4.1.0",
-    "dayjs": "^1.11.13",
+    "dayjs": "^1.11.18",
     "seedrandom": "^3.0.5"
   },
   "devDependencies": {
