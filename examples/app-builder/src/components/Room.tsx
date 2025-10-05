@@ -8,7 +8,7 @@ import {BrowserView} from './BrowserView';
 import {CodeView} from './CodeView';
 import {roomStore} from '../store/store';
 import {TerminalView} from './TerminalView';
-import {FileTreeView} from './FileTreeView';
+import {FileTreeView} from './filetree/FileTreeView';
 
 export const Room = () => {
   return (
@@ -22,6 +22,7 @@ export const Room = () => {
                   <ResizablePanel defaultSize={20}>
                     <FileTreeView />
                   </ResizablePanel>
+                  <ResizableHandle withHandle />
                   <ResizablePanel>
                     <CodeView />
                   </ResizablePanel>
