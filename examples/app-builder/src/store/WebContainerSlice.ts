@@ -2,6 +2,9 @@ import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {createBaseSlice, StateCreator} from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
+import {setFileContentInTree} from './utils/setFileContentInTree';
+
+// helper moved to ./utils/setFileContentInTree
 
 export type WebContainerSliceState = {
   wc: {
@@ -206,6 +209,12 @@ export function createWebContainerSlice(props: {
                   file.content = content;
                   file.dirty = true;
                 }
+                // Keep the in-memory FileSystemTree in sync (immutably)
+                draft.wc.filesTree = setFileContentInTree(
+                  draft.wc.filesTree,
+                  path,
+                  content,
+                );
               }),
             );
           },
