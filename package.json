@@ -77,7 +77,8 @@
     "typedoc-plugin-zod": "1.4.1",
     "typedoc-vitepress-theme": "1.1.2",
     "typescript": "5.9.2",
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "vitepress-plugin-llms": "^1.8.0"
   },
   "pnpm": {
     "overrides": {
