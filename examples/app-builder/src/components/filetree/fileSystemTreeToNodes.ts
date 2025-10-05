@@ -18,7 +18,7 @@ export function isDirectory(
 export function fileSystemTreeToNodes(
   tree: FileSystemTree,
   basePath: string,
-  rootName: string = 'My project files',
+  rootName: string = 'Files',
 ): TreeNodeData<FileNodeObject> {
   const toChildren = (
     subtree: FileSystemTree,

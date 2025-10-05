@@ -12,12 +12,7 @@ export default function scaffoldsPlugin(): Plugin {
   const __dirname = path.dirname(__filename);
   const exampleRoot = path.resolve(__dirname, '..');
   const scaffoldsRoot = path.join(exampleRoot, 'app-scaffolds');
-  const outputFile = path.join(
-    exampleRoot,
-    'src',
-    'store',
-    'generatedScaffolds.ts',
-  );
+  const outputFile = path.join(scaffoldsRoot, 'scaffolds.generated.json');
 
   async function runGenerate() {
     await generateScaffoldsModule({

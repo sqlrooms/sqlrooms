@@ -12,21 +12,23 @@ import {
   RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
-import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import EchoToolResult from '../tools/EchoToolResult';
+import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {AI_SETTINGS} from '../config';
+import {LLM_INSTRUCTIONS} from '../instructions';
+import {createListFilesTool} from '../tools/listFiles/createListFilesTool';
+import {createGetFileContentTool} from '../tools/getFileContent/getFileContentTool';
 import {
   createWebContainerSlice,
   WebContainerSliceState,
 } from './WebContainerSlice';
-import {INITIAL_FILES_TREE} from './initialFilesTree';
-import {SCAFFOLDS} from './generatedScaffolds';
+import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 
 type State = RoomState<BaseRoomConfig> &
   AiSliceState &
   AiSettingsSliceState &
   WebContainerSliceState;
+// LayoutSliceState;
 
 /**
  * Create a customized room store
@@ -37,38 +39,45 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
       // Base room slice
       ...createRoomSlice<BaseRoomConfig>()(set, get, store),
 
+      // ...createLayoutSlice({
+      //   config: {
+      //     type: LayoutTypes.enum.mosaic,
+      //     nodes: {
+      //       direction: 'row',
+      //       first: 'main',
+      //       second: 'sidebar',
+      //     },
+      //   },
+      //   panels: {
+      //     main: {
+      //       title: 'Main View',
+      //       icon: () => null,
+      //       component: BrowserView,
+      //       placement: 'main',
+      //     },
+      //   },
+      // })(set, get, store),
+
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
       // WebContainer slice
       ...createWebContainerSlice({
-        filesTree: SCAFFOLDS['get-started'],
+        filesTree: scaffolds['get-started'],
       })(set, get, store),
 
       // Ai slice
       ...createAiSlice({
-        getInstructions: () => {
-          return `You are an AI assistant that can answer questions and help with tasks.`;
-        },
+        getInstructions: () => `${LLM_INSTRUCTIONS} 
+        <file_list>
+          ${JSON.stringify(fileSystemTreeToNodes(get().wc.filesTree, '/', null, 2))}
+        </file_list>`,
 
         // Add custom tools
         tools: {
           // Example of adding a simple echo tool
-          echo: {
-            description: 'A simple echo tool that returns the input text',
-            parameters: z.object({
-              text: z.string().describe('The text to echo back'),
-            }),
-            execute: async ({text}: {text: string}) => {
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Echo: ${text}`,
-                },
-              };
-            },
-            component: EchoToolResult,
-          },
+          listFiles: createListFilesTool(store),
+          getFileContent: createGetFileContentTool(store),
         },
       })(set, get, store),
     }),

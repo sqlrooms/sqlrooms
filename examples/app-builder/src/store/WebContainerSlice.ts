@@ -26,6 +26,11 @@ export type WebContainerSliceState = {
      * @returns The exit code of the start dev server command
      */
     startDevServer: () => Promise<void>;
+    /**
+     * Get the most recent content for a file. If the file is open, returns the in-memory
+     * (possibly unsaved) content. Otherwise, loads the content from the webcontainer FS.
+     */
+    getFileContent: (path: string) => Promise<string>;
     openFile: (path: string, content?: string) => Promise<void>;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
@@ -73,6 +78,20 @@ export function createWebContainerSlice(props: {
             }
 
             get().wc.startDevServer();
+
+            // see files.ts in bolt.new
+            // const WORK_DIR = '';
+            // (instance as any).internal.watchPaths(
+            //   {
+            //     include: [`${WORK_DIR}/**`],
+            //     exclude: ['**/node_modules', '.git'],
+            //     includeContent: true,
+            //   },
+            //   // bufferWatchEvents(100, this.#processEventBuffer.bind(this)),
+            //   (event: any) => {
+            //     console.log('fs-change', event);
+            //   },
+            // );
           },
 
           async installDependencies() {
@@ -145,18 +164,7 @@ export function createWebContainerSlice(props: {
             }
             let fileContent = content;
             if (fileContent === undefined) {
-              try {
-                const instance = state.wc.instance;
-                if (instance) {
-                  const data = await instance.fs.readFile(path, 'utf-8');
-                  fileContent =
-                    typeof data === 'string'
-                      ? data
-                      : new TextDecoder().decode(data as any);
-                }
-              } catch (e) {
-                fileContent = '';
-              }
+              fileContent = await get().wc.getFileContent(path);
             }
             set((s) =>
               produce(s, (draft) => {
@@ -222,6 +230,26 @@ export function createWebContainerSlice(props: {
                 }
               }),
             );
+          },
+
+          // Helper to read file content from the WebContainer instance
+          // Returns empty string on error or if instance is not available
+          async getFileContent(path) {
+            const state = get();
+            const opened = state.wc.openedFiles.find((f) => f.path === path);
+            if (opened) return opened.content;
+            const instance = state.wc.instance;
+            try {
+              if (instance) {
+                const data = await instance.fs.readFile(path, 'utf-8');
+                return typeof data === 'string'
+                  ? data
+                  : new TextDecoder().decode(data as any);
+              }
+            } catch (_e) {
+              // Swallow and return empty string
+            }
+            return '';
           },
         },
       }),
