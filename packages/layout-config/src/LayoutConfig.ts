@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {$ZodAny} from 'zod/v4/core';
 
 /** Main view room panel key */
 export const MAIN_VIEW = 'main';
@@ -6,10 +7,18 @@ export const MAIN_VIEW = 'main';
 export const LayoutTypes = z.enum(['mosaic']);
 export type LayoutTypes = z.infer<typeof MosaicLayoutDirection>;
 
+/** @deprecated Use createDefaultMosaicLayout instead */
 export const DEFAULT_MOSAIC_LAYOUT: MosaicLayoutConfig = {
   type: LayoutTypes.enum.mosaic,
   nodes: MAIN_VIEW,
 };
+
+export function createDefaultMosaicLayout(): MosaicLayoutConfig {
+  return {
+    type: LayoutTypes.enum.mosaic,
+    nodes: MAIN_VIEW,
+  };
+}
 
 export const MosaicLayoutDirection = z.enum(['row', 'column']);
 export type MosaicLayoutDirection = z.infer<typeof MosaicLayoutDirection>;

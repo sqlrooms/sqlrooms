@@ -60,7 +60,7 @@ npm install ollama-ai-provider-v2
 ### Setting Up AI Integration
 
 ```tsx
-import {createAiSlice, createDefaultAiConfig} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {createRoomStore} from '@sqlrooms/room-shell';
 
 // Create a room store with AI capabilities
@@ -69,7 +69,6 @@ const {roomStore, useRoomStore} = createRoomStore({
   ...createRoomShellSlice({
     config: {
       // Your room configuration
-      ...createDefaultAiConfig(), // Default AI configuration
     },
   }),
   // Add AI slice
@@ -104,11 +103,7 @@ function MyApp() {
 For more complex applications, you can combine multiple slices:
 
 ```tsx
-import {
-  createAiSlice,
-  createDefaultAiConfig,
-  AiSliceConfig,
-} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {
   createSqlEditorSlice,
   createDefaultSqlEditorConfig,
@@ -126,26 +121,25 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     // Base room slice
     ...createRoomShellSlice({
       config: {
-        // Your base configuration
-        ...createDefaultAiConfig({
-          // Optional: Pre-configured AI sessions
-          sessions: [
-            {
-              id: 'default-session',
-              name: 'Default Analysis',
-              modelProvider: 'openai',
-              model: 'gpt-4o',
-              analysisResults: [],
-              createdAt: new Date(),
-            },
-          ],
-          currentSessionId: 'default-session',
-        }),
         ...createDefaultSqlEditorConfig(),
       },
     }),
     // AI slice
     ...createAiSlice({
+      config: {
+        // Optional: Pre-configured AI sessions
+        sessions: [
+          {
+            id: 'default-session',
+            name: 'Default Analysis',
+            modelProvider: 'openai',
+            model: 'gpt-4o',
+            analysisResults: [],
+            createdAt: new Date(),
+          },
+        ],
+        currentSessionId: 'default-session',
+      }
       getApiKey: (modelProvider) => {
         // Return API key based on provider
         return apiKeys[modelProvider] || '';
@@ -505,7 +499,6 @@ This package now includes comprehensive AI settings components. These components
 - **ModelsSettings**: Component for managing available models and their parameters
 - **ModelParametersSettings**: Component for configuring model parameters like max steps and system instructions
 - **ModelSelector**: Standalone model selector component for quick model switching
-- **extractModelsFromSettings**: Utility function to extract models from configuration for use in selectors
 
 ### AI Settings Usage
 
@@ -515,25 +508,18 @@ This package now includes comprehensive AI settings components. These components
 import {
   AiSettingsPanel,
   ModelSelector,
-  extractModelsFromSettings,
 } from '@sqlrooms/ai';
 import {useRoomStore} from '../store';
-
-// Access AI model configuration from store
-const aiSettings = useRoomStore((s) => s.config.aiSettings);
-const models = extractModelsFromSettings(aiSettings);
 
 // Main configuration panel with sub-components
 <AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
   <AiSettingsPanel.ProvidersSettings />
   <AiSettingsPanel.ModelsSettings />
-  <AiSettingsPanel.ModelParametersSettings
-    getDefaultInstructions={getDefaultInstructionsWrapper}
-  />
+  <AiSettingsPanel.ModelParametersSettings  />
 </AiSettingsPanel>
 
 // Standalone model selector
-<ModelSelector models={models} />
+<ModelSelector />
 ```
 
 ### AI Settings API Reference
@@ -545,7 +531,6 @@ const models = extractModelsFromSettings(aiSettings);
   - `AiSettingsPanel.ModelsSettings`: Manage available models and their parameters
   - `AiSettingsPanel.ModelParametersSettings`: Configure model parameters and instructions
 - **`ModelSelector`**: Standalone model selector for quick switching
-- **`extractModelsFromSettings(config)`**: Utility to extract models from configuration
 
 #### Slice Configuration
 

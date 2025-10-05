@@ -3,7 +3,6 @@ import {
   CanvasSliceConfig,
   CanvasSliceState,
   createCanvasSlice,
-  createDefaultCanvasConfig,
 } from '@sqlrooms/canvas';
 import {
   BaseRoomConfig,
@@ -13,17 +12,12 @@ import {
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
-import {DatabaseIcon} from 'lucide-react';
-import exampleCanvas from './example-canvas.json';
-import {createVegaChartTool} from '../../../packages/vega/dist/VegaChartTool';
 
-export const RoomConfig = BaseRoomConfig.merge(CanvasSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   CanvasSliceState & {
     apiKey: string;
     setApiKey: (apiKey: string) => void;
@@ -31,13 +25,14 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<
+  BaseRoomConfig,
+  RoomState
+>(
   persist(
     (set, get, store) => ({
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
-          ...createDefaultCanvasConfig(),
-          // CanvasSliceConfig.parse(exampleCanvas).canvas,
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
@@ -73,12 +68,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       })(set, get, store),
 
-      ...createCanvasSlice<RoomConfig>({
-        getApiKey: () => get().apiKey,
-        toolsOptions: {
-          numberOfRowsToShareWithLLM: 2,
+      ...createCanvasSlice({
+        ai: {
+          getApiKey: () => get().apiKey,
+          defaultModel: 'gpt-4.1-mini',
         },
-        defaultModel: 'gpt-4.1-mini',
       })(set, get, store),
 
       apiKey: '',
@@ -92,7 +86,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Subset of the state to persist
       partialize: (state) => ({
         apiKey: state.apiKey,
-        config: RoomConfig.parse(state.config),
+        config: BaseRoomConfig.parse(state.config),
+        canvas: CanvasSliceConfig.parse(state.canvas.config),
+      }),
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        apiKey: persistedState.apiKey,
+        config: BaseRoomConfig.parse(persistedState.config),
+        canvas: {
+          ...currentState.canvas,
+          config: CanvasSliceConfig.parse(persistedState.canvas),
+        },
       }),
     },
   ) as StateCreator<RoomState>,

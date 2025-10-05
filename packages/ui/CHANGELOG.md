@@ -3,6 +3,36 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0-rc.0 (2025-10-03)
+
+### Features
+
+* Extract ai-core and ai-settings ([#155](https://github.com/sqlrooms/sqlrooms/issues/155)) ([5bf0238](https://github.com/sqlrooms/sqlrooms/commit/5bf02383f351ec7843f71bbbdbc41c6f141dadf2))
+
+# 0.25.0-rc.0 (2025-10-02)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
+## 0.24.28-rc.1 (2025-10-01)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
+## [0.24.28-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.24.27...v0.24.28-rc.0) (2025-10-01)
+
+**Note:** Version bump only for package @sqlrooms/ui
+
+## 0.24.27 (2025-09-26)
+
+### Bug Fixes
+
+* Schema tree styling allows for font size changes ([#149](https://github.com/sqlrooms/sqlrooms/issues/149)) ([9b88f5f](https://github.com/sqlrooms/sqlrooms/commit/9b88f5fbcee21cc51a87b7c3fc897eda86f87651))
+
+## 0.24.26 (2025-09-25)
+
+### Bug Fixes
+
+* Schema tree styling allows for font size changes ([39319f8](https://github.com/sqlrooms/sqlrooms/commit/39319f83b77d62f054b103986d28994b9bb0912b))
+
 ## 0.24.25 (2025-09-23)
 
 ### Features

@@ -1,14 +1,14 @@
-import {RoomShell, RoomStore} from '@sqlrooms/room-shell';
+import {RoomShell} from '@sqlrooms/room-shell';
 import {ThemeSwitch} from '@sqlrooms/ui';
 import {useRef} from 'react';
-import {createRoomStore, RoomConfig} from './store';
+import {createRoomStore} from './store';
 
 interface RoomProps {
   mdToken: string;
 }
 
 export const Room = ({mdToken}: RoomProps) => {
-  const roomStoreRef = useRef<RoomStore<RoomConfig>>(null);
+  const roomStoreRef = useRef<ReturnType<typeof createRoomStore>>(null);
   if (!roomStoreRef.current) {
     roomStoreRef.current = createRoomStore(mdToken);
   }

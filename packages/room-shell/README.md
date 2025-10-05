@@ -581,7 +581,7 @@ setRoomFileProgress('/path/to/file.csv', {status: 'processing'});
 Add a table to the room.
 
 ```tsx
-const addTable = useRoomStore((state) => state.room.addTable);
+const addTable = useRoomStore((state) => state.db.addTable);
 await addTable('my_table', records);
 ```
 

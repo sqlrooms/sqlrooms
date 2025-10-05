@@ -5,8 +5,8 @@ import {
   AiSliceState,
   createAiSettingsSlice,
   createAiSlice,
-  createDefaultAiConfig,
-  createDefaultAiSettings,
+  createDefaultAiInstructions,
+  createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -30,8 +30,8 @@ import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
+import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
-import {AI_SETTINGS, migrateRoomConfig} from './config';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -44,13 +44,7 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig = z.preprocess(
-  // (Optional) Migrate room older versions of the example app config to prevent errors
-  migrateRoomConfig,
-  BaseRoomConfig.merge(AiSliceConfig)
-    .merge(SqlEditorSliceConfig)
-    .merge(AiSettingsSliceConfig),
-);
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -83,17 +77,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          ...createDefaultAiConfig(
-            AiSliceConfig.shape.ai.parse(exampleSessions),
-          ),
-          ...createDefaultAiSettings(AI_SETTINGS),
           ...createDefaultSqlEditorConfig(),
         },
         room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
-              // icon: FolderIcon,
               icon: DatabaseIcon,
               component: DataSourcesPanel,
               placement: 'sidebar',
@@ -112,44 +101,20 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createSqlEditorSlice()(set, get, store),
 
       // Ai model config slice
-      ...createAiSettingsSlice()(set, get, store),
+      ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
       // Ai slice
       ...createAiSlice({
-        // You can configure the Api key in the Ai Settings panel,
-        // or (optional) provide API key with your own custom logic here
-        // getApiKey: (modelProvider: string) => {
-        //  return your api key here
-        // },
+        config: AiSliceConfig.parse(exampleSessions),
 
-        // You can configure the base URL in the Ai Settings panel,
-        // or (optional) provide base URL with your own custom logic here
-        // getBaseUrl: () => {
-        //   // return your base url
-        // },
-
-        // You can configure the max steps of using tools in the Ai Settings panel,
-        // or (optional) provide max steps here
-        // maxSteps: 5,
-
-        // You can configure custom instructions in the Ai Settings panel,
-        // or (optional) provide custom instructions with your own custom logic here
-        // Example of customizing the system instructions
-        // getInstructions: (tablesSchema: DataTable[]) => {
-        //   // get default instructions from sqlrooms/ai
-        //   let instructions = getDefaultInstructions(tablesSchema);
-        //   // you can add more instructions here if you want
-        //   instructions = `${instructions}\n\nYour name is George`;
-        //   return instructions;
-        // },
-
-        toolsOptions: {
-          // Configure number of rows to share with LLM globally
-          numberOfRowsToShareWithLLM: 0,
+        getInstructions: () => {
+          return createDefaultAiInstructions(store);
         },
 
         // Add custom tools
-        customTools: {
+        tools: {
+          ...createDefaultAiTools(store, {query: {}}),
+
           // Add the VegaChart tool from the vega package with a custom description
           chart: createVegaChartTool(),
 
@@ -178,11 +143,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Local storage key
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
-      partialize: (state) => {
-        return {
-          config: RoomConfig.parse(state.config),
-        };
-      },
+      partialize: (state) => ({
+        config: RoomConfig.parse(state.config),
+        ai: AiSliceConfig.parse(state.ai.config),
+        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
+      }),
+      // Combining the persisted state with the current one when loading from local storage
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        config: RoomConfig.parse(persistedState.config),
+        ai: {
+          ...currentState.ai,
+          config: AiSliceConfig.parse(persistedState.ai),
+        },
+        aiSettings: {
+          ...currentState.aiSettings,
+          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
+        },
+      }),
     },
   ) as StateCreator<RoomState>,
 );
