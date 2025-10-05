@@ -7,8 +7,6 @@ export const ListFilesToolResult: FC<{
   details: TreeNodeData<FileNodeObject>;
 }> = ({}) => {
   return (
-    <div className="border-muted text-fg rounded-md border-gray-200 bg-blue-500/50 p-2 text-sm">
-      Listing project files...
-    </div>
+    <div className="text-foreground/50 text-xs">Listing project files...</div>
   );
 };

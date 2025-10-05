@@ -70,10 +70,13 @@ export const {createRoomStore, useRoomStore} = createRoomStoreCreator<State>()(
 
         // Ai slice
         ...createAiSlice({
-          getInstructions: () => `${LLM_INSTRUCTIONS} 
-        <file_list>
-          ${JSON.stringify(fileSystemTreeToNodes(get().wc.filesTree, '/', null, 2))}
-        </file_list>`,
+          getInstructions: () => {
+            const instructions = `${LLM_INSTRUCTIONS} 
+            <file_list>
+            ${JSON.stringify(fileSystemTreeToNodes(get().wc.filesTree, '/'), null, 2)}
+            </file_list>`;
+            return instructions;
+          },
 
           // Add custom tools
           tools: {
