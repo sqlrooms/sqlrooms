@@ -2,7 +2,6 @@ import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {createBaseSlice, StateCreator} from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
-import {editableFileContents, editableFilePath} from './initialFilesTree';
 
 export type WebContainerSliceState = {
   wc: {
@@ -27,7 +26,6 @@ export type WebContainerSliceState = {
      * @returns The exit code of the start dev server command
      */
     startDevServer: () => Promise<void>;
-    writeEditableFile: (content: string) => Promise<void>;
     openFile: (path: string, content?: string) => Promise<void>;
     closeFile: (path: string) => void;
     setActiveFile: (path: string) => void;
@@ -47,14 +45,8 @@ export function createWebContainerSlice(props: {
           instance: null,
           output: '',
           filesTree: props.filesTree,
-          openedFiles: [
-            {
-              path: editableFilePath,
-              content: editableFileContents,
-              dirty: false,
-            },
-          ],
-          activeFilePath: editableFilePath,
+          openedFiles: [],
+          activeFilePath: null,
           iframeUrl: undefined,
           serverStatus: {type: 'not-initialized'},
           initialize: async () => {
@@ -73,6 +65,7 @@ export function createWebContainerSlice(props: {
                 draft.wc.instance = instance;
               }),
             );
+            get().wc.openFile('/src/App.jsx');
 
             const exitCode = await get().wc.installDependencies();
             if (exitCode !== 0) {
@@ -141,14 +134,6 @@ export function createWebContainerSlice(props: {
                 }),
               );
             });
-          },
-
-          async writeEditableFile(content) {
-            const instance = get().wc.instance;
-            if (!instance) {
-              throw new Error('WebContainer instance not found');
-            }
-            await instance.fs.writeFile(editableFilePath, content);
           },
 
           async openFile(path, content) {

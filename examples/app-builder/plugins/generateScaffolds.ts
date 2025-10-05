@@ -1,0 +1,214 @@
+import {promises as fs} from 'fs';
+import * as path from 'path';
+
+/**
+ * Generate a TypeScript module exporting WebContainer FileSystemTree objects for
+ * all scaffolds found under the given root directory.
+ *
+ * The output module exports:
+ * - SCAFFOLDS: Record<ScaffoldName, FileSystemTree>
+ * - SCAFFOLD_DEFAULTS: Record<ScaffoldName, { editableFilePath; editableFileContents }>
+ */
+export async function generateScaffoldsModule(params: {
+  scaffoldsRootDir: string;
+  outputFile: string;
+}): Promise<void> {
+  const {scaffoldsRootDir, outputFile} = params;
+
+  const scaffoldDirs = await listImmediateDirectories(scaffoldsRootDir);
+
+  const scaffoldNames: string[] = [];
+  const trees: Record<string, unknown> = {};
+  const defaults: Record<
+    string,
+    {editableFilePath: string; editableFileContents: string}
+  > = {};
+
+  for (const dirName of scaffoldDirs) {
+    const scaffoldName = dirName as string;
+    const baseDir = path.join(scaffoldsRootDir, scaffoldName);
+    const {tree, editable} = await buildTreeForScaffold(baseDir);
+    scaffoldNames.push(scaffoldName);
+    trees[scaffoldName] = tree;
+    defaults[scaffoldName] = editable;
+  }
+
+  const fileContents = renderOutputModule(scaffoldNames, trees, defaults);
+  await fs.mkdir(path.dirname(outputFile), {recursive: true});
+  await fs.writeFile(outputFile, fileContents, 'utf-8');
+}
+
+/**
+ * Return names of immediate subdirectories within a directory.
+ */
+async function listImmediateDirectories(rootDir: string): Promise<string[]> {
+  const entries = await fs.readdir(rootDir, {withFileTypes: true});
+  return entries
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort();
+}
+
+/**
+ * Build a plain object shaped like FileSystemTree from a scaffold directory,
+ * and determine the default editable file.
+ */
+async function buildTreeForScaffold(baseDir: string): Promise<{
+  tree: unknown;
+  editable: {editableFilePath: string; editableFileContents: string};
+}> {
+  const tree = await buildDirectoryNode(baseDir);
+
+  const candidatePaths = [
+    'src/App.jsx',
+    'src/App.tsx',
+    'src/App.ts',
+    'src/main.jsx',
+    'src/main.tsx',
+  ];
+
+  let editablePathRel: string | null = null;
+  for (const rel of candidatePaths) {
+    const abs = path.join(baseDir, rel);
+    try {
+      const st = await fs.stat(abs);
+      if (st.isFile()) {
+        editablePathRel = rel;
+        break;
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  if (!editablePathRel) {
+    // Fallback: choose first file in a deterministic order
+    const firstFile = await findFirstFile(baseDir);
+    if (!firstFile) {
+      throw new Error(`No files found in scaffold directory: ${baseDir}`);
+    }
+    editablePathRel = path
+      .relative(baseDir, firstFile)
+      .split(path.sep)
+      .join('/');
+  }
+
+  const editableAbs = path.join(baseDir, editablePathRel);
+  const editableContents = await fs.readFile(editableAbs, 'utf-8');
+  const editablePathForContainer =
+    '/' + editablePathRel.split(path.sep).join('/');
+
+  return {
+    tree,
+    editable: {
+      editableFilePath: editablePathForContainer,
+      editableFileContents: editableContents,
+    },
+  };
+}
+
+/**
+ * Recursively build a FileSystemTree-like object from a filesystem directory.
+ */
+async function buildDirectoryNode(dir: string): Promise<unknown> {
+  const entries = await fs.readdir(dir, {withFileTypes: true});
+  const result: Record<string, unknown> = {};
+
+  // Stable order for deterministic output
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isDirectory()) {
+      result[entry.name] = {
+        directory: await buildDirectoryNode(abs),
+      };
+    } else if (entry.isFile()) {
+      const contents = await fs.readFile(abs, 'utf-8');
+      result[entry.name] = {
+        file: {
+          contents,
+        },
+      };
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Find the first file path in a directory tree in a deterministic order.
+ */
+async function findFirstFile(dir: string): Promise<string | null> {
+  const entries = await fs.readdir(dir, {withFileTypes: true});
+  entries.sort((a, b) => a.name.localeCompare(b.name));
+  for (const entry of entries) {
+    const abs = path.join(dir, entry.name);
+    if (entry.isFile()) return abs;
+    if (entry.isDirectory()) {
+      const nested = await findFirstFile(abs);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
+
+/**
+ * Render the TypeScript output module from collected trees and defaults.
+ */
+function renderOutputModule(
+  scaffoldNames: string[],
+  trees: Record<string, unknown>,
+  defaults: Record<
+    string,
+    {editableFilePath: string; editableFileContents: string}
+  >,
+): string {
+  const typeUnion = scaffoldNames.map((n) => `'${n}'`).join(' | ') || 'never';
+
+  function serialize(obj: unknown): string {
+    return JSON.stringify(obj, null, 2);
+  }
+
+  const header = `import {FileSystemTree} from '@webcontainer/api';\n\n/**\n * Auto-generated by generateScaffolds. Do not edit by hand.\n */\n`;
+
+  const body = `export type ScaffoldName = ${typeUnion};\n\nexport const SCAFFOLDS: Record<ScaffoldName, FileSystemTree> = ${serialize(
+    trees,
+  )} as unknown as Record<ScaffoldName, FileSystemTree>;\n\nexport const SCAFFOLD_DEFAULTS: Record<ScaffoldName, { editableFilePath: string; editableFileContents: string }> = ${serialize(
+    defaults,
+  )} as Record<ScaffoldName, { editableFilePath: string; editableFileContents: string }>;\n`;
+
+  return header + body;
+}
+
+// Allow running as a script via node/esbuild (CJS environments)
+// Use typeof checks so this file remains import-safe in ESM contexts.
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-ignore - module/require may be undefined in ESM
+if (
+  typeof module !== 'undefined' &&
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  typeof require !== 'undefined' &&
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-ignore
+  require.main === module
+) {
+  const repoRoot = path.resolve(__dirname, '..');
+  const exampleRoot = path.resolve(repoRoot, '..', 'examples', 'app-builder');
+  const scaffoldsRoot = path.join(exampleRoot, 'app-scaffolds');
+  const output = path.join(
+    exampleRoot,
+    'src',
+    'store',
+    'generatedScaffolds.ts',
+  );
+  generateScaffoldsModule({
+    scaffoldsRootDir: scaffoldsRoot,
+    outputFile: output,
+  }).catch((err) => {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    process.exitCode = 1;
+  });
+}

@@ -21,6 +21,7 @@ import {
   WebContainerSliceState,
 } from './WebContainerSlice';
 import {INITIAL_FILES_TREE} from './initialFilesTree';
+import {SCAFFOLDS} from './generatedScaffolds';
 
 type State = RoomState<BaseRoomConfig> &
   AiSliceState &
@@ -41,7 +42,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
 
       // WebContainer slice
       ...createWebContainerSlice({
-        filesTree: INITIAL_FILES_TREE,
+        filesTree: SCAFFOLDS['get-started'],
       })(set, get, store),
 
       // Ai slice
