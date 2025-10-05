@@ -316,9 +316,18 @@ importers:
       '@sqlrooms/ai-settings':
         specifier: workspace:*
         version: link:../../packages/ai-settings
+      '@sqlrooms/layout':
+        specifier: workspace:*
+        version: link:../../packages/layout
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../../packages/monaco-editor
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../../packages/room-config
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../packages/room-shell
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../../packages/room-store
@@ -335,8 +344,8 @@ importers:
         specifier: ^4.3.19
         version: 4.3.19(react@19.1.0)(zod@3.25.76)
       lucide-react:
-        specifier: ^0.474.0
-        version: 0.474.0(react@19.1.0)
+        specifier: ^0.544.0
+        version: 0.544.0(react@19.1.0)
       react:
         specifier: 19.1.0
         version: 19.1.0
