@@ -1,13 +1,7 @@
-import {useEffect} from 'react';
-import {useRoomStore} from '../store/store';
 import {Spinner} from '@sqlrooms/ui';
+import {useRoomStore} from '../store/store';
 
 export const BrowserView = () => {
-  const initialize = useRoomStore((s) => s.wc.initialize);
-  useEffect(() => {
-    // Remove once RoomStore calls initialize() instead of RoomShellStore
-    initialize();
-  }, [initialize]);
   const serverStatus = useRoomStore((s) => s.wc.serverStatus);
   return (
     <div className="bg-background h-full w-full">

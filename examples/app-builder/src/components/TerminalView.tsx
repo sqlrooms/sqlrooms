@@ -7,16 +7,10 @@ import {useRoomStore} from '../store/store';
 export const TerminalView = () => {
   const serverStatus = useRoomStore((s) => s.wc.serverStatus);
   const output = useRoomStore((s) => s.wc.output);
-  const initialize = useRoomStore((s) => s.wc.initialize);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
   const lastIndexRef = useRef<number>(0);
-
-  useEffect(() => {
-    // Remove once RoomStore calls initialize() instead of RoomShellStore
-    initialize();
-  }, [initialize]);
 
   useEffect(() => {
     if (!containerRef.current || terminalRef.current) {

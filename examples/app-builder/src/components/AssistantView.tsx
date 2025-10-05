@@ -5,7 +5,7 @@ import {
   SessionControls,
 } from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
-import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
+import {Button, Spinner, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store/store';
 
@@ -47,8 +47,7 @@ export const AssistantView: React.FC = () => {
               key={currentSessionId} // will prevent scrolling to bottom after changing current session
             />
             <div className="flex h-full w-full flex-col items-center justify-center">
-              <SkeletonPane className="p-4" />
-              <p className="text-muted-foreground mt-4">Loading database...</p>
+              <Spinner />
             </div>
           </div>
 

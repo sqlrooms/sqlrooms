@@ -19,10 +19,7 @@ export function createUpdateFileContentTool(
       return {
         llmResult: {
           success: true,
-          details: {
-            path,
-            content: content,
-          },
+          details: {path},
         },
       };
     },
