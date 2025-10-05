@@ -1,6 +1,6 @@
 import {FC} from 'react';
 
-export const GetFileContentToolResult: FC<{
+export const UpdateFileContentToolResult: FC<{
   success: true;
   details: {
     path: string;
@@ -9,7 +9,7 @@ export const GetFileContentToolResult: FC<{
 }> = ({details}) => {
   return (
     <div className="text-foreground/50 text-xs">
-      Getting the content of <span className="font-mono">{details.path}</span>
+      Modifying file <span className="font-mono">{details.path}</span>
     </div>
   );
 };

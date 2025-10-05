@@ -23,6 +23,7 @@ import {
   WebContainerSliceState,
 } from './WebContainerSlice';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
+import {createUpdateFileContentTool} from '../tools/updateFileContent/updateFileContentTool';
 
 type State = RoomState<BaseRoomConfig> &
   AiSliceState &
@@ -78,6 +79,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
           // Example of adding a simple echo tool
           listFiles: createListFilesTool(store),
           getFileContent: createGetFileContentTool(store),
+          updateFileContent: createUpdateFileContentTool(store),
         },
       })(set, get, store),
     }),
