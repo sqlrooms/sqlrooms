@@ -69,7 +69,7 @@ export const TerminalView = () => {
 
   return (
     <div className="relative h-full w-full p-2">
-      <div className="gap-21 flex h-full flex-col">
+      <div className="gap-21 flex h-full flex-col overflow-hidden">
         <div className="text-foreground flex w-full justify-between text-xs font-bold">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <SquareTerminalIcon className="h-5 w-5 text-gray-500" />

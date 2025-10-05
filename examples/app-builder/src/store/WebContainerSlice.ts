@@ -33,6 +33,7 @@ export type WebContainerSliceState = {
     setActiveFile: (path: string) => void;
     updateFileContent: (path: string, content: string) => void;
     saveAllOpenFiles: () => Promise<void>;
+    hasDirtyFiles: () => boolean;
   };
 };
 
@@ -57,7 +58,6 @@ export function createWebContainerSlice(props: {
           iframeUrl: undefined,
           serverStatus: {type: 'not-initialized'},
           initialize: async () => {
-            console.log('WebContainerSlice initialize');
             if (get().wc.serverStatus.type !== 'not-initialized') {
               return;
             }
@@ -215,6 +215,10 @@ export function createWebContainerSlice(props: {
                 }
               }),
             );
+          },
+
+          hasDirtyFiles() {
+            return get().wc.openedFiles.some((f) => f.dirty);
           },
 
           async saveAllOpenFiles() {

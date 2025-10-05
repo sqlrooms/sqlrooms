@@ -9,6 +9,7 @@ export const CodeView = () => {
   const setActiveFile = useRoomStore((s) => s.wc.setActiveFile);
   const updateFileContent = useRoomStore((s) => s.wc.updateFileContent);
   const saveAll = useRoomStore((s) => s.wc.saveAllOpenFiles);
+  const hasDirty = useRoomStore((s) => s.wc.hasDirtyFiles());
 
   const activeFile = useMemo(
     () => openedFiles.find((f) => f.path === activeFilePath) ?? null,
@@ -18,7 +19,11 @@ export const CodeView = () => {
   return (
     <div className="flex h-full w-full flex-col gap-2">
       <div className="flex items-center justify-between gap-2 p-1">
-        <Tabs value={activeFilePath ?? undefined} onValueChange={setActiveFile}>
+        <Tabs
+          className="truncate"
+          value={activeFilePath ?? undefined}
+          onValueChange={setActiveFile}
+        >
           <TabsList>
             {openedFiles.map((f) => (
               <TabsTrigger key={f.path} value={f.path}>
@@ -28,9 +33,16 @@ export const CodeView = () => {
             ))}
           </TabsList>
         </Tabs>
-        <Button size="sm" variant="secondary" onClick={saveAll}>
-          Save
-        </Button>
+        {hasDirty ? (
+          <Button
+            size="sm"
+            variant="default"
+            onClick={saveAll}
+            disabled={!activeFile?.dirty}
+          >
+            {activeFile?.dirty ? 'Save all' : 'Saved'}
+          </Button>
+        ) : null}
       </div>
       <div className="flex-1">
         <MonacoEditor
