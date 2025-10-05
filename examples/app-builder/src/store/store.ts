@@ -1,4 +1,5 @@
 import {AiSliceConfig, AiSliceState, createAiSlice} from '@sqlrooms/ai-core';
+
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
@@ -13,10 +14,18 @@ import {
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import EchoToolResult from './components/EchoToolResult';
-import {AI_SETTINGS} from './config';
+import EchoToolResult from '../tools/EchoToolResult';
+import {AI_SETTINGS} from '../config';
+import {
+  createWebContainerSlice,
+  WebContainerSliceState,
+} from './WebContainerSlice';
+import {INITIAL_FILES_TREE} from './initialFilesTree';
 
-type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
+type State = RoomState<BaseRoomConfig> &
+  AiSliceState &
+  AiSettingsSliceState &
+  WebContainerSliceState;
 
 /**
  * Create a customized room store
@@ -29,6 +38,11 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
+
+      // WebContainer slice
+      ...createWebContainerSlice({
+        filesTree: INITIAL_FILES_TREE,
+      })(set, get, store),
 
       // Ai slice
       ...createAiSlice({

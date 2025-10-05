@@ -7,9 +7,9 @@ import {
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
-import {useRoomStore} from '../store';
+import {useRoomStore} from '../store/store';
 
-export const MainView: React.FC = () => {
+export const AssistantView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
