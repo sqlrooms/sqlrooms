@@ -1,11 +1,19 @@
 # SQLRooms Query Workbench
 
-This application is an example demonstrating the capabilities of SQLRooms for building powerful, "Local First" data applications.
+A Vite application demonstrating the SQL query editor of SQLRooms.
 
-This application showcases several key features:
+## Running locally
 
-- **Local First & Offline Support**: It is designed to work completely offline.
-- **Installable as a PWA**: The application can be installed as a Progressive Web App for a more native experience.
-- **OPFS Storage**: It uses the Origin Private File System (OPFS) for persistent and private data storage directly in the browser.
+```sh
+npm install
+npm run dev
+```
 
-To enable powerful, in-browser analytics, this application bundles DuckDB-WASM. To ensure offline availability, some of its core extensions are downloaded during the `postinstall` step.
+To create a new project from the query example, run:
+
+```sh
+npx degit sqlrooms/examples/query my-query-app/
+cd my-query-app
+npm install
+npm run dev
+```
