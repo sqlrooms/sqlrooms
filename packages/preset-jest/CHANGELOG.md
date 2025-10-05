@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0-rc.1 (2025-10-05)
+
+**Note:** Version bump only for package @sqlrooms/preset-jest
+
 # 0.26.0-rc.0 (2025-10-03)
 
 ### Features
