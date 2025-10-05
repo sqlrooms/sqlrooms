@@ -32,7 +32,7 @@
     "recharts": "^2.12.7",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
-    "zod": "^3.25.73"
+    "zod": "^3.25.76"
   },
   "peerDependencies": {
     "react": ">=18",

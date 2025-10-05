@@ -84,7 +84,7 @@
       "typescript": "5.8.3",
       "react": "19.1.0",
       "react-dom": "19.1.0",
-      "@duckdb/duckdb-wasm": "1.30.0"
+      "@duckdb/duckdb-wasm": "1.31.0"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

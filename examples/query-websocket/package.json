@@ -42,6 +42,6 @@
     "vite-plugin-pwa": "^1.0.3"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.30.0"
+    "@duckdb/duckdb-wasm": "1.31.0"
   }
 }
