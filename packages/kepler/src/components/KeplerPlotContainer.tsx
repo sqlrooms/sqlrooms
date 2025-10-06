@@ -1,4 +1,4 @@
-import {FC, useMemo} from 'react';
+import {FC, ReactNode, useMemo} from 'react';
 
 import {
   PlotContainerFactory,
@@ -16,7 +16,10 @@ const KEPLER_PROPS = {
   mapboxApiAccessToken: '',
 };
 
-export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
+export const KeplerPlotContainer: FC<{
+  mapId: string;
+  logoComponent?: ReactNode;
+}> = ({mapId, logoComponent}) => {
   const {keplerState, keplerActions} = useKeplerStateActions({mapId});
 
   const isExportingImage = keplerState?.uiState?.exportImage?.exporting;
@@ -25,7 +28,10 @@ export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
       keplerState !== undefined
         ? {
             ...KEPLER_PROPS,
-            mapboxApiAccessToken: KEPLER_PROPS.mapboxApiAccessToken || keplerState?.mapStyle?.mapboxApiAccessToken || '',
+            mapboxApiAccessToken:
+              KEPLER_PROPS.mapboxApiAccessToken ||
+              keplerState?.mapStyle?.mapboxApiAccessToken ||
+              '',
             ...keplerState,
             ...keplerActions,
             id: mapId,
@@ -36,12 +42,16 @@ export const KeplerPlotContainer: FC<{mapId: string}> = ({mapId}) => {
 
   const plotContainerFields = useMemo(
     () => (mergedKeplerProps ? plotContainerSelector(mergedKeplerProps) : null),
-    [mergedKeplerProps],
+    // include filters in deps to trigger refresh when filters change from bottom time widget
+    [mergedKeplerProps, keplerState?.visState?.filters],
   );
 
   return isExportingImage && plotContainerFields ? (
     <KeplerProvider mapId={mapId}>
-      <PlotContainer {...plotContainerFields} />
+      <PlotContainer
+        {...plotContainerFields}
+        logoComponent={logoComponent ?? null}
+      />
     </KeplerProvider>
   ) : null;
 };

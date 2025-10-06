@@ -27,7 +27,7 @@ const DEFAULT_ACCEPTED_FORMATS = [
   'json',
   'arrow',
   'shp',
-  'klm',
+  'kml',
 ];
 
 const LoadTileSet = KeplerInjector.get(LoadTileSetFactory);
@@ -172,7 +172,7 @@ export const KeplerAddDataDialog = ({
             {/** TileSet*/}
             <TabsContent
               value={AddDataMethods.TileSet}
-              className="h-full w-full data-[state=inactive]:hidden overflow-auto"
+              className="h-full w-full overflow-auto data-[state=inactive]:hidden"
             >
               <LoadTileSetContent
                 loadTileSet={loadTileSet}

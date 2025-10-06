@@ -1,5 +1,5 @@
 import {arrowTableToJson, useDuckDb} from '@sqlrooms/duckdb';
-import {cn, useAspectRatioDimensions} from '@sqlrooms/ui';
+import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import {VegaLite, VisualizationSpec} from 'react-vega';
@@ -113,7 +113,9 @@ export const VegaLiteChart: React.FC<{
         className,
       )}
     >
-      {refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />}
+      <AspectRatio ratio={aspectRatio}>
+        {refinedSpec && data && <VegaLite spec={refinedSpec} data={data} />}
+      </AspectRatio>
     </div>
   );
 };

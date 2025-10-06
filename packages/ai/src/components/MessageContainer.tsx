@@ -53,35 +53,6 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
         </Badge>
       )}
 
-      <div className="absolute right-2 top-2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-6 w-6">
-              <CodeIcon className="h-4 w-4" />
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            className="max-h-[300px] w-[400px] overflow-auto p-4"
-            side="right"
-            align="start"
-          >
-            <JsonMonacoEditor
-              value={JSON.stringify(content, null, 2)}
-              readOnly={true}
-              className="h-[250px]"
-              options={{
-                minimap: {enabled: false},
-                scrollBeyondLastLine: false,
-                automaticLayout: true,
-                folding: true,
-                lineNumbers: false,
-                wordWrap: 'on',
-              }}
-            />
-          </PopoverContent>
-        </Popover>
-      </div>
-
       <div className="flex flex-col gap-5">{children}</div>
     </div>
   );

@@ -69,7 +69,7 @@ console.log(result); // { name: 'John', age: 30 }
 
 // Handle invalid JSON gracefully
 const invalid = safeJsonParse('{"name": "John", age: 30}');
-console.log(invalid); // null
+console.log(invalid); // undefined
 ```
 
 ### Formatting Utilities

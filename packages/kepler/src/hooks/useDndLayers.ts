@@ -7,12 +7,12 @@ import {
 } from '@kepler.gl/actions';
 import {reorderLayerOrder} from '@kepler.gl/reducers';
 import {Layer} from '@kepler.gl/layers';
+import {
+  DROPPABLE_MAP_CONTAINER_TYPE,
+  SORTABLE_LAYER_TYPE,
+  SORTABLE_SIDE_PANEL_TYPE,
+} from '@kepler.gl/components';
 import {useStoreWithKepler} from '../KeplerSlice';
-
-// TODO import from @kepler.gl/components once 3.1.10 release is available
-const DROPPABLE_MAP_CONTAINER_TYPE = 'map';
-const SORTABLE_LAYER_TYPE = 'layer';
-const SORTABLE_SIDE_PANEL_TYPE = 'root';
 
 type DndEffectsHook = {
   activeLayer: Layer | undefined;

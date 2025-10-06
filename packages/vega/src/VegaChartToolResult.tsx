@@ -2,8 +2,10 @@ import {Suspense} from 'react';
 import {VegaLiteChart} from './VegaLiteChart';
 import {QueryToolResult} from '@sqlrooms/ai';
 import {VisualizationSpec} from 'react-vega';
+import {AspectRatio, cn} from '@sqlrooms/ui';
 
 type VegaChartToolResultProps = {
+  className?: string;
   reasoning: string;
   sqlQuery: string;
   vegaLiteSpec: VisualizationSpec;
@@ -15,6 +17,7 @@ type VegaChartToolResultProps = {
  * @returns {JSX.Element} The rendered chart tool call
  */
 export function VegaChartToolResult({
+  className,
   sqlQuery,
   vegaLiteSpec,
 }: VegaChartToolResultProps) {
@@ -31,7 +34,7 @@ export function VegaChartToolResult({
             }
           >
             <VegaLiteChart
-              className="max-w-[600px]"
+              className={cn('max-w-[600px]', className)}
               aspectRatio={16 / 9}
               sqlQuery={sqlQuery}
               spec={vegaLiteSpec}

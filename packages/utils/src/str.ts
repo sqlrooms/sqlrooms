@@ -65,3 +65,18 @@ export function camelCaseToTitle(camelCase: string): string {
 export function capitalize(str: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1);
 }
+
+/**
+ * Truncates text to a specified word limit
+ * @param text - The text to truncate
+ * @param maxWords - The maximum number of words to keep (default: 10)
+ * @returns The truncated text with "..." appended if truncated
+ * @example
+ * truncate("This is a very long sentence that should be truncated", 5) // returns "This is a very long..."
+ * truncate("Short text", 10) // returns "Short text"
+ */
+export function truncate(text: string, maxWords: number = 10): string {
+  const words = text.split(' ');
+  if (words.length <= maxWords) return text;
+  return words.slice(0, maxWords).join(' ') + '...';
+}

@@ -1,4 +1,5 @@
 import {z} from 'zod';
+import {StreamMessagePartSchema} from '@openassistant/core';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -12,36 +13,6 @@ export const ErrorMessageSchema = z.object({
 });
 export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 
-// TODO: StreamMessagePart schema should be provided by @openassistant/core
-export const StreamMessagePartSchema = z.union([
-  z.object({
-    type: z.literal('text'),
-    text: z.string(),
-    additionalData: z.any().optional(),
-    isCompleted: z.boolean().optional(),
-  }),
-  z.object({
-    type: z.literal('tool-invocation'),
-    toolInvocation: z.object({
-      toolCallId: z.string(),
-      toolName: z.string(),
-      args: z.any(),
-      state: z.string(),
-      result: z.any().optional(),
-    }),
-    additionalData: z.any().optional(),
-    isCompleted: z.boolean().optional(),
-  }),
-  // Add a catch-all for other part types that might exist
-  z
-    .object({
-      type: z.string(),
-      additionalData: z.any().optional(),
-      isCompleted: z.boolean().optional(),
-    })
-    .passthrough(),
-]);
-
 // migrate from old streamMessage to new streamMessage
 const migrateStreamMessage = z.preprocess(
   (data) => {
@@ -52,7 +23,7 @@ const migrateStreamMessage = z.preprocess(
       'parts' in data
     ) {
       // migrate from old streamMessage to new streamMessage
-      const parts = (data as any).parts as any[];
+      const parts = (data as {parts: Record<string, unknown>[]}).parts;
 
       const newParts = [];
       for (const part of parts) {
@@ -63,7 +34,10 @@ const migrateStreamMessage = z.preprocess(
             text,
           });
         } else if (part.type === 'tool') {
-          const toolCallMessages = part.toolCallMessages;
+          const toolCallMessages = part.toolCallMessages as Record<
+            string,
+            unknown
+          >[];
           for (const toolCallMessage of toolCallMessages) {
             const toolCallId = toolCallMessage.toolCallId;
             const toolName = toolCallMessage.toolName;
@@ -110,12 +84,38 @@ export const AnalysisResultSchema = z.object({
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
-export const AnalysisSessionSchema = z.object({
-  id: z.string().cuid2(),
-  name: z.string(),
-  modelProvider: z.string(),
-  model: z.string(),
-  analysisResults: z.array(AnalysisResultSchema),
-  createdAt: z.coerce.date().optional(),
-});
+// migrate from old ollamaBaseUrl to new baseUrl
+const migrateAnalysisSession = z.preprocess(
+  (data) => {
+    if (
+      data &&
+      typeof data === 'object' &&
+      'ollamaBaseUrl' in data &&
+      !('baseUrl' in data)
+    ) {
+      // migrate from old ollamaBaseUrl to new baseUrl
+      const {ollamaBaseUrl, ...rest} = data as {ollamaBaseUrl: string} & Record<
+        string,
+        unknown
+      >;
+      return {
+        ...rest,
+        baseUrl: ollamaBaseUrl,
+      };
+    }
+    return data;
+  },
+  z.object({
+    id: z.string().cuid2(),
+    name: z.string(),
+    modelProvider: z.string(),
+    model: z.string(),
+    customModelName: z.string().optional(),
+    baseUrl: z.string().optional(),
+    analysisResults: z.array(AnalysisResultSchema),
+    createdAt: z.coerce.date().optional(),
+  }),
+);
+
+export const AnalysisSessionSchema = migrateAnalysisSession;
 export type AnalysisSessionSchema = z.infer<typeof AnalysisSessionSchema>;

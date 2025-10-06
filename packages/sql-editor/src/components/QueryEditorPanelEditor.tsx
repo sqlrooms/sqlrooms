@@ -1,8 +1,8 @@
-import { cn } from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import type * as Monaco from 'monaco-editor';
-import { useCallback, useRef } from 'react';
-import { useStoreWithSqlEditor } from '../SqlEditorSlice';
-import { SqlMonacoEditor } from '../SqlMonacoEditor';
+import {useCallback, useRef} from 'react';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {SqlMonacoEditor} from '../SqlMonacoEditor';
 
 type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 type MonacoInstance = typeof Monaco;
@@ -10,12 +10,11 @@ type MonacoInstance = typeof Monaco;
 const MONACO_OPTIONS = {
   scrollBeyondLastLine: false,
   automaticLayout: true,
-  minimap: { enabled: false },
+  minimap: {enabled: false},
   wordWrap: 'on',
   quickSuggestions: true,
   suggestOnTriggerCharacters: true,
 };
-
 
 export const QueryEditorPanelEditor: React.FC<{
   className?: string;

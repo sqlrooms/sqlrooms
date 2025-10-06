@@ -58,7 +58,10 @@ function useSidePanelActions(keplerActions: KeplerActions) {
     onUpdateTableColor,
   };
 }
-const KeplerLayerManager: React.FC<{mapId: string}> = ({mapId}) => {
+const KeplerLayerManager: React.FC<{
+  mapId: string;
+  showDeleteDataset?: boolean;
+}> = ({mapId, showDeleteDataset}) => {
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const intl = useIntl();
 
@@ -80,6 +83,7 @@ const KeplerLayerManager: React.FC<{mapId: string}> = ({mapId}) => {
         showAddDataModal={onShowAddDataModal}
         updateTableColor={onUpdateTableColor}
         removeDataset={onRemoveDataset}
+        showDeleteDataset={showDeleteDataset ?? true}
         uiStateActions={keplerActions.uiStateActions}
         visStateActions={keplerActions.visStateActions}
         mapStateActions={keplerActions.mapStateActions}
@@ -144,10 +148,12 @@ const KeplerBasemapManager: React.FC<{mapId: string}> = ({mapId}) => {
 type KeplerSidePanelProps = {
   mapId: string;
   panelId: 'layer' | 'filter' | 'interaction' | 'map';
+  showDeleteDataset?: boolean;
 };
 export const KeplerSidePanels: React.FC<KeplerSidePanelProps> = ({
   mapId,
   panelId,
+  showDeleteDataset,
 }) => {
   const {keplerState} = useKeplerStateActions({mapId});
 
@@ -155,7 +161,12 @@ export const KeplerSidePanels: React.FC<KeplerSidePanelProps> = ({
     <KeplerProvider mapId={mapId}>
       <DndContext visState={keplerState?.visState}>
         <div>
-          {panelId === 'layer' ? <KeplerLayerManager mapId={mapId} /> : null}
+          {panelId === 'layer' ? (
+            <KeplerLayerManager
+              mapId={mapId}
+              showDeleteDataset={showDeleteDataset}
+            />
+          ) : null}
           {panelId === 'filter' ? <KeplerFilterManager mapId={mapId} /> : null}
           {panelId === 'interaction' ? (
             <KeplerInteractionManager mapId={mapId} />

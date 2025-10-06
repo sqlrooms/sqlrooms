@@ -7,17 +7,17 @@ import {
 } from '@dnd-kit/core';
 import {restrictToVerticalAxis} from '@dnd-kit/modifiers';
 import {VisState} from '@kepler.gl/schemas';
-import {LayerPanelHeaderFactory} from '@kepler.gl/components';
+import {
+  LayerPanelHeaderFactory,
+  DND_MODIFIERS,
+  DND_EMPTY_MODIFIERS,
+  SORTABLE_LAYER_TYPE,
+  SORTABLE_EFFECT_TYPE,
+} from '@kepler.gl/components';
 
 import useDndLayers from '../hooks/useDndLayers';
 import useDndEffects from '../hooks/useDndEffects';
 import {useStoreWithKepler} from '../KeplerSlice';
-
-// TODO import from @kepler.gl/components once 3.1.10 release is available
-const DND_MODIFIERS: Modifiers = [restrictToVerticalAxis];
-const DND_EMPTY_MODIFIERS: Modifiers = [];
-const SORTABLE_LAYER_TYPE = 'layer';
-const SORTABLE_EFFECT_TYPE = 'effect';
 
 const DragItem = styled.div`
   cursor: grabbing;

@@ -3,11 +3,12 @@ import {DragEndEvent, DragStartEvent} from '@dnd-kit/core';
 import {reorderEffect, updateEffect} from '@kepler.gl/actions';
 import {reorderEffectOrder} from '@kepler.gl/utils';
 import {Effect} from '@kepler.gl/types';
+import {SORTABLE_EFFECT_TYPE} from '@kepler.gl/components';
+
 import {useStoreWithKepler} from '../KeplerSlice';
 
-// TODO import from @kepler.gl/components once 3.1.10 release is available
+// TODO import from @kepler.gl/components once 3.2.1 release is available
 const SORTABLE_EFFECT_PANEL_TYPE = 'root';
-const SORTABLE_EFFECT_TYPE = 'effect';
 
 type DndEffectsHook = {
   activeEffect: Effect | undefined;

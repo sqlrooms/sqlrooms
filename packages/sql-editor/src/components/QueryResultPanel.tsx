@@ -58,7 +58,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   if (queryResult?.status === 'error') {
     return (
       <div className="h-full w-full overflow-auto p-5">
-        <pre className="whitespace-pre-line text-xs leading-tight text-red-500">
+        <pre className="whitespace-pre-wrap text-xs leading-tight text-red-500">
           {queryResult.error}
         </pre>
       </div>

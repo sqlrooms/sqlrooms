@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.24.10 (2025-07-29)
+
+### Bug Fixes
+
+* Set variable doesn't work in SqlEditor ([#103](https://github.com/sqlrooms/sqlrooms/issues/103)) ([5f7ef67](https://github.com/sqlrooms/sqlrooms/commit/5f7ef67cc63dafbdfbe4bf826a9fbe059d6a993f))
+
+## 0.24.9 (2025-07-28)
+
+### Features
+
+* allow user input ollama model name; style think in markdown ([#89](https://github.com/sqlrooms/sqlrooms/issues/89)) ([6a3805e](https://github.com/sqlrooms/sqlrooms/commit/6a3805eed256ad672df3e029dbff601cb32512f2))
+
 ## 0.24.8 (2025-07-28)
 
 ### Bug Fixes

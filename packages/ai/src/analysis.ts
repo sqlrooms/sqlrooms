@@ -27,7 +27,7 @@ const DEFAULT_INSTRUCTIONS = `
 You are analyzing tables in DuckDB database in the context of a room.
 
 Instructions for analysis:
-- When calling query tool, please use type: 'query'
+- When using 'query' tool, please assign parameter 'type' with value 'query'
 - Use DuckDB-specific SQL syntax and functions (not Oracle, PostgreSQL, or other SQL dialects)
 - Some key DuckDB-specific functions to use:
   * regexp_matches() for regex (not regexp_like)
@@ -66,6 +66,9 @@ For your final answer:
 - Explain your reasoning step by step
 - Include relevant statistics or metrics
 - For each prompt, please always provide the final answer.
+- IMPORTANT: Query tool results may include sample rows (firstRows) or may be empty:
+  * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
+  * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
 Please use the following schema for the tables:
 `;
@@ -116,6 +119,9 @@ type AnalysisParameters = {
   /** Model identifier (e.g., 'gpt-4', 'claude-3') */
   model: string;
 
+  /** Custom model name for Ollama (used when model is 'custom') */
+  customModelName?: string;
+
   /** Authentication key for the model provider's API */
   apiKey: string;
 
@@ -133,6 +139,9 @@ type AnalysisParameters = {
 
   /** Tools to use in the analysis */
   tools?: Record<string, AiSliceTool>;
+
+  /** Base URL for Ollama provider (required when modelProvider is 'ollama') */
+  baseUrl?: string;
 
   /**
    * Function to get custom instructions for the AI assistant
@@ -160,6 +169,7 @@ export async function runAnalysis({
   tableSchemas,
   modelProvider,
   model,
+  customModelName,
   apiKey,
   prompt,
   abortController,
@@ -168,12 +178,17 @@ export async function runAnalysis({
   maxSteps = 5,
   tools = {},
   getInstructions,
+  baseUrl,
 }: AnalysisParameters) {
+  // Use custom model name if model is 'custom' and customModelName is provided
+  const actualModel =
+    model === 'custom' && customModelName ? customModelName : model;
+
   // get the singleton assistant instance
   const assistant = await createAssistant({
     name,
     modelProvider,
-    model,
+    model: actualModel,
     apiKey,
     version: 'v1',
     instructions: getInstructions
@@ -184,6 +199,7 @@ export async function runAnalysis({
     toolChoice: 'auto', // this will enable streaming
     maxSteps,
     ...(abortController ? {abortController} : {}),
+    baseUrl, // ollama base url or LLM proxy server url
   });
 
   // restore ai messages from historyAnalysis?
@@ -220,6 +236,7 @@ export async function runAnalysis({
  */
 export function getDefaultTools(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
+  numberOfRowsToShareWithLLM: number = 0,
 ): Record<string, AiSliceTool> {
   return {
     query: extendedTool({
@@ -227,7 +244,6 @@ export function getDefaultTools(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
       parameters: QueryToolParameters,
-      // TODO: specify the return type e.g. Promise<Partial<ToolCallMessage>>
       execute: async ({type, sqlQuery}) => {
         try {
           const connector = await store.getState().db.getConnector();
@@ -238,9 +254,11 @@ If a query fails, please don't try to run it again with the same syntax.`,
             ? arrowTableToJson(result)
             : await getQuerySummary(connector, sqlQuery);
 
-          // Get first 2 rows of the result as a json object
-          const subResult = result.slice(0, 2);
-          const firstTwoRows = arrowTableToJson(subResult);
+          // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
+          const firstRows =
+            numberOfRowsToShareWithLLM > 0
+              ? arrowTableToJson(result.slice(0, numberOfRowsToShareWithLLM))
+              : [];
 
           return {
             llmResult: {
@@ -248,7 +266,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
               data: {
                 type,
                 summary: summaryData,
-                firstTwoRows,
+                ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
               },
             },
             additionalData: {
