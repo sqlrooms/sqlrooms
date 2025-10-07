@@ -89,7 +89,7 @@ See [`examples/query/vite.config.ts`](https://github.com/sqlrooms/examples/blob/
 
 ## 4. Example: SQL Query Editor
 
-The [SQL Query Editor example](https://sqlrooms.org/examples.html#sql-query-editor) demonstrates all of these offline techniques in a real app. It persists state, stores data in OPFS, and works offline as a PWA.
+The [PWA SQL Query Editor example](https://github.com/sqlrooms/examples/tree/main/query-pwa) demonstrates all of these offline techniques in a real app. It persists state, stores data in OPFS, and works offline as a PWA.
 
 ---
 

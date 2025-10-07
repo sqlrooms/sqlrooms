@@ -34,7 +34,7 @@ export const CanvasNodeContainer: FC<
 > = ({id, className, headerRight, children}) => {
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
   const node = useStoreWithCanvas((s) =>
-    s.config.canvas.nodes.find((n) => n.id === id),
+    s.canvas.config.nodes.find((n) => n.id === id),
   );
   const title = node?.data.title;
   const onTitleChange = useCallback(

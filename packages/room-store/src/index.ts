@@ -24,4 +24,6 @@ export {
   isRoomSliceWithInitialize,
 } from './RoomStore';
 
+export type {StateCreator, StoreApi} from 'zustand';
+
 export * from '@sqlrooms/room-config';
