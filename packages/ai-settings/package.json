@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ai-settings",
-  "version": "0.26.0-rc.1",
+  "version": "0.26.0-rc.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",

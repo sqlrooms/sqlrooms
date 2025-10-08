@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0-rc.2 (2025-10-08)
+
+**Note:** Version bump only for package @sqlrooms/duckdb
+
 # 0.26.0-rc.1 (2025-10-05)
 
 **Note:** Version bump only for package @sqlrooms/duckdb

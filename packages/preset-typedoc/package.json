@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/preset-typedoc",
-  "version": "0.26.0-rc.1",
+  "version": "0.26.0-rc.2",
   "type": "module",
   "private": true,
   "exports": {
