@@ -79,10 +79,10 @@ importers:
         specifier: ^0.6.14
         version: 0.6.14(prettier@3.6.2)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       remove:
         specifier: ^0.1.5
@@ -172,10 +172,10 @@ importers:
         specifier: 0.0.6
         version: 0.0.6(zod@3.25.76)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -251,10 +251,10 @@ importers:
         specifier: ^0.474.0
         version: 0.474.0(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -336,10 +336,10 @@ importers:
         specifier: ^8.5.6
         version: 8.5.6
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       tailwindcss:
         specifier: ^3.4.17
@@ -403,10 +403,10 @@ importers:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -503,10 +503,10 @@ importers:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -600,10 +600,10 @@ importers:
         specifier: ^5.7.3
         version: 5.8.0
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       react-map-gl:
         specifier: ^8.0.4
@@ -673,10 +673,10 @@ importers:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
     devDependencies:
       '@eslint/js':
@@ -737,10 +737,10 @@ importers:
         specifier: ^0.544.0
         version: 0.544.0(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
     devDependencies:
       '@eslint/js':
@@ -922,10 +922,10 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       tailwind-merge:
         specifier: ^2.6.0
@@ -992,10 +992,10 @@ importers:
         specifier: ^0.52.2
         version: 0.52.2
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -1077,10 +1077,10 @@ importers:
         specifier: ^0.52.2
         version: 0.52.2
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -1168,10 +1168,10 @@ importers:
         specifier: ^0.52.2
         version: 0.52.2
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
@@ -1256,10 +1256,10 @@ importers:
         specifier: ^0.52.2
         version: 0.52.2
       react:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0
       react-dom:
-        specifier: ^19.1.1
+        specifier: ^19.2.0
         version: 19.2.0(react@19.2.0)
       zod:
         specifier: ^3.25.76
