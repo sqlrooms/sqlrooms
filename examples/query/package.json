@@ -21,8 +21,6 @@
     "clsx": "2.1.1",
     "lucide-react": "0.544.0",
     "monaco-editor": "^0.52.2",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "zod": "^3.25.76",
     "zustand": "5.0.8"
   },
@@ -42,6 +40,8 @@
     "vite": "^7.1.9"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0"
+    "@duckdb/duckdb-wasm": "1.31.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
   }
 }
