@@ -67,8 +67,8 @@
     "lint-staged": "^16.2.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "remove": "^0.1.5",
     "shx": "^0.4.0",
     "turbo": "^2.5.8",
@@ -83,8 +83,6 @@
   "pnpm": {
     "overrides": {
       "typescript": "5.8.3",
-      "react": "19.1.0",
-      "react-dom": "19.1.0",
       "@duckdb/duckdb-wasm": "1.31.0"
     },
     "onlyBuiltDependencies": [

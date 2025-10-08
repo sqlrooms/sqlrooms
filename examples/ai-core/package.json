@@ -18,8 +18,8 @@
     "@sqlrooms/ui": "workspace:*",
     "ai": "^4.3.19",
     "lucide-react": "^0.474.0",
-    "react": "^19.1.0",
-    "react-dom": "^19.1.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "zod": "^3.25.76",
     "zustand": "^5.0.5"
   },
