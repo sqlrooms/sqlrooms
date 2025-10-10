@@ -25,8 +25,6 @@ type AnalysisResultProps = {
   onDeleteAnalysisResult: (id: string) => void;
 };
 
-// Removed unused stringifyResult helper to satisfy linter
-
 /**
  * Component that displays the results of an AI analysis.
  * Shows the original prompt, intermediate tool calls, final analysis text,
