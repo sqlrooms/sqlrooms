@@ -9,57 +9,151 @@ export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 // migrate from old streamMessage to new streamMessage
 const migrateStreamMessage = z.preprocess(
   (data) => {
-    if (
-      data &&
-      typeof data === 'object' &&
-      'toolCallMessages' in data &&
-      'parts' in data
-    ) {
-      // migrate from old streamMessage to new streamMessage
-      const parts = (data as {parts: Record<string, unknown>[]}).parts;
+    if (data && typeof data === 'object') {
+      // Case A: Old "parts" array with legacy 'tool' entries
+      if ('parts' in data) {
+        const parts = (data as {parts: Record<string, unknown>[]}).parts;
+        if (Array.isArray(parts)) {
+          const newParts: Record<string, unknown>[] = [];
+          for (const part of parts) {
+            if ((part as {type?: string}).type === 'text') {
+              const text = (part as {text?: string}).text;
+              newParts.push({
+                type: 'text',
+                text,
+              });
+            } else if ((part as {type?: string}).type === 'tool') {
+              const toolCallMessages =
+                (
+                  part as {
+                    toolCallMessages?: Record<string, unknown>[];
+                  }
+                ).toolCallMessages || [];
+              for (const toolCallMessage of toolCallMessages) {
+                const toolCallId = (toolCallMessage as {toolCallId?: string})
+                  .toolCallId;
+                const toolName = (toolCallMessage as {toolName?: string})
+                  .toolName;
+                const args = (toolCallMessage as {args?: unknown}).args;
+                const isCompleted = (toolCallMessage as {isCompleted?: boolean})
+                  .isCompleted;
+                const llmResult =
+                  (toolCallMessage as {llmResult?: Record<string, unknown>})
+                    .llmResult || {};
+                const additionalData = (
+                  toolCallMessage as {additionalData?: unknown}
+                ).additionalData;
 
-      const newParts = [];
-      for (const part of parts) {
-        if (part.type === 'text') {
-          const text = part.text;
-          newParts.push({
-            type: 'text',
-            text,
-          });
-        } else if (part.type === 'tool') {
-          const toolCallMessages = part.toolCallMessages as Record<
-            string,
-            unknown
-          >[];
-          for (const toolCallMessage of toolCallMessages) {
-            const toolCallId = toolCallMessage.toolCallId;
-            const toolName = toolCallMessage.toolName;
-            const args = toolCallMessage.args;
-            const isCompleted = toolCallMessage.isCompleted;
-            const llmResult = toolCallMessage.llmResult;
-            const additionalData = toolCallMessage.additionalData;
+                const toolInvocation = {
+                  toolCallId,
+                  toolName,
+                  args,
+                  state: isCompleted ? 'result' : 'call',
+                  result: {
+                    ...llmResult,
+                    toolCallId,
+                  },
+                };
 
-            const toolInvocation = {
-              toolCallId,
-              toolName,
-              args,
-              state: isCompleted ? 'result' : 'call',
-              result: llmResult,
-            };
+                newParts.push({
+                  type: 'tool-invocation',
+                  toolInvocation,
+                  additionalData,
+                  isCompleted,
+                });
+              }
+            } else if ((part as {type?: string}).type === 'tool-invocation') {
+              // Ensure toolInvocation.result contains toolCallId if present
+              const existing = part as {
+                toolInvocation?: {
+                  toolCallId?: string;
+                  toolName?: string;
+                  args?: unknown;
+                  state?: string;
+                  result?: Record<string, unknown> | undefined;
+                };
+              } & Record<string, unknown>;
 
-            newParts.push({
-              type: 'tool-invocation',
-              toolInvocation,
-              additionalData,
-              isCompleted,
-            });
+              const ti = existing.toolInvocation || {};
+              const toolCallId = ti.toolCallId;
+              const updatedResult =
+                ti.result && typeof ti.result === 'object'
+                  ? {
+                      ...ti.result,
+                      toolCallId:
+                        (ti.result as {toolCallId?: string}).toolCallId ??
+                        toolCallId,
+                    }
+                  : ti.result;
+
+              const updatedPart = {
+                ...existing,
+                toolInvocation: {
+                  ...ti,
+                  result: updatedResult,
+                },
+              };
+
+              newParts.push(updatedPart);
+            }
           }
+          return {parts: newParts};
         }
       }
 
-      return {
-        parts: newParts,
-      };
+      // Case B: Very old shape with only top-level toolCallMessages
+      if ('toolCallMessages' in data && !('parts' in data)) {
+        const toolCallMessages =
+          (data as {toolCallMessages?: Record<string, unknown>[]})
+            .toolCallMessages || [];
+        const newParts: Record<string, unknown>[] = [];
+
+        // Preserve any leading text as a text part if present
+        if (
+          'text' in data &&
+          typeof (data as {text?: string}).text === 'string' &&
+          ((data as {text?: string}).text || '').trim() !== ''
+        ) {
+          newParts.push({
+            type: 'text',
+            text: (data as {text?: string}).text,
+          });
+        }
+
+        for (const toolCallMessage of toolCallMessages) {
+          const toolCallId = (toolCallMessage as {toolCallId?: string})
+            .toolCallId;
+          const toolName = (toolCallMessage as {toolName?: string}).toolName;
+          const args = (toolCallMessage as {args?: unknown}).args;
+          const isCompleted = (toolCallMessage as {isCompleted?: boolean})
+            .isCompleted;
+          const llmResult =
+            (toolCallMessage as {llmResult?: Record<string, unknown>})
+              .llmResult || {};
+          const additionalData = (toolCallMessage as {additionalData?: unknown})
+            .additionalData;
+
+          const toolInvocation = {
+            toolCallId,
+            toolName,
+            args,
+            state: isCompleted ? 'result' : 'call',
+            result: {
+              ...llmResult,
+              toolCallId,
+            },
+          };
+
+          newParts.push({
+            type: 'tool-invocation',
+            toolInvocation,
+            additionalData,
+            isCompleted,
+          });
+        }
+
+        return {parts: newParts};
+      }
     }
     return data;
   },

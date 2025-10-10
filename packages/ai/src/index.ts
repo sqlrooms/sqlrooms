@@ -3,6 +3,8 @@
  * @packageDocumentation
  */
 
+export {ReportToolResult} from './tools/report/reportToolResult';
+export {createReportTool} from './tools/report/reportTool';
 export {QueryToolResult} from './tools/query/QueryToolResult';
 export {QueryToolParameters} from './tools/query/queryTool';
 export {createDefaultAiTools} from './tools/defaultTools';

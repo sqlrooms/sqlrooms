@@ -1,4 +1,4 @@
-import {extendedTool} from '@openassistant/utils';
+import {extendedTool, ToolExecutionOptions} from '@openassistant/utils';
 import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
 import {
   arrowTableToJson,
@@ -37,7 +37,8 @@ export function createQueryTool(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    execute: async ({type, sqlQuery}) => {
+    execute: async ({type, sqlQuery}, options) => {
+      const {toolCallId} = options as ToolExecutionOptions;
       try {
         const connector = await store.getState().db.getConnector();
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
@@ -95,6 +96,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
         return {
           llmResult: {
             success: true,
+            toolCallId,
             data: {
               type,
               summary: summaryData,
@@ -110,6 +112,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
         return {
           llmResult: {
             success: false,
+            toolCallId,
             details: 'Query execution failed.',
             errorMessage:
               error instanceof Error ? error.message : 'Unknown error',

@@ -25,16 +25,7 @@ type AnalysisResultProps = {
   onDeleteAnalysisResult: (id: string) => void;
 };
 
-/**
- * Stringify the result of the analysis, excluding toolCallMessages.
- * Used to display raw result data in a code view.
- *
- * @param result - The complete analysis result
- * @returns A JSON string representation of the result without toolCallMessages
- */
-const stringifyResult = (result: AnalysisResultSchema) => {
-  return JSON.stringify(result, null, 2);
-};
+// Removed unused stringifyResult helper to satisfy linter
 
 /**
  * Component that displays the results of an AI analysis.
@@ -125,7 +116,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             />
           )}
           {part.type === 'tool-invocation' && (
-            <div>
+            <div data-tool-call-id={part.toolInvocation.toolCallId}>
               <ToolResult
                 key={part.toolInvocation.toolCallId}
                 toolInvocation={part.toolInvocation}

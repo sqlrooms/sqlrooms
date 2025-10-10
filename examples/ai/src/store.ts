@@ -7,6 +7,7 @@ import {
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiTools,
+  createReportTool,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -134,6 +135,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
             component: EchoToolResult,
           },
+          printReport: createReportTool(),
         },
       })(set, get, store),
     }),
