@@ -15,6 +15,58 @@ type ReportToolResultProps = {
   toolCallIds?: string[];
 };
 
+// Base CSS for exported reports; keep this self-contained to avoid relying on app styles
+const REPORT_BASE_CSS = `
+  :root { color-scheme: light; }
+  html, body { height: 100%; }
+  body { 
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+    margin: 40px; 
+    line-height: 1.6; 
+    color: #333;
+    padding: 12px;
+    background: #fff;
+  }
+  h1, h2, h3, h4, h5, h6 { 
+    color: #222; 
+    font-weight: 600;
+    line-height: 1.25;
+    margin: 1.2em 0 0.5em 0;
+  }
+  h1 { font-size: 2rem; }
+  h2 { font-size: 1.5rem; }
+  h3 { font-size: 1.25rem; }
+  p { margin: 0.5em 0; }
+  a { color: #2563eb; text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace; }
+  pre { 
+    margin: 0; 
+    padding: 12px; 
+    background: #0b102018; 
+    border-radius: 6px;
+    overflow: auto;
+  }
+  code { background: #0b102018; padding: 2px 4px; border-radius: 4px; }
+  blockquote { border-left: 4px solid #e5e7eb; padding-left: 12px; color: #555; margin: 1em 0; }
+  ul, ol { padding-left: 1.25em; margin: 0.5em 0; }
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 1em 0;
+  }
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+  th {
+    background-color: #f2f2f2;
+    font-weight: 600;
+  }
+  img { max-width: 100%; height: auto; }
+`;
+
 interface ToolInvocation {
   toolCallId: string;
   toolName: string;
@@ -99,46 +151,10 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
         if (format === 'html') {
           const hasHtmlShell =
             summary.includes('<html') && summary.includes('<body');
-          const styles = `
-        body { 
-          font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
-          margin: 40px; 
-          line-height: 1.6; 
-          color: #333;
-          padding: 12px;
-        }
-        pre { 
-          margin: 0 !important; 
-          padding: 0;
-        }
-        .max-w-\\[600px\\] {
-          max-width: 100% !important;
-        }
-        div[style*="max-width"] {
-          max-width: 100% !important;
-        }
-        h1, h2, h3 { 
-          color: #333; 
-          font-weight: 600;
-        }
-        table {
-          border-collapse: collapse;
-          width: 100%;
-        }
-        th, td {
-          border: 1px solid #ddd;
-          padding: 8px;
-          text-align: left;
-        }
-        th {
-          background-color: #f2f2f2;
-          font-weight: 600;
-        }
-        `;
           if (hasHtmlShell) {
             content = summary;
           } else {
-            content = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${filename}</title>\n<style>${styles}</style>\n</head>\n<body>\n${summary}\n</body>\n</html>`;
+            content = `<!DOCTYPE html>\n<html lang="en">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>${filename}</title>\n<style>${REPORT_BASE_CSS}</style>\n</head>\n<body>\n${summary}\n</body>\n</html>`;
           }
         }
         if (!cancelled) setGeneratedContent(content);
@@ -161,9 +177,9 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
     if (hasHtmlShell) {
       // If it already has HTML shell, extract the body content and render it
       const bodyMatch = markdown.match(/<body[^>]*>([\s\S]*?)<\/body>/i);
-      if (bodyMatch && bodyMatch[1]) {
+      if (bodyMatch) {
         const bodyContent = bodyMatch[1];
-        const renderedBody = await renderMarkdownContent(bodyContent);
+        const renderedBody = await renderMarkdownContent(bodyContent ?? '');
         // Replace the body content with the rendered version
         return markdown.replace(
           /<body[^>]*>[\s\S]*?<\/body>/i,
@@ -206,7 +222,8 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
       document.body.appendChild(container);
       const root = createRoot(rootEl);
       root.render(
-        <div className="prose max-w-none">
+        <div>
+          {/* Render markdown without app-wide classes; keep it neutral */}
           <Markdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeRaw]}>
             {input}
           </Markdown>
@@ -262,24 +279,23 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
           ) {
             const src = srcCanvases[i];
             const dst = dstCanvases[i];
-            if (!src || !dst) continue;
             try {
-              const dataUrl = src.toDataURL('image/png');
+              const dataUrl = src?.toDataURL('image/png');
               const img = document.createElement('img');
-              img.src = dataUrl;
+              img.src = dataUrl ?? '';
               // Preserve sizing from canvas
-              const rect = src.getBoundingClientRect();
-              if (rect.width && rect.height) {
+              const rect = src?.getBoundingClientRect();
+              if (rect && rect.width && rect.height) {
                 img.width = Math.round(rect.width);
                 img.height = Math.round(rect.height);
                 img.style.width = `${rect.width}px`;
                 img.style.height = `${rect.height}px`;
               } else {
                 // fallback to canvas intrinsic size
-                if (src.width) img.width = src.width;
-                if (src.height) img.height = src.height;
+                if (src?.width) img.width = src.width;
+                if (src?.height) img.height = src.height;
               }
-              dst.replaceWith(img);
+              dst?.replaceWith(img);
             } catch {
               console.warn('[PrintReport] Failed to serialize canvas to image');
             }
@@ -338,7 +354,7 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
             `[data-tool-call-id="${token}"]`,
           ) as HTMLElement | null;
           const byId = document.getElementById(token) as HTMLElement | null;
-          let source = (byDataAttr || byId) as HTMLElement | null;
+          let source = (byDataAttr || byId) as HTMLElement | null | undefined;
           if (!source) {
             const match = String(token).match(/^(.*?)(?:-(\d+))?$/);
             const toolName = match && match[1] ? match[1] : String(token);
@@ -350,8 +366,8 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
             if (candidates.length > 0) {
               source =
                 index >= 0
-                  ? candidates[index] || null
-                  : candidates[candidates.length - 1] || null;
+                  ? (candidates[index] ?? null)
+                  : candidates[candidates.length - 1];
             }
           }
           console.debug('[PrintReport] Download: resolve token', token, {
@@ -391,29 +407,8 @@ export const ReportToolResult: FC<ReportToolResultProps> = ({
           return html;
         });
 
-        const getInlineCss = (): string => {
-          let css = '';
-          const styleSheets = Array.from(
-            document.styleSheets,
-          ) as CSSStyleSheet[];
-          for (const sheet of styleSheets) {
-            try {
-              const rules = sheet.cssRules || [];
-              for (const rule of Array.from(rules)) {
-                css += (rule as CSSStyleRule).cssText + '\n';
-              }
-            } catch {
-              // Likely cross-origin stylesheet; skip
-              console.warn(
-                '[PrintReport] Skipping cross-origin stylesheet while inlining CSS',
-              );
-            }
-          }
-          return css;
-        };
-
-        // Always ensure we have a proper HTML document structure
-        const headAssets = `<style>${getInlineCss()}</style>`;
+        // Always ensure we have a proper HTML document structure using self-contained CSS
+        const headAssets = `<style>${REPORT_BASE_CSS}</style>`;
 
         if (hasHtmlShell && replaced.includes('</head>')) {
           // Inject inline CSS into existing head
