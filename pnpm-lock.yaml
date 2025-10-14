@@ -1356,8 +1356,8 @@ importers:
         specifier: 0.5.17
         version: 0.5.17(@ai-sdk/anthropic@1.2.12(zod@3.25.76))(@ai-sdk/google@1.2.22(zod@3.25.76))(@opentelemetry/api@1.9.0)(encoding@0.1.13)(ollama-ai-provider-v2@0.0.6(zod@3.25.76))(react@19.2.0)(ws@8.18.3)
       '@openassistant/utils':
-        specifier: 0.5.20
-        version: 0.5.20
+        specifier: 0.5.17
+        version: 0.5.17
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.2.2
@@ -2250,7 +2250,7 @@ importers:
   packages/vega:
     dependencies:
       '@openassistant/utils':
-        specifier: ^0.5.20
+        specifier: ^0.5.18
         version: 0.5.20
       '@sqlrooms/ai':
         specifier: workspace:*
@@ -4590,6 +4590,9 @@ packages:
         optional: true
       ollama-ai-provider-v2:
         optional: true
+
+  '@openassistant/utils@0.5.17':
+    resolution: {integrity: sha512-p4yJJHOLg6ABMKhTyuQuE5TJMYnktizPavODVt4zPBArvOoIUqEGuA3Cy6mjEI5rIallcthSfhNy3izJh1FSiQ==}
 
   '@openassistant/utils@0.5.20':
     resolution: {integrity: sha512-rrvmhgl8boKPBrBqNQiwj2T3JfiVGvTjfXbqaNjL/IY21rEbtFQ9Cpy1oudtHMQbzvHYeOrNcnMYAd+QuBA+Zw==}
@@ -14870,6 +14873,10 @@ snapshots:
       - '@opentelemetry/sdk-trace-base'
       - encoding
       - ws
+
+  '@openassistant/utils@0.5.17':
+    dependencies:
+      zod: 3.25.76
 
   '@openassistant/utils@0.5.20':
     dependencies:
