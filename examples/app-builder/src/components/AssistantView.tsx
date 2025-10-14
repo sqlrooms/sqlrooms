@@ -51,7 +51,7 @@ export const AssistantView: React.FC = () => {
             </div>
           </div>
 
-          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+          <QueryControls placeholder="What would you like to change in the app?'">
             <div className="flex items-center justify-end gap-2">
               <ModelSelector />
             </div>
