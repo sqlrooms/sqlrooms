@@ -23,6 +23,7 @@
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/recharts": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "ai": "^4.3.19",
