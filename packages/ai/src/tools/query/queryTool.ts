@@ -1,4 +1,3 @@
-import {extendedTool} from '@openassistant/utils';
 import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
 import {
   arrowTableToJson,
@@ -32,7 +31,7 @@ export function createQueryTool(
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return extendedTool({
+  return {
     description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
@@ -118,7 +117,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
       }
     },
     component: QueryToolResult,
-  });
+  };
 }
 
 /**

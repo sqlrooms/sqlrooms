@@ -22,6 +22,7 @@
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
