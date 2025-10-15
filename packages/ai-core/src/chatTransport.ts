@@ -4,7 +4,7 @@ import {
   convertToModelMessages,
   streamText,
 } from 'ai';
-import type {LanguageModel} from 'ai';
+import type {LanguageModel, ToolSet} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -25,18 +25,15 @@ export type ChatTransportConfig = {
   defaultModel: string;
   apiKey: string;
   baseUrl?: string;
+  headers?: Record<string, string>;
   getInstructions: () => string;
   /**
-   * Optional: supply a pre-configured client for a given provider, e.g. Azure created via createAzure.
-   * If provided and returns a client for the active provider, it will be used to create the model
-   * instead of the default OpenAI-compatible client.
+   * Optional: supply a pre-configured custom model.
+   * e.g. import {xai} from "@ai-sdk/xai";
+   * getCustomModel: () => xai('grok-4', {apiKey: 'your-api-key'})
+   * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
-  getModelClientForProvider?: (
-    provider: string,
-  ) =>
-    | ((modelId: string) => LanguageModel)
-    | {chatModel: (modelId: string) => LanguageModel}
-    | undefined;
+  getCustomModel?: () => LanguageModel | undefined;
 };
 
 export function createLocalChatTransportFactory({
@@ -45,8 +42,9 @@ export function createLocalChatTransportFactory({
   defaultModel,
   apiKey,
   baseUrl,
+  headers,
   getInstructions,
-  getModelClientForProvider,
+  getCustomModel,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
@@ -56,27 +54,16 @@ export function createLocalChatTransportFactory({
       const provider = currentSession?.modelProvider || defaultProvider;
       const modelId = currentSession?.model || defaultModel;
 
-      // Prefer a user-supplied client for this provider if available
-      const customClient = getModelClientForProvider?.(provider);
-      let model: LanguageModel | undefined;
-      if (customClient) {
-        if (typeof customClient === 'function') {
-          model = customClient(modelId);
-        } else if (
-          typeof (customClient as {chatModel?: unknown}).chatModel ===
-          'function'
-        ) {
-          model = (
-            customClient as {chatModel: (id: string) => LanguageModel}
-          ).chatModel(modelId);
-        }
-      }
-      // Fallback to OpenAI-compatible if no custom client/model resolved
+      // Prefer a user-supplied model if available
+      let model: LanguageModel | undefined = getCustomModel?.();
+
+      // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {
         const openai = createOpenAICompatible({
           apiKey,
           name: provider,
           baseURL: baseUrl || 'https://api.openai.com/v1',
+          headers,
         });
         model = openai.chatModel(modelId);
       }
@@ -85,7 +72,7 @@ export function createLocalChatTransportFactory({
       const parsed = body ? JSON.parse(body) : {};
       const messagesCopy = JSON.parse(JSON.stringify(parsed.messages || []));
 
-      // Build tool wrappers for AI SDK v5 streamText
+      // update the onToolCompleted handler to update the tool additional data in the store
       const onToolCompleted = (toolCallId: string, additionalData: unknown) => {
         const sessionId = get().ai.config.currentSessionId;
         if (!sessionId) return;
@@ -99,17 +86,14 @@ export function createLocalChatTransportFactory({
       };
 
       const tools = Object.entries(state.ai.tools || {}).reduce(
-        (
-          acc: Record<string, ReturnType<typeof convertToVercelAiToolV5>>,
-          [name, tool]: [string, OpenAssistantTool],
-        ) => {
+        (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
           acc[name] = convertToVercelAiToolV5({
             ...tool,
             onToolCompleted,
           });
           return acc;
         },
-        {} as Record<string, ReturnType<typeof convertToVercelAiToolV5>>,
+        {},
       );
 
       // get system instructions dynamically at request time to ensure fresh table schema

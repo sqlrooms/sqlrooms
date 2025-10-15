@@ -13,13 +13,12 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {UIMessage, DefaultChatTransport} from 'ai';
+import {UIMessage, DefaultChatTransport, LanguageModel} from 'ai';
 
 import {
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   createChatHandlers,
-  type ChatTransportConfig,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {UIMessagePart} from '@sqlrooms/ai-config/src/UIMessageSchema';
@@ -108,7 +107,7 @@ export interface AiSliceOptions {
   defaultProvider?: string;
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
-  getModelClientForProvider?: ChatTransportConfig['getModelClientForProvider'];
+  getCustomModel?: () => LanguageModel | undefined;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
@@ -126,7 +125,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
-    getModelClientForProvider,
+    getCustomModel,
   } = params;
 
   return createBaseSlice<PC, AiSliceState>((set, get) => {
@@ -606,7 +605,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
               apiKey: state.ai.getApiKeyFromSettings(),
               baseUrl: state.ai.getBaseUrlFromSettings(),
               getInstructions: () => get().ai.getFullInstructions(),
-              getModelClientForProvider,
+              getCustomModel,
             })();
           },
 
