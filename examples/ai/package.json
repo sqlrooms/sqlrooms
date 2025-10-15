@@ -25,11 +25,11 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "^4.3.19",
+    "ai": "^5.0.44",
     "immer": "^10.1.3",
     "lucide-react": "^0.544.0",
     "ollama-ai-provider-v2": "0.0.6",
-    "zod": "^3.25.76",
+    "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

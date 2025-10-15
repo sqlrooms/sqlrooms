@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {StreamMessagePartSchema} from '@openassistant/core';
+import {UIMessagePartSchema, UIMessageSchema} from './UIMessageSchema';
 
 export const ErrorMessageSchema = z.object({
   error: z.string(),
@@ -64,18 +64,34 @@ const migrateStreamMessage = z.preprocess(
     return data;
   },
   z.object({
-    parts: z.array(StreamMessagePartSchema).optional(),
+    parts: z.array(z.unknown()).optional(),
   }),
 );
 
 export const AnalysisResultSchema = z.object({
-  id: z.string().cuid2(),
+  id: z.string(), // allow any string ID to match UI message ID from AI SDK v5
   prompt: z.string(),
-  streamMessage: migrateStreamMessage,
+  // deprecated:
+  // streamMessage: migrateStreamMessage,
+  response: z.array(UIMessagePartSchema),
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
+
+const AnalysisSessionBaseSchema = z.object({
+  id: z.string().cuid2(),
+  name: z.string(),
+  modelProvider: z.string(),
+  model: z.string(),
+  customModelName: z.string().optional(),
+  baseUrl: z.string().optional(),
+  analysisResults: z.array(AnalysisResultSchema),
+  createdAt: z.coerce.date().optional(),
+  // use vercel ai v5 schema
+  uiMessages: z.array(UIMessageSchema),
+  toolAdditionalData: z.record(z.string(), z.unknown()).optional(),
+});
 
 // migrate from old ollamaBaseUrl to new baseUrl
 const migrateAnalysisSession = z.preprocess(
@@ -107,6 +123,8 @@ const migrateAnalysisSession = z.preprocess(
     baseUrl: z.string().optional(),
     analysisResults: z.array(AnalysisResultSchema),
     createdAt: z.coerce.date().optional(),
+    uiMessages: z.array(z.unknown()),
+    toolAdditionalData: z.record(z.string(), z.unknown()),
   }),
 );
 

@@ -1,6 +1,18 @@
 import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
+import {
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useEffect,
+  useMemo,
+} from 'react';
+import {useChat} from '@ai-sdk/react';
+import {
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+} from 'ai';
+import type {UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 
 type QueryControlsProps = PropsWithChildren<{
@@ -25,6 +37,48 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
+  const sessionId = currentSession?.id;
+
+  const getLocalChatTransport = useStoreWithAi(
+    (s) => s.ai.getLocalChatTransport,
+  );
+  const getRemoteChatTransport = useStoreWithAi(
+    (s) => s.ai.getRemoteChatTransport,
+  );
+  const endPoint = useStoreWithAi((s) => s.ai.endPoint);
+  const headers = useStoreWithAi((s) => s.ai.headers);
+  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
+  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+  const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
+
+  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+    // Recreate transport when the model changes
+    void model;
+    const trimmed = (endPoint || '').trim();
+    if (trimmed.length > 0) {
+      return getRemoteChatTransport(trimmed, headers);
+    }
+    return getLocalChatTransport();
+  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
+
+  const {messages, sendMessage} = useChat({
+    id: sessionId,
+    transport,
+    messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+    onToolCall: onChatToolCall,
+    onFinish: onChatFinish,
+    onError: onChatError,
+    // Automatically submit when all tool results are available
+    // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
+    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+  });
+
+  // Sync streaming updates into the store so UiMessages renders incrementally
+  useEffect(() => {
+    if (!sessionId) return;
+    setSessionUiMessages(sessionId, messages as UIMessage[]);
+  }, [messages, sessionId, setSessionUiMessages]);
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -51,7 +105,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis();
+          runAnalysis(sendMessage);
         }
       }
     },
@@ -65,10 +119,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis();
+      runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+  }, [isRunningAnalysis, cancelAnalysis, runAnalysis, sendMessage]);
 
   return (
     <div

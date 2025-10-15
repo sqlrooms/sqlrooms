@@ -21,6 +21,8 @@ export function createDefaultAiConfig(
         model: 'gpt-4.1',
         analysisResults: [],
         createdAt: new Date(),
+        uiMessages: [],
+        toolAdditionalData: {},
       },
     ],
     currentSessionId: defaultSessionId,
