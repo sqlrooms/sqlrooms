@@ -21,7 +21,7 @@
     "@sqlrooms/utils": "workspace:*",
     "immer": "^10.1.3",
     "lucide-react": "^0.544.0",
-    "zod": "^3.25.76"
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
     "react": ">=18",

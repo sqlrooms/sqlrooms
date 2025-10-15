@@ -105,7 +105,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai slice
       ...createAiSlice({
-        config: AiSliceConfig.parse(exampleSessions),
+        // config: AiSliceConfig.parse(exampleSessions),
+        config: {},
 
         getInstructions: () => {
           return createDefaultAiInstructions(store);
@@ -120,6 +121,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
           // Example of adding a simple echo tool
           echo: {
+            name: 'echo',
             description: 'A simple echo tool that returns the input text',
             parameters: z.object({
               text: z.string().describe('The text to echo back'),

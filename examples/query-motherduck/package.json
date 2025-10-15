@@ -20,7 +20,7 @@
     "clsx": "2.1.1",
     "lucide-react": "0.544.0",
     "monaco-editor": "^0.52.2",
-    "zod": "^3.25.76",
+    "zod": "^4.1.8",
     "zustand": "5.0.8"
   },
   "devDependencies": {
