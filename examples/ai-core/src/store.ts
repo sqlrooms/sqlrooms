@@ -40,6 +40,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
         tools: {
           // Example of adding a simple echo tool
           echo: {
+            name: 'echo',
             description: 'A simple echo tool that returns the input text',
             parameters: z.object({
               text: z.string().describe('The text to echo back'),
@@ -55,6 +56,10 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
             component: EchoToolResult,
           },
         },
+
+        // Chat configuration
+        defaultProvider: 'openai',
+        defaultModel: 'gpt-4.1',
       })(set, get, store),
     }),
 

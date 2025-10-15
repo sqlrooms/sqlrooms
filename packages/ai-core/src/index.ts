@@ -9,6 +9,7 @@ export type {AiSliceState} from './AiSlice';
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
+export {useAiChat} from './hooks/useAiChat';
 
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';

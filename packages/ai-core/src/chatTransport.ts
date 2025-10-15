@@ -12,21 +12,20 @@ import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 
-type GetState = AiSliceState;
-type GetFn = () => GetState;
-type SetFn = <T>(
+type GetAiSliceState = () => AiSliceState;
+type SetAiSliceState = <T>(
   partial: T | Partial<T> | ((state: T) => T | Partial<T>),
   replace?: false | undefined,
   action?: string,
 ) => void;
 
-export type LlmDeps = {
-  get: GetFn;
+export type ChatTransportConfig = {
+  get: GetAiSliceState;
   defaultProvider: string;
   defaultModel: string;
   apiKey: string;
   baseUrl?: string;
-  instructions: string;
+  getInstructions: () => string;
   /**
    * Optional: supply a pre-configured client for a given provider, e.g. Azure created via createAzure.
    * If provided and returns a client for the active provider, it will be used to create the model
@@ -46,9 +45,9 @@ export function createLocalChatTransportFactory({
   defaultModel,
   apiKey,
   baseUrl,
-  instructions,
+  getInstructions,
   getModelClientForProvider,
-}: LlmDeps) {
+}: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
       // Resolve provider/model and client at call time to pick up latest settings
@@ -113,8 +112,8 @@ export function createLocalChatTransportFactory({
         {} as Record<string, ReturnType<typeof convertToVercelAiToolV5>>,
       );
 
-      // get system instructions
-      const systemInstructions = instructions;
+      // get system instructions dynamically at request time to ensure fresh table schema
+      const systemInstructions = getInstructions();
 
       const result = streamText({
         model,
@@ -140,7 +139,13 @@ export function createRemoteChatTransportFactory() {
     });
 }
 
-export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
+export function createChatHandlers({
+  get,
+  set,
+}: {
+  get: GetAiSliceState;
+  set: SetAiSliceState;
+}) {
   return {
     onChatToolCall: async ({toolCall}: {toolCall: unknown}) => {
       void toolCall;
@@ -160,8 +165,8 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
         get().ai.setSessionUiMessages(currentSessionId, messages);
 
         // Create analysis result with the user message ID for proper correlation
-        set((state: GetState) =>
-          produce(state, (draft: GetState) => {
+        set((state: AiSliceState) =>
+          produce(state, (draft: AiSliceState) => {
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
             );
@@ -196,8 +201,8 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
             }
           }),
         );
-        set((state: GetState) =>
-          produce(state, (draft: GetState) => {
+        set((state: AiSliceState) =>
+          produce(state, (draft: AiSliceState) => {
             draft.ai.isRunningAnalysis = false;
             draft.ai.analysisPrompt = '';
             draft.ai.analysisAbortController = undefined;
@@ -214,8 +219,8 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
           errMsg = 'Unknown error';
         }
         const currentSessionId = get().ai.config.currentSessionId;
-        set((state: GetState) =>
-          produce(state, (draft: GetState) => {
+        set((state: AiSliceState) =>
+          produce(state, (draft: AiSliceState) => {
             if (!currentSessionId) return;
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
@@ -261,7 +266,6 @@ export function createChatHandlers({get, set}: {get: GetFn; set: SetFn}) {
       } catch (e) {
         console.error('Failed to store chat error:', e);
       }
-      console.error('Chat error:', error);
     },
   };
 }

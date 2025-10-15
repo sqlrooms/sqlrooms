@@ -19,7 +19,7 @@ import {
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   createChatHandlers,
-  type LlmDeps,
+  type ChatTransportConfig,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {UIMessagePart} from '@sqlrooms/ai-config/src/UIMessageSchema';
@@ -62,26 +62,31 @@ export type AiSliceState = {
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
-    // TODO: move the following methods to AiChatSlice
-    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
-    getRemoteChatTransport: (
-      endpoint: string,
-      headers?: Record<string, string>,
-    ) => DefaultChatTransport<UIMessage>;
-    /** Optional remote endpoint to use for chat; if empty, local transport is used */
-    endPoint: string;
-    /** Optional headers to send with remote endpoint */
-    headers: Record<string, string>;
-    /** Chat handler: tool calls locally */
-    onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
-    /** Chat handler: final assistant message */
-    onChatFinish: (args: {
-      message: UIMessage;
-      messages: UIMessage[];
-      isError?: boolean;
-    }) => void;
-    /** Chat handler: error */
-    onChatError: (error: unknown) => void;
+
+    // Chat functionality nested within AI slice
+    chat: {
+      /** Optional remote endpoint to use for chat; if empty, local transport is used */
+      endPoint: string;
+      /** Optional headers to send with remote endpoint */
+      headers: Record<string, string>;
+      /** Get local chat transport for AI communication */
+      getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+      /** Get remote chat transport for AI communication */
+      getRemoteChatTransport: (
+        endpoint: string,
+        headers?: Record<string, string>,
+      ) => DefaultChatTransport<UIMessage>;
+      /** Chat handler: tool calls locally */
+      onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
+      /** Chat handler: final assistant message */
+      onChatFinish: (args: {
+        message: UIMessage;
+        messages: UIMessage[];
+        isError?: boolean;
+      }) => void;
+      /** Chat handler: error */
+      onChatError: (error: unknown) => void;
+    };
   };
 };
 
@@ -103,7 +108,7 @@ export interface AiSliceOptions {
   defaultProvider?: string;
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
-  getModelClientForProvider?: LlmDeps['getModelClientForProvider'];
+  getModelClientForProvider?: ChatTransportConfig['getModelClientForProvider'];
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
@@ -113,25 +118,23 @@ export function createAiSlice<PC extends BaseRoomConfig>(
   params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    defaultProvider = 'openai',
-    defaultModel = 'gpt-4.1',
-    getModelClientForProvider,
     initialAnalysisPrompt = '',
     tools,
     getApiKey,
     getBaseUrl,
     maxSteps,
     getInstructions,
+    defaultProvider = 'openai',
+    defaultModel = 'gpt-4.1',
+    getModelClientForProvider,
   } = params;
 
-  return createBaseSlice<PC, AiSliceState>((set, get, store) => {
+  return createBaseSlice<PC, AiSliceState>((set, get) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
-        endPoint: '',
-        headers: {},
         tools,
 
         setAnalysisPrompt: (prompt: string) => {
@@ -393,24 +396,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
-        getLocalChatTransport: () =>
-          createLocalChatTransportFactory({
-            get,
-            defaultProvider,
-            defaultModel,
-            apiKey: get().ai.getApiKeyFromSettings(),
-            baseUrl: get().ai.getBaseUrlFromSettings(),
-            instructions: get().ai.getFullInstructions(),
-            getModelClientForProvider,
-          })(),
-
-        getRemoteChatTransport: (
-          endpoint: string,
-          headers?: Record<string, string>,
-        ) => createRemoteChatTransportFactory()(endpoint, headers),
-
-        ...createChatHandlers({get, set}),
-
         findToolComponent: (toolName: string) => {
           return Object.entries(get().ai.tools).find(
             ([name]) => name === toolName,
@@ -450,7 +435,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           if (currentSession) {
             // First try the getApiKey function if provided
             const apiKeyFromFunction = getApiKey?.(
-              currentSession.modelProvider || defaultProvider,
+              currentSession.modelProvider || 'openai',
             );
             if (apiKeyFromFunction) {
               return apiKeyFromFunction;
@@ -588,7 +573,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           }
           set((state) =>
             produce(state, (draft) => {
-              const resultId = createId();
               // Extract text content from message parts
               const textContent =
                 message.parts
@@ -599,13 +583,39 @@ export function createAiSlice<PC extends BaseRoomConfig>(
               draft.ai.config.sessions
                 .find((s: AnalysisSessionSchema) => s.id === currentSession?.id)
                 ?.analysisResults.push({
-                  id: resultId,
+                  id: message.id,
                   prompt: textContent,
                   response: [],
                   isCompleted: true,
                 });
             }),
           );
+        },
+
+        // Chat functionality nested within AI slice
+        chat: {
+          endPoint: '',
+          headers: {},
+
+          getLocalChatTransport: () => {
+            const state = get();
+            return createLocalChatTransportFactory({
+              get: () => get(),
+              defaultProvider: defaultProvider,
+              defaultModel: defaultModel,
+              apiKey: state.ai.getApiKeyFromSettings(),
+              baseUrl: state.ai.getBaseUrlFromSettings(),
+              getInstructions: () => get().ai.getFullInstructions(),
+              getModelClientForProvider,
+            })();
+          },
+
+          getRemoteChatTransport: (
+            endpoint: string,
+            headers?: Record<string, string>,
+          ) => createRemoteChatTransportFactory()(endpoint, headers),
+
+          ...createChatHandlers({get, set}),
         },
       },
     };
@@ -615,7 +625,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
 /**
  * Helper function to get the current session from state
  */
-function getCurrentSessionFromState<PC extends BaseRoomConfig>(
+function getCurrentSessionFromState(
   state: AiSliceState,
 ): AnalysisSessionSchema | undefined {
   const {currentSessionId, sessions} = state.ai.config;
