@@ -23,6 +23,7 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {UIMessagePart} from '@sqlrooms/ai-config/src/UIMessageSchema';
 import {OpenAssistantToolSet} from '@openassistant/utils';
+import {transformMessagesToAnalysisResults} from './utils';
 
 export type AiSliceState = {
   ai: {
@@ -317,84 +318,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
-        /**
-         * Start the analysis
-         * TODO: how to pass the history analysisResults?
-         */
-        startAnalysis: async (
-          sendMessage: (message: {text: string}) => void,
-        ) => {
-          const resultId = createId();
-          const abortController = new AbortController();
-          const currentSession = get().ai.getCurrentSession();
-
-          if (!currentSession) {
-            console.error('No current session found');
-            return;
-          }
-
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.analysisAbortController = abortController;
-              draft.ai.isRunningAnalysis = true;
-            }),
-          );
-
-          // Delegate to chat hook; lifecycle managed by onChatFinish/onChatError
-          // Analysis result will be created in onChatFinish with the correct message ID
-          sendMessage({text: get().ai.analysisPrompt});
-        },
-
-        cancelAnalysis: () => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.isRunningAnalysis = false;
-            }),
-          );
-          get().ai.analysisAbortController?.abort('Analysis cancelled');
-        },
-
-        /**
-         * Delete an analysis result from a session
-         * Also removes the corresponding prompt-response pair from uiMessages
-         */
-        deleteAnalysisResult: (sessionId: string, resultId: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
-              );
-              if (session) {
-                session.analysisResults = session.analysisResults.filter(
-                  (r: AnalysisResultSchema) => r.id !== resultId,
-                );
-                // Remove corresponding prompt-response pair from uiMessages
-                const uiMessages = session.uiMessages as UIMessage[];
-                const userMessageIndex = uiMessages.findIndex(
-                  (msg) => msg.id === resultId && msg.role === 'user',
-                );
-
-                if (userMessageIndex !== -1) {
-                  // Find the next user message (or end of array) to determine response boundary
-                  let nextUserIndex = userMessageIndex + 1;
-                  while (
-                    nextUserIndex < uiMessages.length &&
-                    uiMessages[nextUserIndex]?.role !== 'user'
-                  ) {
-                    nextUserIndex++;
-                  }
-
-                  // Remove the user message and all assistant messages until the next user message
-                  session.uiMessages.splice(
-                    userMessageIndex,
-                    nextUserIndex - userMessageIndex,
-                  );
-                }
-              }
-            }),
-          );
-        },
-
         findToolComponent: (toolName: string) => {
           return Object.entries(get().ai.tools).find(
             ([name]) => name === toolName,
@@ -496,72 +419,114 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         },
 
         /**
-         * Get analysis results from the current session's UI messages
+         * Start the analysis
+         * TODO: how to pass the history analysisResults?
+         */
+        startAnalysis: async (
+          sendMessage: (message: {text: string}) => void,
+        ) => {
+          const abortController = new AbortController();
+          const currentSession = get().ai.getCurrentSession();
+
+          if (!currentSession) {
+            console.error('No current session found');
+            return;
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.analysisAbortController = abortController;
+              draft.ai.isRunningAnalysis = true;
+            }),
+          );
+
+          // Delegate to chat hook; lifecycle managed by onChatFinish/onChatError
+          // Analysis result will be created in onChatFinish with the correct message ID
+          sendMessage({text: get().ai.analysisPrompt});
+        },
+
+        cancelAnalysis: () => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.isRunningAnalysis = false;
+            }),
+          );
+          get().ai.analysisAbortController?.abort('Analysis cancelled');
+        },
+
+        /**
+         * Delete an analysis result from a session
+         * - remove the corresponding prompt-response pair from uiMessages
+         * - remove the associated toolAdditionalData
+         */
+        deleteAnalysisResult: (sessionId: string, resultId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.analysisResults = session.analysisResults.filter(
+                  (r: AnalysisResultSchema) => r.id !== resultId,
+                );
+                // Remove corresponding prompt-response pair from uiMessages
+                const uiMessages = session.uiMessages as UIMessage[];
+                const userMessageIndex = uiMessages.findIndex(
+                  (msg) => msg.id === resultId && msg.role === 'user',
+                );
+
+                if (userMessageIndex !== -1) {
+                  // Find the next user message (or end of array) to determine response boundary
+                  let nextUserIndex = userMessageIndex + 1;
+                  const messageIdsToDelete: string[] = [];
+
+                  while (
+                    nextUserIndex < uiMessages.length &&
+                    uiMessages[nextUserIndex]?.role !== 'user'
+                  ) {
+                    const msg = uiMessages[nextUserIndex];
+                    if (msg?.id) {
+                      messageIdsToDelete.push(msg.id);
+                    }
+                    nextUserIndex++;
+                  }
+
+                  // Remove the user message and all assistant messages until the next user message
+                  session.uiMessages.splice(
+                    userMessageIndex,
+                    nextUserIndex - userMessageIndex,
+                  );
+
+                  // Clean up toolAdditionalData for deleted messages
+                  if (session.toolAdditionalData) {
+                    // Remove data keyed by the result ID
+                    delete session.toolAdditionalData[resultId];
+
+                    // Remove data keyed by any of the deleted message IDs
+                    messageIdsToDelete.forEach((msgId) => {
+                      delete session.toolAdditionalData[msgId];
+                    });
+                  }
+                }
+              }
+            }),
+          );
+        },
+
+        /**
+         * Get analysis results for the current session by transforming UI messages
+         * into structured analysis results (user prompt → AI response pairs).
+         *
+         * @returns Array of analysis results for the current session
          */
         getAnalysisResults: (): AnalysisResultSchema[] => {
           const currentSession = get().ai.getCurrentSession();
-          if (!currentSession?.uiMessages?.length) return [];
+          if (!currentSession) return [];
 
-          const results: AnalysisResultSchema[] = [];
-          let i = 0;
-          const uiMessages = currentSession.uiMessages as UIMessage[];
-
-          while (i < uiMessages.length) {
-            const userMessage = uiMessages[i];
-
-            // Skip non-user messages
-            if (!userMessage || userMessage.role !== 'user') {
-              i++;
-              continue;
-            }
-
-            // Extract user prompt text
-            const prompt = userMessage.parts
-              .filter(
-                (part: UIMessagePart): part is {type: 'text'; text: string} =>
-                  part.type === 'text',
-              )
-              .map((part: {type: 'text'; text: string}) => part.text)
-              .join('');
-
-            // Find the assistant response
-            let response: UIMessagePart[] = [];
-            let isCompleted = false;
-            let nextIndex = i + 1;
-
-            for (let j = i + 1; j < uiMessages.length; j++) {
-              const nextMessage = uiMessages[j];
-              if (!nextMessage) continue;
-
-              if (nextMessage.role === 'assistant') {
-                response = nextMessage.parts;
-                isCompleted = true;
-                nextIndex = j + 1; // Skip past the assistant message
-                break;
-              } else if (nextMessage.role === 'user') {
-                // Stop at next user message
-                nextIndex = j;
-                break;
-              }
-            }
-
-            // Check if there's a related item in currentSession.analysisResults
-            const relatedAnalysisResult = currentSession.analysisResults?.find(
-              (result: AnalysisResultSchema) => result.id === userMessage.id,
-            );
-
-            results.push({
-              id: userMessage.id,
-              prompt,
-              response,
-              errorMessage: relatedAnalysisResult?.errorMessage,
-              isCompleted,
-            });
-
-            i = nextIndex;
-          }
-
-          return results;
+          return transformMessagesToAnalysisResults(
+            currentSession.uiMessages as UIMessage[],
+            currentSession.analysisResults,
+          );
         },
 
         addAnalysisResult: (message: UIMessage) => {

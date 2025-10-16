@@ -56,10 +56,6 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
             component: EchoToolResult,
           },
         },
-
-        // Chat configuration
-        defaultProvider: 'openai',
-        defaultModel: 'gpt-4.1',
       })(set, get, store),
     }),
 
