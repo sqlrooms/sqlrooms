@@ -1,4 +1,3 @@
-import {LanguageModel} from 'ai';
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
@@ -28,7 +27,6 @@ import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
-import {createGoogleGenerativeAI} from '@ai-sdk/google';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';

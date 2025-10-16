@@ -21,7 +21,6 @@ import {
   createChatHandlers,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {UIMessagePart} from '@sqlrooms/ai-config/src/UIMessageSchema';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 import {transformMessagesToAnalysisResults} from './utils';
 
@@ -51,9 +50,8 @@ export type AiSliceState = {
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
     setSessionToolAdditionalData: (
       sessionId: string,
-      updater:
-        | Record<string, unknown>
-        | ((prev: Record<string, unknown>) => Record<string, unknown>),
+      toolCallId: string,
+      additionalData: unknown,
     ) => void;
     getAnalysisResults: () => AnalysisResultSchema[];
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
@@ -62,8 +60,7 @@ export type AiSliceState = {
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
-
-    // Chat transport configuration
+    // Chat transport for useChat hook
     /** Optional remote endpoint to use for chat; if empty, local transport is used */
     chatEndPoint: string;
     /** Optional headers to send with remote endpoint */
@@ -272,6 +269,9 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
+        /**
+         * Save the Ai SDK UI messages for a session
+         */
         setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => {
           set((state) =>
             produce(state, (draft) => {
@@ -287,30 +287,24 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
+        /**
+         * Save additional data for a session
+         */
         setSessionToolAdditionalData: (
           sessionId: string,
-          updater:
-            | Record<string, unknown>
-            | ((prev: Record<string, unknown>) => Record<string, unknown>),
+          toolCallId: string,
+          additionalData: unknown,
         ) => {
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: {
-                  id: string;
-                  toolAdditionalData: Record<string, unknown>;
-                }) => s.id === sessionId,
+                (s) => s.id === sessionId,
               );
               if (session) {
-                const prev = session.toolAdditionalData || {};
-                session.toolAdditionalData =
-                  typeof updater === 'function'
-                    ? (
-                        updater as (
-                          p: Record<string, unknown>,
-                        ) => Record<string, unknown>
-                      )(prev)
-                    : updater;
+                if (!session.toolAdditionalData) {
+                  session.toolAdditionalData = {};
+                }
+                session.toolAdditionalData[toolCallId] = additionalData;
               }
             }),
           );
@@ -476,15 +470,24 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                 if (userMessageIndex !== -1) {
                   // Find the next user message (or end of array) to determine response boundary
                   let nextUserIndex = userMessageIndex + 1;
-                  const messageIdsToDelete: string[] = [];
+                  const toolCallIdsToDelete: string[] = [];
 
                   while (
                     nextUserIndex < uiMessages.length &&
                     uiMessages[nextUserIndex]?.role !== 'user'
                   ) {
                     const msg = uiMessages[nextUserIndex];
-                    if (msg?.id) {
-                      messageIdsToDelete.push(msg.id);
+                    // Extract toolCallId from message parts
+                    if (msg?.parts) {
+                      for (const part of msg.parts) {
+                        // Check for tool-* or dynamic-tool parts that have toolCallId
+                        if (
+                          'toolCallId' in part &&
+                          typeof part.toolCallId === 'string'
+                        ) {
+                          toolCallIdsToDelete.push(part.toolCallId);
+                        }
+                      }
                     }
                     nextUserIndex++;
                   }
@@ -497,12 +500,9 @@ export function createAiSlice<PC extends BaseRoomConfig>(
 
                   // Clean up toolAdditionalData for deleted messages
                   if (session.toolAdditionalData) {
-                    // Remove data keyed by the result ID
-                    delete session.toolAdditionalData[resultId];
-
-                    // Remove data keyed by any of the deleted message IDs
-                    messageIdsToDelete.forEach((msgId) => {
-                      delete session.toolAdditionalData[msgId];
+                    // Remove data keyed by the toolCallId from the deleted messages
+                    toolCallIdsToDelete.forEach((toolCallId) => {
+                      delete session.toolAdditionalData[toolCallId];
                     });
                   }
                 }
@@ -527,6 +527,11 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
+        /**
+         * Add an analysis result to the current session
+         * - add the message to the uiMessages
+         * - add the analysis result to the analysisResults
+         */
         addAnalysisResult: (message: UIMessage) => {
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) {

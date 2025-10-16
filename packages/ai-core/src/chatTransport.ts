@@ -76,12 +76,11 @@ export function createLocalChatTransportFactory({
       const onToolCompleted = (toolCallId: string, additionalData: unknown) => {
         const sessionId = get().ai.config.currentSessionId;
         if (!sessionId) return;
+
         get().ai.setSessionToolAdditionalData(
           sessionId,
-          (prev: Record<string, unknown>) => ({
-            ...prev,
-            [toolCallId]: additionalData,
-          }),
+          toolCallId,
+          additionalData,
         );
       };
 
