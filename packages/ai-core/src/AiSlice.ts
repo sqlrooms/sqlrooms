@@ -502,7 +502,12 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                   if (session.toolAdditionalData) {
                     // Remove data keyed by the toolCallId from the deleted messages
                     toolCallIdsToDelete.forEach((toolCallId) => {
-                      delete session.toolAdditionalData[toolCallId];
+                      if (
+                        session.toolAdditionalData &&
+                        session.toolAdditionalData[toolCallId]
+                      ) {
+                        delete session.toolAdditionalData[toolCallId];
+                      }
                     });
                   }
                 }

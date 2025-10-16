@@ -3,8 +3,7 @@
  */
 
 import {AiSettingsSliceConfig, AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {UIMessage} from 'ai';
-import {UIMessagePart} from '@sqlrooms/ai-config/src/UIMessageSchema';
+import {UIDataTypes, UIMessage, UITools, type UIMessagePart} from 'ai';
 
 /**
  * Extract models from aiSettings in the format expected by ModelSelector
@@ -86,12 +85,12 @@ export function transformMessagesToAnalysisResults(
     // UIMessage parts can contain text, images, tool calls, etc.
     // We only want the text parts for the prompt
     const prompt = userMessage.parts
-      .filter((part: UIMessagePart) => part.type === 'text')
+      .filter((part) => part.type === 'text')
       .map((part) => (part as {text: string}).text)
       .join('');
 
     // Look ahead to find the assistant's response to this user message
-    let response: UIMessagePart[] = [];
+    let response: UIMessagePart<UIDataTypes, UITools>[] = [];
     let isCompleted = false;
     let nextIndex = i + 1;
 

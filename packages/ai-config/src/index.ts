@@ -4,4 +4,4 @@ export {
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
-} from './AnalysisSessionSchema';
+} from './schema/AnalysisSessionSchema';
