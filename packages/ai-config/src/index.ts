@@ -5,3 +5,4 @@ export {
   AnalysisResultSchema,
   ErrorMessageSchema,
 } from './schema/AnalysisSessionSchema';
+export type {ToolUIPart, UIMessagePart} from './schema/UIMessageSchema';

@@ -61,6 +61,8 @@ const ToolUIPartSchema = z.union([
   ToolUIPartOutputErrorSchema,
 ]);
 
+export type ToolUIPart = z.infer<typeof ToolUIPartSchema>;
+
 // dynamic-tool parts
 const DynamicToolUIPartBaseSchema = z.object({
   type: z.literal('dynamic-tool'),

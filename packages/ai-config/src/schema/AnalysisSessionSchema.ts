@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {UIMessagePartSchema, UIMessageSchema} from './UIMessageSchema';
+import {UIMessageSchema} from './UIMessageSchema';
 import {
   needsV0_24_14Migration,
   migrateFromV0_24_14,
@@ -21,14 +21,13 @@ export type ErrorMessageSchema = z.infer<typeof ErrorMessageSchema>;
 export const AnalysisResultSchema = z.object({
   id: z.string(), // allow any string ID to match UI message ID from AI SDK v5
   prompt: z.string(),
-  response: z.array(UIMessagePartSchema),
   errorMessage: ErrorMessageSchema.optional(),
   isCompleted: z.boolean(),
 });
 export type AnalysisResultSchema = z.infer<typeof AnalysisResultSchema>;
 
 const AnalysisSessionBaseSchema = z.object({
-  id: z.string().cuid2(),
+  id: z.string(),
   name: z.string(),
   modelProvider: z.string(),
   model: z.string(),
@@ -36,7 +35,6 @@ const AnalysisSessionBaseSchema = z.object({
   baseUrl: z.string().optional(),
   analysisResults: z.array(AnalysisResultSchema),
   createdAt: z.coerce.date().optional(),
-  // use vercel ai v5 schema
   uiMessages: z.array(UIMessageSchema),
   toolAdditionalData: z.record(z.string(), z.unknown()).optional(),
 });

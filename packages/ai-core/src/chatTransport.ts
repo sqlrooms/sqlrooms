@@ -177,7 +177,6 @@ export function createChatHandlers({
                 targetSession.analysisResults.push({
                   id: lastUserMessage.id,
                   prompt: promptText,
-                  response: [],
                   isCompleted: true,
                 });
               }
@@ -232,7 +231,6 @@ export function createChatHandlers({
                   targetSession.analysisResults.push({
                     id: lastUserMessage.id,
                     prompt: promptText,
-                    response: [],
                     errorMessage: {error: errMsg},
                     isCompleted: true,
                   });

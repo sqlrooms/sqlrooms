@@ -1,6 +1,6 @@
 import {cn, ScrollArea, ScrollBar, SkeletonPane} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useMemo, useRef} from 'react';
+import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
@@ -9,26 +9,16 @@ export const AnalysisResultsContainer: React.FC<{
   className?: string;
 }> = ({className}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const uiMessages = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.uiMessages,
+  const currentAnalysisResults = useStoreWithAi((s) =>
+    s.ai.getAnalysisResults(),
   );
-  const getAnalysisResults = useStoreWithAi((s) => s.ai.getAnalysisResults);
-  const currentAnalysisResults = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.analysisResults,
-  );
-
-  // Memoize the analysis results to prevent infinite re-renders
-  // We depend on uiMessages and currentAnalysisResults (error message) which is the actual data that changes
-  const analysisResults = useMemo(() => {
-    return getAnalysisResults();
-  }, [uiMessages, currentAnalysisResults]);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
     endRef,
-    dataToObserve: analysisResults,
+    dataToObserve: currentAnalysisResults,
   });
 
   return (
@@ -38,8 +28,11 @@ export const AnalysisResultsContainer: React.FC<{
         className="flex w-full flex-grow flex-col gap-5"
       >
         {/* Render analysis results */}
-        {analysisResults.map((result) => (
-          <AnalysisResult key={result.id} result={result} />
+        {currentAnalysisResults.map((analysisResult) => (
+          <AnalysisResult
+            key={analysisResult.id}
+            analysisResult={analysisResult}
+          />
         ))}
         {isRunningAnalysis && <SkeletonPane className="p-4" />}
         <div ref={endRef} className="h-10 w-full shrink-0" />

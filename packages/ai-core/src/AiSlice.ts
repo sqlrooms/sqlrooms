@@ -22,7 +22,6 @@ import {
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
-import {transformMessagesToAnalysisResults} from './utils';
 
 export type AiSliceState = {
   ai: {
@@ -55,6 +54,7 @@ export type AiSliceState = {
     ) => void;
     getAnalysisResults: () => AnalysisResultSchema[];
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
+    getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
@@ -447,6 +447,36 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         },
 
         /**
+         * Get the assistant message parts for a given analysis result ID
+         * @param analysisResultId - The ID of the analysis result (user message ID)
+         * @returns Array of message parts from the assistant's response
+         */
+        getAssistantMessageParts: (analysisResultId: string) => {
+          const currentSession = get().ai.getCurrentSession();
+          if (!currentSession) return [];
+
+          const uiMessages = currentSession.uiMessages as UIMessage[];
+          // Find the user message with analysisResultId
+          const userMessageIndex = uiMessages.findIndex(
+            (msg) => msg.id === analysisResultId && msg.role === 'user',
+          );
+          if (userMessageIndex === -1) return [];
+
+          // Find the next assistant message after this user message
+          for (let i = userMessageIndex + 1; i < uiMessages.length; i++) {
+            const msg = uiMessages[i];
+            if (msg?.role === 'assistant') {
+              return msg.parts;
+            }
+            if (msg?.role === 'user') {
+              // Hit next user message without finding assistant response
+              break;
+            }
+          }
+          return [];
+        },
+
+        /**
          * Delete an analysis result from a session
          * - remove the corresponding prompt-response pair from uiMessages
          * - remove the associated toolAdditionalData
@@ -526,10 +556,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) return [];
 
-          return transformMessagesToAnalysisResults(
-            currentSession.uiMessages as UIMessage[],
-            currentSession.analysisResults,
-          );
+          return currentSession.analysisResults;
         },
 
         /**
@@ -557,7 +584,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                 ?.analysisResults.push({
                   id: message.id,
                   prompt: textContent,
-                  response: [],
                   isCompleted: true,
                 });
             }),

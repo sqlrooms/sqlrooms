@@ -15,13 +15,14 @@ import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
 import {ToolResult} from './tools/ToolResult';
 import {useStoreWithAi} from '../AiSlice';
+import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 
 /**
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
  */
 type AnalysisResultProps = {
-  result: AnalysisResultSchema;
+  analysisResult: AnalysisResultSchema;
 };
 
 /**
@@ -34,15 +35,22 @@ type AnalysisResultProps = {
  * @param props.result - The analysis result data to display
  * @returns A React component displaying the analysis results
  */
-export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
+export const AnalysisResult: React.FC<AnalysisResultProps> = ({
+  analysisResult,
+}) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
+  const getAssistantMessageParts = useStoreWithAi(
+    (s) => s.ai.getAssistantMessageParts,
+  );
 
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+
+  const uiMessageParts = getAssistantMessageParts(analysisResult.id);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
@@ -50,10 +58,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
         <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
-          <div className="flex-1">{result.prompt}</div>
+          <div className="flex-1">{analysisResult.prompt}</div>
           <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
             <CopyButton
-              text={result.prompt}
+              text={analysisResult.prompt}
               variant="ghost"
               size="icon"
               className="h-6 w-6"
@@ -64,7 +72,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
               size="icon"
               className="h-6 w-6"
               onClick={() => {
-                setDeleteTargetId(result.id);
+                setDeleteTargetId(analysisResult.id);
                 setShowDeleteConfirmation(true);
               }}
             >
@@ -118,46 +126,36 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
         </div>
       </div>
       <div className="flex w-full flex-col gap-4">
-        {/* Render response parts from analysis result */}
-        {result.response.map((part, index) => {
-          if (part.type === 'text') {
+        {/* Render response parts from uiMessages */}
+        {uiMessageParts.map((part, index) => {
+          if (isTextPart(part)) {
             return (
               <AnalysisAnswer
                 key={index}
-                content={(part as {text: string}).text}
-                isAnswer={index === result.response.length - 1}
+                content={part.text}
+                isAnswer={index === uiMessageParts.length - 1}
               />
             );
           }
-          if (part.type === 'reasoning') {
-            const text = (part as {text: string}).text;
+          if (isReasoningPart(part)) {
             return (
               <div key={index} className="text-muted-foreground text-xs">
-                {text}
+                {part.text}
               </div>
             );
           }
-          if (part.type.startsWith('tool-')) {
-            type ToolUIPart = {
-              toolCallId: string;
-              state: string;
-              input?: unknown;
-              output?: unknown;
-              errorText?: string;
-            };
-            const toolPart = part as unknown as ToolUIPart;
-            const toolCallId = toolPart.toolCallId;
-            const toolName =
-              (part.type as string).replace(/^tool-/, '') || 'unknown';
-            const state = toolPart.state;
-            const input = toolPart.input;
-            const output = toolPart.output;
-            const errorText = toolPart.errorText;
+          if (isToolPart(part)) {
+            const toolCallId = part.toolCallId;
+            const toolName = part.type.replace(/^tool-/, '') || 'unknown';
+            const state = part.state;
+            const input = part.input;
+            const output =
+              state === 'output-available' ? part.output : undefined;
+            const errorText =
+              state === 'output-error' ? part.errorText : undefined;
             const isCompleted =
               state === 'output-available' || state === 'output-error';
-            const additionalData = (
-              toolAdditionalData as Record<string, unknown>
-            )[toolCallId];
+            const additionalData = toolAdditionalData[toolCallId];
 
             return (
               <ToolResult
@@ -182,8 +180,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({result}) => {
           }
           return null;
         })}
-        {result.errorMessage && (
-          <ErrorMessage errorMessage={result.errorMessage.error} />
+        {analysisResult.errorMessage && (
+          <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
         )}
       </div>
     </div>

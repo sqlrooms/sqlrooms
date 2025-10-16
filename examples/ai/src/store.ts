@@ -31,7 +31,7 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
-// import exampleSessions from './example-sessions.json';
+import exampleSessions from './example-sessions.json';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -105,8 +105,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai slice
       ...createAiSlice({
-        // config: AiSliceConfig.parse(exampleSessions),
-        config: {},
+        config: AiSliceConfig.parse(exampleSessions),
 
         getInstructions: () => {
           return createDefaultAiInstructions(store);
