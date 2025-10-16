@@ -41,18 +41,18 @@ export function useAiChat() {
 
   // Get chat transport configuration
   const getLocalChatTransport = useStoreWithAi(
-    (s) => s.ai.chat.getLocalChatTransport,
+    (s) => s.ai.getLocalChatTransport,
   );
   const getRemoteChatTransport = useStoreWithAi(
-    (s) => s.ai.chat.getRemoteChatTransport,
+    (s) => s.ai.getRemoteChatTransport,
   );
-  const endPoint = useStoreWithAi((s) => s.ai.chat.endPoint);
-  const headers = useStoreWithAi((s) => s.ai.chat.headers);
+  const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
+  const headers = useStoreWithAi((s) => s.ai.chatHeaders);
 
   // Get chat handlers
-  const onChatToolCall = useStoreWithAi((s) => s.ai.chat.onChatToolCall);
-  const onChatFinish = useStoreWithAi((s) => s.ai.chat.onChatFinish);
-  const onChatError = useStoreWithAi((s) => s.ai.chat.onChatError);
+  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
+  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
 
   // Create transport (recreate when model changes)

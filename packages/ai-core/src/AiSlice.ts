@@ -63,30 +63,28 @@ export type AiSliceState = {
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
 
-    // Chat functionality nested within AI slice
-    chat: {
-      /** Optional remote endpoint to use for chat; if empty, local transport is used */
-      endPoint: string;
-      /** Optional headers to send with remote endpoint */
-      headers: Record<string, string>;
-      /** Get local chat transport for AI communication */
-      getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
-      /** Get remote chat transport for AI communication */
-      getRemoteChatTransport: (
-        endpoint: string,
-        headers?: Record<string, string>,
-      ) => DefaultChatTransport<UIMessage>;
-      /** Chat handler: tool calls locally */
-      onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
-      /** Chat handler: final assistant message */
-      onChatFinish: (args: {
-        message: UIMessage;
-        messages: UIMessage[];
-        isError?: boolean;
-      }) => void;
-      /** Chat handler: error */
-      onChatError: (error: unknown) => void;
-    };
+    // Chat transport configuration
+    /** Optional remote endpoint to use for chat; if empty, local transport is used */
+    chatEndPoint: string;
+    /** Optional headers to send with remote endpoint */
+    chatHeaders: Record<string, string>;
+    /** Get local chat transport for AI communication */
+    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+    /** Get remote chat transport for AI communication */
+    getRemoteChatTransport: (
+      endpoint: string,
+      headers?: Record<string, string>,
+    ) => DefaultChatTransport<UIMessage>;
+    /** Chat handler: tool calls locally */
+    onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
+    /** Chat handler: final assistant message */
+    onChatFinish: (args: {
+      message: UIMessage;
+      messages: UIMessage[];
+      isError?: boolean;
+    }) => void;
+    /** Chat handler: error */
+    onChatError: (error: unknown) => void;
   };
 };
 
@@ -556,31 +554,29 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           );
         },
 
-        // Chat functionality nested within AI slice
-        chat: {
-          endPoint: '',
-          headers: {},
+        // Chat transport configuration
+        chatEndPoint: '',
+        chatHeaders: {},
 
-          getLocalChatTransport: () => {
-            const state = get();
-            return createLocalChatTransportFactory({
-              get: () => get(),
-              defaultProvider: defaultProvider,
-              defaultModel: defaultModel,
-              apiKey: state.ai.getApiKeyFromSettings(),
-              baseUrl: state.ai.getBaseUrlFromSettings(),
-              getInstructions: () => get().ai.getFullInstructions(),
-              getCustomModel,
-            })();
-          },
-
-          getRemoteChatTransport: (
-            endpoint: string,
-            headers?: Record<string, string>,
-          ) => createRemoteChatTransportFactory()(endpoint, headers),
-
-          ...createChatHandlers({get, set}),
+        getLocalChatTransport: () => {
+          const state = get();
+          return createLocalChatTransportFactory({
+            get: () => get(),
+            defaultProvider: defaultProvider,
+            defaultModel: defaultModel,
+            apiKey: state.ai.getApiKeyFromSettings(),
+            baseUrl: state.ai.getBaseUrlFromSettings(),
+            getInstructions: () => get().ai.getFullInstructions(),
+            getCustomModel,
+          })();
         },
+
+        getRemoteChatTransport: (
+          endpoint: string,
+          headers?: Record<string, string>,
+        ) => createRemoteChatTransportFactory()(endpoint, headers),
+
+        ...createChatHandlers({get, set}),
       },
     };
   });
