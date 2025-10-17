@@ -21,7 +21,7 @@ yarn add @sqlrooms/ai
 
 ## Basic Usage
 
-### Setting Up AI Integration
+### Setting Up SqlRooms AI Chat for Browser-only application
 
 ```tsx
 import {createAiSlice, createAiSettingsSlice} from '@sqlrooms/ai';
@@ -61,6 +61,8 @@ function MyApp() {
   );
 }
 ```
+
+### Setting Up SqlRooms AI Chat for Server-side application
 
 ## Architecture
 

@@ -107,6 +107,10 @@ export interface AiSliceOptions {
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
+  /** Optional remote endpoint to use for chat; if empty, local transport is used */
+  chatEndPoint?: string;
+  /** Optional headers to send with remote endpoint */
+  chatHeaders?: Record<string, string>;
 }
 
 export function createAiSlice<PC extends BaseRoomConfig>(
@@ -122,6 +126,8 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
     getCustomModel,
+    chatEndPoint = '',
+    chatHeaders = {},
   } = params;
 
   return createBaseSlice<PC, AiSliceState>((set, get) => {
@@ -591,8 +597,8 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         },
 
         // Chat transport configuration
-        chatEndPoint: '',
-        chatHeaders: {},
+        chatEndPoint,
+        chatHeaders,
 
         getLocalChatTransport: () => {
           const state = get();
