@@ -1283,6 +1283,9 @@ importers:
       '@sqlrooms/ai-settings':
         specifier: workspace:*
         version: link:../ai-settings
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
@@ -1418,6 +1421,9 @@ importers:
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
