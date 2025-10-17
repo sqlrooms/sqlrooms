@@ -74,7 +74,7 @@ export function createDefaultAiModelConfig(
         // },
       ],
       modelParameters: {
-        maxSteps: 5,
+        maxSteps: 50,
         additionalInstruction: '',
       },
       ...props,

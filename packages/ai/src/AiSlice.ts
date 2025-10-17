@@ -132,7 +132,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
       ai: {
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
-        maxSteps: 5,
+        maxSteps: 50,
 
         tools: {
           ...getDefaultTools(store, toolsOptions),
