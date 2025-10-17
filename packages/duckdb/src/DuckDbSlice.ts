@@ -379,14 +379,14 @@ export function createDuckDbSlice({
                 NULL estimated_size,
                 TRUE AS isView
             )
-            SELECT 
+            SELECT
                 isView,
                 database, schema,
                 name, column_names, column_types,
                 sql, comment,
                 estimated_size
             FROM (DESCRIBE)
-            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name)
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -478,10 +478,42 @@ export function createDuckDbSlice({
               replace: true,
             });
           }
-          const newTable = (await db.loadTableSchemas(qualifiedName))[0];
+
+          // Try to find the table, with retry logic
+          let newTable = (await db.loadTableSchemas(qualifiedName))[0];
           if (!newTable) {
-            throw new Error('Failed to add table');
+            // Try refreshing schemas and looking again
+            await get().db.refreshTableSchemas();
+            newTable = (await db.loadTableSchemas(qualifiedName))[0];
           }
+
+          if (!newTable) {
+            // Try searching without qualification
+            const unqualifiedTables = await db.loadTableSchemas();
+            const foundTable = unqualifiedTables.find(
+              (t) =>
+                t.tableName === tableName ||
+                t.table.table === tableName ||
+                t.table.toString() === qualifiedName.toString(),
+            );
+
+            if (foundTable) {
+              newTable = foundTable;
+            } else {
+              console.error('Failed to find table after creation:', {
+                tableName,
+                qualifiedName: qualifiedName.toString(),
+                availableTables: unqualifiedTables.map((t) => ({
+                  tableName: t.tableName,
+                  qualifiedName: t.table.toString(),
+                })),
+              });
+              throw new Error(
+                `Failed to add table '${tableName}'. Table was created but could not be found in schema.`,
+              );
+            }
+          }
+
           set((state) =>
             produce(state, (draft) => {
               draft.db.tables.push(newTable);

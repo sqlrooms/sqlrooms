@@ -65,6 +65,16 @@ export function literalToSQL(value: unknown) {
       } else if (value instanceof RegExp) {
         return `'${value.source}'`;
       } else {
+        // For arrays and plain objects, serialize to JSON string literal
+        if (Array.isArray(value) || typeof value === 'object') {
+          try {
+            const json = JSON.stringify(value);
+            return `'${json.replace(/'/g, "''")}'`;
+          } catch (_err) {
+            // Fallback to string coercion if serialization fails
+            return `${value}`;
+          }
+        }
         // otherwise rely on string coercion
         return `${value}`;
       }

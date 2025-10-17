@@ -1,6 +1,6 @@
-import {FC} from 'react';
-import {CreditCard, BarChart3, DollarSign} from 'lucide-react';
-import {SkeletonPane} from '@sqlrooms/ui';
+import {FC, useState} from 'react';
+import {CreditCard, BarChart3, DollarSign, Plus} from 'lucide-react';
+import {SkeletonPane, Button, Input} from '@sqlrooms/ui';
 import {ChartContainer, ChartTooltip} from '@sqlrooms/recharts';
 import {
   Bar,
@@ -22,6 +22,7 @@ export interface ModelUsageData {
 type AiModelUsageProps = {
   className?: string;
   modelUsage?: ModelUsageData;
+  onIncreaseBudget?: (amount: number) => Promise<void>;
 };
 
 const fillMissingDays = (weeklySpend: Array<{date: string; spend: number}>) => {
@@ -54,7 +55,11 @@ const fillMissingDays = (weeklySpend: Array<{date: string; spend: number}>) => {
 export const AiModelUsage: FC<AiModelUsageProps> = ({
   className = '',
   modelUsage,
+  onIncreaseBudget,
 }) => {
+  const [increaseAmount, setIncreaseAmount] = useState<string>('10');
+  const [isIncreasing, setIsIncreasing] = useState(false);
+
   if (!modelUsage) return null;
 
   const {
@@ -64,6 +69,23 @@ export const AiModelUsage: FC<AiModelUsageProps> = ({
     weeklySpend,
     isLoadingWeeklySpend,
   } = modelUsage;
+
+  const handleIncreaseBudget = async () => {
+    if (!onIncreaseBudget) return;
+
+    const amount = parseFloat(increaseAmount);
+    if (isNaN(amount) || amount <= 0) return;
+
+    setIsIncreasing(true);
+    try {
+      await onIncreaseBudget(amount);
+      setIncreaseAmount('10'); // Reset to default
+    } catch (error) {
+      console.error('Failed to increase budget:', error);
+    } finally {
+      setIsIncreasing(false);
+    }
+  };
 
   const getCurrentMonthRange = () => {
     const now = new Date();
@@ -105,6 +127,37 @@ export const AiModelUsage: FC<AiModelUsageProps> = ({
             </div>
           )}
         </div>
+
+        {/* Increase Budget Section */}
+        {onIncreaseBudget && (
+          <div className="bg-muted rounded-lg p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              <p className="text-sm font-medium">Increase Budget</p>
+            </div>
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                placeholder="Amount"
+                value={increaseAmount}
+                onChange={(e) => setIncreaseAmount(e.target.value)}
+                className="flex-1"
+                min="0.01"
+                step="0.01"
+              />
+              <Button
+                onClick={handleIncreaseBudget}
+                disabled={isIncreasing || isLoadingSpend}
+                size="sm"
+              >
+                {isIncreasing ? 'Increasing...' : 'Increase'}
+              </Button>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Enter the amount you want to add to your current budget
+            </p>
+          </div>
+        )}
 
         {/* Daily Spending Chart */}
         <div className="space-y-2">

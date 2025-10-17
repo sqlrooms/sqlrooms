@@ -353,7 +353,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               prompt: get().ai.analysisPrompt,
               abortController,
               tools: get().ai.tools,
-              maxSteps: getMaxSteps?.() || get().ai.maxSteps || 5,
+              maxSteps: getMaxSteps?.() || get().ai.maxSteps || 50,
               getInstructions,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(

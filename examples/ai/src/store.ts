@@ -172,7 +172,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         // Get max steps from Ai model config or your default value
         getMaxSteps: () => {
           const state = get();
-          return state.config.aiModelConfig.modelParameters.maxSteps || 5;
+          return state.config.aiModelConfig.modelParameters.maxSteps || 50;
         },
         // Get base URL from Ai model config or your default value
         getBaseUrl: () => {
