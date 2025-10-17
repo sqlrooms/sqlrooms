@@ -30,7 +30,7 @@ export type ChatTransportConfig = {
   /**
    * Optional: supply a pre-configured custom model.
    * e.g. import {xai} from "@ai-sdk/xai";
-   * getCustomModel: () => xai('grok-4', {apiKey: 'your-api-key'})
+   * getCustomModel: () => xai('grok-4')
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
@@ -113,13 +113,43 @@ export function createLocalChatTransportFactory({
   };
 }
 
-export function createRemoteChatTransportFactory() {
-  return (endpoint: string, headers?: Record<string, string>) =>
-    new DefaultChatTransport({
+export function createRemoteChatTransportFactory(params: {
+  get: GetAiSliceState;
+  defaultProvider: string;
+  defaultModel: string;
+}) {
+  return (endpoint: string, headers?: Record<string, string>) => {
+    const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
+      // Get current session's model and provider at request time
+      const state = params.get();
+      const currentSession = state.ai.getCurrentSession();
+      const modelProvider =
+        currentSession?.modelProvider || params.defaultProvider;
+      const model = currentSession?.model || params.defaultModel;
+
+      // Parse the existing body and add model information
+      const body = init?.body as string;
+      const parsed = body ? JSON.parse(body) : {};
+      const enhancedBody = {
+        ...parsed,
+        modelProvider,
+        model,
+      };
+
+      // Make the request with enhanced body
+      return fetch(input, {
+        ...init,
+        body: JSON.stringify(enhancedBody),
+      });
+    };
+
+    return new DefaultChatTransport({
       api: endpoint,
       credentials: 'include',
       headers,
+      fetch: fetchImpl,
     });
+  };
 }
 
 export function createChatHandlers({

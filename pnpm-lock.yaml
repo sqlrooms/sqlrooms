@@ -294,6 +294,9 @@ importers:
       '@ai-sdk/openai':
         specifier: ^2.0.32
         version: 2.0.52(zod@4.1.12)
+      '@ai-sdk/openai-compatible':
+        specifier: ^1.0.18
+        version: 1.0.22(zod@4.1.12)
       '@openassistant/utils':
         specifier: 1.0.0-alpha.0
         version: 1.0.0-alpha.0

@@ -14,6 +14,7 @@ import {
   convertToVercelAiToolV5,
 } from '@openassistant/utils';
 import {z} from 'zod';
+import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 // Create a conversation cache instance with custom configuration
 const conversationCache = new ConversationCache({
@@ -23,13 +24,7 @@ const conversationCache = new ConversationCache({
   enableLogging: true, // Enable logging for debugging
 });
 
-const systemPrompt = `You are a helpful assistant that can answer questions and help with tasks. 
-You can use the following datasets:
-- datasetName: natregimes
-- variables: [HR60, PO60, latitude, longitude]
-- datasetName: world_countries
-- variables: [id, latitude, longitude]
-`;
+const systemPrompt = `You are a helpful assistant that can answer questions and help with tasks.`;
 
 // Define the web search tool
 const webSearchSchema = z.object({
@@ -57,7 +52,6 @@ const webSearchTool: OpenAssistantTool = {
 };
 
 function createTools(toolOutputManager: ToolOutputManager) {
-  // add onToolCompleted: toolOutputManager.createOnToolCompleteCallback() to the webSearchTool
   const webSearchToolWithOnToolCompleted = {
     ...webSearchTool,
     onToolCompleted: toolOutputManager.createOnToolCompletedCallback(),
@@ -70,9 +64,12 @@ function createTools(toolOutputManager: ToolOutputManager) {
 
 export async function POST(req: Request) {
   try {
-    const {id: requestId, messages} = await req.json();
+    const {id: requestId, messages, modelProvider, model} = await req.json();
 
-    console.log(`Processing chat request ${requestId}`);
+    console.log(`Processing chat request ${requestId}`, {
+      modelProvider,
+      model,
+    });
 
     const toolOutputManager =
       await conversationCache.getToolOutputManager(requestId);
@@ -91,8 +88,18 @@ export async function POST(req: Request) {
         // Create all tools using the tools utility
         const tools = createTools(toolOutputManager);
 
+        // use openai compatible client for different models
+        const modelClient = createOpenAICompatible({
+          apiKey: process.env.LITELLM_API_KEY,
+          name: modelProvider,
+          // baseURL: 'https://api.openai.com/v1',
+          baseURL:
+            'https://spatial-workbench-data-api-staging.foursquare.com/v1/liteLLM/v1',
+        });
+        const languageModel = modelClient.chatModel(model);
+
         const result = streamText({
-          model: openai('gpt-4.1') as unknown as LanguageModel,
+          model: languageModel,
           messages: convertToModelMessages(messages),
           system: systemPrompt,
           tools,

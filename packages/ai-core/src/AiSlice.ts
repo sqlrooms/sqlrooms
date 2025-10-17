@@ -616,7 +616,12 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         getRemoteChatTransport: (
           endpoint: string,
           headers?: Record<string, string>,
-        ) => createRemoteChatTransportFactory()(endpoint, headers),
+        ) =>
+          createRemoteChatTransportFactory({
+            get: () => get(),
+            defaultProvider,
+            defaultModel,
+          })(endpoint, headers),
 
         ...createChatHandlers({get, set}),
       },

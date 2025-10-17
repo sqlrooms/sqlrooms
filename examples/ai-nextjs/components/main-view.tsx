@@ -37,8 +37,6 @@ export const MainView: React.FC = () => {
           <div className="flex-grow overflow-auto">
             {currentSessionId && (
               <AiSettingsPanel disclosure={settingsPanelOpen}>
-                <AiSettingsPanel.ProvidersSettings />
-                <AiSettingsPanel.ModelsSettings />
                 <AiSettingsPanel.ModelParametersSettings />
               </AiSettingsPanel>
             )}
