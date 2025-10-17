@@ -92,9 +92,7 @@ export async function POST(req: Request) {
         const modelClient = createOpenAICompatible({
           apiKey: process.env.LITELLM_API_KEY,
           name: modelProvider,
-          // baseURL: 'https://api.openai.com/v1',
-          baseURL:
-            'https://spatial-workbench-data-api-staging.foursquare.com/v1/liteLLM/v1',
+          baseURL: process.env.LITELLM_BASE_URL || 'https://api.openai.com/v1',
         });
         const languageModel = modelClient.chatModel(model);
 

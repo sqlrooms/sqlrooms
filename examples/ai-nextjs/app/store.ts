@@ -36,12 +36,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
         chatEndPoint: '/api/chat',
 
         getInstructions: () => {
-          return `You are a helpful assistant that can answer questions and help with tasks.
-You can use the following datasets:
-- datasetName: natregimes
-- variables: [HR60, PO60, latitude, longitude]
-- datasetName: world_countries
-- variables: [id, latitude, longitude]`;
+          return 'You are a helpful assistant that can answer questions and help with tasks';
         },
 
         // Add custom tools
