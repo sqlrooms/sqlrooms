@@ -9,7 +9,7 @@ export type {AiSliceState} from './AiSlice';
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
-export type {AiSliceTool} from './AiSlice';
+export {useAiChat} from './hooks/useAiChat';
 
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
@@ -22,3 +22,4 @@ export type {SessionType} from './components/session/SessionType';
 export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
 
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
+export {AiThinkingDots} from './components/AiThinkingDots';

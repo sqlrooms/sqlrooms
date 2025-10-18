@@ -98,3 +98,24 @@ export const DataSource = z
   ])
   .describe('Data source specification.');
 export type DataSource = z.infer<typeof DataSource>;
+
+/**
+ * Type guard to check if a data source is a FileDataSource
+ */
+export function isFileDataSource(ds: DataSource): ds is FileDataSource {
+  return ds.type === DataSourceTypes.enum.file;
+}
+
+/**
+ * Type guard to check if a data source is a UrlDataSource
+ */
+export function isUrlDataSource(ds: DataSource): ds is UrlDataSource {
+  return ds.type === DataSourceTypes.enum.url;
+}
+
+/**
+ * Type guard to check if a data source is a SqlQueryDataSource
+ */
+export function isSqlQueryDataSource(ds: DataSource): ds is SqlQueryDataSource {
+  return ds.type === DataSourceTypes.enum.sql;
+}

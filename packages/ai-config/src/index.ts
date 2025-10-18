@@ -4,4 +4,5 @@ export {
   AnalysisSessionSchema,
   AnalysisResultSchema,
   ErrorMessageSchema,
-} from './AnalysisSessionSchema';
+} from './schema/AnalysisSessionSchema';
+export type {ToolUIPart, UIMessagePart} from './schema/UIMessageSchema';

@@ -1,7 +1,6 @@
 import {z} from 'zod';
 import {VegaChartToolResult} from './VegaChartToolResult';
-import {AiSliceTool} from '@sqlrooms/ai';
-import {extendedTool} from '@openassistant/utils';
+import {OpenAssistantTool} from '@openassistant/utils';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -50,16 +49,18 @@ export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
 }: {
   description?: string;
-} = {}): AiSliceTool {
-  return extendedTool<
-    VegaChartToolArgs,
-    VegaChartToolLlmResult,
-    VegaChartToolAdditionalData,
-    VegaChartToolContext
-  >({
+} = {}): OpenAssistantTool<
+  typeof VegaChartToolParameters,
+  VegaChartToolLlmResult,
+  VegaChartToolAdditionalData,
+  VegaChartToolContext
+> {
+  return {
+    name: 'chart',
     description,
     parameters: VegaChartToolParameters,
-    execute: async ({sqlQuery, vegaLiteSpec}: VegaChartToolParameters) => {
+    execute: async (params: VegaChartToolParameters) => {
+      const {sqlQuery, vegaLiteSpec} = params;
       try {
         const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec);
         // data object of the vegaLiteSpec and sqlQuery
@@ -84,5 +85,5 @@ export function createVegaChartTool({
       }
     },
     component: VegaChartToolResult,
-  });
+  };
 }

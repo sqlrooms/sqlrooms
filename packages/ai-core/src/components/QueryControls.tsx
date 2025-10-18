@@ -2,6 +2,7 @@ import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {useAiChat} from '../hooks/useAiChat';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -25,6 +26,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
+
+  // Use the custom hook for chat functionality
+  const {sendMessage} = useAiChat();
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -51,7 +55,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis();
+          runAnalysis(sendMessage);
         }
       }
     },
@@ -65,10 +69,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis();
+      runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+  }, [isRunningAnalysis, cancelAnalysis, runAnalysis, sendMessage]);
 
   return (
     <div

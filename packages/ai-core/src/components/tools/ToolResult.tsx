@@ -1,29 +1,44 @@
-import {Button, useDisclosure} from '@sqlrooms/ui';
+import {useDisclosure} from '@sqlrooms/ui';
 import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
-import {ToolInvocation} from 'ai';
 import {ToolErrorMessage} from './ToolErrorMessage';
 
-type ToolResultProps = {
-  toolInvocation: ToolInvocation;
-  additionalData: unknown;
-  isCompleted: boolean;
-  errorMessage?: string;
+// Tool invocation type that can handle both migrated and AI SDK formats
+type ToolData = {
+  toolCallId: string;
+  toolName?: string;
+  name?: string;
+  args?: any;
+  input?: any;
+  state?:
+    | 'call'
+    | 'result'
+    | 'partial-call'
+    | 'input-streaming'
+    | 'input-available'
+    | 'output-available'
+    | 'output-error';
+  result?: any;
+  output?: any;
+  errorText?: string;
+  [key: string]: any;
 };
 
-export const ToolResult: React.FC<ToolResultProps> = ({
-  toolInvocation,
+export const ToolResult: React.FC<ToolData> = ({
+  toolData,
   additionalData,
   isCompleted,
   errorMessage,
 }) => {
-  const {isOpen: showDetails, onToggle: toggleShowDetails} =
-    useDisclosure(false);
-
-  const {toolName, args, state} = toolInvocation;
-  const llmResult = state === 'result' ? toolInvocation.result : null;
+  const toolName = toolData.toolName || toolData.name || 'unknown';
+  const args = toolData.args || toolData.input || {};
+  const state = toolData.state || 'call';
+  const llmResult =
+    state === 'result' || state === 'output-available'
+      ? toolData.result || toolData.output
+      : null;
 
   // show reason text before tool call complete
   const text = args.reasoning || '';
@@ -74,7 +89,7 @@ export const ToolResult: React.FC<ToolResultProps> = ({
       {isCompleted && (errorMessage || !isSuccess) && (
         <ToolErrorMessage
           error={errorMessage ?? 'Tool call failed'}
-          details={toolInvocation}
+          details={toolData}
           title="Tool call error"
           triggerLabel="Tool call failed"
           editorHeightPx={300}

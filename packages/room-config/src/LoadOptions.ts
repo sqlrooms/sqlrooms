@@ -50,7 +50,7 @@ export type StandardLoadOptions = z.infer<typeof StandardLoadOptions>;
 export const SpatialLoadOptions = StandardLoadOptions.extend({
   /** Additional options for spatial data loading */
   options: z
-    .union([z.array(z.string()), z.string(), z.record(z.unknown())])
+    .union([z.array(z.string()), z.string(), z.record(z.string(), z.unknown())])
     .optional(),
 });
 export type SpatialLoadOptions = z.infer<typeof SpatialLoadOptions>;
