@@ -1,20 +1,18 @@
-import {openai} from '@ai-sdk/openai';
-import {
-  streamText,
-  type LanguageModel,
-  createUIMessageStream,
-  createUIMessageStreamResponse,
-  generateId,
-  convertToModelMessages,
-} from 'ai';
+import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {
   ConversationCache,
   OpenAssistantTool,
   ToolOutputManager,
   convertToVercelAiToolV5,
 } from '@openassistant/utils';
+import {
+  convertToModelMessages,
+  createUIMessageStream,
+  createUIMessageStreamResponse,
+  generateId,
+  streamText,
+} from 'ai';
 import {z} from 'zod';
-import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 // Create a conversation cache instance with custom configuration
 const conversationCache = new ConversationCache({
