@@ -22,3 +22,4 @@ export type {SessionType} from './components/session/SessionType';
 export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
 
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
+export {AiThinkingDots} from './components/AiThinkingDots';

@@ -1,9 +1,10 @@
-import {cn, ScrollArea, ScrollBar, SkeletonPane} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
 import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
+import {AiThinkingDots} from './AiThinkingDots';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
@@ -34,7 +35,9 @@ export const AnalysisResultsContainer: React.FC<{
             analysisResult={analysisResult}
           />
         ))}
-        {isRunningAnalysis && <SkeletonPane className="p-4" />}
+        {isRunningAnalysis && (
+          <AiThinkingDots className="text-muted-foreground p-4" />
+        )}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
