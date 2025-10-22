@@ -11,10 +11,9 @@ import {
   RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
-import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {AI_SETTINGS} from '../config';
-import WebSearchToolResult from '@/components/WebSearchToolResult';
+import {getClientTools} from './lib/tools';
 
 type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
 
@@ -41,32 +40,7 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
 
         // Add custom tools
         tools: {
-          // Example of adding a web search tool
-          webSearch: {
-            name: 'webSearch',
-            description: 'Search the web for information',
-            parameters: z.object({
-              query: z.string().describe('The search query'),
-            }),
-            execute: async ({query}: {query: string}) => {
-              // This is just a toy implementation
-              // In a real app, you would make an actual web search
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Web search results for: ${query}`,
-                  results: [
-                    {
-                      title: 'Example Result',
-                      snippet: 'This is a toy web search result',
-                      url: 'https://example.com',
-                    },
-                  ],
-                },
-              };
-            },
-            component: WebSearchToolResult,
-          },
+          ...getClientTools(),
         },
       })(set, get, store),
     }),

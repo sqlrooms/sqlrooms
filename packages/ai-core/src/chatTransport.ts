@@ -11,6 +11,8 @@ import {produce} from 'immer';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
+import {filterDataParts} from './utils/messageFilter';
+import {AddToolResult} from './hooks/useAiChat';
 
 type GetAiSliceState = () => AiSliceState;
 type SetAiSliceState = <T>(
@@ -18,6 +20,13 @@ type SetAiSliceState = <T>(
   replace?: false | undefined,
   action?: string,
 ) => void;
+
+type ToolCall = {
+  input: string;
+  toolCallId: string;
+  toolName: string;
+  type: 'tool-input-available';
+};
 
 export type ChatTransportConfig = {
   get: GetAiSliceState;
@@ -130,8 +139,13 @@ export function createRemoteChatTransportFactory(params: {
       // Parse the existing body and add model information
       const body = init?.body as string;
       const parsed = body ? JSON.parse(body) : {};
+
+      // Filter out data-tool-additional-output parts from messages before sending
+      const filteredMessages = filterDataParts(parsed.messages || []);
+
       const enhancedBody = {
         ...parsed,
+        messages: filteredMessages,
         modelProvider,
         model,
       };
@@ -160,9 +174,97 @@ export function createChatHandlers({
   set: SetAiSliceState;
 }) {
   return {
-    onChatToolCall: async ({toolCall}: {toolCall: unknown}) => {
-      void toolCall;
-      // no-op for now; UI messages are synced on finish via useChat
+    onChatToolCall: async ({
+      toolCall,
+      addToolResult,
+    }: {
+      toolCall: ToolCall;
+      addToolResult?: AddToolResult;
+    }) => {
+      const {input, toolCallId, toolName} = toolCall;
+      try {
+        // handle local tools
+        const state = get();
+        const tools = Object.entries(state.ai.tools || {}).reduce(
+          (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
+            // @ts-expect-error - only tool has isServerTool property
+            if (tool.isServerTool) {
+              return acc;
+            }
+            acc[name] = convertToVercelAiToolV5({
+              ...tool,
+              onToolCompleted: (
+                toolCallId: string,
+                additionalData: unknown,
+              ) => {
+                const sessionId = state.ai.config.currentSessionId;
+                if (!sessionId) return;
+
+                state.ai.setSessionToolAdditionalData(
+                  sessionId,
+                  toolCallId,
+                  additionalData,
+                );
+              },
+            });
+            return acc;
+          },
+          {},
+        );
+
+        // find tool from tools using toolName
+        const tool = tools[toolName];
+        if (tool && tool.execute) {
+          const llmResult = await tool.execute(input, {
+            toolCallId,
+            messages: [],
+          });
+
+          // If addToolResult is provided, use it to add the result
+          // This allows for more control over when and how tool results are submitted
+          if (addToolResult) {
+            // No await - avoids potential deadlocks
+            // Note: When using sendAutomaticallyWhen, avoid awaiting addToolResult to prevent deadlocks
+            addToolResult({
+              tool: toolName,
+              toolCallId,
+              output: llmResult,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error in onChatToolCall:', error);
+        if (addToolResult) {
+          addToolResult({
+            tool: toolName,
+            toolCallId,
+            state: 'output-error',
+            errorText: getErrorMessageForDisplay(error),
+          });
+        }
+      }
+    },
+    onChatData: (dataPart: any) => {
+      // Handle data messages from the backend
+      if (dataPart.type === 'data-tool-additional-output') {
+        const {toolCallId, toolName, output, timestamp} = dataPart.data;
+        console.log('Received tool additional output:', {
+          toolCallId,
+          toolName,
+          output,
+          timestamp,
+        });
+
+        // Store the additional data in the session
+        const currentSessionId = get().ai.config.currentSessionId;
+        if (currentSessionId) {
+          get().ai.setSessionToolAdditionalData(
+            currentSessionId,
+            toolCallId,
+            output,
+          );
+        }
+      }
     },
     onChatFinish: ({
       message,
@@ -172,10 +274,14 @@ export function createChatHandlers({
       messages: UIMessage[];
     }) => {
       try {
-        void message; // kept for potential analytics; we store full messages
+        console.log('Chat finish:', message, messages);
         const currentSessionId = get().ai.config.currentSessionId;
         if (!currentSessionId) return;
-        get().ai.setSessionUiMessages(currentSessionId, messages);
+
+        // Filter out data-tool-additional-output parts from messages
+        const filteredMessages = filterDataParts(messages);
+
+        get().ai.setSessionUiMessages(currentSessionId, filteredMessages);
 
         // Create analysis result with the user message ID for proper correlation
         set((state: AiSliceState) =>

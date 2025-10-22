@@ -6,6 +6,18 @@ import {
 } from 'ai';
 import type {UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
+import {filterDataParts} from '../utils/messageFilter';
+
+export type AddToolResult = (
+  options:
+    | {tool: string; toolCallId: string; output: unknown}
+    | {
+        tool: string;
+        toolCallId: string;
+        state: 'output-error';
+        errorText: string;
+      },
+) => void;
 
 /**
  * Custom hook that provides AI chat functionality with automatic transport setup,
@@ -38,6 +50,8 @@ export function useAiChat() {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
   const model = currentSession?.model;
+  // Use messagesRevision to force reset only when messages are explicitly deleted
+  const messagesRevision = currentSession?.messagesRevision ?? 0;
 
   // Get chat transport configuration
   const getLocalChatTransport = useStoreWithAi(
@@ -52,6 +66,7 @@ export function useAiChat() {
   // Get chat handlers
   const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
   const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatData = useStoreWithAi((s) => s.ai.onChatData);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
 
@@ -67,26 +82,41 @@ export function useAiChat() {
   }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
 
   // Setup useChat with all configuration
-  const {messages, sendMessage} = useChat({
-    id: sessionId,
+  // Include messagesRevision in the id to force reset only when messages are explicitly deleted
+  // Store addToolResult in a variable that can be captured by the onToolCall closure
+  let capturedAddToolResult: AddToolResult;
+
+  const {messages, sendMessage, addToolResult} = useChat({
+    id: `${sessionId}-${messagesRevision}`,
     transport,
     messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
-    onToolCall: onChatToolCall,
+    onToolCall: async ({toolCall}: {toolCall: any}) => {
+      // Wrap the store's onChatToolCall to provide addToolResult
+      // Use the captured addToolResult from the outer scope
+      return onChatToolCall?.({toolCall, addToolResult: capturedAddToolResult});
+    },
     onFinish: onChatFinish,
     onError: onChatError,
+    onData: onChatData,
     // Automatically submit when all tool results are available
     // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
 
+  // Capture addToolResult for use in onToolCall
+  capturedAddToolResult = addToolResult;
+
+  // Filter messages to remove data-tool-additional-output parts added during streaming
+  const filteredMessages = useMemo(() => filterDataParts(messages), [messages]);
+
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
     if (!sessionId) return;
-    setSessionUiMessages(sessionId, messages as UIMessage[]);
-  }, [messages, sessionId, setSessionUiMessages]);
+    setSessionUiMessages(sessionId, filteredMessages as UIMessage[]);
+  }, [filteredMessages, sessionId, setSessionUiMessages]);
 
   return {
-    messages,
+    messages: filteredMessages,
     sendMessage,
   };
 }

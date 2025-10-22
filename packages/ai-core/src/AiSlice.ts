@@ -23,6 +23,12 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 
+// Custom type for onChatToolCall that includes addToolResult
+type ExtendedChatOnToolCallCallback = (args: {
+  toolCall: any;
+  addToolResult?: any;
+}) => Promise<any> | any;
+
 export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
@@ -73,7 +79,9 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     /** Chat handler: tool calls locally */
-    onChatToolCall: (args: {toolCall: unknown}) => Promise<void> | void;
+    onChatToolCall: ExtendedChatOnToolCallCallback;
+    /** Chat handler: data messages from backend */
+    onChatData: (dataPart: any) => void;
     /** Chat handler: final assistant message */
     onChatFinish: (args: {
       message: UIMessage;
@@ -213,6 +221,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                 createdAt: new Date(),
                 uiMessages: [],
                 toolAdditionalData: {},
+                messagesRevision: 0,
               });
               draft.ai.config.currentSessionId = newSessionId;
             }),
@@ -317,9 +326,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         },
 
         findToolComponent: (toolName: string) => {
-          return Object.entries(get().ai.tools).find(
-            ([name]) => name === toolName,
-          )?.[1]?.component as React.ComponentType;
+          return get().ai.tools[toolName]?.component as React.ComponentType;
         },
 
         getBaseUrlFromSettings: () => {
@@ -506,7 +513,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                 if (userMessageIndex !== -1) {
                   // Find the next user message (or end of array) to determine response boundary
                   let nextUserIndex = userMessageIndex + 1;
-                  const toolCallIdsToDelete: string[] = [];
+                  const toolCallIdsToDelete: Set<string> = new Set();
 
                   while (
                     nextUserIndex < uiMessages.length &&
@@ -521,7 +528,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                           'toolCallId' in part &&
                           typeof part.toolCallId === 'string'
                         ) {
-                          toolCallIdsToDelete.push(part.toolCallId);
+                          toolCallIdsToDelete.add(part.toolCallId);
                         }
                       }
                     }
@@ -534,15 +541,16 @@ export function createAiSlice<PC extends BaseRoomConfig>(
                     nextUserIndex - userMessageIndex,
                   );
 
+                  // Increment messagesRevision to force useChat reset
+                  session.messagesRevision =
+                    (session.messagesRevision || 0) + 1;
+
                   // Clean up toolAdditionalData for deleted messages
                   if (session.toolAdditionalData) {
                     // Remove data keyed by the toolCallId from the deleted messages
                     toolCallIdsToDelete.forEach((toolCallId) => {
-                      if (
-                        session.toolAdditionalData &&
-                        session.toolAdditionalData[toolCallId]
-                      ) {
-                        delete session.toolAdditionalData[toolCallId];
+                      if (session.toolAdditionalData![toolCallId]) {
+                        delete session.toolAdditionalData![toolCallId];
                       }
                     });
                   }
