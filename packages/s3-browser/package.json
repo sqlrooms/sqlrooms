@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/s3-browser",
-  "version": "0.24.10",
+  "version": "0.26.0-rc.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,20 +18,15 @@
     "access": "public"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
-    "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/s3-browser-config": "workspace:*",
+    "@aws-sdk/client-s3": "^3.894.0",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "immer": "^10.1.1",
-    "lucide-react": "^0.474.0",
-    "zod": "^3.25.73",
-    "zustand": "^5.0.3"
+    "lucide-react": "^0.544.0",
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
     "react": ">=18",
-    "react-dom": ">=18",
-    "react-hook-form": "^7.57.0"
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",

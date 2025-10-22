@@ -1,5 +1,5 @@
 import * as arrow from 'apache-arrow';
-import {FC, useState} from 'react';
+import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
   DataTablePaginatedProps,
 } from './DataTablePaginated';
@@ -13,13 +13,20 @@ export const DataTableArrowPaginated: FC<{
   footerActions?: DataTablePaginatedProps<any>['footerActions'];
   pageSize?: number;
 }> = ({className, table, fontSize, footerActions, pageSize = 100}) => {
-  const adt = useArrowDataTable(table);
   const [pagination, setPagination] = useState<PaginationState | undefined>(
     // If the table has less than pageSize rows, don't show pagination.
     table?.numRows && table.numRows <= pageSize
       ? undefined
       : {pageIndex: 0, pageSize},
   );
+  const pageData = useMemo(() => {
+    if (!table || !pagination) return table;
+    const startIndex = pagination.pageIndex * pagination.pageSize;
+    const endIndex = startIndex + pagination.pageSize;
+    return table.slice(startIndex, endIndex);
+  }, [table, pagination]);
+
+  const adt = useArrowDataTable(pageData);
   if (!adt) {
     return <div className="p-4 text-xs">No data</div>;
   }

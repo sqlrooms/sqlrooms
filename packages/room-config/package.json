@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/room-config",
-  "version": "0.24.10",
+  "version": "0.26.0-rc.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -19,10 +19,11 @@
   },
   "dependencies": {
     "@sqlrooms/layout-config": "workspace:*",
-    "zod": "^3.25.73"
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
-    "react": ">=18"
+    "react": ">=18",
+    "react-dom": ">=18"
   },
   "scripts": {
     "dev": "tsc -w",

@@ -58,7 +58,9 @@ export type DuckDbSliceState = Slice & {
      */
     schemaTrees?: DbSchemaNode[];
     /**
-     * Cache of currently running query handles
+     * Cache of currently running query handles.
+     * This is only used for running queries to deduplicate them (especially for useSql),
+     * the cache is cleared when the query is completed.
      */
     queryCache: {[key: string]: QueryHandle};
     /**
@@ -179,8 +181,7 @@ export type DuckDbSliceState = Slice & {
 
     /**
      * Delete a table with optional schema and database
-     * @param tableName - The name of the table to delete
-     * @param options - Optional parameters including schema and database
+     * @param tableName - The name of the table to delete (qualified or plain)
      */
     dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
 
@@ -218,6 +219,7 @@ export type DuckDbSliceState = Slice & {
                 table_name: string;
               };
               select_list: Record<string, unknown>[];
+              type: string;
             };
           }[];
         }
@@ -243,7 +245,7 @@ export function createDuckDbSlice({
         isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
-        schemaTree: undefined,
+        schemaTrees: undefined,
         queryCache: {},
 
         setConnector: (connector: DuckDbConnector) => {
@@ -359,10 +361,33 @@ export function createDuckDbSlice({
         ): Promise<DataTable[]> {
           const {schema, database, table} = filter || {};
           const describeResults = await connector.query(
-            `FROM (DESCRIBE)
-             SELECT 
+            `WITH tables_and_views AS (
+              FROM duckdb_tables() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                table_name AS name,
+                sql,
+                comment,
+                estimated_size,
+                FALSE AS isView
+              UNION
+              FROM duckdb_views() SELECT
+                database_name AS database,
+                schema_name AS schema,
+                view_name AS name,
+                sql,
+                comment,
+                NULL estimated_size,
+                TRUE AS isView
+            )
+            SELECT 
+                isView,
                 database, schema,
-                name, column_names, column_types
+                name, column_names, column_types,
+                sql, comment,
+                estimated_size
+            FROM (DESCRIBE)
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -378,9 +403,15 @@ export function createDuckDbSlice({
 
           const newTables: DataTable[] = [];
           for (let i = 0; i < describeResults.numRows; i++) {
+            const isView = describeResults.getChild('isView')?.get(i);
             const database = describeResults.getChild('database')?.get(i);
             const schema = describeResults.getChild('schema')?.get(i);
             const table = describeResults.getChild('name')?.get(i);
+            const sql = describeResults.getChild('sql')?.get(i);
+            const comment = describeResults.getChild('comment')?.get(i);
+            const estimatedSize = describeResults
+              .getChild('estimated_size')
+              ?.get(i);
             const columnNames = describeResults
               .getChild('column_names')
               ?.get(i);
@@ -400,6 +431,15 @@ export function createDuckDbSlice({
               schema,
               tableName: table,
               columns,
+              sql,
+              comment,
+              isView: Boolean(isView),
+              rowCount:
+                typeof estimatedSize === 'bigint'
+                  ? Number(estimatedSize)
+                  : estimatedSize === null
+                    ? undefined
+                    : estimatedSize,
             });
           }
           return newTables;
@@ -568,8 +608,23 @@ export function createDuckDbSlice({
   });
 }
 
-type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> & DuckDbSliceState;
+/**
+ * @internal
+ */
+export type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> &
+  DuckDbSliceState;
 
+/**
+ * @internal
+ * Select values from the room store that includes the DuckDB slice.
+ *
+ * This is a typed wrapper around `useBaseRoomStore` that narrows the
+ * state to `RoomStateWithDuckDb` so selectors can access `db` safely.
+ *
+ * @typeParam T - The selected slice of state returned by the selector
+ * @param selector - Function that selects a value from the store state
+ * @returns The selected value of type `T`
+ */
 export function useStoreWithDuckDb<T>(
   selector: (state: RoomStateWithDuckDb) => T,
 ): T {

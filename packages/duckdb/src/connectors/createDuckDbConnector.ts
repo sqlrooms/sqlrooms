@@ -4,12 +4,24 @@ import {
   WasmDuckDbConnectorOptions,
   WasmDuckDbConnector,
 } from './WasmDuckDbConnector';
+import {createWebSocketDuckDbConnector} from './WebSocketDuckDbConnector';
 
-export type DuckDbConnectorType = 'wasm';
+export type DuckDbConnectorType = 'wasm' | 'ws';
 
-export type DuckDbConnectorOptions = {
-  type: DuckDbConnectorType;
-} & WasmDuckDbConnectorOptions;
+/**
+ * Options for creating a DuckDB connector instance.
+ *
+ * @public
+ */
+export type DuckDbConnectorOptions =
+  | ({type: 'wasm'} & WasmDuckDbConnectorOptions)
+  | {
+      type: 'ws';
+      /** WebSocket server URL */
+      wsUrl?: string;
+      /** SQL to run after connection */
+      initializationQuery?: string;
+    };
 
 export function createDuckDbConnector(
   options: DuckDbConnectorOptions,
@@ -18,6 +30,8 @@ export function createDuckDbConnector(
   switch (type) {
     case 'wasm':
       return createWasmDuckDbConnector(rest);
+    case 'ws':
+      return createWebSocketDuckDbConnector(rest);
     default:
       throw new Error(`Unsupported DuckDB connector type: ${type}`);
   }

@@ -40,15 +40,15 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Check the [Example applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
 
 - **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
+- **Check the [Example Applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
 
-- **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
+<!-- - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
 
-- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration.
+- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration. -->
 
 <!-- END:overview.md -->
 
@@ -56,7 +56,7 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Modular Architecture](http://sqlrooms.org/modular-architecture) and [Key Concepts](http://sqlrooms.org/key-concepts) pages.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](http://sqlrooms.org/key-concepts) and [Modular Architecture](http://sqlrooms.org/modular-architecture) pages.
 
 ## Try the Minimal Example
 

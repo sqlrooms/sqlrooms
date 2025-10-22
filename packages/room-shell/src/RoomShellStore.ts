@@ -14,7 +14,6 @@ import {
   createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
-import {DEFAULT_MOSAIC_LAYOUT} from '@sqlrooms/layout-config';
 import {
   BaseRoomConfig,
   DataSource,
@@ -22,6 +21,9 @@ import {
   FileDataSource,
   SqlQueryDataSource,
   UrlDataSource,
+  isFileDataSource,
+  isUrlDataSource,
+  isSqlQueryDataSource,
 } from '@sqlrooms/room-config';
 import {
   RoomState,
@@ -41,6 +43,7 @@ import {
 import {castDraft, produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
+import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -52,13 +55,10 @@ export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
   RoomShellSliceState<PC>
 >;
 
-export const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
+const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
   DuckDbSliceConfig &
   LayoutSliceConfig = {
-  title: '',
-  layout: DEFAULT_MOSAIC_LAYOUT,
-  description: '',
-  dataSources: [],
+  ...createDefaultBaseRoomConfig(),
   ...createDefaultDuckDbConfig(),
   ...createDefaultLayoutConfig(),
 };
@@ -119,7 +119,6 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
       query: string,
       oldTableName?: string,
     ): Promise<void>;
-    removeSqlQueryDataSource(tableName: string): Promise<void>;
     areDatasetsReady(): boolean;
 
     addRoomFile(
@@ -127,7 +126,20 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
       tableName?: string,
       loadFileOptions?: LoadFileOptions,
     ): Promise<DataTable | undefined>;
-    removeRoomFile(pathname: string): void;
+    /**
+     * @deprecated Use removeDataSource or removeRoomFile instead
+     */
+    removeSqlQueryDataSource(tableName: string): Promise<void>;
+    /**
+     * Removes a data source from the room by tableName.
+     * @param tableName - The name of the table of the data source to remove.
+     */
+    removeDataSource(tableName: string): Promise<void>;
+    /**
+     * Removes a file data source from the room by pathname.
+     * @param pathname - The pathname of the file to remove.
+     */
+    removeRoomFile(pathname: string): Promise<void>;
     setRoomFiles(info: RoomFileInfo[]): void;
     setRoomFileProgress(pathname: string, fileState: RoomFileState): void;
     addDataSource: (
@@ -136,12 +148,13 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
     ) => Promise<void>;
   };
 
-export type RoomShellSliceState<PC extends BaseRoomConfig> = RoomState<PC> & {
-  initialize?: () => Promise<void>;
-  config: PC;
-  room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
-} & DuckDbSliceState &
-  LayoutSliceState;
+export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
+  RoomState<PC> & {
+    initialize?: () => Promise<void>;
+    config: PC;
+    room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
+  } & DuckDbSliceState &
+    LayoutSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
@@ -158,9 +171,9 @@ const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 
-export function createRoomShellSlice<PC extends BaseRoomConfig>(
-  props: InitialState<PC>,
-): StateCreator<RoomShellSliceState<PC>> {
+export function createRoomShellSlice<
+  PC extends BaseRoomConfig = BaseRoomConfig,
+>(props: InitialState<PC>): StateCreator<RoomShellSliceState<PC>> {
   const slice: StateCreator<RoomShellSliceState<PC>> = (set, get, store) => {
     const {
       connector,
@@ -322,20 +335,6 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           await get().db.refreshTableSchemas();
         },
 
-        removeSqlQueryDataSource: async (tableName) => {
-          const {db} = get();
-          await db.dropTable(tableName);
-          set((state) =>
-            produce(state, (draft) => {
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) => d.tableName !== tableName,
-              );
-              delete draft.room.dataSourceStates[tableName];
-            }),
-          );
-          await get().db.refreshTableSchemas();
-        },
-
         setRoomFiles: (roomFiles) =>
           set((state) =>
             produce(state, (draft) => {
@@ -387,20 +386,40 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           );
           return get().db.findTableByName(tableName);
         },
-
-        removeRoomFile(pathname) {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.roomFiles = draft.room.roomFiles.filter(
-                (f) => f.pathname !== pathname,
-              );
-              draft.config.dataSources = draft.config.dataSources.filter(
-                (d) =>
-                  d.type !== DataSourceTypes.Enum.file ||
-                  d.fileName !== pathname,
-              );
-            }),
+        removeSqlQueryDataSource: async (tableName) => {
+          await get().room.removeDataSource(tableName);
+        },
+        removeDataSource: async (tableName) => {
+          const {db} = get();
+          const dataSource = get().config.dataSources.find(
+            (d) => d.tableName === tableName,
           );
+          if (dataSource) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.config.dataSources = draft.config.dataSources.filter(
+                  (d) => d.tableName !== tableName,
+                );
+                if (dataSource && isFileDataSource(dataSource)) {
+                  draft.room.roomFiles = draft.room.roomFiles.filter(
+                    (f) => f.pathname !== dataSource.fileName,
+                  );
+                }
+                delete draft.room.dataSourceStates[tableName];
+              }),
+            );
+            await db.dropTable(tableName);
+            await db.refreshTableSchemas();
+          }
+        },
+
+        removeRoomFile: async (pathname) => {
+          const dataSource = get().config.dataSources.find(
+            (d) => isFileDataSource(d) && d.fileName === pathname,
+          );
+          if (dataSource) {
+            await get().room.removeDataSource(dataSource.tableName);
+          }
         },
 
         setRoomFileProgress(pathname, fileState) {
@@ -478,23 +497,20 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       );
 
       const filesToDownload = pendingDataSources.filter((ds) => {
-        switch (ds.type) {
-          case DataSourceTypes.Enum.file:
-            return !roomFilesProgress[ds.fileName];
-          case DataSourceTypes.Enum.url:
-            return !roomFilesProgress[ds.url];
-          default:
-            return false;
+        if (isFileDataSource(ds)) {
+          return !roomFilesProgress[ds.fileName];
         }
+        if (isUrlDataSource(ds)) {
+          return !roomFilesProgress[ds.url];
+        }
+        return false;
       }) as (FileDataSource | UrlDataSource)[];
 
       if (filesToDownload.length > 0) {
         await downloadRoomFiles(filesToDownload);
       }
 
-      const queriesToRun = pendingDataSources.filter(
-        (ds) => ds.type === DataSourceTypes.Enum.sql,
-      );
+      const queriesToRun = pendingDataSources.filter(isSqlQueryDataSource);
 
       if (queriesToRun.length > 0) {
         await runDataSourceQueries(queriesToRun);
@@ -517,8 +533,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
       const {captureException, setTaskProgress, setRoomFileProgress} =
         get().room;
       filesToDownload.forEach((ds) => {
-        const fileName =
-          ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
+        const fileName = isFileDataSource(ds) ? ds.fileName : ds.url;
         set((state) =>
           produce(state, (draft) => {
             const info = {
@@ -545,8 +560,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
 
       const loadedFiles = await Promise.all(
         filesToDownload.map(async (ds) => {
-          const fileName =
-            ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
+          const fileName = isFileDataSource(ds) ? ds.fileName : ds.url;
           const onProgress = (progress: ProgressInfo) => {
             setRoomFileProgress(fileName, {
               status: 'download',
@@ -556,26 +570,22 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           };
           try {
             let downloadedFile: Uint8Array | File;
-            switch (ds.type) {
-              case DataSourceTypes.Enum.file: {
-                const {fileDataSourceLoader} = get().room;
-                if (!fileDataSourceLoader) {
-                  throw new Error('fileDataSourceLoader is not defined');
-                }
-                downloadedFile = await fileDataSourceLoader(ds, onProgress);
-                break;
+            if (isFileDataSource(ds)) {
+              const {fileDataSourceLoader} = get().room;
+              if (!fileDataSourceLoader) {
+                throw new Error('fileDataSourceLoader is not defined');
               }
-              case DataSourceTypes.Enum.url: {
-                const url = ds.url;
-                downloadedFile = await downloadFile(url, {
-                  ...(ds.type === DataSourceTypes.Enum.url && {
-                    method: ds.httpMethod,
-                    headers: ds.headers,
-                  }),
-                  onProgress,
-                });
-                break;
-              }
+              downloadedFile = await fileDataSourceLoader(ds, onProgress);
+            } else if (isUrlDataSource(ds)) {
+              const url = ds.url;
+              downloadedFile = await downloadFile(url, {
+                method: ds.httpMethod,
+                headers: ds.headers,
+                onProgress,
+              });
+            } else {
+              // This should never happen as filesToDownload only contains FileDataSource | UrlDataSource
+              throw new Error('Unsupported data source type');
             }
             setRoomFileProgress(fileName, {status: 'done'});
             updateTotalFileDownloadProgress();
@@ -583,7 +593,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
             await db.connector.loadFile(
               downloadedFile instanceof File
                 ? downloadedFile
-                : new File([downloadedFile], fileName),
+                : new File([new Uint8Array(downloadedFile)], fileName),
               ds.tableName,
               ds.loadOptions,
             );

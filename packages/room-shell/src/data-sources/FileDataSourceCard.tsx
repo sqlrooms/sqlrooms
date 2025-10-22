@@ -69,7 +69,7 @@ const FileDataSourceCard: FC<{
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleRemoveFromRoom}>
                   <XIcon className="mr-2 h-4 w-4" />
-                  Remove from room
+                  Remove file
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <FileDownIcon className="mr-2 h-4 w-4" />

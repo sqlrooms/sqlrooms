@@ -7,6 +7,7 @@ export type TableColumn = {
 
 export type DataTable = {
   table: QualifiedTableName;
+  isView: boolean;
   /** @deprecated Use table.database instead */
   database?: string;
   /** @deprecated Use table.schema instead */
@@ -16,6 +17,8 @@ export type DataTable = {
   columns: TableColumn[];
   rowCount?: number;
   inputFileName?: string;
+  sql?: string;
+  comment?: string;
 };
 export type ColumnTypeCategory =
   | 'number'
@@ -52,9 +55,7 @@ export type ColumnNodeObject = BaseNodeObject & {
 
 export type TableNodeObject = BaseNodeObject & {
   type: 'table';
-  schema: string;
-  database: string;
-};
+} & DataTable;
 
 export type SchemaNodeObject = BaseNodeObject & {
   type: 'schema';

@@ -17,6 +17,7 @@ import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
+import {createId} from '@paralleldrive/cuid2';
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
@@ -60,6 +61,8 @@ export type SqlEditorSliceState = {
     tablesError?: string;
 
     queryResultLimit: number;
+    /** Options for the result limit dropdown */
+    queryResultLimitOptions: number[];
 
     /**
      * Run the currently selected query.
@@ -136,8 +139,10 @@ export function createSqlEditorSlice<
   PC extends BaseRoomConfig & DuckDbSliceConfig & SqlEditorSliceConfig,
 >({
   queryResultLimit = 100,
+  queryResultLimitOptions = [100, 500, 1000],
 }: {
   queryResultLimit?: number;
+  queryResultLimitOptions?: number[];
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => {
     return {
@@ -145,19 +150,20 @@ export function createSqlEditorSlice<
         // Initialize runtime state
         isTablesLoading: false,
         queryResultLimit,
+        queryResultLimitOptions,
 
         exportResultsToCsv: (results, filename) => {
           if (!results) return;
           const blob = new Blob([csvFormat(results.toArray())], {
             type: 'text/plain;charset=utf-8',
           });
-          saveAs(blob, filename || `export-${genRandomStr(5)}.csv`);
+          saveAs(blob, filename || `export-${createId().substring(0, 5)}.csv`);
         },
 
         createQueryTab: (initialQuery = '') => {
           const sqlEditorConfig = get().config.sqlEditor;
           const newQuery = {
-            id: genRandomStr(8),
+            id: createId(),
             name: generateUniqueName(
               'Untitled',
               sqlEditorConfig.queries.map((q) => q.name),
