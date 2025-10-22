@@ -67,28 +67,21 @@ export type AiSliceState = {
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
     // Chat transport for useChat hook
+    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
     /** Optional remote endpoint to use for chat; if empty, local transport is used */
     chatEndPoint: string;
-    /** Optional headers to send with remote endpoint */
     chatHeaders: Record<string, string>;
-    /** Get local chat transport for AI communication */
-    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
-    /** Get remote chat transport for AI communication */
     getRemoteChatTransport: (
       endpoint: string,
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
-    /** Chat handler: tool calls locally */
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    /** Chat handler: data messages from backend */
     onChatData: (dataPart: any) => void;
-    /** Chat handler: final assistant message */
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    /** Chat handler: error */
     onChatError: (error: unknown) => void;
   };
 };
@@ -438,22 +431,54 @@ export function createAiSlice<PC extends BaseRoomConfig>(
             return;
           }
 
+          const promptText = get().ai.analysisPrompt;
+
           set((state) =>
             produce(state, (draft) => {
               draft.ai.analysisAbortController = abortController;
               draft.ai.isRunningAnalysis = true;
+
+              // Add incomplete analysis result to session immediately for instant UI rendering
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === currentSession.id,
+              );
+              if (session) {
+                // Add incomplete analysis result with a temporary ID
+                // This will be updated in onChatFinish with the actual user message ID
+                session.analysisResults.push({
+                  id: '__pending__',
+                  prompt: promptText,
+                  isCompleted: false,
+                });
+              }
             }),
           );
 
-          // Delegate to chat hook; lifecycle managed by onChatFinish/onChatError
-          // Analysis result will be created in onChatFinish with the correct message ID
-          sendMessage({text: get().ai.analysisPrompt});
+          // The pending analysis result will be updated in onChatFinish with the correct message ID
+          sendMessage({text: promptText});
         },
 
         cancelAnalysis: () => {
+          const currentSession = get().ai.getCurrentSession();
           set((state) =>
             produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
+
+              // Remove pending analysis result if it exists
+              if (currentSession) {
+                const session = draft.ai.config.sessions.find(
+                  (s: AnalysisSessionSchema) => s.id === currentSession.id,
+                );
+                if (session) {
+                  const pendingIndex = session.analysisResults.findIndex(
+                    (result: AnalysisResultSchema) =>
+                      result.id === '__pending__',
+                  );
+                  if (pendingIndex !== -1) {
+                    session.analysisResults.splice(pendingIndex, 1);
+                  }
+                }
+              }
             }),
           );
           get().ai.analysisAbortController?.abort('Analysis cancelled');

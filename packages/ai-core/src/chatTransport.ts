@@ -241,7 +241,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
 
         store.getState().ai.setSessionUiMessages(currentSessionId, messages);
 
-        // Create analysis result with the user message ID for proper correlation
+        // Create or update analysis result with the user message ID for proper correlation
         store.setState((state: AiSliceState) =>
           produce(state, (draft: AiSliceState) => {
             const targetSession = draft.ai.config.sessions.find(
@@ -255,24 +255,38 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               .slice(-1)[0];
 
             if (lastUserMessage) {
-              // Check if analysis result already exists for this user message
-              const existingResult = targetSession.analysisResults.find(
-                (result: any) => result.id === lastUserMessage.id,
+              // Extract text content from user message
+              const promptText = lastUserMessage.parts
+                .filter((part) => part.type === 'text')
+                .map((part) => (part as {text: string}).text)
+                .join('');
+
+              // Check if there's a pending analysis result
+              const pendingIndex = targetSession.analysisResults.findIndex(
+                (result: any) => result.id === '__pending__',
               );
 
-              if (!existingResult) {
-                // Extract text content from user message
-                const promptText = lastUserMessage.parts
-                  .filter((part) => part.type === 'text')
-                  .map((part) => (part as {text: string}).text)
-                  .join('');
-
-                // Create analysis result with the same ID as the user message
-                targetSession.analysisResults.push({
+              if (pendingIndex !== -1) {
+                // Update the pending result with actual data
+                targetSession.analysisResults[pendingIndex] = {
                   id: lastUserMessage.id,
                   prompt: promptText,
                   isCompleted: true,
-                });
+                };
+              } else {
+                // Check if analysis result already exists for this user message
+                const existingResult = targetSession.analysisResults.find(
+                  (result: any) => result.id === lastUserMessage.id,
+                );
+
+                if (!existingResult) {
+                  // Create analysis result with the same ID as the user message
+                  targetSession.analysisResults.push({
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    isCompleted: true,
+                  });
+                }
               }
             }
           }),
@@ -310,28 +324,43 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
                 .slice(-1)[0];
 
               if (lastUserMessage) {
-                // Check if analysis result already exists for this user message
-                const existingResult = targetSession.analysisResults.find(
-                  (result: any) => result.id === lastUserMessage.id,
+                // Extract text content from user message
+                const promptText = lastUserMessage.parts
+                  .filter((part: any) => part.type === 'text')
+                  .map((part: any) => (part as {text: string}).text)
+                  .join('');
+
+                // Check if there's a pending analysis result
+                const pendingIndex = targetSession.analysisResults.findIndex(
+                  (result: any) => result.id === '__pending__',
                 );
 
-                if (!existingResult) {
-                  // Extract text content from user message
-                  const promptText = lastUserMessage.parts
-                    .filter((part: any) => part.type === 'text')
-                    .map((part: any) => (part as {text: string}).text)
-                    .join('');
-
-                  // Create analysis result with the same ID as the user message
-                  targetSession.analysisResults.push({
+                if (pendingIndex !== -1) {
+                  // Update the pending result with error
+                  targetSession.analysisResults[pendingIndex] = {
                     id: lastUserMessage.id,
                     prompt: promptText,
                     errorMessage: {error: errMsg},
                     isCompleted: true,
-                  });
+                  };
                 } else {
-                  // Update existing result with error message
-                  existingResult.errorMessage = {error: errMsg};
+                  // Check if analysis result already exists for this user message
+                  const existingResult = targetSession.analysisResults.find(
+                    (result: any) => result.id === lastUserMessage.id,
+                  );
+
+                  if (!existingResult) {
+                    // Create analysis result with the same ID as the user message
+                    targetSession.analysisResults.push({
+                      id: lastUserMessage.id,
+                      prompt: promptText,
+                      errorMessage: {error: errMsg},
+                      isCompleted: true,
+                    });
+                  } else {
+                    // Update existing result with error message
+                    existingResult.errorMessage = {error: errMsg};
+                  }
                 }
               }
             }
