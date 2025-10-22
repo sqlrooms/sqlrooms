@@ -18,10 +18,13 @@
     "access": "public"
   },
   "dependencies": {
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^7.0.0",
     "@kepler.gl/actions": "3.2.0",
     "@kepler.gl/components": "3.2.0",
     "@kepler.gl/constants": "3.2.0",
     "@kepler.gl/duckdb": "3.2.0",
+    "@kepler.gl/layers": "3.2.0",
     "@kepler.gl/localization": "3.2.0",
     "@kepler.gl/processors": "3.2.0",
     "@kepler.gl/reducers": "3.2.0",
@@ -36,6 +39,7 @@
     "@sqlrooms/s3-browser": "workspace:*",
     "@sqlrooms/s3-utils": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "apache-arrow": "17.0.0",
     "immer": "^10.1.1",
     "lucide-react": "^0.475.0",
     "mapbox-gl": "^1.13.1",
