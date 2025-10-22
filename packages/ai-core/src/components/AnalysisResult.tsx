@@ -159,9 +159,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             const additionalData = toolAdditionalData[toolCallId];
 
             return (
-              <>
+              <div key={`tool-call-${toolCallId}`}>
                 <ToolCallInfo
-                  key={`tool-call-${toolCallId}`}
                   toolName={toolName}
                   input={input}
                   isCompleted={isCompleted}
@@ -169,7 +168,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                 />
                 <div data-tool-call-id={toolCallId}>
                   <ToolResult
-                    key={toolCallId}
                     toolCallId={toolCallId}
                     toolData={{
                       toolCallId,
@@ -186,7 +184,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                     }
                   />
                 </div>
-              </>
+              </div>
             );
           }
           return null;
