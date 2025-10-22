@@ -11,12 +11,7 @@ const systemPrompt = `You are a helpful assistant that can answer questions and 
 
 export async function POST(req: Request) {
   try {
-    const {id: requestId, messages, modelProvider, model} = await req.json();
-
-    console.log(`Processing chat request ${requestId}`, {
-      modelProvider,
-      model,
-    });
+    const {messages, modelProvider, model} = await req.json();
 
     const stream = createUIMessageStream({
       execute: async ({writer}) => {

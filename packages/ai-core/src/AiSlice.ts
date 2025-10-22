@@ -138,7 +138,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     chatHeaders = {},
   } = params;
 
-  return createBaseSlice<PC, AiSliceState>((set, get) => {
+  return createBaseSlice<PC, AiSliceState>((set, get, store) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),
@@ -611,12 +611,12 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         getLocalChatTransport: () => {
           const state = get();
           return createLocalChatTransportFactory({
-            get: () => get(),
+            store,
             defaultProvider: defaultProvider,
             defaultModel: defaultModel,
             apiKey: state.ai.getApiKeyFromSettings(),
             baseUrl: state.ai.getBaseUrlFromSettings(),
-            getInstructions: () => get().ai.getFullInstructions(),
+            getInstructions: () => store.getState().ai.getFullInstructions(),
             getCustomModel,
           })();
         },
@@ -626,12 +626,12 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           headers?: Record<string, string>,
         ) =>
           createRemoteChatTransportFactory({
-            get: () => get(),
+            store,
             defaultProvider,
             defaultModel,
           })(endpoint, headers),
 
-        ...createChatHandlers({get, set}),
+        ...createChatHandlers({store}),
       },
     };
   });

@@ -12,13 +12,7 @@ import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import {AddToolResult} from './hooks/useAiChat';
-
-type GetAiSliceState = () => AiSliceState;
-type SetAiSliceState = <T>(
-  partial: T | Partial<T> | ((state: T) => T | Partial<T>),
-  replace?: false | undefined,
-  action?: string,
-) => void;
+import type {StoreApi} from '@sqlrooms/room-store';
 
 type ToolCall = {
   input: string;
@@ -28,7 +22,7 @@ type ToolCall = {
 };
 
 export type ChatTransportConfig = {
-  get: GetAiSliceState;
+  store: StoreApi<AiSliceState>;
   defaultProvider: string;
   defaultModel: string;
   apiKey: string;
@@ -45,7 +39,7 @@ export type ChatTransportConfig = {
 };
 
 export function createLocalChatTransportFactory({
-  get,
+  store,
   defaultProvider,
   defaultModel,
   apiKey,
@@ -57,7 +51,7 @@ export function createLocalChatTransportFactory({
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
       // Resolve provider/model and client at call time to pick up latest settings
-      const state = get();
+      const state = store.getState();
       const currentSession = state.ai.getCurrentSession();
       const provider = currentSession?.modelProvider || defaultProvider;
       const modelId = currentSession?.model || defaultModel;
@@ -82,14 +76,16 @@ export function createLocalChatTransportFactory({
 
       // update the onToolCompleted handler to update the tool additional data in the store
       const onToolCompleted = (toolCallId: string, additionalData: unknown) => {
-        const sessionId = get().ai.config.currentSessionId;
+        const sessionId = store.getState().ai.config.currentSessionId;
         if (!sessionId) return;
 
-        get().ai.setSessionToolAdditionalData(
-          sessionId,
-          toolCallId,
-          additionalData,
-        );
+        store
+          .getState()
+          .ai.setSessionToolAdditionalData(
+            sessionId,
+            toolCallId,
+            additionalData,
+          );
       };
 
       const tools = Object.entries(state.ai.tools || {}).reduce(
@@ -122,14 +118,14 @@ export function createLocalChatTransportFactory({
 }
 
 export function createRemoteChatTransportFactory(params: {
-  get: GetAiSliceState;
+  store: StoreApi<AiSliceState>;
   defaultProvider: string;
   defaultModel: string;
 }) {
   return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Get current session's model and provider at request time
-      const state = params.get();
+      const state = params.store.getState();
       const currentSession = state.ai.getCurrentSession();
       const modelProvider =
         currentSession?.modelProvider || params.defaultProvider;
@@ -161,13 +157,7 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
-export function createChatHandlers({
-  get,
-  set,
-}: {
-  get: GetAiSliceState;
-  set: SetAiSliceState;
-}) {
+export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
   return {
     onChatToolCall: async ({
       toolCall,
@@ -178,8 +168,8 @@ export function createChatHandlers({
     }) => {
       const {input, toolCallId, toolName} = toolCall;
       try {
-        // handle local tools
-        const state = get();
+        // handle client tools
+        const state = store.getState();
         const tools = Object.entries(state.ai.tools || {}).reduce(
           (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
             // @ts-expect-error - only tool has isServerTool property
@@ -228,7 +218,6 @@ export function createChatHandlers({
           }
         }
       } catch (error) {
-        console.error('Error in onChatToolCall:', error);
         if (addToolResult) {
           addToolResult({
             tool: toolName,
@@ -242,41 +231,30 @@ export function createChatHandlers({
     onChatData: (dataPart: any) => {
       // Handle data messages from the backend
       if (dataPart.type === 'data-tool-additional-output') {
-        const {toolCallId, toolName, output, timestamp} = dataPart.data;
-        console.log('Received tool additional output:', {
-          toolCallId,
-          toolName,
-          output,
-          timestamp,
-        });
+        const {toolCallId, output} = dataPart.data;
 
         // Store the additional data in the session
-        const currentSessionId = get().ai.config.currentSessionId;
+        const currentSessionId = store.getState().ai.config.currentSessionId;
         if (currentSessionId) {
-          get().ai.setSessionToolAdditionalData(
-            currentSessionId,
-            toolCallId,
-            output,
-          );
+          store
+            .getState()
+            .ai.setSessionToolAdditionalData(
+              currentSessionId,
+              toolCallId,
+              output,
+            );
         }
       }
     },
-    onChatFinish: ({
-      message,
-      messages,
-    }: {
-      message: UIMessage;
-      messages: UIMessage[];
-    }) => {
+    onChatFinish: ({messages}: {messages: UIMessage[]}) => {
       try {
-        console.log('Chat finish:', message, messages);
-        const currentSessionId = get().ai.config.currentSessionId;
+        const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
 
-        get().ai.setSessionUiMessages(currentSessionId, messages);
+        store.getState().ai.setSessionUiMessages(currentSessionId, messages);
 
         // Create analysis result with the user message ID for proper correlation
-        set((state: AiSliceState) =>
+        store.setState((state: AiSliceState) =>
           produce(state, (draft: AiSliceState) => {
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
@@ -311,7 +289,7 @@ export function createChatHandlers({
             }
           }),
         );
-        set((state: AiSliceState) =>
+        store.setState((state: AiSliceState) =>
           produce(state, (draft: AiSliceState) => {
             draft.ai.isRunningAnalysis = false;
             draft.ai.analysisPrompt = '';
@@ -320,6 +298,7 @@ export function createChatHandlers({
         );
       } catch (err) {
         console.error('onChatFinish error:', err);
+        throw err;
       }
     },
     onChatError: (error: unknown) => {
@@ -328,8 +307,8 @@ export function createChatHandlers({
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
-        const currentSessionId = get().ai.config.currentSessionId;
-        set((state: AiSliceState) =>
+        const currentSessionId = store.getState().ai.config.currentSessionId;
+        store.setState((state: AiSliceState) =>
           produce(state, (draft: AiSliceState) => {
             if (!currentSessionId) return;
             const targetSession = draft.ai.config.sessions.find(
@@ -372,8 +351,9 @@ export function createChatHandlers({
             draft.ai.analysisAbortController = undefined;
           }),
         );
-      } catch (e) {
-        console.error('Failed to store chat error:', e);
+      } catch (err) {
+        console.error('Failed to store chat error:', err);
+        throw err;
       }
     },
   };

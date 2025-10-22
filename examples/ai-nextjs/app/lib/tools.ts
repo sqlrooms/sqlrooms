@@ -13,10 +13,6 @@ const webSearchSchema = z.object({
   query: z.string().describe('The search query'),
 });
 
-// open questions
-// testings
-// ui,
-
 const webSearchTool: OpenAssistantTool = {
   name: 'webSearch',
   description: 'Search the web for information',
