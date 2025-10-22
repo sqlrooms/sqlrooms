@@ -355,6 +355,7 @@ export function createAiSlice<PC extends BaseRoomConfig & AiSliceConfig>(
               tools: get().ai.tools,
               maxSteps: getMaxSteps?.() || get().ai.maxSteps || 50,
               getInstructions,
+              historyAnalysis: currentSession.analysisResults,
               onStreamResult: (isCompleted, streamMessage) => {
                 set(
                   makeResultsAppender({
