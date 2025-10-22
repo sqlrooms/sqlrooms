@@ -35,7 +35,7 @@ export function createDefaultAiSettingsConfig(
       // },
     ],
     modelParameters: {
-      maxSteps: 5,
+      maxSteps: 50,
       additionalInstruction: '',
     },
     ...props,

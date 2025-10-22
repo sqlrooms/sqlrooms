@@ -1,5 +1,5 @@
-import {extendedTool} from '@openassistant/utils';
-import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
+import {AiSliceState} from '@sqlrooms/ai-core';
+import {OpenAssistantTool} from '@openassistant/utils';
 import {
   arrowTableToJson,
   DuckDbConnector,
@@ -17,6 +17,22 @@ export const QueryToolParameters = z.object({
 });
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 
+export type QueryToolLlmResult = {
+  success: boolean;
+  data?: {
+    type: 'query';
+    summary: Record<string, unknown>[] | null;
+    firstRows?: Record<string, unknown>[];
+  };
+  details?: string;
+  errorMessage?: string;
+};
+
+export type QueryToolAdditionalData = {
+  title: string;
+  sqlQuery: string;
+};
+
 export type QueryToolOptions = {
   readOnly?: boolean;
   autoSummary?: boolean;
@@ -26,18 +42,25 @@ export type QueryToolOptions = {
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: QueryToolOptions,
-): AiSliceTool {
+): OpenAssistantTool<
+  typeof QueryToolParameters,
+  QueryToolLlmResult,
+  QueryToolAdditionalData,
+  unknown
+> {
   const {
     readOnly = true,
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return extendedTool({
+  return {
+    name: 'query',
     description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    execute: async ({type, sqlQuery}) => {
+    execute: async (params: QueryToolParameters) => {
+      const {type, sqlQuery} = params;
       try {
         const connector = await store.getState().db.getConnector();
         // TODO use options.abortSignal: maybe call db.cancelPendingQuery
@@ -118,7 +141,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
       }
     },
     component: QueryToolResult,
-  });
+  };
 }
 
 /**

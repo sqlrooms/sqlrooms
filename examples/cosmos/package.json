@@ -25,7 +25,7 @@
     "lucide-react": "^0.544.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^3.25.76",
+    "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
   "devDependencies": {

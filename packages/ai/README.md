@@ -19,40 +19,50 @@ npm install @sqlrooms/ai
 yarn add @sqlrooms/ai
 ```
 
-Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use OpenAI, you can install the `@ai-sdk/openai` package:
-
-```bash
-npm install @ai-sdk/openai
-```
-
-Google LLM provider:
-
-```bash
-npm install @ai-sdk/google
-```
-
-Anthropic LLM provider:
-
-```bash
-npm install @ai-sdk/anthropic
-```
-
-DeepSeek LLM provider:
-
-```bash
-npm install @ai-sdk/deepseek
-```
-
-XAI LLM provider:
+Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use XAI, you can install the `@ai-sdk/xai` package:
 
 ```bash
 npm install @ai-sdk/xai
 ```
 
-ollama LLM provider:
+Since version 0.26.0, you don't need to install the LLM providers anymore. You can use AiSettingsSlice to configure the LLM providers, and sqlrooms/ai will use the configured LLM providers via OpenAI compatible SDK.
 
-```bash
-npm install ollama-ai-provider-v2
+```tsx
+import {createAiSettingsSlice} from '@sqlrooms/ai';
+
+// Create a room store with AI capabilities
+const {roomStore, useRoomStore} = createRoomStore({
+  ...createAiSettingsSlice({
+    config: {
+      providers: {
+    openai: {
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      models: [
+        {
+          id: 'gpt-4.1',
+          modelName: 'gpt-4.1',
+        },
+      },
+    },
+  }),
+});
+```
+
+You can also pass a custom model provider to the AiSlice.
+
+```tsx
+import {createAiSlice} from '@sqlrooms/ai';
+
+// Create a room store with AI capabilities
+const {roomStore, useRoomStore} = createRoomStore({
+  ...createAiSlice({
+    getCustomModel: () => {
+      return xai('grok-4');
+    },
+    ...
+  }),
+});
 ```
 
 ## Basic Usage
@@ -71,15 +81,17 @@ const {roomStore, useRoomStore} = createRoomStore({
       // Your room configuration
     },
   }),
+  // Add AI settings slice
+  ...createAiSettingsSlice({
+    config: {
+      // Your AI settings configuration
+    },
+  }),
   // Add AI slice
   ...createAiSlice({
-    getApiKey: (modelProvider) => {
-      // Return API key for the specified model provider
-      return process.env.OPENAI_API_KEY || '';
-    },
     initialAnalysisPrompt: 'What insights can you provide from my data?',
     // Optional: Add custom tools
-    customTools: {
+    tools: {
       // Your custom tools
     },
     // Optional: Custom instructions for the AI
@@ -124,8 +136,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         ...createDefaultSqlEditorConfig(),
       },
     }),
-    // AI slice
-    ...createAiSlice({
+    // AI settings slice
+    ...createAiSettingsSlice({
+      config: {
+        // Your AI settings configuration
+      },
+    }),
+    // Ai config slice
+    ...createAiConfigSlice({
       config: {
         // Optional: Pre-configured AI sessions
         sessions: [
@@ -139,12 +157,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         ],
         currentSessionId: 'default-session',
-      }
-      getApiKey: (modelProvider) => {
-        // Return API key based on provider
-        return apiKeys[modelProvider] || '';
       },
-      // Custom tools and instructions
+    }),
+    // AI slice
+    ...createAiSlice({
+      initialAnalysisPrompt: 'What insights can you provide from my data?',
+      tools: {
+        // Your custom tools
+      },
+      getInstructions: (tablesSchema) => {
+        return `Analyze the following tables: ${tablesSchema.map((t) => t.name).join(', ')}`;
+      },
     }),
     // SQL Editor slice
     ...createSqlEditorSlice(),
@@ -362,119 +385,7 @@ const ChartComponent = useRoomStore((state) =>
 
 ## Data Structure
 
-The basic data structure of the AI package is:
-
-```ts
-ai: {
-  sessions: [
-    {
-      id: defaultSessionId,
-      name: 'Default Session',
-      modelProvider: 'openai',
-      model: 'gpt-4o-mini',
-      analysisResults: [],
-      createdAt: new Date(),
-    },
-  ],
-  currentSessionId: defaultSessionId,
-}
-```
-
-Each session has a `analysisResults` which is an array of `AnalysisResult`. Each `AnalysisResult` has the following properties:
-
-- `id`: The unique identifier for the analysis result
-- `prompt`: The user prompt that was used to generate the analysis result
-- `streamMessage`: The stream message from the LLM
-- `errorMessage`: The error message from the LLM
-- `isCompleted`: Whether the analysis result has been completed
-
-For each user prompt, the LLM will run multiple tools (e.g. `query`, `chart`) and return the result as the `streamMessage`. The structure of the `streamMessage` is as follows:
-
-- `text`: the final response from the LLM (streamable)
-- `reasoning`: the reasoning of the LLM (only for reason models)
-- `toolCallMessages`: the message array of the tool calls executed by the LLM
-
-Each `toolCallMessages` has the following properties:
-
-- `toolName`: the name of the tool
-- `toolCallId`: the id of the tool call
-- `args`: the arguments of the tool call
-- `llmResult`: the result from the execution of the tool, which will be sent back to the LLM as response.
-- `additionalData`: the additional data of the tool, which can be used to pass the output of the tool to next tool call or the component for rendering.
-
-## Rendering
-
-```text
-|--------------------------------|
-| AnalysisResultsContainer       |
-|--------------------------------|
-|  |--------------------------|  |
-|  | AnalysisResult           |  |
-|  |                          |  |
-|  | streamMessage            |  |
-|  |                          |  |
-|  | |---------------------|  |  |
-|  | | Tools               |  |  |
-|  | |---------------------|  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolCallMessage|   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolCallMessage|   |  |  |
-|  | | |---------------|   |  |  |
-|  | |    ...              |  |  |
-|  | |---------------------|  |  |
-|  |                          |  |
-|  | text                     |  |
-|  |--------------------------|  |
-|--------------------------------|
-```
-
-## Tools
-
-In AI package, we provide a tool() to allow creating function tool for LLM to use. It is an extension of the `tool` from `vercel ai sdk`, and it supports not only `execute` function, but also `context` object and `component` object:
-
-- `execute` needs to return
-  - llmResult: the result send back to LLM (no raw data)
-  - additionalData: the data will be used by `component` and next `tool`
-- `context`
-  - provide e.g. runtime or async data for `execute`
-  - `execute` can access `context` via `options.context`
-- `component`
-  - use `additionalData` to render a React component for this `tool`
-
-For example, the `query` tool is defined as follows:
-
-```ts
-const functions = {
-  weather: tool({
-    description: 'Get the weather in a city from a weather station',
-    parameters: z.object({cityName: z.string()}),
-    execute: async ({cityName}, options) => {
-      const getStation = options.context?.getStation;
-      const station = getStation ? await getStation(cityName) : null;
-      return {
-        llmResult: `The weather in ${cityName} is sunny from weather station ${station}.`,
-        additionalData: {
-          weather: 'sunny',
-          station,
-        },
-      };
-    },
-    context: {
-      getStation: async (cityName: string) => {
-        const stations = {
-          'New York': '123',
-          'Los Angeles': '456',
-          Chicago: '789',
-        };
-        return stations[cityName];
-      },
-    },
-    component: WeatherStation,
-  }),
-};
-```
+See [ai-core](https://github.com/sqlrooms/sqlrooms/tree/main/packages/ai-core) for the data structure.
 
 ## Advanced Features
 
