@@ -23,6 +23,7 @@ export function createDefaultAiConfig(
         createdAt: new Date(),
         uiMessages: [],
         toolAdditionalData: {},
+        messagesRevision: 0,
       },
     ],
     currentSessionId: defaultSessionId,

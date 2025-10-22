@@ -11,7 +11,6 @@ import {produce} from 'immer';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
-import {filterDataParts} from './utils/messageFilter';
 import {AddToolResult} from './hooks/useAiChat';
 
 type GetAiSliceState = () => AiSliceState;
@@ -140,12 +139,8 @@ export function createRemoteChatTransportFactory(params: {
       const body = init?.body as string;
       const parsed = body ? JSON.parse(body) : {};
 
-      // Filter out data-tool-additional-output parts from messages before sending
-      const filteredMessages = filterDataParts(parsed.messages || []);
-
       const enhancedBody = {
         ...parsed,
-        messages: filteredMessages,
         modelProvider,
         model,
       };
@@ -278,10 +273,7 @@ export function createChatHandlers({
         const currentSessionId = get().ai.config.currentSessionId;
         if (!currentSessionId) return;
 
-        // Filter out data-tool-additional-output parts from messages
-        const filteredMessages = filterDataParts(messages);
-
-        get().ai.setSessionUiMessages(currentSessionId, filteredMessages);
+        get().ai.setSessionUiMessages(currentSessionId, messages);
 
         // Create analysis result with the user message ID for proper correlation
         set((state: AiSliceState) =>

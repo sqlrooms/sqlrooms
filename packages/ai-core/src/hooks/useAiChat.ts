@@ -1,4 +1,4 @@
-import {useMemo, useEffect} from 'react';
+import {useEffect, useMemo} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -6,7 +6,6 @@ import {
 } from 'ai';
 import type {UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
-import {filterDataParts} from '../utils/messageFilter';
 
 export type AddToolResult = (
   options:
@@ -106,17 +105,14 @@ export function useAiChat() {
   // Capture addToolResult for use in onToolCall
   capturedAddToolResult = addToolResult;
 
-  // Filter messages to remove data-tool-additional-output parts added during streaming
-  const filteredMessages = useMemo(() => filterDataParts(messages), [messages]);
-
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
     if (!sessionId) return;
-    setSessionUiMessages(sessionId, filteredMessages as UIMessage[]);
-  }, [filteredMessages, sessionId, setSessionUiMessages]);
+    setSessionUiMessages(sessionId, messages as UIMessage[]);
+  }, [messages, sessionId, setSessionUiMessages]);
 
   return {
-    messages: filteredMessages,
+    messages,
     sendMessage,
   };
 }
