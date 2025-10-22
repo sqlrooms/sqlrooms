@@ -14,6 +14,7 @@ import {useState} from 'react';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
 import {ToolResult} from './tools/ToolResult';
+import {ToolCallInfo} from './ToolCalling';
 import {useStoreWithAi} from '../AiSlice';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 
@@ -158,24 +159,34 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             const additionalData = toolAdditionalData[toolCallId];
 
             return (
-              <ToolResult
-                key={toolCallId}
-                toolCallId={toolCallId}
-                toolData={{
-                  toolCallId,
-                  name: toolName,
-                  state: state as unknown as
-                    | 'input-available'
-                    | 'output-available'
-                    | 'output-error',
-                  args: input,
-                  result: output,
-                  errorText,
-                }}
-                additionalData={additionalData}
-                isCompleted={isCompleted}
-                errorMessage={state === 'output-error' ? errorText : undefined}
-              />
+              <>
+                <ToolCallInfo
+                  key={`tool-call-${toolCallId}`}
+                  toolName={toolName}
+                  input={input}
+                  isCompleted={isCompleted}
+                  state={state}
+                />
+                <div data-tool-call-id={toolCallId}>
+                  <ToolResult
+                    key={toolCallId}
+                    toolCallId={toolCallId}
+                    toolData={{
+                      toolCallId,
+                      name: toolName,
+                      state: state,
+                      args: input,
+                      result: output,
+                      errorText,
+                    }}
+                    additionalData={additionalData}
+                    isCompleted={isCompleted}
+                    errorMessage={
+                      state === 'output-error' ? errorText : undefined
+                    }
+                  />
+                </div>
+              </>
             );
           }
           return null;

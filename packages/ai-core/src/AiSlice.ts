@@ -122,7 +122,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     tools,
     getApiKey,
     getBaseUrl,
-    maxSteps,
+    maxSteps = 50,
     getInstructions,
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
@@ -396,7 +396,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
               return settingsMaxSteps;
             }
           }
-          return 5;
+          return 50;
         },
 
         getFullInstructions: () => {
