@@ -64,61 +64,58 @@ function MyApp() {
 
 ### Setting Up SqlRooms AI Chat for Server-side application
 
-## Architecture
+- api/chat/route.ts
 
-### Dual Storage Pattern
+```typescript
+export async function POST(req: Request) {
+  const {messages} = await req.json();
 
-The AI package uses a dual storage pattern to manage conversation data efficiently:
+  const stream = createUIMessageStream({
+    execute: async ({writer}) => {
+      const result = streamText({
+        model: openai('gpt-4.1'),
+        system: systemPrompt,
+        messages,
+        tools: {
+          // Your tools: remove exeucte for client tools so they run on the client side
+        },
+      });
+      writer.merge(result.toUIMessageStream({originalMessages: messages}));
+    },
+  });
 
-#### 1. `uiMessages` - Source of Truth (AI SDK v5)
-
-The `uiMessages` array stores the complete, flat conversation history using the Vercel AI SDK v5 `UIMessage` format. This includes:
-
-- User messages
-- Assistant messages
-- Tool call messages
-- All message parts (text, tool invocations, etc.)
-
-This is the **primary data structure** and serves as:
-
-- The full context for AI model interactions
-- The source for displaying conversation history
-- The base for reconstructing analysis results
-
-```tsx
-// Example: Accessing UI messages
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-const messages = currentSession?.uiMessages || [];
+  return stream.toUIMessageStreamResponse();
+}
 ```
 
-#### 2. `analysisResults` - Derived & Error Storage
+- page.tsx
 
-The `analysisResults` array is a **derived structure** that organizes messages into user prompt → AI response pairs. It primarily serves to:
+```typescript
+const {roomStore, useRoomStore} = createRoomStore({
+  ...createRoomShellSlice({
+    // Your room configuration
+    })(set, get, store),
+  ...createAiSettingsSlice({
+    // Your AI settings
+  })(set, get, store),
+  ...createAiSlice({
+    chatEndPoint: '/api/chat', // Point to the server-side endpoint
+    tools: {
+      // Your tools
+    },
+  })(set, get, store),
+});
 
-- Store error messages that occur during analysis
-- Provide backward compatibility with legacy data
-- Offer a simplified view of analysis history
-
-Analysis results are dynamically generated from `uiMessages` using the `transformMessagesToAnalysisResults` utility function.
-
-```tsx
-// Example: Getting analysis results (automatically derived from uiMessages)
-const analysisResults = useRoomStore((state) => state.ai.getAnalysisResults());
+function MyApp() {
+  return (
+    <RoomStateProvider roomStore={roomStore}>
+      <MyDataApp />
+    </RoomStateProvider>
+  );
+}
 ```
 
-#### 3. `toolAdditionalData` - Tool Output Storage
-
-Each session also maintains a `toolAdditionalData` object that stores additional data from tool executions, keyed by `toolCallId`. This data is used for:
-
-- Rendering tool-specific UI components
-- Passing data between tool calls
-- Preserving rich data that doesn't go back to the LLM
-
-```tsx
-// Example: Storing tool additional data
-const setToolData = useRoomStore((state) => state.ai.setSessionToolAdditionalData);
-setToolData(sessionId, toolCallId, {chartData: [...]});
-```
+See [ai-nextjs](https://github.com/sqlrooms/sqlrooms/tree/main/examples/ai-nextjs) for a complete example.
 
 ## Data Structure
 
@@ -151,93 +148,58 @@ Each session contains:
 
 #### `uiMessages` - Complete Chat History
 
-Array of `UIMessage` objects from AI SDK v5, representing the full conversation:
+The `uiMessages` array stores the complete, flat conversation history using the Vercel AI SDK v5 `UIMessage` format. This includes:
 
-```ts
-type UIMessage = {
-  id: string;
-  role: 'user' | 'assistant';
-  parts: UIMessagePart[];
-};
+- User messages
+- Assistant messages
+- Tool call messages
+- All message parts (text, tool invocations, etc.)
 
-type UIMessagePart =
-  | { type: 'text'; text: string }
-  | { type: 'tool-invocation'; toolInvocation: {...} }
-  | { type: 'tool-result'; toolResult: {...} };
+This is the **primary data structure** and serves as:
+
+- The full context for AI model interactions
+- The source for displaying conversation history
+- The base for reconstructing analysis results
+
+```tsx
+// Example: Accessing UI messages
+const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
+const messages = currentSession?.uiMessages || [];
 ```
 
 #### `analysisResults` - Structured Analysis View
 
-Array of `AnalysisResult` objects, derived from `uiMessages`:
+The `analysisResults` array is a **derived structure** that organizes messages into user prompt → AI response pairs. It primarily serves to:
+
+- Store error messages that occur during analysis
+- Provide backward compatibility with legacy data
+- Offer a simplified view of analysis history
+
+Analysis results are dynamically generated from `uiMessages` using the `transformMessagesToAnalysisResults` utility function.
 
 ```ts
 type AnalysisResult = {
-  id: string; // Matches the user message ID
+  id: string; // Matches the UIMessage.id
   prompt: string; // User's question/request
-  response: UIMessagePart[]; // (not used anymore) AI's response parts
-  errorMessage?: {
-    // Error if analysis failed
-    error: string;
-  };
+  errorMessage?: ErrorMessageSchema; // Error if analysis failed
   isCompleted: boolean; // Whether AI finished responding
 };
 ```
 
 #### `toolAdditionalData` - Rich Tool Outputs
 
-Record mapping `toolCallId` to arbitrary data:
+Each session also maintains a `toolAdditionalData` object that stores additional data from tool executions, keyed by `toolCallId`. This data is used for:
+
+- Rendering tool-specific UI components
+- Passing data between tool calls
+- Preserving rich data that doesn't go back to the LLM
 
 ```ts
 type ToolAdditionalData = Record<string, unknown>;
 
-// Example:
-{
-  "call_abc123": {
-    chartData: [...],
-    metadata: {...}
-  },
-  "call_def456": {
-    queryResults: [...]
-  }
-}
-```
-
-### Tool Execution Flow
-
-1. User sends a prompt → creates a user `UIMessage`
-2. AI processes and may call tools → creates assistant `UIMessage` with tool invocations
-3. Tools execute and return:
-   - `llmResult`: Text summary sent back to the LLM
-   - `additionalData`: Rich data stored in `toolAdditionalData` for UI rendering
-4. AI responds with final answer → creates assistant `UIMessage` with text
-5. On completion: `uiMessages` updated, `analysisResult` created with user message ID
-
-## Rendering
-
-```text
-|--------------------------------|
-| AnalysisResultsContainer       |
-|--------------------------------|
-|  |--------------------------|  |
-|  | AnalysisResult           |  |
-|  |                          |  |
-|  | ErrorMessage             |  |
-|  | ------------             |  |
-|  | UIMessage                |  |
-|  |                          |  |
-|  | |---------------------|  |  |
-|  | | Parts               |  |  |
-|  | |---------------------|  |  |
-|  | | |---------------|   |  |  |
-|  | | |TextPart       |   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolPart       |   |  |  |
-|  | | |---------------|   |  |  |
-|  | |    ...              |  |  |
-|  | |---------------------|  |  |
-|  |                          |  |
-|  |--------------------------|  |
-|--------------------------------|
+// Example: Storing tool additional data
+const setToolData = useRoomStore((state) => state.ai.setSessionToolAdditionalData);
+setToolData(sessionId, toolCallId, {chartData: [...]});
 ```
 
 ## Tools
@@ -287,6 +249,122 @@ const weatherTool: OpenAssistantTool = {
   component: WeatherStationComponent,
 };
 ```
+
+### Tool Execution Flow
+
+1. User sends a prompt → creates a user `UIMessage`
+2. AI processes and may call tools → creates assistant `UIMessage` with tool invocations
+3. Tools execute and return:
+   - `llmResult`: Text summary sent back to the LLM
+   - `additionalData`: Rich data stored in `toolAdditionalData` for UI rendering
+4. AI responds with final answer → creates assistant `UIMessage` with text
+5. On completion: `uiMessages` updated, `analysisResult` created with user message ID
+
+### Rendering Tool Results
+
+```text
+|--------------------------------|
+| AnalysisResultsContainer       |
+|--------------------------------|
+|  |--------------------------|  |
+|  | AnalysisResult           |  |
+|  |                          |  |
+|  | ErrorMessage             |  |
+|  | ------------             |  |
+|  | UIMessage                |  |
+|  |                          |  |
+|  | |---------------------|  |  |
+|  | | Parts               |  |  |
+|  | |---------------------|  |  |
+|  | | |---------------|   |  |  |
+|  | | |TextPart       |   |  |  |
+|  | | |---------------|   |  |  |
+|  | | |ToolPart       |   |  |  |
+|  | | |---------------|   |  |  |
+|  | |    ...              |  |  |
+|  | |---------------------|  |  |
+|  |                          |  |
+|  |--------------------------|  |
+|--------------------------------|
+```
+
+### Transfer Additional Tool Output Data to Client
+
+
+#### The Problem
+
+When tools execute, they often generate additional data (like detailed search results, charts, metadata) that needs to be sent to the client for UI rendering, but should NOT be included in the conversation history sent back to the LLM.
+
+If the tool execution is done on the server side, the additional data needs to be transferred to the client side for UI rendering. We use the `data-tool-additional-output` data part type to transfer the additional data to the client.
+
+#### Using `transient: true`
+
+The AI SDK v5 provides a built-in solution through the `transient` flag on data parts. When you write a data part with `transient: true`, the SDK automatically prevents it from being added to the message history.
+
+##### Backend Implementation (route.ts)
+
+```typescript
+writer.write({
+  type: 'data-tool-additional-output',
+  transient: true, // Won't be added to message history
+  data: {
+    toolCallId: chunk.toolCallId,
+    toolName: chunk.toolName,
+    output: getToolAdditionalData(chunk.toolCallId),
+    timestamp: new Date().toISOString(),
+  },
+});
+```
+
+#### The Flow
+
+```text
+Backend (route.ts)
+  │
+  ├─> Tool executes
+  │   └─> writer.write({ 
+  │         type: 'data-tool-additional-output',
+  │         transient: true,  // ✅ SDK handles exclusion
+  │         data: {...}
+  │       })
+  │
+  ↓
+Client receives stream
+  │
+  ├─> onData callback
+  │   └─> setSessionToolAdditionalData() ✅ Stores in toolAdditionalData
+  │
+  └─> messages array ✅ Automatically excludes transient data parts
+
+Session Storage (clean) → AI SDK → UI Display
+                              ↓
+                        Session Storage
+                              ↓
+                        Backend/LLM
+```
+
+#### Benefits of This Approach
+
+1. **✅ Clean Conversation History**: Transient data parts never appear in message history
+2. **✅ Efficient Token Usage**: No unnecessary data sent to the LLM
+3. **✅ Proper Data Storage**: Tool data is stored separately in `toolAdditionalData`
+4. **✅ UI Flexibility**: Components can access tool data via `toolAdditionalData[toolCallId]`
+5. **✅ Simple & Native**: Uses built-in SDK feature, no custom utilities needed
+6. **✅ Maintainable**: Follows SDK conventions and patterns
+7. **✅ No Manual Filtering**: SDK handles exclusion automatically
+
+#### Usage in Components
+
+To access the additional tool data in your components:
+
+```tsx
+const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
+const toolData = currentSession?.toolAdditionalData?.[toolCallId];
+```
+
+#### Alternative Considered: Message Annotations
+
+AI SDK v5 supports message annotations, but these are still part of the message structure. The `transient` flag is specifically designed for data that should only be sent once and not persist in conversation history.
 
 ## Advanced Features
 

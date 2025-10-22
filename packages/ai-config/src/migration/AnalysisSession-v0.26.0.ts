@@ -84,7 +84,7 @@ function migrateFromV0_26_0(data: unknown) {
     // Create user message for the prompt
     if (prompt) {
       synthesizedMessages.push({
-        id: `${id}-user`,
+        id,
         role: 'user',
         parts: [{type: 'text', text: prompt}],
       });
@@ -134,7 +134,6 @@ function migrateFromV0_26_0(data: unknown) {
       // Unknown legacy part types are ignored
     }
 
-    // TODO: looks like the last part should have 'state' = 'done'
     if (assistantParts.length > 0) {
       synthesizedMessages.push({
         id: `${id}-assistant`,
@@ -147,6 +146,7 @@ function migrateFromV0_26_0(data: unknown) {
   // Remove deprecated streamMessage field from analysisResults
   const cleanedAnalysisResults = analysisResults.map((result) => {
     if (!isObject(result)) return result;
+    // eslint-disable-line @typescript-eslint/no-unused-vars
     const {streamMessage, ...rest} = result as UnknownRecord & {
       streamMessage?: unknown;
     };
