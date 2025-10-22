@@ -14,7 +14,7 @@ import {useState} from 'react';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
 import {ToolResult} from './tools/ToolResult';
-import {ToolCallInfo} from './ToolCalling';
+import {ToolCallInfo} from './ToolCallInfo';
 import {useStoreWithAi} from '../AiSlice';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 
