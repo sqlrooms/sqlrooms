@@ -8,7 +8,7 @@ import {
 import WebSearchToolResult from '@/components/WebSearchToolResult';
 import {ToolSet} from 'ai';
 
-// Define the web search tool
+// Define the web search tool (server side tool)
 const webSearchSchema = z.object({
   query: z.string().describe('The search query'),
 });
@@ -36,11 +36,9 @@ const webSearchTool: OpenAssistantTool = {
     };
   },
   component: WebSearchToolResult,
-  // @ts-ignore TODO: fix this
-  isServerTool: true,
 };
 
-// Define the weather tool
+// Define the weather tool (client side tool)
 const weatherSchema = z.object({
   cityName: z.string().describe('The name of the city'),
 });
@@ -66,7 +64,12 @@ const weatherTool: OpenAssistantTool = {
   },
 };
 
-export const tools = [webSearchTool, weatherTool];
+export const tools = {
+  serverTools: [webSearchTool],
+  clientTools: [weatherTool],
+};
+
+const allTools = [...tools.serverTools, ...tools.clientTools];
 
 const toolCache = ToolCache.getInstance();
 
@@ -75,11 +78,11 @@ const onToolCompleted = async (toolCallId: string, additionalData: unknown) => {
 };
 
 export function getServerAiSDKTools(): ToolSet {
-  const aiSDKTools = tools.reduce((acc, tool) => {
+  const aiSDKTools = allTools.reduce((acc, tool) => {
     tool.onToolCompleted = onToolCompleted;
     acc[tool.name] = convertToVercelAiToolV5(tool);
-    // @ts-ignore TODO: fix this
-    if (!tool.isServerTool) {
+    // Only keep execute function for server tools
+    if (!tools.serverTools.includes(tool)) {
       acc[tool.name].execute = undefined;
     }
     return acc;
@@ -89,9 +92,7 @@ export function getServerAiSDKTools(): ToolSet {
 }
 
 export function getClientTools(): OpenAssistantToolSet {
-  // @ts-ignore TODO: fix this
-  const clientTools = tools;
-  return clientTools.reduce((acc, tool) => {
+  return allTools.reduce((acc, tool) => {
     acc[tool.name] = tool;
     return acc;
   }, {} as OpenAssistantToolSet);

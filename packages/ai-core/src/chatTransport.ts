@@ -38,6 +38,39 @@ export type ChatTransportConfig = {
   getCustomModel?: () => LanguageModel | undefined;
 };
 
+/**
+ * Creates a handler for tool completion that updates the tool additional data in the store
+ */
+function createOnToolCompletedHandler(store: StoreApi<AiSliceState>) {
+  return (toolCallId: string, additionalData: unknown) => {
+    const sessionId = store.getState().ai.config.currentSessionId;
+    if (!sessionId) return;
+
+    store
+      .getState()
+      .ai.setSessionToolAdditionalData(sessionId, toolCallId, additionalData);
+  };
+}
+
+/**
+ * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
+ */
+function convertToAiSDKTools(
+  tools: Record<string, OpenAssistantTool>,
+  onToolCompleted: (toolCallId: string, additionalData: unknown) => void,
+): ToolSet {
+  return Object.entries(tools || {}).reduce(
+    (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
+      acc[name] = convertToVercelAiToolV5({
+        ...tool,
+        onToolCompleted,
+      });
+      return acc;
+    },
+    {},
+  );
+}
+
 export function createLocalChatTransportFactory({
   store,
   defaultProvider,
@@ -74,30 +107,8 @@ export function createLocalChatTransportFactory({
       const parsed = body ? JSON.parse(body) : {};
       const messagesCopy = JSON.parse(JSON.stringify(parsed.messages || []));
 
-      // update the onToolCompleted handler to update the tool additional data in the store
-      const onToolCompleted = (toolCallId: string, additionalData: unknown) => {
-        const sessionId = store.getState().ai.config.currentSessionId;
-        if (!sessionId) return;
-
-        store
-          .getState()
-          .ai.setSessionToolAdditionalData(
-            sessionId,
-            toolCallId,
-            additionalData,
-          );
-      };
-
-      const tools = Object.entries(state.ai.tools || {}).reduce(
-        (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
-          acc[name] = convertToVercelAiToolV5({
-            ...tool,
-            onToolCompleted,
-          });
-          return acc;
-        },
-        {},
-      );
+      const onToolCompleted = createOnToolCompletedHandler(store);
+      const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
@@ -170,31 +181,11 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
       try {
         // handle client tools
         const state = store.getState();
-        const tools = Object.entries(state.ai.tools || {}).reduce(
-          (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
-            // @ts-expect-error - only tool has isServerTool property
-            if (tool.isServerTool) {
-              return acc;
-            }
-            acc[name] = convertToVercelAiToolV5({
-              ...tool,
-              onToolCompleted: (
-                toolCallId: string,
-                additionalData: unknown,
-              ) => {
-                const sessionId = state.ai.config.currentSessionId;
-                if (!sessionId) return;
 
-                state.ai.setSessionToolAdditionalData(
-                  sessionId,
-                  toolCallId,
-                  additionalData,
-                );
-              },
-            });
-            return acc;
-          },
-          {},
+        const onToolCompleted = createOnToolCompletedHandler(store);
+        const tools = convertToAiSDKTools(
+          state.ai.tools || {},
+          onToolCompleted,
         );
 
         // find tool from tools using toolName
@@ -205,10 +196,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
             messages: [],
           });
 
-          // If addToolResult is provided, use it to add the result
-          // This allows for more control over when and how tool results are submitted
           if (addToolResult) {
-            // No await - avoids potential deadlocks
             // Note: When using sendAutomaticallyWhen, avoid awaiting addToolResult to prevent deadlocks
             addToolResult({
               tool: toolName,
@@ -229,7 +217,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
       }
     },
     onChatData: (dataPart: any) => {
-      // Handle data messages from the backend
+      // Handle additional tool output data from the backend
       if (dataPart.type === 'data-tool-additional-output') {
         const {toolCallId, output} = dataPart.data;
 
