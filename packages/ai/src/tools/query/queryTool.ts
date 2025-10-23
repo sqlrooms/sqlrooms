@@ -150,7 +150,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
  * @param sqlQuery - SQL SELECT query to analyze
  * @returns Summary statistics as JSON object, or null if the query is not a SELECT statement or if summary generation fails
  */
-async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
+export async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
   if (!sqlQuery.toLowerCase().trim().startsWith('select')) {
     return null;
   }
