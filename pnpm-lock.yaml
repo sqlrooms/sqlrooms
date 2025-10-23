@@ -1913,6 +1913,18 @@ importers:
 
   packages/preset-typescript: {}
 
+  packages/rag:
+    dependencies:
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../duckdb
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+      zod:
+        specifier: ^4.1.8
+        version: 4.1.12
+
   packages/recharts:
     dependencies:
       '@sqlrooms/ui':
@@ -2513,6 +2525,7 @@ packages:
 
   '@arcgis/lumina@4.34.0-next.165':
     resolution: {integrity: sha512-1f4TyfLMyV6CkRpRjCDrPhW2AmGMo7/ti20xfiBnP7hjuEzYVEUIZcrn0R6IU6oRtDqgBXwStLPdANhRBROP2Q==}
+    deprecated: This version is no longer supported. Upgrade to @latest
     peerDependencies:
       '@lit/context': ^1.1.5
       lit: ^3.3.0
@@ -2522,6 +2535,7 @@ packages:
 
   '@arcgis/toolkit@4.34.0-next.165':
     resolution: {integrity: sha512-nUD5xl2e+7JO74pWx5sYFFoDNpVGXutCErMpzGDUQbXZ39dEN8Jiw9H0A/m5xJvxQelc+senxwlqLc/4JNZlWg==}
+    deprecated: This version is no longer supported. Upgrade to @latest
 
   '@asamuzakjp/css-color@3.2.0':
     resolution: {integrity: sha512-K1A6z8tS3XsmCMM86xoWdn7Fkdn9m6RSVtocUrJYIwZnFVkng/PvkEoWtOWmP+Scc6saYWHWZYbndEEXxl24jw==}
