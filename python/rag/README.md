@@ -1,6 +1,6 @@
-# SQLRooms Embedding Preparation Tool
+# SQLRooms RAG
 
-A Python tool to prepare vector embeddings from markdown files and store them in DuckDB for use in RAG (Retrieval Augmented Generation) applications.
+A Python package for preparing and querying vector embeddings stored in DuckDB for RAG (Retrieval Augmented Generation) applications.
 
 ## Overview
 
@@ -13,28 +13,35 @@ This tool follows the approach outlined in [Developing a RAG Knowledge Base with
 
 ## Installation
 
-This project uses [uv](https://github.com/astral-sh/uv) for fast Python package management.
-
-### Install uv (if not already installed)
+### From PyPI (when published)
 
 ```bash
-curl -LsSf https://astral.sh/uv/install.sh | sh
+pip install sqlrooms-rag
 ```
 
-### Install dependencies
+### From source with uv
+
+This project uses [uv](https://github.com/astral-sh/uv) for development.
 
 ```bash
-cd python/embedding
+# Install uv if not already installed
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Install from source
+cd python/rag-embedding
 uv sync
 ```
 
-This will create a virtual environment and install all required dependencies including:
+### Dependencies
 
-- llama-index
-- llama-index-embeddings-huggingface
-- llama-index-vector-stores-duckdb
-- sentence-transformers
-- torch
+The package includes:
+
+- llama-index (core RAG framework)
+- llama-index-embeddings-huggingface (HuggingFace embeddings)
+- llama-index-vector-stores-duckdb (DuckDB vector store)
+- sentence-transformers (embedding models)
+- torch (ML framework)
+- duckdb (database)
 
 ## Usage
 
@@ -43,13 +50,21 @@ This will create a virtual environment and install all required dependencies inc
 Process markdown files from a directory and create a DuckDB knowledge base:
 
 ```bash
-uv run prepare-embeddings /path/to/docs -o knowledge_base.duckdb
+uv run prepare-embeddings /path/to/docs -o generated-embeddings/knowledge_base.duckdb
 ```
 
-Or using the script directly:
+Or use the Python API:
 
-```bash
-uv run python prepare_embeddings.py /path/to/docs -o knowledge_base.duckdb
+```python
+from sqlrooms_rag import prepare_embeddings
+
+prepare_embeddings(
+    input_dir="/path/to/docs",
+    output_db="generated-embeddings/knowledge_base.duckdb",
+    chunk_size=512,
+    embed_model_name="BAAI/bge-small-en-v1.5",
+    embed_dim=384
+)
 ```
 
 ### Examples
@@ -58,21 +73,21 @@ uv run python prepare_embeddings.py /path/to/docs -o knowledge_base.duckdb
 
 ```bash
 # Process all .md files in the docs directory
-uv run prepare-embeddings ../../docs -o sqlrooms_docs.duckdb
+uv run prepare-embeddings ../../docs -o generated-embeddings/sqlrooms_docs.duckdb
 ```
 
 #### Use custom chunk size
 
 ```bash
 # Use smaller chunks for more granular retrieval
-uv run prepare-embeddings docs -o kb.duckdb --chunk-size 256
+uv run prepare-embeddings docs -o generated-embeddings/kb.duckdb --chunk-size 256
 ```
 
 #### Use a different embedding model
 
 ```bash
 # Use all-MiniLM-L6-v2 (dimension: 384)
-uv run prepare-embeddings docs -o kb.duckdb \
+uv run prepare-embeddings docs -o generated-embeddings/kb.duckdb \
   --model "sentence-transformers/all-MiniLM-L6-v2" \
   --embed-dim 384
 ```
@@ -115,7 +130,23 @@ This database can be used with llama-index's query engine or any RAG application
 
 ## Using the Generated Database
 
-See `example_query.py` for a complete working example. Here's a quick snippet:
+### Python API
+
+You can use the package programmatically:
+
+```python
+from sqlrooms_rag import prepare_embeddings
+
+# Create embeddings
+index = prepare_embeddings(
+    input_dir="../../docs",
+    output_db="generated-embeddings/my_docs.duckdb"
+)
+```
+
+### Query Examples
+
+See `examples/example_query.py` for complete working examples. Here's a quick snippet:
 
 ```python
 from llama_index.core import VectorStoreIndex, StorageContext, Settings
@@ -150,20 +181,36 @@ for result in results:
 **Using llama-index (high-level):**
 
 ```bash
-uv run python example_query.py
+uv run python examples/example_query.py
 ```
 
 **Using DuckDB directly (more control):**
 
 ```bash
 # Run predefined queries
-uv run python query_duckdb_direct.py
+uv run python examples/query_duckdb_direct.py
 
 # Query with your own question
-uv run python query_duckdb_direct.py "Your question here"
+uv run python examples/query_duckdb_direct.py "Your question here"
 ```
 
 See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL.
+
+## Package Structure
+
+```
+sqlrooms-rag/
+├── sqlrooms_rag/           # Main package (installed)
+│   ├── __init__.py        # Public API
+│   ├── prepare.py         # Core embedding preparation
+│   └── cli.py             # Command-line interface
+├── examples/               # Example scripts (not installed)
+│   ├── example_query.py   # Query using llama-index
+│   └── query_duckdb_direct.py  # Direct DuckDB queries
+├── generated-embeddings/   # Output directory
+├── pyproject.toml         # Package configuration
+└── README.md
+```
 
 ## Supported Models
 

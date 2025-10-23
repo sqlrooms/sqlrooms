@@ -16,7 +16,7 @@ from sentence_transformers import SentenceTransformer
 
 def query_embeddings_db(
     query_text: str,
-    db_path: str = "sqlrooms_docs",
+    db_path: str = "generated-embeddings/sqlrooms_docs.duckdb",
     model_name: str = "BAAI/bge-small-en-v1.5",
     top_k: int = 3,
 ):
@@ -80,7 +80,7 @@ def query_embeddings_db(
     conn.close()
 
 
-def explore_database(db_path: str = "sqlrooms_docs"):
+def explore_database(db_path: str = "generated-embeddings/sqlrooms_docs.duckdb"):
     """
     Show information about the database schema and contents.
     
@@ -124,7 +124,7 @@ def explore_database(db_path: str = "sqlrooms_docs"):
 
 def batch_query(
     queries: list[str],
-    db_path: str = "sqlrooms_docs",
+    db_path: str = "generated-embeddings/sqlrooms_docs.duckdb",
     model_name: str = "BAAI/bge-small-en-v1.5",
     top_k: int = 3,
 ):

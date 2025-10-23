@@ -30,9 +30,8 @@ env/
 .uv/
 uv.lock
 
-# DuckDB databases
-*.duckdb
-*.duckdb.wal
+# Generated embeddings (keep the directory structure but ignore the data)
+generated-embeddings/*
 
 # Model cache
 .cache/
@@ -48,4 +47,3 @@ models/
 # OS
 .DS_Store
 Thumbs.db
-

@@ -11,13 +11,13 @@ from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 
 
-def query_knowledge_base(query_text: str, database_name: str = "sqlrooms_docs"):
+def query_knowledge_base(query_text: str, database_name: str = "generated-embeddings/sqlrooms_docs.duckdb"):
     """
     Query the knowledge base with a question.
     
     Args:
         query_text: The question to ask
-        database_name: Name of the DuckDB database (without extension)
+        database_name: Path to the DuckDB database file
     """
     print(f"Loading knowledge base: {database_name}...")
     

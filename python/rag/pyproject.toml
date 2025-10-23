@@ -1,0 +1,55 @@
+[project]
+name = "sqlrooms-rag"
+version = "0.1.0"
+description = "Prepare and query vector embeddings for RAG applications using DuckDB"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "SQLRooms Contributors"}
+]
+keywords = ["rag", "embeddings", "duckdb", "vector-search", "llama-index"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Database",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+requires-python = ">=3.10"
+dependencies = [
+    "llama-index>=0.10.0",
+    "llama-index-embeddings-huggingface>=0.2.0",
+    "llama-index-vector-stores-duckdb>=0.2.0",
+    "sentence-transformers>=2.2.0",
+    "torch>=2.0.0",
+    "duckdb>=0.9.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "black>=23.0.0",
+    "ruff>=0.1.0",
+]
+
+[project.scripts]
+prepare-embeddings = "sqlrooms_rag.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/sqlrooms/sqlrooms"
+Documentation = "https://github.com/sqlrooms/sqlrooms"
+Repository = "https://github.com/sqlrooms/sqlrooms"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["sqlrooms_rag"]
+
+[tool.uv]
+dev-dependencies = []
