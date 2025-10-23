@@ -10,13 +10,14 @@ import {
   DialogTitle,
 } from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState} from 'react';
+import {useState, useMemo} from 'react';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ErrorMessage} from './ErrorMessage';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 import {useStoreWithAi} from '../AiSlice';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
+import type {UIMessage} from 'ai';
 
 /**
  * Props for the AnalysisResult component
@@ -44,14 +45,47 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
-  const getAssistantMessageParts = useStoreWithAi(
-    (s) => s.ai.getAssistantMessageParts,
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
 
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  const uiMessageParts = getAssistantMessageParts(analysisResult.id);
+  // Extract message parts using useMemo to avoid infinite loops
+  const uiMessageParts = useMemo(() => {
+    if (!uiMessages) return [];
+
+    // Find the user message with analysisResultId
+    let userMessageIndex = uiMessages.findIndex(
+      (msg) => msg.id === analysisResult.id && msg.role === 'user',
+    );
+
+    // If not found (e.g., pending result before onFinish assigns the real ID),
+    // fall back to the last user message to enable streaming display.
+    if (userMessageIndex === -1) {
+      for (let i = uiMessages.length - 1; i >= 0; i--) {
+        if (uiMessages[i]?.role === 'user') {
+          userMessageIndex = i;
+          break;
+        }
+      }
+      if (userMessageIndex === -1) return [];
+    }
+
+    // Find the next assistant message after this user message
+    for (let i = userMessageIndex + 1; i < uiMessages.length; i++) {
+      const msg = uiMessages[i];
+      if (msg?.role === 'assistant') {
+        return msg.parts;
+      }
+      if (msg?.role === 'user') {
+        // Hit next user message without finding assistant response
+        break;
+      }
+    }
+    return [];
+  }, [uiMessages, analysisResult.id]);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
