@@ -178,13 +178,29 @@ for result in results:
 
 ### Running the Examples
 
-**Using llama-index (high-level):**
+**Prepare DuckDB documentation embeddings:**
+
+```bash
+# Using Python script (recommended)
+uv run python examples/prepare_duckdb_docs.py
+
+# Or using bash script
+chmod +x examples/prepare_duckdb_docs.sh
+./examples/prepare_duckdb_docs.sh
+
+# Custom paths
+uv run python examples/prepare_duckdb_docs.py \
+  --docs-dir ./my-docs \
+  --output ./embeddings/duckdb.duckdb
+```
+
+**Query embeddings using llama-index:**
 
 ```bash
 uv run python examples/example_query.py
 ```
 
-**Using DuckDB directly (more control):**
+**Query embeddings using DuckDB directly:**
 
 ```bash
 # Run predefined queries
@@ -205,11 +221,64 @@ sqlrooms-rag/
 │   ├── prepare.py         # Core embedding preparation
 │   └── cli.py             # Command-line interface
 ├── examples/               # Example scripts (not installed)
-│   ├── example_query.py   # Query using llama-index
-│   └── query_duckdb_direct.py  # Direct DuckDB queries
+│   ├── prepare_duckdb_docs.py   # Download & prepare DuckDB docs
+│   ├── prepare_duckdb_docs.sh   # Bash version of above
+│   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
+│   ├── example_query.py         # Query using llama-index
+│   └── query_duckdb_direct.py   # Direct DuckDB queries
 ├── generated-embeddings/   # Output directory
 ├── pyproject.toml         # Package configuration
 └── README.md
+```
+
+## Example: DuckDB Documentation
+
+The package includes a ready-to-use script for preparing DuckDB documentation embeddings:
+
+```bash
+# Download DuckDB docs and create embeddings
+cd python/rag
+uv run python examples/prepare_duckdb_docs.py
+```
+
+This will:
+
+1. Download the latest DuckDB documentation from GitHub (~600+ files)
+2. Process all markdown files
+3. Generate embeddings using BAAI/bge-small-en-v1.5
+4. Create `generated-embeddings/duckdb_docs.duckdb`
+
+Test the embeddings:
+
+```bash
+# Run interactive test queries
+uv run python examples/test_duckdb_docs_query.py
+
+# Or test a specific query
+uv run python examples/test_duckdb_docs_query.py "What is a window function?"
+```
+
+Then use it in your SQLRooms app:
+
+```typescript
+import {createRagSlice} from '@sqlrooms/rag';
+
+const store = createRoomStore({
+  slices: [
+    createDuckDbSlice(),
+    createRagSlice({
+      embeddingsDatabases: [
+        {
+          databaseFilePath: './embeddings/duckdb_docs.duckdb',
+          databaseName: 'duckdb_docs',
+        },
+      ],
+    }),
+  ],
+});
+
+// Search DuckDB documentation
+const results = await store.getState().rag.queryEmbeddings(embedding);
 ```
 
 ## Supported Models

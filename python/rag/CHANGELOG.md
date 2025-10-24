@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added `examples/prepare_duckdb_docs.py` - Script to download DuckDB documentation from GitHub and prepare embeddings
+- Added `examples/prepare_duckdb_docs.sh` - Bash version of the DuckDB docs preparation script
+- Added `examples/README.md` - Comprehensive documentation for all example scripts
+- Added `downloaded-docs/` to `.gitignore` to exclude downloaded documentation from version control
+
 ### Fixed
 
 - Fixed issue where database files were created without `.duckdb` extension when specifying full path with extension
@@ -18,7 +25,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Improved path handling in `prepare.py` to explicitly manage `.duckdb` extension
 - `database_name` parameter now includes the `.duckdb` extension for clarity
-- Added warning filter in CLI to hide pydantic compatibility warnings from dependencies
+- Updated README.md with DuckDB documentation preparation example
+- Enhanced package structure documentation to include new example scripts
 
 ## [0.1.0] - 2025-10-23
 

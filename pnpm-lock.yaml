@@ -133,6 +133,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
+      '@sqlrooms/rag':
+        specifier: workspace:*
+        version: link:../../packages/rag
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../../packages/room-config
