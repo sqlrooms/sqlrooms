@@ -1,4 +1,4 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -82,8 +82,8 @@ export function useAiChat() {
 
   // Setup useChat with all configuration
   // Include messagesRevision in the id to force reset only when messages are explicitly deleted
-  // Store addToolResult in a variable that can be captured by the onToolCall closure
-  let capturedAddToolResult: AddToolResult;
+  // Store addToolResult in a ref that can be captured by the onToolCall closure
+  const addToolResultRef = useRef<AddToolResult>(null!);
 
   const {messages, sendMessage, addToolResult} = useChat({
     id: `${sessionId}-${messagesRevision}`,
@@ -91,8 +91,8 @@ export function useAiChat() {
     messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     onToolCall: async ({toolCall}: {toolCall: any}) => {
       // Wrap the store's onChatToolCall to provide addToolResult
-      // Use the captured addToolResult from the outer scope
-      return onChatToolCall?.({toolCall, addToolResult: capturedAddToolResult});
+      // Use the captured addToolResult from the ref
+      return onChatToolCall?.({toolCall, addToolResult: addToolResultRef.current});
     },
     onFinish: onChatFinish,
     onError: onChatError,
@@ -103,7 +103,7 @@ export function useAiChat() {
   });
 
   // Capture addToolResult for use in onToolCall
-  capturedAddToolResult = addToolResult;
+  addToolResultRef.current = addToolResult;
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {

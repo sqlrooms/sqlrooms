@@ -13,7 +13,7 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-store';
 import {produce} from 'immer';
-import {UIMessage, DefaultChatTransport, LanguageModel} from 'ai';
+import {UIMessage, DefaultChatTransport, LanguageModel, UITools, ChatOnDataCallback, UIDataTypes} from 'ai';
 
 import {
   createLocalChatTransportFactory,
@@ -78,7 +78,7 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: (dataPart: {type: string; data?: {toolCallId: string; output: unknown}}) => void;
+    onChatData: ChatOnDataCallback<UIMessage<unknown, UIDataTypes, UITools>>;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];

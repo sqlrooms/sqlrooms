@@ -4,7 +4,7 @@ import {
   convertToModelMessages,
   streamText,
 } from 'ai';
-import type {LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -281,7 +281,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
-    onChatData: (dataPart: {type: string; data?: {toolCallId: string; output: unknown}}) => {
+    onChatData: (dataPart: DataUIPart<any>) => {
       // Handle additional tool output data from the backend
       if (dataPart.type === 'data-tool-additional-output' && dataPart.data) {
         const {toolCallId, output} = dataPart.data;
