@@ -18,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "zod": "^3.24.1"
+    "zod": "^4.1.8"
   },
   "scripts": {
     "dev": "tsc -w",
