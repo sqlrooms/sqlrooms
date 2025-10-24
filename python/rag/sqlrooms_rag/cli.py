@@ -68,6 +68,12 @@ Examples:
         help="Suppress progress messages",
     )
     
+    parser.add_argument(
+        "--no-markdown-chunking",
+        action="store_true",
+        help="Disable markdown-aware chunking (use simple size-based chunking instead)",
+    )
+    
     args = parser.parse_args()
     
     try:
@@ -78,6 +84,7 @@ Examples:
             embed_model_name=args.embed_model_name,
             embed_dim=args.embed_dim,
             verbose=not args.quiet,
+            use_markdown_chunking=not args.no_markdown_chunking,
         )
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.", file=sys.stderr)

@@ -9,6 +9,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added markdown-aware chunking by default (splits by headers, preserves section titles)
+- Added `--no-markdown-chunking` CLI flag to revert to size-based chunking
+
 - Added `generate-umap-embeddings` CLI command - Generate 2D UMAP embeddings for visualization from DuckDB embeddings
 - Added automatic topic detection and naming using HDBSCAN clustering and TF-IDF keyword extraction
 - Added automatic link extraction from markdown to build document graphs (chunk-level sources, expanded to all target chunks)

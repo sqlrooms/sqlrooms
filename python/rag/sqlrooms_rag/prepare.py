@@ -11,6 +11,7 @@ from llama_index.core import (
     SimpleDirectoryReader,
     Settings,
 )
+from llama_index.core.node_parser import MarkdownNodeParser
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
 
@@ -22,6 +23,7 @@ def prepare_embeddings(
     embed_model_name: str = "BAAI/bge-small-en-v1.5",
     embed_dim: int = 384,
     verbose: bool = True,
+    use_markdown_chunking: bool = True,
 ):
     """
     Prepare embeddings from markdown files and store in DuckDB.
@@ -33,6 +35,7 @@ def prepare_embeddings(
         embed_model_name: HuggingFace model name (default: BAAI/bge-small-en-v1.5)
         embed_dim: Embedding dimension size (default: 384 for bge-small)
         verbose: Whether to print progress messages (default: True)
+        use_markdown_chunking: Use markdown-aware chunking by headers (default: True)
     
     Returns:
         VectorStoreIndex: The created knowledge base index
@@ -87,9 +90,25 @@ def prepare_embeddings(
     if verbose:
         print(f"Loaded {len(documents)} document(s)")
     
-    # Configure global settings with chunking strategy
+    # Configure global settings
     Settings.embed_model = embed_model
     Settings.chunk_size = chunk_size
+    
+    # Parse documents into nodes using markdown-aware chunking
+    if use_markdown_chunking:
+        if verbose:
+            print("Using markdown-aware chunking (splits by headers and sections)...")
+        
+        # Create markdown parser that respects document structure
+        markdown_parser = MarkdownNodeParser()
+        nodes = markdown_parser.get_nodes_from_documents(documents)
+        
+        if verbose:
+            print(f"Created {len(nodes)} chunks from markdown sections")
+    else:
+        if verbose:
+            print("Using default size-based chunking...")
+        nodes = None  # Let VectorStoreIndex do default chunking
     
     # Set up DuckDB vector store
     output_path = Path(output_db)
@@ -125,16 +144,28 @@ def prepare_embeddings(
         print("Generating embeddings and building knowledge base...")
         print("(This may take a while depending on the number and size of documents)")
     
-    knowledge_base = VectorStoreIndex.from_documents(
-        documents,
-        storage_context=storage_context,
-        show_progress=verbose,
-    )
+    if nodes:
+        # Use pre-parsed nodes
+        knowledge_base = VectorStoreIndex(
+            nodes,
+            storage_context=storage_context,
+            show_progress=verbose,
+        )
+    else:
+        # Use default document parsing
+        knowledge_base = VectorStoreIndex.from_documents(
+            documents,
+            storage_context=storage_context,
+            show_progress=verbose,
+        )
     
     if verbose:
         print(f"\n✓ Knowledge base created successfully!")
         print(f"✓ Database saved to: {persist_dir}/{database_name}")
-        print(f"✓ Total chunks processed: {len(documents)}")
+        if nodes:
+            print(f"✓ Total chunks processed: {len(nodes)} (from {len(documents)} documents)")
+        else:
+            print(f"✓ Total documents processed: {len(documents)}")
         print(f"\nYou can now use this database for RAG applications.")
     
     return knowledge_base

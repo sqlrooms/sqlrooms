@@ -22,12 +22,23 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from umap import UMAP
 
 
-def extract_title_from_markdown(text: str, fallback: str = "") -> str:
+def extract_title_from_markdown(
+    text: str, 
+    metadata_json: Optional[str] = None,
+    fallback: str = ""
+) -> str:
     """
-    Extract title from markdown frontmatter or first heading.
+    Extract title from metadata, markdown frontmatter, or first heading.
+    
+    Priority order:
+    1. Section title from metadata (if using markdown-aware chunking)
+    2. YAML frontmatter title
+    3. First markdown heading in text
+    4. Fallback
     
     Args:
         text: Markdown text content
+        metadata_json: Optional JSON metadata from LlamaIndex
         fallback: Fallback title if none found
         
     Returns:
@@ -35,6 +46,24 @@ def extract_title_from_markdown(text: str, fallback: str = "") -> str:
     """
     if not text or not text.strip():
         return fallback
+    
+    # Try to extract section title from metadata (from MarkdownNodeParser)
+    if metadata_json:
+        try:
+            metadata = json.loads(metadata_json)
+            
+            # Check for header metadata added by MarkdownNodeParser
+            # It stores section headers as 'Header_1', 'Header_2', etc.
+            headers = []
+            for key in sorted(metadata.keys()):
+                if key.startswith('Header_'):
+                    headers.append(metadata[key])
+            
+            if headers:
+                # Use the deepest (most specific) header
+                return headers[-1].strip()
+        except (json.JSONDecodeError, Exception):
+            pass
     
     # Try to extract from YAML frontmatter
     frontmatter_match = re.match(r'^---\s*\n(.*?)\n---\s*\n', text, re.DOTALL)
@@ -663,8 +692,12 @@ def process_embeddings(
         filepath = extract_filepath_from_metadata(row['metadata_'])
         filepaths.append(filepath or "")
         
-        # Extract title from markdown
-        title = extract_title_from_markdown(row['text'], fallback=filename or "Untitled")
+        # Extract title from metadata/markdown (prioritizes section titles)
+        title = extract_title_from_markdown(
+            row['text'], 
+            metadata_json=row['metadata_'],
+            fallback=filename or "Untitled"
+        )
         titles.append(title)
         
         if (idx + 1) % 100 == 0:

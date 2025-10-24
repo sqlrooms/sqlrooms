@@ -103,28 +103,51 @@ options:
   -o OUTPUT, --output OUTPUT
                         Output DuckDB database file path (default: knowledge_base.duckdb)
   --chunk-size CHUNK_SIZE
-                        Size of text chunks in tokens (default: 512)
+                        Max token size for text chunks (default: 512)
   --model EMBED_MODEL_NAME
                         HuggingFace embedding model name (default: BAAI/bge-small-en-v1.5)
   --embed-dim EMBED_DIM
                         Embedding dimension size (default: 384 for bge-small-en-v1.5)
+  --no-markdown-chunking
+                        Disable markdown-aware chunking (use size-based instead)
+  -q, --quiet           Suppress progress messages
 ```
 
 ## How It Works
 
 1. **Document Loading**: The tool recursively scans the input directory for `.md` files
 2. **Embedding Model**: Downloads and initializes the HuggingFace embedding model (cached locally after first run)
-3. **Chunking**: Splits documents into chunks based on the specified token size
+3. **Smart Chunking**: By default, splits documents by markdown headers (##, ###) to preserve section context. Section titles are stored in metadata for better retrieval. Falls back to size-based chunking for large sections.
 4. **Embedding Generation**: Generates vector embeddings for each chunk
-5. **Storage**: Stores embeddings in DuckDB with metadata for efficient retrieval
+5. **Storage**: Stores embeddings in DuckDB with metadata (including section titles) for efficient retrieval
+
+### Chunking Strategy
+
+**Markdown-Aware Chunking** (default):
+
+- ✅ Splits by markdown headers (`##`, `###`, etc.)
+- ✅ Preserves section context and hierarchy
+- ✅ Stores section titles in metadata (`Header_1`, `Header_2`, etc.)
+- ✅ Produces semantically coherent chunks
+
+**Size-Based Chunking** (with `--no-markdown-chunking`):
+
+- Simple token-based splitting
+- May break sections mid-content
+- Use only if your docs lack clear structure
+
+See [CHUNKING.md](./CHUNKING.md) for detailed comparison and best practices.
 
 ## Output
 
 The tool creates a DuckDB database file (`.duckdb`) that contains:
 
-- Document chunks (text)
+- Document chunks (text split by markdown sections)
 - Vector embeddings (384-dimensional by default)
-- Metadata for retrieval
+- Metadata including:
+  - File paths
+  - Section titles (`Header_1`, `Header_2`, etc.)
+  - Document structure information
 
 This database can be used with llama-index's query engine or any RAG application that supports DuckDB vector stores.
 
@@ -251,6 +274,8 @@ The output includes two Parquet files:
 - **Link Extraction:** Parses markdown links to build a chunk-level graph. Source chunks keep individual outdegree values; target documents expand to all chunks. Disable with `--no-links`.
 
 See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
+
+See [CHUNKING.md](./CHUNKING.md) for information about markdown-aware chunking.
 
 ## Package Structure
 
