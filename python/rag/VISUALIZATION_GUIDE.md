@@ -19,13 +19,14 @@ uv run generate-umap-embeddings generated-embeddings/duckdb_docs.duckdb
 
 The script generates a Parquet file with the following columns:
 
-| Column     | Description                              | Example                           |
-| ---------- | ---------------------------------------- | --------------------------------- |
-| `title`    | Document title from markdown frontmatter | "Window Functions"                |
-| `fileName` | File name extracted from metadata        | "window_functions"                |
-| `text`     | Full document text                       | "# Window Functions\n\nWindow..." |
-| `x`        | UMAP X coordinate                        | -5.234                            |
-| `y`        | UMAP Y coordinate                        | 8.123                             |
+| Column     | Description                              | Example                                |
+| ---------- | ---------------------------------------- | -------------------------------------- |
+| `title`    | Document title from markdown frontmatter | "Window Functions"                     |
+| `fileName` | File name extracted from metadata        | "window_functions"                     |
+| `text`     | Full document text                       | "# Window Functions\n\nWindow..."      |
+| `x`        | UMAP X coordinate                        | -5.234                                 |
+| `y`        | UMAP Y coordinate                        | 8.123                                  |
+| `topic`    | Automatically detected topic cluster     | "Window Functions / Aggregate / Query" |
 
 ## How It Works
 
@@ -75,6 +76,28 @@ Result: `fileName = "AiModelParameters"`
 - Projects them to 2D space while preserving structure
 - Similar documents cluster together
 
+### 4. Topic Detection (Automatic)
+
+**How it works:**
+
+- Uses HDBSCAN clustering on UMAP coordinates
+- Finds natural clusters in the 2D projection
+- For each cluster:
+  - Extracts top keywords using TF-IDF
+  - Generates descriptive topic name (e.g., "Window Functions / Aggregate / SQL")
+- Documents that don't fit any cluster are labeled "Uncategorized"
+
+**Parameters:**
+
+- `--min-cluster-size` - Minimum documents per cluster (default: 5)
+- `--no-topics` - Disable topic detection entirely
+
+**Example topics generated:**
+
+- "Window Functions / Aggregate / Query"
+- "JSON / Extensions / Data"
+- "Performance / Optimization / Index"
+
 ## Usage Examples
 
 ### Basic Usage
@@ -98,6 +121,12 @@ uv run generate-umap-embeddings embeddings.duckdb \
   --n-neighbors 30 \
   --min-dist 0.05 \
   --random-state 123
+
+# Disable topic detection
+uv run generate-umap-embeddings embeddings.duckdb --no-topics
+
+# Adjust clustering sensitivity
+uv run generate-umap-embeddings embeddings.duckdb --min-cluster-size 10
 ```
 
 ### Preview Mode
@@ -117,38 +146,51 @@ uv run generate-umap-embeddings embeddings.duckdb \
 
 ## Visualization Examples
 
-### Python + Matplotlib
+### Python + Matplotlib (Color by Topic)
 
 ```python
 import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
 
 # Load data
 df = pd.read_parquet('duckdb_docs_umap.parquet')
 
-# Create scatter plot
-plt.figure(figsize=(15, 10))
-plt.scatter(df['x'], df['y'], alpha=0.5, s=20, c='steelblue')
+# Create scatter plot with topics
+fig, ax = plt.subplots(figsize=(16, 10))
 
-# Add labels for top documents
-for idx in range(min(30, len(df))):
-    plt.annotate(
-        df.iloc[idx]['fileName'],
-        (df.iloc[idx]['x'], df.iloc[idx]['y']),
-        fontsize=7,
-        alpha=0.7
-    )
+# Get unique topics and assign colors
+if 'topic' in df.columns:
+    topics = df['topic'].unique()
+    colors = plt.cm.tab20(np.linspace(0, 1, len(topics)))
+    topic_to_color = dict(zip(topics, colors))
 
-plt.title('Documentation Embedding Visualization', fontsize=16)
+    # Plot each topic with different color
+    for topic in topics:
+        mask = df['topic'] == topic
+        topic_df = df[mask]
+        ax.scatter(
+            topic_df['x'],
+            topic_df['y'],
+            alpha=0.6,
+            s=30,
+            label=topic,
+            c=[topic_to_color[topic]]
+        )
+else:
+    ax.scatter(df['x'], df['y'], alpha=0.5, s=20, c='steelblue')
+
+plt.title('Documentation Map (Colored by Topic)', fontsize=16)
 plt.xlabel('UMAP Dimension 1')
 plt.ylabel('UMAP Dimension 2')
+plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=8)
 plt.grid(True, alpha=0.3)
 plt.tight_layout()
-plt.savefig('umap_visualization.png', dpi=300, bbox_inches='tight')
+plt.savefig('umap_topics.png', dpi=300, bbox_inches='tight')
 plt.show()
 ```
 
-### Python + Plotly (Interactive)
+### Python + Plotly (Interactive with Topics)
 
 ```python
 import pandas as pd
@@ -160,31 +202,40 @@ df = pd.read_parquet('duckdb_docs_umap.parquet')
 # Truncate text for hover display
 df['text_preview'] = df['text'].str[:200] + '...'
 
-# Create interactive scatter plot
+# Create interactive scatter plot colored by topic
 fig = px.scatter(
     df,
     x='x',
     y='y',
+    color='topic' if 'topic' in df.columns else None,
     hover_data={
         'title': True,
         'fileName': True,
+        'topic': True if 'topic' in df.columns else False,
         'text_preview': True,
         'x': ':.2f',
         'y': ':.2f',
     },
     hover_name='title',
-    title='Interactive Documentation Map',
+    title='Interactive Documentation Map (Colored by Topic)',
     labels={'x': 'UMAP 1', 'y': 'UMAP 2'},
 )
 
 fig.update_traces(
-    marker=dict(size=8, opacity=0.6, line=dict(width=0)),
+    marker=dict(size=8, opacity=0.7, line=dict(width=0.5, color='white')),
 )
 
 fig.update_layout(
-    width=1200,
-    height=800,
+    width=1400,
+    height=900,
     hovermode='closest',
+    legend=dict(
+        yanchor="top",
+        y=0.99,
+        xanchor="left",
+        x=0.01,
+        bgcolor="rgba(255,255,255,0.8)"
+    )
 )
 
 # Save as interactive HTML

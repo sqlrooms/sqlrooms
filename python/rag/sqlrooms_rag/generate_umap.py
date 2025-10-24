@@ -11,7 +11,7 @@ import re
 import sys
 from collections import Counter
 from pathlib import Path
-from typing import Optional, List
+from typing import Optional, List, Tuple, Dict
 
 import duckdb
 import numpy as np
@@ -166,11 +166,135 @@ def generate_umap_embeddings(
     return umap_embeddings
 
 
+def extract_keywords_from_texts(texts: List[str], n_keywords: int = 5) -> List[str]:
+    """
+    Extract top keywords from a list of texts using TF-IDF.
+    
+    Args:
+        texts: List of text documents
+        n_keywords: Number of top keywords to extract
+        
+    Returns:
+        List of top keywords
+    """
+    try:
+        # Use TF-IDF to find most important words
+        vectorizer = TfidfVectorizer(
+            max_features=100,
+            stop_words='english',
+            ngram_range=(1, 2),  # Include bigrams
+            min_df=2,  # Must appear in at least 2 documents
+        )
+        
+        tfidf_matrix = vectorizer.fit_transform(texts)
+        feature_names = vectorizer.get_feature_names_out()
+        
+        # Sum TF-IDF scores across all documents
+        scores = np.asarray(tfidf_matrix.sum(axis=0)).ravel()
+        
+        # Get top keywords
+        top_indices = scores.argsort()[-n_keywords:][::-1]
+        keywords = [feature_names[i] for i in top_indices]
+        
+        return keywords
+    except Exception as e:
+        print(f"   Warning: Could not extract keywords: {e}")
+        return []
+
+
+def generate_topic_name(texts: List[str], cluster_id: int) -> str:
+    """
+    Generate a descriptive topic name for a cluster of documents.
+    
+    Args:
+        texts: List of text documents in the cluster
+        cluster_id: The cluster ID number
+        
+    Returns:
+        Descriptive topic name
+    """
+    if not texts:
+        return f"Topic {cluster_id}"
+    
+    # Extract keywords
+    keywords = extract_keywords_from_texts(texts, n_keywords=3)
+    
+    if not keywords:
+        return f"Topic {cluster_id}"
+    
+    # Create topic name from keywords
+    # Capitalize first letter of each keyword
+    topic_name = " / ".join([kw.title() for kw in keywords[:3]])
+    
+    return topic_name
+
+
+def cluster_documents(
+    umap_coords: np.ndarray,
+    texts: List[str],
+    min_cluster_size: int = 5,
+) -> Tuple[np.ndarray, Dict[int, str]]:
+    """
+    Cluster documents using HDBSCAN and generate topic names.
+    
+    Args:
+        umap_coords: UMAP coordinates (n_samples, 2)
+        texts: List of document texts
+        min_cluster_size: Minimum size for a cluster
+        
+    Returns:
+        Tuple of (cluster_labels, topic_names_dict)
+    """
+    print("🔍 Clustering documents...")
+    print(f"   min_cluster_size: {min_cluster_size}")
+    
+    # Cluster using HDBSCAN
+    clusterer = HDBSCAN(
+        min_cluster_size=min_cluster_size,
+        min_samples=3,
+        cluster_selection_epsilon=0.5,
+        metric='euclidean',
+    )
+    
+    cluster_labels = clusterer.fit_predict(umap_coords)
+    
+    # Count clusters
+    unique_labels = np.unique(cluster_labels)
+    n_clusters = len(unique_labels[unique_labels >= 0])  # -1 is noise
+    n_noise = np.sum(cluster_labels == -1)
+    
+    print(f"✓ Found {n_clusters} clusters ({n_noise} noise points)")
+    
+    # Generate topic names for each cluster
+    print("🏷️  Generating topic names...")
+    topic_names = {}
+    
+    for label in unique_labels:
+        if label == -1:
+            topic_names[-1] = "Uncategorized"
+            continue
+        
+        # Get texts for this cluster
+        cluster_mask = cluster_labels == label
+        cluster_texts = [texts[i] for i in np.where(cluster_mask)[0]]
+        
+        # Generate topic name
+        topic_name = generate_topic_name(cluster_texts, label)
+        topic_names[label] = topic_name
+        
+        cluster_size = len(cluster_texts)
+        print(f"   Cluster {label}: {topic_name} ({cluster_size} docs)")
+    
+    return cluster_labels, topic_names
+
+
 def process_embeddings(
     df: pd.DataFrame,
     n_neighbors: int = 15,
     min_dist: float = 0.1,
     random_state: int = 42,
+    detect_topics: bool = True,
+    min_cluster_size: int = 5,
 ) -> pd.DataFrame:
     """
     Process embeddings and extract metadata.
@@ -180,9 +304,11 @@ def process_embeddings(
         n_neighbors: UMAP n_neighbors parameter
         min_dist: UMAP min_dist parameter
         random_state: Random seed
+        detect_topics: Whether to detect topics via clustering
+        min_cluster_size: Minimum cluster size for topic detection
         
     Returns:
-        DataFrame with title, fileName, text, x, y columns
+        DataFrame with title, fileName, text, x, y, topic columns
     """
     print("🔄 Processing embeddings...")
     
@@ -216,14 +342,35 @@ def process_embeddings(
         if (idx + 1) % 100 == 0:
             print(f"   Processed {idx + 1}/{len(df)} documents...")
     
+    # Detect topics via clustering
+    topics = None
+    if detect_topics:
+        try:
+            cluster_labels, topic_names = cluster_documents(
+                umap_coords,
+                df['text'].tolist(),
+                min_cluster_size=min_cluster_size,
+            )
+            # Map cluster labels to topic names
+            topics = [topic_names[label] for label in cluster_labels]
+        except Exception as e:
+            print(f"⚠️  Warning: Topic detection failed: {e}")
+            print("   Continuing without topics...")
+            topics = None
+    
     # Create result DataFrame
-    result_df = pd.DataFrame({
+    result_data = {
         'title': titles,
         'fileName': filenames,
         'text': df['text'].values,
         'x': umap_coords[:, 0],
         'y': umap_coords[:, 1],
-    })
+    }
+    
+    if topics is not None:
+        result_data['topic'] = topics
+    
+    result_df = pd.DataFrame(result_data)
     
     print(f"✓ Processed {len(result_df)} documents")
     return result_df
@@ -309,6 +456,19 @@ Examples:
         help='Preview mode: process only first N documents',
     )
     
+    parser.add_argument(
+        '--no-topics',
+        action='store_true',
+        help='Disable automatic topic detection',
+    )
+    
+    parser.add_argument(
+        '--min-cluster-size',
+        type=int,
+        default=5,
+        help='Minimum cluster size for topic detection (default: 5)',
+    )
+    
     args = parser.parse_args()
     
     # Validate input
@@ -347,6 +507,8 @@ Examples:
             n_neighbors=args.n_neighbors,
             min_dist=args.min_dist,
             random_state=args.random_state,
+            detect_topics=not args.no_topics,
+            min_cluster_size=args.min_cluster_size,
         )
         
         # Save result
@@ -366,6 +528,16 @@ Examples:
         print("Coordinate ranges:")
         print(f"  x: [{result_df['x'].min():.2f}, {result_df['x'].max():.2f}]")
         print(f"  y: [{result_df['y'].min():.2f}, {result_df['y'].max():.2f}]")
+        
+        # Show topic distribution if available
+        if 'topic' in result_df.columns:
+            print()
+            print("Topic distribution:")
+            topic_counts = result_df['topic'].value_counts()
+            for topic, count in topic_counts.head(10).items():
+                print(f"  {topic}: {count} documents")
+            if len(topic_counts) > 10:
+                print(f"  ... and {len(topic_counts) - 10} more topics")
         
     except Exception as e:
         print(f"\n❌ Error: {e}", file=sys.stderr)

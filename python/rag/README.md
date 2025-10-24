@@ -232,6 +232,10 @@ The output Parquet file contains:
 - `fileName` - File name (from metadata)
 - `text` - Full document text
 - `x`, `y` - UMAP coordinates for 2D plotting
+- `topic` - Automatically detected topic/cluster name (e.g., "Window Functions / Aggregate / SQL")
+
+**Topic Detection:**
+The script automatically clusters documents and assigns descriptive topic names using TF-IDF keyword extraction. Disable with `--no-topics`.
 
 See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
 

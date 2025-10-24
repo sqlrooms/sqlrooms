@@ -10,15 +10,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added `generate-umap-embeddings` CLI command - Generate 2D UMAP embeddings for visualization from DuckDB embeddings
+- Added automatic topic detection and naming using HDBSCAN clustering and TF-IDF keyword extraction
+- Added `topic` column to output Parquet files with descriptive cluster names
+- Added `--no-topics` and `--min-cluster-size` CLI options for topic detection control
 - Added `sqlrooms_rag.generate_umap` module with programmatic API for UMAP generation
 - Added `VISUALIZATION_GUIDE.md` - Complete guide for embedding visualization with examples
 - Added `scripts/README.md` - Documentation for utility scripts with visualization examples
 - Added `examples/prepare_duckdb_docs.py` - Script to download DuckDB documentation from GitHub and prepare embeddings
 - Added `examples/prepare_duckdb_docs.sh` - Bash version of the DuckDB docs preparation script
 - Added `examples/README.md` - Comprehensive documentation for all example scripts
-- Added visualization dependencies as optional `viz` extra: `umap-learn`, `pyarrow`, `pandas`
+- Added visualization dependencies as optional `viz` extra: `umap-learn`, `pyarrow`, `pandas`, `scikit-learn`, `hdbscan`
 - Added `downloaded-docs/` and `*.parquet` to `.gitignore`
-- Exported UMAP functions in package API: `extract_title_from_markdown`, `extract_filename_from_metadata`, `load_embeddings_from_duckdb`, `generate_umap_embeddings`, `process_embeddings`, `save_to_parquet`
+- Exported UMAP and clustering functions in package API: `extract_title_from_markdown`, `extract_filename_from_metadata`, `load_embeddings_from_duckdb`, `generate_umap_embeddings`, `process_embeddings`, `save_to_parquet`, `extract_keywords_from_texts`, `generate_topic_name`, `cluster_documents`
 
 ### Fixed
 

@@ -14,6 +14,9 @@ from .generate_umap import (
     generate_umap_embeddings,
     process_embeddings,
     save_to_parquet,
+    extract_keywords_from_texts,
+    generate_topic_name,
+    cluster_documents,
 )
 
 __all__ = [
@@ -24,5 +27,8 @@ __all__ = [
     "generate_umap_embeddings",
     "process_embeddings",
     "save_to_parquet",
+    "extract_keywords_from_texts",
+    "generate_topic_name",
+    "cluster_documents",
 ]
 
