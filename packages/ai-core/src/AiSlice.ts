@@ -19,15 +19,17 @@ import {
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   createChatHandlers,
+  ToolCall,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
+import {AddToolResult} from './hooks/useAiChat';
 
 // Custom type for onChatToolCall that includes addToolResult
 type ExtendedChatOnToolCallCallback = (args: {
-  toolCall: any;
-  addToolResult?: any;
-}) => Promise<any> | any;
+  toolCall: ToolCall;
+  addToolResult?: AddToolResult;
+}) => Promise<void> | void;
 
 export type AiSliceState = {
   ai: {
@@ -76,7 +78,7 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: (dataPart: any) => void;
+    onChatData: (dataPart: {type: string; data?: {toolCallId: string; output: unknown}}) => void;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
@@ -460,9 +462,12 @@ export function createAiSlice<PC extends BaseRoomConfig>(
 
         cancelAnalysis: () => {
           const currentSession = get().ai.getCurrentSession();
+          const abortController = get().ai.analysisAbortController;
+
           set((state) =>
             produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisAbortController = undefined;
 
               // Remove pending analysis result if it exists
               if (currentSession) {
@@ -481,7 +486,8 @@ export function createAiSlice<PC extends BaseRoomConfig>(
               }
             }),
           );
-          get().ai.analysisAbortController?.abort('Analysis cancelled');
+
+          abortController?.abort('Analysis cancelled');
         },
 
         /**

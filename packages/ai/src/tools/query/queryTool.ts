@@ -1,5 +1,4 @@
 import {AiSliceState} from '@sqlrooms/ai-core';
-import {OpenAssistantTool} from '@openassistant/utils';
 import {
   arrowTableToJson,
   DuckDbConnector,
@@ -15,6 +14,7 @@ export const QueryToolParameters = z.object({
   sqlQuery: z.string(),
   reasoning: z.string(),
 });
+
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 
 export type QueryToolLlmResult = {
@@ -42,12 +42,7 @@ export type QueryToolOptions = {
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: QueryToolOptions,
-): OpenAssistantTool<
-  typeof QueryToolParameters,
-  QueryToolLlmResult,
-  QueryToolAdditionalData,
-  unknown
-> {
+) {
   const {
     readOnly = true,
     autoSummary = false,

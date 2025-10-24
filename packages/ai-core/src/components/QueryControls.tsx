@@ -1,4 +1,4 @@
-import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
@@ -59,7 +59,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -72,7 +72,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis, sendMessage]);
+  }, [isRunningAnalysis, cancelAnalysis, onCancel, runAnalysis, sendMessage, onRun]);
 
   return (
     <div
@@ -107,7 +107,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!canStart}
+                  disabled={!isRunningAnalysis && !canStart}
                 >
                   {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>

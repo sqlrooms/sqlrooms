@@ -14,7 +14,72 @@ import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import {AddToolResult} from './hooks/useAiChat';
 import type {StoreApi} from '@sqlrooms/room-store';
 
-type ToolCall = {
+/**
+ * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
+ * This is important when canceling with AbortController, which may leave incomplete tool-calls.
+ * Assumes sequential tool execution (only one tool runs at a time).
+ *
+ * @param messages - The messages to validate and complete
+ * @returns Cleaned messages with completed tool-call/result pairs
+ */
+function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
+  return messages.map((message) => {
+    if (message.role !== 'assistant' || !message.parts) {
+      return message;
+    }
+
+    // Find the last tool-related part by iterating backwards
+    let lastToolPartIndex = -1;
+
+    for (let i = message.parts.length - 1; i >= 0; i--) {
+      const part = message.parts[i];
+      if (
+        typeof part?.type === 'string' &&
+        ('toolCallId' in part) &&
+        (part.type === 'dynamic-tool' || part.type.startsWith('tool-'))
+      ) {
+        lastToolPartIndex = i;
+        break;
+      }
+    }
+
+    // If no tool parts, nothing to do
+    if (lastToolPartIndex === -1) return message;
+
+    const lastToolPart = message.parts[lastToolPartIndex] as {
+      type: string;
+      toolCallId: string;
+      toolName?: string;
+      input?: unknown;
+      state?: string;
+    };
+
+    // Check if this tool has output (any state starting with 'output')
+    const hasOutput = lastToolPart.state?.startsWith('output');
+
+    if (hasOutput) return message; // Already complete
+
+    // Add synthetic error output for the incomplete tool call
+    const base = {
+      toolCallId: lastToolPart.toolCallId,
+      state: 'output-error' as const,
+      input: lastToolPart.input ?? {},
+      errorText: 'Operation cancelled by user',
+      providerExecuted: false,
+    };
+
+    const syntheticPart = lastToolPart.type === 'dynamic-tool'
+      ? { type: 'dynamic-tool' as const, toolName: lastToolPart.toolName || 'unknown', ...base }
+      : { type: lastToolPart.type as `tool-${string}`, ...base };
+
+    return {
+      ...message,
+      parts: [...message.parts, syntheticPart as unknown as typeof message.parts[number]],
+    };
+  });
+}
+
+export type ToolCall = {
   input: string;
   toolCallId: string;
   toolName: string;
@@ -216,9 +281,9 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
-    onChatData: (dataPart: any) => {
+    onChatData: (dataPart: {type: string; data?: {toolCallId: string; output: unknown}}) => {
       // Handle additional tool output data from the backend
-      if (dataPart.type === 'data-tool-additional-output') {
+      if (dataPart.type === 'data-tool-additional-output' && dataPart.data) {
         const {toolCallId, output} = dataPart.data;
 
         // Store the additional data in the session
@@ -234,12 +299,15 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
-    onChatFinish: ({messages}: {messages: UIMessage[]}) => {
+    onChatFinish: ({messages}: {messages: UIMessage[];}) => {
       try {
         const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
 
-        store.getState().ai.setSessionUiMessages(currentSessionId, messages);
+        // Complete any incomplete tool-calls before saving (can happen with AbortController)
+        const completedMessages = completeIncompleteToolCalls(messages);
+
+        store.getState().ai.setSessionUiMessages(currentSessionId, completedMessages);
 
         // Create or update analysis result with the user message ID for proper correlation
         store.setState((state: AiSliceState) =>
@@ -250,7 +318,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
             if (!targetSession) return;
 
             // Find the last user message to get its ID and prompt
-            const lastUserMessage = messages
+            const lastUserMessage = completedMessages
               .filter((msg) => msg.role === 'user')
               .slice(-1)[0];
 
@@ -263,7 +331,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
 
               // Check if there's a pending analysis result
               const pendingIndex = targetSession.analysisResults.findIndex(
-                (result: any) => result.id === '__pending__',
+                result => result.id === '__pending__',
               );
 
               if (pendingIndex !== -1) {
@@ -276,7 +344,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               } else {
                 // Check if analysis result already exists for this user message
                 const existingResult = targetSession.analysisResults.find(
-                  (result: any) => result.id === lastUserMessage.id,
+                  result => result.id === lastUserMessage.id,
                 );
 
                 if (!existingResult) {
@@ -291,13 +359,47 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
             }
           }),
         );
-        store.setState((state: AiSliceState) =>
-          produce(state, (draft: AiSliceState) => {
-            draft.ai.isRunningAnalysis = false;
-            draft.ai.analysisPrompt = '';
-            draft.ai.analysisAbortController = undefined;
-          }),
-        );
+
+        // Only stop the analysis when the assistant has fully completed,
+        // including any required tool calls and follow-up messages.
+        // Determine completion step-aware: only consider parts after the last step-start.
+        const lastMessage = completedMessages[completedMessages.length - 1];
+        const isLastMessageAssistant = lastMessage?.role === 'assistant';
+
+        let isConversationComplete = false;
+        if (isLastMessageAssistant) {
+          const parts = lastMessage?.parts ?? [];
+          // Find the last step boundary
+          let lastStepStartIndex = -1;
+          for (let i = parts.length - 1; i >= 0; i--) {
+            if (parts[i]?.type === 'step-start') {
+              lastStepStartIndex = i;
+              break;
+            }
+          }
+          const tailParts = parts.slice(lastStepStartIndex + 1);
+          // If the tail contains any tool parts, it's not complete yet
+          const tailHasTool = tailParts.some(
+            (part) =>
+              typeof part?.type === 'string' &&
+              (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
+          );
+          // Consider complete when the final step has no tools and includes some assistant content
+          const tailHasAssistantContent = tailParts.some(
+            (part) => part.type === 'text' || part.type === 'reasoning',
+          );
+          isConversationComplete = !tailHasTool && tailHasAssistantContent;
+        }
+
+        if (isConversationComplete) {
+          store.setState((state: AiSliceState) =>
+            produce(state, (draft: AiSliceState) => {
+              draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisPrompt = '';
+              draft.ai.analysisAbortController = undefined;
+            }),
+          );
+        }
       } catch (err) {
         console.error('onChatFinish error:', err);
         throw err;
@@ -326,13 +428,13 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               if (lastUserMessage) {
                 // Extract text content from user message
                 const promptText = lastUserMessage.parts
-                  .filter((part: any) => part.type === 'text')
-                  .map((part: any) => (part as {text: string}).text)
+                  .filter(part => part.type === 'text')
+                  .map(part => (part as {text: string}).text)
                   .join('');
 
                 // Check if there's a pending analysis result
                 const pendingIndex = targetSession.analysisResults.findIndex(
-                  (result: any) => result.id === '__pending__',
+                  result => result.id === '__pending__',
                 );
 
                 if (pendingIndex !== -1) {
@@ -346,7 +448,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
                 } else {
                   // Check if analysis result already exists for this user message
                   const existingResult = targetSession.analysisResults.find(
-                    (result: any) => result.id === lastUserMessage.id,
+                    result => result.id === lastUserMessage.id,
                   );
 
                   if (!existingResult) {
