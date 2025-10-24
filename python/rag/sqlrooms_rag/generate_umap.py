@@ -287,6 +287,25 @@ def generate_umap_embeddings(
     return umap_embeddings
 
 
+def clean_html_tags(text: str) -> str:
+    """
+    Remove HTML tags and entities from text.
+    
+    Args:
+        text: Text potentially containing HTML
+        
+    Returns:
+        Clean text with HTML removed
+    """
+    # Remove HTML tags
+    text = re.sub(r'<[^>]+>', ' ', text)
+    # Remove HTML entities
+    text = re.sub(r'&[a-zA-Z]+;', ' ', text)
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text)
+    return text.strip()
+
+
 def extract_keywords_from_texts(texts: List[str], n_keywords: int = 5) -> List[str]:
     """
     Extract top keywords from a list of texts using TF-IDF.
@@ -299,6 +318,9 @@ def extract_keywords_from_texts(texts: List[str], n_keywords: int = 5) -> List[s
         List of top keywords
     """
     try:
+        # Clean HTML tags from all texts
+        cleaned_texts = [clean_html_tags(text) for text in texts]
+        
         # Use TF-IDF to find most important words
         vectorizer = TfidfVectorizer(
             max_features=100,
@@ -307,7 +329,7 @@ def extract_keywords_from_texts(texts: List[str], n_keywords: int = 5) -> List[s
             min_df=2,  # Must appear in at least 2 documents
         )
         
-        tfidf_matrix = vectorizer.fit_transform(texts)
+        tfidf_matrix = vectorizer.fit_transform(cleaned_texts)
         feature_names = vectorizer.get_feature_names_out()
         
         # Sum TF-IDF scores across all documents
