@@ -8,4 +8,5 @@ export {
   type RagSliceState,
   type EmbeddingResult,
   type EmbeddingDatabase,
+  type EmbeddingProvider,
 } from './RagSlice';

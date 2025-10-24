@@ -5,9 +5,11 @@ RAG (Retrieval Augmented Generation) helper module for SQLRooms. This package pr
 ## Features
 
 - 🔍 **Vector Similarity Search** - Query embeddings using cosine similarity
+- 💬 **Text Queries** - Query directly with text using configurable embedding providers
 - 📊 **Multiple Databases** - Search across multiple embedding databases simultaneously
 - ⚡ **Efficient** - Uses DuckDB's native vector functions (`array_cosine_similarity`)
 - 🔄 **Lazy Loading** - Databases are attached on-demand
+- 🌐 **Flexible Embedding** - Works with OpenAI, Transformers.js, Cohere, and custom providers
 - 📦 **Type-Safe** - Full TypeScript support
 
 ## Installation
@@ -85,9 +87,59 @@ results.forEach(result => {
 });
 ```
 
-### 4. Using with an embedding API
+### 4. Query with text (automatic embedding generation)
 
-To generate embeddings from user queries, integrate with an API:
+**New!** Configure an embedding provider to query directly with text:
+
+```typescript
+import OpenAI from 'openai';
+import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
+
+const openai = new OpenAI();
+
+// Define embedding provider
+const embeddingProvider: EmbeddingProvider = async (text) => {
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-ada-002',
+    input: text,
+  });
+  return response.data[0].embedding;
+};
+
+// Option 1: Configure at creation
+const store = createRoomStore({
+  slices: [
+    createDuckDbSlice(),
+    createRagSlice({
+      embeddingsDatabases: [...],
+      embeddingProvider, // 👈 Pass provider here
+    }),
+  ],
+});
+
+// Now you can query with plain text!
+const results = await store.getState().rag.queryByText(
+  'How do I use window functions?',
+  {topK: 5}
+);
+
+// Option 2: Set provider later
+store.getState().rag.setEmbeddingProvider(embeddingProvider);
+const results2 = await store.getState().rag.queryByText('another query');
+```
+
+**See [EMBEDDING_PROVIDERS.md](./EMBEDDING_PROVIDERS.md) for complete examples including:**
+
+- OpenAI
+- Transformers.js (client-side, no server!)
+- Cohere
+- HuggingFace
+- Custom APIs
+- Caching, retry logic, and more
+
+### 5. Using with an embedding API (manual)
+
+Alternatively, generate embeddings manually before querying:
 
 ```typescript
 async function searchDocs(query: string) {
@@ -121,6 +173,9 @@ Creates a RAG slice for the room store.
 - `embeddingsDatabases` - Array of embedding database configurations
   - `databaseFilePath` - Path to the .duckdb file
   - `databaseName` - Name to use when attaching the database
+- `embeddingProvider` (optional) - Function to generate embeddings from text
+  - Type: `(text: string) => Promise<number[]>`
+  - Enables `queryByText()` method
 
 **Returns:** StateCreator for the RAG slice
 
@@ -138,7 +193,7 @@ await store.getState().rag.initialize();
 
 #### `queryEmbeddings(queryEmbedding, options?): Promise<EmbeddingResult[]>`
 
-Queries embeddings using vector similarity search.
+Queries embeddings using a pre-computed vector embedding.
 
 **Parameters:**
 
@@ -146,6 +201,55 @@ Queries embeddings using vector similarity search.
 - `options` (optional)
   - `topK` - Number of results to return (default: 5)
   - `databases` - Array of database names to search (default: all attached databases)
+
+**Example:**
+
+```typescript
+const embedding = [0.1, 0.2, ...]; // Pre-computed embedding
+const results = await store.getState().rag.queryEmbeddings(embedding, {topK: 5});
+```
+
+#### `queryByText(queryText, options?): Promise<EmbeddingResult[]>`
+
+Queries embeddings using text (requires embedding provider).
+
+**Parameters:**
+
+- `queryText` - The text query string
+- `options` (optional)
+  - `topK` - Number of results to return (default: 5)
+  - `databases` - Array of database names to search (default: all attached databases)
+
+**Example:**
+
+```typescript
+const results = await store
+  .getState()
+  .rag.queryByText('How do I use window functions?', {topK: 5});
+```
+
+**Throws:** Error if no embedding provider is configured
+
+#### `setEmbeddingProvider(provider): void`
+
+Sets or updates the embedding provider for text queries.
+
+**Parameters:**
+
+- `provider` - Function that converts text to embeddings
+  - Type: `(text: string) => Promise<number[]>`
+
+**Example:**
+
+```typescript
+store.getState().rag.setEmbeddingProvider(async (text) => {
+  const response = await openai.embeddings.create({
+    model: 'text-embedding-ada-002',
+    input: text,
+  });
+  return response.data[0].embedding;
+});
+```
 
 **Returns:** Promise resolving to array of `EmbeddingResult`:
 

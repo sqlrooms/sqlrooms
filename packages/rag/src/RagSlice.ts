@@ -19,6 +19,16 @@ export type EmbeddingDatabase = {
   databaseName: string;
 };
 
+/**
+ * Function that generates an embedding vector from text.
+ * This can be implemented using:
+ * - OpenAI API
+ * - Transformers.js (client-side)
+ * - Custom embedding service
+ * - Cohere, Anthropic, etc.
+ */
+export type EmbeddingProvider = (text: string) => Promise<number[]>;
+
 export type RagSliceState = {
   rag: {
     /**
@@ -41,6 +51,27 @@ export type RagSliceState = {
     ) => Promise<EmbeddingResult[]>;
 
     /**
+     * Query embeddings using text (requires embedding provider to be configured)
+     * @param queryText - The text query
+     * @param options - Query options (topK, databases to search)
+     * @returns Array of results sorted by similarity score
+     * @throws Error if no embedding provider is configured
+     */
+    queryByText: (
+      queryText: string,
+      options?: {
+        topK?: number;
+        databases?: string[];
+      },
+    ) => Promise<EmbeddingResult[]>;
+
+    /**
+     * Set the embedding provider for text queries
+     * @param provider - Function that converts text to embeddings
+     */
+    setEmbeddingProvider: (provider: EmbeddingProvider) => void;
+
+    /**
      * List all attached embedding databases
      */
     listDatabases: () => string[];
@@ -49,12 +80,15 @@ export type RagSliceState = {
 
 export function createRagSlice<PC extends BaseRoomConfig & DuckDbSliceConfig>({
   embeddingsDatabases,
+  embeddingProvider,
 }: {
   embeddingsDatabases: EmbeddingDatabase[];
+  embeddingProvider?: EmbeddingProvider;
 }): StateCreator<RagSliceState> {
   return createSlice<PC, RagSliceState>((set, get) => {
     let initialized = false;
     const attachedDatabases = new Set<string>();
+    let currentEmbeddingProvider = embeddingProvider;
 
     return {
       rag: {
@@ -153,6 +187,30 @@ export function createRagSlice<PC extends BaseRoomConfig & DuckDbSliceConfig>({
             console.error('Error querying embeddings:', error);
             throw error;
           }
+        },
+
+        queryByText: async (
+          queryText: string,
+          options = {},
+        ): Promise<EmbeddingResult[]> => {
+          if (!currentEmbeddingProvider) {
+            throw new Error(
+              'No embedding provider configured. Either:\n' +
+                '1. Pass embeddingProvider to createRagSlice()\n' +
+                '2. Call setEmbeddingProvider() before querying\n' +
+                '3. Use queryEmbeddings() with pre-computed embeddings',
+            );
+          }
+
+          // Generate embedding from text
+          const embedding = await currentEmbeddingProvider(queryText);
+
+          // Query using the embedding
+          return get().rag.queryEmbeddings(embedding, options);
+        },
+
+        setEmbeddingProvider: (provider: EmbeddingProvider) => {
+          currentEmbeddingProvider = provider;
         },
 
         listDatabases: () => {
