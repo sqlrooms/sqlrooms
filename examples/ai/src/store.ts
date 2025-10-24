@@ -8,6 +8,7 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
+import {createRagSlice, RagSliceState} from '@sqlrooms/rag';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -50,7 +51,8 @@ export type RoomConfig = z.infer<typeof RoomConfig>;
 export type RoomState = RoomShellSliceState<RoomConfig> &
   AiSliceState &
   SqlEditorSliceState &
-  AiSettingsSliceState;
+  AiSettingsSliceState &
+  RagSliceState;
 
 /**
  * Create a customized room store
@@ -102,6 +104,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
+
+      ...createRagSlice({
+        embeddingsDatabases: [
+          {
+            databaseFilePath: './examples/ai/embeddings/docs.duckdb',
+            databaseName: 'docs',
+          },
+        ],
+      }),
 
       // Ai slice
       ...createAiSlice({
