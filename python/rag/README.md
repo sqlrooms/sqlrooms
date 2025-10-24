@@ -248,7 +248,7 @@ The output includes two Parquet files:
 **Features:**
 
 - **Topic Detection:** Automatically clusters documents and assigns descriptive topic names using TF-IDF keyword extraction. Disable with `--no-topics`.
-- **Link Extraction:** Parses markdown links to build a document graph. Calculates network metrics (indegree/outdegree). Disable with `--no-links`.
+- **Link Extraction:** Parses markdown links to build a chunk-level graph. Source chunks keep individual outdegree values; target documents expand to all chunks. Disable with `--no-links`.
 
 See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
 

@@ -8,17 +8,29 @@ The UMAP embedding generator now includes automatic link extraction and network 
 
 Automatically extracts markdown links from document text:
 
-- Finds `[text](url)` patterns
+- Finds `[text](url)` patterns in all chunks
 - Filters to internal/relative links only (excludes external http:// URLs)
 - Normalizes paths for matching
 - Maps links to actual documents in the collection
+
+**Chunking-Aware:** Since documents are chunked during embedding preparation, link extraction handles this carefully:
+
+- **Source Chunks**: Chunk-level granularity - only chunks containing actual markdown links have `outdegree > 0`
+- **Target Documents**: Expands to all chunks - when a chunk links to a document, it creates edges to ALL chunks of that document
+- This approach is accurate (respects where links actually appear) while acknowledging that we don't know which specific chunk of the target document is referenced
+
+Example: If chunk 3 of "intro.md" has `[see this](window_functions.md)`, and "window_functions.md" has 5 chunks:
+
+- Chunk 3 of "intro.md" gets `outdegree = 5` (links to all 5 target chunks)
+- All 5 chunks of "window_functions.md" get `indegree += 1` (referenced by chunk 3)
 
 ### 2. Graph Construction
 
 Builds a directed graph where:
 
-- **Nodes** = Documents
-- **Edges** = Links from one document to another
+- **Nodes** = Individual chunks
+- **Edges** = From chunks with links to all chunks of target documents
+- **Granularity** = Source chunks keep their individual connectivity; target documents expand to all chunks
 
 ### 3. Network Metrics
 

@@ -113,6 +113,72 @@ def extract_filepath_from_metadata(metadata_json: str) -> Optional[str]:
         return None
 
 
+def make_relative_path(file_path: str, all_paths: List[str]) -> str:
+    """
+    Convert an absolute path to a relative path from the documentation root.
+    
+    Tries to find a common base directory among all paths and makes the path relative to it.
+    Falls back to the original path if no common base is found.
+    
+    Args:
+        file_path: The file path to make relative
+        all_paths: All file paths in the dataset (used to find common base)
+        
+    Returns:
+        Relative path from documentation root
+    """
+    if not file_path:
+        return file_path
+    
+    try:
+        path_obj = Path(file_path)
+        
+        # If already relative, return as-is
+        if not path_obj.is_absolute():
+            return file_path
+        
+        # Try to find common base from all paths
+        if all_paths:
+            valid_paths = [Path(p) for p in all_paths if p]
+            if valid_paths:
+                # Find common parent
+                try:
+                    # Get all parent directories
+                    all_parents = []
+                    for p in valid_paths[:100]:  # Sample for performance
+                        all_parents.extend(p.parents)
+                    
+                    # Find most common parent that's reasonably deep
+                    from collections import Counter
+                    parent_counts = Counter(all_parents)
+                    
+                    # Get the deepest common parent
+                    for parent, count in parent_counts.most_common():
+                        if count >= len(valid_paths) * 0.8:  # 80% of paths share this parent
+                            try:
+                                rel_path = path_obj.relative_to(parent)
+                                return str(rel_path)
+                            except ValueError:
+                                continue
+                except Exception:
+                    pass
+        
+        # Fallback: just return the path as-is (or try to extract a reasonable relative part)
+        # Look for common documentation root markers
+        parts = path_obj.parts
+        for i, part in enumerate(parts):
+            if part.lower() in ['docs', 'documentation', 'doc', 'pages', 'content']:
+                # Return from this point forward
+                return str(Path(*parts[i:]))
+        
+        # Last resort: return original
+        return file_path
+        
+    except Exception as e:
+        print(f"Warning: Failed to make path relative: {e}", file=sys.stderr)
+        return file_path
+
+
 def load_embeddings_from_duckdb(db_path: str) -> pd.DataFrame:
     """
     Load embeddings and metadata from DuckDB.
@@ -319,79 +385,112 @@ def build_link_graph(
     """
     Build a directed graph of document links.
     
+    Strategy:
+    - Source: Keep at chunk level (only chunks with actual links have outdegree > 0)
+    - Target: Expand to all chunks (link to document means link to ALL its chunks)
+    
     Args:
         df: DataFrame with 'text' and 'fileName' columns
-        filename_to_idx: Mapping from normalized filename to index
-        filepaths: List of full file paths for each document
+        filename_to_idx: Mapping from normalized filename to FIRST chunk index of that file
+        filepaths: List of full file paths for each chunk
         
     Returns:
-        Tuple of (outgoing_links, incoming_links) dictionaries
+        Tuple of (outgoing_links, incoming_links) dictionaries at CHUNK level
     """
     print("🔗 Building link graph...")
     
-    outgoing_links = defaultdict(set)  # source -> set of targets
-    incoming_links = defaultdict(set)  # target -> set of sources
+    # Group chunks by source document
+    doc_to_chunks = defaultdict(list)  # file_path -> list of chunk indices
+    for idx, filepath in enumerate(filepaths):
+        if filepath:
+            doc_to_chunks[filepath].append(idx)
+    
+    print(f"   Found {len(doc_to_chunks)} unique documents across {len(df)} chunks")
+    
+    # Build chunk-level graph
+    chunk_outgoing = defaultdict(set)  # chunk_idx -> set of target chunk indices
+    chunk_incoming = defaultdict(set)  # chunk_idx -> set of source chunk indices
     
     total_markdown_links = 0
+    chunks_with_links = 0
+    matched_links = 0
     
     for idx, row in df.iterrows():
         source_filepath = filepaths[idx] if idx < len(filepaths) else None
+        if not source_filepath:
+            continue
         
-        # Extract links from text
+        # Extract links from THIS chunk
         links = extract_links_from_markdown(row['text'])
         total_markdown_links += len(links)
         
         if not links:
             continue
         
+        chunks_with_links += 1
+        
         for link in links:
-            # Try multiple normalization strategies
-            target_idx = None
+            # Try to find target document
+            target_filepath = None
             
             # Strategy 1: Normalize with full file path context
             if source_filepath:
                 normalized_link = normalize_path(link, source_filepath)
                 if normalized_link in filename_to_idx:
-                    target_idx = filename_to_idx[normalized_link]
+                    first_chunk_idx = filename_to_idx[normalized_link]
+                    if first_chunk_idx < len(filepaths):
+                        target_filepath = filepaths[first_chunk_idx]
             
             # Strategy 2: Try normalizing without context
-            if target_idx is None:
+            if target_filepath is None:
                 normalized_link = normalize_path(link)
                 if normalized_link in filename_to_idx:
-                    target_idx = filename_to_idx[normalized_link]
+                    first_chunk_idx = filename_to_idx[normalized_link]
+                    if first_chunk_idx < len(filepaths):
+                        target_filepath = filepaths[first_chunk_idx]
             
             # Strategy 3: Try basename matching
-            if target_idx is None:
+            if target_filepath is None:
                 link_basename = Path(link).stem.lower()
-                # Look for a match in our lookup
                 for key, file_idx in filename_to_idx.items():
                     if Path(key).stem.lower() == link_basename:
-                        target_idx = file_idx
-                        break
+                        if file_idx < len(filepaths):
+                            target_filepath = filepaths[file_idx]
+                            break
             
-            # Strategy 4: If link contains path separators, try relative path parts
-            if target_idx is None and '/' in link:
+            # Strategy 4: Try relative path parts
+            if target_filepath is None and '/' in link:
                 link_parts = Path(link).parts
-                # Try last 2 parts
                 if len(link_parts) >= 2:
                     relative_key = str(Path(*link_parts[-2:])).lower()
                     if relative_key.endswith('.md'):
                         relative_key = relative_key[:-3]
                     if relative_key in filename_to_idx:
-                        target_idx = filename_to_idx[relative_key]
+                        first_chunk_idx = filename_to_idx[relative_key]
+                        if first_chunk_idx < len(filepaths):
+                            target_filepath = filepaths[first_chunk_idx]
             
-            if target_idx is not None and target_idx != idx:
-                outgoing_links[idx].add(target_idx)
-                incoming_links[target_idx].add(idx)
+            # If found, create links from THIS chunk to ALL chunks of target document
+            if target_filepath and target_filepath != source_filepath:
+                matched_links += 1
+                target_chunks = doc_to_chunks[target_filepath]
+                
+                # This specific chunk links to all chunks of the target document
+                chunk_outgoing[idx].update(target_chunks)
+                
+                # All target chunks receive an incoming link from this chunk
+                for target_chunk_idx in target_chunks:
+                    chunk_incoming[target_chunk_idx].add(idx)
     
-    n_docs_with_links = len([v for v in outgoing_links.values() if v])
-    total_links = sum(len(v) for v in outgoing_links.values())
-    matched_pct = (total_links / total_markdown_links * 100) if total_markdown_links > 0 else 0
+    # Calculate statistics
+    total_chunk_links = sum(len(targets) for targets in chunk_outgoing.values())
+    matched_pct = (matched_links / total_markdown_links * 100) if total_markdown_links > 0 else 0
     
-    print(f"✓ Found {total_markdown_links} markdown links in documents")
-    print(f"✓ Matched {total_links} links ({matched_pct:.1f}%) across {n_docs_with_links} documents")
+    print(f"✓ Found {total_markdown_links} markdown links in {chunks_with_links} chunks")
+    print(f"✓ Matched {matched_links} links ({matched_pct:.1f}%)")
+    print(f"✓ Created {total_chunk_links} chunk-to-chunk edges")
     
-    return dict(outgoing_links), dict(incoming_links)
+    return dict(chunk_outgoing), dict(chunk_incoming)
 
 
 def calculate_graph_metrics(
@@ -571,6 +670,10 @@ def process_embeddings(
         if (idx + 1) % 100 == 0:
             print(f"   Processed {idx + 1}/{len(df)} documents...")
     
+    # Convert absolute paths to relative paths for output
+    print("📁 Converting to relative paths...")
+    relative_filepaths = [make_relative_path(fp, filepaths) for fp in filepaths]
+    
     # Generate node IDs
     node_ids = [f"node_{i:04d}" for i in range(len(df))]
     
@@ -666,7 +769,7 @@ def process_embeddings(
         'node_id': node_ids,
         'title': titles,
         'fileName': filenames,
-        'file_path': filepaths,
+        'file_path': relative_filepaths,
         'text': df['text'].values,
         'x': umap_coords[:, 0],
         'y': umap_coords[:, 1],

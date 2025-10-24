@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `generate-umap-embeddings` CLI command - Generate 2D UMAP embeddings for visualization from DuckDB embeddings
 - Added automatic topic detection and naming using HDBSCAN clustering and TF-IDF keyword extraction
-- Added automatic link extraction from markdown to build document graphs
+- Added automatic link extraction from markdown to build document graphs (chunk-level sources, expanded to all target chunks)
 - Added `topic` column to output Parquet files with descriptive cluster names
 - Added `node_id`, `file_path`, `indegree`, `outdegree` columns for network analysis
 - Added separate links table (`*_links.parquet`) with `source_id` and `target_id` for network visualization
