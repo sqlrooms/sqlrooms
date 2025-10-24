@@ -10,6 +10,7 @@ from .prepare import prepare_embeddings
 from .generate_umap import (
     extract_title_from_markdown,
     extract_filename_from_metadata,
+    extract_filepath_from_metadata,
     load_embeddings_from_duckdb,
     generate_umap_embeddings,
     process_embeddings,
@@ -17,12 +18,18 @@ from .generate_umap import (
     extract_keywords_from_texts,
     generate_topic_name,
     cluster_documents,
+    extract_links_from_markdown,
+    normalize_path,
+    build_link_graph,
+    calculate_graph_metrics,
+    create_links_table,
 )
 
 __all__ = [
     "prepare_embeddings",
     "extract_title_from_markdown",
     "extract_filename_from_metadata",
+    "extract_filepath_from_metadata",
     "load_embeddings_from_duckdb",
     "generate_umap_embeddings",
     "process_embeddings",
@@ -30,5 +37,10 @@ __all__ = [
     "extract_keywords_from_texts",
     "generate_topic_name",
     "cluster_documents",
+    "extract_links_from_markdown",
+    "normalize_path",
+    "build_link_graph",
+    "calculate_graph_metrics",
+    "create_links_table",
 ]
 

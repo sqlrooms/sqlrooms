@@ -226,16 +226,29 @@ uv run generate-umap-embeddings generated-embeddings/duckdb_docs.duckdb
 # Output: generated-embeddings/duckdb_docs_umap.parquet
 ```
 
-The output Parquet file contains:
+The output includes two Parquet files:
 
+**Main file (`*_umap.parquet`):**
+
+- `node_id` - Unique node identifier (e.g., "node_0001")
 - `title` - Document title (from markdown frontmatter)
-- `fileName` - File name (from metadata)
+- `fileName` - File name extracted from metadata (e.g., "window_functions")
+- `file_path` - Full file path (e.g., "/path/to/docs/window_functions.md")
 - `text` - Full document text
 - `x`, `y` - UMAP coordinates for 2D plotting
 - `topic` - Automatically detected topic/cluster name (e.g., "Window Functions / Aggregate / SQL")
+- `outdegree` - Number of documents this document links TO
+- `indegree` - Number of documents linking TO this document
 
-**Topic Detection:**
-The script automatically clusters documents and assigns descriptive topic names using TF-IDF keyword extraction. Disable with `--no-topics`.
+**Links file (`*_umap_links.parquet`):**
+
+- `source_id` - Source node ID
+- `target_id` - Target node ID
+
+**Features:**
+
+- **Topic Detection:** Automatically clusters documents and assigns descriptive topic names using TF-IDF keyword extraction. Disable with `--no-topics`.
+- **Link Extraction:** Parses markdown links to build a document graph. Calculates network metrics (indegree/outdegree). Disable with `--no-links`.
 
 See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
 

@@ -19,14 +19,18 @@ uv run generate-umap-embeddings generated-embeddings/duckdb_docs.duckdb
 
 The script generates a Parquet file with the following columns:
 
-| Column     | Description                              | Example                                |
-| ---------- | ---------------------------------------- | -------------------------------------- |
-| `title`    | Document title from markdown frontmatter | "Window Functions"                     |
-| `fileName` | File name extracted from metadata        | "window_functions"                     |
-| `text`     | Full document text                       | "# Window Functions\n\nWindow..."      |
-| `x`        | UMAP X coordinate                        | -5.234                                 |
-| `y`        | UMAP Y coordinate                        | 8.123                                  |
-| `topic`    | Automatically detected topic cluster     | "Window Functions / Aggregate / Query" |
+| Column      | Description                              | Example                                |
+| ----------- | ---------------------------------------- | -------------------------------------- |
+| `node_id`   | Unique node identifier                   | "node_0001"                            |
+| `title`     | Document title from markdown frontmatter | "Window Functions"                     |
+| `fileName`  | File name extracted from metadata        | "window_functions"                     |
+| `file_path` | Full file path from metadata             | "/path/to/docs/window_functions.md"    |
+| `text`      | Full document text                       | "# Window Functions\n\nWindow..."      |
+| `x`         | UMAP X coordinate                        | -5.234                                 |
+| `y`         | UMAP Y coordinate                        | 8.123                                  |
+| `outdegree` | Number of outgoing links                 | 5                                      |
+| `indegree`  | Number of incoming links                 | 12                                     |
+| `topic`     | Automatically detected topic cluster     | "Window Functions / Aggregate / Query" |
 
 ## How It Works
 

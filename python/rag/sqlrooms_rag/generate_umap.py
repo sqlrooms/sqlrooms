@@ -9,9 +9,10 @@ import argparse
 import json
 import re
 import sys
-from collections import Counter
+from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Optional, List, Tuple, Dict
+from typing import Optional, List, Tuple, Dict, Set
+from urllib.parse import unquote
 
 import duckdb
 import numpy as np
@@ -82,6 +83,31 @@ def extract_filename_from_metadata(metadata_json: str) -> Optional[str]:
             return path.stem  # filename without extension
         
         return None
+    except (json.JSONDecodeError, Exception) as e:
+        print(f"Warning: Failed to parse metadata JSON: {e}", file=sys.stderr)
+        return None
+
+
+def extract_filepath_from_metadata(metadata_json: str) -> Optional[str]:
+    """
+    Extract full file path from metadata JSON.
+    
+    Args:
+        metadata_json: JSON string containing metadata
+        
+    Returns:
+        Full file path, or None if not found
+    """
+    try:
+        if not metadata_json:
+            return None
+        
+        metadata = json.loads(metadata_json)
+        
+        # Try to get file_path or file_name
+        file_path = metadata.get('file_path') or metadata.get('file_name')
+        
+        return file_path if file_path else None
     except (json.JSONDecodeError, Exception) as e:
         print(f"Warning: Failed to parse metadata JSON: {e}", file=sys.stderr)
         return None
@@ -229,6 +255,200 @@ def generate_topic_name(texts: List[str], cluster_id: int) -> str:
     return topic_name
 
 
+def extract_links_from_markdown(text: str) -> List[str]:
+    """
+    Extract links from markdown text.
+    
+    Args:
+        text: Markdown text content
+        
+    Returns:
+        List of link targets (URLs/paths)
+    """
+    links = []
+    
+    # Match [text](url) pattern
+    markdown_links = re.findall(r'\[([^\]]+)\]\(([^\)]+)\)', text)
+    for _, url in markdown_links:
+        # Clean up the URL
+        url = url.split('#')[0]  # Remove anchors
+        url = unquote(url)  # Decode URL encoding
+        if url and not url.startswith(('http://', 'https://', 'mailto:', 'ftp://')):
+            # Only include relative/internal links
+            links.append(url)
+    
+    # Also match raw URLs (optional)
+    # raw_links = re.findall(r'(?<!\()(\.{0,2}/[\w/\-\.]+\.md)', text)
+    # links.extend(raw_links)
+    
+    return links
+
+
+def normalize_path(path: str, base_file: Optional[str] = None) -> str:
+    """
+    Normalize a file path for comparison.
+    
+    Args:
+        path: File path to normalize
+        base_file: Base file for resolving relative paths
+        
+    Returns:
+        Normalized path
+    """
+    # Remove leading ./
+    path = path.lstrip('./')
+    
+    # Remove .md extension if present
+    if path.endswith('.md'):
+        path = path[:-3]
+    
+    # Handle relative paths if base_file provided
+    if base_file and path.startswith('../'):
+        base_dir = Path(base_file).parent
+        resolved = (base_dir / path).resolve()
+        path = str(resolved)
+    
+    return path.lower()
+
+
+def build_link_graph(
+    df: pd.DataFrame,
+    filename_to_idx: Dict[str, int],
+    filepaths: List[str],
+) -> Tuple[Dict[int, Set[int]], Dict[int, Set[int]]]:
+    """
+    Build a directed graph of document links.
+    
+    Args:
+        df: DataFrame with 'text' and 'fileName' columns
+        filename_to_idx: Mapping from normalized filename to index
+        filepaths: List of full file paths for each document
+        
+    Returns:
+        Tuple of (outgoing_links, incoming_links) dictionaries
+    """
+    print("🔗 Building link graph...")
+    
+    outgoing_links = defaultdict(set)  # source -> set of targets
+    incoming_links = defaultdict(set)  # target -> set of sources
+    
+    total_markdown_links = 0
+    
+    for idx, row in df.iterrows():
+        source_filepath = filepaths[idx] if idx < len(filepaths) else None
+        
+        # Extract links from text
+        links = extract_links_from_markdown(row['text'])
+        total_markdown_links += len(links)
+        
+        if not links:
+            continue
+        
+        for link in links:
+            # Try multiple normalization strategies
+            target_idx = None
+            
+            # Strategy 1: Normalize with full file path context
+            if source_filepath:
+                normalized_link = normalize_path(link, source_filepath)
+                if normalized_link in filename_to_idx:
+                    target_idx = filename_to_idx[normalized_link]
+            
+            # Strategy 2: Try normalizing without context
+            if target_idx is None:
+                normalized_link = normalize_path(link)
+                if normalized_link in filename_to_idx:
+                    target_idx = filename_to_idx[normalized_link]
+            
+            # Strategy 3: Try basename matching
+            if target_idx is None:
+                link_basename = Path(link).stem.lower()
+                # Look for a match in our lookup
+                for key, file_idx in filename_to_idx.items():
+                    if Path(key).stem.lower() == link_basename:
+                        target_idx = file_idx
+                        break
+            
+            # Strategy 4: If link contains path separators, try relative path parts
+            if target_idx is None and '/' in link:
+                link_parts = Path(link).parts
+                # Try last 2 parts
+                if len(link_parts) >= 2:
+                    relative_key = str(Path(*link_parts[-2:])).lower()
+                    if relative_key.endswith('.md'):
+                        relative_key = relative_key[:-3]
+                    if relative_key in filename_to_idx:
+                        target_idx = filename_to_idx[relative_key]
+            
+            if target_idx is not None and target_idx != idx:
+                outgoing_links[idx].add(target_idx)
+                incoming_links[target_idx].add(idx)
+    
+    n_docs_with_links = len([v for v in outgoing_links.values() if v])
+    total_links = sum(len(v) for v in outgoing_links.values())
+    matched_pct = (total_links / total_markdown_links * 100) if total_markdown_links > 0 else 0
+    
+    print(f"✓ Found {total_markdown_links} markdown links in documents")
+    print(f"✓ Matched {total_links} links ({matched_pct:.1f}%) across {n_docs_with_links} documents")
+    
+    return dict(outgoing_links), dict(incoming_links)
+
+
+def calculate_graph_metrics(
+    n_docs: int,
+    outgoing_links: Dict[int, Set[int]],
+    incoming_links: Dict[int, Set[int]],
+) -> Tuple[List[int], List[int]]:
+    """
+    Calculate graph metrics for each document.
+    
+    Args:
+        n_docs: Total number of documents
+        outgoing_links: Dictionary of outgoing links
+        incoming_links: Dictionary of incoming links
+        
+    Returns:
+        Tuple of (outdegree_list, indegree_list)
+    """
+    outdegree = [len(outgoing_links.get(i, set())) for i in range(n_docs)]
+    indegree = [len(incoming_links.get(i, set())) for i in range(n_docs)]
+    
+    return outdegree, indegree
+
+
+def create_links_table(
+    outgoing_links: Dict[int, Set[int]],
+    node_ids: List[str],
+) -> pd.DataFrame:
+    """
+    Create a links table for network visualization.
+    
+    Args:
+        outgoing_links: Dictionary of outgoing links
+        node_ids: List of node IDs for each document
+        
+    Returns:
+        DataFrame with source_id and target_id columns
+    """
+    print("📊 Creating links table...")
+    
+    links_data = []
+    for source_idx, targets in outgoing_links.items():
+        source_id = node_ids[source_idx]
+        for target_idx in targets:
+            target_id = node_ids[target_idx]
+            links_data.append({
+                'source_id': source_id,
+                'target_id': target_id,
+            })
+    
+    links_df = pd.DataFrame(links_data)
+    
+    print(f"✓ Created links table with {len(links_df)} edges")
+    
+    return links_df
+
+
 def cluster_documents(
     umap_coords: np.ndarray,
     texts: List[str],
@@ -295,7 +515,8 @@ def process_embeddings(
     random_state: int = 42,
     detect_topics: bool = True,
     min_cluster_size: int = 5,
-) -> pd.DataFrame:
+    extract_links: bool = True,
+) -> Tuple[pd.DataFrame, Optional[pd.DataFrame]]:
     """
     Process embeddings and extract metadata.
     
@@ -306,9 +527,12 @@ def process_embeddings(
         random_state: Random seed
         detect_topics: Whether to detect topics via clustering
         min_cluster_size: Minimum cluster size for topic detection
+        extract_links: Whether to extract document links and build graph
         
     Returns:
-        DataFrame with title, fileName, text, x, y, topic columns
+        Tuple of (documents_df, links_df)
+        - documents_df: DataFrame with node_id, title, fileName, file_path, text, x, y, outdegree, indegree, topic
+        - links_df: DataFrame with source_id, target_id (None if extract_links=False)
     """
     print("🔄 Processing embeddings...")
     
@@ -329,11 +553,16 @@ def process_embeddings(
     print("📝 Extracting metadata...")
     titles = []
     filenames = []
+    filepaths = []
     
     for idx, row in df.iterrows():
         # Extract filename from metadata
         filename = extract_filename_from_metadata(row['metadata_'])
         filenames.append(filename or "Unknown")
+        
+        # Extract full file path from metadata
+        filepath = extract_filepath_from_metadata(row['metadata_'])
+        filepaths.append(filepath or "")
         
         # Extract title from markdown
         title = extract_title_from_markdown(row['text'], fallback=filename or "Untitled")
@@ -341,6 +570,9 @@ def process_embeddings(
         
         if (idx + 1) % 100 == 0:
             print(f"   Processed {idx + 1}/{len(df)} documents...")
+    
+    # Generate node IDs
+    node_ids = [f"node_{i:04d}" for i in range(len(df))]
     
     # Detect topics via clustering
     topics = None
@@ -358,13 +590,88 @@ def process_embeddings(
             print("   Continuing without topics...")
             topics = None
     
+    # Extract links and build graph
+    links_df = None
+    outdegree = None
+    indegree = None
+    
+    if extract_links:
+        try:
+            # Build filename to index mapping using BOTH file_path and fileName
+            filename_to_idx = {}
+            for idx, (filepath, filename) in enumerate(zip(filepaths, filenames)):
+                if filename and filename != 'Unknown':
+                    # Add normalized filename (just the stem)
+                    normalized_name = normalize_path(filename)
+                    filename_to_idx[normalized_name] = idx
+                    
+                    # Also add normalized full path if available
+                    if filepath:
+                        normalized_path = normalize_path(filepath)
+                        filename_to_idx[normalized_path] = idx
+                        
+                        # Also add just the relative path parts (e.g., "sql/window_functions")
+                        path_obj = Path(filepath)
+                        # Try various path combinations for better matching
+                        if len(path_obj.parts) >= 2:
+                            # Add last 2 parts: "sql/window_functions"
+                            relative_2 = str(Path(*path_obj.parts[-2:])).lower()
+                            if relative_2.endswith('.md'):
+                                relative_2 = relative_2[:-3]
+                            filename_to_idx[relative_2] = idx
+                        
+                        if len(path_obj.parts) >= 3:
+                            # Add last 3 parts: "docs/sql/window_functions"
+                            relative_3 = str(Path(*path_obj.parts[-3:])).lower()
+                            if relative_3.endswith('.md'):
+                                relative_3 = relative_3[:-3]
+                            filename_to_idx[relative_3] = idx
+            
+            print(f"   Built lookup index with {len(filename_to_idx)} path variants for {len(filenames)} documents")
+            
+            # Build link graph
+            outgoing_links, incoming_links = build_link_graph(df, filename_to_idx, filepaths)
+            
+            # Calculate metrics
+            outdegree, indegree = calculate_graph_metrics(
+                len(df),
+                outgoing_links,
+                incoming_links
+            )
+            
+            # Create links table
+            links_df = create_links_table(outgoing_links, node_ids)
+            
+            # Show statistics
+            if outdegree:
+                max_out = max(outdegree)
+                max_in = max(indegree)
+                avg_out = sum(outdegree) / len(outdegree)
+                avg_in = sum(indegree) / len(indegree)
+                
+                print(f"   Outdegree: avg={avg_out:.1f}, max={max_out}")
+                print(f"   Indegree: avg={avg_in:.1f}, max={max_in}")
+                
+        except Exception as e:
+            print(f"⚠️  Warning: Link extraction failed: {e}")
+            print("   Continuing without link data...")
+            outdegree = [0] * len(df)
+            indegree = [0] * len(df)
+    else:
+        outdegree = [0] * len(df)
+        indegree = [0] * len(df)
+    
     # Create result DataFrame
     result_data = {
+        'node_id': node_ids,
         'title': titles,
         'fileName': filenames,
+        'file_path': filepaths,
         'text': df['text'].values,
         'x': umap_coords[:, 0],
         'y': umap_coords[:, 1],
+        'outdegree': outdegree,
+        'indegree': indegree,
     }
     
     if topics is not None:
@@ -373,7 +680,7 @@ def process_embeddings(
     result_df = pd.DataFrame(result_data)
     
     print(f"✓ Processed {len(result_df)} documents")
-    return result_df
+    return result_df, links_df
 
 
 def save_to_parquet(df: pd.DataFrame, output_path: str):
@@ -469,6 +776,12 @@ Examples:
         help='Minimum cluster size for topic detection (default: 5)',
     )
     
+    parser.add_argument(
+        '--no-links',
+        action='store_true',
+        help='Disable link extraction and graph analysis',
+    )
+    
     args = parser.parse_args()
     
     # Validate input
@@ -502,17 +815,24 @@ Examples:
             df = df.head(args.preview)
         
         # Process embeddings
-        result_df = process_embeddings(
+        result_df, links_df = process_embeddings(
             df,
             n_neighbors=args.n_neighbors,
             min_dist=args.min_dist,
             random_state=args.random_state,
             detect_topics=not args.no_topics,
             min_cluster_size=args.min_cluster_size,
+            extract_links=not args.no_links,
         )
         
-        # Save result
+        # Save documents
         save_to_parquet(result_df, str(output_path))
+        
+        # Save links if available
+        if links_df is not None and not links_df.empty:
+            links_path = output_path.with_name(f"{output_path.stem}_links.parquet")
+            save_to_parquet(links_df, str(links_path))
+            print(f"\n📊 Links saved to: {links_path}")
         
         print()
         print("=" * 80)
@@ -538,6 +858,30 @@ Examples:
                 print(f"  {topic}: {count} documents")
             if len(topic_counts) > 10:
                 print(f"  ... and {len(topic_counts) - 10} more topics")
+        
+        # Show link statistics if available
+        if 'outdegree' in result_df.columns and result_df['outdegree'].sum() > 0:
+            print()
+            print("Link statistics:")
+            print(f"  Total links: {result_df['outdegree'].sum()}")
+            print(f"  Documents with outgoing links: {(result_df['outdegree'] > 0).sum()}")
+            print(f"  Documents with incoming links: {(result_df['indegree'] > 0).sum()}")
+            
+            # Show top linked documents
+            if result_df['indegree'].max() > 0:
+                print()
+                print("Most referenced documents:")
+                top_referenced = result_df.nlargest(5, 'indegree')[['title', 'indegree']]
+                for idx, row in top_referenced.iterrows():
+                    print(f"  {row['title']}: {row['indegree']} incoming links")
+            
+            # Show most linking documents
+            if result_df['outdegree'].max() > 0:
+                print()
+                print("Documents with most links:")
+                top_linking = result_df.nlargest(5, 'outdegree')[['title', 'outdegree']]
+                for idx, row in top_linking.iterrows():
+                    print(f"  {row['title']}: {row['outdegree']} outgoing links")
         
     except Exception as e:
         print(f"\n❌ Error: {e}", file=sys.stderr)

@@ -11,8 +11,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added `generate-umap-embeddings` CLI command - Generate 2D UMAP embeddings for visualization from DuckDB embeddings
 - Added automatic topic detection and naming using HDBSCAN clustering and TF-IDF keyword extraction
+- Added automatic link extraction from markdown to build document graphs
 - Added `topic` column to output Parquet files with descriptive cluster names
-- Added `--no-topics` and `--min-cluster-size` CLI options for topic detection control
+- Added `node_id`, `file_path`, `indegree`, `outdegree` columns for network analysis
+- Added separate links table (`*_links.parquet`) with `source_id` and `target_id` for network visualization
+- Added `--no-topics`, `--min-cluster-size`, and `--no-links` CLI options
 - Added `sqlrooms_rag.generate_umap` module with programmatic API for UMAP generation
 - Added `VISUALIZATION_GUIDE.md` - Complete guide for embedding visualization with examples
 - Added `scripts/README.md` - Documentation for utility scripts with visualization examples
@@ -21,7 +24,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added `examples/README.md` - Comprehensive documentation for all example scripts
 - Added visualization dependencies as optional `viz` extra: `umap-learn`, `pyarrow`, `pandas`, `scikit-learn`, `hdbscan`
 - Added `downloaded-docs/` and `*.parquet` to `.gitignore`
-- Exported UMAP and clustering functions in package API: `extract_title_from_markdown`, `extract_filename_from_metadata`, `load_embeddings_from_duckdb`, `generate_umap_embeddings`, `process_embeddings`, `save_to_parquet`, `extract_keywords_from_texts`, `generate_topic_name`, `cluster_documents`
+- Exported UMAP, clustering, and graph functions in package API: `extract_title_from_markdown`, `extract_filename_from_metadata`, `load_embeddings_from_duckdb`, `generate_umap_embeddings`, `process_embeddings`, `save_to_parquet`, `extract_keywords_from_texts`, `generate_topic_name`, `cluster_documents`, `extract_links_from_markdown`, `normalize_path`, `build_link_graph`, `calculate_graph_metrics`, `create_links_table`
 
 ### Fixed
 
