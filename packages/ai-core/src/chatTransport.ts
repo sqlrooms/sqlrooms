@@ -4,7 +4,7 @@ import {
   convertToModelMessages,
   streamText,
 } from 'ai';
-import type {LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -35,7 +35,7 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       const part = message.parts[i];
       if (
         typeof part?.type === 'string' &&
-        ('toolCallId' in part) &&
+        'toolCallId' in part &&
         (part.type === 'dynamic-tool' || part.type.startsWith('tool-'))
       ) {
         lastToolPartIndex = i;
@@ -68,13 +68,21 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       providerExecuted: false,
     };
 
-    const syntheticPart = lastToolPart.type === 'dynamic-tool'
-      ? { type: 'dynamic-tool' as const, toolName: lastToolPart.toolName || 'unknown', ...base }
-      : { type: lastToolPart.type as `tool-${string}`, ...base };
+    const syntheticPart =
+      lastToolPart.type === 'dynamic-tool'
+        ? {
+            type: 'dynamic-tool' as const,
+            toolName: lastToolPart.toolName || 'unknown',
+            ...base,
+          }
+        : {type: lastToolPart.type as `tool-${string}`, ...base};
 
     return {
       ...message,
-      parts: [...message.parts, syntheticPart as unknown as typeof message.parts[number]],
+      parts: [
+        ...message.parts,
+        syntheticPart as unknown as (typeof message.parts)[number],
+      ],
     };
   });
 }
@@ -281,7 +289,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
-    onChatData: (dataPart: {type: string; data?: {toolCallId: string; output: unknown}}) => {
+    onChatData: (dataPart: DataUIPart<any>) => {
       // Handle additional tool output data from the backend
       if (dataPart.type === 'data-tool-additional-output' && dataPart.data) {
         const {toolCallId, output} = dataPart.data;
@@ -299,7 +307,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
-    onChatFinish: ({messages}: {messages: UIMessage[];}) => {
+    onChatFinish: ({messages}: {messages: UIMessage[]}) => {
       try {
         const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
@@ -307,7 +315,9 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         // Complete any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = completeIncompleteToolCalls(messages);
 
-        store.getState().ai.setSessionUiMessages(currentSessionId, completedMessages);
+        store
+          .getState()
+          .ai.setSessionUiMessages(currentSessionId, completedMessages);
 
         // Create or update analysis result with the user message ID for proper correlation
         store.setState((state: AiSliceState) =>
@@ -331,7 +341,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
 
               // Check if there's a pending analysis result
               const pendingIndex = targetSession.analysisResults.findIndex(
-                result => result.id === '__pending__',
+                (result) => result.id === '__pending__',
               );
 
               if (pendingIndex !== -1) {
@@ -344,7 +354,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               } else {
                 // Check if analysis result already exists for this user message
                 const existingResult = targetSession.analysisResults.find(
-                  result => result.id === lastUserMessage.id,
+                  (result) => result.id === lastUserMessage.id,
                 );
 
                 if (!existingResult) {
@@ -428,13 +438,13 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               if (lastUserMessage) {
                 // Extract text content from user message
                 const promptText = lastUserMessage.parts
-                  .filter(part => part.type === 'text')
-                  .map(part => (part as {text: string}).text)
+                  .filter((part) => part.type === 'text')
+                  .map((part) => (part as {text: string}).text)
                   .join('');
 
                 // Check if there's a pending analysis result
                 const pendingIndex = targetSession.analysisResults.findIndex(
-                  result => result.id === '__pending__',
+                  (result) => result.id === '__pending__',
                 );
 
                 if (pendingIndex !== -1) {
@@ -448,7 +458,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
                 } else {
                   // Check if analysis result already exists for this user message
                   const existingResult = targetSession.analysisResults.find(
-                    result => result.id === lastUserMessage.id,
+                    (result) => result.id === lastUserMessage.id,
                   );
 
                   if (!existingResult) {
