@@ -182,6 +182,10 @@ export function createLocalChatTransportFactory({
 
       const onToolCompleted = createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
+      // remove execute from tools, so they will be handled by onChatToolCall
+      Object.values(tools).forEach(tool => {
+        tool.execute = undefined;
+      });
 
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
