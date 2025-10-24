@@ -36,6 +36,9 @@ generated-embeddings/*
 # Downloaded documentation
 downloaded-docs/
 
+# Generated visualizations
+*.parquet
+
 # Model cache
 .cache/
 models/

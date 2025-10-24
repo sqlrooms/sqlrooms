@@ -123,6 +123,7 @@ uv run python test_duckdb_docs_query.py --top-k 10 "How to use JSON?"
 - Runs predefined test queries interactively
 
 **Perfect for:**
+
 - Testing your embeddings after preparation
 - Verifying query results
 - Learning how to query the documentation
@@ -153,6 +154,31 @@ uv run python query_duckdb_direct.py "How do I use window functions?"
 - `explore_database()` - Show schema and stats
 - `query_embeddings_db()` - Single query with embedding
 - `batch_query()` - Multiple queries efficiently
+
+### 6. `generate_umap_example.py` - Programmatic UMAP Generation
+
+Example of using the sqlrooms-rag API to generate UMAP embeddings programmatically.
+
+**Basic Usage:**
+
+```bash
+uv run python generate_umap_example.py
+```
+
+**What it does:**
+
+- Demonstrates programmatic API usage
+- Loads embeddings using `load_embeddings_from_duckdb()`
+- Processes with `process_embeddings()`
+- Saves using `save_to_parquet()`
+
+**Perfect for:**
+
+- Integrating UMAP into your own scripts
+- Customizing the UMAP workflow
+- Batch processing multiple databases
+
+**Note:** For CLI usage, use `uv run generate-umap-embeddings` instead.
 
 ## Quick Start
 

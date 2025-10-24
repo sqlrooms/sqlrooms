@@ -35,9 +35,15 @@ dev = [
     "black>=23.0.0",
     "ruff>=0.1.0",
 ]
+viz = [
+    "umap-learn>=0.5.0",
+    "pyarrow>=14.0.0",
+    "pandas>=2.0.0",
+]
 
 [project.scripts]
 prepare-embeddings = "sqlrooms_rag.cli:main"
+generate-umap-embeddings = "sqlrooms_rag.generate_umap:main"
 
 [project.urls]
 Homepage = "https://github.com/sqlrooms/sqlrooms"

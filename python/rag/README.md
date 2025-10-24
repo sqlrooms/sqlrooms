@@ -212,6 +212,29 @@ uv run python examples/query_duckdb_direct.py "Your question here"
 
 See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL.
 
+## Visualization
+
+Generate 2D UMAP embeddings for visualization:
+
+```bash
+# Install visualization dependencies
+uv pip install -e ".[viz]"
+
+# Generate UMAP visualization
+uv run generate-umap-embeddings generated-embeddings/duckdb_docs.duckdb
+
+# Output: generated-embeddings/duckdb_docs_umap.parquet
+```
+
+The output Parquet file contains:
+
+- `title` - Document title (from markdown frontmatter)
+- `fileName` - File name (from metadata)
+- `text` - Full document text
+- `x`, `y` - UMAP coordinates for 2D plotting
+
+See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
+
 ## Package Structure
 
 ```
@@ -226,6 +249,7 @@ sqlrooms-rag/
 │   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
 │   ├── example_query.py         # Query using llama-index
 │   └── query_duckdb_direct.py   # Direct DuckDB queries
+├── scripts/                # Documentation for utility scripts
 ├── generated-embeddings/   # Output directory
 ├── pyproject.toml         # Package configuration
 └── README.md
