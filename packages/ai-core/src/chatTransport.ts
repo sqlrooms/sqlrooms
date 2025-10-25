@@ -59,7 +59,7 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
 
     if (hasOutput) return message; // Already complete
 
-    // Add synthetic error output for the incomplete tool call
+    // Replace the incomplete tool call with a completed error version
     const base = {
       toolCallId: lastToolPart.toolCallId,
       state: 'output-error' as const,
@@ -77,12 +77,14 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
           }
         : {type: lastToolPart.type as `tool-${string}`, ...base};
 
+    // Replace the incomplete part instead of appending to avoid duplicates
+    const updatedParts = [...message.parts];
+    updatedParts[lastToolPartIndex] =
+      syntheticPart as unknown as (typeof message.parts)[number];
+
     return {
       ...message,
-      parts: [
-        ...message.parts,
-        syntheticPart as unknown as (typeof message.parts)[number],
-      ],
+      parts: updatedParts,
     };
   });
 }
@@ -183,7 +185,7 @@ export function createLocalChatTransportFactory({
       const onToolCompleted = createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
       // remove execute from tools, so they will be handled by onChatToolCall
-      Object.values(tools).forEach(tool => {
+      Object.values(tools).forEach((tool) => {
         tool.execute = undefined;
       });
 

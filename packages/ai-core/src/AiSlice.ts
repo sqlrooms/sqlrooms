@@ -32,6 +32,7 @@ import {
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 import {AddToolResult} from './hooks/useAiChat';
+import {cleanupPendingAnalysisResults} from './utils';
 
 // Custom type for onChatToolCall that includes addToolResult
 type ExtendedChatOnToolCallCallback = (args: {
@@ -143,9 +144,17 @@ export function createAiSlice(
   } = params;
 
   return createSlice<AiSliceState>((set, get, store) => {
+    // Clean up pending analysis results from persisted config
+    const cleanedConfig = params.config?.sessions
+      ? {
+          ...params.config,
+          sessions: params.config.sessions.map(cleanupPendingAnalysisResults),
+        }
+      : params.config;
+
     return {
       ai: {
-        config: createDefaultAiConfig(params.config),
+        config: createDefaultAiConfig(cleanedConfig),
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         tools,
@@ -462,6 +471,11 @@ export function createAiSlice(
                 (s: AnalysisSessionSchema) => s.id === currentSession.id,
               );
               if (session) {
+                // Remove any existing pending results (safety check for page refresh scenarios)
+                session.analysisResults = session.analysisResults.filter(
+                  (result: AnalysisResultSchema) => result.id !== '__pending__',
+                );
+
                 // Add incomplete analysis result with a temporary ID
                 // This will be updated in onChatFinish with the actual user message ID
                 session.analysisResults.push({
