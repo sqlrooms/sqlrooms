@@ -380,14 +380,14 @@ export function createDuckDbSlice({
                 NULL estimated_size,
                 TRUE AS isView
             )
-            SELECT 
+            SELECT
                 isView,
                 database, schema,
                 name, column_names, column_types,
                 sql, comment,
                 estimated_size
             FROM (DESCRIBE)
-            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name)
             ${
               schema || database || table
                 ? `WHERE ${[
@@ -471,15 +471,39 @@ export function createDuckDbSlice({
             : makeQualifiedTableName({table: tableName});
 
           const {db} = get();
-          if (data instanceof arrow.Table) {
+          const usedArrowLoad = data instanceof arrow.Table;
+          if (usedArrowLoad) {
             // TODO: make sure the table is replaced
-            await db.connector.loadArrow(data, qualifiedName.toString());
+            await db.connector.loadArrow(data as arrow.Table, qualifiedName.toString());
           } else {
-            await db.connector.loadObjects(data, qualifiedName.toString(), {
-              replace: true,
-            });
+            await db.connector.loadObjects(
+              data as Record<string, unknown>[],
+              qualifiedName.toString(),
+              {
+                replace: true,
+              },
+            );
           }
-          const newTable = (await db.loadTableSchemas(qualifiedName))[0];
+          let newTable = (await db.loadTableSchemas(qualifiedName))[0];
+          if (!newTable && usedArrowLoad) {
+            // The backend may finish ingestion slightly before schema introspection sees it.
+            // Retry a few times with small delays and occasional refreshes.
+            for (let attempt = 0; attempt < 30 && !newTable; attempt++) {
+              if (attempt > 0) await new Promise((r) => setTimeout(r, 100));
+              const described = (await db.loadTableSchemas(qualifiedName))[0];
+              if (described) {
+                newTable = described;
+                break;
+              }
+              // Try to refresh cached schemas and then find by name
+              await db.refreshTableSchemas();
+              const found = db.findTableByName(qualifiedName);
+              if (found) {
+                newTable = found;
+                break;
+              }
+            }
+          }
           if (!newTable) {
             throw new Error('Failed to add table');
           }

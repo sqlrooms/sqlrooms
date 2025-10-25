@@ -58,9 +58,6 @@ If a query fails, please don't try to run it again with the same syntax.`,
       const {type, sqlQuery} = params;
       try {
         const connector = await store.getState().db.getConnector();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await connector.query(sqlQuery);
-
         const parsedQuery = await store.getState().db.sqlSelectToJson(sqlQuery);
 
         if (
@@ -84,6 +81,9 @@ If a query fails, please don't try to run it again with the same syntax.`,
             throw new Error('Query is not a valid SELECT statement');
           }
         }
+
+        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+        const result = await connector.query(sqlQuery);
 
         const summaryData = await (async () => {
           if (!autoSummary) return null;

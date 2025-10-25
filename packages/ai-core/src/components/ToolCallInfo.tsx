@@ -77,7 +77,6 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
             <ChevronRightIcon className="h-3 w-3" />
           )}
           <span>{toolName}</span>
-          <span>{truncateArgs(input)}</span>
         </button>
       </div>
 
