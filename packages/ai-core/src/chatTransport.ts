@@ -124,9 +124,9 @@ function createOnToolCompletedHandler(store: StoreApi<AiSliceState>) {
 /**
  * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
  */
-function convertToAiSDKTools(
+export function convertToAiSDKTools(
   tools: Record<string, OpenAssistantTool>,
-  onToolCompleted: (toolCallId: string, additionalData: unknown) => void,
+  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
 ): ToolSet {
   return Object.entries(tools || {}).reduce(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {

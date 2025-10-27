@@ -13,6 +13,10 @@ function formatTablesForLLM(tables: DataTable[]): string {
   }
 
   return tables
+    .filter((table) => {
+      const schemaName = table.table?.schema || table.schema;
+      return !schemaName || schemaName === 'main';
+    })
     .map((table) => {
       const tableName = table.table?.table || table.tableName;
       const schemaName = table.table?.schema || table.schema;

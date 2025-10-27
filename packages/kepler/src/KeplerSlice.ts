@@ -6,6 +6,7 @@ import {
   registerEntry,
   requestMapStyles,
   wrapTo,
+  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
@@ -124,6 +125,7 @@ export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
       [mapId: string]: Dispatch;
     };
     initialize: (config?: PC) => Promise<void>;
+    addLayer: (mapId: string, layer: any, datasetId: string) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
      * the latest table schemas in the database
@@ -288,6 +290,11 @@ export function createKeplerSlice<
           }
           await get().kepler.syncKeplerDatasets();
           requestMapStyle(get().config.kepler.currentMapId);
+        },
+
+        addLayer: (mapId, layer, datasetId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
         },
 
         addTableToMap: async (mapId, tableName, options = {}) => {
