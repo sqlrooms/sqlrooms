@@ -13,17 +13,23 @@ function formatTablesForLLM(tables: DataTable[]): string {
   }
 
   return tables
+    .filter((table) => {
+      const schemaName = table.table?.schema || table.schema;
+      return !schemaName || schemaName === 'main';
+    })
     .map((table) => {
       const tableName = table.table?.table || table.tableName;
       const schemaName = table.table?.schema || table.schema;
-      const fullTableName = schemaName && schemaName !== 'main'
-        ? `${schemaName}.${tableName}`
-        : tableName;
+      const fullTableName =
+        schemaName && schemaName !== 'main'
+          ? `${schemaName}.${tableName}`
+          : tableName;
 
       // Build table header with metadata
       const header = [fullTableName];
       if (table.isView) header.push('(view)');
-      if (table.rowCount !== undefined) header.push(`[${table.rowCount.toLocaleString()} rows]`);
+      if (table.rowCount !== undefined)
+        header.push(`[${table.rowCount.toLocaleString()} rows]`);
 
       // Format columns with proper indentation
       const columns = table.columns

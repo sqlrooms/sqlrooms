@@ -19,6 +19,7 @@ import {
   UITools,
   ChatOnDataCallback,
   UIDataTypes,
+  generateText,
 } from 'ai';
 
 import {OpenAssistantToolSet} from '@openassistant/utils';
@@ -33,6 +34,7 @@ import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 import {AddToolResult} from './hooks/useAiChat';
 import {cleanupPendingAnalysisResults} from './utils';
+import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 // Custom type for onChatToolCall that includes addToolResult
 type ExtendedChatOnToolCallCallback = (args: {
@@ -50,6 +52,10 @@ export type AiSliceState = {
     setConfig: (config: AiSliceConfig) => void;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
+    sendPrompt: (
+      prompt: string,
+      abortController?: AbortController,
+    ) => Promise<string>;
     startAnalysis: (
       sendMessage: (message: {text: string}) => void,
     ) => Promise<void>;
@@ -442,6 +448,34 @@ export function createAiSlice(
             }
           }
           return instructions;
+        },
+
+        sendPrompt: async (
+          prompt: string,
+          abortController?: AbortController,
+        ) => {
+          // call completeText with the prompt, model, and tools and system instructions directly to get the response
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          const provider = currentSession?.modelProvider || defaultProvider;
+          const modelId = currentSession?.model || defaultModel;
+          const tools = state.ai.tools;
+          const systemInstructions = state.ai.getFullInstructions();
+
+          const model = createOpenAICompatible({
+            apiKey: state.ai.getApiKeyFromSettings(),
+            name: provider,
+            baseURL:
+              state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+          }).chatModel(modelId);
+
+          const response = await generateText({
+            model,
+            messages: [{role: 'user', content: prompt}],
+            system: systemInstructions,
+            abortSignal: abortController?.signal,
+          });
+          return response.text;
         },
 
         /**
