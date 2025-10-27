@@ -29,6 +29,7 @@ import {
   createRemoteChatTransportFactory,
   createChatHandlers,
   ToolCall,
+  convertToAiSDKTools,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
@@ -54,7 +55,12 @@ export type AiSliceState = {
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
       prompt: string,
-      abortController?: AbortController,
+      options?: {
+        modelProvider?: string;
+        modelName?: string;
+        baseUrl?: string;
+        abortController?: AbortController;
+      },
     ) => Promise<string>;
     startAnalysis: (
       sendMessage: (message: {text: string}) => void,
@@ -452,21 +458,36 @@ export function createAiSlice(
 
         sendPrompt: async (
           prompt: string,
-          abortController?: AbortController,
+          options: {
+            modelProvider?: string;
+            modelName?: string;
+            baseUrl?: string;
+            abortController?: AbortController;
+          } = {},
         ) => {
           // call completeText with the prompt, model, and tools and system instructions directly to get the response
           const state = get();
           const currentSession = state.ai.getCurrentSession();
-          const provider = currentSession?.modelProvider || defaultProvider;
-          const modelId = currentSession?.model || defaultModel;
+          const {modelProvider, modelName, baseUrl, abortController} = options;
+          const provider =
+            modelProvider || currentSession?.modelProvider || defaultProvider;
+          const modelId = modelName || currentSession?.model || defaultModel;
+          const baseURL =
+            baseUrl ||
+            state.ai.getBaseUrlFromSettings() ||
+            'https://api.openai.com/v1';
           const tools = state.ai.tools;
           const systemInstructions = state.ai.getFullInstructions();
+
+          // remove execute from tools
+          const toolsWithoutExecute = Object.fromEntries(
+            Object.entries(tools).filter(([_, tool]) => !tool.execute),
+          );
 
           const model = createOpenAICompatible({
             apiKey: state.ai.getApiKeyFromSettings(),
             name: provider,
-            baseURL:
-              state.ai.getBaseUrlFromSettings() || 'https://api.openai.com/v1',
+            baseURL,
           }).chatModel(modelId);
 
           const response = await generateText({
@@ -474,6 +495,7 @@ export function createAiSlice(
             messages: [{role: 'user', content: prompt}],
             system: systemInstructions,
             abortSignal: abortController?.signal,
+            tools: convertToAiSDKTools(toolsWithoutExecute),
           });
           return response.text;
         },
