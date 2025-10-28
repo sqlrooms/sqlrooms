@@ -89,9 +89,9 @@ export const TableTreeNode: FC<{
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="flex w-full items-center space-x-2">
+        <div className="flex w-full items-center space-x-2 pr-4">
           <TableIcon size="16px" className="shrink-0 text-blue-500" />
-          <span className="text-sm">{nodeObject.name}</span>
+          <span className="text-sm truncate">{nodeObject.name}</span>
         </div>
         <TreeNodeActionsMenu>
           {renderMenuItems(nodeObject, tableModal)}

@@ -1,6 +1,5 @@
 import React, {useCallback, useEffect} from 'react';
 import {
-  AccordionContent,
   Button,
   Select,
   SelectContent,
@@ -8,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
   Label,
-  Checkbox,
+  Switch,
 } from '@sqlrooms/ui';
 import type {
   ImageRatioOption,
@@ -56,10 +55,9 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
   }, [processing, imageDataUri, fileName]);
 
   return (
-    <AccordionContent className="flex flex-col gap-4 px-[5px] pb-5 pt-1">
-      <Label>Preview</Label>
-      <ImagePreview exportImage={exportImageSettings} />
-      <div className="flex flex-col space-y-2">
+    <div className="flex flex-col gap-6 px-[5px] pb-5 pt-1">
+      <ImagePreview exportImage={exportImageSettings}/>
+      <div className="grid grid-cols-[100px_auto] gap-4 items-center">
         <Label>Resolution</Label>
         <Select
           value={resolution}
@@ -86,9 +84,7 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
             )}
           </SelectContent>
         </Select>
-      </div>
 
-      <div>
         <Label>Ratio</Label>
         <Select
           value={ratio}
@@ -111,10 +107,9 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
             ))}
           </SelectContent>
         </Select>
-      </div>
 
-      <div className="flex flex-row items-center space-x-2">
-        <Checkbox
+        <Label className="font-normal">Show legend</Label>
+        <Switch
           checked={legend}
           onCheckedChange={(checked) =>
             setExportImageSetting({
@@ -122,18 +117,17 @@ export const KeplerImageExport: React.FC<KeplerImageExportProps> = ({
             })
           }
         />
-        <Label className="font-normal">Include legend</Label>
       </div>
 
       <div className="flex flex-col gap-2">
         <Button
-          variant="secondary"
+          variant="default"
           className="w-full"
           onClick={handleExportImage}
         >
           Export Image
         </Button>
       </div>
-    </AccordionContent>
+    </div>
   );
 };

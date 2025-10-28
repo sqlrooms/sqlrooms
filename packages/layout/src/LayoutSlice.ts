@@ -6,21 +6,56 @@ import {
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
 import React from 'react';
 import {StateCreator} from 'zustand';
 import {
   LayoutConfig,
   DEFAULT_MOSAIC_LAYOUT,
   MAIN_VIEW,
-  isMosaicLayoutParent,
 } from '@sqlrooms/layout-config';
+import {getVisibleMosaicLayoutPanels, makeMosaicStack} from './mosaic/mosaic-utils';
+
+// Helper function to get panels by placement
+function getPanelsByPlacement(panels: Record<string, RoomPanelInfo>, placement: string): string[] {
+  return Object.keys(panels).filter(panelId => panels[panelId]?.placement === placement);
+}
+
+// Helper function to build layout using existing mosaic utilities
+function buildLayout(panels: Record<string, RoomPanelInfo>, visiblePanels: string[]): any {
+  const sidebarTopPanels = getPanelsByPlacement(panels, 'sidebar-top').filter(p => visiblePanels.includes(p));
+  const sidebarBottomPanels = getPanelsByPlacement(panels, 'sidebar-bottom').filter(p => visiblePanels.includes(p));
+  const mainPanels = getPanelsByPlacement(panels, 'main').filter(p => visiblePanels.includes(p));
+  const mainBottomPanels = getPanelsByPlacement(panels, 'main-bottom').filter(p => visiblePanels.includes(p));
+  
+  // Build sidebar column using makeMosaicStack
+  const sidebarChildren = [
+    ...sidebarTopPanels.map(panel => ({node: panel, weight: 1})),
+    ...sidebarBottomPanels.map(panel => ({node: panel, weight: 1}))
+  ];
+  const sidebarColumn = makeMosaicStack('column', sidebarChildren);
+  
+  // Build main column using makeMosaicStack
+  const mainChildren = [
+    ...mainPanels.map(panel => ({node: panel, weight: 3})), // Main panels get more weight
+    ...mainBottomPanels.map(panel => ({node: panel, weight: 2}))
+  ];
+  const mainColumn = makeMosaicStack('column', mainChildren);
+  
+  // Build root layout using makeMosaicStack
+  const rootChildren = [
+    ...(sidebarColumn ? [{node: sidebarColumn, weight: 1}] : []),
+    ...(mainColumn ? [{node: mainColumn, weight: 3}] : [])
+  ];
+  
+  return makeMosaicStack('row', rootChildren) || DEFAULT_MOSAIC_LAYOUT.nodes;
+}
+
 
 export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
   component: React.ComponentType;
-  placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
+  placement: 'sidebar-top' | 'sidebar-bottom' | 'main' | 'main-bottom';
 };
 
 export const LayoutSliceConfig = z.object({
@@ -43,7 +78,6 @@ export type LayoutSliceState = {
     panels: Record<string, RoomPanelInfo>;
     setLayout(layout: LayoutConfig): void;
     togglePanel: (panel: string, show?: boolean) => void;
-    togglePanelPin: (panel: string) => void;
   };
 };
 
@@ -55,96 +89,41 @@ export function createLayoutSlice<
   panels?: Record<string, RoomPanelInfo>;
 } = {}): StateCreator<LayoutSliceState> {
   return createBaseSlice<PC, LayoutSliceState>((set, get) => ({
-    layout: {
-      panels,
-      setLayout: (layout) =>
-        set((state) =>
-          produce(state, (draft) => {
-            draft.config.layout = layout;
-          }),
-        ),
+      layout: {
+        panels,
+        setLayout: (layout) =>
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.layout = layout;
+            }),
+          ),
       togglePanel: (panel, show) => {
-        const {config} = get();
-        if (config.layout?.nodes === panel) {
-          // don't hide the view if it's the only one
+        // Main panel should always be visible and not toggleable
+        if (panel === MAIN_VIEW) {
           return;
         }
-        const result = removeMosaicNodeByKey(config.layout?.nodes, panel);
-        const isShown = result.success;
-        if (isShown) {
-          if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.config.layout;
-              layout.nodes = result.nextTree;
-              if (layout.pinned?.includes(panel)) {
-                layout.pinned = layout.pinned.filter(
-                  (p: string) => p !== panel,
-                );
-              }
-            }),
-          );
-        } else {
-          if (show === false) {
-            return;
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              const layout = draft.config.layout;
-              const root = layout.nodes;
-              const placement = get().layout.panels[panel]?.placement;
-              const side = placement === 'sidebar' ? 'first' : 'second';
-              const toReplace = isMosaicLayoutParent(root)
-                ? root[side]
-                : undefined;
-              if (
-                toReplace &&
-                isMosaicLayoutParent(root) &&
-                !isMosaicLayoutParent(toReplace) &&
-                toReplace !== MAIN_VIEW &&
-                !layout.fixed?.includes(toReplace) &&
-                !layout.pinned?.includes(toReplace)
-              ) {
-                // replace first un-pinned leaf
-                root[side] = panel;
-              } else {
-                const panelNode = {node: panel, weight: 1};
-                const restNode = {
-                  node: config.layout?.nodes,
-                  weight: 3,
-                };
-                // add to to the left
-                layout.nodes = makeMosaicStack(
-                  placement === 'sidebar-bottom' ? 'column' : 'row',
-                  side === 'first'
-                    ? [panelNode, restNode]
-                    : [restNode, panelNode],
-                );
-              }
-            }),
-          );
-        }
-      },
-
-      /**
-       * Toggle the pin state of a panel.
-       * @param panel - The panel to toggle the pin state of.
-       */
-      togglePanelPin: (panel: string) => {
+        
         set((state) =>
           produce(state, (draft) => {
             const layout = draft.config.layout;
-            const pinned = layout.pinned ?? [];
-            if (pinned.includes(panel)) {
-              layout.pinned = pinned.filter((p: string) => p !== panel);
+            const visiblePanels = getVisibleMosaicLayoutPanels(layout.nodes);
+            const isCurrentlyVisible = visiblePanels.includes(panel);
+            
+            // Determine the desired visibility state
+            const shouldShow = show ? show : !isCurrentlyVisible;
+            
+            if (shouldShow) {
+              // Show panel - rebuild layout with this panel included
+              const newVisiblePanels = [...visiblePanels, panel];
+              layout.nodes = buildLayout(draft.layout.panels, newVisiblePanels);
             } else {
-              layout.pinned = [...pinned, panel];
+              // Hide panel - rebuild layout without this panel
+              const newVisiblePanels = visiblePanels.filter(p => p !== panel);
+              layout.nodes = buildLayout(draft.layout.panels, newVisiblePanels);
             }
           }),
         );
-      },
+      }
     },
   }));
 }

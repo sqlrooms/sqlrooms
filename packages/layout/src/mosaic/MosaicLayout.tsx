@@ -11,6 +11,15 @@ const customMosaicStyles = `
   .mosaic-split:hover {
     background-color: hsl(var(--primary) / 0.4);
   }
+  .mosaic-root {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+  }
+  .mosaic-tile {
+    margin: 0;
+  }
 `;
 
 const MosaicLayout: FC<MosaicProps<string>> = (props) => {
@@ -42,7 +51,7 @@ const MosaicLayout: FC<MosaicProps<string>> = (props) => {
         renderTile={(id, path) => (
           <MosaicTile
             id={id}
-            className="bg-secondary/10"
+            className="bg-secondary/10 p-0 rounded-none"
             path={path}
             isDragging={isDragging}
             content={renderTile(id, path)}

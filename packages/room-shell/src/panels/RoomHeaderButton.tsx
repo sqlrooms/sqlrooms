@@ -4,18 +4,15 @@ import React, {FC} from 'react';
 const PanelHeaderButton: FC<{
   label: string;
   icon: React.ReactElement;
-  isPinned?: boolean;
   onClick: () => void;
 }> = (props) => {
-  const {isPinned, icon, label, onClick} = props;
+  const {icon, label, onClick} = props;
   return (
     <Button
       size="icon"
       onClick={onClick}
       variant="ghost"
-      className={`h-6 w-6 ${
-        isPinned ? 'text-foreground' : 'text-muted-foreground'
-      } hover:text-foreground hover:bg-foreground/10`}
+      className={`h-4 w-4 text-muted-foreground`}
       aria-label={label}
     >
       {icon}

@@ -2,7 +2,6 @@ import React, {useCallback} from 'react';
 import {useIntl} from 'react-intl';
 
 import {
-  LayerManagerFactory,
   FilterManagerFactory,
   InteractionManagerFactory,
   MapManagerFactory,
@@ -21,8 +20,8 @@ import {
 import {KeplerProvider} from './KeplerProvider';
 import {KeplerInjector} from './KeplerInjector';
 import {RGBColor} from '@kepler.gl/types';
+import {CustomLayerManager} from './CustomLayerManager';
 
-const LayerManager = KeplerInjector.get(LayerManagerFactory);
 const FilterManager = KeplerInjector.get(FilterManagerFactory);
 const InteractionManager = KeplerInjector.get(InteractionManagerFactory);
 const MapManager = KeplerInjector.get(MapManagerFactory);
@@ -58,39 +57,6 @@ function useSidePanelActions(keplerActions: KeplerActions) {
     onUpdateTableColor,
   };
 }
-const KeplerLayerManager: React.FC<{mapId: string; showDeleteDataset?: boolean}> = ({
-  mapId,
-  showDeleteDataset,
-}) => {
-  const {keplerActions, keplerState} = useKeplerStateActions({mapId});
-  const intl = useIntl();
-
-  const {onRemoveDataset, onShowAddDataModal, onUpdateTableColor} =
-    useSidePanelActions(keplerActions);
-
-  return (
-    <>
-      <LayerManager
-        layers={keplerState?.visState.layers || []}
-        datasets={keplerState?.visState.datasets || {}}
-        intl={intl}
-        layerOrder={keplerState?.visState.layerOrder || {}}
-        panelListView={keplerState?.uiState.layerPanelListView}
-        panelMetadata={layerPanelMetadata}
-        layerClasses={keplerState?.visState.layerClasses || {}}
-        layerBlending={keplerState?.visState.layerBlending}
-        overlayBlending={keplerState?.visState.overlayBlending}
-        showAddDataModal={onShowAddDataModal}
-        updateTableColor={onUpdateTableColor}
-        removeDataset={onRemoveDataset}
-        showDeleteDataset={showDeleteDataset ?? true}
-        uiStateActions={keplerActions.uiStateActions}
-        visStateActions={keplerActions.visStateActions}
-        mapStateActions={keplerActions.mapStateActions}
-      />
-    </>
-  );
-};
 
 const KeplerFilterManager: React.FC<{mapId: string}> = ({mapId}) => {
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
@@ -162,7 +128,7 @@ export const KeplerSidePanels: React.FC<KeplerSidePanelProps> = ({
       <DndContext visState={keplerState?.visState}>
         <div>
           {panelId === 'layer' ? (
-            <KeplerLayerManager mapId={mapId} showDeleteDataset={showDeleteDataset} />
+           <CustomLayerManager mapId={mapId} showDeleteDataset={showDeleteDataset} />
           ) : null}
           {panelId === 'filter' ? <KeplerFilterManager mapId={mapId} /> : null}
           {panelId === 'interaction' ? (

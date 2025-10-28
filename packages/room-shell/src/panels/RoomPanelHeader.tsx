@@ -1,5 +1,5 @@
-import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
-import {FC, useMemo} from 'react';
+import {XIcon} from 'lucide-react';
+import {FC} from 'react';
 import {useBaseRoomShellStore} from '../RoomShellStore';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
@@ -14,46 +14,24 @@ const RoomPanelHeader: FC<{
   const togglePanel = useBaseRoomShellStore(
     (state) => state.layout.togglePanel,
   );
-  const togglePanelPin = useBaseRoomShellStore(
-    (state) => state.layout.togglePanelPin,
-  );
-  const pinnedPanels = useBaseRoomShellStore(
-    (state) => state.config.layout.pinned,
-  );
-  const isPinned = useMemo(
-    () => pinnedPanels?.includes(type),
-    [pinnedPanels, type],
-  );
 
   return (
     <div className="flex">
-      <div className="flex w-full flex-row items-center gap-2">
+      <div className="flex w-full flex-row items-center gap-1.5">
         {showHeader && (
           <>
-            {Icon ? <Icon className="h-4 w-4" /> : null}
-            <h2 className="text-muted-foreground text-xs font-semibold uppercase">
+            {Icon ? <Icon className="h-3 w-3 text-muted-foreground" /> : null}
+            <span className="text-muted-foreground text-[10px] uppercase">
               {title}
-            </h2>
+            </span>
           </>
         )}
         {children}
       </div>
-      <div className="bg-secondary/50 flex gap-0">
+      <div className=" flex gap-0">
         <PanelHeaderButton
-          isPinned={isPinned}
-          icon={
-            isPinned ? (
-              <PinIcon className="w-[18px]" />
-            ) : (
-              <PinOffIcon className="w-[18px]" />
-            )
-          }
-          onClick={() => togglePanelPin(type)}
-          label="Pin panel"
-        />
-        <PanelHeaderButton
-          icon={<XIcon className="w-[18px]" />}
-          onClick={() => togglePanel(type)}
+          icon={<XIcon className='h-3 w-3'/>}
+          onClick={() => togglePanel(type, false)}
           label={`Close panel "${title}"`}
         />
       </div>

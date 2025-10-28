@@ -12,6 +12,7 @@ export {
 
 export {KeplerMapContainer} from './components/KeplerMapContainer';
 export {KeplerSidePanels} from './components/KeplerSidePanels';
+export {CustomLayerManager} from './components/CustomLayerManager';
 export {
   KeplerAddTileSetDialog,
   type LoadTileSet,

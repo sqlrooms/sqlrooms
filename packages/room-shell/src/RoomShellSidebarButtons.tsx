@@ -1,4 +1,3 @@
-import {getVisibleMosaicLayoutPanels} from '@sqlrooms/layout';
 import {
   Button,
   cn,
@@ -8,13 +7,14 @@ import {
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
 import {useBaseRoomShellStore} from './RoomShellStore';
+import { getVisibleMosaicLayoutPanels } from '@sqlrooms/layout';
 
 const SidebarButton: FC<{
   className?: string;
   title: string;
   isSelected: boolean;
   isDisabled?: boolean;
-  icon: React.ComponentType<{className?: string}>;
+  icon?: React.ComponentType<any>;
   onClick: () => void;
 }> = ({
   className,
@@ -25,24 +25,22 @@ const SidebarButton: FC<{
   onClick,
 }) => {
   return (
-    <Tooltip>
-      <TooltipTrigger asChild>
+    <Tooltip delayDuration={100}>
+      <TooltipTrigger asChild >
         <Button
           variant="ghost"
-          size="icon"
           className={cn(
-            'h-10 w-10 rounded-none',
-            isSelected ? 'bg-secondary' : 'hover:bg-secondary/50',
-            // isDisabled && 'opacity-50 cursor-not-allowed',
+            'h-9 w-9 rounded hover:bg-primary/10 p-0 flex items-center justify-center shrink-0',
+            isSelected && 'bg-primary/10' ,
             className,
           )}
           disabled={isDisabled}
           onClick={onClick}
         >
-          {Icon ? <Icon className="h-5 w-5" /> : title}
+          {Icon ? <Icon strokeWidth={1.5}/> : title}
         </Button>
-      </TooltipTrigger>
-      <TooltipContent side="right">
+      </TooltipTrigger >
+      <TooltipContent side="right" >
         <p>{title}</p>
       </TooltipContent>
     </Tooltip>
@@ -70,7 +68,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
       title={title ?? ''}
       isSelected={visibleRoomPanels.includes(roomPanelType)}
       isDisabled={!initialized}
-      icon={Icon ?? (() => null)}
+      icon={Icon}
       onClick={() => togglePanel(roomPanelType)}
     />
   );
@@ -82,22 +80,13 @@ const RoomShellSidebarButtons: FC<{className?: string}> = ({className}) => {
   return (
     <div className={cn('flex h-full grow flex-col', className)}>
       <div className="flex flex-col gap-2">
-        {panels
-          ? Object.keys(panels)
-              .filter((key) => panels[key]?.placement === 'sidebar')
-              .map((type) => (
-                <RoomShellSidebarButton key={type} roomPanelType={type} />
-              ))
-          : null}
-      </div>
-      <div className="flex-1" />
-      <div className="flex flex-col gap-2">
         {Object.keys(panels)
-          .filter((key) => panels[key]?.placement === 'sidebar-bottom')
+          .filter((key) => panels[key]?.placement !== 'main')
           .map((type) => (
             <RoomShellSidebarButton key={type} roomPanelType={type} />
-          ))}
+        ))}
       </div>
+      <div className="flex-1" />
     </div>
   );
 };

@@ -10,7 +10,7 @@ import {
   TabsTrigger,
 } from '@sqlrooms/ui';
 import {MoreVerticalIcon, PlusIcon} from 'lucide-react';
-import React, {useCallback} from 'react';
+import React, {useCallback, useRef} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
@@ -33,6 +33,9 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     id: string;
     name: string;
   } | null>(null);
+
+  // Ref for the scrollable container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
 
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
@@ -93,7 +96,16 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   // Handle new query creation
   const handleNewQuery = useCallback(() => {
-    return createQueryTab();
+    createQueryTab();
+    // Auto-scroll to the right after a short delay to ensure the tab is rendered
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          left: scrollContainerRef.current.scrollWidth,
+          behavior: 'smooth',
+        });
+      }
+    }, 0);
   }, [createQueryTab]);
 
   const handleConfirmDeleteQuery = useCallback(() => {
@@ -105,24 +117,25 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   return (
     <>
-      <TabsList className={cn('h-auto flex-1 flex-wrap', className)}>
-        {queries.map((q) => (
-          <div key={q.id} className="relative">
+      <TabsList className={cn('p-0 h-10 flex pt-1.5 gap-1 justify-start bg-transparent', className)}>
+        <div ref={scrollContainerRef} className="h-full flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
+          {queries.map((q) => (
             <TabsTrigger
+              key={q.id}
               value={q.id}
-              className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 py-0 pr-8"
+              className="h-full flex-shrink-0 min-w-[100px] max-w-[200px] pl-4 pr-2 py-0 font-normal rounded-b-none data-[state=active]:shadow-none overflow-hidden flex items-center justify-between gap-1 data-[state=inactive]:hover:bg-white/40"
             >
               <div
-                className="flex h-6 items-center"
+                className="min-w-0 flex items-center"
                 onDoubleClick={() => handleDoubleClick(q.id)}
               >
                 {editingQueryId !== q.id ? (
-                  <div>{q.name}</div>
+                  <div className="truncate text-sm">{q.name}</div>
                 ) : (
                   <EditableText
                     value={q.name}
                     onChange={(newName: string) => handleRename(q.id, newName)}
-                    className="h-6 truncate text-sm"
+                    className="h-6 shadow-none truncate text-sm flex-1 min-w-0"
                     isEditing={editingQueryId === q.id}
                     onEditingChange={(isEditing) => {
                       if (!isEditing) {
@@ -132,44 +145,45 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   />
                 )}
               </div>
-            </TabsTrigger>
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <div className="hover:bg-accent absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm">
-                  <MoreVerticalIcon className="h-3 w-3" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleStartRename(q.id, q.name);
-                  }}
-                >
-                  Rename
-                </DropdownMenuItem>
-                {queries.length > 1 && (
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <div className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-sm" onMouseDown={(e) => e.stopPropagation()}>
+                    <MoreVerticalIcon className="h-3 w-3" />
+                  </div>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
                   <DropdownMenuItem
                     onClick={() => {
-                      handleDeleteQuery(q.id);
+                      handleStartRename(q.id, q.name);
                     }}
-                    className="text-red-500"
                   >
-                    Delete
+                    Rename
                   </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
+                  {queries.length > 1 && (
+                    <DropdownMenuItem
+                      onClick={() => {
+                        handleDeleteQuery(q.id);
+                      }}
+                    >
+                      Delete
+                    </DropdownMenuItem>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </TabsTrigger>
+          ))}
+        </div>
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleNewQuery}
+          className="w-8 h-10 flex-shrink-0"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </Button>
       </TabsList>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={handleNewQuery}
-        className="ml-2"
-      >
-        <PlusIcon className="h-4 w-4" />
-      </Button>
+      
       <DeleteSqlQueryModal
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}
