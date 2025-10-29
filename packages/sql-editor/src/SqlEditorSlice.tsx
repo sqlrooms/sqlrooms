@@ -106,6 +106,17 @@ export type SqlEditorSliceState = {
     renameQueryTab(queryId: string, newName: string): void;
 
     /**
+     * Close a query tab.
+     * @param queryId - The ID of the query to close.
+     */
+    closeQueryTab(queryId: string): void;
+    /**
+     * Open a closed tab id.
+     * @param queryId - The ID of the query to remove.
+     */
+    openQueryTab(queryId: string): void;
+
+    /**
      * Update the SQL text for a query.
      * @param queryId - The ID of the query to update.
      * @param queryText - The new SQL text.
@@ -218,6 +229,28 @@ export function createSqlEditorSlice<
               if (query) {
                 query.name = newName || query.name;
               }
+            }),
+          );
+        },
+
+        closeQueryTab: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.closedTabIds.push(queryId);
+              const openedTabs = draft.config.sqlEditor.queries.filter((q) => !draft.config.sqlEditor.closedTabIds.includes(q.id));
+
+              if (draft.config.sqlEditor.selectedQueryId === queryId && openedTabs.length > 0 && openedTabs[0]) {
+                draft.config.sqlEditor.selectedQueryId = openedTabs[0].id;
+              }
+            }),
+          );
+        },
+
+        openQueryTab: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.closedTabIds = draft.config.sqlEditor.closedTabIds?.filter((id) => id !== queryId);
+              draft.config.sqlEditor.selectedQueryId = queryId;
             }),
           );
         },
