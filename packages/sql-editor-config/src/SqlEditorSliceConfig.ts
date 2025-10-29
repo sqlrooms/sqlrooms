@@ -23,7 +23,7 @@ export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
     sqlEditor: {
-      queries: [{id: 'default', name: 'Untitled', query: ''}],
+      queries: [{id: 'default', name: 'SQL', query: ''}],
       selectedQueryId: 'default',
       minimizedTabIds: [],
     },

@@ -237,6 +237,11 @@ export function createSqlEditorSlice<
           set((state) =>
             produce(state, (draft) => {
               draft.config.sqlEditor.minimizedTabIds.push(queryId);
+              const openedTabs = draft.config.sqlEditor.queries.filter((q) => !draft.config.sqlEditor.minimizedTabIds.includes(q.id));
+
+              if (draft.config.sqlEditor.selectedQueryId === queryId && openedTabs.length > 0 && openedTabs[0]) {
+                draft.config.sqlEditor.selectedQueryId = openedTabs[0].id;
+              }
             }),
           );
         },
