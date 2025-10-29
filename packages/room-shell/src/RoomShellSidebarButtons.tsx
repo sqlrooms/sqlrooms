@@ -30,7 +30,7 @@ const SidebarButton: FC<{
         <Button
           variant="ghost"
           className={cn(
-            'h-9 w-9 rounded hover:bg-primary/10 p-0 flex items-center justify-center shrink-0',
+            'h-9 w-9 rounded hover:bg-primary/5 p-0 flex items-center justify-center shrink-0',
             isSelected && 'bg-primary/10' ,
             className,
           )}

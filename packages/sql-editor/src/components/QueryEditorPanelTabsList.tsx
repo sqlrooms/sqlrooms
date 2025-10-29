@@ -9,7 +9,7 @@ import {
   TabsList,
   TabsTrigger,
 } from '@sqlrooms/ui';
-import {MoreVerticalIcon, PlusIcon} from 'lucide-react';
+import {ListIcon, MoreVerticalIcon, PlusIcon} from 'lucide-react';
 import React, {useCallback, useRef} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
@@ -19,6 +19,11 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
+  const minimizedTabIds = useStoreWithSqlEditor((s) => s.config.sqlEditor.minimizedTabIds);
+
+
+  const minimizedTabs = queries.filter((q) => minimizedTabIds.includes(q.id));
+  const displayTabs = queries.filter((q) => !minimizedTabIds.includes(q.id));
 
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
@@ -37,6 +42,8 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   // Ref for the scrollable container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
+  const minimizeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.minimizeQueryTab);
+  const removeMinimizedTabId = useStoreWithSqlEditor((s) => s.sqlEditor.removeMinimizedTabId);
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
   );
@@ -118,12 +125,12 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   return (
     <>
       <TabsList className={cn('p-0 h-10 flex pt-1.5 gap-1 justify-start bg-transparent', className)}>
-        <div ref={scrollContainerRef} className="h-full flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
-          {queries.map((q) => (
+        <div ref={scrollContainerRef} className="h-full pr-1 flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
+          {displayTabs.map((q) => (
             <TabsTrigger
               key={q.id}
               value={q.id}
-              className="h-full flex-shrink-0 min-w-[100px] max-w-[200px] pl-4 pr-2 py-0 font-normal rounded-b-none data-[state=active]:shadow-none overflow-hidden flex items-center justify-between gap-1 data-[state=inactive]:hover:bg-white/40"
+              className="h-full flex-shrink-0 min-w-[100px] max-w-[200px] pl-4 pr-2 py-0 font-normal rounded-b-none data-[state=active]:shadow-none overflow-hidden flex items-center justify-between gap-1 data-[state=inactive]:hover:bg-primary/5"
             >
               <div
                 className="min-w-0 flex items-center"
@@ -154,6 +161,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
                   <DropdownMenuItem
+                    className="text-xs"
                     onClick={() => {
                       handleStartRename(q.id, q.name);
                     }}
@@ -162,6 +170,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   </DropdownMenuItem>
                   {queries.length > 1 && (
                     <DropdownMenuItem
+                      className="text-xs"
                       onClick={() => {
                         handleDeleteQuery(q.id);
                       }}
@@ -169,16 +178,42 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                       Delete
                     </DropdownMenuItem>
                   )}
+                  <DropdownMenuItem 
+                    className="text-xs" 
+                    onClick={() => minimizeQueryTab(q.id)}
+                  >
+                    Close
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </TabsTrigger>
           ))}
         </div>
+
+        {minimizedTabs.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="w-5 h-10 flex-shrink-0"
+              >
+                <ListIcon className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent>
+              {minimizedTabs.map((tab) => (
+                <DropdownMenuItem key={tab.id} onClick={() => removeMinimizedTabId(tab.id)}>{tab.name}</DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
         <Button
           size="icon"
           variant="ghost"
           onClick={handleNewQuery}
-          className="w-8 h-10 flex-shrink-0"
+          className="w-5 h-10 flex-shrink-0"
         >
           <PlusIcon className="h-4 w-4" />
         </Button>

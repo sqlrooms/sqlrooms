@@ -106,6 +106,17 @@ export type SqlEditorSliceState = {
     renameQueryTab(queryId: string, newName: string): void;
 
     /**
+     * Minimize a query tab.
+     * @param queryId - The ID of the query to minimize.
+     */
+    minimizeQueryTab(queryId: string): void;
+    /**
+     * Remove a minimized tab id.
+     * @param queryId - The ID of the query to remove.
+     */
+    removeMinimizedTabId(queryId: string): void;
+
+    /**
      * Update the SQL text for a query.
      * @param queryId - The ID of the query to update.
      * @param queryText - The new SQL text.
@@ -218,6 +229,23 @@ export function createSqlEditorSlice<
               if (query) {
                 query.name = newName || query.name;
               }
+            }),
+          );
+        },
+
+        minimizeQueryTab: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.minimizedTabIds.push(queryId);
+            }),
+          );
+        },
+
+        removeMinimizedTabId: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.minimizedTabIds = draft.config.sqlEditor.minimizedTabIds?.filter((id) => id !== queryId);
+              draft.config.sqlEditor.selectedQueryId = queryId;
             }),
           );
         },
