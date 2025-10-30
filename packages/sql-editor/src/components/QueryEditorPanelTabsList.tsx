@@ -3,37 +3,51 @@ import {
   cn,
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
   EditableText,
+  Input,
   TabsList,
   TabsTrigger,
 } from '@sqlrooms/ui';
-import {MoreVerticalIcon, PlusIcon} from 'lucide-react';
-import React, {useCallback} from 'react';
+import {ListCollapseIcon, PlusIcon, XIcon, SearchIcon} from 'lucide-react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
+import {QueryTabMenuItem} from './QueryTabMenuItem';
 import RenameSqlQueryModal from './RenameSqlQueryModal';
 
 export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
+  const closedTabIds = useStoreWithSqlEditor((s) => s.config.sqlEditor.closedTabIds);
+  const openedTabs = queries.filter((q) => !closedTabIds.includes(q.id));
+  const closedTabs = queries.filter((q) => closedTabIds.includes(q.id));
 
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
   );
 
   // Local state for modals and editing
-  const [queryToDelete, setQueryToDelete] = React.useState<string | null>(null);
-  const [editingQueryId, setEditingQueryId] = React.useState<string | null>(
+  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
+  const [editingQueryId, setEditingQueryId] = useState<string | null>(
     null,
   );
-  const [queryToRename, setQueryToRename] = React.useState<{
+  const [queryToRename, setQueryToRename] = useState<{
     id: string;
     name: string;
   } | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
 
+  // Ref for the scrollable container
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  const closeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.closeQueryTab);
+  const openQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.openQueryTab);
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
   );
@@ -93,7 +107,16 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   // Handle new query creation
   const handleNewQuery = useCallback(() => {
-    return createQueryTab();
+    createQueryTab();
+    // Auto-scroll to the right after a short delay to ensure the tab is rendered
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTo({
+          left: scrollContainerRef.current.scrollWidth,
+          behavior: 'smooth',
+        });
+      }
+    }, 0);
   }, [createQueryTab]);
 
   const handleConfirmDeleteQuery = useCallback(() => {
@@ -103,26 +126,62 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     }
   }, [queryToDelete, deleteQueryTab]);
 
+  const filteredClosedTabs = useMemo(() => {
+    if (!searchQuery.trim()) return closedTabs;
+    const lowerQuery = searchQuery.toLowerCase();
+    return closedTabs.filter(tab => tab.name.toLowerCase().includes(lowerQuery));
+  }, [closedTabs, searchQuery]);
+
+  const filteredOpenedTabs = useMemo(() => {
+    if (!searchQuery.trim()) return openedTabs;
+    const lowerQuery = searchQuery.toLowerCase();
+    return openedTabs.filter(tab => tab.name.toLowerCase().includes(lowerQuery));
+  }, [openedTabs, searchQuery]);
+
+  const renderTabGroup = useCallback((
+    tabs: typeof queries,
+    emptyMessage: string,
+  ) => {
+    if (tabs.length === 0) {
+      return (
+        <DropdownMenuItem className="text-xs items-center justify-center" disabled>
+          {emptyMessage}
+        </DropdownMenuItem>
+      );
+    }
+
+    return tabs.map((tab) => (
+      <QueryTabMenuItem
+        key={tab.id}
+        tab={tab}
+        onRestore={() => openQueryTab(tab.id)}
+        onRename={() => handleStartRename(tab.id, tab.name)}
+        onDelete={() => handleDeleteQuery(tab.id)}
+      />
+    ));
+  }, [openQueryTab, handleStartRename, handleDeleteQuery]);
+
   return (
     <>
-      <TabsList className={cn('h-auto flex-1 flex-wrap', className)}>
-        {queries.map((q) => (
-          <div key={q.id} className="relative">
+      <TabsList className={cn('p-0 flex pt-1.5 gap-1 justify-start bg-transparent', className)}>
+        <div ref={scrollContainerRef} className="h-full pr-1 flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
+          {openedTabs.map((q) => (
             <TabsTrigger
+              key={q.id}
               value={q.id}
-              className="hover:bg-accent min-w-[60px] max-w-[150px] overflow-hidden px-6 py-0 pr-8"
+              className="h-full flex-shrink-0 min-w-[100px] max-w-[200px] pl-4 pr-2 py-0 font-normal rounded-b-none data-[state=active]:shadow-none overflow-hidden flex items-center justify-between gap-2 data-[state=inactive]:hover:bg-primary/5"
             >
               <div
-                className="flex h-6 items-center"
+                className="min-w-0 flex items-center"
                 onDoubleClick={() => handleDoubleClick(q.id)}
               >
                 {editingQueryId !== q.id ? (
-                  <div>{q.name}</div>
+                  <div className="truncate text-sm">{q.name}</div>
                 ) : (
                   <EditableText
                     value={q.name}
                     onChange={(newName: string) => handleRename(q.id, newName)}
-                    className="h-6 truncate text-sm"
+                    className="h-6 shadow-none truncate text-sm flex-1 min-w-0"
                     isEditing={editingQueryId === q.id}
                     onEditingChange={(isEditing) => {
                       if (!isEditing) {
@@ -132,44 +191,73 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   />
                 )}
               </div>
+              
+              <Button
+                size="xs"
+                variant="ghost"
+                className="w-4 h-4 hover:bg-primary/10 p-1"
+                onMouseDown={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  closeQueryTab(q.id);
+                }}
+              >
+                <XIcon size={12} />
+              </Button>
             </TabsTrigger>
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <div className="hover:bg-accent absolute right-0 top-1/2 flex h-6 w-6 -translate-y-1/2 cursor-pointer items-center justify-center rounded-sm">
-                  <MoreVerticalIcon className="h-3 w-3" />
-                </div>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                <DropdownMenuItem
-                  onClick={() => {
-                    handleStartRename(q.id, q.name);
-                  }}
-                >
-                  Rename
-                </DropdownMenuItem>
-                {queries.length > 1 && (
-                  <DropdownMenuItem
-                    onClick={() => {
-                      handleDeleteQuery(q.id);
-                    }}
-                    className="text-red-500"
-                  >
-                    Delete
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        ))}
+          ))}
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="w-5 h-5 flex-shrink-0 ml-2"
+            >
+              <ListCollapseIcon className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent onCloseAutoFocus={(e) => e.preventDefault()} className='max-h-[400px] max-w-[240px] overflow-y-auto'>
+            <div className="flex items-center gap-1 px-2">
+              <SearchIcon className="text-muted-foreground" size={14} />
+              <Input
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+                onKeyUp={(e) => e.stopPropagation()}
+                className="border-none text-xs focus-visible:ring-0 shadow-none"
+                placeholder='Search...'
+              />
+            </div>
+            <DropdownMenuSeparator/>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Closed</DropdownMenuLabel>
+              {renderTabGroup(filteredClosedTabs, 'No closed tabs')}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator/>
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-xs text-muted-foreground font-normal">Opened</DropdownMenuLabel>
+              {renderTabGroup(filteredOpenedTabs, 'No opened tabs')}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+    
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={handleNewQuery}
+          className="w-5 h-5 flex-shrink-0"
+        >
+          <PlusIcon className="h-4 w-4" />
+        </Button>
       </TabsList>
-      <Button
-        size="icon"
-        variant="ghost"
-        onClick={handleNewQuery}
-        className="ml-2"
-      >
-        <PlusIcon className="h-4 w-4" />
-      </Button>
+      
       <DeleteSqlQueryModal
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}

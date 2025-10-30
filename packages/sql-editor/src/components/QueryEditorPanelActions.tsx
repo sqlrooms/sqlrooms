@@ -6,7 +6,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {isMacOS} from '@sqlrooms/utils';
-import {Loader2, OctagonXIcon, PlayIcon} from 'lucide-react';
+import {Loader2, OctagonXIcon} from 'lucide-react';
 import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 
@@ -35,7 +35,7 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
   };
 
   const getButtonContent = (): {
-    icon: React.ReactNode;
+    icon?: React.ReactNode;
     text: string;
     disabled: boolean;
     rightIcon?: React.ReactNode;
@@ -57,10 +57,8 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
       }
     } else {
       return {
-        icon: <PlayIcon className="h-3 w-3" />,
         text: 'Run',
         disabled: false,
-        rightIcon: <span>{isMac ? '⌘↵' : '⌃↵'}</span>,
       };
     }
   };
@@ -68,24 +66,24 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
   const buttonContent = getButtonContent();
 
   return (
-    <Tooltip>
+    <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
         <Button
-          className={cn('flex w-[110px] items-center gap-2', className)}
-          variant={'outline'}
-          size="xs"
+          className={cn('flex items-center justify-center gap-2 h-6 px-4', className)}
+          variant='default'
+          size='xs'
           onClick={handleClick}
           disabled={buttonContent.disabled}
         >
-          {buttonContent.icon}
+          {buttonContent?.icon}
           <span>{buttonContent.text}</span>
           {buttonContent.rightIcon}
         </Button>
       </TooltipTrigger>
-      <TooltipContent>
+      <TooltipContent align="end">
         {isLoading
           ? 'Cancel the running query'
-          : `Use ${isMac ? 'Cmd' : 'Ctrl'}+Enter to run query or selected text`}
+          : `Run query (${isMac ? 'Cmd' : 'Ctrl'}+Enter)`}
       </TooltipContent>
     </Tooltip>
   );
