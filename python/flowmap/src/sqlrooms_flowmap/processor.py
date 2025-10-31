@@ -986,6 +986,7 @@ class FlowmapProcessor:
             )
             
             # Aggregate flows using cluster mapping
+            # This includes both flows between different clusters AND cluster self-loops
             self.conn.execute(
                 f"""
                 CREATE TEMP TABLE flows_z{z} AS
@@ -997,12 +998,6 @@ class FlowmapProcessor:
                 FROM flows_with_h f
                 LEFT JOIN cluster_map_z{z} co ON f.origin = co.id
                 LEFT JOIN cluster_map_z{z} cd ON f.dest = cd.id
-                WHERE 
-                    -- Keep flows between different clusters
-                    COALESCE(co.cluster_id, f.origin) != COALESCE(cd.cluster_id, f.dest)
-                    OR
-                    -- Keep original self-loops (where origin = dest in original data)
-                    (f.origin = f.dest AND COALESCE(co.cluster_id, f.origin) = COALESCE(cd.cluster_id, f.dest))
                 GROUP BY COALESCE(co.cluster_id, f.origin), COALESCE(cd.cluster_id, f.dest){time_group or (has_time and ', f.time' or '')}
                 """
             )
@@ -1065,6 +1060,7 @@ class FlowmapProcessor:
             original_total = 0
         
         print(f"  Original total: {original_total:,.0f}")
+        print()
         
         # Get all zoom levels
         zoom_levels = self.conn.execute(
@@ -1075,31 +1071,42 @@ class FlowmapProcessor:
             """
         ).fetchall()
         
-        # Check highest zoom level matches original total
-        highest_zoom = zoom_levels[0] if zoom_levels else None
+        all_valid = True
         
-        if highest_zoom:
-            highest_total = self.conn.execute(
+        # Check each zoom level with breakdown
+        for (z,) in zoom_levels:
+            stats = self.conn.execute(
                 f"""
-                SELECT SUM(count) 
+                SELECT 
+                    SUM(CASE WHEN origin != dest THEN count ELSE 0 END) as non_self,
+                    SUM(CASE WHEN origin = dest THEN count ELSE 0 END) as self_loops,
+                    SUM(count) as total
                 FROM tiled_flows 
-                WHERE z = {highest_zoom[0]}
+                WHERE z = {z}
                 """
-            ).fetchone()[0] or 0
+            ).fetchone()
             
-            diff = abs(original_total - highest_total)
-            diff_pct = (diff / original_total * 100) if original_total > 0 else 0
+            non_self = stats[0] or 0
+            self_loops = stats[1] or 0
+            total = stats[2] or 0
             
-            status = "✓" if diff <= 0.01 else "⚠️"
-            print(f"  Highest zoom (z={highest_zoom[0]}): {highest_total:,.0f}  (diff: {diff:,.0f}, {diff_pct:.2f}%)  {status}")
-            
-            if diff > 0.01:
-                print()
-                print("  ⚠️  Warning: Highest zoom level doesn't match original total!")
+            # At highest zoom, should match original total
+            if z == zoom_levels[0][0]:
+                diff = abs(original_total - total)
+                diff_pct = (diff / original_total * 100) if original_total > 0 else 0
+                status = "✓" if diff <= 0.01 else "⚠️"
+                print(f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}  {status}")
+                if diff > 0.01:
+                    all_valid = False
             else:
-                print()
-                print("  ✓ Flow totals validated at highest zoom level")
-                print("  Note: Lower zoom levels have fewer flows as locations cluster together")
+                print(f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}")
+        
+        print()
+        if all_valid:
+            print("  ✓ Flow totals validated at highest zoom level")
+            print("  Note: Lower zoom levels have fewer flows as locations cluster together")
+        else:
+            print("  ⚠️  Warning: Highest zoom level doesn't match original total!")
     
     def _export_flows(self, output_file: str) -> None:
         """
