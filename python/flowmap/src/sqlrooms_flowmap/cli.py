@@ -1,5 +1,8 @@
 """Command-line interface for sqlrooms-flowmap."""
 
+import os
+from pathlib import Path
+
 import click
 
 from .processor import FlowmapProcessor
@@ -19,15 +22,10 @@ from .processor import FlowmapProcessor
     help="Path to flows file (CSV or Parquet)",
 )
 @click.option(
-    "--output",
+    "--output-dir",
     required=True,
     type=click.Path(),
-    help="Path to output Parquet file for clusters",
-)
-@click.option(
-    "--flows-output",
-    type=click.Path(),
-    help="Path to output Parquet file for tiled flows (optional)",
+    help="Output directory for generated Parquet files",
 )
 @click.option(
     "--radius",
@@ -58,24 +56,40 @@ from .processor import FlowmapProcessor
     type=str,
     help="Time zone for temporal aggregation (default: UTC)",
 )
+@click.option(
+    "--skip-flows",
+    is_flag=True,
+    help="Skip flow tiling (only generate clusters)",
+)
 def main(
     locations: str,
     flows: str,
-    output: str,
-    flows_output: str,
+    output_dir: str,
     radius: float,
     min_zoom: int,
     max_zoom: int,
     time_bucket: str,
     time_zone: str,
+    skip_flows: bool,
 ) -> None:
     """Prepare origin-destination datasets for tiling using DuckDB."""
+    # Create output directory if it doesn't exist
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Derive base name from locations file
+    base_name = Path(locations).stem
+    
+    # Generate output file paths
+    clusters_output = os.path.join(output_dir, f"{base_name}-clusters.parquet")
+    flows_output = None if skip_flows else os.path.join(output_dir, f"{base_name}-flows.parquet")
+    
     click.echo("SQLRooms Flowmap Processor")
     click.echo(f"Locations: {locations}")
     click.echo(f"Flows: {flows}")
-    click.echo(f"Clusters output: {output}")
-    if flows_output:
-        click.echo(f"Flows output: {flows_output}")
+    click.echo(f"Output directory: {output_dir}")
+    click.echo(f"  → Clusters: {base_name}-clusters.parquet")
+    if not skip_flows:
+        click.echo(f"  → Flows: {base_name}-flows.parquet")
     click.echo(f"Cluster radius: {radius} pixels")
     click.echo(f"Zoom range: {min_zoom} - {max_zoom}")
     if time_bucket:
@@ -91,10 +105,11 @@ def main(
         time_zone=time_zone,
     )
 
-    processor.process(output, flows_output)
-    click.echo(f"\n✓ Complete! Clusters written to {output}")
+    processor.process(clusters_output, flows_output)
+    click.echo(f"\n✓ Complete!")
+    click.echo(f"  Clusters: {clusters_output}")
     if flows_output:
-        click.echo(f"✓ Flows written to {flows_output}")
+        click.echo(f"  Flows: {flows_output}")
 
 
 if __name__ == "__main__":

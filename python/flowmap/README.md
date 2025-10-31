@@ -10,27 +10,40 @@ pip install sqlrooms-flowmap
 
 ## Usage
 
-### Basic Usage (Clusters Only)
+### Basic Usage
 
 ```bash
 sqlrooms-flowmap \
   --locations locations.csv \
-  --flows flows.parquet \
-  --output clusters.parquet \
-  --radius 40
+  --flows flows.csv \
+  --output-dir ./output
 ```
 
-### With Flow Tiling
+This generates:
+
+- `./output/locations-clusters.parquet` - hierarchical clusters
+- `./output/locations-flows.parquet` - tiled flows with nested Hilbert indexing
+
+### Clusters Only (Skip Flows)
 
 ```bash
 sqlrooms-flowmap \
   --locations locations.csv \
-  --flows flows.parquet \
-  --output clusters.parquet \
-  --flows-output flows.parquet \
-  --radius 40 \
+  --flows flows.csv \
+  --output-dir ./output \
+  --skip-flows
+```
+
+### With Custom Parameters
+
+```bash
+sqlrooms-flowmap \
+  --locations locations.csv \
+  --flows flows.csv \
+  --output-dir ./output \
+  --radius 50 \
   --min-zoom 0 \
-  --max-zoom 20
+  --max-zoom 15
 ```
 
 ### With Temporal Aggregation
@@ -38,9 +51,8 @@ sqlrooms-flowmap \
 ```bash
 sqlrooms-flowmap \
   --locations locations.csv \
-  --flows flows.parquet \
-  --output clusters.parquet \
-  --flows-output flows.parquet \
+  --flows flows.csv \
+  --output-dir ./output \
   --time-bucket day \
   --time-zone America/New_York
 ```
@@ -49,13 +61,13 @@ sqlrooms-flowmap \
 
 - `--locations` - Path to locations CSV/Parquet file
 - `--flows` - Path to flows CSV/Parquet file
-- `--output` - Path to output Parquet file for clusters
-- `--flows-output` - (Optional) Path to output Parquet file for tiled flows
+- `--output-dir` - Output directory (files named from locations file)
 - `--radius` - Cluster radius in pixels (default: 40). Scales with zoom level
 - `--min-zoom` - Minimum zoom level for clustering (default: 0)
 - `--max-zoom` - Maximum zoom level to start from (default: 20)
 - `--time-bucket` - (Optional) Temporal aggregation: hour, day, week, month, year
 - `--time-zone` - Time zone for temporal aggregation (default: UTC)
+- `--skip-flows` - Skip flow tiling, only generate clusters
 
 ### Input Data
 
