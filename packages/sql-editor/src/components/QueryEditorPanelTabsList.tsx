@@ -163,8 +163,8 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   return (
     <>
-      <TabsList className={cn('p-0 flex pt-1.5 gap-1 justify-start bg-transparent', className)}>
-        <div ref={scrollContainerRef} className="h-full pr-1 flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden">
+      <TabsList className={cn('p-0 flex pt-1.5 gap-1 justify-start bg-transparent min-w-0', className)}>
+        <div ref={scrollContainerRef} className="h-full pr-1 flex items-center gap-1 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden min-w-0">
           {openedTabs.map((q) => (
             <TabsTrigger
               key={q.id}
@@ -191,7 +191,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   />
                 )}
               </div>
-              
+
               <Button
                 size="xs"
                 variant="ghost"
@@ -247,7 +247,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
             </DropdownMenuGroup>
           </DropdownMenuContent>
         </DropdownMenu>
-    
+
         <Button
           size="icon"
           variant="ghost"
@@ -257,7 +257,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
           <PlusIcon className="h-4 w-4" />
         </Button>
       </TabsList>
-      
+
       <DeleteSqlQueryModal
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}
