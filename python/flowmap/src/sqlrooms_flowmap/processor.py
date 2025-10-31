@@ -16,6 +16,8 @@ class FlowmapProcessor:
         cluster_radius: float = 40.0,
         min_zoom: int = 0,
         max_zoom: int = 20,
+        time_bucket: Optional[str] = None,
+        time_zone: str = "UTC",
     ):
         """
         Initialize the flowmap processor.
@@ -26,20 +28,26 @@ class FlowmapProcessor:
             cluster_radius: Clustering radius in pixels (default: 40)
             min_zoom: Minimum zoom level for clustering
             max_zoom: Maximum zoom level to start from
+            time_bucket: Optional temporal aggregation (e.g., 'hour', 'day', 'week', 'month')
+            time_zone: Time zone for temporal aggregation (default: 'UTC')
         """
         self.locations_file = locations_file
         self.flows_file = flows_file
         self.cluster_radius_pixels = cluster_radius
         self.min_zoom = min_zoom
         self.max_zoom = max_zoom
+        self.time_bucket = time_bucket
+        self.time_zone = time_zone
         self.conn = None
+        self.extent = None  # Global spatial extent for Hilbert indexing
 
-    def process(self, output_file: str) -> None:
+    def process(self, output_file: str, flows_output_file: Optional[str] = None) -> None:
         """
         Process the flowmap data and generate hierarchical clusters.
 
         Args:
-            output_file: Path to output Parquet file
+            output_file: Path to output Parquet file for clusters
+            flows_output_file: Optional path to output Parquet file for tiled flows
         """
         self.conn = duckdb.connect(":memory:")
 
@@ -59,8 +67,13 @@ class FlowmapProcessor:
         # Perform hierarchical clustering
         self._hierarchical_clustering()
 
-        # Export results
+        # Export cluster results
         self._export_results(output_file)
+
+        # Process and export flows if output file specified
+        if flows_output_file:
+            self._process_flows()
+            self._export_flows(flows_output_file)
 
         self.conn.close()
 
@@ -115,6 +128,17 @@ class FlowmapProcessor:
         ).fetchone()
 
         min_x, max_x, min_y, max_y = extent_result
+        
+        # Store extent as geometry for use in flows processing
+        self.conn.execute(
+            f"""
+            CREATE TABLE spatial_extent AS
+            SELECT ST_MakeBox2D(
+                ST_Point({min_x}, {min_y}),
+                ST_Point({max_x}, {max_y})
+            ) as extent
+            """
+        )
 
         # Create projected locations table with Hilbert index
         self.conn.execute(
@@ -468,6 +492,222 @@ class FlowmapProcessor:
             if identical:
                 # Remove the higher zoom level
                 self.conn.execute(f"DELETE FROM clusters WHERE z = {z_high}")
+
+    def _process_flows(self) -> None:
+        """Process flows with nested Hilbert indexing for all zoom levels."""
+        print("\nProcessing flows with nested Hilbert indexing...")
+        
+        # Step 1: Compute location Hilbert indices
+        print("  Computing location Hilbert indices...")
+        self.conn.execute(
+            """
+            CREATE TABLE location_h AS
+            SELECT 
+                id, 
+                x, 
+                y,
+                ST_Hilbert(x, y, (SELECT extent FROM spatial_extent)) AS h
+            FROM location_weights
+            """
+        )
+        
+        # Step 2: Join flows with location Hilbert indices
+        print("  Joining flows with location indices...")
+        
+        # Check if time column exists
+        has_time = self.conn.execute(
+            """
+            SELECT COUNT(*) 
+            FROM information_schema.columns 
+            WHERE table_name = 'flows_raw' AND column_name = 'time'
+            """
+        ).fetchone()[0] > 0
+        
+        time_select = ""
+        time_group = ""
+        if has_time and self.time_bucket:
+            time_select = f", date_trunc('{self.time_bucket}', time AT TIME ZONE '{self.time_zone}') AS time_bucket"
+            time_group = ", time_bucket"
+        elif has_time:
+            time_select = ", time"
+            time_group = ", time"
+        
+        # Create base flows with Hilbert indices
+        self.conn.execute(
+            f"""
+            CREATE TABLE flows_with_h AS
+            SELECT 
+                f.origin,
+                f.dest,
+                f.count,
+                o.h AS origin_h,
+                d.h AS dest_h
+                {time_select}
+            FROM flows_raw f
+            JOIN location_h o ON f.origin = o.id
+            JOIN location_h d ON f.dest = d.id
+            WHERE f.origin != f.dest  -- Exclude self-loops
+            """
+        )
+        
+        # Step 3: Compute extent over (origin_h, dest_h) for nested Hilbert
+        print("  Computing OD extent for nested Hilbert...")
+        self.conn.execute(
+            """
+            CREATE TABLE od_extent AS
+            SELECT ST_MakeBox2D(
+                ST_Point(MIN(origin_h), MIN(dest_h)),
+                ST_Point(MAX(origin_h), MAX(dest_h))
+            ) AS extent
+            FROM flows_with_h
+            """
+        )
+        
+        # Step 4: Compute nested Hilbert index (flow_h)
+        print("  Computing nested Hilbert index for flows...")
+        self.conn.execute(
+            """
+            ALTER TABLE flows_with_h ADD COLUMN flow_h BIGINT
+            """
+        )
+        self.conn.execute(
+            """
+            UPDATE flows_with_h
+            SET flow_h = ST_Hilbert(
+                CAST(origin_h AS DOUBLE), 
+                CAST(dest_h AS DOUBLE), 
+                (SELECT extent FROM od_extent)
+            )
+            """
+        )
+        
+        # Step 5: Create aggregated flows table for all zoom levels
+        print("  Aggregating flows across zoom levels...")
+        self.conn.execute(
+            f"""
+            CREATE TABLE tiled_flows AS
+            SELECT 
+                {self.max_zoom + 1} as z,
+                flow_h,
+                origin,
+                dest,
+                count
+                {time_select}
+            FROM flows_with_h
+            """
+        )
+        
+        # Step 6: Aggregate flows for each zoom level using cluster hierarchy
+        for z in range(self.max_zoom, self.min_zoom - 1, -1):
+            print(f"  Aggregating flows at z={z}...")
+            
+            # Get cluster assignments for this zoom level
+            # Need to map each original location to its cluster at this zoom
+            self.conn.execute(
+                f"""
+                CREATE TEMP TABLE cluster_map_z{z} AS
+                WITH RECURSIVE find_cluster AS (
+                    -- Base: locations at max_zoom + 1
+                    SELECT id, id as cluster_id, {self.max_zoom + 1} as z
+                    FROM location_weights
+                    
+                    UNION ALL
+                    
+                    -- Recursive: follow parent links up to level z
+                    SELECT fc.id, c.parent_id as cluster_id, c.z - 1 as z
+                    FROM find_cluster fc
+                    JOIN clusters c ON fc.cluster_id = c.id AND c.z = fc.z
+                    WHERE c.parent_id IS NOT NULL AND c.z > {z}
+                )
+                SELECT id, COALESCE(cluster_id, id) as cluster_id
+                FROM find_cluster
+                WHERE z = {z}
+                """
+            )
+            
+            # Aggregate flows using cluster mapping
+            self.conn.execute(
+                f"""
+                CREATE TEMP TABLE flows_z{z} AS
+                SELECT
+                    COALESCE(co.cluster_id, f.origin) as origin,
+                    COALESCE(cd.cluster_id, f.dest) as dest,
+                    SUM(f.count) as count
+                    {time_group and ', f.time_bucket' or (has_time and ', f.time' or '')}
+                FROM flows_with_h f
+                LEFT JOIN cluster_map_z{z} co ON f.origin = co.id
+                LEFT JOIN cluster_map_z{z} cd ON f.dest = cd.id
+                WHERE COALESCE(co.cluster_id, f.origin) != COALESCE(cd.cluster_id, f.dest)
+                GROUP BY COALESCE(co.cluster_id, f.origin), COALESCE(cd.cluster_id, f.dest){time_group or (has_time and ', f.time' or '')}
+                """
+            )
+            
+            # Compute flow_h for aggregated flows using cluster coordinates
+            self.conn.execute(
+                f"""
+                INSERT INTO tiled_flows
+                SELECT
+                    {z} as z,
+                    ST_Hilbert(
+                        CAST(
+                            COALESCE(
+                                (SELECT ST_Hilbert(x, y, (SELECT extent FROM spatial_extent))
+                                 FROM clusters WHERE id = f.origin AND z = {z} LIMIT 1),
+                                (SELECT h FROM location_h WHERE id = f.origin)
+                            ) AS DOUBLE
+                        ),
+                        CAST(
+                            COALESCE(
+                                (SELECT ST_Hilbert(x, y, (SELECT extent FROM spatial_extent))
+                                 FROM clusters WHERE id = f.dest AND z = {z} LIMIT 1),
+                                (SELECT h FROM location_h WHERE id = f.dest)
+                            ) AS DOUBLE
+                        ),
+                        (SELECT extent FROM od_extent)
+                    ) as flow_h,
+                    f.origin,
+                    f.dest,
+                    f.count
+                    {time_group and ', f.time_bucket' or (has_time and ', f.time' or '')}
+                FROM flows_z{z} f
+                """
+            )
+            
+            # Clean up temp tables
+            self.conn.execute(f"DROP TABLE flows_z{z}")
+            self.conn.execute(f"DROP TABLE cluster_map_z{z}")
+        
+        print(f"  Total flows: {self.conn.execute('SELECT COUNT(*) FROM tiled_flows').fetchone()[0]:,}")
+    
+    def _export_flows(self, output_file: str) -> None:
+        """
+        Export tiled flows to Parquet file.
+
+        Args:
+            output_file: Path to output Parquet file for flows
+        """
+        print(f"\nExporting flows to {output_file}...")
+        
+        # Determine if we have time column
+        has_time = self.conn.execute(
+            """
+            SELECT COUNT(*) 
+            FROM information_schema.columns 
+            WHERE table_name = 'tiled_flows' AND column_name IN ('time', 'time_bucket')
+            """
+        ).fetchone()[0] > 0
+        
+        time_col = "time_bucket" if self.time_bucket else "time"
+        order_clause = f"z DESC, flow_h, {time_col}" if has_time else "z DESC, flow_h"
+        
+        self.conn.execute(
+            f"""
+            COPY (
+                SELECT * FROM tiled_flows
+                ORDER BY {order_clause}
+            ) TO '{output_file}' (FORMAT PARQUET)
+            """
+        )
 
     def _export_results(self, output_file: str) -> None:
         """
