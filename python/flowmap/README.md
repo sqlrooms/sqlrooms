@@ -52,13 +52,15 @@ A Parquet file containing hierarchical clusters ordered by zoom level and Hilber
 - `z` - zoom level
 - `h_index` - Hilbert index for spatial ordering
 - `id` - cluster/location ID
-- `name` - cluster/location name
+- `name` - cluster/location name (format: "Location + N" where N is the count of other locations in the cluster)
 - `parent_id` - parent cluster ID (NULL for top-level)
 - `lat` - WGS84 latitude
 - `lon` - WGS84 longitude
 - `x` - Web Mercator X coordinate
 - `y` - Web Mercator Y coordinate
 - `weight` - cluster weight (max of in/out flows)
+- `num_leaves` - total number of original locations in this cluster
+- `top_leaf_id` - ID of the highest-weighted original location in this cluster
 
 ## License
 
