@@ -8,7 +8,44 @@ import {
   AnalysisSessionSchema,
   UIMessagePart,
 } from '@sqlrooms/ai-config';
-import {UIMessage, TextUIPart, ToolUIPart} from 'ai';
+import {TextUIPart, ToolUIPart} from 'ai';
+
+/**
+ * Custom error class for operation abort errors.
+ * This allows for type-safe error handling when operations are cancelled by the user.
+ *
+ * Tools should throw this error when they detect an abort signal,
+ * and error handlers can check for this specific error type to provide
+ * appropriate user feedback.
+ *
+ * @example
+ * ```ts
+ * if (abortSignal?.aborted) {
+ *   throw new ToolAbortError('Operation was aborted');
+ * }
+ * ```
+ *
+ * @example
+ * ```ts
+ * try {
+ *   await someTool.execute(params, { abortSignal });
+ * } catch (error) {
+ *   if (error instanceof ToolAbortError) {
+ *     console.log('User cancelled the operation');
+ *   }
+ * }
+ * ```
+ */
+export class ToolAbortError extends Error {
+  constructor(message: string = 'Operation was aborted') {
+    super(message);
+    this.name = 'ToolAbortError';
+    // Maintains proper stack trace for where our error was thrown (only available on V8)
+    if (Error.captureStackTrace) {
+      Error.captureStackTrace(this, ToolAbortError);
+    }
+  }
+}
 
 /**
  * Extract models from aiSettings in the format expected by ModelSelector

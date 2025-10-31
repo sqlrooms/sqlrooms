@@ -6,6 +6,7 @@ import {
 } from 'ai';
 import type {UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
+import type {ToolCall} from '../chatTransport';
 
 export type AddToolResult = (
   options:
@@ -68,6 +69,17 @@ export function useAiChat() {
   const onChatData = useStoreWithAi((s) => s.ai.onChatData);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
+  const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
+
+  // Abort/auto-send guards
+  const isAborted = useStoreWithAi(
+    (s) => s.ai.analysisAbortController?.signal.aborted ?? false,
+  );
+  const isAbortedRef = useRef<boolean>(isAborted);
+  // Keep a live ref so sendAutomaticallyWhen sees latest abort state even if useChat doesn't reinit
+  useEffect(() => {
+    isAbortedRef.current = isAborted;
+  }, [isAborted]);
 
   // Create transport (recreate when model changes)
   const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
@@ -85,25 +97,51 @@ export function useAiChat() {
   // Store addToolResult in a ref that can be captured by the onToolCall closure
   const addToolResultRef = useRef<AddToolResult>(null!);
 
-  const {messages, sendMessage, addToolResult} = useChat({
+  // Gate auto-send when analysis is aborted or cancelled, to prevent unintended follow-ups
+  type SendAutoWhenArg = Parameters<
+    typeof lastAssistantMessageIsCompleteWithToolCalls
+  >[0];
+  const shouldAutoSend = (options: SendAutoWhenArg) => {
+    if (isAbortedRef.current) return false;
+    return lastAssistantMessageIsCompleteWithToolCalls(options);
+  };
+
+  const {messages, sendMessage, addToolResult, stop, status} = useChat({
     id: `${sessionId}-${messagesRevision}`,
     transport,
     messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
-    onToolCall: async ({toolCall}: {toolCall: any}) => {
+    onToolCall: async (opts) => {
+      const {toolCall} = opts as {toolCall: unknown};
       // Wrap the store's onChatToolCall to provide addToolResult
       // Use the captured addToolResult from the ref
-      return onChatToolCall?.({toolCall, addToolResult: addToolResultRef.current});
+      return onChatToolCall?.({
+        toolCall: toolCall as ToolCall,
+        addToolResult: addToolResultRef.current,
+      });
     },
     onFinish: onChatFinish,
     onError: onChatError,
     onData: onChatData,
     // Automatically submit when all tool results are available
     // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    sendAutomaticallyWhen: shouldAutoSend,
   });
 
   // Capture addToolResult for use in onToolCall
   addToolResultRef.current = addToolResult;
+
+  // If user aborts mid-stream, stop the local chat stream immediately
+  useEffect(() => {
+    if (isAbortedRef.current && status === 'streaming') {
+      stop();
+    }
+  }, [status, stop, isAborted]);
+
+  // Register stop with the store so cancelAnalysis can stop the stream
+  useEffect(() => {
+    setChatStop?.(stop);
+    return () => setChatStop?.(undefined);
+  }, [setChatStop, stop]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
@@ -114,5 +152,7 @@ export function useAiChat() {
   return {
     messages,
     sendMessage,
+    stop,
+    status,
   };
 }
