@@ -54,9 +54,19 @@ export function createQueryTool(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    execute: async (params: QueryToolParameters) => {
+    execute: async (
+      params: QueryToolParameters,
+      options?: {abortSignal?: AbortSignal},
+    ) => {
       const {type, sqlQuery} = params;
+      const abortSignal = options?.abortSignal;
+
       try {
+        // Check if aborted before starting
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
+
         const connector = await store.getState().db.getConnector();
         const parsedQuery = await store.getState().db.sqlSelectToJson(sqlQuery);
 
@@ -82,12 +92,25 @@ If a query fails, please don't try to run it again with the same syntax.`,
           }
         }
 
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
+        // Check if aborted before running query
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
+
         const result = await connector.query(sqlQuery);
+
+        // Check if aborted after query execution
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
 
         const summaryData = await (async () => {
           if (!autoSummary) return null;
           if (parsedQuery.error) return null;
+
+          // Check if aborted before generating summary
+          if (abortSignal?.aborted) return null;
+
           const lastNode =
             parsedQuery.statements[parsedQuery.statements.length - 1]?.node;
 

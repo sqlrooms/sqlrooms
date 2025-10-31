@@ -24,5 +24,5 @@ export {ToolCallInfo} from './components/ToolCallInfo';
 
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
-export {cleanupPendingAnalysisResults} from './utils';
+export {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
 export {convertToAiSDKTools} from './chatTransport';

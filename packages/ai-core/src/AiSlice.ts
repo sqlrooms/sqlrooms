@@ -21,8 +21,6 @@ import {
   UIDataTypes,
   generateText,
 } from 'ai';
-
-import {OpenAssistantToolSet} from '@openassistant/utils';
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
@@ -51,6 +49,10 @@ export type AiSliceState = {
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
     setConfig: (config: AiSliceConfig) => void;
+    /** Latest stop function from useChat to immediately halt local streaming */
+    chatStop?: () => void;
+    /** Register/replace the current chat stop function */
+    setChatStop: (stop: (() => void) | undefined) => void;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
@@ -59,7 +61,7 @@ export type AiSliceState = {
         modelProvider?: string;
         modelName?: string;
         baseUrl?: string;
-        abortController?: AbortController;
+        abortSignal?: AbortSignal;
       },
     ) => Promise<string>;
     startAnalysis: (
@@ -170,6 +172,13 @@ export function createAiSlice(
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         tools,
+        setChatStop: (stopFn: (() => void) | undefined) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.chatStop = stopFn;
+            }),
+          );
+        },
 
         setConfig: (config: AiSliceConfig) => {
           set((state) =>
@@ -462,13 +471,13 @@ export function createAiSlice(
             modelProvider?: string;
             modelName?: string;
             baseUrl?: string;
-            abortController?: AbortController;
+            abortSignal?: AbortSignal;
           } = {},
         ) => {
-          // call completeText with the prompt, model, and tools and system instructions directly to get the response
+          // One-shot generateText path with explicit abort lifecycle management
           const state = get();
           const currentSession = state.ai.getCurrentSession();
-          const {modelProvider, modelName, baseUrl, abortController} = options;
+          const {modelProvider, modelName, baseUrl, abortSignal} = options;
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
@@ -481,7 +490,7 @@ export function createAiSlice(
 
           // remove execute from tools
           const toolsWithoutExecute = Object.fromEntries(
-            Object.entries(tools).filter(([_, tool]) => !tool.execute),
+            Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
 
           const model = createOpenAICompatible({
@@ -490,14 +499,19 @@ export function createAiSlice(
             baseURL,
           }).chatModel(modelId);
 
-          const response = await generateText({
-            model,
-            messages: [{role: 'user', content: prompt}],
-            system: systemInstructions,
-            abortSignal: abortController?.signal,
-            tools: convertToAiSDKTools(toolsWithoutExecute),
-          });
-          return response.text;
+          try {
+            const response = await generateText({
+              model,
+              messages: [{role: 'user', content: prompt}],
+              system: systemInstructions,
+              abortSignal: abortSignal,
+              tools: convertToAiSDKTools(toolsWithoutExecute),
+            });
+            return response.text;
+          } catch (error) {
+            console.error('Error generating text:', error);
+            return 'error: can not generate response';
+          }
         },
 
         /**
@@ -548,33 +562,31 @@ export function createAiSlice(
         },
 
         cancelAnalysis: () => {
-          const currentSession = get().ai.getCurrentSession();
           const abortController = get().ai.analysisAbortController;
+
+          // Stop local chat streaming immediately if available
+          try {
+            get().ai.chatStop?.();
+          } catch {
+            // no-op
+          }
+
+          // Call abort to signal cancellation
+          // Keep the abort controller in state so that async handlers (onChatToolCall, onChatFinish)
+          // can check if it was aborted. The onChatFinish handler will clean it up.
+          abortController?.abort('Analysis cancelled');
 
           set((state) =>
             produce(state, (draft) => {
+              // Set isRunningAnalysis to false to update UI
               draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisAbortController = undefined;
+              // Keep analysisAbortController so handlers can check signal.aborted
+              // It will be cleared by onChatFinish
 
-              // Remove pending analysis result if it exists
-              if (currentSession) {
-                const session = draft.ai.config.sessions.find(
-                  (s: AnalysisSessionSchema) => s.id === currentSession.id,
-                );
-                if (session) {
-                  const pendingIndex = session.analysisResults.findIndex(
-                    (result: AnalysisResultSchema) =>
-                      result.id === '__pending__',
-                  );
-                  if (pendingIndex !== -1) {
-                    session.analysisResults.splice(pendingIndex, 1);
-                  }
-                }
-              }
+              // Intentionally preserve any pending analysis result so the
+              // conversation row remains visible until onChatFinish runs.
             }),
           );
-
-          abortController?.abort('Analysis cancelled');
         },
 
         /**

@@ -59,9 +59,18 @@ export function createVegaChartTool({
     name: 'chart',
     description,
     parameters: VegaChartToolParameters,
-    execute: async (params: VegaChartToolParameters) => {
+    execute: async (
+      params: VegaChartToolParameters,
+      options?: {abortSignal?: AbortSignal},
+    ) => {
+      const abortSignal = options?.abortSignal;
       const {sqlQuery, vegaLiteSpec} = params;
       try {
+        // Check if aborted before starting
+        if (abortSignal?.aborted) {
+          throw new Error('Chart creation was aborted');
+        }
+
         const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec);
         // data object of the vegaLiteSpec and sqlQuery
         // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated

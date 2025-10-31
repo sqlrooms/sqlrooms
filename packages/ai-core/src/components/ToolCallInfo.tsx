@@ -22,17 +22,6 @@ type ToolCallInfoProps = {
 };
 
 /**
- * Truncates a string representation of arguments to a maximum length
- */
-const truncateArgs = (args: unknown, maxLength: number = 50): string => {
-  const argsStr = JSON.stringify(args) ?? '';
-  if (argsStr.length <= maxLength) {
-    return argsStr;
-  }
-  return `${argsStr.substring(0, maxLength)}...`;
-};
-
-/**
  * Component that renders a tool call is running
  * Shows the tool name and truncated arguments by default.
  * Click on the tool name to expand and see full arguments.

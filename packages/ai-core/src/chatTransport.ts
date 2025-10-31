@@ -3,6 +3,7 @@ import {
   UIMessage,
   convertToModelMessages,
   streamText,
+  lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
 import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
@@ -13,6 +14,7 @@ import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import {AddToolResult} from './hooks/useAiChat';
 import type {StoreApi} from '@sqlrooms/room-store';
+import {ToolAbortError} from './utils';
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -22,7 +24,9 @@ import type {StoreApi} from '@sqlrooms/room-store';
  * @param messages - The messages to validate and complete
  * @returns Cleaned messages with completed tool-call/result pairs
  */
-function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
+export function completeIncompleteToolCalls(
+  messages: UIMessage[],
+): UIMessage[] {
   return messages.map((message) => {
     if (message.role !== 'assistant' || !message.parts) {
       return message;
@@ -180,7 +184,7 @@ export function createLocalChatTransportFactory({
 
       const body = init?.body as string;
       const parsed = body ? JSON.parse(body) : {};
-      const messagesCopy = JSON.parse(JSON.stringify(parsed.messages || []));
+      const messagesCopy = parsed.messages;
 
       const onToolCompleted = createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
@@ -261,6 +265,20 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         // handle client tools
         const state = store.getState();
 
+        // Check if the stream was aborted before executing tool
+        if (state.ai.analysisAbortController?.signal.aborted) {
+          console.log('Tool call skipped due to abort:', toolName);
+          if (addToolResult) {
+            addToolResult({
+              tool: toolName,
+              toolCallId,
+              state: 'output-error',
+              errorText: 'Operation cancelled by user',
+            });
+          }
+          return;
+        }
+
         const onToolCompleted = createOnToolCompletedHandler(store);
         const tools = convertToAiSDKTools(
           state.ai.tools || {},
@@ -272,7 +290,10 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         if (tool && tool.execute) {
           const llmResult = await tool.execute(input, {
             toolCallId,
-            messages: [],
+            messages: convertToModelMessages(
+              state.ai.getCurrentSession()?.uiMessages as UIMessage[],
+            ),
+            abortSignal: state.ai.analysisAbortController?.signal,
           });
 
           if (addToolResult) {
@@ -285,12 +306,21 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
           }
         }
       } catch (error) {
+        // Check if this is an abort error
+        const isAbortError = error instanceof ToolAbortError;
+
+        if (isAbortError) {
+          console.log('Tool execution aborted:', toolName);
+        }
+
         if (addToolResult) {
           addToolResult({
             tool: toolName,
             toolCallId,
             state: 'output-error',
-            errorText: getErrorMessageForDisplay(error),
+            errorText: isAbortError
+              ? 'Operation cancelled by user'
+              : getErrorMessageForDisplay(error),
           });
         }
       }
@@ -317,6 +347,73 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
       try {
         const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
+
+        // If the analysis has been aborted, force-complete and clean up immediately
+        const aborted =
+          !!store.getState().ai.analysisAbortController?.signal.aborted;
+        if (aborted) {
+          // If messages are empty (possible when stopping immediately), fall back to existing session messages
+          const sessionMessages =
+            (store.getState().ai.getCurrentSession()
+              ?.uiMessages as UIMessage[]) || [];
+          const sourceMessages =
+            messages && messages.length > 0 ? messages : sessionMessages;
+
+          const completedMessages = completeIncompleteToolCalls(sourceMessages);
+          store
+            .getState()
+            .ai.setSessionUiMessages(currentSessionId, completedMessages);
+
+          // Ensure an analysis result exists and is marked as cancelled
+          store.setState((state: AiSliceState) =>
+            produce(state, (draft: AiSliceState) => {
+              draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisAbortController = undefined;
+
+              const targetSession = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              );
+              if (!targetSession) return;
+
+              // Find the last user message
+              const lastUserMessage = completedMessages
+                .filter((msg) => msg.role === 'user')
+                .slice(-1)[0];
+              if (!lastUserMessage) return;
+
+              const promptText = lastUserMessage.parts
+                .filter((part) => part.type === 'text')
+                .map((part) => (part as {text: string}).text)
+                .join('');
+
+              const pendingIndex = targetSession.analysisResults.findIndex(
+                (result) => result.id === '__pending__',
+              );
+
+              if (pendingIndex !== -1) {
+                targetSession.analysisResults[pendingIndex] = {
+                  id: lastUserMessage.id,
+                  prompt: promptText,
+                  errorMessage: {error: 'Operation cancelled by user'},
+                  isCompleted: true,
+                };
+              } else {
+                const existing = targetSession.analysisResults.find(
+                  (r) => r.id === lastUserMessage.id,
+                );
+                if (!existing) {
+                  targetSession.analysisResults.push({
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    errorMessage: {error: 'Operation cancelled by user'},
+                    isCompleted: true,
+                  });
+                }
+              }
+            }),
+          );
+          return;
+        }
 
         // Complete any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = completeIncompleteToolCalls(messages);
@@ -376,16 +473,18 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
           }),
         );
 
-        // Only stop the analysis when the assistant has fully completed,
-        // including any required tool calls and follow-up messages.
-        // Determine completion step-aware: only consider parts after the last step-start.
+        // Determine if SDK wants to auto-send a follow-up turn (i.e., more steps pending)
+        const shouldAutoSendNext = lastAssistantMessageIsCompleteWithToolCalls({
+          messages: completedMessages,
+        });
+
+        // Step-aware completion: look only at parts after the most recent step-start
         const lastMessage = completedMessages[completedMessages.length - 1];
         const isLastMessageAssistant = lastMessage?.role === 'assistant';
-
-        let isConversationComplete = false;
+        let tailHasTool = false;
+        let tailHasAssistantContent = false;
         if (isLastMessageAssistant) {
           const parts = lastMessage?.parts ?? [];
-          // Find the last step boundary
           let lastStepStartIndex = -1;
           for (let i = parts.length - 1; i >= 0; i--) {
             if (parts[i]?.type === 'step-start') {
@@ -394,20 +493,23 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
             }
           }
           const tailParts = parts.slice(lastStepStartIndex + 1);
-          // If the tail contains any tool parts, it's not complete yet
-          const tailHasTool = tailParts.some(
+          tailHasTool = tailParts.some(
             (part) =>
               typeof part?.type === 'string' &&
               (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
           );
-          // Consider complete when the final step has no tools and includes some assistant content
-          const tailHasAssistantContent = tailParts.some(
+          tailHasAssistantContent = tailParts.some(
             (part) => part.type === 'text' || part.type === 'reasoning',
           );
-          isConversationComplete = !tailHasTool && tailHasAssistantContent;
         }
 
-        if (isConversationComplete) {
+        const shouldEndAnalysis =
+          isLastMessageAssistant &&
+          !shouldAutoSendNext &&
+          !tailHasTool &&
+          tailHasAssistantContent;
+
+        if (shouldEndAnalysis) {
           store.setState((state: AiSliceState) =>
             produce(state, (draft: AiSliceState) => {
               draft.ai.isRunningAnalysis = false;
@@ -435,6 +537,13 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
             );
             if (targetSession) {
+              // Ensure message structure is valid even on errors
+              const existingMessages = (targetSession.uiMessages ||
+                []) as UIMessage[];
+              targetSession.uiMessages = completeIncompleteToolCalls(
+                existingMessages,
+              ) as unknown as AnalysisSessionSchema['uiMessages'];
+
               // Find the last user message to create analysis result with correct ID
               const uiMessages = targetSession.uiMessages as UIMessage[];
               const lastUserMessage = uiMessages
