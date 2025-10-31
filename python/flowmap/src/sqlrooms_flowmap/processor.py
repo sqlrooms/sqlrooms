@@ -95,19 +95,19 @@ class FlowmapProcessor:
             """
             SELECT 
                 MIN(ST_X(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 ))) as min_x,
                 MAX(ST_X(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 ))) as max_x,
                 MIN(ST_Y(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 ))) as min_y,
                 MAX(ST_Y(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 ))) as max_y
             FROM locations_raw
@@ -122,24 +122,24 @@ class FlowmapProcessor:
             CREATE TABLE locations_projected AS
             SELECT 
                 id,
-                COALESCE(label, CAST(id AS VARCHAR)) as label,
-                latitude as lat,
-                longitude as lon,
+                COALESCE(name, CAST(id AS VARCHAR)) as name,
+                lat as lat,
+                lon as lon,
                 ST_X(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 )) as x,
                 ST_Y(ST_Transform(
-                    ST_Point(longitude, latitude),
+                    ST_Point(lon, lat),
                     'EPSG:4326', 'EPSG:3857', always_xy := true
                 )) as y,
                 ST_Hilbert(
                     ST_X(ST_Transform(
-                        ST_Point(longitude, latitude),
+                        ST_Point(lon, lat),
                         'EPSG:4326', 'EPSG:3857', always_xy := true
                     )),
                     ST_Y(ST_Transform(
-                        ST_Point(longitude, latitude),
+                        ST_Point(lon, lat),
                         'EPSG:4326', 'EPSG:3857', always_xy := true
                     )),
                     ST_MakeBox2D(
@@ -158,21 +158,21 @@ class FlowmapProcessor:
             CREATE TABLE location_weights AS
             WITH out_flows AS (
                 SELECT 
-                    origin_id as id,
+                    origin as id,
                     SUM(count) as out_weight
                 FROM flows_raw
-                GROUP BY origin_id
+                GROUP BY origin
             ),
             in_flows AS (
                 SELECT 
-                    dest_id as id,
+                    dest as id,
                     SUM(count) as in_weight
                 FROM flows_raw
-                GROUP BY dest_id
+                GROUP BY dest
             )
             SELECT 
                 l.id,
-                l.label,
+                l.name,
                 l.lat,
                 l.lon,
                 l.x,
@@ -198,7 +198,7 @@ class FlowmapProcessor:
                 {self.max_zoom + 1} as z,
                 h_index,
                 id,
-                label,
+                name,
                 NULL::VARCHAR as parent_id,
                 lat,
                 lon,
@@ -229,7 +229,7 @@ class FlowmapProcessor:
         # Get locations/clusters from z+1 that haven't been clustered yet
         unclustered = self.conn.execute(
             f"""
-            SELECT id, label, x, y, weight, h_index, lat, lon
+            SELECT id, name, x, y, weight, h_index, lat, lon
             FROM clusters
             WHERE z = {z + 1}
             ORDER BY weight DESC
@@ -275,7 +275,7 @@ class FlowmapProcessor:
                         {z} as z,
                         h_index,
                         id,
-                        label,
+                        name,
                         NULL as parent_id,
                         lat,
                         lon,
@@ -325,7 +325,7 @@ class FlowmapProcessor:
                     """
                 ).fetchone()[0]
 
-                # Create cluster label
+                # Create cluster name
                 if len(cluster_members) == 1:
                     cluster_label = cluster_members[0][1]
                 else:
@@ -334,7 +334,7 @@ class FlowmapProcessor:
                 # Insert cluster
                 self.conn.execute(
                     f"""
-                    INSERT INTO clusters (z, h_index, id, label, parent_id, lat, lon, x, y, weight)
+                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight)
                     VALUES (
                         {z},
                         {cluster_h},
@@ -407,7 +407,7 @@ class FlowmapProcessor:
         self.conn.execute(
             f"""
             COPY (
-                SELECT z, h_index, id, label, parent_id, lat, lon, x, y, weight
+                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight
                 FROM clusters
                 ORDER BY z DESC, h_index
             ) TO '{output_file}' (FORMAT PARQUET)

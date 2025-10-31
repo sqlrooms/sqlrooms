@@ -23,14 +23,16 @@ sqlrooms-flowmap \
 ### Input Data
 
 **Locations table:**
+
 - `id` - unique identifier
-- `label` (optional) - location name
-- `latitude` - WGS84 latitude
-- `longitude` - WGS84 longitude
+- `name` (optional) - location name
+- `lat` - WGS84 latitude
+- `lon` - WGS84 longitude
 
 **Flows table:**
-- `origin_id` - origin location ID
-- `dest_id` - destination location ID
+
+- `origin` - origin location ID
+- `dest` - destination location ID
 - `count` - flow magnitude
 - `time` (optional) - temporal dimension
 
@@ -41,7 +43,7 @@ A Parquet file containing hierarchical clusters ordered by zoom level and Hilber
 - `z` - zoom level
 - `h_index` - Hilbert index for spatial ordering
 - `id` - cluster/location ID
-- `label` - cluster/location label
+- `name` - cluster/location name
 - `parent_id` - parent cluster ID (NULL for top-level)
 - `lat` - WGS84 latitude
 - `lon` - WGS84 longitude
@@ -52,4 +54,3 @@ A Parquet file containing hierarchical clusters ordered by zoom level and Hilber
 ## License
 
 MIT
-
