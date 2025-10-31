@@ -597,8 +597,24 @@ class FlowmapProcessor:
             """
         )
         
-        # Step 6: Aggregate flows for each zoom level using cluster hierarchy
-        for z in range(self.max_zoom, self.min_zoom - 1, -1):
+        # Step 6: Get actual zoom levels that exist in clusters (after deduplication)
+        existing_zooms = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            WHERE parent_id IS NULL
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        existing_zooms = [z[0] for z in existing_zooms]
+        
+        print(f"  Aggregating flows for {len(existing_zooms)} zoom levels: {existing_zooms}")
+        
+        # Step 7: Aggregate flows for each zoom level using cluster hierarchy
+        for z in existing_zooms:
+            if z == self.max_zoom + 1:
+                # Skip - already have base level flows
+                continue
             print(f"  Aggregating flows at z={z}...")
             
             # Get cluster assignments for this zoom level
