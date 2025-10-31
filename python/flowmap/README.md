@@ -95,7 +95,7 @@ Parquet file with hierarchical clusters ordered by zoom level and Hilbert index:
 - `h_index` - Hilbert index for spatial ordering
 - `id` - cluster/location ID
 - `name` - cluster/location name (format: "Location + N")
-- `parent_id` - parent cluster ID (NULL for top-level)
+- `parent_id` - parent cluster ID (self-reference for top-level items)
 - `lat` - WGS84 latitude
 - `lon` - WGS84 longitude
 - `x` - Web Mercator X coordinate
@@ -103,6 +103,42 @@ Parquet file with hierarchical clusters ordered by zoom level and Hilbert index:
 - `weight` - cluster weight (max of in/out flows)
 - `size` - total number of original locations in this cluster
 - `top_id` - ID of the highest-weighted original location in this cluster
+- `total_in` - total incoming flows from non-members
+- `total_out` - total outgoing flows to non-members
+- `total_self` - self-loops plus flows between cluster members
+
+#### Hierarchical Structure
+
+The cluster hierarchy is built by creating separate rows for each location/cluster at each zoom level. Locations appear at multiple zoom levels until they merge:
+
+```
+z=11 (detailed):
+  Geneva (parent_id=Geneva, size=1)      ← top-level, self-reference
+  Lausanne (parent_id=Lausanne, size=1)  ← top-level, self-reference
+  Zurich (parent_id=Zurich, size=1)      ← top-level, self-reference
+
+z=10 (slightly zoomed out, Geneva+Lausanne start merging):
+  Geneva (parent_id=cluster_z9_0, size=1)    ← will merge at z=9
+  Lausanne (parent_id=cluster_z9_0, size=1)  ← will merge at z=9
+  Zurich (parent_id=Zurich, size=1)          ← still separate, top-level
+
+z=9 (merged):
+  cluster_z9_0 "Geneva + 1" (parent_id=cluster_z8_0, size=2)  ← Geneva+Lausanne merged
+  Zurich (parent_id=cluster_z8_0, size=1)                     ← will merge at z=8
+
+z=8 (all merge):
+  cluster_z8_0 "Zurich + 2" (parent_id=cluster_z8_0, size=3)  ← all 3 cities merged
+
+z=0 (fully zoomed out):
+  cluster_z0_0 (parent_id=cluster_z0_0, size=26) ← single cluster containing everything
+```
+
+**Key points:**
+
+- Each location appears at multiple zoom levels as separate rows
+- `parent_id = id` means top-level (rendered at this zoom)
+- `parent_id != id` means merged into parent at the next lower zoom level
+- To find all leaf members of a cluster, recursively follow `parent_id` links
 
 #### Flows Output (Optional)
 

@@ -230,7 +230,7 @@ class FlowmapProcessor:
                 h_index,
                 id,
                 name,
-                NULL::VARCHAR as parent_id,
+                id as parent_id,  -- Self-reference for top-level items
                 lat,
                 lon,
                 x,
@@ -267,7 +267,7 @@ class FlowmapProcessor:
             """
             SELECT z, COUNT(*) as count
             FROM clusters
-            WHERE parent_id IS NULL
+            WHERE parent_id = id  -- Self-reference = top-level
             GROUP BY z
             ORDER BY z DESC
             """
@@ -346,7 +346,7 @@ class FlowmapProcessor:
                         clustered_ids.add(loc_id)
 
             if len(cluster_members) == 1:
-                # Single location - just copy to this zoom level
+                # Single location - just copy to this zoom level (self-reference = top-level)
                 member_id = cluster_members[0][0]
                 self.conn.execute(
                     f"""
@@ -356,7 +356,7 @@ class FlowmapProcessor:
                         h_index,
                         id,
                         name,
-                        NULL as parent_id,
+                        id as parent_id,  -- Self-reference for top-level
                         lat,
                         lon,
                         x,
@@ -432,7 +432,7 @@ class FlowmapProcessor:
                 else:
                     cluster_label = f"{top_leaf_name} + {total_leaves - 1}"
 
-                # Insert cluster
+                # Insert cluster (self-reference = top-level)
                 self.conn.execute(
                     f"""
                     INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id, total_in, total_out, total_self)
@@ -441,7 +441,7 @@ class FlowmapProcessor:
                         {cluster_h},
                         '{cluster_id}',
                         '{cluster_label.replace("'", "''")}',
-                        NULL,
+                        '{cluster_id}',  -- Self-reference for top-level
                         {center_lat},
                         {center_lon},
                         {center_x},
@@ -467,9 +467,9 @@ class FlowmapProcessor:
                     """
                 )
         
-        # Count how many actual clusters were created
+        # Count how many actual clusters were created (self-reference = top-level)
         num_clusters = self.conn.execute(
-            f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND parent_id IS NULL"
+            f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND parent_id = id"
         ).fetchone()[0]
         print(f" → {num_clusters} clusters")
 
@@ -487,13 +487,14 @@ class FlowmapProcessor:
             z_low = zoom_levels[i + 1]
 
             # Check if clusters are identical (same number and same positions)
+            # Self-reference = top-level
             identical = self.conn.execute(
                 f"""
                 WITH high_clusters AS (
-                    SELECT id, x, y FROM clusters WHERE z = {z_high} AND parent_id IS NULL
+                    SELECT id, x, y FROM clusters WHERE z = {z_high} AND parent_id = id
                 ),
                 low_clusters AS (
-                    SELECT id, x, y FROM clusters WHERE z = {z_low} AND parent_id IS NULL
+                    SELECT id, x, y FROM clusters WHERE z = {z_low} AND parent_id = id
                 )
                 SELECT 
                     (SELECT COUNT(*) FROM high_clusters) = (SELECT COUNT(*) FROM low_clusters)
@@ -588,17 +589,18 @@ class FlowmapProcessor:
                     f"""
                     CREATE TEMP TABLE cluster_members AS
                     WITH RECURSIVE find_members AS (
-                        -- Start with all direct children
+                        -- Start with all direct children (not self-references)
                         SELECT id, z
                         FROM clusters
-                        WHERE parent_id = '{cluster_id}'
+                        WHERE parent_id = '{cluster_id}' AND id != parent_id
                         
                         UNION ALL
                         
-                        -- Recursively find their children
+                        -- Recursively find their children (not self-references)
                         SELECT c.id, c.z
                         FROM clusters c
                         JOIN find_members fm ON c.parent_id = fm.id
+                        WHERE c.id != c.parent_id
                     )
                     SELECT DISTINCT id FROM find_members WHERE id NOT LIKE 'cluster_%'
                     """
@@ -816,11 +818,12 @@ class FlowmapProcessor:
         )
         
         # Step 5: Get actual zoom levels that exist in clusters (after deduplication)
+        # Self-reference = top-level
         existing_zooms = self.conn.execute(
             """
             SELECT DISTINCT z 
             FROM clusters 
-            WHERE parent_id IS NULL
+            WHERE parent_id = id
             ORDER BY z DESC
             """
         ).fetchall()
