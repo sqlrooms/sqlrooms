@@ -32,59 +32,66 @@ export function completeIncompleteToolCalls(
       return message;
     }
 
-    // Find the last tool-related part by iterating backwards
-    let lastToolPartIndex = -1;
-
-    for (let i = message.parts.length - 1; i >= 0; i--) {
-      const part = message.parts[i];
-      if (
-        typeof part?.type === 'string' &&
-        'toolCallId' in part &&
-        (part.type === 'dynamic-tool' || part.type.startsWith('tool-'))
-      ) {
-        lastToolPartIndex = i;
-        break;
-      }
-    }
-
-    // If no tool parts, nothing to do
-    if (lastToolPartIndex === -1) return message;
-
-    const lastToolPart = message.parts[lastToolPartIndex] as {
+    // Walk backward and complete any TRAILING tool parts that lack output.
+    // This covers multi-tool-step aborts where several tool calls were started
+    // but the stream was cancelled before the outputs were emitted.
+    type ToolPart = {
       type: string;
       toolCallId: string;
       toolName?: string;
       input?: unknown;
       state?: string;
     };
-
-    // Check if this tool has output (any state starting with 'output')
-    const hasOutput = lastToolPart.state?.startsWith('output');
-
-    if (hasOutput) return message; // Already complete
-
-    // Replace the incomplete tool call with a completed error version
-    const base = {
-      toolCallId: lastToolPart.toolCallId,
-      state: 'output-error' as const,
-      input: lastToolPart.input ?? {},
-      errorText: 'Operation cancelled by user',
-      providerExecuted: false,
+    const isToolPart = (part: unknown): part is ToolPart => {
+      if (typeof part !== 'object' || part === null) return false;
+      const p = part as Record<string, unknown> & {type?: unknown};
+      const typeVal =
+        typeof p.type === 'string' ? (p.type as string) : undefined;
+      return (
+        !!typeVal &&
+        'toolCallId' in p &&
+        (typeVal === 'dynamic-tool' || typeVal.startsWith('tool-'))
+      );
     };
 
-    const syntheticPart =
-      lastToolPart.type === 'dynamic-tool'
-        ? {
-            type: 'dynamic-tool' as const,
-            toolName: lastToolPart.toolName || 'unknown',
-            ...base,
-          }
-        : {type: lastToolPart.type as `tool-${string}`, ...base};
-
-    // Replace the incomplete part instead of appending to avoid duplicates
     const updatedParts = [...message.parts];
-    updatedParts[lastToolPartIndex] =
-      syntheticPart as unknown as (typeof message.parts)[number];
+    let sawAnyTool = false;
+    for (let i = updatedParts.length - 1; i >= 0; i--) {
+      const current = updatedParts[i] as unknown;
+      if (!isToolPart(current)) {
+        // Stop once we exit the trailing tool region
+        if (sawAnyTool) break;
+        continue;
+      }
+      sawAnyTool = true;
+      const toolPart = current as ToolPart;
+      const hasOutput = toolPart.state?.startsWith('output');
+      if (hasOutput) {
+        // Completed tool; continue checking earlier parts just in case
+        continue;
+      }
+
+      // Synthesize a completed error result for the incomplete tool call
+      const base = {
+        toolCallId: toolPart.toolCallId,
+        state: 'output-error' as const,
+        input: toolPart.input ?? {},
+        errorText: 'Operation cancelled by user',
+        providerExecuted: false,
+      };
+
+      const syntheticPart =
+        toolPart.type === 'dynamic-tool'
+          ? {
+              type: 'dynamic-tool' as const,
+              toolName: toolPart.toolName || 'unknown',
+              ...base,
+            }
+          : {type: toolPart.type as string, ...base};
+
+      updatedParts[i] =
+        syntheticPart as unknown as (typeof message.parts)[number];
+    }
 
     return {
       ...message,
@@ -182,13 +189,24 @@ export function createLocalChatTransportFactory({
         model = openai.chatModel(modelId);
       }
 
+      // Parse caller-supplied body defensively to avoid breaking the stream
       const body = init?.body as string;
-      const parsed = body ? JSON.parse(body) : {};
-      const messagesCopy = parsed.messages;
+      let parsed: unknown = {};
+      try {
+        parsed = body ? JSON.parse(body) : {};
+      } catch {
+        parsed = {};
+      }
+      const parsedObj = (parsed as {messages?: unknown}) || {};
+      const messagesCopy = Array.isArray(parsedObj.messages)
+        ? (parsedObj.messages as UIMessage[])
+        : [];
 
       const onToolCompleted = createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
-      // remove execute from tools, so they will be handled by onChatToolCall
+      // Remove execute from tools for the model call so tool invocations are
+      // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
+      // to return fresh tool objects; if that ever changes, clone before mutate.
       Object.values(tools).forEach((tool) => {
         tool.execute = undefined;
       });
@@ -198,6 +216,7 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
+        // Ensure we always pass an array of messages
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
@@ -225,12 +244,21 @@ export function createRemoteChatTransportFactory(params: {
         currentSession?.modelProvider || params.defaultProvider;
       const model = currentSession?.model || params.defaultModel;
 
-      // Parse the existing body and add model information
+      // Parse the existing body and add model information (defensive parsing)
       const body = init?.body as string;
-      const parsed = body ? JSON.parse(body) : {};
+      let parsed: unknown = {};
+      try {
+        parsed = body ? JSON.parse(body) : {};
+      } catch {
+        parsed = {};
+      }
 
+      const parsedObj =
+        typeof parsed === 'object' && parsed !== null
+          ? (parsed as Record<string, unknown>)
+          : {};
       const enhancedBody = {
-        ...parsed,
+        ...parsedObj,
         modelProvider,
         model,
       };
@@ -288,11 +316,12 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         // find tool from tools using toolName
         const tool = tools[toolName];
         if (tool && tool.execute) {
+          // Always provide a defined messages array to the tool runtime
+          const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
+            []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
-            messages: convertToModelMessages(
-              state.ai.getCurrentSession()?.uiMessages as UIMessage[],
-            ),
+            messages: convertToModelMessages(sessionMessages),
             abortSignal: state.ai.analysisAbortController?.signal,
           });
 
@@ -325,10 +354,18 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         }
       }
     },
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend
-      if (dataPart.type === 'data-tool-additional-output' && dataPart.data) {
-        const {toolCallId, output} = dataPart.data;
+      // Handle additional tool output data from the backend (defensive guards)
+      if (
+        dataPart.type === 'data-tool-additional-output' &&
+        dataPart.data &&
+        (dataPart.data as {toolCallId?: unknown}).toolCallId != null
+      ) {
+        const {toolCallId, output} = dataPart.data as {
+          toolCallId: string;
+          output: unknown;
+        };
 
         // Store the additional data in the session
         const currentSessionId = store.getState().ai.config.currentSessionId;
@@ -482,7 +519,6 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
         const lastMessage = completedMessages[completedMessages.length - 1];
         const isLastMessageAssistant = lastMessage?.role === 'assistant';
         let tailHasTool = false;
-        let tailHasAssistantContent = false;
         if (isLastMessageAssistant) {
           const parts = lastMessage?.parts ?? [];
           let lastStepStartIndex = -1;
@@ -498,16 +534,13 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               typeof part?.type === 'string' &&
               (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
           );
-          tailHasAssistantContent = tailParts.some(
-            (part) => part.type === 'text' || part.type === 'reasoning',
-          );
         }
 
+        // End analysis when there is no autosend and there are no pending tool parts
+        // even if the assistant didn't emit additional text (e.g., tool-only tails).
         const shouldEndAnalysis =
-          isLastMessageAssistant &&
-          !shouldAutoSendNext &&
-          !tailHasTool &&
-          tailHasAssistantContent;
+          (isLastMessageAssistant && !shouldAutoSendNext && !tailHasTool) ||
+          (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
           store.setState((state: AiSliceState) =>
