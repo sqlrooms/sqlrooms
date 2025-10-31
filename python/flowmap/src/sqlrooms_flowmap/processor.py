@@ -745,6 +745,21 @@ class FlowmapProcessor:
             ) TO '{output_file}' (FORMAT PARQUET)
             """
         )
+        
+        # Export metadata with extents for Hilbert range computation
+        import os
+        metadata_file = output_file.replace('.parquet', '-metadata.parquet')
+        print(f"Exporting metadata to {metadata_file}...")
+        
+        self.conn.execute(
+            f"""
+            COPY (
+                SELECT 
+                    (SELECT extent FROM spatial_extent) as location_extent,
+                    (SELECT extent FROM od_extent) as od_extent
+            ) TO '{metadata_file}' (FORMAT PARQUET)
+            """
+        )
 
     def _export_results(self, output_file: str) -> None:
         """

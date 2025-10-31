@@ -2,7 +2,7 @@
 Flask server for serving flowmap vector tiles from Parquet files.
 
 Usage:
-    python server.py --clusters data/clusters.parquet --flows data/flows.parquet
+    uv run server.py locations --output-dir /path/to/data
 """
 
 import argparse
@@ -20,9 +20,19 @@ con = None
 available_zooms = []
 
 
-def init_database(clusters_file: str, flows_file: str):
+def init_database(dataset_name: str, output_dir: str = "../output"):
     """Initialize DuckDB connection and load data."""
     global con, available_zooms
+    
+    # Construct file paths
+    clusters_file = f"{output_dir}/{dataset_name}-clusters.parquet"
+    flows_file = f"{output_dir}/{dataset_name}-flows.parquet"
+    metadata_file = f"{output_dir}/{dataset_name}-flows-metadata.parquet"
+    
+    print(f"Loading dataset '{dataset_name}' from {output_dir}/")
+    print(f"  Clusters: {clusters_file}")
+    print(f"  Flows: {flows_file}")
+    print(f"  Metadata: {metadata_file}")
     
     # Create DuckDB connection with spatial extension
     con = duckdb.connect(":memory:")
@@ -40,6 +50,17 @@ def init_database(clusters_file: str, flows_file: str):
         CREATE TABLE flows AS 
         SELECT * FROM read_parquet('{flows_file}')
     """)
+    
+    # Load metadata for Hilbert range computation
+    try:
+        con.execute(f"""
+            CREATE TABLE flow_metadata AS 
+            SELECT * FROM read_parquet('{metadata_file}')
+        """)
+        print("Loaded flow metadata for Hilbert range filtering")
+    except Exception as e:
+        print(f"Warning: Could not load metadata file {metadata_file}: {e}")
+        print("Hilbert range filtering will not be available")
     
     # Get available zoom levels (sorted ascending for bisect)
     available_zooms = con.execute("""
@@ -68,10 +89,12 @@ def init_database(clusters_file: str, flows_file: str):
 
 
     # Also create a spatial index on cluster coordinates if possible
-    try:
-        con.execute("CREATE INDEX idx_clusters_coords ON clusters USING RTREE(x, y)")
-    except:
-        print("Note: R-tree spatial index not available, using regular indexes")
+    # try:
+    #     con.execute("CREATE INDEX idx_clusters_coords ON clusters USING RTREE(x, y)")
+    # RTree indexes can only be created over a single column.
+    # except Exception as e:
+    #     print(f"Error: {e}")
+    #     print("Note: R-tree spatial index not available, using regular indexes")
 
 
 def find_best_zoom(requested_zoom: int) -> int:
@@ -84,6 +107,71 @@ def find_best_zoom(requested_zoom: int) -> int:
     if idx == 0:
         return available_zooms[0]
     return available_zooms[idx - 1]
+
+
+def compute_hilbert_range_for_tile(z: int, x: int, y: int) -> tuple:
+    """
+    Compute Hilbert index range for flows within a tile.
+    
+    Returns (min_h, max_h) covering flows that might be visible in the tile.
+    Uses a bounding box approach - may over-select but guarantees coverage.
+    """
+    with con.cursor() as cursor:
+        # Compute everything in one query to avoid passing geometries through Python
+        result = cursor.execute("""
+            WITH tile_info AS (
+                SELECT 
+                    CAST(location_extent AS BOX_2D) as loc_ext,
+                    CAST(od_extent AS BOX_2D) as od_ext,
+                    ST_TileEnvelope($1, $2, $3) as tile_env
+                FROM flow_metadata
+            ),
+            tile_corners AS (
+                SELECT
+                    loc_ext,
+                    od_ext,
+                    ST_Hilbert(ST_XMin(tile_env), ST_YMin(tile_env), loc_ext) as h1,
+                    ST_Hilbert(ST_XMin(tile_env), ST_YMax(tile_env), loc_ext) as h2,
+                    ST_Hilbert(ST_XMax(tile_env), ST_YMin(tile_env), loc_ext) as h3,
+                    ST_Hilbert(ST_XMax(tile_env), ST_YMax(tile_env), loc_ext) as h4
+                FROM tile_info
+            ),
+            loc_range AS (
+                SELECT
+                    od_ext,
+                    LEAST(h1, h2, h3, h4) as min_loc_h,
+                    GREATEST(h1, h2, h3, h4) as max_loc_h
+                FROM tile_corners
+            )
+            SELECT
+                LEAST(
+                    ST_Hilbert(min_loc_h, ST_YMin(od_ext), od_ext),
+                    ST_Hilbert(min_loc_h, ST_YMax(od_ext), od_ext),
+                    ST_Hilbert(max_loc_h, ST_YMin(od_ext), od_ext),
+                    ST_Hilbert(max_loc_h, ST_YMax(od_ext), od_ext),
+                    ST_Hilbert(ST_XMin(od_ext), min_loc_h, od_ext),
+                    ST_Hilbert(ST_XMax(od_ext), min_loc_h, od_ext),
+                    ST_Hilbert(ST_XMin(od_ext), max_loc_h, od_ext),
+                    ST_Hilbert(ST_XMax(od_ext), max_loc_h, od_ext)
+                ) as min_flow_h,
+                GREATEST(
+                    ST_Hilbert(min_loc_h, ST_YMin(od_ext), od_ext),
+                    ST_Hilbert(min_loc_h, ST_YMax(od_ext), od_ext),
+                    ST_Hilbert(max_loc_h, ST_YMin(od_ext), od_ext),
+                    ST_Hilbert(max_loc_h, ST_YMax(od_ext), od_ext),
+                    ST_Hilbert(ST_XMin(od_ext), min_loc_h, od_ext),
+                    ST_Hilbert(ST_XMax(od_ext), min_loc_h, od_ext),
+                    ST_Hilbert(ST_XMin(od_ext), max_loc_h, od_ext),
+                    ST_Hilbert(ST_XMax(od_ext), max_loc_h, od_ext)
+                ) as max_flow_h
+            FROM loc_range
+        """, [z, x, y]).fetchone()
+        
+        if not result:
+            return (None, None)
+        
+        min_flow_h, max_flow_h = result
+        return (min_flow_h, max_flow_h)
 
 
 @app.route('/clusters/<int:z>/<int:x>/<int:y>.pbf')
@@ -137,45 +225,86 @@ def get_flows_tile(z, x, y):
     # Find best matching zoom level
     data_zoom = find_best_zoom(z)
     
+    # Compute Hilbert range for this tile
+    min_h, max_h = compute_hilbert_range_for_tile(z, x, y)
+    
     with con.cursor() as cursor:
-        tile_blob = cursor.execute("""
-            WITH tile_bounds AS (
-                SELECT 
-                    ST_TileEnvelope($1, $2, $3) AS envelope,
-                    ST_Extent(ST_TileEnvelope($1, $2, $3)) AS bounds
-            )
-            SELECT ST_AsMVT(tile_data, 'default')
-            FROM (
-                SELECT 
-                    f.origin,
-                    f.dest,
-                    f.count,
-                    ST_AsMVTGeom(
-                        ST_MakeLine(
-                            ST_Point(co.x, co.y),
-                            ST_Point(cd.x, cd.y)
-                        ),
-                        (SELECT bounds FROM tile_bounds),
-                        4096,
-                        64
-                    ) AS geometry
-                FROM flows f, tile_bounds
-                JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id IS NULL
-                JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id IS NULL
-                WHERE f.z = $4
-                  AND (
-                      ST_Within(ST_Point(co.x, co.y), envelope)
-                      OR ST_Within(ST_Point(cd.x, cd.y), envelope)
-                  )
-            ) AS tile_data
-            WHERE geometry IS NOT NULL
-        """, [z, x, y, data_zoom]).fetchone()
+        # Use Hilbert range if available for fast pre-filtering
+        if min_h is not None and max_h is not None:
+            tile_blob = cursor.execute("""
+                WITH tile_bounds AS (
+                    SELECT 
+                        ST_TileEnvelope($1, $2, $3) AS envelope,
+                        ST_Extent(ST_TileEnvelope($1, $2, $3)) AS bounds
+                )
+                SELECT ST_AsMVT(tile_data, 'default')
+                FROM (
+                    SELECT 
+                        f.origin,
+                        f.dest,
+                        f.count,
+                        ST_AsMVTGeom(
+                            ST_MakeLine(
+                                ST_Point(co.x, co.y),
+                                ST_Point(cd.x, cd.y)
+                            ),
+                            (SELECT bounds FROM tile_bounds),
+                            4096,
+                            64
+                        ) AS geometry
+                    FROM flows f, tile_bounds
+                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id IS NULL
+                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id IS NULL
+                    WHERE f.z = $4
+                      AND f.flow_h BETWEEN $5 AND $6  -- Hilbert range filter (fast!)
+                      AND (
+                          ST_Within(ST_Point(co.x, co.y), envelope)
+                          OR ST_Within(ST_Point(cd.x, cd.y), envelope)
+                      )
+                ) AS tile_data
+                WHERE geometry IS NOT NULL
+            """, [z, x, y, data_zoom, min_h, max_h]).fetchone()
+        else:
+            # Fallback without Hilbert filtering
+            tile_blob = cursor.execute("""
+                WITH tile_bounds AS (
+                    SELECT 
+                        ST_TileEnvelope($1, $2, $3) AS envelope,
+                        ST_Extent(ST_TileEnvelope($1, $2, $3)) AS bounds
+                )
+                SELECT ST_AsMVT(tile_data, 'default')
+                FROM (
+                    SELECT 
+                        f.origin,
+                        f.dest,
+                        f.count,
+                        ST_AsMVTGeom(
+                            ST_MakeLine(
+                                ST_Point(co.x, co.y),
+                                ST_Point(cd.x, cd.y)
+                            ),
+                            (SELECT bounds FROM tile_bounds),
+                            4096,
+                            64
+                        ) AS geometry
+                    FROM flows f, tile_bounds
+                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id IS NULL
+                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id IS NULL
+                    WHERE f.z = $4
+                      AND (
+                          ST_Within(ST_Point(co.x, co.y), envelope)
+                          OR ST_Within(ST_Point(cd.x, cd.y), envelope)
+                      )
+                ) AS tile_data
+                WHERE geometry IS NOT NULL
+            """, [z, x, y, data_zoom]).fetchone()
         
         tile = tile_blob[0] if tile_blob and tile_blob[0] else b''
         
         # Debug logging
         if tile:
-            print(f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}): {len(tile)} bytes")
+            range_info = f" (Hilbert: {min_h}-{max_h})" if min_h is not None else ""
+            print(f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}){range_info}: {len(tile)} bytes")
         else:
             print(f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}): empty")
         
@@ -446,15 +575,15 @@ def index():
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Serve flowmap data as vector tiles')
-    parser.add_argument('--clusters', required=True, help='Path to clusters Parquet file')
-    parser.add_argument('--flows', required=True, help='Path to flows Parquet file')
+    parser.add_argument('dataset', help='Dataset name (e.g., "locations" for output/locations-*.parquet)')
+    parser.add_argument('--output-dir', default='output', help='Output directory containing Parquet files (default: output)')
     parser.add_argument('--host', default='127.0.0.1', help='Host to bind to')
     parser.add_argument('--port', default=5000, type=int, help='Port to bind to')
     
     args = parser.parse_args()
     
     # Initialize database
-    init_database(args.clusters, args.flows)
+    init_database(args.dataset, args.output_dir)
     
     # Start server
     print(f"Starting server at http://{args.host}:{args.port}")
