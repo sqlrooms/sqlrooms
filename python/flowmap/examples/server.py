@@ -194,6 +194,9 @@ def get_clusters_tile(z, x, y):
                     name,
                     weight,
                     size,
+                    total_in,
+                    total_out,
+                    total_self,
                     ST_AsMVTGeom(
                         ST_Point(x, y),
                         (SELECT bounds FROM tile_bounds),
@@ -202,7 +205,7 @@ def get_clusters_tile(z, x, y):
                     ) AS geometry
                 FROM clusters, tile_bounds
                 WHERE z = $4
-                  AND parent_id IS NULL
+                  AND parent_id = id  -- Self-reference = top-level
                   AND ST_Within(ST_Point(x, y), envelope)
             ) AS tile_data
             WHERE geometry IS NOT NULL
@@ -253,8 +256,8 @@ def get_flows_tile(z, x, y):
                             64
                         ) AS geometry
                     FROM flows f, tile_bounds
-                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id IS NULL
-                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id IS NULL
+                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id = co.id
+                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id = cd.id
                     WHERE f.z = $4
                       AND f.flow_h BETWEEN $5 AND $6  -- Hilbert range filter (fast!)
                       AND (
@@ -288,8 +291,8 @@ def get_flows_tile(z, x, y):
                             64
                         ) AS geometry
                     FROM flows f, tile_bounds
-                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id IS NULL
-                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id IS NULL
+                    JOIN clusters co ON f.origin = co.id AND co.z = $4 AND co.parent_id = co.id
+                    JOIN clusters cd ON f.dest = cd.id AND cd.z = $4 AND cd.parent_id = cd.id
                     WHERE f.z = $4
                       AND (
                           ST_Within(ST_Point(co.x, co.y), envelope)
@@ -318,7 +321,7 @@ def debug_clusters():
         sample = cursor.execute("""
             SELECT z, COUNT(*) as count, MIN(x) as min_x, MAX(x) as max_x, MIN(y) as min_y, MAX(y) as max_y
             FROM clusters
-            WHERE parent_id IS NULL
+            WHERE parent_id = id  -- Self-reference = top-level
             GROUP BY z
             ORDER BY z DESC
         """).fetchall()
@@ -340,14 +343,14 @@ def get_metadata():
                 MAX(lon) as max_lon,
                 MAX(lat) as max_lat
             FROM clusters
-            WHERE parent_id IS NULL
+            WHERE parent_id = id  -- Self-reference = top-level
         """).fetchone()
         
         # Get location count
         location_count = cursor.execute("""
             SELECT COUNT(DISTINCT id) 
             FROM clusters 
-            WHERE parent_id IS NULL
+            WHERE parent_id = id  -- Self-reference = top-level
         """).fetchone()[0]
         
         # Get flow count
@@ -515,8 +518,12 @@ INDEX_HTML = """
                     .setLngLat(e.lngLat)
                     .setHTML(`
                         <strong>${properties.name}</strong><br>
+                        Size: ${properties.size} locations<br>
                         Weight: ${properties.weight.toLocaleString()}<br>
-                        Size: ${properties.size} locations
+                        <br>
+                        Flows in: ${(properties.total_in || 0).toLocaleString()}<br>
+                        Flows out: ${(properties.total_out || 0).toLocaleString()}<br>
+                        Internal: ${(properties.total_self || 0).toLocaleString()}
                     `)
                     .addTo(map);
             });
