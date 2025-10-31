@@ -117,6 +117,20 @@ Parquet file with tiled OD flows ordered by `z, flow_h, [time]`:
 
 The flows are spatially indexed using a **nested Hilbert transform** that preserves locality in OD-space, making range queries efficient for tile-based serving.
 
+## Example Server
+
+A Flask-based vector tile server is included in `examples/server.py`. To run it:
+
+```bash
+# Install dev dependencies
+uv sync --group dev
+
+# Run the server
+python examples/server.py --clusters <clusters.parquet> --flows <flows.parquet>
+```
+
+See [examples/README.md](examples/README.md) for details.
+
 ## License
 
 MIT

@@ -16,6 +16,11 @@ dependencies = [
 [project.scripts]
 sqlrooms-flowmap = "sqlrooms_flowmap.cli:main"
 
+[dependency-groups]
+dev = [
+    "flask>=3.0.0",
+]
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
