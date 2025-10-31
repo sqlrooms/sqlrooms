@@ -59,8 +59,8 @@ A Parquet file containing hierarchical clusters ordered by zoom level and Hilber
 - `x` - Web Mercator X coordinate
 - `y` - Web Mercator Y coordinate
 - `weight` - cluster weight (max of in/out flows)
-- `num_leaves` - total number of original locations in this cluster
-- `top_leaf_id` - ID of the highest-weighted original location in this cluster
+- `size` - total number of original locations in this cluster
+- `top_id` - ID of the highest-weighted original location in this cluster
 
 ## License
 

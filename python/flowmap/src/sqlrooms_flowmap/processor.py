@@ -211,8 +211,8 @@ class FlowmapProcessor:
                 x,
                 y,
                 weight,
-                1 as num_leaves,
-                id as top_leaf_id
+                1 as size,
+                id as top_id
             FROM location_weights
             """
         )
@@ -272,7 +272,7 @@ class FlowmapProcessor:
         # Get locations/clusters from z+1 that haven't been clustered yet
         unclustered = self.conn.execute(
             f"""
-            SELECT id, name, x, y, weight, h_index, lat, lon, num_leaves, top_leaf_id
+            SELECT id, name, x, y, weight, h_index, lat, lon, size, top_id
             FROM clusters
             WHERE z = {z + 1}
             ORDER BY weight DESC
@@ -299,12 +299,12 @@ class FlowmapProcessor:
             if seed is None:
                 break
 
-            seed_id, seed_label, seed_x, seed_y, seed_weight, seed_h, seed_lat, seed_lon, seed_num_leaves, seed_top_leaf_id = seed
+            seed_id, seed_label, seed_x, seed_y, seed_weight, seed_h, seed_lat, seed_lon, seed_size, seed_top_id = seed
 
             # Find all locations within cluster radius
             cluster_members = []
             for loc in unclustered:
-                loc_id, loc_label, loc_x, loc_y, loc_weight, loc_h, loc_lat, loc_lon, loc_num_leaves, loc_top_leaf_id = loc
+                loc_id, loc_label, loc_x, loc_y, loc_weight, loc_h, loc_lat, loc_lon, loc_size, loc_top_id = loc
                 if loc_id not in clustered_ids:
                     dist = math.sqrt((loc_x - seed_x) ** 2 + (loc_y - seed_y) ** 2)
                     if dist <= cluster_radius:
@@ -328,8 +328,8 @@ class FlowmapProcessor:
                         x,
                         y,
                         weight,
-                        num_leaves,
-                        top_leaf_id
+                        size,
+                        top_id
                     FROM clusters
                     WHERE z = {z + 1} AND id = '{member_id}'
                     """
@@ -374,18 +374,18 @@ class FlowmapProcessor:
                 ).fetchone()[0]
 
                 # Calculate total leaves and find top leaf
-                total_leaves = sum(m[8] for m in cluster_members)  # num_leaves is index 8
+                total_leaves = sum(m[8] for m in cluster_members)  # size is index 8
                 
-                # Find the member with highest weight to determine top_leaf_id
+                # Find the member with highest weight to determine top_id
                 top_member = max(cluster_members, key=lambda m: m[4])  # weight is index 4
-                top_leaf_id = top_member[9]  # top_leaf_id is index 9
+                top_id = top_member[9]  # top_id is index 9
                 
                 # Get the name of the top leaf location
                 top_leaf_name = self.conn.execute(
                     f"""
                     SELECT name 
                     FROM location_weights 
-                    WHERE id = '{top_leaf_id}'
+                    WHERE id = '{top_id}'
                     """
                 ).fetchone()[0]
                 
@@ -398,7 +398,7 @@ class FlowmapProcessor:
                 # Insert cluster
                 self.conn.execute(
                     f"""
-                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, num_leaves, top_leaf_id)
+                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id)
                     VALUES (
                         {z},
                         {cluster_h},
@@ -411,7 +411,7 @@ class FlowmapProcessor:
                         {center_y},
                         {total_weight},
                         {total_leaves},
-                        '{top_leaf_id}'
+                        '{top_id}'
                     )
                     """
                 )
@@ -479,7 +479,7 @@ class FlowmapProcessor:
         self.conn.execute(
             f"""
             COPY (
-                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight, num_leaves, top_leaf_id
+                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id
                 FROM clusters
                 ORDER BY z DESC, h_index
             ) TO '{output_file}' (FORMAT PARQUET)
