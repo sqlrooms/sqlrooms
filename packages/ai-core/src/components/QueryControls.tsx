@@ -72,7 +72,14 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, onCancel, runAnalysis, sendMessage, onRun]);
+  }, [
+    isRunningAnalysis,
+    cancelAnalysis,
+    onCancel,
+    runAnalysis,
+    sendMessage,
+    onRun,
+  ]);
 
   return (
     <div
@@ -101,7 +108,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 pr-2">
+              <div className="ml-auto shrink-0 gap-2 pr-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
