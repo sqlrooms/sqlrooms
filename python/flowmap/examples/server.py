@@ -50,8 +50,28 @@ def init_database(clusters_file: str, flows_file: str):
     print(f"Loaded data with zoom levels: {available_zooms}")
     
     # Create indexes for performance
-    con.execute("CREATE INDEX idx_clusters_z ON clusters(z)")
-    con.execute("CREATE INDEX idx_flows_z ON flows(z)")
+    con.execute("CREATE INDEX idx_clusters_z_id ON clusters(z, id)")
+    con.execute("CREATE INDEX idx_clusters_z_parent ON clusters(z, parent_id)")
+    con.execute("CREATE INDEX idx_flows_z_h ON flows(z, flow_h)")
+    
+    # The indexes will help, especially idx_flows_z_h which leverages the
+    # sorting. The main benefit of flow_h is: Parquet file ordering - Spatially
+    # close flows are stored together, making sequential reads efficient Index
+    # scans - The (z, flow_h) index enables efficient range queries For tile
+    # queries, we still need to join with clusters to get coordinates for
+    # rendering, so the spatial filtering is necessary. The flow_h helps more
+    # when reading from disk - DuckDB can scan contiguous blocks of flows
+    # efficiently. For even better performance with flow_h, we could compute
+    # Hilbert ranges for tiles, but that's complex. The current approach with
+    # improved indexes should work well. The sorted Parquet + index means DuckDB
+    # can efficiently skip irrelevant flow ranges.
+
+
+    # Also create a spatial index on cluster coordinates if possible
+    try:
+        con.execute("CREATE INDEX idx_clusters_coords ON clusters USING RTREE(x, y)")
+    except:
+        print("Note: R-tree spatial index not available, using regular indexes")
 
 
 def find_best_zoom(requested_zoom: int) -> int:
