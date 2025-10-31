@@ -26,9 +26,9 @@ from .processor import FlowmapProcessor
 )
 @click.option(
     "--radius",
-    default=100.0,
+    default=40.0,
     type=float,
-    help="Cluster radius in Web Mercator units (default: 100)",
+    help="Cluster radius in pixels (default: 40)",
 )
 @click.option(
     "--min-zoom",
@@ -55,9 +55,8 @@ def main(
     click.echo(f"Locations: {locations}")
     click.echo(f"Flows: {flows}")
     click.echo(f"Output: {output}")
-    click.echo(f"Cluster radius: {radius}")
+    click.echo(f"Cluster radius: {radius} pixels")
     click.echo(f"Zoom range: {min_zoom} - {max_zoom}")
-    click.echo()
 
     processor = FlowmapProcessor(
         locations_file=locations,
@@ -67,9 +66,8 @@ def main(
         max_zoom=max_zoom,
     )
 
-    click.echo("Processing...")
     processor.process(output)
-    click.echo(f"✓ Complete! Output written to {output}")
+    click.echo(f"\n✓ Complete! Output written to {output}")
 
 
 if __name__ == "__main__":

@@ -15,10 +15,19 @@ sqlrooms-flowmap \
   --locations locations.csv \
   --flows flows.parquet \
   --output clusters.parquet \
-  --radius 100 \
+  --radius 40 \
   --min-zoom 0 \
   --max-zoom 20
 ```
+
+### Parameters
+
+- `--locations` - Path to locations CSV/Parquet file
+- `--flows` - Path to flows CSV/Parquet file
+- `--output` - Path to output Parquet file
+- `--radius` - Cluster radius in pixels (default: 40). This scales with zoom level - at lower zoom levels (zoomed out), more locations will cluster together
+- `--min-zoom` - Minimum zoom level for clustering (default: 0)
+- `--max-zoom` - Maximum zoom level to start from (default: 20)
 
 ### Input Data
 

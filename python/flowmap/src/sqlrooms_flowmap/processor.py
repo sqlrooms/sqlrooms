@@ -13,7 +13,7 @@ class FlowmapProcessor:
         self,
         locations_file: str,
         flows_file: str,
-        cluster_radius: float = 100.0,
+        cluster_radius: float = 40.0,
         min_zoom: int = 0,
         max_zoom: int = 20,
     ):
@@ -23,13 +23,13 @@ class FlowmapProcessor:
         Args:
             locations_file: Path to locations data (CSV or Parquet)
             flows_file: Path to flows data (CSV or Parquet)
-            cluster_radius: Clustering radius in Web Mercator units
+            cluster_radius: Clustering radius in pixels (default: 40)
             min_zoom: Minimum zoom level for clustering
             max_zoom: Maximum zoom level to start from
         """
         self.locations_file = locations_file
         self.flows_file = flows_file
-        self.cluster_radius = cluster_radius
+        self.cluster_radius_pixels = cluster_radius
         self.min_zoom = min_zoom
         self.max_zoom = max_zoom
         self.conn = None
@@ -191,6 +191,12 @@ class FlowmapProcessor:
     def _hierarchical_clustering(self) -> None:
         """Perform hierarchical clustering across zoom levels."""
         # Create initial table with all locations at max zoom + 1
+        num_locations = self.conn.execute(
+            "SELECT COUNT(*) FROM location_weights"
+        ).fetchone()[0]
+        
+        print(f"\nClustering {num_locations} locations from z={self.max_zoom} down to z={self.min_zoom}:")
+        
         self.conn.execute(
             f"""
             CREATE TABLE clusters AS
@@ -217,7 +223,42 @@ class FlowmapProcessor:
             self._cluster_at_zoom(z)
 
         # Remove zoom levels with no actual clustering
+        print("\nRemoving duplicate zoom levels...")
         self._remove_duplicate_zoom_levels()
+        
+        # Show final zoom level distribution
+        zoom_dist = self.conn.execute(
+            """
+            SELECT z, COUNT(*) as count
+            FROM clusters
+            WHERE parent_id IS NULL
+            GROUP BY z
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        print(f"\nFinal distribution:")
+        for z, count in zoom_dist:
+            print(f"  z={z}: {count} clusters")
+
+    def _get_cluster_radius_for_zoom(self, z: int) -> float:
+        """
+        Calculate cluster radius in meters for a given zoom level.
+
+        At zoom level z, the resolution at the equator is:
+        resolution = (2 * π * 6378137) / (256 * 2^z) meters per pixel
+
+        Args:
+            z: Zoom level
+
+        Returns:
+            Cluster radius in Web Mercator meters
+        """
+        # Earth's radius in meters (Web Mercator uses WGS84)
+        earth_radius = 6378137.0
+        # Meters per pixel at this zoom level (at equator)
+        resolution = (2 * math.pi * earth_radius) / (256 * (2 ** z))
+        # Convert pixel radius to meters
+        return self.cluster_radius_pixels * resolution
 
     def _cluster_at_zoom(self, z: int) -> None:
         """
@@ -241,6 +282,9 @@ class FlowmapProcessor:
 
         clustered_ids = set()
         new_cluster_id = 0
+        cluster_radius = self._get_cluster_radius_for_zoom(z)
+        
+        print(f"  z={z}: radius={cluster_radius:.0f}m, {len(unclustered)} locations", end="")
 
         while len(clustered_ids) < len(unclustered):
             # Find next unclustered location with highest weight
@@ -261,7 +305,7 @@ class FlowmapProcessor:
                 loc_id, loc_label, loc_x, loc_y, loc_weight, loc_h, loc_lat, loc_lon = loc
                 if loc_id not in clustered_ids:
                     dist = math.sqrt((loc_x - seed_x) ** 2 + (loc_y - seed_y) ** 2)
-                    if dist <= self.cluster_radius:
+                    if dist <= cluster_radius:
                         cluster_members.append(loc)
                         clustered_ids.add(loc_id)
 
@@ -360,6 +404,12 @@ class FlowmapProcessor:
                     WHERE z = {z + 1} AND id IN ('{member_ids_str}')
                     """
                 )
+        
+        # Count how many actual clusters were created
+        num_clusters = self.conn.execute(
+            f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND parent_id IS NULL"
+        ).fetchone()[0]
+        print(f" → {num_clusters} clusters")
 
     def _remove_duplicate_zoom_levels(self) -> None:
         """Remove zoom levels that have identical clusters to the level above."""
