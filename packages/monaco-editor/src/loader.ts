@@ -1,4 +1,5 @@
 import {loader} from '@monaco-editor/react';
+import * as Monaco from 'monaco-editor';
 
 export interface LoaderWorkers {
   /** worker used when label does not match other workers */
@@ -7,7 +8,7 @@ export interface LoaderWorkers {
 }
 
 export const DEFAULT_CDN_PATH =
-  'https://cdn.jsdelivr.net/npm/monaco-editor@0.45.0/min/vs';
+  'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs';
 
 export type LoaderConfig = Parameters<typeof loader.config>[0];
 
@@ -43,7 +44,9 @@ export function configureMonacoLoader(options: MonacoLoaderOptions) {
 
 export function ensureMonacoLoaderConfigured() {
   if (!configured) {
-    loader.config({paths: {vs: DEFAULT_CDN_PATH}});
+    // Prefer bundling the local monaco-editor to avoid CDN/version mismatches
+    // Consumers can still override via configureMonacoLoader if needed
+    loader.config({monaco: Monaco});
     configured = true;
   }
 }
