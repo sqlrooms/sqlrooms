@@ -188,7 +188,16 @@ def server(cache, port=4000, auth_token: str | None = None):
                         "data": data_b64,
                     },
                 }
+                logger.info(f"CRDT update: {doc_id} {branch} {data_b64}")
+                # broadcasts the CRDT update to every socket subscribed to that
+                # crdt:<docId>:<branch> channel—i.e., all other clients (and
+                # usually the sender too) so they can merge the change. Without
+                # it, no peers would hear about the update.
                 app.publish(channel, ujson.dumps(payload))
+                # goes only to the socket that issued the update. Here it’s used
+                # for the immediate crdtAck, letting the sender know the server
+                # imported the bytes successfully. The client can use that ack
+                # for flow control or error handling.
                 ws.send({"type": "crdtAck", "docId": doc_id, "branch": branch}, OpCode.TEXT)
             except Exception as e:
                 logger.exception("CRDT update failed")

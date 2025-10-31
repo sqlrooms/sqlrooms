@@ -1,8 +1,11 @@
 import {CrdtSliceState, createCrdtSlice} from '@sqlrooms/crdt';
-import {isControlMessagesConnector} from '@sqlrooms/duckdb';
+import {
+  ControlMessagesConnector,
+  isControlMessagesConnector,
+} from '@sqlrooms/duckdb';
 import {BaseRoomConfig, createSlice} from '@sqlrooms/room-shell';
 import {StoreApi} from 'zustand';
-import type {VersionVector} from 'loro-crdt';
+import type {LoroDoc} from 'loro-crdt';
 const u8ToHex = (u8: Uint8Array): string =>
   Array.from(u8)
     .map((b) => b.toString(16).padStart(2, '0'))
@@ -46,7 +49,7 @@ interface BufferedEvent {
 
 /**
  * Create a synchronization slice that composes the CRDT slice and persists
- * Yjs updates into DuckDB (Ducklake) as crdt_events plus supports snapshots.
+ * Loro updates into DuckDB (Ducklake) as crdt_events plus supports snapshots.
  */
 export function createSyncSlice<PC extends BaseRoomConfig>(options: {
   /** DuckDB schema name to create/use for CRDT tables */
@@ -75,127 +78,132 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
     }, flushMs) as unknown as number;
   };
 
-  const docVersions = new Map<string, VersionVector | undefined>();
-
   return createSlice<PC, SyncSliceState>((set, get, store) => {
+    const docSubscriptions = new Map<string, () => void>();
+    const suppressedInitDocKeys = new Set<string>();
+    let connectorRef: ControlMessagesConnector | undefined;
+    let hasCompletedInitialization = false;
+
+    const userOnDocCreated = options.crdtOptions?.onDocCreated;
+
+    /**
+     * Subscribe to local Loro updates and forward them to the sync connector.
+     */
+    const registerDocSubscription = (key: string, doc: LoroDoc) => {
+      const previous = docSubscriptions.get(key);
+      previous?.();
+      if (!hasCompletedInitialization) {
+        suppressedInitDocKeys.add(key);
+      }
+
+      const unsubscribe = doc.subscribeLocalUpdates((update) => {
+        if (update.length === 0) {
+          return;
+        }
+
+        if (suppressedInitDocKeys.has(key)) {
+          suppressedInitDocKeys.delete(key);
+          return;
+        }
+
+        try {
+          if (!connectorRef) {
+            console.warn('Missing connector for CRDT update forwarding');
+            return;
+          }
+          const b64 = btoa(String.fromCharCode(...update));
+          connectorRef.sendControlMessage({
+            type: 'crdtUpdate',
+            docId: key,
+            branch: 'main',
+            data: b64,
+          });
+        } catch (error) {
+          console.error('Failed to send CRDT update', key, error);
+        }
+      });
+
+      docSubscriptions.set(key, unsubscribe);
+    };
+
     const base = createCrdtSlice<PC, any>({
       selector: options.crdtSelector,
       ...(options.crdtOptions || {}),
+      onDocCreated: (key: string, doc: LoroDoc) => {
+        registerDocSubscription(key, doc);
+        userOnDocCreated?.(key, doc);
+      },
     })(set, get, store as unknown as StoreApi<any>);
 
     // Wrap initialize to also init WS CRDT channels and forward updates
     const originalInitialize = base.crdt.initialize;
-    let unsubscribeForward: (() => void) | undefined;
-    const forwardSelector =
-      options.crdtSelector || ((s: any) => ({config: s.config}));
 
-    /**
-     * Snapshot the latest known version vector for a doc so future exports can
-     * request only the incremental diff.
-     */
-    const updateKnownVersion = (key: string) => {
-      try {
-        const doc = get().crdt.getDoc(key);
-        docVersions.set(key, doc.oplogVersion());
-      } catch (error) {
-        console.error('Failed to record CRDT version for', key, error);
+    const ensureDocSubscriptions = () => {
+      for (const [key, doc] of Object.entries(get().crdt.docs)) {
+        if (!docSubscriptions.has(key)) {
+          registerDocSubscription(key, doc);
+        }
       }
     };
 
     base.crdt.initialize = async () => {
-      await originalInitialize?.();
-      try {
-        const connector = await get().db.getConnector();
-        if (!isControlMessagesConnector(connector)) {
-          throw new Error(
-            'Provided connector does not support control messages, ' +
-              'use e.g. WebSocketDuckDbConnector instead',
-          );
-        }
-        const initial = forwardSelector(store.getState());
-        // Request server state and subscribe
-        for (const key of Object.keys(initial)) {
-          try {
-            connector.sendControlMessage({
-              type: 'crdtInit',
-              docId: key,
-              branch: 'main',
-            });
-          } catch (e) {
-            console.error('Failed to send CRDT init', key);
-          }
-          // Forward local changes as CRDT updates
-          unsubscribeForward = store.subscribe((nextState, prevState) => {
-            const nextSel = forwardSelector(nextState);
-            const prevSel = forwardSelector(prevState);
-            for (const [key, nextVal] of Object.entries(nextSel)) {
-              const prevVal = prevSel[key as keyof typeof prevSel];
-              if (prevVal !== nextVal) {
-                try {
-                  const doc = get().crdt.getDoc(key);
-                  const knownVersion = docVersions.get(key);
-                  const bytes: Uint8Array = knownVersion
-                    ? doc.export({mode: 'update', from: knownVersion})
-                    : doc.export({mode: 'update'});
-                  if (bytes.length === 0) {
-                    updateKnownVersion(key);
-                    continue;
-                  }
-                  const b64 = btoa(String.fromCharCode(...bytes));
-                  connector.sendControlMessage({
-                    type: 'crdtUpdate',
-                    docId: key,
-                    branch: 'main',
-                    data: b64,
-                  });
-                  updateKnownVersion(key);
-                } catch (e) {
-                  console.error('Failed to send CRDT update', key, e);
-                }
-              }
-            }
-          });
+      hasCompletedInitialization = false;
+      suppressedInitDocKeys.clear();
 
-          // Listen for server CRDT updates and apply to local docs
-          const listener = (payload: any) => {
-            try {
-              if (
-                payload?.type === 'crdtUpdate' &&
-                typeof payload?.docId === 'string' &&
-                typeof payload?.data === 'string'
-              ) {
-                const key = payload.docId as string;
-                const b64 = payload.data as string;
-                const bytes = Uint8Array.from(atob(b64), (c) =>
-                  c.charCodeAt(0),
-                );
-                get().crdt.applyRemoteUpdate(key, bytes);
-                updateKnownVersion(key);
-              } else if (
-                payload?.type === 'crdtState' &&
-                typeof payload?.docId === 'string' &&
-                typeof payload?.data === 'string'
-              ) {
-                const key = payload.docId as string;
-                const b64 = payload.data as string;
-                const bytes = Uint8Array.from(atob(b64), (c) =>
-                  c.charCodeAt(0),
-                );
-                get().crdt.applyRemoteUpdate(key, bytes);
-                updateKnownVersion(key);
-              }
-            } catch (e) {
-              console.error('Failed to apply CRDT update', payload);
-            }
-          };
-          // Attach a per-connector listener using internal API
-          try {
-            connector.addNotificationListener(listener);
-          } catch (e) {
-            console.error('Failed to add CRDT listener');
-          }
+      const connector = await get().db.getConnector();
+      if (!isControlMessagesConnector(connector)) {
+        throw new Error(
+          'Provided connector does not support control messages, ' +
+            'use e.g. WebSocketDuckDbConnector instead',
+        );
+      }
+      connectorRef = connector;
+
+      await originalInitialize?.();
+
+      ensureDocSubscriptions();
+
+      const docKeys = Object.keys(get().crdt.docs);
+
+      // Request server state and subscribe
+      for (const key of docKeys) {
+        try {
+          connector.sendControlMessage({
+            type: 'crdtInit',
+            docId: key,
+            branch: 'main',
+          });
+        } catch (e) {
+          console.error('Failed to send CRDT init', key);
         }
-      } catch {}
+        // Listen for server CRDT updates and apply to local docs
+        const listener = (payload: any) => {
+          try {
+            if (
+              (payload?.type === 'crdtUpdate' ||
+                payload?.type === 'crdtState') &&
+              typeof payload?.docId === 'string' &&
+              typeof payload?.data === 'string'
+            ) {
+              console.log('Received CRDT update', payload);
+              const key = payload.docId as string;
+              const b64 = payload.data as string;
+              const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+              get().crdt.applyRemoteUpdate(key, bytes);
+            }
+          } catch (e) {
+            console.error('Failed to apply CRDT update', payload);
+          }
+        };
+        // Attach a per-connector listener using internal API
+        try {
+          connector.addNotificationListener(listener);
+        } catch (e) {
+          console.error('Failed to add CRDT listener');
+        }
+      }
+
+      hasCompletedInitialization = true;
     };
 
     // Then, add sync API
@@ -204,6 +212,15 @@ export function createSyncSlice<PC extends BaseRoomConfig>(options: {
 
       sync: {
         schema,
+
+        teardown: () => {
+          for (const unsubscribe of docSubscriptions.values()) {
+            unsubscribe();
+          }
+          docSubscriptions.clear();
+          suppressedInitDocKeys.clear();
+          connectorRef = undefined;
+        },
 
         ensureSchema: async () => {
           const connector = await get().db.getConnector();

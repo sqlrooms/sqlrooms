@@ -18,6 +18,7 @@ export type TaskProgress = {
 
 export type RoomStateActions<PC> = {
   initialize: () => Promise<void>;
+  teardown: () => Promise<void>;
 
   /**
    * Set the room config.
@@ -71,6 +72,10 @@ export function createRoomSlice<PC>(props: {
       room: {
         ...initialRoomState,
         initialize: async () => {
+          // To be overridden by the room shell
+        },
+
+        teardown: async () => {
           // To be overridden by the room shell
         },
 
@@ -158,6 +163,7 @@ export function createRoomStore<PC, RS extends RoomState<PC>>(
 
 export interface RoomSlice {
   initialize?: () => Promise<void>;
+  teardown?: () => void;
 }
 
 export function isRoomSliceWithInitialize(
@@ -168,6 +174,17 @@ export function isRoomSliceWithInitialize(
     slice !== null &&
     'initialize' in slice &&
     typeof slice.initialize === 'function'
+  );
+}
+
+export function isRoomSliceWithTeardown(
+  slice: unknown,
+): slice is RoomSlice & Required<Pick<RoomSlice, 'teardown'>> {
+  return (
+    typeof slice === 'object' &&
+    slice !== null &&
+    'teardown' in slice &&
+    typeof slice.teardown === 'function'
   );
 }
 

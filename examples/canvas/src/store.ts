@@ -81,6 +81,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     ...createSyncSlice<RoomConfig>({
       crdtOptions: {
         selector: (state) => ({config: state.config}),
+        onDocCreated: (key, doc) => {
+          switch (key) {
+            case 'config':
+              break;
+          }
+        },
       },
     })(set, get, store),
 

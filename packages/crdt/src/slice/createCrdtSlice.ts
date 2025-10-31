@@ -2,16 +2,13 @@ import {
   BaseRoomConfig,
   createSlice,
   RoomShellSliceState,
-  RoomState,
 } from '@sqlrooms/room-shell';
 import {produce} from 'immer';
 import {LoroDoc} from 'loro-crdt';
-import type {StateCreator, StoreApi} from 'zustand';
-import type {WebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import type {StateCreator} from 'zustand';
 
 import {
   CrdtDocsSelection,
-  CrdtSliceInternals,
   CrdtSliceState,
   CreateCrdtSliceOptions,
 } from '../types';
@@ -33,7 +30,7 @@ function defaultIsEqual(prev: unknown, next: unknown): boolean {
  * Create a CRDT slice for a SQLRooms room store.
  *
  * The slice:
- * - creates and manages one or more Yjs documents keyed by logical names
+ * - creates and manages one or more Loro documents keyed by logical names
  * - subscribes to selected parts of the store and mirrors changes into the corresponding docs
  * - exposes an API to apply remote updates (`applyRemoteUpdate`)
  *
@@ -49,12 +46,6 @@ export function createCrdtSlice<
   const selector = options?.selector ?? defaultSelector;
   const isEqual = options?.isEqual ?? defaultIsEqual;
 
-  // Internals are kept outside of Zustand state to avoid serialization and change noise
-  const internals: CrdtSliceInternals<TState> = {
-    // initialized later
-    storeApi: undefined as unknown as StoreApi<TState>,
-  };
-
   function writeJsonToDoc(doc: any, value: unknown) {
     const map = doc.getMap('state');
     map.set('data', value);
@@ -66,15 +57,16 @@ export function createCrdtSlice<
       const existing = st.crdt.docs[key];
       if (existing) return existing;
       const doc = new LoroDoc();
-      const currentDocs = st.crdt.docs;
       set((state) =>
         produce(state, (draft) => {
-          draft.crdt.docs = {...currentDocs, [key]: doc};
+          draft.crdt.docs[key] = doc;
         }),
       );
       options?.onDocCreated?.(key, doc);
       return doc;
     };
+
+    let unsubscribeStore: (() => void) | undefined;
 
     return {
       crdt: {
@@ -92,20 +84,10 @@ export function createCrdtSlice<
           // Export incremental update (best-effort default)
           return doc.export({mode: 'update'});
         },
-        teardown: () => {
-          if (internals.unsubscribeStore) {
-            internals.unsubscribeStore();
-            internals.unsubscribeStore = undefined;
-          }
-        },
 
         initialize: async () => {
-          // Wire internals
-          internals.storeApi = store as unknown as StoreApi<TState>;
-
           // Initial mirror
           const initialSelection = selector(store.getState() as any);
-          internals.prevSelection = initialSelection;
           for (const [key, value] of Object.entries(initialSelection)) {
             const doc = ensureDoc(key);
             writeJsonToDoc(doc, value);
@@ -114,34 +96,26 @@ export function createCrdtSlice<
           // Networking is handled by createSyncSlice
 
           // Subscribe to store and mirror changes into docs
-          internals.unsubscribeStore = store.subscribe(
-            (nextState, prevState) => {
-              const nextSelection = selector(nextState as any);
-              const prevSelection = selector(prevState as any) || {};
+          unsubscribeStore = store.subscribe((nextState, prevState) => {
+            const nextSelection = selector(nextState as any);
+            const prevSelection = selector(prevState as any) || {};
 
-              // Handle updated and new keys
-              for (const [key, nextVal] of Object.entries(nextSelection)) {
-                const prevVal = (prevSelection as any)[key];
-                if (!isEqual(prevVal, nextVal, key)) {
-                  const doc = ensureDoc(key);
-                  writeJsonToDoc(doc, nextVal);
-                }
+            // Handle updated and new keys
+            for (const [key, nextVal] of Object.entries(nextSelection)) {
+              const prevVal = prevSelection[key];
+              if (!isEqual(prevVal, nextVal, key)) {
+                const doc = ensureDoc(key);
+                writeJsonToDoc(doc, nextVal);
               }
+            }
+          });
+        },
 
-              // Handle removed keys: free memory by dropping from record
-              for (const key of Object.keys(prevSelection as any)) {
-                if (!(key in nextSelection)) {
-                  const currentDocs = get().crdt.docs;
-                  set((state) =>
-                    produce(state, (draft) => {
-                      const {[key]: _removed, ...rest} = currentDocs;
-                      draft.crdt.docs = rest;
-                    }),
-                  );
-                }
-              }
-            },
-          );
+        teardown: () => {
+          if (unsubscribeStore) {
+            unsubscribeStore();
+            unsubscribeStore = undefined;
+          }
         },
       },
     };

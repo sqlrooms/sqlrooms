@@ -112,6 +112,67 @@ export function createWebSocketDuckDbConnector(
         ws.binaryType = 'arraybuffer';
 
         let authAcked = !authToken;
+        const textDecoder = new TextDecoder();
+
+        const tryHandleControlMessage = (raw: string): boolean => {
+          let parsed: any;
+          try {
+            parsed = JSON.parse(raw);
+          } catch {
+            return false;
+          }
+          const t = parsed?.type;
+          if (!authAcked) {
+            if (t === 'authAck') {
+              authAcked = true;
+              opening = null;
+              resubscribe();
+              resolve();
+            } else if (t === 'error') {
+              const msg = parsed?.error || 'Unauthorized';
+              opening = null;
+              reject(new Error(msg));
+            }
+            return true;
+          }
+          if (t === 'cancelAck') return true;
+          if (t === 'notify') {
+            console.log('notify', parsed);
+            const payload = parsed?.payload;
+            try {
+              options.onNotification?.(payload);
+            } catch {}
+            try {
+              for (const fn of notificationListeners) fn(payload);
+            } catch {}
+            return true;
+          }
+          if (t === 'error') {
+            const errMsg = String(parsed?.error || '').toLowerCase();
+            const hasQid = typeof parsed?.queryId === 'string';
+            if (!hasQid && errMsg.includes('unauthorized')) {
+              closeAndRejectAll('Unauthorized');
+              try {
+                ws.close();
+              } catch {}
+              socket = null;
+              return true;
+            }
+          }
+          const qid: string | undefined = parsed?.queryId;
+          if (!qid) return true;
+          const waiter = pending.get(qid);
+          if (!waiter) return true;
+          if (t === 'error') {
+            pending.delete(qid);
+            waiter.reject(new Error(parsed?.error || 'Unknown error'));
+          } else if (t === 'ok') {
+            pending.delete(qid);
+            const empty = arrow.tableFromArrays({});
+            waiter.resolve(empty as unknown as arrow.Table);
+          }
+          return true;
+        };
 
         ws.onopen = () => {
           // If auth is required, perform first-message auth and wait for ack
@@ -133,67 +194,7 @@ export function createWebSocketDuckDbConnector(
           console.log('onmessage', event);
           (async () => {
             if (typeof event.data === 'string') {
-              let parsed: any;
-              try {
-                parsed = JSON.parse(event.data);
-              } catch {
-                return;
-              }
-              const t = parsed?.type;
-              if (!authAcked) {
-                if (t === 'authAck') {
-                  authAcked = true;
-                  opening = null;
-                  // Subscribe once authed
-                  resubscribe();
-                  resolve();
-                } else if (t === 'error') {
-                  const msg = parsed?.error || 'Unauthorized';
-                  opening = null;
-                  reject(new Error(msg));
-                }
-                return;
-              }
-              if (t === 'cancelAck') return;
-              if (t === 'notify') {
-                console.log('notify', parsed);
-                const payload = parsed?.payload;
-                try {
-                  options.onNotification?.(payload);
-                } catch {}
-                try {
-                  for (const fn of notificationListeners) fn(payload);
-                } catch {}
-                return;
-              }
-              // After initialization: if we ever receive a global unauthorized error, throw and close
-              if (t === 'error') {
-                const errMsg = String(parsed?.error || '').toLowerCase();
-                const hasQid = typeof parsed?.queryId === 'string';
-                if (!hasQid && errMsg.includes('unauthorized')) {
-                  closeAndRejectAll('Unauthorized');
-                  try {
-                    ws.close();
-                  } catch {}
-                  socket = null;
-                  return;
-                }
-              }
-              const qid: string | undefined = parsed?.queryId;
-              if (!qid) return;
-              const waiter = pending.get(qid);
-              if (!waiter) return;
-              if (t === 'error') {
-                pending.delete(qid);
-                waiter.reject(new Error(parsed?.error || 'Unknown error'));
-              } else if (t === 'ok') {
-                // Server acknowledged an arrow query with no result set
-                pending.delete(qid);
-                const empty = arrow.tableFromArrays(
-                  {},
-                ) as unknown as arrow.Table;
-                waiter.resolve(empty);
-              }
+              tryHandleControlMessage(event.data);
               return;
             }
 
@@ -204,8 +205,19 @@ export function createWebSocketDuckDbConnector(
               buffer = await event.data.arrayBuffer();
             else return;
 
+            if (buffer.byteLength < 4) {
+              const maybeText = textDecoder.decode(new Uint8Array(buffer));
+              if (tryHandleControlMessage(maybeText)) return;
+              return;
+            }
+
             const view = new DataView(buffer, 0, 4);
             const headerLen = view.getUint32(0, false);
+            if (headerLen + 4 > buffer.byteLength) {
+              const asText = textDecoder.decode(new Uint8Array(buffer));
+              if (tryHandleControlMessage(asText)) return;
+              return;
+            }
             const headerStart = 4;
             const headerEnd = headerStart + headerLen;
             const headerBytes = new Uint8Array(

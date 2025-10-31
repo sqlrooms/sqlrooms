@@ -1,11 +1,7 @@
-import type {StoreApi} from 'zustand';
-// Prefer real Loro types; fallback to local shim for type safety
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
 import {
   BaseRoomConfig,
   RoomShellSliceState,
-  RoomState,
+  RoomSlice,
 } from '@sqlrooms/room-shell';
 import type {LoroDoc} from 'loro-crdt';
 
@@ -44,7 +40,7 @@ export interface CreateCrdtSliceOptions<
  * Runtime state and actions exposed by the CRDT slice.
  */
 export type CrdtSliceState = {
-  crdt: {
+  crdt: RoomSlice & {
     /** Plain object of logical key -> Loro document */
     docs: Record<string, LoroDoc>;
 
@@ -62,24 +58,5 @@ export type CrdtSliceState = {
      * Encode the current state of a doc as a Loro export (bytes) for persistence or syncing.
      */
     encodeDocAsUpdate: (key: string) => Uint8Array;
-
-    /**
-     * Stop any subscriptions/observers created by the slice.
-     */
-    teardown: () => void;
-
-    /**
-     * Initialize the connector (creates a WasmDuckDbConnector if none exists)
-     */
-    initialize: () => Promise<void>;
   };
 };
-
-/**
- * Internal subscriptions managed by the slice, held outside of the Zustand state tree.
- */
-export interface CrdtSliceInternals<TState> {
-  storeApi: StoreApi<TState>;
-  unsubscribeStore?: () => void;
-  prevSelection?: CrdtDocsSelection;
-}

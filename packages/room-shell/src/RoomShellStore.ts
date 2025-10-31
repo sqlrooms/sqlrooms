@@ -29,6 +29,7 @@ import {
   RoomStateProps,
   createRoomSlice,
   isRoomSliceWithInitialize,
+  isRoomSliceWithTeardown,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {ErrorBoundary} from '@sqlrooms/ui';
@@ -224,10 +225,7 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
 
             // Call initialize on all other slices that have an initialize function
             const slices = Object.entries(store.getState()).filter(
-              ([key, value]) =>
-                key !== 'room' &&
-                key !== 'db' &&
-                isRoomSliceWithInitialize(value),
+              ([key]) => key !== 'room' && key !== 'db',
             );
             for (const [_, slice] of slices) {
               if (isRoomSliceWithInitialize(slice)) {
@@ -241,6 +239,17 @@ export function createRoomShellSlice<PC extends BaseRoomConfig>(
           } finally {
             setTaskProgress(INIT_DB_TASK, undefined);
             setTaskProgress(INIT_ROOM_TASK, undefined);
+          }
+        },
+
+        async teardown() {
+          const slices = Object.entries(store.getState()).filter(
+            ([key]) => key !== 'room',
+          );
+          for (const [_, slice] of slices) {
+            if (isRoomSliceWithTeardown(slice)) {
+              await slice.teardown();
+            }
           }
         },
 

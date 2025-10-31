@@ -22,6 +22,7 @@ export {
   createBaseSlice,
   type RoomSlice,
   isRoomSliceWithInitialize,
+  isRoomSliceWithTeardown,
 } from './RoomStore';
 
 export * from '@sqlrooms/room-config';
