@@ -715,6 +715,68 @@ class FlowmapProcessor:
             self.conn.execute(f"DROP TABLE cluster_map_z{z}")
         
         print(f"  Total flows: {self.conn.execute('SELECT COUNT(*) FROM tiled_flows').fetchone()[0]:,}")
+        
+        # Validate flow totals
+        self._validate_flow_totals()
+    
+    def _validate_flow_totals(self) -> None:
+        """
+        Validate that total flow counts match between original and aggregated data at all zoom levels.
+        """
+        print("\nValidating flow totals...")
+        
+        # Calculate total from original flows (excluding self-loops)
+        original_total = self.conn.execute(
+            """
+            SELECT SUM(count) 
+            FROM flows_raw 
+            WHERE origin != dest
+            """
+        ).fetchone()[0]
+        
+        if original_total is None:
+            original_total = 0
+        
+        print(f"  Original total: {original_total:,.0f}")
+        
+        # Get all zoom levels
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM tiled_flows 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        
+        all_valid = True
+        
+        # Check each zoom level
+        for (z,) in zoom_levels:
+            aggregated_total = self.conn.execute(
+                f"""
+                SELECT SUM(count) 
+                FROM tiled_flows 
+                WHERE z = {z}
+                """
+            ).fetchone()[0]
+            
+            if aggregated_total is None:
+                aggregated_total = 0
+            
+            diff = abs(original_total - aggregated_total)
+            diff_pct = (diff / original_total * 100) if original_total > 0 else 0
+            
+            status = "✓" if diff <= 0.01 else "⚠️"
+            print(f"  z={z:2d}: {aggregated_total:>12,.0f}  (diff: {diff:>8,.0f}, {diff_pct:>5.2f}%)  {status}")
+            
+            if diff > 0.01:
+                all_valid = False
+        
+        print()
+        if all_valid:
+            print("  ✓ All zoom levels match original total")
+        else:
+            print("  ⚠️  Warning: Some zoom levels don't match original total!")
     
     def _export_flows(self, output_file: str) -> None:
         """
