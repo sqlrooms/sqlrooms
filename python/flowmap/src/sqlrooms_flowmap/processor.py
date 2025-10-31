@@ -581,23 +581,7 @@ class FlowmapProcessor:
             """
         )
         
-        # Step 5: Create aggregated flows table for all zoom levels
-        print("  Aggregating flows across zoom levels...")
-        self.conn.execute(
-            f"""
-            CREATE TABLE tiled_flows AS
-            SELECT 
-                {self.max_zoom + 1} as z,
-                flow_h,
-                origin,
-                dest,
-                count
-                {time_select}
-            FROM flows_with_h
-            """
-        )
-        
-        # Step 6: Get actual zoom levels that exist in clusters (after deduplication)
+        # Step 5: Get actual zoom levels that exist in clusters (after deduplication)
         existing_zooms = self.conn.execute(
             """
             SELECT DISTINCT z 
@@ -610,12 +594,49 @@ class FlowmapProcessor:
         
         print(f"  Aggregating flows for {len(existing_zooms)} zoom levels: {existing_zooms}")
         
+        # Step 6: Create empty tiled_flows table
+        time_col_def = ""
+        if has_time and self.time_bucket:
+            time_col_def = ", time_bucket TIMESTAMP"
+        elif has_time:
+            time_col_def = ", time TIMESTAMP"
+            
+        self.conn.execute(
+            f"""
+            CREATE TABLE tiled_flows (
+                z INTEGER,
+                flow_h BIGINT,
+                origin VARCHAR,
+                dest VARCHAR,
+                count DOUBLE
+                {time_col_def}
+            )
+            """
+        )
+        
         # Step 7: Aggregate flows for each zoom level using cluster hierarchy
-        for z in existing_zooms:
-            if z == self.max_zoom + 1:
-                # Skip - already have base level flows
-                continue
+        highest_zoom = existing_zooms[0] if existing_zooms else self.max_zoom + 1
+        
+        for i, z in enumerate(existing_zooms):
             print(f"  Aggregating flows at z={z}...")
+            
+            # For the highest zoom level, use base flows directly if it matches
+            if i == 0 and z == self.max_zoom + 1:
+                # Use base flows directly
+                self.conn.execute(
+                    f"""
+                    INSERT INTO tiled_flows
+                    SELECT 
+                        {z} as z,
+                        flow_h,
+                        origin,
+                        dest,
+                        count
+                        {time_group and ', time_bucket' or (has_time and ', time' or '')}
+                    FROM flows_with_h
+                    """
+                )
+                continue
             
             # Get cluster assignments for this zoom level
             # Need to map each original location to its cluster at this zoom
@@ -623,8 +644,8 @@ class FlowmapProcessor:
                 f"""
                 CREATE TEMP TABLE cluster_map_z{z} AS
                 WITH RECURSIVE find_cluster AS (
-                    -- Base: locations at max_zoom + 1
-                    SELECT id, id as cluster_id, {self.max_zoom + 1} as z
+                    -- Base: locations at highest zoom
+                    SELECT id, id as cluster_id, {highest_zoom} as z
                     FROM location_weights
                     
                     UNION ALL
