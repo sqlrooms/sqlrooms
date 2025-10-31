@@ -65,6 +65,7 @@ class FlowmapProcessor:
         self._calculate_weights()
 
         # Perform hierarchical clustering
+        # (flow statistics are calculated inside, before deduplication)
         self._hierarchical_clustering()
 
         # Export cluster results
@@ -236,7 +237,10 @@ class FlowmapProcessor:
                 y,
                 weight,
                 1 as size,
-                id as top_id
+                id as top_id,
+                NULL::DOUBLE as total_in,
+                NULL::DOUBLE as total_out,
+                NULL::DOUBLE as total_self
             FROM location_weights
             """
         )
@@ -248,9 +252,15 @@ class FlowmapProcessor:
         for z in range(self.max_zoom, self.min_zoom - 1, -1):
             self._cluster_at_zoom(z)
 
+        # Calculate flow statistics BEFORE deduplication (so parent links are intact)
+        self._calculate_cluster_flow_stats()
+
         # Remove zoom levels with no actual clustering
         print("\nRemoving duplicate zoom levels...")
         self._remove_duplicate_zoom_levels()
+        
+        # Validate flow statistics AFTER deduplication
+        self._validate_cluster_flow_stats()
         
         # Show final zoom level distribution
         zoom_dist = self.conn.execute(
@@ -353,7 +363,10 @@ class FlowmapProcessor:
                         y,
                         weight,
                         size,
-                        top_id
+                        top_id,
+                        total_in,
+                        total_out,
+                        total_self
                     FROM clusters
                     WHERE z = {z + 1} AND id = '{member_id}'
                     """
@@ -422,7 +435,7 @@ class FlowmapProcessor:
                 # Insert cluster
                 self.conn.execute(
                     f"""
-                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id)
+                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id, total_in, total_out, total_self)
                     VALUES (
                         {z},
                         {cluster_h},
@@ -435,7 +448,10 @@ class FlowmapProcessor:
                         {center_y},
                         {total_weight},
                         {total_leaves},
-                        '{top_id}'
+                        '{top_id}',
+                        NULL,
+                        NULL,
+                        NULL
                     )
                     """
                 )
@@ -492,6 +508,224 @@ class FlowmapProcessor:
             if identical:
                 # Remove the higher zoom level
                 self.conn.execute(f"DELETE FROM clusters WHERE z = {z_high}")
+
+    def _calculate_cluster_flow_stats(self) -> None:
+        """Calculate flow statistics (total_in, total_out, total_self) for each cluster at every zoom level."""
+        print("\nCalculating cluster flow statistics...")
+        
+        # Get all zoom levels in descending order
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        zoom_levels = [z[0] for z in zoom_levels]
+        
+        highest_zoom = zoom_levels[0] if zoom_levels else self.max_zoom + 1
+        
+        # Step 1: Calculate flow statistics for all base locations (singletons) at ALL zoom levels
+        # This is needed because singletons are copied down during clustering with NULL stats
+        print(f"  Calculating for base locations at all zoom levels...")
+        for z in zoom_levels:
+            self.conn.execute(
+                f"""
+                UPDATE clusters c
+                SET 
+                    total_out = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.origin = c.id AND f.origin != f.dest
+                    ), 0),
+                    total_in = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.dest = c.id AND f.origin != f.dest
+                    ), 0),
+                    total_self = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.origin = c.id AND f.dest = c.id
+                    ), 0)
+                WHERE c.z = {z} AND c.id NOT LIKE 'cluster_%'
+                """
+            )
+        
+        # Step 2: Aggregate flow statistics for merged clusters at each zoom level
+        for z in zoom_levels[1:]:
+            # Count merged clusters at this level (not singletons, which already have stats)
+            total_at_z = self.conn.execute(
+                f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND id LIKE 'cluster_%'"
+            ).fetchone()[0]
+            
+            if total_at_z == 0:
+                print(f"  Calculating for z={z} ({total_at_z} merged clusters) - skipping")
+                continue
+            
+            print(f"  Calculating for z={z} ({total_at_z} merged clusters)...")
+            
+            # For each cluster at this zoom level, aggregate from child clusters
+            # Note: Calculate for ALL clusters (even those with parents), since they may be referenced by parent clusters
+            clusters_at_z = self.conn.execute(
+                f"""
+                SELECT id 
+                FROM clusters 
+                WHERE z = {z} AND id LIKE 'cluster_%'
+                """
+            ).fetchall()
+            
+            for (cluster_id,) in clusters_at_z:
+                # Find all child locations/clusters that belong to this cluster
+                # This includes direct children and needs to recursively find all base locations
+                
+                # Drop and recreate the temp table for each cluster
+                self.conn.execute("DROP TABLE IF EXISTS cluster_members")
+                
+                # Find all leaf members by recursing through parent_id links
+                # We need to go back to flows_raw to properly account for flows between members
+                self.conn.execute(
+                    f"""
+                    CREATE TEMP TABLE cluster_members AS
+                    WITH RECURSIVE find_members AS (
+                        -- Start with all direct children
+                        SELECT id, z
+                        FROM clusters
+                        WHERE parent_id = '{cluster_id}'
+                        
+                        UNION ALL
+                        
+                        -- Recursively find their children
+                        SELECT c.id, c.z
+                        FROM clusters c
+                        JOIN find_members fm ON c.parent_id = fm.id
+                    )
+                    SELECT DISTINCT id FROM find_members WHERE id NOT LIKE 'cluster_%'
+                    """
+                )
+                
+                # Calculate flow statistics from flows_raw using the member list
+                self.conn.execute(
+                    f"""
+                    WITH members AS (
+                        SELECT id FROM cluster_members
+                    )
+                    UPDATE clusters c
+                    SET
+                        total_out = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE f.origin IN (SELECT id FROM members)
+                              AND f.dest NOT IN (SELECT id FROM members)
+                        ),
+                        total_in = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE f.dest IN (SELECT id FROM members)
+                              AND f.origin NOT IN (SELECT id FROM members)
+                        ),
+                        total_self = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE (
+                                -- Original self-loops
+                                (f.origin = f.dest AND f.origin IN (SELECT id FROM members))
+                                OR
+                                -- Flows between members (becomes internal flow)
+                                (f.origin IN (SELECT id FROM members) AND f.dest IN (SELECT id FROM members) AND f.origin != f.dest)
+                            )
+                        )
+                    WHERE c.id = '{cluster_id}' AND c.z = {z}
+                    """
+                )
+        
+        # Clean up temp table
+        self.conn.execute("DROP TABLE IF EXISTS cluster_members")
+
+    def _validate_cluster_flow_stats(self) -> None:
+        """Validate that flow statistics are consistent across all zoom levels."""
+        print("\nValidating cluster flow statistics...")
+        
+        # Calculate total from original flows
+        flow_totals = self.conn.execute(
+            """
+            SELECT 
+                SUM(CASE WHEN origin != dest THEN count ELSE 0 END) as non_self_total,
+                SUM(CASE WHEN origin = dest THEN count ELSE 0 END) as self_total,
+                SUM(count) as grand_total
+            FROM flows_raw
+            """
+        ).fetchone()
+        
+        non_self_total = flow_totals[0] or 0
+        self_total = flow_totals[1] or 0
+        grand_total = flow_totals[2] or 0
+        
+        print(f"  Original flows: non-self={non_self_total:,.0f}, self={self_total:,.0f}, total={grand_total:,.0f}")
+        
+        # Get all zoom levels
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        
+        all_valid = True
+        
+        # Check each zoom level
+        for (z,) in zoom_levels:
+            stats = self.conn.execute(
+                f"""
+                SELECT 
+                    SUM(total_out) as sum_out,
+                    SUM(total_in) as sum_in,
+                    SUM(total_self) as sum_self
+                FROM clusters
+                WHERE z = {z}
+                """
+            ).fetchone()
+            
+            sum_out = stats[0] or 0
+            sum_in = stats[1] or 0
+            sum_self = stats[2] or 0
+            
+            # Key invariant: At each zoom level, ALL flows must be accounted for.
+            # As locations cluster together, flows between them transition from
+            # "external" (total_out/total_in) to "internal" (total_self).
+            # sum_out + sum_self should equal grand_total (each flow counted once)
+            # sum_in + sum_self should equal grand_total (each flow counted once)
+            
+            total_from_out = sum_out + sum_self
+            total_from_in = sum_in + sum_self
+            
+            out_diff = abs(total_from_out - grand_total)
+            in_diff = abs(total_from_in - grand_total)
+            
+            # Additionally, total_self should be at least the original self-loops
+            self_diff = 0 if sum_self >= self_total else (self_total - sum_self)
+            
+            out_pct = (out_diff / grand_total * 100) if grand_total > 0 else 0
+            in_pct = (in_diff / grand_total * 100) if grand_total > 0 else 0
+            
+            status_out = "✓" if out_diff <= 0.01 else "⚠️"
+            status_in = "✓" if in_diff <= 0.01 else "⚠️"
+            status_self = "✓" if self_diff <= 0.01 else "⚠️"
+            
+            print(f"  z={z:2d}:")
+            print(f"    out+self:   {total_from_out:>12,.0f}  (expected: {grand_total:,.0f}, diff: {out_diff:>8,.0f})  {status_out}")
+            print(f"    in+self:    {total_from_in:>12,.0f}  (expected: {grand_total:,.0f}, diff: {in_diff:>8,.0f})  {status_in}")
+            print(f"    self >= orig: {sum_self:>12,.0f} >= {self_total:,.0f}  {status_self}")
+            
+            if out_diff > 0.01 or in_diff > 0.01 or self_diff > 0.01:
+                all_valid = False
+        
+        print()
+        if all_valid:
+            print("  ✓ All zoom levels have consistent flow statistics")
+        else:
+            print("  ⚠️  Warning: Some zoom levels have inconsistent flow statistics!")
 
     def _process_flows(self) -> None:
         """Process flows with nested Hilbert indexing for all zoom levels."""
@@ -833,7 +1067,7 @@ class FlowmapProcessor:
         self.conn.execute(
             f"""
             COPY (
-                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id
+                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id, total_in, total_out, total_self
                 FROM clusters
                 ORDER BY z DESC, h_index
             ) TO '{output_file}' (FORMAT PARQUET)
