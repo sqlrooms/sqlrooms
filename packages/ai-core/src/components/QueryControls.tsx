@@ -99,8 +99,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           <Textarea
             ref={textareaRef}
             disabled={isRunningAnalysis}
-            className="min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
-            autoResize
+            className="max-h-70 min-h-[30px] resize-none overflow-y-auto border-none p-2 text-sm outline-none focus-visible:ring-0"
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
