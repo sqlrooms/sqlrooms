@@ -58,7 +58,15 @@ export const MainView: React.FC = () => {
             )}
           </div>
 
-          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+          <QueryControls
+            placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'"
+            ideas={[
+              'What questions can I ask to get insights from my data?',
+              'Show me a summary of the data',
+              'What are the key trends?',
+              'Help me understand the data structure',
+            ]}
+          >
             <div className="flex items-center justify-end gap-2">
               <ModelSelector />
             </div>
