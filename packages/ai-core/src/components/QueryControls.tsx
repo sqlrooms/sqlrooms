@@ -3,10 +3,12 @@ import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useAiChat} from '../hooks/useAiChat';
+import {IdeasContainer} from './IdeasContainer';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
+  ideas?: string[];
   onRun?: () => void;
   onCancel?: () => void;
 }>;
@@ -14,6 +16,7 @@ type QueryControlsProps = PropsWithChildren<{
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
+  ideas,
   children,
   onRun,
   onCancel,
@@ -84,10 +87,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-center justify-center gap-4',
+        'flex w-full flex-col items-center justify-center gap-2',
         className,
       )}
     >
+      {ideas && ideas.length > 0 && (
+        <IdeasContainer ideas={ideas} className="w-full" />
+      )}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
