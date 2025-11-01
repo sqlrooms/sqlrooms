@@ -11,6 +11,7 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useAiChat} from './hooks/useAiChat';
 
+export {IdeasContainer} from './components/IdeasContainer';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
