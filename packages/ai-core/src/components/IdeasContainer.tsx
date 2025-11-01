@@ -43,7 +43,7 @@ export const IdeasContainer: React.FC<IdeasContainerProps> = ({
     <TooltipProvider>
       <div
         className={cn(
-          'scrollbar-hide no-scrollbar flex h-20 w-full gap-2 overflow-x-auto',
+          'scrollbar-hide no-scrollbar flex h-20 w-full gap-2 overflow-x-auto p-1',
           className,
         )}
       >
@@ -65,8 +65,8 @@ export const IdeasContainer: React.FC<IdeasContainerProps> = ({
                   'flex items-start justify-start',
                   'text-left',
                   'overflow-hidden',
-                  'py-3 pl-8 pr-4',
-                  'h-24 max-h-24 min-h-24 w-48 min-w-48 max-w-48',
+                  'py-2 pl-8 pr-4',
+                  'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
                 )}
                 type="button"
                 title={idea}
