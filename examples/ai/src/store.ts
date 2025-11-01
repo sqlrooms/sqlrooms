@@ -21,11 +21,12 @@ import {
 } from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
+  QueryEditorPanel,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {createVegaChartTool} from '@sqlrooms/vega';
-import {DatabaseIcon} from 'lucide-react';
+import {DatabaseIcon, TerminalIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -37,6 +38,7 @@ import exampleSessions from './example-sessions.json';
 export const RoomPanelTypes = z.enum([
   'room-details',
   'data-sources',
+  'sql-editor',
   'view-configuration',
   MAIN_VIEW,
 ] as const);
@@ -67,7 +69,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
+              first: {
+                direction: 'column',
+                first: RoomPanelTypes.enum['data-sources'],
+                second: RoomPanelTypes.enum['sql-editor'],
+                splitPercentage: 50,
+              },
               second: MAIN_VIEW,
               splitPercentage: 30,
             },
@@ -79,6 +86,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               title: 'Data Sources',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
+              placement: 'sidebar',
+            },
+            [RoomPanelTypes.enum['sql-editor']]: {
+              title: 'SQL Editor',
+              icon: TerminalIcon,
+              component: QueryEditorPanel,
               placement: 'sidebar',
             },
             main: {
