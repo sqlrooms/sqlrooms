@@ -148,11 +148,9 @@ export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
  */
 type CreateRoomShellSliceProps = {
   connector?: DuckDbConnector;
-  config: Partial<BaseRoomConfig & LayoutSliceConfig>;
-  room: Partial<Omit<RoomShellSliceStateProps<BaseRoomConfig>, 'config'>> & {
-    panels?: Record<string, RoomPanelInfo>;
-  };
-  // layout:
+  config: Partial<BaseRoomConfig>;
+  layout?: Parameters<typeof createLayoutSlice>[0];
+  room?: Partial<Omit<RoomShellSliceStateProps<BaseRoomConfig>, 'config'>>;
 };
 
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
@@ -162,16 +160,19 @@ const INIT_ROOM_TASK = 'init-room';
 export function createRoomShellSlice(
   props: CreateRoomShellSliceProps,
 ): StateCreator<RoomShellSliceState> {
-  const slice: StateCreator<
-    RoomShellSliceState<BaseRoomConfig & LayoutSliceConfig>
-  > = (set, get, store) => {
+  const slice: StateCreator<RoomShellSliceState<BaseRoomConfig>> = (
+    set,
+    get,
+    store,
+  ) => {
     const {
       connector,
       config: configProps,
+      layout: layoutProps,
       room: roomStateProps,
       ...restState
     } = props;
-    const initialConfig: BaseRoomConfig & LayoutSliceConfig = {
+    const initialConfig: BaseRoomConfig = {
       ...INITIAL_BASE_ROOM_CONFIG,
       ...configProps,
     };
@@ -192,7 +193,8 @@ export function createRoomShellSlice(
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       ...createLayoutSlice({
-        panels: roomStateProps.panels,
+        config: layoutProps?.config,
+        panels: layoutProps?.panels,
       })(set, get, store),
       room: {
         ...initialRoomState,

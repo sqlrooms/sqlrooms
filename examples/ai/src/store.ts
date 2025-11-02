@@ -18,12 +18,10 @@ import {
   StateCreator,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createLayoutSlice} from '@sqlrooms/layout';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
@@ -33,7 +31,6 @@ import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
-import {createDuckDbSlice} from '@sqlrooms/duckdb';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -60,15 +57,6 @@ export const {roomStore, useRoomStore} = createRoomStore<
       // Base room slice
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -77,35 +65,60 @@ export const {roomStore, useRoomStore} = createRoomStore<
             },
           ],
         },
-      })(set, get, store),
-
-      ...createDuckDbSlice()(set, get, store),
-
-      ...createLayoutSlice({
-        config: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: RoomPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              first: RoomPanelTypes.enum['data-sources'],
+              second: MAIN_VIEW,
+              splitPercentage: 30,
+            },
           },
-        },
-        panels: {
-          [RoomPanelTypes.enum['data-sources']]: {
-            title: 'Data Sources',
-            icon: DatabaseIcon,
-            component: DataSourcesPanel,
-            placement: 'sidebar',
-          },
-          main: {
-            title: 'Main view',
-            icon: () => null,
-            component: MainView,
-            placement: 'main',
+          panels: {
+            [RoomPanelTypes.enum['data-sources']]: {
+              title: 'Data Sources',
+              icon: DatabaseIcon,
+              component: DataSourcesPanel,
+              placement: 'sidebar',
+            },
+            main: {
+              title: 'Main view',
+              icon: () => null,
+              component: MainView,
+              placement: 'main',
+            },
           },
         },
       })(set, get, store),
+
+      // ...createDuckDbSlice()(set, get, store),
+
+      // ...createLayoutSlice({
+      //   config: {
+      //     type: LayoutTypes.enum.mosaic,
+      //     nodes: {
+      //       direction: 'row',
+      //       first: RoomPanelTypes.enum['data-sources'],
+      //       second: MAIN_VIEW,
+      //       splitPercentage: 30,
+      //     },
+      //   },
+      //   panels: {
+      //     [RoomPanelTypes.enum['data-sources']]: {
+      //       title: 'Data Sources',
+      //       icon: DatabaseIcon,
+      //       component: DataSourcesPanel,
+      //       placement: 'sidebar',
+      //     },
+      //     main: {
+      //       title: 'Main view',
+      //       icon: () => null,
+      //       component: MainView,
+      //       placement: 'main',
+      //     },
+      //   },
+      // })(set, get, store),
 
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
