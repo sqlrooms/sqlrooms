@@ -1,14 +1,5 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {
-  Button,
-  CopyButton,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@sqlrooms/ui';
+import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
 import {useState} from 'react';
 import {AnalysisAnswer} from './AnalysisAnswer';
@@ -17,13 +8,16 @@ import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 import {useStoreWithAi} from '../AiSlice';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
+import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
+ * @property {string | null} floatingPromptId - ID of the prompt currently shown in the floating overlay
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
+  floatingPromptId?: string | null;
 };
 
 /**
@@ -34,10 +28,12 @@ type AnalysisResultProps = {
  * @component
  * @param props - Component props
  * @param props.result - The analysis result data to display
+ * @param props.floatingPromptId - ID of the prompt currently shown in the floating overlay
  * @returns A React component displaying the analysis results
  */
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
+  floatingPromptId,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const toolAdditionalData = useStoreWithAi(
@@ -53,9 +49,16 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   const uiMessageParts = getAssistantMessageParts(analysisResult.id);
 
+  const isFloating = floatingPromptId === analysisResult.id;
+
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
-      <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
+      <div
+        className={`mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100 ${isFloating ? 'invisible' : ''}`}
+        data-prompt-header
+        data-result-id={analysisResult.id}
+        data-prompt-text={analysisResult.prompt}
+      >
         <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
@@ -80,8 +83,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <TrashIcon className="h-4 w-4" />
             </Button>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
+            <DeleteConfirmationDialog
               open={showDeleteConfirmation}
               onOpenChange={(open) => {
                 setShowDeleteConfirmation(open);
@@ -89,40 +91,16 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   setDeleteTargetId(null);
                 }
               }}
-            >
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Confirm Deletion</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to delete this analysis result? This
-                    action cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteConfirmation(false)}
-                  >
-                    Cancel
-                  </Button>
-                  {currentSession?.id && deleteTargetId && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        deleteAnalysisResult(
-                          currentSession?.id,
-                          deleteTargetId,
-                        );
-                        setShowDeleteConfirmation(false);
-                        setDeleteTargetId(null);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              onConfirm={() => {
+                if (currentSession?.id && deleteTargetId) {
+                  deleteAnalysisResult(currentSession.id, deleteTargetId);
+                }
+                setShowDeleteConfirmation(false);
+                setDeleteTargetId(null);
+              }}
+              canConfirm={Boolean(currentSession?.id && deleteTargetId)}
+              contentClassName="sm:max-w-[425px]"
+            />
           </div>
         </div>
       </div>
