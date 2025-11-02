@@ -6,6 +6,7 @@ import {
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
 import {
+  LayoutSliceConfig,
   LayoutSliceState,
   RoomPanelInfo,
   createLayoutSlice,
@@ -145,32 +146,35 @@ export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
-type InitialState<PC extends BaseRoomConfig> = {
+type CreateRoomShellSliceProps = {
   connector?: DuckDbConnector;
-  config: Partial<PC>;
-  room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config'>> & {
+  config: Partial<BaseRoomConfig & LayoutSliceConfig>;
+  room: Partial<Omit<RoomShellSliceStateProps<BaseRoomConfig>, 'config'>> & {
     panels?: Record<string, RoomPanelInfo>;
   };
+  // layout:
 };
 
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 
-export function createRoomShellSlice<
-  PC extends BaseRoomConfig = BaseRoomConfig,
->(props: InitialState<PC>): StateCreator<RoomShellSliceState<PC>> {
-  const slice: StateCreator<RoomShellSliceState<PC>> = (set, get, store) => {
+export function createRoomShellSlice(
+  props: CreateRoomShellSliceProps,
+): StateCreator<RoomShellSliceState> {
+  const slice: StateCreator<
+    RoomShellSliceState<BaseRoomConfig & LayoutSliceConfig>
+  > = (set, get, store) => {
     const {
       connector,
       config: configProps,
       room: roomStateProps,
       ...restState
     } = props;
-    const initialConfig: PC = {
+    const initialConfig: BaseRoomConfig & LayoutSliceConfig = {
       ...INITIAL_BASE_ROOM_CONFIG,
       ...configProps,
-    } as PC;
+    };
     const initialRoomState = {
       CustomErrorBoundary: ErrorBoundary,
       roomFiles: [],

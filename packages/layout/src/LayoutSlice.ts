@@ -43,14 +43,14 @@ export type LayoutSliceState = {
   };
 };
 
-export function createLayoutSlice<PC extends BaseRoomConfig = BaseRoomConfig>({
+export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
 }: {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
 } = {}): StateCreator<LayoutSliceState> {
-  return createBaseSlice<PC, LayoutSliceState>((set, get) => ({
+  return createBaseSlice<BaseRoomConfig, LayoutSliceState>((set, get) => ({
     layout: {
       config: initialConfig,
       panels,

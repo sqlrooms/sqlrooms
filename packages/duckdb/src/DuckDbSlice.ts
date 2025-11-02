@@ -226,14 +226,16 @@ export type DuckDbSliceState = {
   };
 };
 
+type CreateDuckDbSliceProps = {
+  connector?: DuckDbConnector;
+};
+
 /**
  * Create a DuckDB slice for managing the connector
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-}: {
-  connector?: DuckDbConnector;
-}): StateCreator<DuckDbSliceState> {
+}: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createBaseSlice<{}, DuckDbSliceState>((set, get) => {
     return {
       db: {

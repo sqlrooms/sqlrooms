@@ -17,13 +17,13 @@ import {
 } from './RoomShellSidebarButtons';
 import {useBaseRoomShellStore} from './RoomShellStore';
 
-export function RoomShellBase<PC extends BaseRoomConfig>({
+export function RoomShellBase({
   className,
   children,
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomStore<PC>;
+  roomStore?: RoomStore;
 }>) {
   return (
     <RoomStateProvider roomStore={roomStore}>

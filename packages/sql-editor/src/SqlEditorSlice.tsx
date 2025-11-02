@@ -10,7 +10,10 @@ import {
   StateCreator,
   useBaseRoomShellStore,
 } from '@sqlrooms/room-shell';
-import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor-config';
+import {
+  createDefaultSqlEditorConfig,
+  SqlEditorSliceConfig,
+} from '@sqlrooms/sql-editor-config';
 import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
@@ -49,6 +52,7 @@ export function isQueryWithResult(
 
 export type SqlEditorSliceState = {
   sqlEditor: {
+    config: SqlEditorSliceConfig;
     // Runtime state
     queryResult?: QueryResult;
     /** @deprecated  */
@@ -133,18 +137,19 @@ export type SqlEditorSliceState = {
   };
 };
 
-export function createSqlEditorSlice<
-  PC extends BaseRoomConfig & SqlEditorSliceConfig,
->({
+export function createSqlEditorSlice<PC extends BaseRoomConfig>({
+  config = createDefaultSqlEditorConfig(),
   queryResultLimit = 100,
   queryResultLimitOptions = [100, 500, 1000],
 }: {
+  config?: SqlEditorSliceConfig;
   queryResultLimit?: number;
   queryResultLimitOptions?: number[];
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<PC, SqlEditorSliceState>((set, get) => {
     return {
       sqlEditor: {
+        config,
         // Initialize runtime state
         isTablesLoading: false,
         queryResultLimit,
@@ -159,7 +164,7 @@ export function createSqlEditorSlice<
         },
 
         createQueryTab: (initialQuery = '') => {
-          const sqlEditorConfig = get().config.sqlEditor;
+          const sqlEditorConfig = get().sqlEditor.config;
           const newQuery = {
             id: genRandomStr(8),
             name: generateUniqueName(
@@ -171,8 +176,8 @@ export function createSqlEditorSlice<
 
           set((state) =>
             produce(state, (draft) => {
-              draft.config.sqlEditor.queries.push(newQuery);
-              draft.config.sqlEditor.selectedQueryId = newQuery.id;
+              draft.sqlEditor.config.queries.push(newQuery);
+              draft.sqlEditor.config.selectedQueryId = newQuery.id;
             }),
           );
 
@@ -180,7 +185,7 @@ export function createSqlEditorSlice<
         },
 
         deleteQueryTab: (queryId) => {
-          const sqlEditorConfig = get().config.sqlEditor;
+          const sqlEditorConfig = get().sqlEditor.config;
           const queries = sqlEditorConfig.queries;
 
           if (queries.length <= 1) {
@@ -196,7 +201,7 @@ export function createSqlEditorSlice<
 
           set((state) =>
             produce(state, (draft) => {
-              draft.config.sqlEditor.queries = filteredQueries;
+              draft.sqlEditor.config.queries = filteredQueries;
 
               // If we're deleting the selected tab, select the previous one or the first one
               if (isSelected && filteredQueries.length > 0) {
@@ -206,7 +211,7 @@ export function createSqlEditorSlice<
                   filteredQueries[newSelectedIndex]?.id ??
                   filteredQueries[0]?.id;
                 if (newSelectedId) {
-                  draft.config.sqlEditor.selectedQueryId = newSelectedId;
+                  draft.sqlEditor.config.selectedQueryId = newSelectedId;
                 }
               }
             }),
@@ -216,7 +221,7 @@ export function createSqlEditorSlice<
         renameQueryTab: (queryId, newName) => {
           set((state) =>
             produce(state, (draft) => {
-              const query = draft.config.sqlEditor.queries.find(
+              const query = draft.sqlEditor.config.queries.find(
                 (q) => q.id === queryId,
               );
               if (query) {
@@ -229,7 +234,7 @@ export function createSqlEditorSlice<
         updateQueryText: (queryId, queryText) => {
           set((state) =>
             produce(state, (draft) => {
-              const query = draft.config.sqlEditor.queries.find(
+              const query = draft.sqlEditor.config.queries.find(
                 (q) => q.id === queryId,
               );
               if (query) {
@@ -242,13 +247,13 @@ export function createSqlEditorSlice<
         setSelectedQueryId: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.sqlEditor.selectedQueryId = queryId;
+              draft.sqlEditor.config.selectedQueryId = queryId;
             }),
           );
         },
 
         getCurrentQuery: () => {
-          const sqlEditorConfig = get().config.sqlEditor;
+          const sqlEditorConfig = get().sqlEditor.config;
           const selectedId = sqlEditorConfig.selectedQueryId;
           const query = sqlEditorConfig.queries.find(
             (q) => q.id === selectedId,
@@ -323,7 +328,6 @@ export function createSqlEditorSlice<
                 isBeingAborted: false,
                 controller: queryController,
               };
-              draft.config.sqlEditor.lastExecutedQuery = query;
             }),
           );
 
@@ -442,7 +446,7 @@ export function createSqlEditorSlice<
           }));
         },
       },
-    };
+    } satisfies SqlEditorSliceState;
   });
 }
 

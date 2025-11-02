@@ -8,9 +8,6 @@ export const BaseRoomConfig = z
   .object({
     title: z.string().default(DEFAULT_ROOM_TITLE).describe('Room title.'),
     description: z.string().nullable().optional().describe('Room description.'),
-    layout: LayoutConfig.default(DEFAULT_MOSAIC_LAYOUT).describe(
-      'Layout specifies how views are arranged on the screen.',
-    ),
     dataSources: z
       .array(DataSource)
       .default([])
@@ -23,7 +20,6 @@ export type BaseRoomConfig = z.infer<typeof BaseRoomConfig>;
 export function createDefaultBaseRoomConfig(): BaseRoomConfig {
   return {
     title: DEFAULT_ROOM_TITLE,
-    layout: DEFAULT_MOSAIC_LAYOUT,
     dataSources: [],
   };
 }

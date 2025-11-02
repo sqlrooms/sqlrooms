@@ -1,4 +1,7 @@
-import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
+import {
+  BaseRoomConfig,
+  createDefaultBaseRoomConfig,
+} from '@sqlrooms/room-config';
 import {castDraft, produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 
@@ -145,9 +148,10 @@ export function createBaseSlice<PC, S>(
  * @param sliceCreators - The slices to add to the room store
  * @returns The room store and a hook for accessing the room store
  */
-export function createRoomStore<PC, RS extends RoomState<PC>>(
-  stateCreator: StateCreator<RS>,
-) {
+export function createRoomStore<
+  PC = BaseRoomConfig,
+  RS extends RoomState<PC> = RoomState<PC>,
+>(stateCreator: StateCreator<RS>) {
   const factory = createRoomStoreCreator<RS>();
   const storeCreator = factory(() => stateCreator);
   const roomStore = storeCreator.createRoomStore();

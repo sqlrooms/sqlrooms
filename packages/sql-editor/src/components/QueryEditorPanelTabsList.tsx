@@ -18,7 +18,7 @@ import RenameSqlQueryModal from './RenameSqlQueryModal';
 export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
 }) => {
-  const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
+  const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
 
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
