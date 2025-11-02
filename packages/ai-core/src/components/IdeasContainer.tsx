@@ -43,7 +43,8 @@ export const IdeasContainer: React.FC<IdeasContainerProps> = ({
     <TooltipProvider>
       <div
         className={cn(
-          'scrollbar-hide no-scrollbar flex h-20 w-full gap-2 overflow-x-auto p-1',
+          'flex h-20 w-full gap-2 overflow-x-hidden hover:overflow-x-auto overflow-y-hidden p-1 mt-2',
+          '[scrollbar - width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:bg-muted-foreground/60 hover:[&::-webkit-scrollbar-thumb]:bg-foreground/50 [&::-webkit-scrollbar-thumb]:rounded-full',
           className,
         )}
       >
