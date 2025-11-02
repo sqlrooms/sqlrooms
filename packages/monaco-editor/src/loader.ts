@@ -46,7 +46,9 @@ export function ensureMonacoLoaderConfigured() {
   if (!configured) {
     // Prefer bundling the local monaco-editor to avoid CDN/version mismatches
     // Consumers can still override via configureMonacoLoader if needed
-    loader.config({monaco: Monaco});
+    if (typeof window !== 'undefined') {
+      loader.config({paths: {vs: DEFAULT_CDN_PATH}});
+    }
     configured = true;
   }
 }
