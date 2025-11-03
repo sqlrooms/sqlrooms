@@ -25,6 +25,7 @@ def prepare_embeddings(
     verbose: bool = True,
     use_markdown_chunking: bool = True,
     include_headers_in_chunks: bool = True,
+    header_weight: int = 3,
 ):
     """
     Prepare embeddings from markdown files and store in DuckDB.
@@ -38,6 +39,7 @@ def prepare_embeddings(
         verbose: Whether to print progress messages (default: True)
         use_markdown_chunking: Use markdown-aware chunking by headers (default: True)
         include_headers_in_chunks: Prepend headers to chunk text for higher weight (default: True)
+        header_weight: Number of times to repeat headers in chunks (default: 3, min: 1)
     
     Returns:
         VectorStoreIndex: The created knowledge base index
@@ -112,24 +114,30 @@ def prepare_embeddings(
         
         # Prepend header hierarchy to each chunk to give headers more weight
         if include_headers_in_chunks:
+            # Ensure header_weight is at least 1
+            weight = max(1, header_weight)
             headers_added = 0
+            
             for node in nodes:
                 # Get header from metadata if available
                 header_text = ""
                 if hasattr(node, 'metadata') and node.metadata:
                     # Common metadata fields that might contain headers
                     if 'header_path' in node.metadata:
-                        header_text = node.metadata['header_path'] + "\n\n"
+                        header_text = node.metadata['header_path']
                     elif 'section_header' in node.metadata:
-                        header_text = node.metadata['section_header'] + "\n\n"
+                        header_text = node.metadata['section_header']
                 
-                # Prepend header to node text to increase its weight in embeddings
+                # Repeat header multiple times to increase its weight in embeddings
                 if header_text and not node.text.startswith(header_text):
-                    node.text = header_text + node.text
+                    # Repeat the header 'weight' times, separated by newlines
+                    repeated_header = "\n".join([header_text] * weight) + "\n\n"
+                    node.text = repeated_header + node.text
                     headers_added += 1
             
             if verbose and headers_added > 0:
-                print(f"Enhanced {headers_added} chunks with header context for better retrieval")
+                weight_msg = f" (weight: {weight}x)" if weight > 1 else ""
+                print(f"Enhanced {headers_added} chunks with header context{weight_msg} for better retrieval")
         
         if verbose:
             print(f"Created {len(nodes)} chunks from markdown sections")

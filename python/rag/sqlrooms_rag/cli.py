@@ -22,6 +22,9 @@ Examples:
   # Use custom chunk size
   %(prog)s docs -o generated-embeddings/kb.duckdb --chunk-size 256
   
+  # Increase header weight for better header-based retrieval
+  %(prog)s docs -o generated-embeddings/kb.duckdb --header-weight 5
+  
   # Use a different embedding model
   %(prog)s docs -o generated-embeddings/kb.duckdb --model "sentence-transformers/all-MiniLM-L6-v2" --embed-dim 384
         """,
@@ -80,6 +83,13 @@ Examples:
         help="Disable prepending headers to chunks (reduces header weight in embeddings)",
     )
     
+    parser.add_argument(
+        "--header-weight",
+        type=int,
+        default=3,
+        help="Number of times to repeat headers in chunks for higher weight (default: 3, min: 1)",
+    )
+    
     args = parser.parse_args()
     
     try:
@@ -92,6 +102,7 @@ Examples:
             verbose=not args.quiet,
             use_markdown_chunking=not args.no_markdown_chunking,
             include_headers_in_chunks=not args.no_header_weighting,
+            header_weight=args.header_weight,
         )
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.", file=sys.stderr)
