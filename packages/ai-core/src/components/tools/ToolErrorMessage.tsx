@@ -48,7 +48,6 @@ export interface ToolErrorMessageProps {
 
 export function ToolErrorMessage(props: ToolErrorMessageProps) {
   const title = props.title ?? 'Tool rendering error';
-  const triggerLabel = props.triggerLabel ?? 'Tool rendering failed';
   const align = props.align ?? 'start';
   const errorText = props.error != null ? String(props.error) : '';
   const editorHeightPx = props.editorHeightPx ?? 300;
@@ -59,10 +58,7 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
     <Popover open={popoverOpen.isOpen} onOpenChange={popoverOpen.onToggle}>
       <PopoverTrigger asChild>
         <Button className="w-fit" variant="ghost" size="xs">
-          <p className="flex items-center gap-2 text-xs ">
-            <TriangleAlertIcon />
-            {triggerLabel}
-          </p>
+          <TriangleAlertIcon />
         </Button>
       </PopoverTrigger>
       <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
