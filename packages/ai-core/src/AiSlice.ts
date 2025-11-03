@@ -52,6 +52,14 @@ export type AiSliceState = {
     chatStop?: () => void;
     /** Register/replace the current chat stop function */
     setChatStop: (stop: (() => void) | undefined) => void;
+    /** Latest sendMessage function from useChat to send messages */
+    chatSendMessage?: (message: {text: string}) => void;
+    /** Register/replace the current chat sendMessage function */
+    setChatSendMessage: (sendMessage: ((message: {text: string}) => void) | undefined) => void;
+    /** Latest addToolResult function from useChat to add tool results */
+    addToolResult?: AddToolResult;
+    /** Register/replace the current addToolResult function */
+    setAddToolResult: (addToolResult: AddToolResult | undefined) => void;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
@@ -175,6 +183,22 @@ export function createAiSlice<PC extends BaseRoomConfig>(
           set((state) =>
             produce(state, (draft) => {
               draft.ai.chatStop = stopFn;
+            }),
+          );
+        },
+
+        setChatSendMessage: (sendMessageFn: ((message: {text: string}) => void) | undefined) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.chatSendMessage = sendMessageFn;
+            }),
+          );
+        },
+
+        setAddToolResult: (addToolResultFn: AddToolResult | undefined) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.addToolResult = addToolResultFn;
             }),
           );
         },

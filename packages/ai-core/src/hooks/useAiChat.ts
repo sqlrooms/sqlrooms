@@ -70,6 +70,8 @@ export function useAiChat() {
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
   const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
+  const setChatSendMessage = useStoreWithAi((s) => s.ai.setChatSendMessage);
+  const setAddToolResult = useStoreWithAi((s) => s.ai.setAddToolResult);
 
   // Abort/auto-send guards
   const isAborted = useStoreWithAi(
@@ -142,6 +144,18 @@ export function useAiChat() {
     setChatStop?.(stop);
     return () => setChatStop?.(undefined);
   }, [setChatStop, stop]);
+
+  // Register sendMessage with the store so it can be accessed from the slice
+  useEffect(() => {
+    setChatSendMessage?.(sendMessage);
+    return () => setChatSendMessage?.(undefined);
+  }, [setChatSendMessage, sendMessage]);
+
+  // Register addToolResult with the store so it can be accessed from the slice
+  useEffect(() => {
+    setAddToolResult?.(addToolResult);
+    return () => setAddToolResult?.(undefined);
+  }, [setAddToolResult, addToolResult]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
