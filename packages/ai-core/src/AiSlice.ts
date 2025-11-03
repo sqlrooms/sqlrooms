@@ -60,6 +60,8 @@ export type AiSliceState = {
     addToolResult?: AddToolResult;
     /** Register/replace the current addToolResult function */
     setAddToolResult: (addToolResult: AddToolResult | undefined) => void;
+    /** Wait for a tool result to be added by UI component */
+    waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => Promise<void>;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
@@ -173,12 +175,56 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         }
       : params.config;
 
+    // Create a persistent Map for pending tool call resolvers (outside of immer draft)
+    const pendingToolCallResolvers = new Map<
+      string,
+      {resolve: () => void; reject: (error: Error) => void}
+    >();
+
     return {
       ai: {
         config: createDefaultAiConfig(cleanedConfig),
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         tools,
+        waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
+          return new Promise<void>((resolve, reject) => {
+            // Set up abort handler
+            const abortHandler = () => {
+              const resolver = pendingToolCallResolvers.get(toolCallId);
+              if (resolver) {
+                pendingToolCallResolvers.delete(toolCallId);
+                resolver.reject(new Error('Tool call cancelled by user'));
+              }
+            };
+
+            if (abortSignal) {
+              if (abortSignal.aborted) {
+                reject(new Error('Tool call cancelled by user'));
+                return;
+              }
+              abortSignal.addEventListener('abort', abortHandler, {once: true});
+            }
+
+            // Store resolver (overwrites any existing one, which is fine for our use case)
+            pendingToolCallResolvers.set(toolCallId, {
+              resolve: () => {
+                if (abortSignal) {
+                  abortSignal.removeEventListener('abort', abortHandler);
+                }
+                pendingToolCallResolvers.delete(toolCallId);
+                resolve();
+              },
+              reject: (error: Error) => {
+                if (abortSignal) {
+                  abortSignal.removeEventListener('abort', abortHandler);
+                }
+                pendingToolCallResolvers.delete(toolCallId);
+                reject(error);
+              },
+            });
+          });
+        },
         setChatStop: (stopFn: (() => void) | undefined) => {
           set((state) =>
             produce(state, (draft) => {
@@ -196,9 +242,23 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         },
 
         setAddToolResult: (addToolResultFn: AddToolResult | undefined) => {
+          // Wrap addToolResult to intercept calls and resolve pending promises
+          const wrappedAddToolResult: AddToolResult | undefined = addToolResultFn
+            ? (options) => {
+                // Call the original addToolResult
+                addToolResultFn(options);
+
+                // Resolve the promise if there's a pending waiter for this toolCallId
+                const resolver = pendingToolCallResolvers.get(options.toolCallId);
+                if (resolver) {
+                  resolver.resolve();
+                }
+              }
+            : undefined;
+
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.addToolResult = addToolResultFn;
+              draft.ai.addToolResult = wrappedAddToolResult;
             }),
           );
         },
