@@ -46,7 +46,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 pl-2 text-xs text-gray-700 dark:text-gray-300">
         {/* Loading/Completed Indicator */}
-        {!isCompleted && state === 'input-streaming' ? (
+        {!isCompleted && (state !== 'output-available' && state !== 'output-error') ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400 dark:text-gray-500" />
         ) : (
           <CircleArrowRightIcon className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
