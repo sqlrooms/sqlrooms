@@ -1,4 +1,3 @@
-import {useDisclosure} from '@sqlrooms/ui';
 import React from 'react';
 import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
@@ -73,6 +72,15 @@ export const ToolResult: React.FC<ToolData> = ({
     >
       <div className="text-sm text-gray-500">
         {reason && <span>{reason}</span>}
+        {isCompleted && (errorMessage || !isSuccess) && (
+          <ToolErrorMessage
+            error={errorMessage ?? 'Tool call failed'}
+            details={toolData}
+            title="Tool call error"
+            triggerLabel="Tool call failed"
+            editorHeightPx={300}
+          />
+        )}
       </div>
       {ToolComponent && isSuccess && isCompleted && (
         <ToolCallErrorBoundary>
@@ -85,15 +93,6 @@ export const ToolResult: React.FC<ToolData> = ({
             ToolComponent
           )}
         </ToolCallErrorBoundary>
-      )}
-      {isCompleted && (errorMessage || !isSuccess) && (
-        <ToolErrorMessage
-          error={errorMessage ?? 'Tool call failed'}
-          details={toolData}
-          title="Tool call error"
-          triggerLabel="Tool call failed"
-          editorHeightPx={300}
-        />
       )}
     </MessageContainer>
   );
