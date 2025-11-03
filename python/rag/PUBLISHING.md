@@ -2,6 +2,30 @@
 
 This document explains how to publish `sqlrooms-rag` to PyPI.
 
+## Quick Reference
+
+```bash
+# 1. Update version in pyproject.toml to prerelease (e.g., 0.1.0a1)
+
+# 2. Build the package
+uv build
+
+# 3. Test locally (optional)
+uv venv test-env && source test-env/bin/activate
+uv pip install dist/*.whl
+prepare-embeddings --help
+deactivate && rm -rf test-env
+
+# 4. Publish to TestPyPI (recommended first)
+export UV_PUBLISH_USERNAME=__token__
+export UV_PUBLISH_PASSWORD=your-testpypi-token
+uv publish --publish-url https://test.pypi.org/legacy/
+
+# 5. Publish to PyPI
+export UV_PUBLISH_PASSWORD=your-pypi-token
+uv publish
+```
+
 ## Package Structure (PyPI-Ready)
 
 ```
@@ -38,27 +62,25 @@ sqlrooms-rag/
 ### Using uv (recommended)
 
 ```bash
-# Install build tools
-pip install build twine
-
-# Build the package
-python -m build
+# Build the package (creates wheel and source distribution)
+uv build
 
 # This creates:
-# dist/sqlrooms_rag-0.1.0-py3-none-any.whl
-# dist/sqlrooms_rag-0.1.0.tar.gz
+# dist/sqlrooms_rag-0.1.0a1-py3-none-any.whl
+# dist/sqlrooms_rag-0.1.0a1.tar.gz
 ```
 
 ### Verify the build
 
 ```bash
 # Check what's in the wheel
-unzip -l dist/sqlrooms_rag-0.1.0-py3-none-any.whl
+unzip -l dist/sqlrooms_rag-0.1.0a1-py3-none-any.whl
 
 # Should include:
 # - sqlrooms_rag/__init__.py
 # - sqlrooms_rag/prepare.py
 # - sqlrooms_rag/cli.py
+# - sqlrooms_rag/generate_umap.py
 # Should NOT include:
 # - examples/
 # - generated-embeddings/
@@ -72,7 +94,7 @@ Before publishing, test the package locally:
 # Install in a fresh virtual environment
 uv venv test-env
 source test-env/bin/activate
-pip install dist/sqlrooms_rag-0.1.0-py3-none-any.whl
+uv pip install dist/sqlrooms_rag-0.1.0a1-py3-none-any.whl
 
 # Test the CLI
 prepare-embeddings --help
@@ -91,10 +113,19 @@ Test the publishing process on TestPyPI first:
 
 ```bash
 # Upload to TestPyPI
-twine upload --repository testpypi dist/*
+uv publish --publish-url https://test.pypi.org/legacy/
 
 # Test installation from TestPyPI
-pip install --index-url https://test.pypi.org/simple/ sqlrooms-rag
+pip install --index-url https://test.pypi.org/simple/ --pre sqlrooms-rag
+```
+
+You'll need a TestPyPI account and API token from https://test.pypi.org/manage/account/token/
+
+Set credentials via environment variables:
+
+```bash
+export UV_PUBLISH_USERNAME=__token__
+export UV_PUBLISH_PASSWORD=your-testpypi-token-here
 ```
 
 ## Publishing to PyPI
@@ -102,14 +133,23 @@ pip install --index-url https://test.pypi.org/simple/ sqlrooms-rag
 Once tested on TestPyPI:
 
 ```bash
-# Upload to PyPI
-twine upload dist/*
+# Upload to PyPI (uv will prompt for credentials if not set)
+uv publish
 
-# Verify installation
-pip install sqlrooms-rag
+# Verify installation (use --pre for prerelease versions)
+pip install --pre sqlrooms-rag
 
 # Test it works
 prepare-embeddings --help
+```
+
+You'll need a PyPI account and API token from https://pypi.org/manage/account/token/
+
+Set credentials via environment variables:
+
+```bash
+export UV_PUBLISH_USERNAME=__token__
+export UV_PUBLISH_PASSWORD=your-pypi-token-here
 ```
 
 ## Post-Publication
@@ -137,11 +177,20 @@ name = "sqlrooms-rag"
 version = "0.2.0"  # <-- Update this
 ```
 
-Follow [Semantic Versioning](https://semver.org/):
+Follow [Semantic Versioning](https://semver.org/) with [PEP 440](https://peps.python.org/pep-0440/) for prerelease versions:
 
 - **MAJOR**: Incompatible API changes
 - **MINOR**: New functionality (backwards compatible)
 - **PATCH**: Bug fixes (backwards compatible)
+
+**Prerelease versions:**
+
+- `0.1.0a1` - Alpha prerelease 1
+- `0.1.0b1` - Beta prerelease 1
+- `0.1.0rc1` - Release candidate 1
+- `0.1.0` - Stable release
+
+Users need `pip install --pre sqlrooms-rag` or `pip install sqlrooms-rag==0.1.0a1` to install prerelease versions.
 
 ## Package Maintenance
 
@@ -199,15 +248,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/setup-python@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v2
         with:
-          python-version: '3.11'
-      - run: pip install build twine
-      - run: python -m build
-      - run: twine upload dist/*
+          version: 'latest'
+      - name: Set up Python
+        run: uv python install 3.11
+      - name: Build package
+        run: uv build
+      - name: Publish to PyPI
+        run: uv publish
         env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+          UV_PUBLISH_USERNAME: __token__
+          UV_PUBLISH_PASSWORD: ${{ secrets.PYPI_TOKEN }}
 ```
 
 ## Troubleshooting

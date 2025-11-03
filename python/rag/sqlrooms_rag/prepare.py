@@ -24,6 +24,7 @@ def prepare_embeddings(
     embed_dim: int = 384,
     verbose: bool = True,
     use_markdown_chunking: bool = True,
+    include_headers_in_chunks: bool = True,
 ):
     """
     Prepare embeddings from markdown files and store in DuckDB.
@@ -36,6 +37,7 @@ def prepare_embeddings(
         embed_dim: Embedding dimension size (default: 384 for bge-small)
         verbose: Whether to print progress messages (default: True)
         use_markdown_chunking: Use markdown-aware chunking by headers (default: True)
+        include_headers_in_chunks: Prepend headers to chunk text for higher weight (default: True)
     
     Returns:
         VectorStoreIndex: The created knowledge base index
@@ -100,8 +102,34 @@ def prepare_embeddings(
             print("Using markdown-aware chunking (splits by headers and sections)...")
         
         # Create markdown parser that respects document structure
-        markdown_parser = MarkdownNodeParser()
+        # include_metadata=True stores headers in metadata
+        # include_prev_next_rel=True adds context about surrounding chunks
+        markdown_parser = MarkdownNodeParser(
+            include_metadata=True,
+            include_prev_next_rel=True,
+        )
         nodes = markdown_parser.get_nodes_from_documents(documents)
+        
+        # Prepend header hierarchy to each chunk to give headers more weight
+        if include_headers_in_chunks:
+            headers_added = 0
+            for node in nodes:
+                # Get header from metadata if available
+                header_text = ""
+                if hasattr(node, 'metadata') and node.metadata:
+                    # Common metadata fields that might contain headers
+                    if 'header_path' in node.metadata:
+                        header_text = node.metadata['header_path'] + "\n\n"
+                    elif 'section_header' in node.metadata:
+                        header_text = node.metadata['section_header'] + "\n\n"
+                
+                # Prepend header to node text to increase its weight in embeddings
+                if header_text and not node.text.startswith(header_text):
+                    node.text = header_text + node.text
+                    headers_added += 1
+            
+            if verbose and headers_added > 0:
+                print(f"Enhanced {headers_added} chunks with header context for better retrieval")
         
         if verbose:
             print(f"Created {len(nodes)} chunks from markdown sections")

@@ -1,6 +1,6 @@
 [project]
 name = "sqlrooms-rag"
-version = "0.1.0"
+version = "0.1.0a1"
 description = "Prepare and query vector embeddings for RAG applications using DuckDB"
 readme = "README.md"
 license = {text = "MIT"}

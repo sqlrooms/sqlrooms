@@ -74,6 +74,12 @@ Examples:
         help="Disable markdown-aware chunking (use simple size-based chunking instead)",
     )
     
+    parser.add_argument(
+        "--no-header-weighting",
+        action="store_true",
+        help="Disable prepending headers to chunks (reduces header weight in embeddings)",
+    )
+    
     args = parser.parse_args()
     
     try:
@@ -85,6 +91,7 @@ Examples:
             embed_dim=args.embed_dim,
             verbose=not args.quiet,
             use_markdown_chunking=not args.no_markdown_chunking,
+            include_headers_in_chunks=not args.no_header_weighting,
         )
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.", file=sys.stderr)
