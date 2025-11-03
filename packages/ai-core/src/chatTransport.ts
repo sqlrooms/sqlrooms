@@ -315,7 +315,7 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
 
         // find tool from tools using toolName
         const tool = tools[toolName];
-        if (tool && tool.execute) {
+        if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
           // Always provide a defined messages array to the tool runtime
           const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
             []) as UIMessage[];
@@ -333,6 +333,33 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
               output: llmResult,
             });
           }
+        } else {
+          // Tool has no execute function - wait for UI component to call addToolResult
+          // Check if there's a ToolComponent for this tool
+          const hasToolComponent = !!state.ai.findToolComponent(toolName);
+          if (hasToolComponent && state.ai.waitForToolResult) {
+            try {
+              // Wait for the UI component to call addToolResult
+              await state.ai.waitForToolResult(
+                toolCallId,
+                state.ai.analysisAbortController?.signal,
+              );
+            } catch (error) {
+              // If waiting was cancelled or failed, ensure we add an error result
+              if (addToolResult && error instanceof Error) {
+                addToolResult({
+                  tool: toolName,
+                  toolCallId,
+                  state: 'output-error',
+                  errorText: error.message,
+                });
+              }
+              // Re-throw to let the outer catch handle it
+              throw error;
+            }
+          }
+          // If no ToolComponent, we still return (no-op) - the UI won't render anything
+          // and the tool call will remain incomplete, which is fine for error handling
         }
       } catch (error) {
         // Check if this is an abort error

@@ -44,7 +44,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
-
+  const tools = useStoreWithAi(s => s.ai.tools);
+  const findToolComponent= useStoreWithAi((state) => state.ai.findToolComponent);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
@@ -170,6 +171,23 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               state === 'output-available' || state === 'output-error';
             const additionalData = toolAdditionalData[toolCallId];
 
+            // check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
+            if (!tools[toolName]?.execute && (state === 'input-streaming' || state === 'input-available')) {
+              const ToolComponent = findToolComponent(toolName);
+              const props = {
+                ...(input as Record<string, unknown>),
+                ...({toolCallId, toolName} as Record<string, unknown>),
+              };
+              return (
+                <div key={`tool-call-${toolCallId}`}>
+                  {ToolComponent && typeof ToolComponent === 'function' && (
+                    <ToolComponent {...props} />
+                  )}
+                </div>
+              );
+            }
+
+            // otherwise, render <ToolResult>
             return (
               <div key={`tool-call-${toolCallId}`}>
                 <ToolCallInfo
