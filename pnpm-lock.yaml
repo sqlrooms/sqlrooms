@@ -1541,7 +1541,7 @@ importers:
         specifier: ^1.0.18
         version: 1.0.26(zod@4.1.8)
       '@ai-sdk/react':
-        specifier: ^2.0.32
+        specifier: ^2.0.44
         version: 2.0.87(react@19.2.0)(zod@4.1.8)
       '@openassistant/utils':
         specifier: 1.0.0-alpha.0
