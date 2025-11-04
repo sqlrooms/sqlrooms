@@ -169,7 +169,38 @@ index = prepare_embeddings(
 
 ### Query Examples
 
-See `examples/example_query.py` for complete working examples. Here's a quick snippet:
+#### Hybrid Search (Recommended)
+
+Combines vector similarity with full-text search for better results:
+
+```python
+from sqlrooms_rag import hybrid_query, print_results, get_source_documents
+
+# Query using both vector similarity and keyword matching
+# FTS index is created automatically during prepare_embeddings()
+results = hybrid_query(
+    "What is the ARRAY_AGG function in DuckDB?",
+    db_path="generated-embeddings/knowledge_base.duckdb",
+    top_k=5,
+    use_rrf=True,  # Reciprocal Rank Fusion
+)
+
+print_results(results, query_text)
+
+# Optionally retrieve full source documents for context
+chunk_ids = [r['node_id'] for r in results]
+source_docs = get_source_documents(chunk_ids, db_path)
+for doc in source_docs:
+    print(f"Full document: {doc['file_name']}")
+```
+
+**Why hybrid?** Combines semantic understanding (vector search) with exact keyword matching (FTS). Best for technical queries with specific terms, function names, or acronyms. See [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for details.
+
+**New:** Full source documents are automatically stored alongside chunks, making it easy to retrieve complete document context after finding relevant snippets.
+
+#### Vector-Only Search
+
+Using llama-index (see `examples/example_query.py`):
 
 ```python
 from llama_index.core import VectorStoreIndex, StorageContext, Settings
@@ -233,7 +264,17 @@ uv run python examples/query_duckdb_direct.py
 uv run python examples/query_duckdb_direct.py "Your question here"
 ```
 
-See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL.
+**Hybrid search (vector + full-text):**
+
+```bash
+# Run hybrid search examples
+uv run python examples/hybrid_search_example.py
+
+# Compare methods side-by-side
+uv run python examples/hybrid_search_example.py --compare
+```
+
+See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL, and [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for hybrid retrieval details.
 
 ## Visualization
 
@@ -284,17 +325,23 @@ sqlrooms-rag/
 ├── sqlrooms_rag/           # Main package (installed)
 │   ├── __init__.py        # Public API
 │   ├── prepare.py         # Core embedding preparation
+│   ├── query.py           # Hybrid retrieval (vector + FTS)
+│   ├── generate_umap.py   # UMAP visualization
 │   └── cli.py             # Command-line interface
 ├── examples/               # Example scripts (not installed)
 │   ├── prepare_duckdb_docs.py   # Download & prepare DuckDB docs
 │   ├── prepare_duckdb_docs.sh   # Bash version of above
 │   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
 │   ├── example_query.py         # Query using llama-index
-│   └── query_duckdb_direct.py   # Direct DuckDB queries
+│   ├── query_duckdb_direct.py   # Direct DuckDB queries
+│   └── hybrid_search_example.py # Hybrid search examples
 ├── scripts/                # Documentation for utility scripts
 ├── generated-embeddings/   # Output directory
 ├── pyproject.toml         # Package configuration
-└── README.md
+├── README.md
+├── HYBRID_SEARCH.md       # Hybrid retrieval documentation
+├── QUERYING.md            # Query documentation
+└── CHUNKING.md            # Chunking strategies
 ```
 
 ## Example: DuckDB Documentation

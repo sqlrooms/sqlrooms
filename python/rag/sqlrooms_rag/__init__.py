@@ -7,6 +7,12 @@ Tools for preparing and querying vector embeddings stored in DuckDB.
 __version__ = "0.1.0"
 
 from .prepare import prepare_embeddings
+from .query import (
+    hybrid_query,
+    reciprocal_rank_fusion,
+    get_source_documents,
+    print_results,
+)
 from .generate_umap import (
     extract_title_from_markdown,
     extract_filename_from_metadata,
@@ -29,6 +35,10 @@ from .generate_umap import (
 
 __all__ = [
     "prepare_embeddings",
+    "hybrid_query",
+    "reciprocal_rank_fusion",
+    "get_source_documents",
+    "print_results",
     "extract_title_from_markdown",
     "extract_filename_from_metadata",
     "extract_filepath_from_metadata",
