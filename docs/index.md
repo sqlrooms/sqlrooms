@@ -5,11 +5,14 @@ layout: home
 hero:
   name: 'SQLRooms'
   text: 'Build data-centric apps with DuckDB'
-  tagline: An Open Source React Framework for Single-Node Data Analytics powered by DuckDB
+  tagline: An open source React toolkit for human + agent collaborative analytics apps
   actions:
     - theme: brand
       text: What is SQLRooms?
       link: /overview
+    #    - theme: alt
+    #      text: Key Concepts
+    #      link: /key-concepts
     - theme: alt
       text: Example Apps
       link: /examples
@@ -20,6 +23,20 @@ hero:
     # Must be in the public/ directory (see https://github.com/vuejs/vitepress/issues/4097#issuecomment-2261203743)
     src: /media/sqlrooms-ai.webp
     alt: SQLRooms AI
+
+caseStudies:
+  - title: 'Foursquare Spatial Desktop'
+    href: '/case-studies.html#foursquare-spatial-desktop'
+    img: '/carousel/fsq-spatial-desktop-earthquakes.webp'
+    alt: 'Foursquare Spatial Desktop screenshot'
+  - title: 'Flowmap City'
+    href: '/case-studies.html#flowmap-city'
+    img: '/carousel/flowmap-city.webp'
+    alt: 'Flowmap City screenshot'
+  - title: 'Cosmograph'
+    href: '/case-studies.html#cosmograph'
+    img: '/carousel/cosmograph.webp'
+    alt: 'Cosmograph screenshot'
 
 features:
   - title: Local Analytics, No Backend Required
@@ -35,3 +52,59 @@ features:
   - title: Offline Use
     details: Work with your data, run queries, and analyze results even without an internet connection. SQLRooms supports offline workflows using persistent storage via OPFS.
 ---
+
+## Get Started in Minutes
+
+To create a new project from the minimal example, run:
+
+```sh
+npx degit sqlrooms/examples/minimal my-minimal-app/
+cd my-minimal-app
+npm install
+npm run dev
+```
+
+## Manual setup
+
+Set up a simple room that loads and queries a single data table:
+
+```tsx
+const {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({
+  ...createRoomShellSlice({
+    config: {
+      dataSources: [
+        {
+          type: 'url',
+          tableName: 'earthquakes',
+          url: 'https://.../earthquakes.parquet',
+        },
+      ],
+    },
+  })(set, get, store),
+}));
+
+export const MyRoom = () => (
+  <RoomShell roomStore={roomStore}>
+    <MyComponent />
+  </RoomShell>
+);
+
+function MyComponent() {
+  const isTableReady = useRoomStore((state) =>
+    Boolean(state.db.findTableByName('earthquakes')),
+  );
+  const queryResult = useSql<{maxMagnitude: number}>({
+    query: `SELECT max(Magnitude) AS maxMagnitude FROM earthquakes`,
+    enabled: isTableReady,
+  });
+  if (!isTableReady) return 'Loading…';
+  const row = queryResult.data?.toArray()[0];
+  return `Max earthquake magnitude: ${row?.maxMagnitude}`;
+}
+```
+
+[Complete example on GitHub →](https://github.com/sqlrooms/examples/tree/main/minimal)
+
+That's it! You've just built an app with a flexible store and UI that can be extended with various analytics, visualization and AI modules — all powered by client-side DuckDB with no backend required.
+
+For a more comprehensive guide, see [Key Concepts](/key-concepts) and the [Getting Started](/getting-started) page.

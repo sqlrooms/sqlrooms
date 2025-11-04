@@ -46,6 +46,7 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
 
     // Format the document on initial load
     setTimeout(() => {
+      console.log('formatting document');
       editor.getAction('editor.action.formatDocument')?.run();
     }, 100);
 

@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/data-table",
-  "version": "0.24.10",
+  "version": "0.26.0-rc.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -23,11 +23,11 @@
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/table-core": "^8.21.3",
-    "lucide-react": "^0.503.0",
+    "lucide-react": "^0.544.0",
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {
-    "apache-arrow": "17.0.0",
+    "apache-arrow": ">=17",
     "react": ">=18",
     "react-dom": ">=18"
   },

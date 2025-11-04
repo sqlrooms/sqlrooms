@@ -94,7 +94,8 @@ const TableCard: FC<{
               </Tooltip>
             ))}
           </div>
-          {numRows !== undefined && Number.isFinite(numRows) && (
+          {(typeof numRows === 'bigint' ||
+            (numRows !== undefined && Number.isFinite(numRows))) && (
             <div className="mt-1 text-right text-xs">
               {`${formatNumber(numRows)} rows`}
             </div>

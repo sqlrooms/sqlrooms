@@ -1,5 +1,4 @@
 import {
-  createDefaultDiscussConfig,
   createDiscussSlice,
   DiscussSliceConfig,
   DiscussSliceState,
@@ -9,22 +8,22 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  RoomShellSliceState,
-  StateCreator,
   LayoutTypes,
   MAIN_VIEW,
+  RoomShellSliceState,
+  StateCreator,
 } from '@sqlrooms/room-shell';
-import {MessageCircleIcon} from 'lucide-react';
-import {z} from 'zod';
-import {persist} from 'zustand/middleware';
-import DiscussionPanel from './components/DiscussionPanel';
-import {MainView} from './components/MainView';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {MessageCircleIcon} from 'lucide-react';
+import {z} from 'zod';
+import {persist} from 'zustand/middleware';
+import DiscussionPanel from './components/DiscussionPanel';
+import {MainView} from './components/MainView';
 
 export const RoomPanelTypes = z.enum([
   'data-sources',
@@ -33,13 +32,12 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const RoomConfig =
-  BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
-  DiscussSliceState &
-  SqlEditorSliceState;
+  SqlEditorSliceState &
+  DiscussSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   persist(
@@ -55,7 +53,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           initializationQuery: 'LOAD spatial',
         }),
         config: {
-          ...createDefaultDiscussConfig(),
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
@@ -103,7 +100,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       name: 'discuss-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
+        roomConfig: RoomConfig.parse(state.config),
+        discussConfig: DiscussSliceConfig.parse(state.discuss.config),
+      }),
+      // Combining the persisted state with the current one
+      merge: (persistedState: any, currentState) => ({
+        ...currentState,
+        config: RoomConfig.parse(persistedState.roomConfig),
+        discuss: {
+          ...currentState.discuss,
+          config: DiscussSliceConfig.parse(persistedState.discussConfig),
+        },
       }),
     },
   ) as StateCreator<RoomState>,

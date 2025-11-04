@@ -51,7 +51,7 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
  * Room config for saving
  */
 export const RoomConfig =
-  BaseRoomConfig.merge(KeplerSliceConfig).merge(SqlEditorSliceConfig);
+  BaseRoomConfig.merge(SqlEditorSliceConfig).merge(KeplerSliceConfig);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 
 export type RoomState = RoomShellSliceState<RoomConfig> &
@@ -76,13 +76,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               splitPercentage: 30,
             },
           },
-          // dataSources: [
-          //   {
-          //     tableName: 'earthquakes',
-          //     type: 'url',
-          //     url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-          //   },
-          // ],
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
+          ],
           ...createDefaultKeplerConfig(),
           ...createDefaultSqlEditorConfig(),
         },
@@ -128,6 +128,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         },
       })(set, get, store),
+
+      initialize: async () => {
+        console.log('initialize');
+        const id = get().kepler.getCurrentMap()?.id;
+        if (id) {
+          console.log('current tables', get().db.tables);
+          console.log('add table to map', id);
+          await get().kepler.addTableToMap(id, 'earthquakes', {
+            autoCreateLayers: true,
+            centerMap: true,
+          });
+        }
+      },
 
       ...createKeplerSlice<RoomConfig>({
         actionLogging: true,

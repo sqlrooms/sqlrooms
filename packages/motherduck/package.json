@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/motherduck",
-  "version": "0.24.10",
+  "version": "0.26.0-rc.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",

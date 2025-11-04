@@ -1,3 +1,4 @@
+import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
 import {castDraft, produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 
@@ -56,11 +57,15 @@ export type RoomState<PC> = {
   room: RoomStateProps<PC> & RoomStateActions<PC>;
 };
 
-export function createRoomSlice<PC>(props: {
-  config: PC;
-  room: Partial<Omit<RoomStateProps<PC>, 'config'>>;
+export function createRoomSlice<PC>(props?: {
+  config?: PC;
+  room?: Partial<Omit<RoomStateProps<PC>, 'config'>>;
 }): StateCreator<RoomState<PC>> {
-  const {config: initialConfig, room: roomStateProps, ...restState} = props;
+  const {
+    config: initialConfig = createDefaultBaseRoomConfig() as PC,
+    room: roomStateProps,
+    ...restState
+  } = props ?? {};
   const initialRoomState: RoomStateProps<PC> = {
     ...roomStateProps,
     initialized: false,

@@ -36,12 +36,12 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Check the [Example applications](/examples)** to see what can be built with the framework.
+- **Review the [Key Concepts](/key-concepts)** to understand the core ideas and architecture.
 
 - **Explore the [Modular Architecture](/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](/key-concepts)** to understand the core ideas and architecture.
+- **Check the [Example Applications](/examples)** to see what can be built with the framework.
 
-- **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
+<!-- - **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
 
-- **Read the [API reference](/packages/)** for deeper integration.
+- **Read the [API reference](/packages/)** for deeper integration. -->

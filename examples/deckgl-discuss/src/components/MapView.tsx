@@ -47,14 +47,14 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   const [commentText, setCommentText] = useState('');
 
   // Get state from store
-  const discussions = useRoomStore((state) => state.config.discuss.discussions);
+  const discussions = useRoomStore((state) => state.discuss.config.discussions);
   const addDiscussion = useRoomStore((state) => state.discuss.addDiscussion);
   const setReplyToItem = useRoomStore((state) => state.discuss.setReplyToItem);
   const setHighlightedDiscussionId = useRoomStore(
     (state) => state.discuss.setHighlightedDiscussionId,
   );
   const highlightedDiscussion = useRoomStore((state) =>
-    state.config.discuss.discussions.find(
+    state.discuss.config.discussions.find(
       (d) => d.id === state.discuss.highlightedDiscussionId,
     ),
   );
