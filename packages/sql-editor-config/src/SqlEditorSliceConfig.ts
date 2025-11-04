@@ -15,6 +15,7 @@ export const SqlEditorSliceConfig = z.object({
       .default('default')
       .describe('The id of the currently selected query.'),
     lastExecutedQuery: z.string().optional().describe('Last executed query'),
+    closedTabIds: z.array(z.string()).default([]).describe('List of closed tab ids'),
   }),
 });
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
@@ -22,8 +23,9 @@ export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
     sqlEditor: {
-      queries: [{id: 'default', name: 'Untitled', query: ''}],
+      queries: [{id: 'default', name: 'SQL', query: ''}],
       selectedQueryId: 'default',
+      closedTabIds: [],
     },
   };
 }
