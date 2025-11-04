@@ -1,5 +1,4 @@
-import {Slot} from '@radix-ui/react-slot';
-import {cn} from '@sqlrooms/ui';
+import {cn, Slot} from '@sqlrooms/ui';
 import {PropsWithChildren} from 'react';
 
 export function BaseTreeNode<T>(

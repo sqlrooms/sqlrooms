@@ -1,11 +1,6 @@
 import React, {useCallback, useMemo, PropsWithChildren} from 'react';
 import styled from 'styled-components';
-import {
-  DndContext as DndKitContext,
-  DragOverlay,
-  Modifiers,
-} from '@dnd-kit/core';
-import {restrictToVerticalAxis} from '@dnd-kit/modifiers';
+import {DndContext as DndKitContext, DragOverlay} from '@dnd-kit/core';
 import {VisState} from '@kepler.gl/schemas';
 import {
   LayerPanelHeaderFactory,
