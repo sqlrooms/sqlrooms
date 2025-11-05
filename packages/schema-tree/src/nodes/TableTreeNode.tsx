@@ -109,7 +109,7 @@ export const TableTreeNode: FC<{
             <TableIcon size="16px" className="shrink-0 text-blue-500" />
           )}
           <div className="flex w-full items-center justify-between gap-2">
-            <span>{name}</span>
+            <span className="truncate">{name}</span>
             {rowCount !== undefined && (
               <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-5 text-xs">
                 {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
