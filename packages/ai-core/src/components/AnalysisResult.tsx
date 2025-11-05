@@ -14,11 +14,9 @@ import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 /**
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
- * @property {string | null} floatingPromptId - ID of the prompt currently shown in the floating overlay
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
-  floatingPromptId?: string | null;
 };
 
 /**
@@ -29,12 +27,10 @@ type AnalysisResultProps = {
  * @component
  * @param props - Component props
  * @param props.result - The analysis result data to display
- * @param props.floatingPromptId - ID of the prompt currently shown in the floating overlay
  * @returns A React component displaying the analysis results
  */
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
-  floatingPromptId,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const toolAdditionalData = useStoreWithAi(
@@ -84,15 +80,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     return [];
   }, [uiMessages, analysisResult.id]);
 
-  const isFloating = floatingPromptId === analysisResult.id;
-
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
       <div
-        className={`mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100 ${isFloating ? 'invisible' : ''}`}
-        data-prompt-header
-        data-result-id={analysisResult.id}
-        data-prompt-text={analysisResult.prompt}
+        className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100"
       >
         <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
