@@ -16,9 +16,31 @@ export const AnalysisResultsContainer: React.FC<{
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
+  const [viewportElement, setViewportElement] = useState<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
+
+  // Get the actual scrollable viewport element from ScrollArea
+  useEffect(() => {
+    const scrollArea = containerRef.current;
+    if (!scrollArea) return;
+
+    const viewport = scrollArea.querySelector<HTMLDivElement>(
+      '[data-radix-scroll-area-viewport]',
+    );
+    if (viewport && viewport !== viewportElement) {
+      setViewportElement(viewport);
+      // Use Object.defineProperty to bypass readonly restriction
+      Object.defineProperty(viewportRef, 'current', {
+        value: viewport,
+        writable: true,
+        configurable: true,
+      });
+    }
+  }, [viewportElement]);
+
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
-    containerRef,
+    containerRef: viewportRef,
     endRef,
     dataToObserve: currentAnalysisResults,
   });
