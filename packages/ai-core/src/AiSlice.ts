@@ -67,10 +67,12 @@ export type AiSliceState = {
     sendPrompt: (
       prompt: string,
       options?: {
+        systemInstructions?: string;
         modelProvider?: string;
         modelName?: string;
         baseUrl?: string;
         abortSignal?: AbortSignal;
+        useTools?: boolean;
       },
     ) => Promise<string>;
     startAnalysis: (
@@ -543,16 +545,18 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         sendPrompt: async (
           prompt: string,
           options: {
+            systemInstructions?: string;
             modelProvider?: string;
             modelName?: string;
             baseUrl?: string;
+            useTools?: boolean;
             abortSignal?: AbortSignal;
           } = {},
         ) => {
           // One-shot generateText path with explicit abort lifecycle management
           const state = get();
           const currentSession = state.ai.getCurrentSession();
-          const {modelProvider, modelName, baseUrl, abortSignal} = options;
+          const {systemInstructions, modelProvider, modelName, baseUrl, abortSignal, useTools = false} = options;
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
@@ -561,7 +565,6 @@ export function createAiSlice<PC extends BaseRoomConfig>(
             state.ai.getBaseUrlFromSettings() ||
             'https://api.openai.com/v1';
           const tools = state.ai.tools;
-          const systemInstructions = state.ai.getFullInstructions();
 
           // remove execute from tools
           const toolsWithoutExecute = Object.fromEntries(
@@ -579,9 +582,9 @@ export function createAiSlice<PC extends BaseRoomConfig>(
             const response = await generateText({
               model,
               messages: [{role: 'user', content: prompt}],
-              system: systemInstructions,
+              system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,
-              tools: convertToAiSDKTools(toolsWithoutExecute),
+              ...(useTools ? {tools: convertToAiSDKTools(toolsWithoutExecute)} : {}),
             });
             return response.text;
           } catch (error) {
