@@ -130,7 +130,7 @@ export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
      * Update the datasets in all the kepler map so that they correspond to
      * the latest table schemas in the database
      */
-    syncKeplerDatasets: () => Promise<void>;
+    syncKeplerDatasets: (options?: {internalDatabase?: string[]}) => Promise<void>;
     addTableToMap: (
       mapId: string,
       tableName: string,
@@ -365,15 +365,17 @@ export function createKeplerSlice<
           await get().kepler.syncKeplerDatasets();
         },
 
-        async syncKeplerDatasets() {
+        async syncKeplerDatasets({ internalDatabase }: {internalDatabase?: string[]} = {}) {
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
             for (const {table} of get().db.tables) {
               // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
               // const qualifiedTable = table.toString();
+              const database = table.database as string;
               if (
                 // !table.schema?.startsWith('__') && // skip internal schemas
                 // !keplerDatasets?.[qualifiedTable]
+                !(internalDatabase || []).includes(database) &&
                 table.schema === 'main' &&
                 !keplerDatasets?.[table.table]
               ) {
