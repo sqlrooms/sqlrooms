@@ -163,7 +163,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             const additionalData = toolAdditionalData[toolCallId];
 
             // check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
-            if (!tools[toolName]?.execute && (state === 'input-streaming' || state === 'input-available')) {
+            if (isCompleted === false && !tools[toolName]?.execute && (state === 'input-streaming' || state === 'input-available')) {
               const ToolComponent = findToolComponent(toolName);
               const props = {
                 ...(input as Record<string, unknown>),
@@ -179,34 +179,36 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             }
 
             // otherwise, render <ToolResult>
-            return (
-              <div key={`tool-call-${toolCallId}`}>
-                <ToolCallInfo
-                  toolName={toolName}
-                  input={input}
-                  isCompleted={isCompleted}
-                  state={state}
-                />
-                <div data-tool-call-id={toolCallId}>
-                  <ToolResult
-                    toolCallId={toolCallId}
-                    toolData={{
-                      toolCallId,
-                      name: toolName,
-                      state: state,
-                      args: input,
-                      result: output,
-                      errorText,
-                    }}
-                    additionalData={additionalData}
+            if (tools[toolName]?.execute) {
+              return (
+                <div key={`tool-call-${toolCallId}`}>
+                  <ToolCallInfo
+                    toolName={toolName}
+                    input={input}
                     isCompleted={isCompleted}
-                    errorMessage={
-                      state === 'output-error' ? errorText : undefined
-                    }
+                    state={state}
                   />
+                  <div data-tool-call-id={toolCallId}>
+                    <ToolResult
+                      toolCallId={toolCallId}
+                      toolData={{
+                        toolCallId,
+                        name: toolName,
+                        state: state,
+                        args: input,
+                        result: output,
+                        errorText,
+                      }}
+                      additionalData={additionalData}
+                      isCompleted={isCompleted}
+                      errorMessage={
+                        state === 'output-error' ? errorText : undefined
+                      }
+                    />
+                  </div>
                 </div>
-              </div>
-            );
+              );
+            }
           }
           return null;
         })}
