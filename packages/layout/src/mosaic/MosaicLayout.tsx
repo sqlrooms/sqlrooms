@@ -12,6 +12,15 @@ const customMosaicStyles = `
   .mosaic-split:hover {
     background-color: hsl(var(--primary) / 0.4);
   }
+  .mosaic-root {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+  }
+  .mosaic-tile {
+    margin: 0;
+  }
 `;
 
 const MosaicLayout: FC<MosaicProps<string> & {tileClassName?: string}> = (
