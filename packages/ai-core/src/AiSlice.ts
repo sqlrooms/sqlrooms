@@ -26,6 +26,7 @@ import {
   createRemoteChatTransportFactory,
   ToolCall,
   convertToAiSDKTools,
+  completeIncompleteToolCalls,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
@@ -174,7 +175,18 @@ export function createAiSlice(
     const cleanedConfig = params.config?.sessions
       ? {
           ...params.config,
-          sessions: params.config.sessions.map(cleanupPendingAnalysisResults),
+          sessions: params.config.sessions.map((session) => {
+            const cleaned = cleanupPendingAnalysisResults(session);
+            const completedUiMessages = Array.isArray(cleaned.uiMessages)
+              ? completeIncompleteToolCalls(
+                  (cleaned.uiMessages as unknown as UIMessage[]) || [],
+                )
+              : [];
+            return {
+              ...cleaned,
+              uiMessages: completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
+            };
+          }),
         }
       : params.config;
 
