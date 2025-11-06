@@ -7,6 +7,7 @@ import {
 import type {UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import type {ToolCall} from '../chatTransport';
+import {completeIncompleteToolCalls} from '../chatTransport';
 
 export type AddToolResult = (
   options:
@@ -108,10 +109,16 @@ export function useAiChat() {
     return lastAssistantMessageIsCompleteWithToolCalls(options);
   };
 
+  const initialMessages = useMemo(() => {
+    return completeIncompleteToolCalls(
+      ((currentSession?.uiMessages as unknown as UIMessage[]) ?? []),
+    );
+  }, [sessionId, messagesRevision]);
+
   const {messages, sendMessage, addToolResult, stop, status} = useChat({
     id: `${sessionId}-${messagesRevision}`,
     transport,
-    messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+    messages: initialMessages,
     onToolCall: async (opts) => {
       const {toolCall} = opts as {toolCall: unknown};
       // Wrap the store's onChatToolCall to provide addToolResult
