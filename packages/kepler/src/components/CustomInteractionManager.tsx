@@ -1,59 +1,11 @@
 import React, {useCallback} from 'react';
-import styled from 'styled-components';
 import {Switch, Checkbox, useTheme} from '@sqlrooms/ui';
 
-import {TooltipConfigFactory} from '@kepler.gl/components';
 import {InteractionConfig} from '@kepler.gl/types';
 import {FormattedMessage} from '@kepler.gl/localization';
 
-import {
-  useKeplerStateActions,
-} from '../hooks/useKeplerStateActions';
-import {KeplerInjector} from './KeplerInjector';
-
-const TooltipConfigWrapper = styled.div<{isDark: boolean}>`
-  .sortable-layer-items > div {
-    padding: 2px 4px;
-    background-color: ${props => props.theme.sidePanelBg || props.theme.panelBackground};
-    border-radius: 4px;
-  }
-  .chickleted-input {
-    background-color: ${props => props.isDark ? '#0f172a' : '#F6F8FB'} !important;
-    border-color: transparent;
-    border-radius: 6px;
-    font-weight: 400;
-  }
-  .side-panel-section {
-    position: relative;
-  }
-  .side-panel-section > :first-child {
-    display:flex;
-    justify-content: space-between;
-    position: absolute;
-    width: 100%;
-    padding: 0px 9px;
-    top: 8px;
-  }
-  .field-selector {
-    padding-top: 32px;
-    background-color: ${props => props.isDark ? '#0f172a' : '#F6F8FB'} !important;
-  }
-  .update-color {
-    display: none;
-  }
-  .dataset-name {
-    font-weight: 500;
-    font-size: 12px;
-  }
-  .clear-all {
-    width: 64px;
-    font-weight: 400;
-    color: #94A2B8 !important;
-    font-size: 12px;
-  }
-`;
-
-const TooltipConfig = KeplerInjector.get(TooltipConfigFactory);
+import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
+import {CustomTooltipConfig} from './CustomTooltipConfig';
 
 const SimpleInteractionPanel: React.FC<{
   configId: string;
@@ -68,8 +20,8 @@ const SimpleInteractionPanel: React.FC<{
   }, [configId, config.enabled]);
 
   return (
-    <div className="p-2 flex items-center justify-between">
-      <div className="text-sm text-muted-foreground font-medium">{label}</div>
+    <div className="flex items-center justify-between p-2">
+      <div className="text-muted-foreground text-sm font-medium">{label}</div>
       <Switch
         checked={config.enabled}
         onCheckedChange={toggleEnableConfig}
@@ -98,9 +50,12 @@ const TooltipPanel: React.FC<{
 }) => {
   if (!tooltipConfig) return null;
 
-  const handleTooltipConfigChange = useCallback((newConfig: any) => {
-    handleConfigChange('tooltip', { config: newConfig });
-  }, [handleConfigChange]);
+  const handleTooltipConfigChange = useCallback(
+    (newConfig: any) => {
+      handleConfigChange('tooltip', {config: newConfig});
+    },
+    [handleConfigChange],
+  );
 
   return (
     <div>
@@ -111,25 +66,24 @@ const TooltipPanel: React.FC<{
         handleConfigChange={handleConfigChange}
       />
       {tooltipConfig.enabled && (
-        <div className="pr-2 pl-4">
+        <div className="pl-4 pr-2">
           <div className="flex items-center space-x-2 py-2">
             <Checkbox
               checked={coordinateConfig?.enabled || false}
               onCheckedChange={handleCoordinateToggle}
-              className='shadow-none'
+              className="shadow-none"
             />
-            <span className="text-xs text-muted-foreground">
+            <span className="text-muted-foreground text-xs">
               Show <FormattedMessage id="interactions.coordinate" />
             </span>
           </div>
-          <TooltipConfigWrapper isDark={isDark}>
-            <TooltipConfig
-              datasets={datasets}
-              config={tooltipConfig.config}
-              onChange={handleTooltipConfigChange}
-              onDisplayFormatChange={setColumnDisplayFormat}
-            />
-          </TooltipConfigWrapper>
+          <CustomTooltipConfig
+            datasets={datasets}
+            config={tooltipConfig.config}
+            onChange={handleTooltipConfigChange}
+            onDisplayFormatChange={setColumnDisplayFormat}
+            isDark={isDark}
+          />
         </div>
       )}
     </div>
@@ -143,21 +97,30 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
   const {theme} = useTheme();
 
   // Determine if dark mode is active
-  const isDark = theme === 'dark' || (theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const isDark =
+    theme === 'dark' ||
+    (theme === 'system' &&
+      window.matchMedia('(prefers-color-scheme: dark)').matches);
 
-  const interactionConfig: Partial<InteractionConfig> = keplerState?.visState.interactionConfig || {};
+  const interactionConfig: Partial<InteractionConfig> =
+    keplerState?.visState.interactionConfig || {};
   const datasets = keplerState?.visState.datasets || {};
-  const {interactionConfigChange, setColumnDisplayFormat} = keplerActions.visStateActions;
+  const {interactionConfigChange, setColumnDisplayFormat} =
+    keplerActions.visStateActions;
 
-  const handleConfigChange = useCallback((configId: string, newConfig: any) => {
-    const currentConfig = interactionConfig[configId as keyof InteractionConfig];
-    if (currentConfig && typeof currentConfig === 'object') {
-      interactionConfigChange({
-        ...currentConfig,
-        ...newConfig,
-      });
-    }
-  }, [interactionConfig, interactionConfigChange]);
+  const handleConfigChange = useCallback(
+    (configId: string, newConfig: any) => {
+      const currentConfig =
+        interactionConfig[configId as keyof InteractionConfig];
+      if (currentConfig && typeof currentConfig === 'object') {
+        interactionConfigChange({
+          ...currentConfig,
+          ...newConfig,
+        });
+      }
+    },
+    [interactionConfig, interactionConfigChange],
+  );
 
   // Handle coordinate display toggle
   const handleCoordinateToggle = useCallback(() => {
@@ -169,8 +132,6 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
       });
     }
   }, [interactionConfig.coordinate, interactionConfigChange]);
-
-
 
   return (
     <div className="interaction-manager">
