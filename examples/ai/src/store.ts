@@ -48,10 +48,7 @@ export type RoomState = RoomShellSliceState &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<
-  BaseRoomConfig,
-  RoomState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       // Base room slice
@@ -64,9 +61,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-        },
-        layout: {
-          config: {
+          layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
@@ -75,6 +70,8 @@ export const {roomStore, useRoomStore} = createRoomStore<
               splitPercentage: 30,
             },
           },
+        },
+        room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',

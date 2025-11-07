@@ -25,10 +25,7 @@ export type RoomState = RoomShellSliceState &
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore, useRoomStore} = createRoomStore<
-  BaseRoomConfig,
-  RoomState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       ...createRoomShellSlice({

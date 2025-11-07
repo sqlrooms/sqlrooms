@@ -15,7 +15,7 @@ import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {useBaseRoomShellStore} from './RoomShellStore';
+import {RoomShellSliceConfig, useBaseRoomShellStore} from './RoomShellStore';
 
 export function RoomShellBase({
   className,
@@ -23,7 +23,7 @@ export function RoomShellBase({
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomStore;
+  roomStore?: RoomStore<RoomShellSliceConfig>;
 }>) {
   return (
     <RoomStateProvider roomStore={roomStore}>

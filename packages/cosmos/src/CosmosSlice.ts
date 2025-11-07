@@ -8,11 +8,13 @@ import {
   createSlice,
   useBaseRoomShellStore,
   type RoomShellSliceState,
-  BaseRoomConfig,
 } from '@sqlrooms/room-shell';
-import type {StateCreator} from 'zustand';
-import {CosmosSliceConfig} from './CosmosSliceConfig';
 import {produce} from 'immer';
+import type {StateCreator} from 'zustand';
+import {
+  CosmosSliceConfig,
+  createDefaultCosmosConfig,
+} from './CosmosSliceConfig';
 
 /**
  * Core state interface for the Cosmos graph visualization.
@@ -20,6 +22,7 @@ import {produce} from 'immer';
  */
 export type CosmosSliceState = {
   cosmos: {
+    config: CosmosSliceConfig;
     /** The current graph instance */
     graph: Graph | null;
     /** Whether the physics simulation is currently running */
@@ -35,9 +38,7 @@ export type CosmosSliceState = {
     /** Cleans up and removes the current graph */
     destroyGraph: () => void;
     /** Updates the simulation configuration parameters */
-    updateSimulationConfig: (
-      config: Partial<CosmosSliceConfig['cosmos']>,
-    ) => void;
+    updateSimulationConfig: (config: Partial<CosmosSliceConfig>) => void;
     /** Updates the graph's visual configuration */
     updateGraphConfig: (config: Partial<GraphConfigInterface>) => void;
     /** Updates the graph's data (points, links, colors, etc.) */
@@ -59,10 +60,7 @@ export type CosmosSliceState = {
  * Combined type representing the full room state including Cosmos functionality.
  * Merges the base room state with Cosmos-specific state and configuration.
  */
-export type RoomStateWithCosmos = RoomShellSliceState<
-  BaseRoomConfig & CosmosSliceConfig
-> &
-  CosmosSliceState;
+export type RoomStateWithCosmos = RoomShellSliceState & CosmosSliceState;
 
 /**
  * Creates a Zustand slice for managing Cosmos graph state.
@@ -71,153 +69,150 @@ export type RoomStateWithCosmos = RoomShellSliceState<
  * @returns A state creator function for the Cosmos slice
  */
 export function createCosmosSlice(): StateCreator<CosmosSliceState> {
-  return createSlice<BaseRoomConfig & CosmosSliceConfig, CosmosSliceState>(
-    (set, get) => ({
-      cosmos: {
-        graph: null,
-        isSimulationRunning: true,
+  return createSlice<CosmosSliceState>((set, get) => ({
+    cosmos: {
+      graph: null,
+      isSimulationRunning: true,
+      config: createDefaultCosmosConfig(),
 
-        createGraph: (container: HTMLDivElement) => {
-          // Clean up old graph if it exists
-          const oldGraph = get().cosmos.graph;
-          if (oldGraph) {
-            oldGraph.pause();
-            oldGraph.destroy();
-          }
+      createGraph: (container: HTMLDivElement) => {
+        // Clean up old graph if it exists
+        const oldGraph = get().cosmos.graph;
+        if (oldGraph) {
+          oldGraph.pause();
+          oldGraph.destroy();
+        }
 
-          // Create and configure new graph
-          const graph = new Graph(container);
-          const config = get().config.cosmos;
-          graph.setConfig(config);
-          graph.start();
+        // Create and configure new graph
+        const graph = new Graph(container);
+        const config = get().cosmos.config;
+        graph.setConfig(config);
+        graph.start();
 
+        set((state) =>
+          produce(state, (draft) => {
+            draft.cosmos.graph = graph;
+          }),
+        );
+      },
+
+      toggleSimulation: () => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+
+        if (graph.isSimulationRunning) {
+          graph.pause();
           set((state) =>
             produce(state, (draft) => {
-              draft.cosmos.graph = graph;
+              draft.cosmos.isSimulationRunning = false;
             }),
           );
-        },
-
-        toggleSimulation: () => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-
-          if (graph.isSimulationRunning) {
-            graph.pause();
-            set((state) =>
-              produce(state, (draft) => {
-                draft.cosmos.isSimulationRunning = false;
-              }),
-            );
-          } else {
-            graph.restart();
-            set((state) =>
-              produce(state, (draft) => {
-                draft.cosmos.isSimulationRunning = true;
-              }),
-            );
-          }
-        },
-
-        fitView: () => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-          graph.fitView();
-        },
-
-        startWithEnergy: () => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-          graph.start(1);
+        } else {
+          graph.restart();
           set((state) =>
             produce(state, (draft) => {
               draft.cosmos.isSimulationRunning = true;
             }),
           );
-        },
-
-        updateSimulationConfig: (
-          config: Partial<CosmosSliceConfig['cosmos']>,
-        ) => {
-          const {graph} = get().cosmos;
-
-          set((state) =>
-            produce(state, (draft) => {
-              Object.assign(draft.config.cosmos, config);
-              if (graph) {
-                graph.setConfig(draft.config.cosmos);
-              }
-            }),
-          );
-        },
-
-        updateGraphConfig: (config: Partial<GraphConfigInterface>) => {
-          const {graph} = get().cosmos;
-
-          set((state) =>
-            produce(state, (draft) => {
-              Object.assign(draft.config.cosmos, config);
-              if (graph) {
-                graph.setConfig(draft.config.cosmos);
-              }
-            }),
-          );
-        },
-
-        updateGraphData: (data) => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-
-          if (data.pointPositions) {
-            graph.setPointPositions(data.pointPositions);
-          }
-          if (data.pointColors) {
-            graph.setPointColors(data.pointColors);
-          }
-          if (data.pointSizes) {
-            graph.setPointSizes(data.pointSizes);
-          }
-          if (data.linkIndexes) {
-            graph.setLinks(data.linkIndexes);
-          }
-          if (data.linkColors) {
-            graph.setLinkColors(data.linkColors);
-          }
-
-          graph.render();
-        },
-
-        setFocusedPoint: (index) => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-          graph.setFocusedPointByIndex(index);
-        },
-
-        setZoomLevel: (level) => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-          graph.setZoomLevel(level);
-        },
-
-        destroyGraph: () => {
-          const {graph} = get().cosmos;
-          if (!graph) return;
-          // TODO: this should be happening in cosmos
-          if ((graph as any).store.div?.firstChild) {
-            (graph as any).store.div.innerHTML = '';
-          }
-          graph.pause();
-          graph.destroy();
-          set((state) =>
-            produce(state, (draft) => {
-              draft.cosmos.graph = null;
-              draft.cosmos.isSimulationRunning = false;
-            }),
-          );
-        },
+        }
       },
-    }),
-  );
+
+      fitView: () => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+        graph.fitView();
+      },
+
+      startWithEnergy: () => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+        graph.start(1);
+        set((state) =>
+          produce(state, (draft) => {
+            draft.cosmos.isSimulationRunning = true;
+          }),
+        );
+      },
+
+      updateSimulationConfig: (config: Partial<CosmosSliceConfig>) => {
+        const {graph} = get().cosmos;
+
+        set((state) =>
+          produce(state, (draft) => {
+            Object.assign(draft.cosmos.config, config);
+            if (graph) {
+              graph.setConfig(draft.cosmos.config);
+            }
+          }),
+        );
+      },
+
+      updateGraphConfig: (config: Partial<GraphConfigInterface>) => {
+        const {graph} = get().cosmos;
+
+        set((state) =>
+          produce(state, (draft) => {
+            Object.assign(draft.cosmos.config, config);
+            if (graph) {
+              graph.setConfig(draft.cosmos.config);
+            }
+          }),
+        );
+      },
+
+      updateGraphData: (data) => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+
+        if (data.pointPositions) {
+          graph.setPointPositions(data.pointPositions);
+        }
+        if (data.pointColors) {
+          graph.setPointColors(data.pointColors);
+        }
+        if (data.pointSizes) {
+          graph.setPointSizes(data.pointSizes);
+        }
+        if (data.linkIndexes) {
+          graph.setLinks(data.linkIndexes);
+        }
+        if (data.linkColors) {
+          graph.setLinkColors(data.linkColors);
+        }
+
+        graph.render();
+      },
+
+      setFocusedPoint: (index) => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+        graph.setFocusedPointByIndex(index);
+      },
+
+      setZoomLevel: (level) => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+        graph.setZoomLevel(level);
+      },
+
+      destroyGraph: () => {
+        const {graph} = get().cosmos;
+        if (!graph) return;
+        // TODO: this should be happening in cosmos
+        if ((graph as any).store.div?.firstChild) {
+          (graph as any).store.div.innerHTML = '';
+        }
+        graph.pause();
+        graph.destroy();
+        set((state) =>
+          produce(state, (draft) => {
+            draft.cosmos.graph = null;
+            draft.cosmos.isSimulationRunning = false;
+          }),
+        );
+      },
+    },
+  }));
 }
 
 /**
@@ -237,9 +232,7 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
 export function useStoreWithCosmos<T>(
   selector: (state: RoomStateWithCosmos) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & CosmosSliceConfig,
-    RoomStateWithCosmos,
-    T
-  >((state) => selector(state as RoomStateWithCosmos));
+  return useBaseRoomShellStore<RoomStateWithCosmos, T>((state) =>
+    selector(state as RoomStateWithCosmos),
+  );
 }

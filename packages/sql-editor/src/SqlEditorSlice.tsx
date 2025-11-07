@@ -149,7 +149,7 @@ export type SqlEditorSliceState = {
   };
 };
 
-export function createSqlEditorSlice<PC extends BaseRoomConfig>({
+export function createSqlEditorSlice({
   config = createDefaultSqlEditorConfig(),
   queryResultLimit = 100,
   queryResultLimitOptions = [100, 500, 1000],
@@ -158,7 +158,7 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
   queryResultLimit?: number;
   queryResultLimitOptions?: number[];
 } = {}): StateCreator<SqlEditorSliceState> {
-  return createSlice<PC, SqlEditorSliceState>((set, get) => {
+  return createSlice<SqlEditorSliceState>((set, get) => {
     return {
       sqlEditor: {
         config,
@@ -246,17 +246,17 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
         closeQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.sqlEditor.closedTabIds.push(queryId);
-              const openedTabs = draft.config.sqlEditor.queries.filter(
-                (q) => !draft.config.sqlEditor.closedTabIds.includes(q.id),
+              draft.sqlEditor.config.closedTabIds.push(queryId);
+              const openedTabs = draft.sqlEditor.config.queries.filter(
+                (q) => !draft.sqlEditor.config.closedTabIds.includes(q.id),
               );
 
               if (
-                draft.config.sqlEditor.selectedQueryId === queryId &&
+                draft.sqlEditor.config.selectedQueryId === queryId &&
                 openedTabs.length > 0 &&
                 openedTabs[0]
               ) {
-                draft.config.sqlEditor.selectedQueryId = openedTabs[0].id;
+                draft.sqlEditor.config.selectedQueryId = openedTabs[0].id;
               }
             }),
           );
@@ -265,11 +265,11 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
         openQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.sqlEditor.closedTabIds =
-                draft.config.sqlEditor.closedTabIds?.filter(
+              draft.sqlEditor.config.closedTabIds =
+                draft.sqlEditor.config.closedTabIds?.filter(
                   (id) => id !== queryId,
                 );
-              draft.config.sqlEditor.selectedQueryId = queryId;
+              draft.sqlEditor.config.selectedQueryId = queryId;
             }),
           );
         },
@@ -493,16 +493,12 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
   });
 }
 
-type RoomConfigWithSqlEditor = BaseRoomConfig & SqlEditorSliceConfig;
-type RoomStateWithSqlEditor = RoomShellSliceState<RoomConfigWithSqlEditor> &
-  SqlEditorSliceState;
+type RoomStateWithSqlEditor = RoomShellSliceState & SqlEditorSliceState;
 
 export function useStoreWithSqlEditor<T>(
   selector: (state: RoomStateWithSqlEditor) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & SqlEditorSliceConfig,
-    RoomShellSliceState<RoomConfigWithSqlEditor>,
-    T
-  >((state) => selector(state as unknown as RoomStateWithSqlEditor));
+  return useBaseRoomShellStore<RoomShellSliceState, T>((state) =>
+    selector(state as unknown as RoomStateWithSqlEditor),
+  );
 }

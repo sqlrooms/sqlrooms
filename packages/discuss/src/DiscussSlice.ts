@@ -157,15 +157,14 @@ export type DiscussSliceState = {
   };
 };
 
-export type RoomStateWithDiscussion = RoomShellSliceState<BaseRoomConfig> &
-  DiscussSliceState;
+export type RoomStateWithDiscussion = RoomShellSliceState & DiscussSliceState;
 
-export function createDiscussSlice<PC extends BaseRoomConfig>({
+export function createDiscussSlice({
   userId,
 }: {
   userId: string;
 }): StateCreator<DiscussSliceState> {
-  return createSlice<PC, DiscussSliceState>((set, get) => ({
+  return createSlice((set, get) => ({
     discuss: {
       userId,
       config: createDefaultDiscussConfig(),
@@ -517,16 +516,12 @@ export function createDiscussSlice<PC extends BaseRoomConfig>({
   }));
 }
 
-type RoomConfigWithDiscuss = BaseRoomConfig & DiscussSliceConfig;
-type RoomStateWithDiscuss = RoomShellSliceState<RoomConfigWithDiscuss> &
-  DiscussSliceState;
+type RoomStateWithDiscuss = RoomShellSliceState & DiscussSliceState;
 
 export function useStoreWithDiscussion<T>(
   selector: (state: RoomStateWithDiscuss) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & DiscussSliceConfig,
-    RoomStateWithDiscuss,
-    T
-  >((state) => selector(state as RoomStateWithDiscuss));
+  return useBaseRoomShellStore<RoomStateWithDiscuss, T>((state) =>
+    selector(state as RoomStateWithDiscuss),
+  );
 }

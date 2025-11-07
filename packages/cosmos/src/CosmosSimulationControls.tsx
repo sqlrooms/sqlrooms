@@ -147,9 +147,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
     updateSimulationConfig,
   } = useStoreWithCosmos((s) => s.cosmos);
 
-  const config = useStoreWithCosmos(
-    (s) => s.config.cosmos,
-  ) as CosmosSliceConfig['cosmos'];
+  const config = useStoreWithCosmos((s) => s.cosmos.config);
 
   const handleParameterChange = (paramKey: SimulationKey, value: number[]) => {
     updateSimulationConfig({[paramKey]: value[0]});
@@ -212,7 +210,7 @@ export const CosmosSimulationControls: FC<CosmosSimulationControlsProps> = ({
                 </Label>
               </TooltipTrigger>
               <TooltipContent side="left" className="max-w-[200px]">
-                {CosmosSliceConfig.shape.cosmos.shape[key].description}
+                {CosmosSliceConfig.shape[key].description}
               </TooltipContent>
             </Tooltip>
             <span className="text-muted-foreground text-xs tabular-nums">

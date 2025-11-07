@@ -148,10 +148,9 @@ export function createBaseSlice<PC, S>(
  * @param sliceCreators - The slices to add to the room store
  * @returns The room store and a hook for accessing the room store
  */
-export function createRoomStore<
-  PC = BaseRoomConfig,
-  RS extends RoomState<PC> = RoomState<PC>,
->(stateCreator: StateCreator<RS>) {
+export function createRoomStore<RS extends RoomState<BaseRoomConfig>>(
+  stateCreator: StateCreator<RS>,
+) {
   const factory = createRoomStoreCreator<RS>();
   const storeCreator = factory(() => stateCreator);
   const roomStore = storeCreator.createRoomStore();
@@ -181,22 +180,21 @@ export function isRoomSliceWithInitialize(
 /**
  * Factory to create a room store creator with custom params.
  *
- * @template PC - Room config type
  * @template RS - Room state type
  * @param stateCreatorFactory - A function that takes params and returns a Zustand state creator
  * @returns An object with createRoomStore(params) and useRoomStore(selector)
  *
  */
-export function createRoomStoreCreator<TState extends RoomState<any>>() {
-  return function <TFactory extends (...args: any[]) => StateCreator<TState>>(
+export function createRoomStoreCreator<RS extends RoomState<BaseRoomConfig>>() {
+  return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
     stateCreatorFactory: TFactory,
   ): {
-    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<TState>;
-    useRoomStore: <T>(selector: (state: TState) => T) => T;
+    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<RS>;
+    useRoomStore: <T>(selector: (state: RS) => T) => T;
   } {
-    let store: StoreApi<TState> | undefined;
+    let store: StoreApi<RS> | undefined;
 
-    function createRoomStore(...args: Parameters<TFactory>): StoreApi<TState> {
+    function createRoomStore(...args: Parameters<TFactory>): StoreApi<RS> {
       store = createStore(stateCreatorFactory(...args));
       if (typeof window !== 'undefined') {
         (async () => {
@@ -228,7 +226,7 @@ export function createRoomStoreCreator<TState extends RoomState<any>>() {
       return store;
     }
 
-    function useRoomStore<T>(selector: (state: TState) => T): T {
+    function useRoomStore<T>(selector: (state: RS) => T): T {
       if (!store)
         throw new Error(
           'Room store not initialized. Call createRoomStore first.',

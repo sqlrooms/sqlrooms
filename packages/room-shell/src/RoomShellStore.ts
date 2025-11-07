@@ -9,6 +9,7 @@ import {
   LayoutSliceConfig,
   LayoutSliceState,
   RoomPanelInfo,
+  createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
 import {
@@ -48,53 +49,52 @@ import {
   RoomFileState,
 } from './types';
 
-export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
-  RoomShellSliceState<PC>
->;
+export type RoomShellSliceConfig = BaseRoomConfig & {layout: LayoutSliceConfig};
+
+export type RoomShellStore = StoreApi<RoomShellSliceState>;
 
 const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig = createDefaultBaseRoomConfig();
 
-export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
-  RoomStateProps<PC> & {
-    roomFiles: RoomFileInfo[];
-    roomFilesProgress: {[pathname: string]: RoomFileState};
-    isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
-    dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-    /**
-     * Load a file data source. A fileDataSourceLoader implementation can be passed to
-     * createRoomShellSlice to specify how file data sources should be loaded.
-     *
-     * @example
-     * ```ts
-     *     ...createRoomShellSlice<RoomConfig>({
-     *       config: {
-     *         dataSources: [
-     *           { type: 'file', fileName: 'earthquakes.parquet', tableName: 'earthquakes' },
-     *         ],
-     *       },
-     *       room: {
-     *         fileDataSourceLoader: async ({fileName}, onProgress) =>
-     *           await downloadFile(`https://some.url/${fileName}`, {onProgress}),
-     *       },
-     *     })(set, get, store)
-     * ```
-     *
-     * @param fileName - The name of the file to load.
-     * @param onProgress - A callback to report the progress of the download.
-     * @returns The loaded file.
-     */
-    fileDataSourceLoader?: (
-      {fileName}: FileDataSource,
-      onProgress: (progress: ProgressInfo) => void,
-    ) => Promise<Uint8Array | File>;
-    CustomErrorBoundary: React.ComponentType<{
-      onRetry?: () => void;
-      children?: ReactNode;
-    }>;
-  };
+export type RoomShellSliceStateProps = RoomStateProps<RoomShellSliceConfig> & {
+  roomFiles: RoomFileInfo[];
+  roomFilesProgress: {[pathname: string]: RoomFileState};
+  isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
+  dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
+  /**
+   * Load a file data source. A fileDataSourceLoader implementation can be passed to
+   * createRoomShellSlice to specify how file data sources should be loaded.
+   *
+   * @example
+   * ```ts
+   *     ...createRoomShellSlice<RoomConfig>({
+   *       config: {
+   *         dataSources: [
+   *           { type: 'file', fileName: 'earthquakes.parquet', tableName: 'earthquakes' },
+   *         ],
+   *       },
+   *       room: {
+   *         fileDataSourceLoader: async ({fileName}, onProgress) =>
+   *           await downloadFile(`https://some.url/${fileName}`, {onProgress}),
+   *       },
+   *     })(set, get, store)
+   * ```
+   *
+   * @param fileName - The name of the file to load.
+   * @param onProgress - A callback to report the progress of the download.
+   * @returns The loaded file.
+   */
+  fileDataSourceLoader?: (
+    {fileName}: FileDataSource,
+    onProgress: (progress: ProgressInfo) => void,
+  ) => Promise<Uint8Array | File>;
+  CustomErrorBoundary: React.ComponentType<{
+    onRetry?: () => void;
+    children?: ReactNode;
+  }>;
+};
 
-export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
-  RoomStateActions<PC> & {
+export type RoomShellSliceStateActions =
+  RoomStateActions<RoomShellSliceConfig> & {
     setRoomTitle(title: string): void;
     setDescription(description: string): void;
 
@@ -138,22 +138,23 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
     ) => Promise<void>;
   };
 
-export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
-  RoomState<PC> & {
-    initialize?: () => Promise<void>;
-    config: PC;
-    room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
-  } & DuckDbSliceState &
-    LayoutSliceState;
+export type RoomShellSliceState = RoomState<RoomShellSliceConfig> & {
+  initialize?: () => Promise<void>;
+  config: RoomShellSliceConfig;
+  room: RoomShellSliceStateProps & RoomShellSliceStateActions;
+} & DuckDbSliceState &
+  LayoutSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
 type CreateRoomShellSliceProps = {
   connector?: DuckDbConnector;
-  config: Partial<BaseRoomConfig>;
-  layout?: Parameters<typeof createLayoutSlice>[0];
-  room?: Partial<Omit<RoomShellSliceStateProps<BaseRoomConfig>, 'config'>>;
+  config: Partial<RoomShellSliceConfig>;
+  room: Partial<Omit<RoomShellSliceStateProps, 'config'>> & {
+    panels?: Record<string, RoomPanelInfo>;
+  };
+  // layout:
 };
 
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
@@ -163,21 +164,20 @@ const INIT_ROOM_TASK = 'init-room';
 export function createRoomShellSlice(
   props: CreateRoomShellSliceProps,
 ): StateCreator<RoomShellSliceState> {
-  const slice: StateCreator<RoomShellSliceState<BaseRoomConfig>> = (
-    set,
-    get,
-    store,
-  ) => {
+  const slice: StateCreator<RoomShellSliceState> = (set, get, store) => {
     const {
       connector,
       config: configProps,
-      layout: layoutProps,
       room: roomStateProps,
       ...restState
     } = props;
-    const initialConfig: BaseRoomConfig = {
+    const initialConfig: RoomShellSliceConfig = {
       ...INITIAL_BASE_ROOM_CONFIG,
       ...configProps,
+      layout: {
+        ...createDefaultLayoutConfig(),
+        ...configProps.layout,
+      },
     };
     const initialRoomState = {
       CustomErrorBoundary: ErrorBoundary,
@@ -187,17 +187,16 @@ export function createRoomShellSlice(
       dataSourceStates: {},
       ...roomStateProps,
     };
-    const roomSliceState = createRoomSlice({
+    const roomSliceState = createRoomSlice<RoomShellSliceConfig>({
       config: initialConfig,
       room: initialRoomState,
     })(set, get, store);
 
-    const roomState: RoomShellSliceState<PC> = {
+    const roomState: RoomShellSliceState = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
       ...createLayoutSlice({
-        config: layoutProps?.config,
-        panels: layoutProps?.panels,
+        panels: roomStateProps.panels,
       })(set, get, store),
       room: {
         ...initialRoomState,
@@ -677,23 +676,23 @@ export function createRoomShellSlice(
   return slice;
 }
 
-export function useBaseRoomShellStore<
-  PC extends BaseRoomConfig,
-  PS extends RoomShellSliceState<PC>,
-  T,
->(selector: (state: RoomShellSliceState<PC>) => T): T {
-  return useBaseRoomStore<PC, PS, T>(selector as (state: RoomState<PC>) => T);
+export function useBaseRoomShellStore<PS extends RoomShellSliceState, T>(
+  selector: (state: RoomShellSliceState) => T,
+): T {
+  return useBaseRoomStore<RoomShellSliceConfig, PS, T>(
+    selector as (state: RoomState<RoomShellSliceConfig>) => T,
+  );
 }
 
-export function createSlice<PC extends BaseRoomConfig, S>(
+export function createSlice<S>(
   sliceCreator: (
-    ...args: Parameters<StateCreator<S & RoomShellSliceState<PC>>>
+    ...args: Parameters<StateCreator<S & RoomShellSliceState>>
   ) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
     sliceCreator(
       set,
-      get as () => S & RoomShellSliceState<PC>,
-      store as StoreApi<S & RoomShellSliceState<PC>>,
+      get as () => S & RoomShellSliceState,
+      store as StoreApi<S & RoomShellSliceState>,
     );
 }

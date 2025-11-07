@@ -25,7 +25,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
   const closedTabIds = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.closedTabIds,
+    (s) => s.sqlEditor.config.closedTabIds,
   );
   const openedTabs = queries.filter((q) => !closedTabIds.includes(q.id));
   const closedTabs = queries.filter((q) => closedTabIds.includes(q.id));

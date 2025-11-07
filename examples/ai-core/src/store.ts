@@ -21,7 +21,7 @@ type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
+export const {roomStore, useRoomStore} = createRoomStore<State>(
   persist(
     (set, get, store) => ({
       // Base room slice
