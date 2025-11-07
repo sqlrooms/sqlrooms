@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {AnalysisSessionSchema} from './AnalysisSessionSchema';
+import {AnalysisSessionSchema} from './schema/AnalysisSessionSchema';
 import {createId} from '@paralleldrive/cuid2';
 
 export const AiSliceConfig = z.object({
@@ -21,6 +21,9 @@ export function createDefaultAiConfig(
         model: 'gpt-4.1',
         analysisResults: [],
         createdAt: new Date(),
+        uiMessages: [],
+        toolAdditionalData: {},
+        messagesRevision: 0,
       },
     ],
     currentSessionId: defaultSessionId,

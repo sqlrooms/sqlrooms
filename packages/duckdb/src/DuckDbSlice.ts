@@ -179,8 +179,7 @@ export type DuckDbSliceState = {
 
     /**
      * Delete a table with optional schema and database
-     * @param tableName - The name of the table to delete
-     * @param options - Optional parameters including schema and database
+     * @param tableName - The name of the table to delete (qualified or plain)
      */
     dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
 
@@ -246,7 +245,7 @@ export function createDuckDbSlice({
         isRefreshingTableSchemas: false,
         tables: [],
         tableRowCounts: {},
-        schemaTree: undefined,
+        schemaTrees: undefined,
         queryCache: {},
 
         setConnector: (connector: DuckDbConnector) => {
@@ -609,8 +608,22 @@ export function createDuckDbSlice({
   });
 }
 
-type RoomStateWithDuckDb = RoomState<{}> & DuckDbSliceState;
+/**
+ * @internal
+ */
+export type RoomStateWithDuckDb = RoomState<{}> & DuckDbSliceState;
 
+/**
+ * @internal
+ * Select values from the room store that includes the DuckDB slice.
+ *
+ * This is a typed wrapper around `useBaseRoomStore` that narrows the
+ * state to `RoomStateWithDuckDb` so selectors can access `db` safely.
+ *
+ * @typeParam T - The selected slice of state returned by the selector
+ * @param selector - Function that selects a value from the store state
+ * @returns The selected value of type `T`
+ */
 export function useStoreWithDuckDb<T>(
   selector: (state: RoomStateWithDuckDb) => T,
 ): T {

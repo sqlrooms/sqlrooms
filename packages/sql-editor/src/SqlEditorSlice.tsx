@@ -19,6 +19,7 @@ import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
+import {createId} from '@paralleldrive/cuid2';
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
@@ -111,6 +112,17 @@ export type SqlEditorSliceState = {
     renameQueryTab(queryId: string, newName: string): void;
 
     /**
+     * Close a query tab.
+     * @param queryId - The ID of the query to close.
+     */
+    closeQueryTab(queryId: string): void;
+    /**
+     * Open a closed tab id.
+     * @param queryId - The ID of the query to remove.
+     */
+    openQueryTab(queryId: string): void;
+
+    /**
      * Update the SQL text for a query.
      * @param queryId - The ID of the query to update.
      * @param queryText - The new SQL text.
@@ -160,13 +172,13 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
           const blob = new Blob([csvFormat(results.toArray())], {
             type: 'text/plain;charset=utf-8',
           });
-          saveAs(blob, filename || `export-${genRandomStr(5)}.csv`);
+          saveAs(blob, filename || `export-${createId().substring(0, 5)}.csv`);
         },
 
         createQueryTab: (initialQuery = '') => {
           const sqlEditorConfig = get().sqlEditor.config;
           const newQuery = {
-            id: genRandomStr(8),
+            id: createId(),
             name: generateUniqueName(
               'Untitled',
               sqlEditorConfig.queries.map((q) => q.name),
@@ -227,6 +239,37 @@ export function createSqlEditorSlice<PC extends BaseRoomConfig>({
               if (query) {
                 query.name = newName || query.name;
               }
+            }),
+          );
+        },
+
+        closeQueryTab: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.closedTabIds.push(queryId);
+              const openedTabs = draft.config.sqlEditor.queries.filter(
+                (q) => !draft.config.sqlEditor.closedTabIds.includes(q.id),
+              );
+
+              if (
+                draft.config.sqlEditor.selectedQueryId === queryId &&
+                openedTabs.length > 0 &&
+                openedTabs[0]
+              ) {
+                draft.config.sqlEditor.selectedQueryId = openedTabs[0].id;
+              }
+            }),
+          );
+        },
+
+        openQueryTab: (queryId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.config.sqlEditor.closedTabIds =
+                draft.config.sqlEditor.closedTabIds?.filter(
+                  (id) => id !== queryId,
+                );
+              draft.config.sqlEditor.selectedQueryId = queryId;
             }),
           );
         },

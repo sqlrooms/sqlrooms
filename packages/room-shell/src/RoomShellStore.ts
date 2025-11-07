@@ -19,6 +19,9 @@ import {
   SqlQueryDataSource,
   UrlDataSource,
   createDefaultBaseRoomConfig,
+  isFileDataSource,
+  isUrlDataSource,
+  isSqlQueryDataSource,
 } from '@sqlrooms/room-config';
 import {
   RoomState,
@@ -394,7 +397,7 @@ export function createRoomShellSlice(
                 draft.config.dataSources = draft.config.dataSources.filter(
                   (d) => d.tableName !== tableName,
                 );
-                if (dataSource?.type === DataSourceTypes.Enum.file) {
+                if (dataSource && isFileDataSource(dataSource)) {
                   draft.room.roomFiles = draft.room.roomFiles.filter(
                     (f) => f.pathname !== dataSource.fileName,
                   );
@@ -409,8 +412,7 @@ export function createRoomShellSlice(
 
         removeRoomFile: async (pathname) => {
           const dataSource = get().config.dataSources.find(
-            (d) =>
-              d.type === DataSourceTypes.Enum.file && d.fileName === pathname,
+            (d) => isFileDataSource(d) && d.fileName === pathname,
           );
           if (dataSource) {
             await get().room.removeDataSource(dataSource.tableName);
@@ -492,23 +494,20 @@ export function createRoomShellSlice(
       );
 
       const filesToDownload = pendingDataSources.filter((ds) => {
-        switch (ds.type) {
-          case DataSourceTypes.Enum.file:
-            return !roomFilesProgress[ds.fileName];
-          case DataSourceTypes.Enum.url:
-            return !roomFilesProgress[ds.url];
-          default:
-            return false;
+        if (isFileDataSource(ds)) {
+          return !roomFilesProgress[ds.fileName];
         }
+        if (isUrlDataSource(ds)) {
+          return !roomFilesProgress[ds.url];
+        }
+        return false;
       }) as (FileDataSource | UrlDataSource)[];
 
       if (filesToDownload.length > 0) {
         await downloadRoomFiles(filesToDownload);
       }
 
-      const queriesToRun = pendingDataSources.filter(
-        (ds) => ds.type === DataSourceTypes.Enum.sql,
-      );
+      const queriesToRun = pendingDataSources.filter(isSqlQueryDataSource);
 
       if (queriesToRun.length > 0) {
         await runDataSourceQueries(queriesToRun);
@@ -531,8 +530,7 @@ export function createRoomShellSlice(
       const {captureException, setTaskProgress, setRoomFileProgress} =
         get().room;
       filesToDownload.forEach((ds) => {
-        const fileName =
-          ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
+        const fileName = isFileDataSource(ds) ? ds.fileName : ds.url;
         set((state) =>
           produce(state, (draft) => {
             const info = {
@@ -559,8 +557,7 @@ export function createRoomShellSlice(
 
       const loadedFiles = await Promise.all(
         filesToDownload.map(async (ds) => {
-          const fileName =
-            ds.type === DataSourceTypes.Enum.file ? ds.fileName : ds.url;
+          const fileName = isFileDataSource(ds) ? ds.fileName : ds.url;
           const onProgress = (progress: ProgressInfo) => {
             setRoomFileProgress(fileName, {
               status: 'download',
@@ -570,26 +567,22 @@ export function createRoomShellSlice(
           };
           try {
             let downloadedFile: Uint8Array | File;
-            switch (ds.type) {
-              case DataSourceTypes.Enum.file: {
-                const {fileDataSourceLoader} = get().room;
-                if (!fileDataSourceLoader) {
-                  throw new Error('fileDataSourceLoader is not defined');
-                }
-                downloadedFile = await fileDataSourceLoader(ds, onProgress);
-                break;
+            if (isFileDataSource(ds)) {
+              const {fileDataSourceLoader} = get().room;
+              if (!fileDataSourceLoader) {
+                throw new Error('fileDataSourceLoader is not defined');
               }
-              case DataSourceTypes.Enum.url: {
-                const url = ds.url;
-                downloadedFile = await downloadFile(url, {
-                  ...(ds.type === DataSourceTypes.Enum.url && {
-                    method: ds.httpMethod,
-                    headers: ds.headers,
-                  }),
-                  onProgress,
-                });
-                break;
-              }
+              downloadedFile = await fileDataSourceLoader(ds, onProgress);
+            } else if (isUrlDataSource(ds)) {
+              const url = ds.url;
+              downloadedFile = await downloadFile(url, {
+                method: ds.httpMethod,
+                headers: ds.headers,
+                onProgress,
+              });
+            } else {
+              // This should never happen as filesToDownload only contains FileDataSource | UrlDataSource
+              throw new Error('Unsupported data source type');
             }
             setRoomFileProgress(fileName, {status: 'done'});
             updateTotalFileDownloadProgress();
@@ -597,7 +590,7 @@ export function createRoomShellSlice(
             await db.connector.loadFile(
               downloadedFile instanceof File
                 ? downloadedFile
-                : new File([downloadedFile], fileName),
+                : new File([new Uint8Array(downloadedFile)], fileName),
               ds.tableName,
               ds.loadOptions,
             );

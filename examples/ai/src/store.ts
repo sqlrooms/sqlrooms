@@ -143,6 +143,7 @@ export const {roomStore, useRoomStore} = createRoomStore<
 
           // Example of adding a simple echo tool
           echo: {
+            name: 'echo',
             description: 'A simple echo tool that returns the input text',
             parameters: z.object({
               text: z.string().describe('The text to echo back'),
