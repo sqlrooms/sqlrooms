@@ -102,18 +102,16 @@ export const TableTreeNode: FC<{
   return (
     <>
       <BaseTreeNode asChild className={className} nodeObject={nodeObject}>
-        <div className="relative flex w-full min-w-0 items-center space-x-2 pr-5">
+        <div className="relative flex w-full items-center space-x-2">
           {isView ? (
             <ViewIcon size="16px" className="shrink-0 text-blue-500" />
           ) : (
             <TableIcon size="16px" className="shrink-0 text-blue-500" />
           )}
-          <div className="flex w-full min-w-0 items-center justify-between gap-1">
-            <span className="min-w-0 flex-1 truncate" title={name}>
-              {name}
-            </span>
+          <div className="flex w-full items-center justify-between gap-2">
+            <span>{name}</span>
             {rowCount !== undefined && (
-              <span className="text-muted-foreground/50 shrink-0 whitespace-nowrap text-xs">
+              <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-8 text-xs">
                 {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
               </span>
             )}
