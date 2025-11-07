@@ -8,7 +8,8 @@ import {AiThinkingDots} from './AiThinkingDots';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-}> = ({className}) => {
+  enableReasoningBox?: boolean;
+}> = ({className, enableReasoningBox = false}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
@@ -34,6 +35,7 @@ export const AnalysisResultsContainer: React.FC<{
           <AnalysisResult
             key={analysisResult.id}
             analysisResult={analysisResult}
+            enableReasoningBox={enableReasoningBox}
           />
         ))}
         {isRunningAnalysis && (
