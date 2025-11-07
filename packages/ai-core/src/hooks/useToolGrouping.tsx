@@ -1,4 +1,5 @@
-import {useMemo} from 'react';
+import React, {useMemo} from 'react';
+import {MapIcon, BarChart3Icon} from 'lucide-react';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 
@@ -6,7 +7,7 @@ type ToolGroup = {
   type: 'text' | 'reasoning' | 'tool-group';
   parts: UIMessagePart[];
   startIndex: number;
-  title?: string;
+  title?: React.ReactNode;
 };
 
 /**
@@ -128,11 +129,39 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[]): ToolGroup[] {
 }
 
 /**
+ * Extract tool name from a tool part
+ */
+function getToolName(part: UIMessagePart): string {
+  if (typeof part.type === 'string' && part.type === 'dynamic-tool') {
+    return ((part as any).toolName || 'unknown') as string;
+  }
+  if (isToolPart(part)) {
+    return typeof part.type === 'string'
+      ? part.type.replace(/^tool-/, '') || 'unknown'
+      : 'unknown';
+  }
+  return 'unknown';
+}
+
+/**
+ * Get icon component based on tool name
+ */
+function getToolIcon(toolName: string): React.ReactNode | null {
+  if (toolName === 'createMapLayer') {
+    return <MapIcon className="h-3 w-3 text-blue-500 shrink-0" />;
+  }
+  if (toolName === 'chart') {
+    return <BarChart3Icon className="h-3 w-3 text-green-500 shrink-0" />;
+  }
+  return null;
+}
+
+/**
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
  * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  */
-function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean): string {
+function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
     (p) =>
@@ -151,6 +180,35 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
 
   const toolCount = actualToolParts.length;
 
+  // Collect all unique tool names to determine icons
+  const toolNames = new Set(
+    actualToolParts.map((p) => getToolName(p)).filter((name) => name !== 'unknown')
+  );
+
+  // Check if we have both 'createMapLayer' and 'chart' tools
+  const hasMapLayer = toolNames.has('createMapLayer');
+  const hasChart = toolNames.has('chart');
+
+  // Generate icons - show both if both types are present
+  let icon: React.ReactNode | null = null;
+  if (hasMapLayer && hasChart) {
+    icon = (
+      <span className="flex items-center gap-1">
+        <MapIcon className="h-3 w-3 text-blue-500 shrink-0" />
+        <BarChart3Icon className="h-3 w-3 text-green-500 shrink-0" />
+      </span>
+    );
+  } else if (hasMapLayer) {
+    icon = <MapIcon className="h-3 w-3 text-blue-500 shrink-0" />;
+  } else if (hasChart) {
+    icon = <BarChart3Icon className="h-3 w-3 text-green-500 shrink-0" />;
+  } else {
+    // Fallback to first tool icon if neither map nor chart
+    const firstToolPart = actualToolParts[0];
+    const firstToolName = firstToolPart ? getToolName(firstToolPart) : 'unknown';
+    icon = getToolIcon(firstToolName);
+  }
+
   // Show "Thinking..." if:
   // 1. Tools are not completed yet, OR
   // 2. Tools are completed but there are more tool calls coming after
@@ -163,8 +221,8 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    // Truncate reasoning if too long (max 50 characters)
-    const maxReasoningLength = 50;
+    // Truncate reasoning if too long (max 40 characters)
+    const maxReasoningLength = 40;
     const truncatedReasoning =
       reasoning && reasoning.length > maxReasoningLength
         ? `${reasoning.substring(0, maxReasoningLength).toLowerCase()}...`
@@ -172,10 +230,22 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
 
     const baseTitle =
       toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
-    return truncatedReasoning ? `${baseTitle}: ${truncatedReasoning}` : baseTitle;
+    const titleText = truncatedReasoning ? `${baseTitle} ${truncatedReasoning}` : baseTitle;
+    return (
+      <span className="flex w-full items-center justify-between">
+        <span className="truncate">{titleText}</span>
+        {icon}
+      </span>
+    );
   } else {
     // For completed thoughts (and no more tools after), just show tool count without reasoning
-    return toolCount === 1 ? 'Thought' : `Thought (${toolCount} tools)`;
+    const titleText = toolCount === 1 ? 'Thought (1 tool)' : `Thought (${toolCount} tools)`;
+    return (
+      <span className="flex w-full items-center justify-between">
+        <span className="truncate">{titleText}</span>
+        {icon}
+      </span>
+    );
   }
 }
 

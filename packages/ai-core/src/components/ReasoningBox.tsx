@@ -4,7 +4,7 @@ import {cn} from '@sqlrooms/ui';
 
 type ReasoningBoxProps = {
   children: React.ReactNode;
-  title?: string;
+  title?: React.ReactNode;
 };
 
 /**
@@ -17,7 +17,8 @@ type ReasoningBoxProps = {
  * @param props.title - Custom title to display (default: "Thought")
  * @returns A React component displaying a collapsible reasoning box
  */
-export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title = 'Thought'}) => {
+export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title}) => {
+  const displayTitle = title ?? 'Thought';
   // Start collapsed (content hidden)
   const [isOpen, setIsOpen] = useState(false);
 
@@ -41,7 +42,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title = 'Th
         ) : (
           <ChevronRightIcon className="h-3 w-3 shrink-0" />
         )}
-        <span className="truncate flex-1">{title}</span>
+        <span className="truncate flex-1">{displayTitle}</span>
       </button>
       {isOpen && (
         <div
