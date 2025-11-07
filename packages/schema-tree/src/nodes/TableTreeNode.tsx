@@ -113,7 +113,7 @@ export const TableTreeNode: FC<{
               {name}
             </span>
             {rowCount !== undefined && (
-              <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-5 text-xs">
+              <span className="text-muted-foreground/50 ml-1 whitespace-nowrap pr-8 text-xs">
                 {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
               </span>
             )}
