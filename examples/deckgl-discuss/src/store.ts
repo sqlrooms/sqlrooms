@@ -8,6 +8,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
   RoomShellSliceState,
@@ -97,14 +98,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       name: 'discuss-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        roomConfig: BaseRoomConfig.parse(state.config),
+        roomConfig: BaseRoomConfig.parse(state.room.config),
+        layoutConfig: LayoutConfig.parse(state.layout.config),
         sqlEditorConfig: SqlEditorSliceConfig.parse(state.sqlEditor.config),
         discussConfig: DiscussSliceConfig.parse(state.discuss.config),
       }),
       // Combining the persisted state with the current one
       merge: (persistedState: any, currentState) => ({
         ...currentState,
-        config: BaseRoomConfig.parse(persistedState.roomConfig),
+        room: {
+          ...currentState.room,
+          config: BaseRoomConfig.parse(persistedState.roomConfig),
+        },
+        layout: {
+          ...currentState.layout,
+          config: LayoutConfig.parse(persistedState.layoutConfig),
+        },
         sqlEditor: {
           ...currentState.sqlEditor,
           config: SqlEditorSliceConfig.parse(persistedState.sqlEditorConfig),

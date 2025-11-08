@@ -1,11 +1,11 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 
-export interface SliceState {
-  [key: string]: {
-    initialize?: () => Promise<void>;
-    destroy?: () => Promise<void>;
-  };
+export type SliceState = object;
+
+export interface SliceFunctions {
+  initialize?: () => Promise<void>;
+  destroy?: () => Promise<void>;
 }
 
 export type BaseRoomSliceState = SliceState & {
@@ -143,7 +143,7 @@ export function createRoomStoreCreator<RS extends BaseRoomSliceState>() {
 
 export function isRoomSliceWithInitialize(
   slice: unknown,
-): slice is SliceState & Required<Pick<SliceState, 'initialize'>> {
+): slice is SliceState & Required<Pick<SliceFunctions, 'initialize'>> {
   return (
     typeof slice === 'object' &&
     slice !== null &&
@@ -154,7 +154,7 @@ export function isRoomSliceWithInitialize(
 
 export function isRoomSliceWithDestroy(
   slice: unknown,
-): slice is SliceState & Required<Pick<SliceState, 'destroy'>> {
+): slice is SliceState & Required<Pick<SliceFunctions, 'destroy'>> {
   return (
     typeof slice === 'object' &&
     slice !== null &&

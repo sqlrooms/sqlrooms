@@ -71,7 +71,14 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
         name: 'md-sql-editor-example-app-state-storage',
         // Subset of the state to persist
         partialize: (state) => ({
-          config: BaseRoomConfig.parse(state.config),
+          config: BaseRoomConfig.parse(state.room.config),
+        }),
+        merge: (persistedState: any, currentState) => ({
+          ...currentState,
+          room: {
+            ...currentState.room,
+            config: BaseRoomConfig.parse(persistedState.room),
+          },
         }),
       },
     ) as StateCreator<RoomState>,

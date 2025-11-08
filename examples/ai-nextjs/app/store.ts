@@ -5,26 +5,25 @@ import {
   createAiSettingsSlice,
 } from '@sqlrooms/ai-settings';
 import {
-  BaseRoomConfig,
-  createRoomSlice,
+  BaseRoomSliceState,
+  createBaseRoomSlice,
   createRoomStore,
-  RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
 import {persist} from 'zustand/middleware';
 import {AI_SETTINGS} from '../config';
 import {getClientTools} from './lib/tools';
 
-type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
+type State = BaseRoomSliceState & AiSliceState & AiSettingsSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
+export const {roomStore, useRoomStore} = createRoomStore<State>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<BaseRoomConfig>()(set, get, store),
+      ...createBaseRoomSlice()(set, get, store),
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
