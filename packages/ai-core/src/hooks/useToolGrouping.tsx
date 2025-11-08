@@ -3,7 +3,10 @@ import {MapIcon, BarChart3Icon} from 'lucide-react';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 
-type ToolGroup = {
+/**
+ * Type for a grouped message part (from useToolGrouping hook)
+ */
+export type ToolGroup = {
   type: 'text' | 'reasoning' | 'tool-group';
   parts: UIMessagePart[];
   startIndex: number;

@@ -1,15 +1,13 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState, useMemo} from 'react';
-import {AnalysisAnswer} from './AnalysisAnswer';
+import {useState} from 'react';
 import {ErrorMessage} from './ErrorMessage';
-import {ToolResult} from './tools/ToolResult';
-import {ToolCallInfo} from './ToolCallInfo';
-import {ReasoningBox} from './ReasoningBox';
+import {GroupedMessageParts} from './GroupedMessageParts';
+import {MessagePartsList} from './MessagePartsList';
 import {useStoreWithAi} from '../AiSlice';
-import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 import {useToolGrouping} from '../hooks/useToolGrouping';
+import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import type {UIMessage} from 'ai';
 import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
@@ -38,125 +36,17 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   enableReasoningBox = false,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
-  );
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
-  const tools = useStoreWithAi(s => s.ai.tools);
-  const findToolComponent= useStoreWithAi((state) => state.ai.findToolComponent);
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
-  // Extract message parts using useMemo to avoid infinite loops
-  const uiMessageParts = useMemo(() => {
-    if (!uiMessages) return [];
-
-    // Find the user message with analysisResultId
-    let userMessageIndex = uiMessages.findIndex(
-      (msg) => msg.id === analysisResult.id && msg.role === 'user',
-    );
-
-    // If not found (e.g., pending result before onFinish assigns the real ID),
-    // fall back to the last user message to enable streaming display.
-    if (userMessageIndex === -1) {
-      for (let i = uiMessages.length - 1; i >= 0; i--) {
-        if (uiMessages[i]?.role === 'user') {
-          userMessageIndex = i;
-          break;
-        }
-      }
-      if (userMessageIndex === -1) return [];
-    }
-
-    // Find the next assistant message after this user message
-    for (let i = userMessageIndex + 1; i < uiMessages.length; i++) {
-      const msg = uiMessages[i];
-      if (msg?.role === 'assistant') {
-        return msg.parts;
-      }
-      if (msg?.role === 'user') {
-        // Hit next user message without finding assistant response
-        break;
-      }
-    }
-    return [];
-  }, [uiMessages, analysisResult.id]);
+  const uiMessageParts = useAssistantMessageParts(uiMessages, analysisResult.id);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
   const groupedParts = useToolGrouping(uiMessageParts);
-
-  // Render function for individual tool parts (used in both old and new styles)
-  const renderToolPart = (part: typeof uiMessageParts[number], key: string) => {
-    // Check if it's a tool part (including dynamic-tool)
-    const isTool = isToolPart(part) || (typeof part.type === 'string' && part.type === 'dynamic-tool');
-    if (!isTool) return null;
-
-    const toolCallId = (part as any).toolCallId;
-    const toolName = part.type === 'dynamic-tool'
-      ? ((part as any).toolName || 'unknown')
-      : part.type.replace(/^tool-/, '') || 'unknown';
-    const state = (part as any).state;
-    const input = (part as any).input;
-    const output = state === 'output-available' ? (part as any).output : undefined;
-    const errorText = state === 'output-error' ? (part as any).errorText : undefined;
-    const isCompleted = state === 'output-available' || state === 'output-error';
-    const additionalData = toolAdditionalData[toolCallId];
-
-    // check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
-    if (
-      isCompleted === false &&
-      !tools[toolName]?.execute &&
-      (state === 'input-streaming' || state === 'input-available')
-    ) {
-      const ToolComponent = findToolComponent(toolName);
-      const props = {
-        ...(input as Record<string, unknown>),
-        ...({toolCallId, toolName} as Record<string, unknown>),
-      };
-      return (
-        <div key={key}>
-          {ToolComponent && typeof ToolComponent === 'function' && (
-            <ToolComponent {...props} />
-          )}
-        </div>
-      );
-    }
-
-    // otherwise, render <ToolResult>
-    if (tools[toolName]?.execute) {
-      return (
-        <div key={key}>
-          <ToolCallInfo
-            toolName={toolName}
-            input={input}
-            isCompleted={isCompleted}
-            state={state}
-          />
-          <div data-tool-call-id={toolCallId}>
-            <ToolResult
-              toolCallId={toolCallId}
-              toolData={{
-                toolCallId,
-                name: toolName,
-                state: state,
-                args: input,
-                result: output,
-                errorText,
-              }}
-              additionalData={additionalData}
-              isCompleted={isCompleted}
-              errorMessage={state === 'output-error' ? errorText : undefined}
-            />
-          </div>
-        </div>
-      );
-    }
-
-    return null;
-  };
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
@@ -210,68 +100,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
       </div>
       <div className="flex w-full flex-col gap-4">
         {enableReasoningBox ? (
-          /* Render with ReasoningBox grouping */
-          groupedParts.map((group, groupIndex) => {
-          if (group.type === 'text') {
-            const part = group.parts[0];
-            if (!part || !isTextPart(part)) return null;
-            return (
-              <AnalysisAnswer
-                key={`group-${groupIndex}`}
-                content={part.text}
-                isAnswer={
-                  group.startIndex === uiMessageParts.length - 1
-                }
-              />
-            );
-          }
-
-          if (group.type === 'reasoning') {
-            const part = group.parts[0];
-            if (!part || !isReasoningPart(part)) return null;
-            return (
-              <div key={`group-${groupIndex}`} className="text-muted-foreground text-xs">
-                {part.text}
-              </div>
-            );
-          }
-
-          if (group.type === 'tool-group') {
-            return (
-              <ReasoningBox key={`group-${groupIndex}`} title={group.title}>
-                {group.parts.map((part, partIndex) =>
-                  renderToolPart(part as any, `tool-call-${groupIndex}-${partIndex}`)
-                )}
-              </ReasoningBox>
-            );
-          }
-
-          return null;
-        })
+          <GroupedMessageParts
+            groupedParts={groupedParts}
+            totalPartsCount={uiMessageParts.length}
+          />
         ) : (
-          /* Render without ReasoningBox (old style) */
-          uiMessageParts.map((part, index) => {
-            if (isTextPart(part)) {
-              return (
-                <AnalysisAnswer
-                  key={index}
-                  content={part.text}
-                  isAnswer={index === uiMessageParts.length - 1}
-                />
-              );
-            }
-            if (isReasoningPart(part)) {
-              return (
-                <div key={index} className="text-muted-foreground text-xs">
-                  {part.text}
-                </div>
-              );
-            }
-            if (isToolPart(part)) {
-              return renderToolPart(part, `tool-call-${index}`);
-            }
-            return null;
-          })
+          <MessagePartsList parts={uiMessageParts} />
         )}
         {analysisResult.errorMessage && (
           <ErrorMessage errorMessage={analysisResult.errorMessage.error} />

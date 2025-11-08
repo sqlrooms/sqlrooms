@@ -1,6 +1,7 @@
-import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {cn, ScrollBar} from '@sqlrooms/ui';
+import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area';
 import {ChevronDown} from 'lucide-react';
-import React, {useEffect, useRef, useState} from 'react';
+import React, {useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
@@ -26,10 +27,11 @@ export const AnalysisResultsContainer: React.FC<{
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
-      <ScrollArea
-        ref={containerRef}
-        className="flex h-full w-full flex-grow flex-col gap-5 overflow-auto"
-      >
+      <ScrollAreaPrimitive.Root className="relative h-full w-full overflow-hidden">
+        <ScrollAreaPrimitive.Viewport
+          ref={containerRef}
+          className="h-full w-full rounded-[inherit] flex flex-col gap-5"
+        >
         {/* Render analysis results */}
         {currentAnalysisResults.map((analysisResult) => (
           <AnalysisResult
@@ -42,9 +44,10 @@ export const AnalysisResultsContainer: React.FC<{
           <AiThinkingDots className="text-muted-foreground p-4" />
         )}
         <div ref={endRef} className="h-10 w-full shrink-0" />
+        </ScrollAreaPrimitive.Viewport>
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
-      </ScrollArea>
+      </ScrollAreaPrimitive.Root>
       <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center">
         <button
           onClick={scrollToBottom}
