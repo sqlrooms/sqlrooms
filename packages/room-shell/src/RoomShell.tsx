@@ -1,6 +1,5 @@
-import {RoomStateProvider, RoomStore} from '@sqlrooms/room-store';
 import {MosaicLayout} from '@sqlrooms/layout';
-import {BaseRoomConfig} from '@sqlrooms/room-config';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
   cn,
   ErrorBoundary,
@@ -15,7 +14,7 @@ import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {RoomShellSliceConfig, useBaseRoomShellStore} from './RoomShellStore';
+import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
 export function RoomShellBase({
   className,
@@ -23,7 +22,7 @@ export function RoomShellBase({
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomStore<RoomShellSliceConfig>;
+  roomStore?: RoomShellStore;
 }>) {
   return (
     <RoomStateProvider roomStore={roomStore}>

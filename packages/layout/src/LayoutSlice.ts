@@ -4,9 +4,8 @@ import {
   MAIN_VIEW,
   isMosaicLayoutParent,
 } from '@sqlrooms/layout-config';
-import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {
-  RoomState,
+  SliceState,
   createBaseSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
@@ -31,7 +30,7 @@ export function createDefaultLayoutConfig(): LayoutSliceConfig {
   return DEFAULT_MOSAIC_LAYOUT;
 }
 
-export type LayoutSliceState = {
+export type LayoutSliceState = SliceState & {
   layout: {
     config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
@@ -43,7 +42,7 @@ export type LayoutSliceState = {
   };
 };
 
-type CreateLayoutSliceProps = {
+export type CreateLayoutSliceProps = {
   config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
 };
@@ -52,7 +51,7 @@ export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
-  return createBaseSlice<BaseRoomConfig, LayoutSliceState>((set, get) => ({
+  return createBaseSlice<LayoutSliceState>((set, get) => ({
     layout: {
       config: initialConfig,
       panels,
@@ -148,13 +147,8 @@ export function createLayoutSlice({
   }));
 }
 
-type RoomConfigWithLayout = BaseRoomConfig;
-type RoomStateWithLayout = RoomState<RoomConfigWithLayout> & LayoutSliceState;
-
 export function useStoreWithLayout<T>(
-  selector: (state: RoomStateWithLayout) => T,
+  selector: (state: LayoutSliceState) => T,
 ): T {
-  return useBaseRoomStore<BaseRoomConfig, RoomState<RoomConfigWithLayout>, T>(
-    (state) => selector(state as unknown as RoomStateWithLayout),
-  );
+  return useBaseRoomStore<LayoutSliceState, T>((state) => selector(state));
 }

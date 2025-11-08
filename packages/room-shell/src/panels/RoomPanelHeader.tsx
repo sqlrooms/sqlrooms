@@ -1,6 +1,6 @@
 import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
 const RoomPanelHeader: FC<{

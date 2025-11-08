@@ -8,6 +8,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   RoomShellSliceState,
   StateCreator,
@@ -83,13 +84,21 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Subset of the state to persist
       partialize: (state) => ({
         apiKey: state.apiKey,
-        config: BaseRoomConfig.parse(state.config),
+        room: BaseRoomConfig.parse(state.room.config),
+        layout: LayoutConfig.parse(state.layout.config),
         canvas: CanvasSliceConfig.parse(state.canvas.config),
       }),
       merge: (persistedState: any, currentState) => ({
         ...currentState,
         apiKey: persistedState.apiKey,
-        config: BaseRoomConfig.parse(persistedState.config),
+        room: {
+          ...currentState.room,
+          config: BaseRoomConfig.parse(persistedState.room),
+        },
+        layout: {
+          ...currentState.layout,
+          config: LayoutConfig.parse(persistedState.layout),
+        },
         canvas: {
           ...currentState.canvas,
           config: CanvasSliceConfig.parse(persistedState.canvas),

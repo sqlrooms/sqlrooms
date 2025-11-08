@@ -57,12 +57,6 @@ export type CosmosSliceState = {
 };
 
 /**
- * Combined type representing the full room state including Cosmos functionality.
- * Merges the base room state with Cosmos-specific state and configuration.
- */
-export type RoomStateWithCosmos = RoomShellSliceState & CosmosSliceState;
-
-/**
  * Creates a Zustand slice for managing Cosmos graph state.
  * This slice handles graph creation, destruction, configuration, and data updates.
  *
@@ -214,6 +208,12 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
     },
   }));
 }
+
+/**
+ * Combined type representing the full room state including Cosmos functionality.
+ * Merges the base room state with Cosmos-specific state and configuration.
+ */
+export type RoomStateWithCosmos = RoomShellSliceState & CosmosSliceState;
 
 /**
  * Hook to access the Cosmos store with proper typing.

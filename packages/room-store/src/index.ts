@@ -13,15 +13,16 @@ export {
 export {
   createRoomStore,
   createRoomStoreCreator,
+  createBaseSlice,
   createRoomSlice,
-  type RoomStateActions,
-  type RoomStateProps,
+  createBaseRoomSlice,
+  type CreateBaseRoomSliceProps,
+  type BaseRoomSliceState,
   type RoomState,
   type RoomStore,
-  type TaskProgress,
-  createBaseSlice,
-  type RoomSlice,
+  type SliceState,
   isRoomSliceWithInitialize,
+  isRoomSliceWithDestroy,
 } from './RoomStore';
 
 export type {StateCreator, StoreApi} from 'zustand';

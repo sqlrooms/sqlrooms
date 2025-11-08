@@ -8,8 +8,8 @@ import {
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
+  BaseRoomSliceState,
   createSlice,
-  RoomState,
   useBaseRoomStore,
 } from '@sqlrooms/room-shell';
 import {createVegaChartTool} from '@sqlrooms/vega';
@@ -513,7 +513,7 @@ export type DuckDbSliceStateWithCanvas = DuckDbSliceState & CanvasSliceState;
 export function useStoreWithCanvas<T>(
   selector: (state: DuckDbSliceStateWithCanvas) => T,
 ): T {
-  return useBaseRoomStore<{}, RoomState<{}>, T>((state) =>
+  return useBaseRoomStore<BaseRoomSliceState, T>((state) =>
     selector(state as unknown as DuckDbSliceStateWithCanvas),
   );
 }

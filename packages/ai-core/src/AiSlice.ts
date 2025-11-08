@@ -8,20 +8,20 @@ import {
 import {
   BaseRoomConfig,
   createBaseSlice,
-  RoomState,
+  SliceState,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
+import {DefaultChatTransport, LanguageModel, UIMessage} from 'ai';
 import {produce} from 'immer';
-import {UIMessage, DefaultChatTransport, LanguageModel} from 'ai';
 
+import {OpenAssistantToolSet} from '@openassistant/utils';
 import {
+  createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
-  createChatHandlers,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {OpenAssistantToolSet} from '@openassistant/utils';
 
 // Custom type for onChatToolCall that includes addToolResult
 type ExtendedChatOnToolCallCallback = (args: {
@@ -29,7 +29,7 @@ type ExtendedChatOnToolCallCallback = (args: {
   addToolResult?: any;
 }) => Promise<any> | any;
 
-export type AiSliceState = {
+export type AiSliceState = SliceState & {
   ai: {
     config: AiSliceConfig;
     analysisPrompt: string;
@@ -131,7 +131,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     chatHeaders = {},
   } = params;
 
-  return createBaseSlice<PC, AiSliceState>((set, get, store) => {
+  return createBaseSlice<AiSliceState>((set, get, store) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),
@@ -672,12 +672,6 @@ function getCurrentSessionFromState(
   return sessions.find((session) => session.id === currentSessionId);
 }
 
-export function useStoreWithAi<
-  T,
-  PC extends BaseRoomConfig,
-  S extends RoomState<PC> & AiSliceState,
->(selector: (state: S) => T): T {
-  return useBaseRoomStore<PC, RoomState<PC>, T>((state) =>
-    selector(state as unknown as S),
-  );
+export function useStoreWithAi<T>(selector: (state: AiSliceState) => T): T {
+  return useBaseRoomStore<AiSliceState, T>((state) => selector(state));
 }

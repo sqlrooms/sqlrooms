@@ -25,7 +25,7 @@ export {
   createSlice,
   useBaseRoomShellStore,
   type RoomShellSliceState,
-} from './RoomShellStore';
+} from './RoomShellSlice';
 
 export type {StateCreator, StoreApi} from 'zustand';
 

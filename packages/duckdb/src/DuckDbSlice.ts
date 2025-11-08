@@ -1,4 +1,5 @@
 import {
+  BaseRoomSliceState,
   createBaseSlice,
   RoomState,
   useBaseRoomStore,
@@ -235,7 +236,7 @@ type CreateDuckDbSliceProps = {
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
-  return createBaseSlice<{}, DuckDbSliceState>((set, get) => {
+  return createBaseSlice<DuckDbSliceState>((set, get) => {
     return {
       db: {
         connector, // Will be initialized during init
@@ -610,11 +611,6 @@ export function createDuckDbSlice({
 
 /**
  * @internal
- */
-export type RoomStateWithDuckDb = RoomState<{}> & DuckDbSliceState;
-
-/**
- * @internal
  * Select values from the room store that includes the DuckDB slice.
  *
  * This is a typed wrapper around `useBaseRoomStore` that narrows the
@@ -625,9 +621,7 @@ export type RoomStateWithDuckDb = RoomState<{}> & DuckDbSliceState;
  * @returns The selected value of type `T`
  */
 export function useStoreWithDuckDb<T>(
-  selector: (state: RoomStateWithDuckDb) => T,
+  selector: (state: BaseRoomSliceState & DuckDbSliceState) => T,
 ): T {
-  return useBaseRoomStore<{}, RoomState<{}>, T>((state) =>
-    selector(state as unknown as RoomStateWithDuckDb),
-  );
+  return useBaseRoomStore<DuckDbSliceState, T>((state) => selector(state));
 }

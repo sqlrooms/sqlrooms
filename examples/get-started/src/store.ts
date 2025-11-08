@@ -1,35 +1,25 @@
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {MapIcon} from 'lucide-react';
-import {z} from 'zod';
 import {MainView} from './components/MainView';
-
-/**
- * Room config schema is the part of the app state meant for saving.
- */
-export const RoomConfig = BaseRoomConfig.extend({
-  // Add your room config here
-});
-export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * The whole app state.
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & {
-  // Add your app state here
+export type RoomState = RoomShellSliceState & {
+  // Add your custom app state types here
 };
 
 /**
  * Create the room store. You can combine your custom state and logic
  * with the slices from the SQLRooms modules.
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         title: 'Minimal SQLRooms App',
         dataSources: [

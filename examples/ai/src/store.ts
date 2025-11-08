@@ -12,6 +12,7 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
   RoomShellSliceState,
@@ -165,7 +166,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       name: 'ai-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: BaseRoomConfig.parse(state.config),
+        room: BaseRoomConfig.parse(state.room.config),
+        layout: LayoutConfig.parse(state.layout.config),
         ai: AiSliceConfig.parse(state.ai.config),
         aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
         sqlEditor: SqlEditorSliceConfig.parse(state.sqlEditor.config),
@@ -173,7 +175,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Combining the persisted state with the current one when loading from local storage
       merge: (persistedState: any, currentState) => ({
         ...currentState,
-        config: BaseRoomConfig.parse(persistedState.config),
+        room: {
+          ...currentState.room,
+          config: BaseRoomConfig.parse(persistedState.room),
+        },
+        layout: {
+          ...currentState.layout,
+          config: LayoutConfig.parse(persistedState.layout),
+        },
         ai: {
           ...currentState.ai,
           config: AiSliceConfig.parse(persistedState.ai),

@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from './RoomShellStore';
+import {useBaseRoomShellStore} from './RoomShellSlice';
 
 const SidebarButton: FC<{
   className?: string;

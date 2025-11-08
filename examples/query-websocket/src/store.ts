@@ -10,7 +10,6 @@ import {
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
-  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
@@ -48,19 +47,10 @@ export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
 
-export type RoomState = RoomShellSliceState<RoomConfig> &
-  SqlEditorSliceState & {
-    // Add your own state here
-  };
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 /**
  * Path to the preloaded extensions directory.
@@ -75,11 +65,11 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         connector: createWebSocketDuckDbConnector({
           authToken: 'secret123',
           wsUrl: 'ws://localhost:4000',
@@ -133,7 +123,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       name: 'sql-editor-example-app-state-storage',
       // Subset of the state to persist
       partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
+        config: BaseRoomConfig.parse(state.config),
       }),
     },
   ) as StateCreator<RoomState>,
