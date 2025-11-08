@@ -34,9 +34,10 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         className,
       )}
     >
-      <div className="border-border flex items-center border-b p-1">
-        <QueryEditorPanelActions />
+      <div className="border-border flex items-center gap-4 border-b px-2 pt-1">
         <QueryEditorPanelTabsList />
+        <div className="flex-1" />
+        <QueryEditorPanelActions />
       </div>
       {queries.map((q) => (
         <TabsContent
