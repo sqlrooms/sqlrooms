@@ -1,5 +1,4 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {ensureMonacoLoaderConfigured} from '../loader';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
 import React, {useEffect, useRef} from 'react';
 import {
@@ -64,17 +63,16 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   options = {},
   ...props
 }) => {
-  // Ensure the loader is configured before the editor mounts
-  ensureMonacoLoaderConfigured();
-  // Get the app theme from the ThemeProvider
   const {theme: appTheme} = useTheme();
   const [renderKey, setRenderKey] = React.useState(0);
 
-  // If a theme is explicitly provided, use it. Otherwise, determine from the app theme
+  // Determine editor theme based on app theme
+  // Use typeof window check to avoid SSR errors in Next.js when accessing window.matchMedia
   const theme =
     explicitTheme ||
     (appTheme === 'dark' ||
     (appTheme === 'system' &&
+      typeof window !== 'undefined' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches)
       ? 'vs-dark'
       : 'light');

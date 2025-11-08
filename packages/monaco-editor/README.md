@@ -59,25 +59,20 @@ function MyJsonEditor() {
 }
 ```
 
-### Configuring the loader for offline use
+### Offline Use and Bundling
 
-By default, the editor loads its sources from a CDN. To use the editor in an
-offline environment, you need to bundle `monaco-editor` with your application.
-You can do this with the `configureMonacoLoader` utility. This function is a
-thin wrapper around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config)
-and sets up `self.MonacoEnvironment` automatically when web workers are passed.
+By default, the editor loads from a CDN, which is SSR-friendly (works with Next.js) and reduces bundle size.
 
-Here's an example of how to configure the loader to use bundled workers with
-Vite (note the `?worker` suffix):
+For offline environments (like PWAs), configure Monaco once at app startup:
 
 ```ts
+// main.tsx or app entry point
 import {configureMonacoLoader} from '@sqlrooms/monaco-editor';
 import * as monaco from 'monaco-editor';
 import editorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import jsonWorker from 'monaco-editor/esm/vs/language/json/json.worker?worker';
 import tsWorker from 'monaco-editor/esm/vs/language/typescript/ts.worker?worker';
 
-// Use the monaco-editor package instead of a CDN
 configureMonacoLoader({
   monaco,
   workers: {
@@ -89,11 +84,21 @@ configureMonacoLoader({
 });
 ```
 
-You can also use `configureMonacoLoader` to specify a custom path to the
-editor's sources, for example, if you are hosting them on a different CDN:
+Now all `<MonacoEditor />` components automatically work offline:
+
+```tsx
+// No configuration needed - automatically detected!
+<MonacoEditor language="javascript" value="// Works offline!" />
+```
+
+**Note:** Vite requires the `?worker` suffix on worker imports. This is a thin wrapper around the [`loader.config` function](https://github.com/suren-atoyan/monaco-react#loader-config).
+
+#### Custom CDN path
+
+You can also specify a custom CDN path:
 
 ```ts
-// configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
+configureMonacoLoader({paths: {vs: 'https://unpkg.com/monaco-editor/min/vs'}});
 ```
 
 ## Props
