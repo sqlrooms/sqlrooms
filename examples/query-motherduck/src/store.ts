@@ -5,10 +5,15 @@ import {
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
-import {BaseRoomConfig, createRoomStoreCreator} from '@sqlrooms/room-store';
+import {
+  BaseRoomConfig,
+  createRoomStoreCreator,
+  LayoutConfig,
+} from '@sqlrooms/room-store';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
+  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
@@ -71,13 +76,23 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
         name: 'md-sql-editor-example-app-state-storage',
         // Subset of the state to persist
         partialize: (state) => ({
-          config: BaseRoomConfig.parse(state.room.config),
+          room: BaseRoomConfig.parse(state.room.config),
+          layout: LayoutConfig.parse(state.layout.config),
+          sqlEditor: SqlEditorSliceConfig.parse(state.sqlEditor.config),
         }),
         merge: (persistedState: any, currentState) => ({
           ...currentState,
           room: {
             ...currentState.room,
             config: BaseRoomConfig.parse(persistedState.room),
+          },
+          layout: {
+            ...currentState.layout,
+            config: LayoutConfig.parse(persistedState.layout),
+          },
+          sqlEditor: {
+            ...currentState.sqlEditor,
+            config: SqlEditorSliceConfig.parse(persistedState.sqlEditor),
           },
         }),
       },
