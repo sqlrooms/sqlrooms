@@ -8,7 +8,6 @@ import {
 import {
   BaseRoomConfig,
   createBaseSlice,
-  SliceState,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
@@ -29,7 +28,7 @@ type ExtendedChatOnToolCallCallback = (args: {
   addToolResult?: any;
 }) => Promise<any> | any;
 
-export type AiSliceState = SliceState & {
+export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
     analysisPrompt: string;

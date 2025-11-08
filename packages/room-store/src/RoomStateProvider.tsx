@@ -1,6 +1,6 @@
 import React, {createContext, ReactNode, useContext} from 'react';
 import {StoreApi, useStore} from 'zustand';
-import {BaseRoomSliceState, SliceState, RoomStore} from './RoomStore';
+import {BaseRoomSliceState, RoomStore} from './RoomStore';
 
 // See https://docs.pmnd.rs/zustand/guides/initialize-state-with-props
 
@@ -23,7 +23,7 @@ export function RoomStateProvider<RS extends BaseRoomSliceState>({
   );
 }
 
-export function useBaseRoomStore<RS extends SliceState, T>(
+export function useBaseRoomStore<RS extends object, T>(
   selector: (state: RS & BaseRoomSliceState) => T,
 ): T {
   const store = useContext(RoomStateContext);

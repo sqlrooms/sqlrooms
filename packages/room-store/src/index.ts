@@ -11,18 +11,17 @@ export {
 } from './RoomStateProvider';
 
 export {
-  createRoomStore,
-  createRoomStoreCreator,
+  createBaseRoomSlice,
   createBaseSlice,
   createRoomSlice,
-  createBaseRoomSlice,
-  type CreateBaseRoomSliceProps,
+  createRoomStore,
+  createRoomStoreCreator,
+  isRoomSliceWithDestroy,
+  isRoomSliceWithInitialize,
   type BaseRoomSliceState,
+  type CreateBaseRoomSliceProps,
   type RoomState,
   type RoomStore,
-  type SliceState,
-  isRoomSliceWithInitialize,
-  isRoomSliceWithDestroy,
 } from './RoomStore';
 
 export type {StateCreator, StoreApi} from 'zustand';

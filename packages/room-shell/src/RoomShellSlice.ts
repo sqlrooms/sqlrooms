@@ -26,7 +26,6 @@ import {
 import {
   BaseRoomSliceState,
   CreateBaseRoomSliceProps,
-  SliceState,
   createBaseRoomSlice,
   isRoomSliceWithInitialize,
   useBaseRoomStore,
@@ -57,7 +56,7 @@ export type TaskProgress = {
   message: string;
 };
 
-export type RoomShellSliceState = SliceState & {
+export type RoomShellSliceState = {
   initialize?: () => Promise<void>;
   room: BaseRoomSliceState['room'] & {
     config: RoomShellSliceConfig;
