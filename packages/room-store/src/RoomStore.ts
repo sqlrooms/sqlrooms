@@ -8,6 +8,7 @@ export type RoomStateProps<PC> = {
   initialized: boolean;
   lastSavedConfig: PC | undefined;
   tasksProgress: Record<string, TaskProgress>;
+  roomError: Error | undefined;
   captureException: (exception: unknown, captureContext?: unknown) => void;
 };
 
@@ -36,13 +37,19 @@ export type RoomStateActions<PC> = {
   hasUnsavedChanges(): boolean; // since last save
   /**
    * Called when the project config gets changed. Can be used for saving.
-   * To be overridden by the custom project state.
+   * Implementations should call get().room.setLastSavedConfig(config) after a successful
+   * save to update the last saved config.
    * @param config - The project config to save.
    */
   onSaveConfig?: (config: PC) => Promise<void> | undefined;
 
   setTaskProgress: (id: string, taskProgress: TaskProgress | undefined) => void;
   getLoadingProgress: () => TaskProgress | undefined;
+  /**
+   * Set the error of the project.
+   * @param error - The error to set.
+   */
+  setRoomError: (error: Error) => void;
 };
 
 export type RoomState<PC> = {
@@ -63,6 +70,7 @@ export function createRoomSlice<PC>(props?: {
     ...roomStateProps,
     initialized: false,
     lastSavedConfig: undefined,
+    roomError: undefined,
     tasksProgress: {},
     captureException: (exception: unknown) => {
       console.error(exception);
@@ -107,6 +115,14 @@ export function createRoomSlice<PC>(props?: {
           return undefined;
         },
 
+        setRoomError(error) {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.room.roomError = error;
+            }),
+          );
+        },
+
         setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
@@ -126,6 +142,16 @@ export function createRoomSlice<PC>(props?: {
   };
 
   return slice;
+}
+
+export interface Slice {
+  initialize?: () => Promise<void>;
+}
+
+function isSliceWithInitialize(
+  slice: unknown,
+): slice is Slice & Required<Pick<Slice, 'initialize'>> {
+  return typeof slice === 'object' && slice !== null && 'initialize' in slice;
 }
 
 export function createBaseSlice<PC, S>(

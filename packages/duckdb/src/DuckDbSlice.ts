@@ -2,6 +2,7 @@ import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
   createBaseSlice,
   RoomState,
+  Slice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -30,7 +31,7 @@ export type SchemaAndDatabase = {
 /**
  * State and actions for the DuckDB slice
  */
-export type DuckDbSliceState = {
+export type DuckDbSliceState = Slice & {
   db: {
     /**
      * The DuckDB connector instance

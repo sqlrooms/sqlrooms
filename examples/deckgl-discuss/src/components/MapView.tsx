@@ -1,8 +1,8 @@
 import {
   MapboxOverlay as DeckOverlay,
   MapboxOverlayProps,
-} from '@deck.gl/mapbox';
-import {GeoJsonLayer} from 'deck.gl';
+} from '@deck.gl/mapbox/typed';
+import {GeoJsonLayer} from 'deck.gl/typed';
 import {MessageCircle, PlusCircle} from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useMemo, useState} from 'react';
@@ -21,7 +21,9 @@ const INITIAL_VIEW_STATE = {
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 function DeckGLOverlay(props: MapboxOverlayProps) {
+  // @ts-ignore
   const overlay = useControl(() => new DeckOverlay(props));
+  // @ts-ignore
   overlay.setProps(props);
   return null;
 }
@@ -150,7 +152,7 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
       filled: true,
       pointRadiusMinPixels: 2,
       pointRadiusScale: 4000,
-      getPointRadius: (f) => 11 - f.properties.scalerank,
+      getPointRadius: (f) => 11 - (f.properties?.scalerank ?? 0),
       getFillColor: [200, 0, 80, 180],
       pickable: true,
       autoHighlight: true,

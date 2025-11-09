@@ -225,6 +225,7 @@ function MyComponent() {
   // Use actions
   const handleExecute = () => {
     runQuery('SELECT * FROM users LIMIT 10');
+    runQuery('SELECT * FROM users LIMIT 10');
   };
 
   return (
