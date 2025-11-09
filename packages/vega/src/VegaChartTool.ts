@@ -1,6 +1,8 @@
 import {z} from 'zod';
 import {VegaChartToolResult} from './VegaChartToolResult';
 import {OpenAssistantTool} from '@openassistant/utils';
+import {compile, TopLevelSpec} from 'vega-lite';
+import {parse as vegaParse} from 'vega';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -68,13 +70,37 @@ export function createVegaChartTool({
           throw new Error('Chart creation was aborted');
         }
 
-        const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec);
+        const parsedVegaLiteSpec = JSON.parse(vegaLiteSpec) as TopLevelSpec;
+
+        // Validate/spec-check by compiling to Vega and attempting to parse it.
+        // - compile() can throw on invalid Vega-Lite specs
+        // - vegaParse() will throw if the compiled Vega spec is invalid
+        let vegaWarnings: string[] = [];
+        try {
+          const compiled = compile(parsedVegaLiteSpec);
+          // vega-lite's compile() may expose warnings at runtime, but types don't include it
+          vegaWarnings = (compiled as any).warnings ?? [];
+          // This will throw if the compiled Vega spec is invalid
+          vegaParse(compiled.spec);
+        } catch (e) {
+          const message = e instanceof Error ? e.message : String(e);
+          return {
+            llmResult: {
+              success: false,
+              details: `Invalid Vega-Lite spec: ${message}`,
+            },
+          };
+        }
+
         // data object of the vegaLiteSpec and sqlQuery
         // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
         return {
           llmResult: {
             success: true,
-            details: 'Chart created successfully.',
+            details:
+              vegaWarnings.length > 0
+                ? `Chart created successfully with warnings:\n- ${vegaWarnings.join('\n- ')}`
+                : 'Chart created successfully.',
           },
           additionalData: {
             sqlQuery,
