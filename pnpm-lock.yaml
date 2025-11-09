@@ -181,19 +181,19 @@ importers:
         version: 19.2.2(@types/react@19.1.13)
       '@vitejs/plugin-react':
         specifier: ^5.0.3
-        version: 5.0.4(vite@7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))
+        version: 5.0.4(vite@7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
-        version: 9.37.0(jiti@2.6.1)
+        version: 9.37.0(jiti@1.21.7)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.37.0(jiti@2.6.1))
+        version: 5.2.0(eslint@9.37.0(jiti@1.21.7))
       eslint-plugin-react-refresh:
         specifier: ^0.4.21
-        version: 0.4.23(eslint@9.37.0(jiti@2.6.1))
+        version: 0.4.23(eslint@9.37.0(jiti@1.21.7))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -208,10 +208,10 @@ importers:
         version: 5.8.3
       typescript-eslint:
         specifier: ^8.44.1
-        version: 8.46.1(eslint@9.37.0(jiti@2.6.1))(typescript@5.8.3)
+        version: 8.46.1(eslint@9.37.0(jiti@1.21.7))(typescript@5.8.3)
       vite:
         specifier: ^7.1.9
-        version: 7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
+        version: 7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
 
   examples/ai-core:
     dependencies:
@@ -260,19 +260,19 @@ importers:
         version: 19.2.2(@types/react@19.1.13)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
-        version: 4.7.0(vite@7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))
+        version: 4.7.0(vite@7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.21(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
-        version: 9.37.0(jiti@1.21.7)
+        version: 9.37.0(jiti@2.6.1)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.37.0(jiti@1.21.7))
+        version: 5.2.0(eslint@9.37.0(jiti@2.6.1))
       eslint-plugin-react-refresh:
         specifier: ^0.4.20
-        version: 0.4.23(eslint@9.37.0(jiti@1.21.7))
+        version: 0.4.23(eslint@9.37.0(jiti@2.6.1))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -287,10 +287,10 @@ importers:
         version: 5.8.3
       typescript-eslint:
         specifier: ^8.34.0
-        version: 8.46.1(eslint@9.37.0(jiti@1.21.7))(typescript@5.8.3)
+        version: 8.46.1(eslint@9.37.0(jiti@2.6.1))(typescript@5.8.3)
       vite:
         specifier: ^7.1.9
-        version: 7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
+        version: 7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
 
   examples/ai-nextjs:
     dependencies:
@@ -886,9 +886,6 @@ importers:
       react-icons:
         specifier: ^5.5.0
         version: 5.5.0(react@19.2.0)
-      react-mosaic-component:
-        specifier: 5.3.0
-        version: 5.3.0(@types/node@22.18.10)(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       zod:
         specifier: ^4.1.8
         version: 4.1.12
@@ -1758,8 +1755,8 @@ importers:
         specifier: '>=18'
         version: 19.2.0(react@19.2.0)
       react-mosaic-component:
-        specifier: 5.3.0
-        version: 5.3.0(@types/node@22.18.10)(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: ^6.1.1
+        version: 6.1.1(@types/node@22.18.10)(@types/react@19.1.13)(dnd-core@16.0.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       zod:
         specifier: ^4.1.8
         version: 4.1.12
@@ -1979,8 +1976,8 @@ importers:
         specifier: '>=18'
         version: 19.2.0(react@19.2.0)
       react-mosaic-component:
-        specifier: 5.3.0
-        version: 5.3.0(@types/node@22.18.10)(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+        specifier: ^6.1.1
+        version: 6.1.1(@types/node@22.18.10)(@types/react@19.1.13)(dnd-core@16.0.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       zod:
         specifier: ^4.1.8
         version: 4.1.12
@@ -5215,14 +5212,14 @@ packages:
   '@reach/observe-rect@1.2.0':
     resolution: {integrity: sha512-Ba7HmkFgfQxZqqaeIWWkNK0rEhpxVQHIoVyW1YDSkGsGIXzcaW4deC8B0pZrNSSyLTdIk7y+5olKt5+g0GmFIQ==}
 
-  '@react-dnd/asap@4.0.1':
-    resolution: {integrity: sha512-kLy0PJDDwvwwTXxqTFNAAllPHD73AycE9ypWeln/IguoGBEbvFcPDbCV03G52bEcC5E+YgupBE0VzHGdC8SIXg==}
+  '@react-dnd/asap@5.0.2':
+    resolution: {integrity: sha512-WLyfoHvxhs0V9U+GTsGilGgf2QsPl6ZZ44fnv0/b8T3nQyvzxidxsg/ZltbWssbsRDlYW8UKSQMTGotuTotZ6A==}
 
-  '@react-dnd/invariant@2.0.0':
-    resolution: {integrity: sha512-xL4RCQBCBDJ+GRwKTFhGUW8GXa4yoDfJrPbLblc3U09ciS+9ZJXJ3Qrcs/x2IODOdIE5kQxvMmE2UKyqUictUw==}
+  '@react-dnd/invariant@4.0.2':
+    resolution: {integrity: sha512-xKCTqAK/FFauOM9Ta2pswIyT3D8AQlfrYdOi/toTPEhqCuAs1v5tcJ3Y08Izh1cJ5Jchwy9SeAXmMg6zrKs2iw==}
 
-  '@react-dnd/shallowequal@2.0.0':
-    resolution: {integrity: sha512-Pc/AFTdwZwEKJxFJvlxrSmGe/di+aAOBn60sremrpLo6VI/6cmiUYNNwlI5KNYttg7uypzA3ILPMPgxB2GYZEg==}
+  '@react-dnd/shallowequal@4.0.2':
+    resolution: {integrity: sha512-/RVXdLvJxLg4QKvMoM5WlwNR9ViO9z8B/qPcc+C0Sa/teJY7QG7kJ441DwzOjMYEY7GmU4dj5EcGHIkKZiQZCA==}
 
   '@rolldown/pluginutils@1.0.0-beta.27':
     resolution: {integrity: sha512-+d0F4MKMCbeVUJwG96uQ4SgAznZNSq93I3V+9NHA4OpvqG8mRCpGdKmK8l/dl02h2CCDHwW2FqilnTyDcAnqjA==}
@@ -7336,11 +7333,13 @@ packages:
   dlv@1.1.3:
     resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
 
-  dnd-core@14.0.1:
-    resolution: {integrity: sha512-+PVS2VPTgKFPYWo3vAFEA8WPbTf7/xo43TifH9G8S1KqnrQu0o77A3unrF5yOugy4mIz7K5wAVFHUcha7wsz6A==}
+  dnd-core@16.0.1:
+    resolution: {integrity: sha512-HK294sl7tbw6F6IeuK16YSBUoorvHpY8RHO+9yFfaJyCDVb6n7PRcezrOEOa2SBCqiYpemh5Jx20ZcjKdFAVng==}
 
-  dnd-multi-backend@6.0.0:
-    resolution: {integrity: sha512-qfUO4V0IACs24xfE9m9OUnwIzoL+SWzSiFbKVIHE0pFddJeZ93BZOdHS1XEYr8X3HNh+CfnfjezXgOMgjvh74g==}
+  dnd-multi-backend@8.1.2:
+    resolution: {integrity: sha512-KPDVEsiM+6gNEegqZYTWJQgJxYV4vB91tUrvoKJjaS0wwWqT/jNU0P7xJAwCue/cbasJNvk2dFZH7tC+bjX1Rg==}
+    peerDependencies:
+      dnd-core: ^16.0.1
 
   doctrine@2.1.0:
     resolution: {integrity: sha512-35mSku4ZXK0vfCuHEDAwt55dg2jNajHZ1odvF+8SSr82EsZY4QmXfuWso8oEd8zRhVObSN18aM0CjSdoBX7zIw==}
@@ -9783,34 +9782,37 @@ packages:
   randombytes@2.1.0:
     resolution: {integrity: sha512-vYl3iOX+4CKUWuxGi9Ukhie6fsqXqS9FE2Zaic4tNFD2N2QQaXOMFbuKK4QmDHC0JO6B1Zp41J0LpT0oR68amQ==}
 
+  rdndmb-html5-to-touch@8.1.2:
+    resolution: {integrity: sha512-efi3MaXYxWaLMd5xzF1bVvmX8erTMhYHSlaMjQe+tynf4IdtgRYfKLwYg+4Z5eq4k7idrjKHQOIMDE6D8LjnOA==}
+
   react-day-picker@8.10.1:
     resolution: {integrity: sha512-TMx7fNbhLk15eqcMt+7Z7S2KF7mfTId/XJDjKE8f+IUcFn0l08/kI4FiYTL/0yuOLmEcbR4Fwe3GJf/NiiMnPA==}
     peerDependencies:
       date-fns: ^2.28.0 || ^3.0.0
       react: ^16.8.0 || ^17.0.0 || ^18.0.0
 
-  react-dnd-html5-backend@14.1.0:
-    resolution: {integrity: sha512-6ONeqEC3XKVf4eVmMTe0oPds+c5B9Foyj8p/ZKLb7kL2qh9COYxiBHv3szd6gztqi/efkmriywLUVlPotqoJyw==}
+  react-dnd-html5-backend@16.0.1:
+    resolution: {integrity: sha512-Wu3dw5aDJmOGw8WjH1I1/yTH+vlXEL4vmjk5p+MHxP8HuHJS1lAGeIdG/hze1AvNeXWo/JgULV87LyQOr+r5jw==}
 
-  react-dnd-multi-backend@6.0.2:
-    resolution: {integrity: sha512-SwpqRv0HkJYu244FbHf9NbvGzGy14Ir9wIAhm909uvOVaHgsOq6I1THMSWSgpwUI31J3Bo5uS19tuvGpVPjzZw==}
+  react-dnd-multi-backend@8.1.2:
+    resolution: {integrity: sha512-Ecj+gwr5B7zRiWqkDU5sUvUmufcu97WnsZFHnqHrWFJhTXAXQnhrperHLFktNP2CnQYtAgbucodr1if0MWpEaA==}
     peerDependencies:
-      react: ^16.13
-      react-dnd-html5-backend: ^11.1.3
-      react-dnd-touch-backend: ^11.1.3
-      react-dom: ^16.13
+      dnd-core: ^16.0.1
+      react: ^16.14.0 || ^17.0.2 || ^18.0.0
+      react-dnd: ^16.0.1
+      react-dom: ^16.14.0 || ^17.0.2 || ^18.0.0
 
-  react-dnd-preview@6.0.2:
-    resolution: {integrity: sha512-F2+uK4Be+q+7mZfNh9kaZols7wp1hX6G7UBTVaTpDsBpMhjFvY7/v7odxYSerSFBShh23MJl33a4XOVRFj1zoQ==}
+  react-dnd-preview@8.1.2:
+    resolution: {integrity: sha512-j5M1NcQBItOCYXONRbCNs6MzW7u4KygeOGZlztNNguTs1/f2d7q1fRnQjFLjCpgeg5Gy/JrTFrbRThZglJP5dg==}
     peerDependencies:
-      react: ^16.13.1
-      react-dnd: ^11.1.3
+      react: ^16.14.0 || ^17.0.2 || ^18.0.0
+      react-dnd: ^16.0.1
 
-  react-dnd-touch-backend@14.1.1:
-    resolution: {integrity: sha512-ITmfzn3fJrkUBiVLO6aJZcnu7T8C+GfwZitFryGsXKn5wYcUv+oQBeh9FYcMychmVbDdeUCfvEtTk9O+DKmAaw==}
+  react-dnd-touch-backend@16.0.1:
+    resolution: {integrity: sha512-NonoCABzzjyWGZuDxSG77dbgMZ2Wad7eQiCd/ECtsR2/NBLTjGksPUx9UPezZ1nQ/L7iD130Tz3RUshL/ClKLA==}
 
-  react-dnd@14.0.5:
-    resolution: {integrity: sha512-9i1jSgbyVw0ELlEVt/NkCUkxy1hmhJOkePoCH713u75vzHGyXhPDm28oLfc2NMSBjZRM1Y+wRjHXJT3sPrTy+A==}
+  react-dnd@16.0.1:
+    resolution: {integrity: sha512-QeoM/i73HHu2XF9aKksIUuamHPDvRglEwdHL4jsp784BgUuWcg6mzfxT0QDdQz8Wj0qyRKx2eMg8iZtWvU4E2Q==}
     peerDependencies:
       '@types/hoist-non-react-statics': '>= 3.3.1'
       '@types/node': '>= 12'
@@ -9874,10 +9876,10 @@ packages:
       '@types/react': 19.1.13
       react: '>=18'
 
-  react-mosaic-component@5.3.0:
-    resolution: {integrity: sha512-lw5l86+BHJQUysZ5zOT+ssZh6V7fe+ZGNpYU3tmC2LhjoljbY5WniRRtjZDJf/UyqxdArjxUAB9rAlm4JpBNwA==}
+  react-mosaic-component@6.1.1:
+    resolution: {integrity: sha512-Ivuj6AxRDlo/H8OiEDU1mdgivxuKbwGOa5Ub6Yf+bHcu0JWioT7ttlpCWF63/gKrJBlRMB6fW9/eNOXINg9+Gg==}
     peerDependencies:
-      react: 16 - 18
+      react: '>=16'
 
   react-refresh@0.17.0:
     resolution: {integrity: sha512-z6F7K9bV85EfseRCp2bzrpyQ0Gkw1uLoCel9XBVWPg/TjRj94SkJzUTGfOa4bs7iJvBWtQG0Wq7wnI0syw3EBQ==}
@@ -11011,9 +11013,8 @@ packages:
     resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
     hasBin: true
 
-  uuid@3.4.0:
-    resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
-    deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
+  uuid@9.0.1:
+    resolution: {integrity: sha512-b+1eJOlsR9K8HJpow9Ok3fiWOWSIcIzXodvv0rQjVoOVNpWMpxf1wZNpt4y9h10odCNrqnYp1OBzRktckBe3sA==}
     hasBin: true
 
   v8-to-istanbul@9.3.0:
@@ -15283,11 +15284,11 @@ snapshots:
 
   '@reach/observe-rect@1.2.0': {}
 
-  '@react-dnd/asap@4.0.1': {}
+  '@react-dnd/asap@5.0.2': {}
 
-  '@react-dnd/invariant@2.0.0': {}
+  '@react-dnd/invariant@4.0.2': {}
 
-  '@react-dnd/shallowequal@2.0.0': {}
+  '@react-dnd/shallowequal@4.0.2': {}
 
   '@rolldown/pluginutils@1.0.0-beta.27': {}
 
@@ -16675,12 +16676,24 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.9.0
 
-  '@vitejs/plugin-react@4.7.0(vite@7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))':
+  '@vitejs/plugin-react@4.7.0(vite@7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))':
     dependencies:
       '@babel/core': 7.28.4
       '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.4)
       '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.4)
       '@rolldown/pluginutils': 1.0.0-beta.27
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.17.0
+      vite: 7.1.10(@types/node@22.18.10)(jiti@2.6.1)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
+    transitivePeerDependencies:
+      - supports-color
+
+  '@vitejs/plugin-react@5.0.4(vite@7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1))':
+    dependencies:
+      '@babel/core': 7.28.4
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.4)
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.4)
+      '@rolldown/pluginutils': 1.0.0-beta.38
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
       vite: 7.1.10(@types/node@22.18.10)(jiti@1.21.7)(lightningcss@1.30.1)(terser@5.44.0)(yaml@2.8.1)
@@ -17807,13 +17820,15 @@ snapshots:
 
   dlv@1.1.3: {}
 
-  dnd-core@14.0.1:
+  dnd-core@16.0.1:
     dependencies:
-      '@react-dnd/asap': 4.0.1
-      '@react-dnd/invariant': 2.0.0
+      '@react-dnd/asap': 5.0.2
+      '@react-dnd/invariant': 4.0.2
       redux: 4.2.1
 
-  dnd-multi-backend@6.0.0: {}
+  dnd-multi-backend@8.1.2(dnd-core@16.0.1):
+    dependencies:
+      dnd-core: 16.0.1
 
   doctrine@2.1.0:
     dependencies:
@@ -20905,43 +20920,47 @@ snapshots:
     dependencies:
       safe-buffer: 5.2.1
 
+  rdndmb-html5-to-touch@8.1.2(dnd-core@16.0.1):
+    dependencies:
+      dnd-multi-backend: 8.1.2(dnd-core@16.0.1)
+      react-dnd-html5-backend: 16.0.1
+      react-dnd-touch-backend: 16.0.1
+    transitivePeerDependencies:
+      - dnd-core
+
   react-day-picker@8.10.1(date-fns@4.1.0)(react@19.2.0):
     dependencies:
       date-fns: 4.1.0
       react: 19.2.0
 
-  react-dnd-html5-backend@14.1.0:
+  react-dnd-html5-backend@16.0.1:
     dependencies:
-      dnd-core: 14.0.1
+      dnd-core: 16.0.1
 
-  react-dnd-multi-backend@6.0.2(react-dnd-html5-backend@14.1.0)(react-dnd-touch-backend@14.1.1)(react-dnd@14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  react-dnd-multi-backend@8.1.2(dnd-core@16.0.1)(react-dnd@16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
-      dnd-multi-backend: 6.0.0
-      prop-types: 15.8.1
+      dnd-core: 16.0.1
+      dnd-multi-backend: 8.1.2(dnd-core@16.0.1)
       react: 19.2.0
-      react-dnd-html5-backend: 14.1.0
-      react-dnd-preview: 6.0.2(react-dnd@14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react@19.2.0)
-      react-dnd-touch-backend: 14.1.1
+      react-dnd: 16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0)
+      react-dnd-preview: 8.1.2(react-dnd@16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react@19.2.0)
       react-dom: 19.2.0(react@19.2.0)
-    transitivePeerDependencies:
-      - react-dnd
 
-  react-dnd-preview@6.0.2(react-dnd@14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react@19.2.0):
+  react-dnd-preview@8.1.2(react-dnd@16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react@19.2.0):
     dependencies:
-      prop-types: 15.8.1
       react: 19.2.0
-      react-dnd: 14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0)
+      react-dnd: 16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0)
 
-  react-dnd-touch-backend@14.1.1:
+  react-dnd-touch-backend@16.0.1:
     dependencies:
-      '@react-dnd/invariant': 2.0.0
-      dnd-core: 14.0.1
+      '@react-dnd/invariant': 4.0.2
+      dnd-core: 16.0.1
 
-  react-dnd@14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0):
+  react-dnd@16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0):
     dependencies:
-      '@react-dnd/invariant': 2.0.0
-      '@react-dnd/shallowequal': 2.0.0
-      dnd-core: 14.0.1
+      '@react-dnd/invariant': 4.0.2
+      '@react-dnd/shallowequal': 4.0.2
+      dnd-core: 16.0.1
       fast-deep-equal: 3.1.3
       hoist-non-react-statics: 3.3.2
       react: 19.2.0
@@ -21002,22 +21021,24 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  react-mosaic-component@5.3.0(@types/node@22.18.10)(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
+  react-mosaic-component@6.1.1(@types/node@22.18.10)(@types/react@19.1.13)(dnd-core@16.0.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0):
     dependencies:
       classnames: 2.5.1
       immutability-helper: 3.1.1
       lodash: 4.17.21
       prop-types: 15.8.1
+      rdndmb-html5-to-touch: 8.1.2(dnd-core@16.0.1)
       react: 19.2.0
-      react-dnd: 14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0)
-      react-dnd-html5-backend: 14.1.0
-      react-dnd-multi-backend: 6.0.2(react-dnd-html5-backend@14.1.0)(react-dnd-touch-backend@14.1.1)(react-dnd@14.0.5(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      react-dnd-touch-backend: 14.1.1
-      uuid: 3.4.0
+      react-dnd: 16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0)
+      react-dnd-html5-backend: 16.0.1
+      react-dnd-multi-backend: 8.1.2(dnd-core@16.0.1)(react-dnd@16.0.1(@types/node@22.18.10)(@types/react@19.1.13)(react@19.2.0))(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
+      react-dnd-touch-backend: 16.0.1
+      uuid: 9.0.1
     transitivePeerDependencies:
       - '@types/hoist-non-react-statics'
       - '@types/node'
       - '@types/react'
+      - dnd-core
       - react-dom
 
   react-refresh@0.17.0: {}
@@ -22359,7 +22380,7 @@ snapshots:
 
   uuid@13.0.0: {}
 
-  uuid@3.4.0: {}
+  uuid@9.0.1: {}
 
   v8-to-istanbul@9.3.0:
     dependencies:
