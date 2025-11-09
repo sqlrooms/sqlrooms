@@ -6,6 +6,7 @@ import {
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -96,32 +97,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     {
       // Local storage key
       name: 'discuss-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        roomConfig: BaseRoomConfig.parse(state.room.config),
-        layoutConfig: LayoutConfig.parse(state.layout.config),
-        sqlEditorConfig: SqlEditorSliceConfig.parse(state.sqlEditor.config),
-        discussConfig: DiscussSliceConfig.parse(state.discuss.config),
-      }),
-      // Combining the persisted state with the current one
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        room: {
-          ...currentState.room,
-          config: BaseRoomConfig.parse(persistedState.roomConfig),
-        },
-        layout: {
-          ...currentState.layout,
-          config: LayoutConfig.parse(persistedState.layoutConfig),
-        },
-        sqlEditor: {
-          ...currentState.sqlEditor,
-          config: SqlEditorSliceConfig.parse(persistedState.sqlEditorConfig),
-        },
-        discuss: {
-          ...currentState.discuss,
-          config: DiscussSliceConfig.parse(persistedState.discussConfig),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+        discuss: DiscussSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

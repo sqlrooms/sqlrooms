@@ -7,6 +7,7 @@ import {
 import {
   BaseRoomSliceState,
   createBaseRoomSlice,
+  createPersistHelpers,
   createRoomStore,
   StateCreator,
 } from '@sqlrooms/room-store';
@@ -48,22 +49,10 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
     {
       // Local storage key
       name: 'ai-nextjs-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
       }),
     },
   ) as StateCreator<State>,

@@ -1,6 +1,7 @@
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -123,26 +124,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     {
       // Local storage key
       name: 'sql-editor-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        room: BaseRoomConfig.parse(state.room.config),
-        layout: LayoutConfig.parse(state.layout.config),
-        sqlEditor: SqlEditorSliceConfig.parse(state.sqlEditor.config),
-      }),
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        room: {
-          ...currentState.room,
-          config: BaseRoomConfig.parse(persistedState.room),
-        },
-        layout: {
-          ...currentState.layout,
-          config: LayoutConfig.parse(persistedState.layout),
-        },
-        sqlEditor: {
-          ...currentState.sqlEditor,
-          config: SqlEditorSliceConfig.parse(persistedState.sqlEditor),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

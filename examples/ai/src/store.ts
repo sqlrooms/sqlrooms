@@ -10,6 +10,7 @@ import {
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -164,37 +165,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     {
       // Local storage key
       name: 'ai-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        room: BaseRoomConfig.parse(state.room.config),
-        layout: LayoutConfig.parse(state.layout.config),
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-        sqlEditor: SqlEditorSliceConfig.parse(state.sqlEditor.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        room: {
-          ...currentState.room,
-          config: BaseRoomConfig.parse(persistedState.room),
-        },
-        layout: {
-          ...currentState.layout,
-          config: LayoutConfig.parse(persistedState.layout),
-        },
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
-        sqlEditor: {
-          ...currentState.sqlEditor,
-          config: SqlEditorSliceConfig.parse(persistedState.sqlEditor),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        sqlEditor: SqlEditorSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

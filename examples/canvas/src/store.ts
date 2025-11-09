@@ -6,6 +6,7 @@ import {
 } from '@sqlrooms/canvas';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
@@ -81,29 +82,24 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     {
       // Local storage key
       name: 'canvas-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        apiKey: state.apiKey,
-        room: BaseRoomConfig.parse(state.room.config),
-        layout: LayoutConfig.parse(state.layout.config),
-        canvas: CanvasSliceConfig.parse(state.canvas.config),
-      }),
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        apiKey: persistedState.apiKey,
-        room: {
-          ...currentState.room,
-          config: BaseRoomConfig.parse(persistedState.room),
-        },
-        layout: {
-          ...currentState.layout,
-          config: LayoutConfig.parse(persistedState.layout),
-        },
-        canvas: {
-          ...currentState.canvas,
-          config: CanvasSliceConfig.parse(persistedState.canvas),
-        },
-      }),
+      // Helper to extract and merge slice configs
+      ...(() => {
+        const {partialize, merge} = createPersistHelpers({
+          room: BaseRoomConfig,
+          layout: LayoutConfig,
+          canvas: CanvasSliceConfig,
+        });
+        return {
+          partialize: (state: RoomState) => ({
+            apiKey: state.apiKey,
+            ...partialize(state),
+          }),
+          merge: (persistedState: any, currentState: RoomState) => ({
+            ...merge(persistedState, currentState),
+            apiKey: persistedState.apiKey,
+          }),
+        };
+      })(),
     },
   ) as StateCreator<RoomState>,
 );
