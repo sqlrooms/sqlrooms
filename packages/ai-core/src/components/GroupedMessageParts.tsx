@@ -1,4 +1,5 @@
 import React from 'react';
+import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ReasoningBox} from './ReasoningBox';
 import {ToolPartRenderer} from './ToolPartRenderer';
@@ -13,6 +14,8 @@ type GroupedMessagePartsProps = {
   groupedParts: ToolGroup[];
   /** Total number of message parts (used to determine if a text part is the final answer) */
   totalPartsCount: number;
+  /** Optional custom components for markdown rendering */
+  customComponents?: Partial<Components>;
 };
 
 /**
@@ -26,6 +29,7 @@ type GroupedMessagePartsProps = {
 export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
   groupedParts,
   totalPartsCount,
+  customComponents,
 }) => {
   return (
     <>
@@ -38,6 +42,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
               key={`group-${groupIndex}`}
               content={part.text}
               isAnswer={group.startIndex === totalPartsCount - 1}
+              customComponents={customComponents}
             />
           );
         }
