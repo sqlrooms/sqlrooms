@@ -62,6 +62,7 @@ export type RoomShellSliceState = {
     config: RoomShellSliceConfig;
     tasksProgress: Record<string, TaskProgress>;
 
+    setConfig: (config: RoomShellSliceConfig) => void;
     setTaskProgress: (
       id: string,
       taskProgress: TaskProgress | undefined,
@@ -213,6 +214,14 @@ export function createRoomShellSlice(
         dataSourceStates: {},
         tasksProgress: {},
         fileDataSourceLoader,
+
+        setConfig: (config) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.room.config = config;
+            }),
+          );
+        },
 
         async initialize() {
           const {setTaskProgress} = get().room;

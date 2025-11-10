@@ -14,6 +14,7 @@ import {createDefaultAiSettingsConfig} from './defaultSettings';
 export type AiSettingsSliceState = {
   aiSettings: {
     config: AiSettingsSliceConfig;
+    setConfig: (config: AiSettingsSliceConfig) => void;
     setMaxSteps: (maxSteps: number) => void;
     setAdditionalInstruction: (additionalInstruction: string) => void;
     updateProvider: (
@@ -53,6 +54,14 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   return createBaseSlice<AiSettingsSliceState>((set, get) => ({
     aiSettings: {
       config,
+
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.aiSettings.config = config;
+          }),
+        );
+      },
 
       setMaxSteps: (maxSteps: number) => {
         set((state) =>

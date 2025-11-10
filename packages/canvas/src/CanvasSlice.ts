@@ -109,6 +109,7 @@ export type CanvasSliceState = AiSliceState & {
     isAssistantOpen: boolean;
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
+    setConfig: (config: CanvasSliceConfig) => void;
     setViewport: (viewport: Viewport) => void;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
     addNode: (params: {
@@ -166,6 +167,13 @@ export function createCanvasSlice<
       config: createDefaultCanvasConfig(props.config),
       isAssistantOpen: false,
       sqlResults: {},
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.canvas.config = config;
+          }),
+        );
+      },
       setAssistantOpen: (isAssistantOpen) => {
         set((state) =>
           produce(state, (draft) => {

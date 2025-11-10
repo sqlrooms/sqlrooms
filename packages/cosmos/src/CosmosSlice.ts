@@ -27,6 +27,8 @@ export type CosmosSliceState = {
     graph: Graph | null;
     /** Whether the physics simulation is currently running */
     isSimulationRunning: boolean;
+    /** Sets the config for the cosmos slice */
+    setConfig: (config: CosmosSliceConfig) => void;
     /** Creates a new graph instance in the specified container */
     createGraph: (container: HTMLDivElement) => void;
     /** Toggles the physics simulation on/off */
@@ -68,6 +70,14 @@ export function createCosmosSlice(): StateCreator<CosmosSliceState> {
       graph: null,
       isSimulationRunning: true,
       config: createDefaultCosmosConfig(),
+
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.cosmos.config = config;
+          }),
+        );
+      },
 
       createGraph: (container: HTMLDivElement) => {
         // Clean up old graph if it exists

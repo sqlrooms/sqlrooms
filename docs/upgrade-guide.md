@@ -13,7 +13,7 @@ When upgrading, please follow the version-specific instructions below that apply
 - There's no combined config in the store anymore
   state.config -> state.room.config
 
-- room.setRoomConfig removed, use store.
+- room.setRoomConfig removed, use .setConfig in all individual slices
 
 ## 0.25.0-rc.1
 
