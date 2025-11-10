@@ -8,7 +8,7 @@ import {
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-shell';
@@ -513,7 +513,7 @@ export type DuckDbSliceStateWithCanvas = DuckDbSliceState & CanvasSliceState;
 export function useStoreWithCanvas<T>(
   selector: (state: DuckDbSliceStateWithCanvas) => T,
 ): T {
-  return useBaseRoomStore<BaseRoomSliceState, T>((state) =>
+  return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
     selector(state as unknown as DuckDbSliceStateWithCanvas),
   );
 }

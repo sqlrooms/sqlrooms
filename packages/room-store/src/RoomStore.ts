@@ -6,7 +6,7 @@ export interface SliceFunctions {
   destroy?: () => Promise<void>;
 }
 
-export type BaseRoomSliceState = {
+export type BaseRoomStoreState = {
   room: {
     initialized: boolean;
     initialize: () => Promise<void>;
@@ -15,17 +15,17 @@ export type BaseRoomSliceState = {
   };
 };
 /** @deprecated Use RoomSliceState instead */
-export type RoomState = BaseRoomSliceState;
+export type RoomState = BaseRoomStoreState;
 
-export type RoomStore<RS extends BaseRoomSliceState> = StoreApi<RS>;
+export type RoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
 
 export type CreateBaseRoomSliceProps = {
-  captureException?: BaseRoomSliceState['room']['captureException'];
+  captureException?: BaseRoomStoreState['room']['captureException'];
 };
 
 export function createBaseRoomSlice(
   props?: CreateBaseRoomSliceProps,
-): StateCreator<BaseRoomSliceState> {
+): StateCreator<BaseRoomStoreState> {
   return (_set, _get, store) => ({
     room: {
       initialized: false,
@@ -54,14 +54,14 @@ export const createRoomSlice = createBaseRoomSlice;
 
 export function createBaseSlice<S extends object>(
   sliceCreator: (
-    ...args: Parameters<StateCreator<S & BaseRoomSliceState>>
+    ...args: Parameters<StateCreator<S & BaseRoomStoreState>>
   ) => S,
 ): StateCreator<S> {
   return (set, get, store) =>
     sliceCreator(
       set,
-      get as () => S & BaseRoomSliceState,
-      store as StoreApi<S & BaseRoomSliceState>,
+      get as () => S & BaseRoomStoreState,
+      store as StoreApi<S & BaseRoomStoreState>,
     );
 }
 
@@ -71,10 +71,10 @@ export function createBaseSlice<S extends object>(
  * @param sliceCreators - The slices to add to the room store
  * @returns The room store and a hook for accessing the room store
  */
-export function createRoomStore<RS extends BaseRoomSliceState>(
+export function createRoomStore<RS extends BaseRoomStoreState>(
   stateCreator: StateCreator<RS>,
 ) {
-  const factory = createRoomStoreCreator<BaseRoomSliceState & RS>();
+  const factory = createRoomStoreCreator<BaseRoomStoreState & RS>();
   const storeCreator = factory(() => stateCreator);
   const roomStore = storeCreator.createRoomStore();
 
@@ -93,7 +93,7 @@ export function createRoomStore<RS extends BaseRoomSliceState>(
  * @returns An object with createRoomStore(params) and useRoomStore(selector)
  *
  */
-export function createRoomStoreCreator<RS extends BaseRoomSliceState>() {
+export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
   return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
     stateCreatorFactory: TFactory,
   ): {

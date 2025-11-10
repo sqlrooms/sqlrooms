@@ -2,7 +2,7 @@ import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {AiSliceState} from '@sqlrooms/ai-core';
 import {
   BaseRoomConfig,
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   createBaseSlice,
   RoomState,
   useBaseRoomStore,
