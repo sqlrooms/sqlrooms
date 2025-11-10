@@ -7,7 +7,7 @@ import {StoreApi} from '@sqlrooms/room-shell';
  * @param tables Array of DataTable objects from the DuckDB state
  * @returns Formatted string representation of table schemas
  */
-function formatTablesForLLM(tables: DataTable[]): string {
+export function formatTablesForLLM(tables: DataTable[]): string {
   if (!tables || tables.length === 0) {
     return 'No tables available in the database.';
   }

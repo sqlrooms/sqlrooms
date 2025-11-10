@@ -9,6 +9,7 @@ type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
   ideas?: string[];
+  isLoadingIdeas?: boolean;
   onRun?: () => void;
   onCancel?: () => void;
 }>;
@@ -17,6 +18,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
   ideas,
+  isLoadingIdeas = false,
   children,
   onRun,
   onCancel,
@@ -91,9 +93,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         className,
       )}
     >
-      {ideas && ideas.length > 0 && (
-        <IdeasContainer ideas={ideas} className="w-full" />
-      )}
+      {(ideas && ideas.length > 0) || isLoadingIdeas ? (
+        <IdeasContainer ideas={ideas} isLoading={isLoadingIdeas} className="w-full" />
+      ) : null}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
