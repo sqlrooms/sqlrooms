@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/cosmos",
+  "name": "@sqlrooms/duckdb-config",
   "version": "0.26.0-rc.4",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,18 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmograph/cosmos": "2.0.0-beta.22",
-    "@sqlrooms/room-config": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/ui": "workspace:*",
-    "immer": "^10.1.3",
-    "lucide-react": "^0.544.0",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
-  },
-  "peerDependencies": {
-    "react": ">=18",
-    "react-dom": ">=18"
+    "zod": "^4.1.8"
   },
   "scripts": {
     "dev": "tsc -w",
