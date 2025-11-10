@@ -18,7 +18,7 @@ export {
   createRoomStoreCreator,
   isRoomSliceWithDestroy,
   isRoomSliceWithInitialize,
-  type BaseRoomSliceState,
+  type BaseRoomStoreState,
   type CreateBaseRoomSliceProps,
   type RoomState,
   type RoomStore,

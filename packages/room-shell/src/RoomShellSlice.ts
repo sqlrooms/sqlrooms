@@ -24,7 +24,7 @@ import {
   isUrlDataSource,
 } from '@sqlrooms/room-config';
 import {
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   CreateBaseRoomSliceProps,
   createBaseRoomSlice,
   isRoomSliceWithInitialize,
@@ -58,15 +58,11 @@ export type TaskProgress = {
 
 export type RoomShellSliceState = {
   initialize?: () => Promise<void>;
-  room: BaseRoomSliceState['room'] & {
+  room: BaseRoomStoreState['room'] & {
     config: RoomShellSliceConfig;
     tasksProgress: Record<string, TaskProgress>;
-    /**
-     * Set the room config.
-     * @param config - The room config to set.
-     */
-    setRoomConfig: (config: BaseRoomConfig) => void;
 
+    setConfig: (config: RoomShellSliceConfig) => void;
     setTaskProgress: (
       id: string,
       taskProgress: TaskProgress | undefined,
@@ -220,6 +216,14 @@ export function createRoomShellSlice(
         tasksProgress: {},
         fileDataSourceLoader,
 
+        setConfig: (config) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.room.config = config;
+            }),
+          );
+        },
+
         async initialize() {
           const {setTaskProgress} = get().room;
           setTaskProgress(INIT_DB_TASK, {
@@ -278,13 +282,6 @@ export function createRoomShellSlice(
             }),
           );
         },
-
-        setRoomConfig: (config) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.config = castDraft(config);
-            }),
-          ),
 
         setRoomTitle: (title) =>
           set((state) =>

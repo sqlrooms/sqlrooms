@@ -8,7 +8,7 @@ import {
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-shell';
@@ -109,6 +109,7 @@ export type CanvasSliceState = AiSliceState & {
     isAssistantOpen: boolean;
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
+    setConfig: (config: CanvasSliceConfig) => void;
     setViewport: (viewport: Viewport) => void;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
     addNode: (params: {
@@ -166,6 +167,13 @@ export function createCanvasSlice<
       config: createDefaultCanvasConfig(props.config),
       isAssistantOpen: false,
       sqlResults: {},
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.canvas.config = config;
+          }),
+        );
+      },
       setAssistantOpen: (isAssistantOpen) => {
         set((state) =>
           produce(state, (draft) => {
@@ -513,7 +521,7 @@ export type DuckDbSliceStateWithCanvas = DuckDbSliceState & CanvasSliceState;
 export function useStoreWithCanvas<T>(
   selector: (state: DuckDbSliceStateWithCanvas) => T,
 ): T {
-  return useBaseRoomStore<BaseRoomSliceState, T>((state) =>
+  return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
     selector(state as unknown as DuckDbSliceStateWithCanvas),
   );
 }

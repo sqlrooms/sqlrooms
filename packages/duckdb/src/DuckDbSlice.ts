@@ -1,5 +1,5 @@
 import {
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   createBaseSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
@@ -620,7 +620,7 @@ export function createDuckDbSlice({
  * @returns The selected value of type `T`
  */
 export function useStoreWithDuckDb<T>(
-  selector: (state: BaseRoomSliceState & DuckDbSliceState) => T,
+  selector: (state: BaseRoomStoreState & DuckDbSliceState) => T,
 ): T {
   return useBaseRoomStore<DuckDbSliceState, T>((state) => selector(state));
 }

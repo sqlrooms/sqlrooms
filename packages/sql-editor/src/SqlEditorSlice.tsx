@@ -68,6 +68,11 @@ export type SqlEditorSliceState = {
     queryResultLimitOptions: number[];
 
     /**
+     * Set the config for the sql editor slice.
+     */
+    setConfig(config: SqlEditorSliceConfig): void;
+
+    /**
      * Run the currently selected query.
      */
     parseAndRunQuery(query: string): Promise<void>;
@@ -166,6 +171,14 @@ export function createSqlEditorSlice({
         isTablesLoading: false,
         queryResultLimit,
         queryResultLimitOptions,
+
+        setConfig: (config) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.sqlEditor.config = config;
+            }),
+          );
+        },
 
         exportResultsToCsv: (results, filename) => {
           if (!results) return;

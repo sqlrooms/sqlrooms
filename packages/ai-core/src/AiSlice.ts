@@ -35,6 +35,7 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
+    setConfig: (config: AiSliceConfig) => void;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     startAnalysis: (
@@ -137,6 +138,14 @@ export function createAiSlice<PC extends BaseRoomConfig>(
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         tools,
+
+        setConfig: (config: AiSliceConfig) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config = config;
+            }),
+          );
+        },
 
         setAnalysisPrompt: (prompt: string) => {
           set((state) =>

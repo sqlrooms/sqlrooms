@@ -8,7 +8,7 @@ import {
   createBaseRoomSlice,
   createPersistHelpers,
   createRoomStore,
-  BaseRoomSliceState,
+  BaseRoomStoreState,
   StateCreator,
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
@@ -16,7 +16,7 @@ import {persist} from 'zustand/middleware';
 import EchoToolResult from './components/EchoToolResult';
 import {AI_SETTINGS} from './config';
 
-type State = BaseRoomSliceState & AiSliceState & AiSettingsSliceState;
+type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 
 /**
  * Create a customized room store
