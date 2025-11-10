@@ -2,6 +2,7 @@ import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
 import {useState} from 'react';
+import {Components} from 'react-markdown';
 import {ErrorMessage} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -15,10 +16,12 @@ import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
  * @property {boolean} enableReasoningBox - Whether to group consecutive tool parts into a collapsible ReasoningBox
+ * @property {Partial<Components>} customComponents - Optional custom components for markdown rendering
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
+  customComponents?: Partial<Components>;
 };
 
 /**
@@ -34,6 +37,7 @@ type AnalysisResultProps = {
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
   enableReasoningBox = false,
+  customComponents,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
@@ -103,9 +107,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
+            customComponents={customComponents}
           />
         ) : (
-          <MessagePartsList parts={uiMessageParts} />
+          <MessagePartsList parts={uiMessageParts} customComponents={customComponents} />
         )}
         {analysisResult.errorMessage && (
           <ErrorMessage errorMessage={analysisResult.errorMessage.error} />

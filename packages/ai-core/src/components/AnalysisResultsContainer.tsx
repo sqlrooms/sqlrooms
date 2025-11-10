@@ -2,6 +2,7 @@ import {cn, ScrollBar} from '@sqlrooms/ui';
 import * as ScrollAreaPrimitive from '@radix-ui/react-scroll-area';
 import {ChevronDown} from 'lucide-react';
 import React, {useRef} from 'react';
+import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
@@ -10,7 +11,8 @@ import {AiThinkingDots} from './AiThinkingDots';
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
-}> = ({className, enableReasoningBox = false}) => {
+  customComponents?: Partial<Components>;
+}> = ({className, enableReasoningBox = false, customComponents}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
@@ -38,6 +40,7 @@ export const AnalysisResultsContainer: React.FC<{
             key={analysisResult.id}
             analysisResult={analysisResult}
             enableReasoningBox={enableReasoningBox}
+            customComponents={customComponents}
           />
         ))}
         {isRunningAnalysis && (

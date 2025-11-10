@@ -1,5 +1,6 @@
 import React from 'react';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
+import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ToolPartRenderer} from './ToolPartRenderer';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
@@ -10,6 +11,8 @@ import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 type MessagePartsListProps = {
   /** Array of UI message parts to render */
   parts: UIMessagePart[];
+  /** Optional custom components for markdown rendering */
+  customComponents?: Partial<Components>;
 };
 
 /**
@@ -20,7 +23,7 @@ type MessagePartsListProps = {
  * @param props - Component props
  * @returns A React component displaying the message parts
  */
-export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts}) => {
+export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts, customComponents}) => {
   return (
     <>
       {parts.map((part, index) => {
@@ -30,6 +33,7 @@ export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts}) => {
               key={index}
               content={part.text}
               isAnswer={index === parts.length - 1}
+              customComponents={customComponents}
             />
           );
         }
