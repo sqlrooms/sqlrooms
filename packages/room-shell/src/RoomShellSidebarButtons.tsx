@@ -7,7 +7,7 @@ import {
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import React, {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from './RoomShellStore';
+import {useBaseRoomShellStore} from './RoomShellSlice';
 
 const SidebarButton: FC<{
   className?: string;
@@ -53,7 +53,7 @@ const RoomShellSidebarButton: FC<{roomPanelType: string}> = ({
   roomPanelType,
 }) => {
   const initialized = useBaseRoomShellStore((state) => state.room.initialized);
-  const layout = useBaseRoomShellStore((state) => state.config.layout);
+  const layout = useBaseRoomShellStore((state) => state.layout.config);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const visibleRoomPanels = useMemo(
     () => getVisibleMosaicLayoutPanels(layout?.nodes),

@@ -21,7 +21,7 @@ import {KeplerMapContainer, KeplerPlotContainer} from '@sqlrooms/kepler';
 export const KeplerMapsContainer: FC<{
   className?: string;
 }> = ({className}) => {
-  const maps = useRoomStore((state) => state.config.kepler.maps);
+  const maps = useRoomStore((state) => state.kepler.config.maps);
   const currentMap = useRoomStore((state) => state.kepler.getCurrentMap());
   const setCurrentMapId = useRoomStore((state) => state.kepler.setCurrentMapId);
   const createMap = useRoomStore((state) => state.kepler.createMap);

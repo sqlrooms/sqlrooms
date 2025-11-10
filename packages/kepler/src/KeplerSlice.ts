@@ -1,9 +1,9 @@
 import {
   addDataToMap,
   deleteEntry,
-  removeDataset,
   ActionTypes as KeplerActionTypes,
   registerEntry,
+  removeDataset,
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
@@ -23,16 +23,22 @@ import {
   MapStyle,
 } from '@kepler.gl/reducers';
 import KeplerGLSchemaManager from '@kepler.gl/schemas';
+import {KeplerTable} from '@kepler.gl/table';
 import {AddDataToMapPayload} from '@kepler.gl/types';
+import {
+  DatabaseConnection,
+  initApplicationConfig,
+  KeplerApplicationConfig,
+} from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
+import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
   createSlice,
-  type Slice,
-  type StateCreator,
-  BaseRoomConfig,
   RoomShellSliceState,
   useBaseRoomShellStore,
+  type StateCreator,
 } from '@sqlrooms/room-shell';
+import * as arrow from 'apache-arrow';
 import {produce} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
@@ -43,14 +49,6 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
-import {KeplerTable} from '@kepler.gl/table';
-import {
-  DatabaseConnection,
-  initApplicationConfig,
-  KeplerApplicationConfig,
-} from '@kepler.gl/utils';
-import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
-import * as arrow from 'apache-arrow';
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
@@ -64,6 +62,7 @@ export type KeplerGLBasicProps = {
 };
 
 export type CreateKeplerSliceOptions = {
+  config?: Partial<KeplerSliceConfig>;
   initialKeplerState?: Partial<KeplerGlState>;
   basicKeplerProps?: Partial<KeplerGLBasicProps>;
   actionLogging?: boolean | ReduxLoggerOptions;
@@ -78,21 +77,19 @@ export type CreateKeplerSliceOptions = {
 };
 
 export function createDefaultKeplerConfig(
-  props?: Partial<KeplerSliceConfig['kepler']>,
+  props?: Partial<KeplerSliceConfig>,
 ): KeplerSliceConfig {
   const mapId = createId();
   return {
-    kepler: {
-      maps: [
-        {
-          id: mapId,
-          name: 'Untitled Map',
-          config: undefined,
-        },
-      ],
-      currentMapId: mapId,
-      ...props,
-    },
+    maps: [
+      {
+        id: mapId,
+        name: 'Untitled Map',
+        config: undefined,
+      },
+    ],
+    currentMapId: mapId,
+    ...props,
   };
 }
 
@@ -116,14 +113,16 @@ export function hasMapId(action: KeplerAction): action is KeplerAction & {
 
 // support multiple kepler maps
 export type KeplerGlReduxState = {[id: string]: KeplerGlState};
-export type KeplerSliceState<PC extends RoomConfigWithKepler> = Slice & {
+export type KeplerSliceState = {
   kepler: {
+    config: KeplerSliceConfig;
     map: KeplerGlReduxState;
     basicKeplerProps?: Partial<KeplerGLBasicProps>;
     forwardDispatch: {
       [mapId: string]: Dispatch;
     };
-    initialize: (config?: PC) => Promise<void>;
+    initialize: (config?: KeplerSliceConfig) => Promise<void>;
+    setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
      * the latest table schemas in the database
@@ -164,10 +163,9 @@ const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.UPDATE_MAP,
 ];
 
-export function createKeplerSlice<
-  PC extends BaseRoomConfig & KeplerSliceConfig,
->({
+export function createKeplerSlice({
   basicKeplerProps = {},
+  config: initialConfigProps,
   initialKeplerState = {
     mapStyle: {styleType: 'positron'} as MapStyle,
     uiState: {
@@ -190,12 +188,13 @@ export function createKeplerSlice<
   middlewares: additionalMiddlewares = [],
   applicationConfig,
   onAction,
-}: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState<PC>> {
+}: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
+  const initialConfig = createDefaultKeplerConfig(initialConfigProps);
   initApplicationConfig({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
-  return createSlice<PC, KeplerSliceState<PC>>((set, get) => {
+  return createSlice<KeplerSliceState>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -211,7 +210,7 @@ export function createKeplerSlice<
     }
 
     const storeDispatch: Dispatch<KeplerAction> = (action) => {
-      set((state: KeplerSliceState<PC>) => ({
+      set((state: KeplerSliceState) => ({
         ...state,
         kepler: {
           ...state.kepler,
@@ -228,15 +227,23 @@ export function createKeplerSlice<
     // const forwardDispatch: {[id: string]: Dispatch} = {};
     return {
       kepler: {
+        config: initialConfig,
         basicKeplerProps,
         map: {},
         dispatchAction: () => {},
         __reduxProviderStore: undefined,
         forwardDispatch: {},
 
-        async initialize(config?: PC) {
-          const currentMapId =
-            config?.kepler.currentMapId || get().config.kepler.currentMapId;
+        setConfig: (config: KeplerSliceConfig) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.kepler.config = config;
+            }),
+          );
+        },
+
+        async initialize(config?: KeplerSliceConfig) {
+          const currentMapId = get().kepler.config.currentMapId;
           const keplerInitialState: KeplerGlReduxState = keplerReducer(
             undefined,
             registerEntry({id: currentMapId}),
@@ -246,7 +253,7 @@ export function createKeplerSlice<
             [currentMapId]: getForwardDispatch(currentMapId),
           };
           if (config) {
-            for (const {id} of config.kepler.maps) {
+            for (const {id} of get().kepler.config.maps) {
               forwardDispatch[id] = getForwardDispatch(id);
             }
           }
@@ -275,8 +282,8 @@ export function createKeplerSlice<
             },
           });
           if (config) {
-            get().room.setRoomConfig(config);
-            const keplerMaps = config.kepler.maps;
+            get().kepler.setConfig(config);
+            const keplerMaps = config.maps;
             for (const {id, config} of keplerMaps) {
               if (config) {
                 get().kepler.addConfigToMap(
@@ -287,7 +294,7 @@ export function createKeplerSlice<
             }
           }
           await get().kepler.syncKeplerDatasets();
-          requestMapStyle(get().config.kepler.currentMapId);
+          requestMapStyle(get().kepler.config.currentMapId);
         },
 
         addTableToMap: async (mapId, tableName, options = {}) => {
@@ -326,15 +333,15 @@ export function createKeplerSlice<
         },
 
         getCurrentMap: () => {
-          return get().config.kepler.maps.find(
-            (map) => map.id === get().config.kepler.currentMapId,
+          return get().kepler.config.maps.find(
+            (map) => map.id === get().kepler.config.currentMapId,
           );
         },
 
         setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
-              draft.config.kepler.currentMapId = mapId;
+              draft.kepler.config.currentMapId = mapId;
             }),
           );
         },
@@ -343,7 +350,7 @@ export function createKeplerSlice<
           const mapId = createId();
           set((state) =>
             produce(state, (draft) => {
-              draft.config.kepler.maps.push({
+              draft.kepler.config.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
               });
@@ -382,7 +389,7 @@ export function createKeplerSlice<
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.kepler.maps = draft.config.kepler.maps.filter(
+              draft.kepler.config.maps = draft.kepler.config.maps.filter(
                 (map) => map.id !== mapId,
               );
               draft.kepler.map = keplerReducer(
@@ -398,7 +405,7 @@ export function createKeplerSlice<
         renameMap: (mapId, name) => {
           set((state) =>
             produce(state, (draft) => {
-              const map = draft.config.kepler.maps.find(
+              const map = draft.kepler.config.maps.find(
                 (map) => map.id === mapId,
               );
               if (map) {
@@ -517,7 +524,7 @@ export function createKeplerSlice<
             // save kepler config to store
             set((state) =>
               produce(state, (draft) => {
-                const mapToSave = draft.config.kepler.maps.find(
+                const mapToSave = draft.kepler.config.maps.find(
                   (map) => map.id === mapId,
                 );
                 if (mapToSave && state.kepler.map?.[mapId]) {
@@ -560,16 +567,12 @@ export function createKeplerSlice<
   });
 }
 
-type RoomConfigWithKepler = BaseRoomConfig & KeplerSliceConfig;
-type RoomStateWithKepler = RoomShellSliceState<RoomConfigWithKepler> &
-  KeplerSliceState<RoomConfigWithKepler>;
+type RoomStateWithDiscuss = RoomShellSliceState & KeplerSliceState;
 
 export function useStoreWithKepler<T>(
-  selector: (state: RoomStateWithKepler) => T,
+  selector: (state: RoomStateWithDiscuss) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & KeplerSliceConfig,
-    RoomShellSliceState<RoomConfigWithKepler>,
-    T
-  >((state) => selector(state as unknown as RoomStateWithKepler));
+  return useBaseRoomShellStore<RoomStateWithDiscuss, T>((state) =>
+    selector(state as RoomStateWithDiscuss),
+  );
 }

@@ -126,7 +126,7 @@ const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>({
 You can access slices' namespaced config, state and functions in the store using selectors, for example:
 
 ```tsx
-const queries = useRoomStore((state) => state.config.sqlEditor.queries);
+const queries = useRoomStore((state) => state.sqlEditor.config.queries);
 const runQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
 ```
 

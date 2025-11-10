@@ -2,6 +2,7 @@ import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {AiSliceState} from '@sqlrooms/ai-core';
 import {
   BaseRoomConfig,
+  BaseRoomSliceState,
   createBaseSlice,
   RoomState,
   useBaseRoomStore,
@@ -49,7 +50,7 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   props?: CreateAiSettingsSliceParams,
 ): StateCreator<AiSettingsSliceState> {
   const config = createDefaultAiSettingsConfig(props?.config);
-  return createBaseSlice<PC, AiSettingsSliceState>((set, get) => ({
+  return createBaseSlice<AiSettingsSliceState>((set, get) => ({
     aiSettings: {
       config,
 
@@ -219,15 +220,13 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   }));
 }
 
-type RoomStateWithAiSettings = RoomState<BaseRoomConfig> &
-  AiSliceState &
-  AiSettingsSliceState;
+type AiStateWithSettings = AiSliceState & AiSettingsSliceState;
 
 // Hook to access aiSettings from the room store
 export function useStoreWithAiSettings<T>(
-  selector: (state: RoomStateWithAiSettings) => T,
+  selector: (state: AiStateWithSettings) => T,
 ): T {
-  return useBaseRoomStore<BaseRoomConfig, RoomState<BaseRoomConfig>, T>(
-    (state) => selector(state as unknown as RoomStateWithAiSettings),
+  return useBaseRoomStore<AiStateWithSettings, T>((state) =>
+    selector(state as unknown as AiStateWithSettings),
   );
 }

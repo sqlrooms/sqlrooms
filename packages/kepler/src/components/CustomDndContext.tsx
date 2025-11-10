@@ -63,7 +63,7 @@ export function CustomDndContextFactory(
   const DndContext = ({children, visState}: DndContextProps) => {
     // Get the current map ID from the store
     const mapId = useStoreWithKepler(
-      (state: any) => state.config.kepler.currentMapId,
+      (state: any) => state.kepler.config.currentMapId,
     );
     const {datasets, layerOrder, layers, splitMaps, effects, effectOrder} =
       visState || {};

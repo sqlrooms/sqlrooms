@@ -38,17 +38,17 @@ export type RoomConfig = z.infer<typeof RoomConfig>;
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   SqlEditorSliceState &
   CosmosSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         layout: {
           type: LayoutTypes.enum.mosaic,

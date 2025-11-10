@@ -1,6 +1,6 @@
 import {FC} from 'react';
 import {FileDataSourceCard} from './FileDataSourceCard';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 
 const FileDataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const roomFiles = useBaseRoomShellStore((state) => state.room.roomFiles);

@@ -1,8 +1,6 @@
-import {DuckDbSliceConfig} from '@sqlrooms/duckdb-config';
 import {
+  BaseRoomSliceState,
   createBaseSlice,
-  RoomState,
-  Slice,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import * as arrow from 'apache-arrow';
@@ -31,7 +29,7 @@ export type SchemaAndDatabase = {
 /**
  * State and actions for the DuckDB slice
  */
-export type DuckDbSliceState = Slice & {
+export type DuckDbSliceState = {
   db: {
     /**
      * The DuckDB connector instance
@@ -227,15 +225,17 @@ export type DuckDbSliceState = Slice & {
   };
 };
 
+type CreateDuckDbSliceProps = {
+  connector?: DuckDbConnector;
+};
+
 /**
  * Create a DuckDB slice for managing the connector
  */
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
-}: {
-  connector?: DuckDbConnector;
-}): StateCreator<DuckDbSliceState> {
-  return createBaseSlice<DuckDbSliceConfig, DuckDbSliceState>((set, get) => {
+}: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
+  return createBaseSlice<DuckDbSliceState>((set, get) => {
     return {
       db: {
         connector, // Will be initialized during init
@@ -610,12 +610,6 @@ export function createDuckDbSlice({
 
 /**
  * @internal
- */
-export type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> &
-  DuckDbSliceState;
-
-/**
- * @internal
  * Select values from the room store that includes the DuckDB slice.
  *
  * This is a typed wrapper around `useBaseRoomStore` that narrows the
@@ -626,9 +620,7 @@ export type RoomStateWithDuckDb = RoomState<DuckDbSliceConfig> &
  * @returns The selected value of type `T`
  */
 export function useStoreWithDuckDb<T>(
-  selector: (state: RoomStateWithDuckDb) => T,
+  selector: (state: BaseRoomSliceState & DuckDbSliceState) => T,
 ): T {
-  return useBaseRoomStore<DuckDbSliceConfig, RoomState<DuckDbSliceConfig>, T>(
-    (state) => selector(state as unknown as RoomStateWithDuckDb),
-  );
+  return useBaseRoomStore<DuckDbSliceState, T>((state) => selector(state));
 }

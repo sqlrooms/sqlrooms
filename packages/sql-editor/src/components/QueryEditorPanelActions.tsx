@@ -69,9 +69,12 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
     <Tooltip delayDuration={100}>
       <TooltipTrigger asChild>
         <Button
-          className={cn('flex items-center justify-center gap-2 h-6 px-4', className)}
-          variant='default'
-          size='xs'
+          className={cn(
+            'flex h-6 items-center justify-center gap-2 px-4',
+            className,
+          )}
+          variant="default"
+          size="xs"
           onClick={handleClick}
           disabled={buttonContent.disabled}
         >

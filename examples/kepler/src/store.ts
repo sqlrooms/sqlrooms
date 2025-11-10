@@ -153,7 +153,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         await get().db.connector.loadFile(file, tableName, loadOptions);
         await get().db.refreshTableSchemas();
         await get().kepler.syncKeplerDatasets();
-        const currentMapId = get().config.kepler.currentMapId;
+        const currentMapId = get().kepler.config.currentMapId;
         await get().kepler.addTableToMap(currentMapId, tableName);
         return tableName;
       },

@@ -23,9 +23,7 @@ export const KeplerMapSchema = z.object({
 export type KeplerMapSchema = z.infer<typeof KeplerMapSchema>;
 
 export const KeplerSliceConfig = z.object({
-  kepler: z.object({
-    currentMapId: z.string(),
-    maps: z.array(KeplerMapSchema),
-  }),
+  currentMapId: z.string(),
+  maps: z.array(KeplerMapSchema),
 });
 export type KeplerSliceConfig = z.infer<typeof KeplerSliceConfig>;

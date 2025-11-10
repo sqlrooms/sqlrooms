@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.30.0",
-    "@sqlrooms/duckdb-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
