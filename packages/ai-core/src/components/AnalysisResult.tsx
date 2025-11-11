@@ -1,7 +1,7 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState} from 'react';
+import {useState, useRef, useEffect} from 'react';
 import {Components} from 'react-markdown';
 import {ErrorMessage} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
@@ -46,11 +46,36 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   );
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [divWidth, setDivWidth] = useState<number>(0);
+  const divRef = useRef<HTMLDivElement>(null);
 
   const uiMessageParts = useAssistantMessageParts(uiMessages, analysisResult.id);
 
+  // Measure div width using ResizeObserver
+  useEffect(() => {
+    const element = divRef.current;
+    if (!element) return;
+
+    // Set initial width immediately
+    setDivWidth(element.getBoundingClientRect().width);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Use borderBoxSize if available (modern API), fallback to contentRect
+        const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        setDivWidth(width);
+      }
+    });
+
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(uiMessageParts);
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
@@ -102,7 +127,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           </div>
         </div>
       </div>
-      <div className="flex w-full flex-col gap-4">
+      <div ref={divRef} className="flex w-full flex-col gap-4">
         {enableReasoningBox ? (
           <GroupedMessageParts
             groupedParts={groupedParts}

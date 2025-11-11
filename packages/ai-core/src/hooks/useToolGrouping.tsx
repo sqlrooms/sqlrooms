@@ -16,9 +16,10 @@ export type ToolGroup = {
 /**
  * Custom hook to group consecutive tool parts and generate titles
  * @param uiMessageParts - Array of UI message parts from the assistant
+ * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @returns Grouped parts with generated titles for tool groups
  */
-export function useToolGrouping(uiMessageParts: UIMessagePart[]): ToolGroup[] {
+export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth: number = 0): ToolGroup[] {
   return useMemo(() => {
     if (!uiMessageParts.length) return [];
 
@@ -113,7 +114,7 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[]): ToolGroup[] {
         }
 
         // Generate title for this tool group
-        const title = generateToolGroupTitle(toolParts, hasMoreToolsAfter);
+        const title = generateToolGroupTitle(toolParts, hasMoreToolsAfter, containerWidth);
 
         groups.push({
           type: 'tool-group',
@@ -128,7 +129,7 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[]): ToolGroup[] {
     }
 
     return groups;
-  }, [uiMessageParts]);
+  }, [uiMessageParts, containerWidth]);
 }
 
 /**
@@ -163,8 +164,9 @@ function getToolIcon(toolName: string): React.ReactNode | null {
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
  * @param hasMoreToolsAfter - Whether there are more tool calls after this group
+ * @param containerWidth - Width of the container in pixels (for calculating truncation)
  */
-function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean): React.ReactNode {
+function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean, containerWidth: number): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
     (p) =>
@@ -224,15 +226,26 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    // Truncate reasoning if too long (max 40 characters)
-    const maxReasoningLength = 40;
+    const baseTitle =
+      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
+
+    // Calculate max reasoning length based on container width
+    // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
+    const baseTextWidth = baseTitle.length * 7; // Rough estimate for "Thinking..." or "Thinking... (X tools)"
+    const iconWidth = 24; // Space for icon(s)
+    const padding = 16; // Padding and gaps
+    const availableWidth = containerWidth > 0 ? containerWidth - baseTextWidth - iconWidth - padding : 0;
+    // Estimate characters that fit: divide by average char width (~7px), with a minimum of 20 and max of 150
+    // Removed hard cap of 60 to allow scaling with container width
+    const maxReasoningLength = containerWidth > 0
+      ? Math.max(20, Math.min(150, Math.floor(availableWidth / 7)))
+      : 40; // Fallback to 40 if width not available
+
     const truncatedReasoning =
       reasoning && reasoning.length > maxReasoningLength
         ? `${reasoning.substring(0, maxReasoningLength).toLowerCase()}...`
         : reasoning?.toLowerCase();
 
-    const baseTitle =
-      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
     const titleText = truncatedReasoning ? `${baseTitle} ${truncatedReasoning}` : baseTitle;
     return (
       <span className="flex w-full items-center justify-between">
