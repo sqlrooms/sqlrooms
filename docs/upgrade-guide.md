@@ -15,6 +15,8 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - room.setRoomConfig removed, use .setConfig in all individual slices
 
+- RoomState renamed to BaseRoomStoreState (meant to be internal) to avoid confusion with RoomState introduced in many of the examples
+
 ## 0.25.0-rc.1
 
 - createAiSlice init parameters changed:

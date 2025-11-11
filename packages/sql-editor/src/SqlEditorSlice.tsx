@@ -1,10 +1,12 @@
+import {createId} from '@paralleldrive/cuid2';
 import {
+  DuckDbSliceState,
   getSqlErrorWithPointer,
-  splitSqlStatements,
   makeLimitQuery,
+  splitSqlStatements,
 } from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
+  BaseRoomStoreState,
   createSlice,
   RoomShellSliceState,
   StateCreator,
@@ -14,12 +16,11 @@ import {
   createDefaultSqlEditorConfig,
   SqlEditorSliceConfig,
 } from '@sqlrooms/sql-editor-config';
-import {generateUniqueName, genRandomStr} from '@sqlrooms/utils';
+import {generateUniqueName} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {csvFormat} from 'd3-dsv';
 import {saveAs} from 'file-saver';
 import {produce} from 'immer';
-import {createId} from '@paralleldrive/cuid2';
 
 export type QueryResult =
   | {status: 'loading'; isBeingAborted?: boolean; controller: AbortController}
@@ -163,7 +164,10 @@ export function createSqlEditorSlice({
   queryResultLimit?: number;
   queryResultLimitOptions?: number[];
 } = {}): StateCreator<SqlEditorSliceState> {
-  return createSlice<SqlEditorSliceState>((set, get) => {
+  return createSlice<
+    SqlEditorSliceState,
+    BaseRoomStoreState & DuckDbSliceState & SqlEditorSliceState
+  >((set, get) => {
     return {
       sqlEditor: {
         config,
