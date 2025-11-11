@@ -7,7 +7,7 @@ import {
 } from '@sqlrooms/ai-config';
 import {
   BaseRoomConfig,
-  createBaseSlice,
+  createSlice,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
@@ -131,7 +131,7 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     chatHeaders = {},
   } = params;
 
-  return createBaseSlice<AiSliceState>((set, get, store) => {
+  return createSlice<AiSliceState>((set, get, store) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),

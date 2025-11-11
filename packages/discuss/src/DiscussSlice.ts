@@ -164,7 +164,7 @@ export function createDiscussSlice({
 }: {
   userId: string;
 }): StateCreator<DiscussSliceState> {
-  return createSlice((set, get) => ({
+  return createSlice<DiscussSliceState>((set, get) => ({
     discuss: {
       userId,
       config: createDefaultDiscussConfig(),

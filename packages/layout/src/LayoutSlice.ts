@@ -4,7 +4,7 @@ import {
   MAIN_VIEW,
   isMosaicLayoutParent,
 } from '@sqlrooms/layout-config';
-import {createBaseSlice, useBaseRoomStore} from '@sqlrooms/room-store';
+import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import React from 'react';
 import {z} from 'zod';
@@ -47,7 +47,7 @@ export function createLayoutSlice({
   config: initialConfig = createDefaultLayoutConfig(),
   panels = {},
 }: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
-  return createBaseSlice<LayoutSliceState>((set, get) => ({
+  return createSlice<LayoutSliceState>((set, get) => ({
     layout: {
       config: initialConfig,
       panels,

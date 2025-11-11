@@ -13,6 +13,7 @@ export {
 export {
   createBaseRoomSlice,
   createBaseSlice,
+  createSlice,
   createRoomSlice,
   createRoomStore,
   createRoomStoreCreator,
@@ -20,7 +21,6 @@ export {
   isRoomSliceWithInitialize,
   type BaseRoomStoreState,
   type CreateBaseRoomSliceProps,
-  type RoomState,
   type RoomStore,
 } from './RoomStore';
 

@@ -706,16 +706,3 @@ export function useBaseRoomShellStore<RS extends RoomShellSliceState, T>(
 ): T {
   return useBaseRoomStore<RS, T>(selector as (state: RS) => T);
 }
-
-export function createSlice<RS>(
-  sliceCreator: (
-    ...args: Parameters<StateCreator<RS & RoomShellSliceState>>
-  ) => RS,
-): StateCreator<RS> {
-  return (set, get, store) =>
-    sliceCreator(
-      set,
-      get as () => RS & RoomShellSliceState,
-      store as StoreApi<RS & RoomShellSliceState>,
-    );
-}

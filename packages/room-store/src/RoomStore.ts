@@ -14,8 +14,6 @@ export type BaseRoomStoreState = {
     captureException: (exception: unknown, captureContext?: unknown) => void;
   };
 };
-/** @deprecated Use RoomSliceState instead */
-export type RoomState = BaseRoomStoreState;
 
 export type RoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
 
@@ -52,18 +50,18 @@ export function createBaseRoomSlice(
 /** @deprecated Use createBaseRoomSlice instead */
 export const createRoomSlice = createBaseRoomSlice;
 
-export function createBaseSlice<S extends object>(
-  sliceCreator: (
-    ...args: Parameters<StateCreator<S & BaseRoomStoreState>>
-  ) => S,
-): StateCreator<S> {
+export function createSlice<
+  SliceState,
+  StoreState extends SliceState = BaseRoomStoreState & SliceState,
+>(
+  sliceCreator: (...args: Parameters<StateCreator<StoreState>>) => SliceState,
+): StateCreator<SliceState> {
   return (set, get, store) =>
-    sliceCreator(
-      set,
-      get as () => S & BaseRoomStoreState,
-      store as StoreApi<S & BaseRoomStoreState>,
-    );
+    sliceCreator(set, get as () => StoreState, store as StoreApi<StoreState>);
 }
+
+/** @deprecated Use createSlice instead */
+export const createBaseSlice = createSlice;
 
 /**
  * Create a room store with custom fields and methods

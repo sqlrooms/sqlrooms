@@ -151,7 +151,10 @@ export function createCanvasSlice<
   config?: Partial<CanvasSliceConfig>;
   ai?: Partial<Parameters<typeof createAiSlice<PC>>[0]>;
 }) {
-  return createSlice<CanvasSliceState>((set, get, store) => ({
+  return createSlice<
+    CanvasSliceState,
+    BaseRoomStoreState & DuckDbSliceState & CanvasSliceState
+  >((set, get, store) => ({
     ...createAiSlice({
       getInstructions: () => {
         return createDefaultAiInstructions(store);
