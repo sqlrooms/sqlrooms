@@ -248,7 +248,7 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
 
     const titleText = truncatedReasoning ? `${baseTitle} ${truncatedReasoning}` : baseTitle;
     return (
-      <span className="flex w-full items-center justify-between">
+      <span className="flex w-full items-center justify-between text-orange-400">
         <span className="truncate">{titleText}</span>
         {icon}
       </span>
@@ -257,7 +257,7 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
     // For completed thoughts (and no more tools after), just show tool count without reasoning
     const titleText = toolCount === 1 ? 'Thought (1 tool)' : `Thought (${toolCount} tools)`;
     return (
-      <span className="flex w-full items-center justify-between">
+      <span className="flex w-full items-center justify-between text-orange-400">
         <span className="truncate">{titleText}</span>
         {icon}
       </span>

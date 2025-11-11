@@ -29,11 +29,7 @@ export const SessionControls: React.FC<{
         <div className="flex items-center gap-3">
           <SessionDropdown />
           <SessionTitle />
-          {currentSession && (
-            <div className="text-muted-foreground text-xs">
-              {currentSession.model}
-            </div>
-          )}
+
         </div>
 
         {/* Render children if provided */}
