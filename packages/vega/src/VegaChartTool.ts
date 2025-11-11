@@ -39,7 +39,16 @@ export type VegaChartToolContext = unknown;
 export const DEFAULT_VEGA_CHART_DESCRIPTION = `A tool for creating VegaLite charts based on the schema of the SQL query result from the "query" tool.
 In the response:
 - omit the data from the vegaLiteSpec
-- provide an sql query in sqlQuery instead.`;
+- provide an sql query in sqlQuery instead.
+
+Best practices for creating charts:
+- try to use strptime to convert e.g. YYYYMMDD string format to a proper type (date, datetime, etc.)
+- try to set the top-level width property to "container", so the chart will stretch to the full width of its parent container.
+- for bar charts with few categories (<= 5), widen bars by reducing band padding on the x scale:
+  - For 2-3 categories: set "encoding.x.scale.paddingInner" to 0.2 and "paddingOuter" to 0.1 for optimal bar width with clear separation
+  - For 4-5 categories: set "encoding.x.scale.paddingInner" to 0.1 and "paddingOuter" to 0.05 for narrower spacing
+  - Adjust to lower values (0.05/0.02 or 0/0) only if user specifically requests maximum bar width
+- If the chart uses an encoding channel like color, shape, or size to represent a data field, then include a legend object in that channel's encoding (unless explicitly told not to).`;
 
 /**
  * Creates a VegaLite chart visualization tool for AI assistants
