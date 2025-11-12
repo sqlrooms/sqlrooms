@@ -17,11 +17,13 @@ import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
  * @property {boolean} enableReasoningBox - Whether to group consecutive tool parts into a collapsible ReasoningBox
  * @property {Partial<Components>} customComponents - Optional custom components for markdown rendering
+ * @property {string[]} userTools - Array of tool names that should not be grouped and must be rendered separately
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
   customComponents?: Partial<Components>;
+  userTools?: string[];
 };
 
 /**
@@ -38,6 +40,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
   enableReasoningBox = false,
   customComponents,
+  userTools,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
@@ -75,7 +78,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, []);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(uiMessageParts, divWidth);
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">

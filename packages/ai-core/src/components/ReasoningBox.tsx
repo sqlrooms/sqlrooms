@@ -5,22 +5,26 @@ import {cn} from '@sqlrooms/ui';
 type ReasoningBoxProps = {
   children: React.ReactNode;
   title?: React.ReactNode;
+  /** Whether the box should be expanded by default (default: false) */
+  defaultOpen?: boolean;
 };
 
 /**
  * Component that renders a collapsible box for grouping consecutive tool parts.
- * Starts collapsed (content hidden). Clicking the title expands to show full content.
+ * Starts collapsed by default (content hidden) unless defaultOpen is true.
+ * Clicking the title expands to show full content.
  *
  * @component
  * @param props - Component props
  * @param props.children - The tool parts to render inside the box
  * @param props.title - Custom title to display (default: "Thought")
+ * @param props.defaultOpen - Whether the box should be expanded by default (default: false)
  * @returns A React component displaying a collapsible reasoning box
  */
-export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title}) => {
+export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title, defaultOpen = false}) => {
   const displayTitle = title ?? 'Thought';
-  // Start collapsed (content hidden)
-  const [isOpen, setIsOpen] = useState(false);
+  // Start with defaultOpen state (collapsed by default unless specified)
+  const [isOpen, setIsOpen] = useState(defaultOpen);
 
   const handleToggle = () => {
     setIsOpen(!isOpen);

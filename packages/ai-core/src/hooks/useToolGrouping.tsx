@@ -11,15 +11,22 @@ export type ToolGroup = {
   parts: UIMessagePart[];
   startIndex: number;
   title?: React.ReactNode;
+  /** Whether the ReasoningBox should be expanded by default (default: false) */
+  defaultExpanded?: boolean;
 };
 
 /**
  * Custom hook to group consecutive tool parts and generate titles
  * @param uiMessageParts - Array of UI message parts from the assistant
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
+ * @param exclude - Array of tool names that should not be grouped and must be rendered separately
  * @returns Grouped parts with generated titles for tool groups
  */
-export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth: number = 0): ToolGroup[] {
+export function useToolGrouping(
+  uiMessageParts: UIMessagePart[],
+  containerWidth: number = 0,
+  exclude: string[] = []
+): ToolGroup[] {
   return useMemo(() => {
     if (!uiMessageParts.length) return [];
 
@@ -31,6 +38,13 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth:
       if (isToolPart(part)) return true;
       // Also check for dynamic-tool type
       return typeof part.type === 'string' && part.type === 'dynamic-tool';
+    };
+
+    // Helper function to check if a tool part should be excluded from grouping
+    const isExcludedTool = (part: UIMessagePart): boolean => {
+      if (!isAnyToolPart(part)) return false;
+      const toolName = getToolName(part);
+      return exclude.includes(toolName);
     };
 
     const groups: ToolGroup[] = [];
@@ -58,8 +72,22 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth:
         });
         i++;
       } else if (isAnyToolPart(part)) {
+        // If this tool is excluded, render it separately and expand by default
+        if (isExcludedTool(part)) {
+          groups.push({
+            type: 'tool-group',
+            parts: [part],
+            startIndex: i,
+            title: generateToolGroupTitle([part], false, containerWidth),
+            defaultExpanded: true, // Excluded tools are expanded by default
+          });
+          i++;
+          continue;
+        }
+
         // Collect consecutive tool parts (including dynamic-tool)
         // Skip over step-start and other metadata parts between tool calls
+        // But exclude tools that are in the exclude list
         const toolParts: UIMessagePart[] = [part];
         let j = i + 1;
         while (j < uiMessageParts.length) {
@@ -69,8 +97,12 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth:
             continue;
           }
 
-          // If it's a tool part, add it to the group
+          // If it's a tool part, check if it should be excluded
           if (isAnyToolPart(nextPart)) {
+            // If excluded, stop grouping here
+            if (isExcludedTool(nextPart)) {
+              break;
+            }
             toolParts.push(nextPart);
             j++;
           }
@@ -104,8 +136,8 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth:
             break;
           }
 
-          // If we find another tool part, reasoning continues
-          if (isAnyToolPart(nextPart)) {
+          // If we find another tool part, reasoning continues (but only if it's not excluded)
+          if (isAnyToolPart(nextPart) && !isExcludedTool(nextPart)) {
             hasMoreToolsAfter = true;
             break;
           }
@@ -129,7 +161,7 @@ export function useToolGrouping(uiMessageParts: UIMessagePart[], containerWidth:
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth]);
+  }, [uiMessageParts, containerWidth, exclude]);
 }
 
 /**
