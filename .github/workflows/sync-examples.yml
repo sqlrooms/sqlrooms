@@ -1,12 +1,12 @@
 name: Sync Examples
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'examples/**'
-      - 'docs/media/examples/**'
-      - '.github/workflows/sync-examples.yml'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'examples/**'
+  #     - 'docs/media/examples/**'
+  #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
 
 jobs:
