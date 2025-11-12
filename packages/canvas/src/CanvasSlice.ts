@@ -2,15 +2,15 @@ import {createId} from '@paralleldrive/cuid2';
 import {
   AiSliceState,
   createAiSlice,
-  createDefaultAiTools,
   createDefaultAiInstructions,
+  createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {escapeId} from '@sqlrooms/duckdb';
+import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
+  BaseRoomStoreState,
   createSlice,
-  RoomShellSliceState,
-  useBaseRoomShellStore,
+  useBaseRoomStore,
 } from '@sqlrooms/room-shell';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
@@ -109,6 +109,7 @@ export type CanvasSliceState = AiSliceState & {
     isAssistantOpen: boolean;
     sqlResults: Record<string, SqlNodeQueryResult>;
     initialize: () => Promise<void>;
+    setConfig: (config: CanvasSliceConfig) => void;
     setViewport: (viewport: Viewport) => void;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
     addNode: (params: {
@@ -150,7 +151,10 @@ export function createCanvasSlice<
   config?: Partial<CanvasSliceConfig>;
   ai?: Partial<Parameters<typeof createAiSlice<PC>>[0]>;
 }) {
-  return createSlice<PC, CanvasSliceState>((set, get, store) => ({
+  return createSlice<
+    CanvasSliceState,
+    BaseRoomStoreState & DuckDbSliceState & CanvasSliceState
+  >((set, get, store) => ({
     ...createAiSlice({
       getInstructions: () => {
         return createDefaultAiInstructions(store);
@@ -166,6 +170,13 @@ export function createCanvasSlice<
       config: createDefaultCanvasConfig(props.config),
       isAssistantOpen: false,
       sqlResults: {},
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.canvas.config = config;
+          }),
+        );
+      },
       setAssistantOpen: (isAssistantOpen) => {
         set((state) =>
           produce(state, (draft) => {
@@ -508,17 +519,12 @@ export function createCanvasSlice<
   }));
 }
 
-// Types to integrate with room-shell selector
-export type RoomConfigWithCanvas = BaseRoomConfig & CanvasSliceConfig;
-export type RoomShellSliceStateWithCanvas =
-  RoomShellSliceState<RoomConfigWithCanvas> & CanvasSliceState;
+export type DuckDbSliceStateWithCanvas = DuckDbSliceState & CanvasSliceState;
 
 export function useStoreWithCanvas<T>(
-  selector: (state: RoomShellSliceStateWithCanvas) => T,
+  selector: (state: DuckDbSliceStateWithCanvas) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & CanvasSliceConfig,
-    RoomShellSliceState<RoomConfigWithCanvas>,
-    T
-  >((state) => selector(state as unknown as RoomShellSliceStateWithCanvas));
+  return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
+    selector(state as unknown as DuckDbSliceStateWithCanvas),
+  );
 }

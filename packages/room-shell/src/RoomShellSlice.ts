@@ -1,17 +1,13 @@
 import {
   DataTable,
   DuckDbConnector,
-  DuckDbSliceConfig,
   DuckDbSliceState,
   LoadFileOptions,
-  createDefaultDuckDbConfig,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
 import {
-  LayoutSliceConfig,
+  CreateLayoutSliceProps,
   LayoutSliceState,
-  RoomPanelInfo,
-  createDefaultLayoutConfig,
   createLayoutSlice,
 } from '@sqlrooms/layout';
 import {
@@ -19,17 +15,18 @@ import {
   DataSource,
   DataSourceTypes,
   FileDataSource,
+  LayoutConfig,
   SqlQueryDataSource,
   UrlDataSource,
+  createDefaultBaseRoomConfig,
   isFileDataSource,
-  isUrlDataSource,
   isSqlQueryDataSource,
+  isUrlDataSource,
 } from '@sqlrooms/room-config';
 import {
-  RoomState,
-  RoomStateActions,
-  RoomStateProps,
-  createRoomSlice,
+  BaseRoomStoreState,
+  CreateBaseRoomSliceProps,
+  createBaseRoomSlice,
   isRoomSliceWithInitialize,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
@@ -43,7 +40,6 @@ import {
 import {castDraft, produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
-import {createDefaultBaseRoomConfig} from '@sqlrooms/room-config';
 import {
   DataSourceState,
   DataSourceStatus,
@@ -51,20 +47,28 @@ import {
   RoomFileState,
 } from './types';
 
-export type RoomShellStore<PC extends BaseRoomConfig> = StoreApi<
-  RoomShellSliceState<PC>
->;
+export type RoomShellSliceConfig = BaseRoomConfig;
 
-const INITIAL_BASE_ROOM_CONFIG: BaseRoomConfig &
-  DuckDbSliceConfig &
-  LayoutSliceConfig = {
-  ...createDefaultBaseRoomConfig(),
-  ...createDefaultDuckDbConfig(),
-  ...createDefaultLayoutConfig(),
+export type RoomShellStore = StoreApi<RoomShellSliceState>;
+
+export type TaskProgress = {
+  progress?: number | undefined;
+  message: string;
 };
 
-export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
-  RoomStateProps<PC> & {
+export type RoomShellSliceState = {
+  initialize?: () => Promise<void>;
+  room: BaseRoomStoreState['room'] & {
+    config: RoomShellSliceConfig;
+    tasksProgress: Record<string, TaskProgress>;
+
+    setConfig: (config: RoomShellSliceConfig) => void;
+    setTaskProgress: (
+      id: string,
+      taskProgress: TaskProgress | undefined,
+    ) => void;
+    getLoadingProgress: () => TaskProgress | undefined;
+
     roomFiles: RoomFileInfo[];
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
@@ -75,7 +79,7 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
      *
      * @example
      * ```ts
-     *     ...createRoomShellSlice<RoomConfig>({
+     *     ...createRoomShellSlice({
      *       config: {
      *         dataSources: [
      *           { type: 'file', fileName: 'earthquakes.parquet', tableName: 'earthquakes' },
@@ -100,10 +104,7 @@ export type RoomShellSliceStateProps<PC extends BaseRoomConfig> =
       onRetry?: () => void;
       children?: ReactNode;
     }>;
-  };
 
-export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
-  RoomStateActions<PC> & {
     setRoomTitle(title: string): void;
     setDescription(description: string): void;
 
@@ -146,67 +147,83 @@ export type RoomShellSliceStateActions<PC extends BaseRoomConfig> =
       status?: DataSourceStatus,
     ) => Promise<void>;
   };
-
-export type RoomShellSliceState<PC extends BaseRoomConfig = BaseRoomConfig> =
-  RoomState<PC> & {
-    initialize?: () => Promise<void>;
-    config: PC;
-    room: RoomShellSliceStateProps<PC> & RoomShellSliceStateActions<PC>;
-  } & DuckDbSliceState &
-    LayoutSliceState;
+} & DuckDbSliceState &
+  LayoutSliceState;
 
 /**
  * 	This type takes a union type U (for example, A | B) and transforms it into an intersection type (A & B). This is useful because if you pass in, say, two slices of type { a: number } and { b: string }, the union of the slice types would be { a: number } | { b: string }, but you really want an object that has both properties—i.e. { a: number } & { b: string }.
  */
-type InitialState<PC extends BaseRoomConfig> = {
+type CreateRoomShellSliceProps = CreateBaseRoomSliceProps & {
   connector?: DuckDbConnector;
-  config: Partial<PC>;
-  room: Partial<Omit<RoomShellSliceStateProps<PC>, 'config'>> & {
-    panels?: Record<string, RoomPanelInfo>;
-  };
+  config?: Partial<
+    RoomShellSliceConfig & {
+      /** @deprecated Use layout.config instead */
+      layout?: LayoutConfig;
+    }
+  >;
+  layout?: CreateLayoutSliceProps;
+  fileDataSourceLoader?: RoomShellSliceState['room']['fileDataSourceLoader'];
+  CustomErrorBoundary?: RoomShellSliceState['room']['CustomErrorBoundary'];
+  /** @deprecated Use direct props instead e.g. layout.panels */
+  room?: Partial<Pick<LayoutSliceState['layout'], 'panels'>>;
 };
 
 const DOWNLOAD_DATA_SOURCES_TASK = 'download-data-sources';
 const INIT_DB_TASK = 'init-db';
 const INIT_ROOM_TASK = 'init-room';
 
-export function createRoomShellSlice<
-  PC extends BaseRoomConfig = BaseRoomConfig,
->(props: InitialState<PC>): StateCreator<RoomShellSliceState<PC>> {
-  const slice: StateCreator<RoomShellSliceState<PC>> = (set, get, store) => {
+export function createRoomShellSlice(
+  props: CreateRoomShellSliceProps,
+): StateCreator<RoomShellSliceState> {
+  const slice: StateCreator<RoomShellSliceState> = (set, get, store) => {
     const {
       connector,
       config: configProps,
-      room: roomStateProps,
-      ...restState
+      layout: layoutProps,
+      room: deprecatedRoomProps,
+      fileDataSourceLoader,
+      CustomErrorBoundary = ErrorBoundary,
+      captureException = (exception) => console.error(exception),
+      ...restProps
     } = props;
-    const initialConfig: PC = {
-      ...INITIAL_BASE_ROOM_CONFIG,
-      ...configProps,
-    } as PC;
-    const initialRoomState = {
-      CustomErrorBoundary: ErrorBoundary,
-      roomFiles: [],
-      roomFilesProgress: {},
-      isDataAvailable: false,
-      dataSourceStates: {},
-      ...roomStateProps,
+
+    const createLayoutProps: CreateLayoutSliceProps = {
+      ...layoutProps,
+      config: layoutProps?.config ?? configProps?.layout,
+      panels: layoutProps?.panels ?? deprecatedRoomProps?.panels,
     };
-    const roomSliceState = createRoomSlice({
-      config: initialConfig,
-      room: initialRoomState,
+    const roomSliceState = createBaseRoomSlice({
+      captureException,
     })(set, get, store);
 
-    const roomState: RoomShellSliceState<PC> = {
+    const sliceState: RoomShellSliceState = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
-      ...createLayoutSlice({panels: roomStateProps.panels})(set, get, store),
+      ...createLayoutSlice(createLayoutProps)(set, get, store),
       room: {
-        ...initialRoomState,
         ...roomSliceState.room,
-        async initialize() {
-          await roomSliceState.room.initialize();
+        // @ts-ignore TODO: fix this
+        config: {
+          ...createDefaultBaseRoomConfig(),
+          ...configProps,
+        },
+        CustomErrorBoundary,
+        roomFiles: [],
+        roomFilesProgress: {},
+        isDataAvailable: false,
+        dataSourceStates: {},
+        tasksProgress: {},
+        fileDataSourceLoader,
 
+        setConfig: (config) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.room.config = config;
+            }),
+          );
+        },
+
+        async initialize() {
           const {setTaskProgress} = get().room;
           setTaskProgress(INIT_DB_TASK, {
             message: 'Initializing database…',
@@ -242,35 +259,40 @@ export function createRoomShellSlice<
           setTaskProgress(INIT_ROOM_TASK, undefined);
         },
 
-        setRoomConfig: (config) =>
+        /** Returns the progress of the last task */
+        getLoadingProgress() {
+          const {tasksProgress} = get().room;
+          const keys = Object.keys(tasksProgress);
+          const lastKey = keys[keys.length - 1];
+          if (lastKey) {
+            return tasksProgress[lastKey];
+          }
+          return undefined;
+        },
+
+        setTaskProgress(id, taskProgress) {
           set((state) =>
             produce(state, (draft) => {
-              draft.config = castDraft(config);
+              if (taskProgress) {
+                draft.room.tasksProgress[id] = taskProgress;
+              } else {
+                delete draft.room.tasksProgress[id];
+              }
             }),
-          ),
-        setLastSavedConfig: (config) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.room.lastSavedConfig = castDraft(config);
-            }),
-          ),
-        hasUnsavedChanges: () => {
-          const {lastSavedConfig} = get().room;
-          const {config} = get();
-          return config !== lastSavedConfig;
+          );
         },
 
         setRoomTitle: (title) =>
           set((state) =>
             produce(state, (draft) => {
-              draft.config.title = title;
+              draft.room.config.title = title;
             }),
           ),
 
         setDescription: (description) =>
           set((state) =>
             produce(state, (draft) => {
-              draft.config.description = description;
+              draft.room.config.description = description;
             }),
           ),
 
@@ -280,7 +302,7 @@ export function createRoomShellSlice<
         ) => {
           set((state) =>
             produce(state, (draft) => {
-              const dataSources = draft.config.dataSources;
+              const dataSources = draft.room.config.dataSources;
               const tableName = dataSource.tableName;
               const index = dataSources.findIndex(
                 (d) => d.tableName === tableName,
@@ -316,15 +338,15 @@ export function createRoomShellSlice<
                 tableName: newTableName,
               };
               if (oldTableName) {
-                draft.config.dataSources = draft.config.dataSources.map(
-                  (dataSource) =>
+                draft.room.config.dataSources =
+                  draft.room.config.dataSources.map((dataSource) =>
                     dataSource.tableName === oldTableName
                       ? newDataSource
                       : dataSource,
-                );
+                  );
                 delete draft.room.dataSourceStates[oldTableName];
               } else {
-                draft.config.dataSources.push(newDataSource);
+                draft.room.config.dataSources.push(newDataSource);
               }
               draft.room.dataSourceStates[newTableName] = {
                 status: DataSourceStatus.READY,
@@ -390,15 +412,16 @@ export function createRoomShellSlice<
         },
         removeDataSource: async (tableName) => {
           const {db} = get();
-          const dataSource = get().config.dataSources.find(
+          const dataSource = get().room.config.dataSources.find(
             (d) => d.tableName === tableName,
           );
           if (dataSource) {
             set((state) =>
               produce(state, (draft) => {
-                draft.config.dataSources = draft.config.dataSources.filter(
-                  (d) => d.tableName !== tableName,
-                );
+                draft.room.config.dataSources =
+                  draft.room.config.dataSources.filter(
+                    (d) => d.tableName !== tableName,
+                  );
                 if (dataSource && isFileDataSource(dataSource)) {
                   draft.room.roomFiles = draft.room.roomFiles.filter(
                     (f) => f.pathname !== dataSource.fileName,
@@ -413,7 +436,7 @@ export function createRoomShellSlice<
         },
 
         removeRoomFile: async (pathname) => {
-          const dataSource = get().config.dataSources.find(
+          const dataSource = get().room.config.dataSources.find(
             (d) => isFileDataSource(d) && d.fileName === pathname,
           );
           if (dataSource) {
@@ -439,9 +462,8 @@ export function createRoomShellSlice<
         },
 
         areDatasetsReady: () => {
-          const {dataSourceStates} = get().room;
-          const {config} = get();
-          const dataSources = config.dataSources;
+          const dataSourceStates = get().room.dataSourceStates;
+          const dataSources = get().room.config.dataSources;
           return dataSources.every(
             (ds) =>
               dataSourceStates[ds.tableName]?.status === DataSourceStatus.READY,
@@ -449,7 +471,7 @@ export function createRoomShellSlice<
         },
       },
 
-      ...restState,
+      ...restProps,
     };
 
     // If the tables have changed, update the data sources
@@ -459,10 +481,12 @@ export function createRoomShellSlice<
       }
     });
 
+    return sliceState;
+
     async function updateReadyDataSources() {
       const {tables} = get().db;
       const {dataSourceStates} = get().room;
-      const {config} = get();
+      const {config} = get().room;
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
@@ -488,7 +512,7 @@ export function createRoomShellSlice<
 
     async function maybeDownloadDataSources() {
       const {roomFilesProgress, dataSourceStates} = get().room;
-      const {dataSources} = get().config;
+      const {dataSources} = get().room.config;
       const pendingDataSources = dataSources.filter(
         (ds) =>
           !dataSourceStates[ds.tableName] ||
@@ -515,7 +539,7 @@ export function createRoomShellSlice<
         await runDataSourceQueries(queriesToRun);
       }
 
-      if (get().config.dataSources.length > 0) {
+      if (get().room.config.dataSources.length > 0) {
         set((state) =>
           produce(state, (draft) => {
             draft.room.isDataAvailable = true;
@@ -672,30 +696,13 @@ export function createRoomShellSlice<
         message: 'Downloading data…',
       });
     }
-
-    return roomState;
   };
 
   return slice;
 }
 
-export function useBaseRoomShellStore<
-  PC extends BaseRoomConfig,
-  PS extends RoomShellSliceState<PC>,
-  T,
->(selector: (state: RoomShellSliceState<PC>) => T): T {
-  return useBaseRoomStore<PC, PS, T>(selector as (state: RoomState<PC>) => T);
-}
-
-export function createSlice<PC extends BaseRoomConfig, S>(
-  sliceCreator: (
-    ...args: Parameters<StateCreator<S & RoomShellSliceState<PC>>>
-  ) => S,
-): StateCreator<S> {
-  return (set, get, store) =>
-    sliceCreator(
-      set,
-      get as () => S & RoomShellSliceState<PC>,
-      store as StoreApi<S & RoomShellSliceState<PC>>,
-    );
+export function useBaseRoomShellStore<RS extends RoomShellSliceState, T>(
+  selector: (state: RS) => T,
+): T {
+  return useBaseRoomStore<RS, T>(selector as (state: RS) => T);
 }

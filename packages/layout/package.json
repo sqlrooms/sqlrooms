@@ -29,7 +29,7 @@
   "peerDependencies": {
     "react": ">=18",
     "react-dom": ">=18",
-    "react-mosaic-component": "5.3.0"
+    "react-mosaic-component": "^6.1.1"
   },
   "scripts": {
     "dev": "tsc -w",

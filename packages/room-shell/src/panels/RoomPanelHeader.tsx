@@ -1,6 +1,6 @@
 import {PinIcon, PinOffIcon, XIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {PanelHeaderButton} from './RoomHeaderButton';
 
 const RoomPanelHeader: FC<{
@@ -18,7 +18,7 @@ const RoomPanelHeader: FC<{
     (state) => state.layout.togglePanelPin,
   );
   const pinnedPanels = useBaseRoomShellStore(
-    (state) => state.config.layout.pinned,
+    (state) => state.layout.config.pinned,
   );
   const isPinned = useMemo(
     () => pinnedPanels?.includes(type),

@@ -16,9 +16,9 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   // Get state and actions from store in a single call
 
   const selectedQueryId = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.selectedQueryId,
+    (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
+  const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
   const setSelectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setSelectedQueryId,
   );

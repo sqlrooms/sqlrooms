@@ -21,14 +21,14 @@ export const QueryTabMenuItem: React.FC<QueryTabMenuItemProps> = ({
   return (
     <DropdownMenuItem
       onClick={onRestore}
-      className="flex items-center justify-between truncate h-7 cursor-pointer"
+      className="flex h-7 cursor-pointer items-center justify-between truncate"
     >
-      <span className="truncate xs pl-1">{tab.name}</span>
+      <span className="xs truncate pl-1">{tab.name}</span>
       <div className="flex items-center gap-1">
         <Button
           size="xs"
           variant="ghost"
-          className="w-3 h-3 text-muted-foreground"
+          className="text-muted-foreground h-3 w-3"
           onClick={(e) => {
             e.stopPropagation();
             onRename();
@@ -39,7 +39,7 @@ export const QueryTabMenuItem: React.FC<QueryTabMenuItemProps> = ({
         <Button
           size="xs"
           variant="ghost"
-          className="w-3 h-3 text-muted-foreground"
+          className="text-muted-foreground h-3 w-3"
           onClick={(e) => {
             e.stopPropagation();
             onDelete();

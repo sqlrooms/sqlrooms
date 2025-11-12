@@ -1,12 +1,16 @@
 import {createWasmMotherDuckDbConnector} from '@sqlrooms/motherduck';
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
-import {createRoomStoreCreator} from '@sqlrooms/room-store';
+import {
+  BaseRoomConfig,
+  createPersistHelpers,
+  createRoomStoreCreator,
+  LayoutConfig,
+} from '@sqlrooms/room-store';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
@@ -23,21 +27,15 @@ export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
   (mdToken: string) =>
     persist(
       (set, get, store) => ({
-        ...createRoomShellSlice<RoomConfig>({
+        ...createRoomShellSlice({
           connector: createWasmMotherDuckDbConnector({
             mdToken,
           }),
@@ -77,9 +75,11 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
       {
         // Local storage key
         name: 'md-sql-editor-example-app-state-storage',
-        // Subset of the state to persist
-        partialize: (state) => ({
-          config: RoomConfig.parse(state.config),
+        // Helper to extract and merge slice configs
+        ...createPersistHelpers({
+          room: BaseRoomConfig,
+          layout: LayoutConfig,
+          sqlEditor: SqlEditorSliceConfig,
         }),
       },
     ) as StateCreator<RoomState>,

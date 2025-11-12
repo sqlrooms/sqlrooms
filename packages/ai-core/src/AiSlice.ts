@@ -7,21 +7,20 @@ import {
 } from '@sqlrooms/ai-config';
 import {
   BaseRoomConfig,
-  createBaseSlice,
-  RoomState,
+  createSlice,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
+import {DefaultChatTransport, LanguageModel, UIMessage} from 'ai';
 import {produce} from 'immer';
-import {UIMessage, DefaultChatTransport, LanguageModel} from 'ai';
 
+import {OpenAssistantToolSet} from '@openassistant/utils';
 import {
+  createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
-  createChatHandlers,
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {OpenAssistantToolSet} from '@openassistant/utils';
 
 // Custom type for onChatToolCall that includes addToolResult
 type ExtendedChatOnToolCallCallback = (args: {
@@ -36,6 +35,7 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
+    setConfig: (config: AiSliceConfig) => void;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     startAnalysis: (
@@ -131,13 +131,21 @@ export function createAiSlice<PC extends BaseRoomConfig>(
     chatHeaders = {},
   } = params;
 
-  return createBaseSlice<PC, AiSliceState>((set, get, store) => {
+  return createSlice<AiSliceState>((set, get, store) => {
     return {
       ai: {
         config: createDefaultAiConfig(params.config),
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         tools,
+
+        setConfig: (config: AiSliceConfig) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.config = config;
+            }),
+          );
+        },
 
         setAnalysisPrompt: (prompt: string) => {
           set((state) =>
@@ -672,12 +680,6 @@ function getCurrentSessionFromState(
   return sessions.find((session) => session.id === currentSessionId);
 }
 
-export function useStoreWithAi<
-  T,
-  PC extends BaseRoomConfig,
-  S extends RoomState<PC> & AiSliceState,
->(selector: (state: S) => T): T {
-  return useBaseRoomStore<PC, RoomState<PC>, T>((state) =>
-    selector(state as unknown as S),
-  );
+export function useStoreWithAi<T>(selector: (state: AiSliceState) => T): T {
+  return useBaseRoomStore<AiSliceState, T>((state) => selector(state));
 }
