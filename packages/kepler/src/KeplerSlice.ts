@@ -31,8 +31,10 @@ import {
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
 import {createId} from '@paralleldrive/cuid2';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
 import {
+  BaseRoomStoreState,
   createSlice,
   RoomShellSliceState,
   useBaseRoomShellStore,
@@ -121,7 +123,7 @@ export type KeplerSliceState = {
     forwardDispatch: {
       [mapId: string]: Dispatch;
     };
-    initialize: (config?: KeplerSliceConfig) => Promise<void>;
+    initialize: () => Promise<void>;
     setConfig: (config: KeplerSliceConfig) => void;
     /**
      * Update the datasets in all the kepler map so that they correspond to
@@ -194,7 +196,7 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
-  return createSlice<KeplerSliceState>((set, get) => {
+  return createSlice<KeplerSliceState, BaseRoomStoreState & KeplerSliceState & DuckDbSliceState>((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -240,28 +242,21 @@ export function createKeplerSlice({
               draft.kepler.config = config;
             }),
           );
+          updateForwardDispatch();
+          updateMapConfigs();
         },
 
-        async initialize(config?: KeplerSliceConfig) {
-          const currentMapId = get().kepler.config.currentMapId;
+        async initialize() {
+          const config = get().kepler.config;
+          const currentMapId = config.currentMapId;
           const keplerInitialState: KeplerGlReduxState = keplerReducer(
             undefined,
             registerEntry({id: currentMapId}),
           );
-
-          const forwardDispatch = {
-            [currentMapId]: getForwardDispatch(currentMapId),
-          };
-          if (config) {
-            for (const {id} of get().kepler.config.maps) {
-              forwardDispatch[id] = getForwardDispatch(id);
-            }
-          }
           set({
             kepler: {
               ...get().kepler,
-              map: keplerInitialState,
-              forwardDispatch,
+              map: keplerInitialState,              
               dispatchAction: (mid, action) => {
                 // wrapDispatch(wrapTo(mapId)(action));
                 const dispatchToMap = get().kepler.forwardDispatch[mid];
@@ -281,20 +276,10 @@ export function createKeplerSlice({
               },
             },
           });
-          if (config) {
-            get().kepler.setConfig(config);
-            const keplerMaps = config.maps;
-            for (const {id, config} of keplerMaps) {
-              if (config) {
-                get().kepler.addConfigToMap(
-                  id,
-                  config as unknown as KeplerMapSchema,
-                );
-              }
-            }
-          }
+          updateForwardDispatch();
+          updateMapConfigs();
           await get().kepler.syncKeplerDatasets();
-          requestMapStyle(get().kepler.config.currentMapId);
+          requestMapStyle(config.currentMapId);
         },
 
         addTableToMap: async (mapId, tableName, options = {}) => {
@@ -539,6 +524,38 @@ export function createKeplerSlice({
           return result;
         };
     }
+
+    function updateMapConfigs() {
+      const config = get().kepler.config;
+      const keplerMaps = config.maps;
+      for (const {id, config} of keplerMaps) {
+        if (config) {
+          get().kepler.addConfigToMap(
+            id,
+            config as unknown as KeplerMapSchema,
+          );
+        }
+      }
+    }
+
+    function updateForwardDispatch() {
+      const config = get().kepler.config;
+      const currentMapId = config.currentMapId;
+      const forwardDispatch = {
+        [currentMapId]: getForwardDispatch(currentMapId),
+      };
+      if (config) {
+        for (const {id} of config.maps) {
+          forwardDispatch[id] = getForwardDispatch(id);
+        }
+      }
+      set((state) =>
+        produce(state, (draft) => {
+          draft.kepler.forwardDispatch = forwardDispatch;
+        }),
+      );
+    }
+
 
     function getForwardDispatch(mapId: string): Dispatch<KeplerAction> {
       /** Adapted from  applyMiddleware in redux */
