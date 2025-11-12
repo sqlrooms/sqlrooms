@@ -64,17 +64,17 @@ export enum AddDataMethods {
 }
 const ADD_DATA_METHODS = [
   {
-    label: 'Upload',
+    label: 'Local File',
     value: AddDataMethods.Upload,
   },
   {
-    label: 'TileSet',
+    label: 'Tiles',
     value: AddDataMethods.TileSet,
   },
-  {
-    label: 'S3',
-    value: AddDataMethods.S3,
-  },
+  // {
+  //   label: 'S3',
+  //   value: AddDataMethods.S3,
+  // },
 ];
 
 export type KeplerAddDataDialogProps = {
@@ -123,8 +123,7 @@ export const KeplerAddDataDialog = ({
           <DialogHeader>
             <DialogTitle>Add Data</DialogTitle>
             <DialogDescription>
-              Add data from local files, S3, or Tilesets. Data stays in your
-              local machine and is not uploaded to the cloud.
+              Add data to the project.
             </DialogDescription>
           </DialogHeader>
           <Tabs
