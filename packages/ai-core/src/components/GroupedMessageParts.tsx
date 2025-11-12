@@ -59,7 +59,11 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
 
         if (group.type === 'tool-group') {
           return (
-            <ReasoningBox key={`group-${groupIndex}`} title={group.title}>
+            <ReasoningBox
+              key={`group-${groupIndex}`}
+              title={group.title}
+              defaultOpen={group.defaultExpanded}
+            >
               {group.parts.map((part, partIndex) => (
                 <ToolPartRenderer
                   key={`tool-call-${groupIndex}-${partIndex}`}

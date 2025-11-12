@@ -12,7 +12,8 @@ export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
   customComponents?: Partial<Components>;
-}> = ({className, enableReasoningBox = false, customComponents}) => {
+  userTools?: string[];
+}> = ({className, enableReasoningBox = false, customComponents, userTools}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
@@ -41,6 +42,7 @@ export const AnalysisResultsContainer: React.FC<{
             analysisResult={analysisResult}
             enableReasoningBox={enableReasoningBox}
             customComponents={customComponents}
+            userTools={userTools}
           />
         ))}
         {isRunningAnalysis && (

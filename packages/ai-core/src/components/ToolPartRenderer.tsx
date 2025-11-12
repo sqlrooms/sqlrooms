@@ -52,14 +52,13 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
 
   // Check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
   if (
-    isCompleted === false &&
     !tools[toolName]?.execute &&
-    (state === 'input-streaming' || state === 'input-available')
+    (state === 'input-streaming' || state === 'input-available' || state === 'output-available')
   ) {
     const ToolComponent = findToolComponent(toolName);
     const props = {
       ...(input as Record<string, unknown>),
-      ...({toolCallId, toolName} as Record<string, unknown>),
+      ...({ toolCallId, toolName, isCompleted } as Record<string, unknown>),
     };
     return (
       <div>
