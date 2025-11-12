@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0-rc.5 (2025-11-12)
+
+### Features
+
+* Separate config for every slice ([#156](/github.com/sqlrooms/sqlrooms/issues/156)) ([ae600c1](github.com/sqlrooms/sqlrooms/commits/ae600c124bec754bea9a71218dcb8203f11a5cce))
+
 # 0.26.0-rc.4 (2025-11-10)
 
 ### Bug Fixes
