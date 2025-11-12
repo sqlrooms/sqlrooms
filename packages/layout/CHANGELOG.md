@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0-rc.6 (2025-11-12)
+
+**Note:** Version bump only for package @sqlrooms/layout
+
 # 0.26.0-rc.5 (2025-11-12)
 
 ### Features
