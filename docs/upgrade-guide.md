@@ -10,13 +10,17 @@ When upgrading, please follow the version-specific instructions below that apply
 
 ## 0.26.0-rc.5
 
-- There's no combined config in the store anymore
+- There's no combined config in the store anymore. We decided to split the config into individual slices' configs to avoid confusion and simplify the store typing.
 
       state.config.title -> state.room.config.title
       state.config.dataSources -> state.room.config.dataSources
       state.config.sqlEditor -> state.sqlEditor.config
       state.config.layout -> state.layout.config
       ...
+
+  If you were saving the combined config, make sure to update the persistence logic (check out the examples).
+
+- createStore, createSlice now only have one generic type parameter
 
 - room.setRoomConfig removed, use .setConfig in all individual slices
 

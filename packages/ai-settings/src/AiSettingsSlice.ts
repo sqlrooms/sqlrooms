@@ -1,7 +1,6 @@
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {AiSliceState} from '@sqlrooms/ai-core';
 import {
-  BaseRoomConfig,
   createSlice,
   useBaseRoomStore,
   type StateCreator,
@@ -45,7 +44,7 @@ type CreateAiSettingsSliceParams = {
   config?: Partial<AiSettingsSliceConfig>;
 };
 
-export function createAiSettingsSlice<PC extends BaseRoomConfig>(
+export function createAiSettingsSlice(
   props?: CreateAiSettingsSliceParams,
 ): StateCreator<AiSettingsSliceState> {
   const config = createDefaultAiSettingsConfig(props?.config);

@@ -7,7 +7,6 @@ import {
 } from '@sqlrooms/ai';
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
@@ -145,11 +144,9 @@ export function createDefaultCanvasConfig(
   };
 }
 
-export function createCanvasSlice<
-  PC extends BaseRoomConfig = BaseRoomConfig,
->(props: {
+export function createCanvasSlice(props: {
   config?: Partial<CanvasSliceConfig>;
-  ai?: Partial<Parameters<typeof createAiSlice<PC>>[0]>;
+  ai?: Partial<Parameters<typeof createAiSlice>[0]>;
 }) {
   return createSlice<
     CanvasSliceState,
