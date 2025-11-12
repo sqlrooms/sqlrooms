@@ -8,10 +8,15 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
-## 0.26.0-rc.7
+## 0.26.0-rc.5
 
 - There's no combined config in the store anymore
-  state.config -> state.room.config
+
+      state.config.title -> state.room.config.title
+      state.config.dataSources -> state.room.config.dataSources
+      state.config.sqlEditor -> state.sqlEditor.config
+      state.config.layout -> state.layout.config
+      ...
 
 - room.setRoomConfig removed, use .setConfig in all individual slices
 
