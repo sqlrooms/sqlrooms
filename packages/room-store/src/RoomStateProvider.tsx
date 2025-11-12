@@ -1,15 +1,15 @@
 import React, {createContext, ReactNode, useContext} from 'react';
 import {StoreApi, useStore} from 'zustand';
-import {BaseRoomStoreState, RoomStore} from './RoomStore';
+import {BaseRoomStoreState, BaseRoomStore} from './BaseRoomStore';
 
 // See https://docs.pmnd.rs/zustand/guides/initialize-state-with-props
 
 export const RoomStateContext =
-  createContext<RoomStore<BaseRoomStoreState> | null>(null);
+  createContext<BaseRoomStore<BaseRoomStoreState> | null>(null);
 
 export type RoomStateProviderProps<RS extends BaseRoomStoreState> =
   React.PropsWithChildren<{
-    roomStore?: RoomStore<RS>;
+    roomStore?: BaseRoomStore<RS>;
   }>;
 
 export function RoomStateProvider<RS extends BaseRoomStoreState>({
