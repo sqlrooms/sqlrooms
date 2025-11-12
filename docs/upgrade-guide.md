@@ -15,7 +15,9 @@ When upgrading, please follow the version-specific instructions below that apply
 
 - room.setRoomConfig removed, use .setConfig in all individual slices
 
-- RoomState renamed to BaseRoomStoreState (meant to be internal) to avoid confusion with RoomState introduced in many of the examples
+- RoomState renamed to BaseRoomStoreState (meant to be internal) and RoomStore interface renamed to BaseRoomStore to avoid confusion with RoomState/RoomStore introduced in many of the examples
+
+- room.onSaveConfig, hasUnsavedChanges, lastSavedConfig were removed.
 
 ## 0.25.0-rc.1
 
