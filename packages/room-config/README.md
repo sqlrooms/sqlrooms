@@ -42,21 +42,31 @@ Room configuration is designed to be saved and restored between sessions. Here's
 
 ```tsx
 import {persist} from 'zustand/middleware';
-import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
+import {
+  createRoomStore,
+  createRoomShellSlice,
+  RoomShellSliceState,
+  StateCreator,
+  createPersistHelpers,
+  LayoutConfig,
+} from '@sqlrooms/room-shell';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 
+type MyRoomState = RoomShellSliceState;
+
 // Create a store with persistence for configuration
-const {useRoomStore} = createRoomStore(
+const {useRoomStore} = createRoomStore<MyRoomState>(
   persist(
     (set, get, store) => ({
       ...createRoomShellSlice({
-        // Config is stored at the root level of state for persisting the app state
         config: {
           title: 'My Room',
           // Other configuration properties
         },
-        // Room object contains panels and runtime-only state
-        room: {
+        layout: {
+          config: {
+            // Layout configuration
+          },
           panels: {
             // Panel definitions
           },
@@ -65,18 +75,19 @@ const {useRoomStore} = createRoomStore(
     }),
     {
       name: 'room-config-storage',
-      // Only persist the configuration part of the state
-      partialize: (state) => ({
-        config: state.config,
+      // Use helper to persist configuration
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
       }),
     },
-  ),
+  ) as StateCreator<MyRoomState>,
 );
 
 // Access the config in components
 function ConfigComponent() {
-  // Config is accessed directly from state, not from state.room.config
-  const config = useRoomStore((state) => state.config);
+  // Config is accessed from state.room.config
+  const config = useRoomStore((state) => state.room.config);
 
   return <div>{config.title}</div>;
 }

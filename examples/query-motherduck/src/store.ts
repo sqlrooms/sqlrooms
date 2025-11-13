@@ -12,7 +12,6 @@ import {
   LayoutConfig,
 } from '@sqlrooms/room-store';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
@@ -39,8 +38,8 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
           connector: createWasmMotherDuckDbConnector({
             mdToken,
           }),
-          config: {
-            layout: {
+          layout: {
+            config: {
               type: LayoutTypes.enum.mosaic,
               nodes: {
                 first: RoomPanelTypes.enum['data'],
@@ -49,10 +48,6 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
                 splitPercentage: 30,
               },
             },
-
-            ...createDefaultSqlEditorConfig(),
-          },
-          room: {
             panels: {
               [RoomPanelTypes.enum['main']]: {
                 component: MainView,

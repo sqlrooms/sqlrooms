@@ -69,19 +69,31 @@ npm run dev
 Set up a simple room that loads and queries a single data table:
 
 ```tsx
-const {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({
-  ...createRoomShellSlice({
-    config: {
-      dataSources: [
-        {
-          type: 'url',
-          tableName: 'earthquakes',
-          url: 'https://.../earthquakes.parquet',
-        },
-      ],
-    },
-  })(set, get, store),
-}));
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+  RoomShell,
+} from '@sqlrooms/room-shell';
+import {useSql} from '@sqlrooms/duckdb';
+
+type RoomState = RoomShellSliceState;
+
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice({
+      config: {
+        dataSources: [
+          {
+            type: 'url',
+            tableName: 'earthquakes',
+            url: 'https://.../earthquakes.parquet',
+          },
+        ],
+      },
+    })(set, get, store),
+  }),
+);
 
 export const MyRoom = () => (
   <RoomShell roomStore={roomStore}>

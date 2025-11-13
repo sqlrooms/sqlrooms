@@ -63,7 +63,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
             },
           ],
-          layout: {
+        },
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
@@ -72,8 +74,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               splitPercentage: 30,
             },
           },
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
