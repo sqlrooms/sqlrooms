@@ -13,11 +13,11 @@ type QueryToolResultProps = {
 };
 
 export function QueryToolResult(props: QueryToolResultProps) {
-  const {title, sqlQuery} = props;
+  const {title, sqlQuery, showSql = true} = props;
   const tableModal = useDisclosure();
   return (
     <>
-      {props.showSql && (
+      {showSql && (
         <div className="text-muted-foreground bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
           <pre className="whitespace-pre-wrap break-words pr-8">{sqlQuery}</pre>
           <div className="absolute right-1 top-1">
@@ -31,7 +31,7 @@ export function QueryToolResult(props: QueryToolResultProps) {
           </div>
         </div>
       )}
-      <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400">
+      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
         <Button variant="ghost" size="xs" onClick={tableModal.onOpen}>
           <TableIcon className="h-4 w-4" />
           <h3 className="text-xs">Show Query Result</h3>
