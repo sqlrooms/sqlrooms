@@ -10,9 +10,14 @@ import {AiThinkingDots} from './AiThinkingDots';
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
-  customComponents?: Partial<Components>;
+  customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
-}> = ({className, enableReasoningBox = false, customComponents, userTools}) => {
+}> = ({
+  className,
+  enableReasoningBox = false,
+  customMarkdownComponents,
+  userTools,
+}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
@@ -41,7 +46,7 @@ export const AnalysisResultsContainer: React.FC<{
             key={analysisResult.id}
             analysisResult={analysisResult}
             enableReasoningBox={enableReasoningBox}
-            customComponents={customComponents}
+            customMarkdownComponents={customMarkdownComponents}
             userTools={userTools}
           />
         ))}

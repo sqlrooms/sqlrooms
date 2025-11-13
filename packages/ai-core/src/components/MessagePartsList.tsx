@@ -12,7 +12,7 @@ type MessagePartsListProps = {
   /** Array of UI message parts to render */
   parts: UIMessagePart[];
   /** Optional custom components for markdown rendering */
-  customComponents?: Partial<Components>;
+  customMarkdownComponents?: Partial<Components>;
 };
 
 /**
@@ -23,7 +23,10 @@ type MessagePartsListProps = {
  * @param props - Component props
  * @returns A React component displaying the message parts
  */
-export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts, customComponents}) => {
+export const MessagePartsList: React.FC<MessagePartsListProps> = ({
+  parts,
+  customMarkdownComponents,
+}) => {
   return (
     <>
       {parts.map((part, index) => {
@@ -33,7 +36,7 @@ export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts, custom
               key={index}
               content={part.text}
               isAnswer={index === parts.length - 1}
-              customComponents={customComponents}
+              customMarkdownComponents={customMarkdownComponents}
             />
           );
         }
@@ -45,16 +48,10 @@ export const MessagePartsList: React.FC<MessagePartsListProps> = ({parts, custom
           );
         }
         if (isToolPart(part)) {
-          return (
-            <ToolPartRenderer
-              key={`tool-call-${index}`}
-              part={part}
-            />
-          );
+          return <ToolPartRenderer key={`tool-call-${index}`} part={part} />;
         }
         return null;
       })}
     </>
   );
 };
-

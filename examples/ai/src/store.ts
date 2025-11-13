@@ -21,7 +21,6 @@ import {
 } from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
-  QueryEditorPanel,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';

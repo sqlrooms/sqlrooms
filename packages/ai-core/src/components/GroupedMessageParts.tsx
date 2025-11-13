@@ -15,7 +15,7 @@ type GroupedMessagePartsProps = {
   /** Total number of message parts (used to determine if a text part is the final answer) */
   totalPartsCount: number;
   /** Optional custom components for markdown rendering */
-  customComponents?: Partial<Components>;
+  customMarkdownComponents?: Partial<Components>;
 };
 
 /**
@@ -29,7 +29,7 @@ type GroupedMessagePartsProps = {
 export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
   groupedParts,
   totalPartsCount,
-  customComponents,
+  customMarkdownComponents,
 }) => {
   return (
     <>
@@ -42,7 +42,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
               key={`group-${groupIndex}`}
               content={part.text}
               isAnswer={group.startIndex === totalPartsCount - 1}
-              customComponents={customComponents}
+              customMarkdownComponents={customMarkdownComponents}
             />
           );
         }
@@ -51,7 +51,10 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
           const part = group.parts[0];
           if (!part || !isReasoningPart(part)) return null;
           return (
-            <div key={`group-${groupIndex}`} className="text-muted-foreground text-xs">
+            <div
+              key={`group-${groupIndex}`}
+              className="text-muted-foreground text-xs"
+            >
               {part.text}
             </div>
           );
@@ -79,4 +82,3 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
     </>
   );
 };
-

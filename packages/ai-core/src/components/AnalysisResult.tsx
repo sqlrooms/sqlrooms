@@ -16,13 +16,13 @@ import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
  * @property {boolean} enableReasoningBox - Whether to group consecutive tool parts into a collapsible ReasoningBox
- * @property {Partial<Components>} customComponents - Optional custom components for markdown rendering
+ * @property {Partial<Components>} customMarkdownComponents - Optional custom components for markdown rendering
  * @property {string[]} userTools - Array of tool names that should not be grouped and must be rendered separately
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
-  customComponents?: Partial<Components>;
+  customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
 };
 
@@ -39,7 +39,7 @@ type AnalysisResultProps = {
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
   enableReasoningBox = false,
-  customComponents,
+  customMarkdownComponents,
   userTools,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -52,7 +52,10 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
-  const uiMessageParts = useAssistantMessageParts(uiMessages, analysisResult.id);
+  const uiMessageParts = useAssistantMessageParts(
+    uiMessages,
+    analysisResult.id,
+  );
 
   // Measure div width using ResizeObserver
   useEffect(() => {
@@ -65,7 +68,8 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         // Use borderBoxSize if available (modern API), fallback to contentRect
-        const width = entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        const width =
+          entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
         setDivWidth(width);
       }
     });
@@ -82,9 +86,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
-      <div
-        className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100"
-      >
+      <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
         <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
@@ -135,10 +137,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
-            customComponents={customComponents}
+            customMarkdownComponents={customMarkdownComponents}
           />
         ) : (
-          <MessagePartsList parts={uiMessageParts} customComponents={customComponents} />
+          <MessagePartsList
+            parts={uiMessageParts}
+            customMarkdownComponents={customMarkdownComponents}
+          />
         )}
         {analysisResult.errorMessage && (
           <ErrorMessage errorMessage={analysisResult.errorMessage.error} />

@@ -10,7 +10,7 @@ import {cn} from '@sqlrooms/ui';
 type AnalysisAnswerProps = {
   content: string;
   isAnswer: boolean;
-  customComponents?: Partial<Components>;
+  customMarkdownComponents?: Partial<Components>;
 };
 
 type ThinkContent = {
@@ -130,7 +130,7 @@ ThinkBlock.displayName = 'ThinkBlock';
 export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   props: AnalysisAnswerProps,
 ) {
-  const {content, isAnswer, customComponents} = props;
+  const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
 
   const toggleThinkExpansion = useCallback((content: string) => {
@@ -180,7 +180,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     [thinkContents, expandedThink, toggleThinkExpansion],
   );
 
-
   return (
     <div className="flex flex-col gap-5">
       <MessageContainer
@@ -195,7 +194,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
             components={{
               // @ts-expect-error - Custom HTML element not in react-markdown types
               'think-block': thinkBlockComponent,
-              ...customComponents,
+              ...customMarkdownComponents,
             }}
           >
             {processedContent}
