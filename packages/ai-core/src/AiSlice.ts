@@ -10,7 +10,6 @@ import {
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
-import {DefaultChatTransport, LanguageModel, UIMessage} from 'ai';
 import {produce} from 'immer';
 import {
   UIMessage,
@@ -25,7 +24,6 @@ import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
-  createChatHandlers,
   ToolCall,
   convertToAiSDKTools,
 } from './chatTransport';
