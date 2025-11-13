@@ -1,14 +1,10 @@
 import {loader} from '@monaco-editor/react';
-import * as Monaco from 'monaco-editor';
 
 export interface LoaderWorkers {
   /** worker used when label does not match other workers */
   default?: {new (): Worker};
   [label: string]: {new (): Worker} | undefined;
 }
-
-export const DEFAULT_CDN_PATH =
-  'https://cdn.jsdelivr.net/npm/monaco-editor@0.52.0/min/vs';
 
 export type LoaderConfig = Parameters<typeof loader.config>[0];
 
@@ -69,11 +65,30 @@ export function configureMonacoLoader(options: MonacoLoaderOptions) {
   configured = true;
 }
 
-export function ensureMonacoLoaderConfigured() {
-  if (!configured) {
-    if (typeof window !== 'undefined') {
-      loader.config({monaco: Monaco});
-    }
+/**
+ * Dynamically imports and configures Monaco for bundling (SSR-safe).
+ *
+ * @internal
+ * This is an advanced utility that most users don't need.
+ * Use `configureMonacoLoader()` at app startup instead for better control.
+ *
+ * This function:
+ * - Only runs on the client side (checks typeof window)
+ * - Dynamically imports monaco-editor to avoid SSR issues in Next.js
+ * - Automatically configures the loader with the imported Monaco instance
+ *
+ * When to use:
+ * - You need Monaco bundled but can't call configureMonacoLoader at app startup
+ * - You're working in an environment where top-level imports of monaco-editor fail
+ *
+ * When NOT to use:
+ * - For normal bundling, use `configureMonacoLoader()` at app startup
+ * - For CDN loading, just use the component - no configuration needed
+ */
+export async function ensureMonacoLoaderConfigured() {
+  if (!configured && typeof window !== 'undefined') {
+    const Monaco = await import('monaco-editor');
+    loader.config({monaco: Monaco});
     configured = true;
   }
 }

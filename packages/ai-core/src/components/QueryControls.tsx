@@ -94,14 +94,19 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       )}
     >
       {(ideas && ideas.length > 0) || isLoadingIdeas ? (
-        <IdeasContainer ideas={ideas} isLoading={isLoadingIdeas} className="w-full" />
+        <IdeasContainer
+          ideas={ideas}
+          isLoading={isLoadingIdeas}
+          className="w-full"
+        />
       ) : null}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
             ref={textareaRef}
             disabled={isRunningAnalysis}
-            className="max-h-70 min-h-[30px] resize-none overflow-y-auto border-none p-2 text-sm outline-none focus-visible:ring-0"
+            className="min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
+            autoResize
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
             onKeyDown={handleKeyDown}
