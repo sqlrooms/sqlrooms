@@ -40,15 +40,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     ...createRoomShellSlice({
       config: {
         title: 'Demo App Room',
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: RoomPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
-        },
         dataSources: [
           {
             type: 'url',
@@ -58,7 +49,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ],
         ...createDefaultSqlEditorConfig(),
       },
-      room: {
+      layout: {
+        config: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
             title: 'Room Details',

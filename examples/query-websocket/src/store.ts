@@ -89,7 +89,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               tableName: 'earthquakes',
             },
           ],
-          layout: {
+          ...createDefaultSqlEditorConfig(),
+        },
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               first: RoomPanelTypes.enum['data'],
@@ -98,9 +101,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               splitPercentage: 30,
             },
           },
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['main']]: {
               component: MainView,

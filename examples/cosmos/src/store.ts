@@ -34,10 +34,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     // Base room slice
     ...createRoomShellSlice({
       config: {
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: MAIN_VIEW,
-        },
         dataSources: [
           {
             type: 'url',
@@ -46,7 +42,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {
+      layout: {
+        config: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: MAIN_VIEW,
+        },
         panels: {
           [RoomPanelTypes.enum['data-sources']]: {
             title: 'Data Sources',

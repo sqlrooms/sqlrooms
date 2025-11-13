@@ -34,7 +34,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ],
         ...createDefaultSqlEditorConfig(),
       },
-      room: {
+      layout: {
         panels: {
           main: {
             title: 'Main view',

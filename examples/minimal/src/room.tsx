@@ -30,7 +30,6 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {},
     })(set, get, store),
   }),
 );
