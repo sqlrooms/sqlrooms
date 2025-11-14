@@ -1,11 +1,9 @@
 import {
   createDefaultKeplerConfig,
   createKeplerSlice,
-  KeplerSliceConfig,
   KeplerSliceState,
 } from '@sqlrooms/kepler';
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutTypes,
@@ -16,7 +14,6 @@ import {
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
-  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
@@ -50,32 +47,19 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room config for saving
  */
-export const RoomConfig =
-  BaseRoomConfig.merge(SqlEditorSliceConfig).merge(KeplerSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> &
-  KeplerSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
+  KeplerSliceState &
   SqlEditorSliceState & {
     addFile: (file: File, loadOptions?: LoadFileOptions) => Promise<string>;
   };
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => {
     return {
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['data'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -86,7 +70,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           ...createDefaultKeplerConfig(),
           ...createDefaultSqlEditorConfig(),
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              first: RoomPanelTypes.enum['data'],
+              second: MAIN_VIEW,
+              splitPercentage: 30,
+            },
+          },
           panels: {
             [RoomPanelTypes.enum['data']]: {
               title: 'Data Sources',
@@ -142,7 +135,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         }
       },
 
-      ...createKeplerSlice<RoomConfig>({
+      ...createKeplerSlice({
         actionLogging: true,
       })(set, get, store),
 
