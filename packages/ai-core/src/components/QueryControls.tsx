@@ -3,13 +3,13 @@ import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useAiChat} from '../hooks/useAiChat';
-import {IdeasContainer} from './IdeasContainer';
+import {PromptSuggestionsContainer} from './PromptSuggestionsContainer';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
-  ideas?: string[];
-  isLoadingIdeas?: boolean;
+  promptSuggestions?: string[];
+  isLoadingPromptSuggestions?: boolean;
   onRun?: () => void;
   onCancel?: () => void;
 }>;
@@ -17,8 +17,8 @@ type QueryControlsProps = PropsWithChildren<{
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
-  ideas,
-  isLoadingIdeas = false,
+  promptSuggestions,
+  isLoadingPromptSuggestions = false,
   children,
   onRun,
   onCancel,
@@ -93,10 +93,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         className,
       )}
     >
-      {(ideas && ideas.length > 0) || isLoadingIdeas ? (
-        <IdeasContainer
-          ideas={ideas}
-          isLoading={isLoadingIdeas}
+      {(promptSuggestions && promptSuggestions.length > 0) ||
+      isLoadingPromptSuggestions ? (
+        <PromptSuggestionsContainer
+          promptSuggestions={promptSuggestions}
+          isLoading={isLoadingPromptSuggestions}
           className="w-full"
         />
       ) : null}

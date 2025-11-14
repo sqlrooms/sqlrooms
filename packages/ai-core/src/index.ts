@@ -11,7 +11,7 @@ export {AnalysisResult} from './components/AnalysisResult';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useAiChat} from './hooks/useAiChat';
 
-export {IdeasContainer} from './components/IdeasContainer';
+export {PromptSuggestionsContainer} from './components/PromptSuggestionsContainer';
 export {ModelSelector} from './components/ModelSelector';
 export {SessionControls} from './components/SessionControls';
 export {QueryControls} from './components/QueryControls';
@@ -26,4 +26,7 @@ export {ToolCallInfo} from './components/ToolCallInfo';
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
-export {convertToAiSDKTools, completeIncompleteToolCalls} from './chatTransport';
+export {
+  convertToAiSDKTools,
+  completeIncompleteToolCalls,
+} from './chatTransport';

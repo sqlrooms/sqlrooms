@@ -60,7 +60,7 @@ export const MainView: React.FC = () => {
 
           <QueryControls
             placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'"
-            ideas={[
+            promptSuggestions={[
               'What questions can I ask to get insights from my data?',
               'Show me a summary of the data',
               'What are the key trends?',
