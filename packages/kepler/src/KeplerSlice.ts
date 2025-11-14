@@ -149,7 +149,12 @@ export type KeplerSliceState = {
     removeDatasetFromMaps: (datasetId: string) => void;
     dispatchAction: (mapId: string, action: KeplerAction) => void;
     setCurrentMapId: (mapId: string) => void;
-    createMap: (name?: string) => void;
+    /**
+     * Create a new map and return the map id
+     * @param name - The name of the map
+     * @returns The map id
+     */
+    createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
@@ -245,8 +250,10 @@ export function createKeplerSlice({
               draft.kepler.config = config;
             }),
           );
+          updateMapReduxStates();
           updateForwardDispatch();
           updateMapConfigs();
+          get().kepler.syncKeplerDatasets();
         },
 
         async initialize() {
@@ -334,7 +341,7 @@ export function createKeplerSlice({
           );
         },
 
-        createMap: async (name) => {
+        createMap: (name) => {
           const mapId = createId();
           set((state) =>
             produce(state, (draft) => {
@@ -350,7 +357,8 @@ export function createKeplerSlice({
             }),
           );
           requestMapStyle(mapId);
-          await get().kepler.syncKeplerDatasets();
+          get().kepler.syncKeplerDatasets();
+          return mapId;
         },
 
         async syncKeplerDatasets() {
@@ -536,6 +544,26 @@ export function createKeplerSlice({
           get().kepler.addConfigToMap(id, config as unknown as KeplerMapSchema);
         }
       }
+    }
+
+    function updateMapReduxStates() {
+      set((state) =>
+        produce(state, (draft) => {
+          // Delete redux state of maps that are not in the config
+          for (const mapId of Object.keys(draft.kepler.map)) {
+            if (!draft.kepler.config.maps.some((map) => map.id === mapId)) {
+              draft.kepler.map = keplerReducer(draft.kepler.map, deleteEntry(mapId));
+            }
+          }
+          // Register redux state of maps that are not in the config
+          for (const map of draft.kepler.config.maps) {
+            if (!draft.kepler.map[map.id]) {
+              draft.kepler.map = keplerReducer(draft.kepler.map, registerEntry({id: map.id}));
+              draft.kepler.forwardDispatch[map.id] = getForwardDispatch(map.id);
+            }
+          }
+        }),
+      );
     }
 
     function updateForwardDispatch() {

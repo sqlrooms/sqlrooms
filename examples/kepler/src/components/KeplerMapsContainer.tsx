@@ -28,7 +28,10 @@ export const KeplerMapsContainer: FC<{
   const renameMap = useRoomStore((state) => state.kepler.renameMap);
   const deleteMap = useRoomStore((state) => state.kepler.deleteMap);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-
+  const handleCreateMap = () => {
+    const newMapId = createMap();
+    setCurrentMapId(newMapId);
+  };
   const handleDeleteMap = () => {
     if (currentMap) {
       deleteMap(currentMap.id);
@@ -68,7 +71,7 @@ export const KeplerMapsContainer: FC<{
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => createMap()}
+              onClick={handleCreateMap}
               className="h-8 w-8 shrink-0"
             >
               <PlusIcon className="h-4 w-4" />
