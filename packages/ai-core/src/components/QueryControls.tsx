@@ -1,12 +1,15 @@
-import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
 import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useAiChat} from '../hooks/useAiChat';
+import {PromptSuggestionsContainer} from './PromptSuggestionsContainer';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
+  promptSuggestions?: string[];
+  isLoadingPromptSuggestions?: boolean;
   onRun?: () => void;
   onCancel?: () => void;
 }>;
@@ -14,6 +17,8 @@ type QueryControlsProps = PropsWithChildren<{
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
+  promptSuggestions,
+  isLoadingPromptSuggestions = false,
   children,
   onRun,
   onCancel,
@@ -59,7 +64,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -72,15 +77,30 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis, sendMessage]);
+  }, [
+    isRunningAnalysis,
+    cancelAnalysis,
+    onCancel,
+    runAnalysis,
+    sendMessage,
+    onRun,
+  ]);
 
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-center justify-center gap-4',
+        'flex w-full flex-col items-center justify-center gap-2',
         className,
       )}
     >
+      {(promptSuggestions && promptSuggestions.length > 0) ||
+      isLoadingPromptSuggestions ? (
+        <PromptSuggestionsContainer
+          promptSuggestions={promptSuggestions}
+          isLoading={isLoadingPromptSuggestions}
+          className="w-full"
+        />
+      ) : null}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
@@ -101,13 +121,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 pr-2">
+              <div className="ml-auto shrink-0 gap-2 pr-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!canStart}
+                  disabled={!isRunningAnalysis && !canStart}
                 >
                   {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>

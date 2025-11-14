@@ -381,14 +381,14 @@ export function createDuckDbSlice({
                 NULL estimated_size,
                 TRUE AS isView
             )
-            SELECT 
+            SELECT
                 isView,
                 database, schema,
                 name, column_names, column_types,
                 sql, comment,
                 estimated_size
             FROM (DESCRIBE)
-            LEFT OUTER JOIN tables_and_views USING (database, schema, name) 
+            LEFT OUTER JOIN tables_and_views USING (database, schema, name)
             ${
               schema || database || table
                 ? `WHERE ${[

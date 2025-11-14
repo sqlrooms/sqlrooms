@@ -1,29 +1,29 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {
-  Button,
-  CopyButton,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@sqlrooms/ui';
+import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState} from 'react';
-import {AnalysisAnswer} from './AnalysisAnswer';
+import {useState, useRef, useEffect} from 'react';
+import {Components} from 'react-markdown';
 import {ErrorMessage} from './ErrorMessage';
-import {ToolResult} from './tools/ToolResult';
-import {ToolCallInfo} from './ToolCallInfo';
+import {GroupedMessageParts} from './GroupedMessageParts';
+import {MessagePartsList} from './MessagePartsList';
 import {useStoreWithAi} from '../AiSlice';
-import {isTextPart, isReasoningPart, isToolPart} from '../utils';
+import {useToolGrouping} from '../hooks/useToolGrouping';
+import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import type {UIMessage} from 'ai';
+import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
  * Props for the AnalysisResult component
  * @property {AnalysisResultSchema} result - The result of the analysis containing prompt, tool calls, and analysis data
+ * @property {boolean} enableReasoningBox - Whether to group consecutive tool parts into a collapsible ReasoningBox
+ * @property {Partial<Components>} customMarkdownComponents - Optional custom components for markdown rendering
+ * @property {string[]} userTools - Array of tool names that should not be grouped and must be rendered separately
  */
 type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
+  enableReasoningBox?: boolean;
+  customMarkdownComponents?: Partial<Components>;
+  userTools?: string[];
 };
 
 /**
@@ -38,20 +38,59 @@ type AnalysisResultProps = {
  */
 export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
+  enableReasoningBox = false,
+  customMarkdownComponents,
+  userTools,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
+  );
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
-  const getAssistantMessageParts = useStoreWithAi(
-    (s) => s.ai.getAssistantMessageParts,
-  );
-
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
+  const [divWidth, setDivWidth] = useState<number>(0);
+  const divRef = useRef<HTMLDivElement>(null);
 
-  const uiMessageParts = getAssistantMessageParts(analysisResult.id);
+  const uiMessageParts = useAssistantMessageParts(
+    uiMessages,
+    analysisResult.id,
+  );
+
+  // Measure div width using ResizeObserver
+  useEffect(() => {
+    const element = divRef.current;
+    if (!element) return;
+
+    // Set initial width immediately
+    setDivWidth(element.getBoundingClientRect().width);
+
+    const resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        // Use borderBoxSize if available (modern API), fallback to contentRect
+        const width =
+          entry.borderBoxSize?.[0]?.inlineSize ?? entry.contentRect.width;
+        setDivWidth(width);
+      }
+    });
+
+    resizeObserver.observe(element);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
+
+  // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
+  const groupedParts = useToolGrouping(
+    uiMessageParts,
+    divWidth,
+    userTools,
+    toolAdditionalData,
+  );
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
@@ -80,8 +119,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               <TrashIcon className="h-4 w-4" />
             </Button>
 
-            {/* Delete Confirmation Dialog */}
-            <Dialog
+            <DeleteConfirmationDialog
               open={showDeleteConfirmation}
               onOpenChange={(open) => {
                 setShowDeleteConfirmation(open);
@@ -89,106 +127,32 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
                   setDeleteTargetId(null);
                 }
               }}
-            >
-              <DialogContent className="sm:max-w-[425px]">
-                <DialogHeader>
-                  <DialogTitle>Confirm Deletion</DialogTitle>
-                  <DialogDescription>
-                    Are you sure you want to delete this analysis result? This
-                    action cannot be undone.
-                  </DialogDescription>
-                </DialogHeader>
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setShowDeleteConfirmation(false)}
-                  >
-                    Cancel
-                  </Button>
-                  {currentSession?.id && deleteTargetId && (
-                    <Button
-                      variant="destructive"
-                      onClick={() => {
-                        deleteAnalysisResult(
-                          currentSession?.id,
-                          deleteTargetId,
-                        );
-                        setShowDeleteConfirmation(false);
-                        setDeleteTargetId(null);
-                      }}
-                    >
-                      Delete
-                    </Button>
-                  )}
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
+              onConfirm={() => {
+                if (currentSession?.id && deleteTargetId) {
+                  deleteAnalysisResult(currentSession.id, deleteTargetId);
+                }
+                setShowDeleteConfirmation(false);
+                setDeleteTargetId(null);
+              }}
+              canConfirm={Boolean(currentSession?.id && deleteTargetId)}
+              contentClassName="sm:max-w-[425px]"
+            />
           </div>
         </div>
       </div>
-      <div className="flex w-full flex-col gap-4">
-        {/* Render response parts from uiMessages */}
-        {uiMessageParts.map((part, index) => {
-          if (isTextPart(part)) {
-            return (
-              <AnalysisAnswer
-                key={index}
-                content={part.text}
-                isAnswer={index === uiMessageParts.length - 1}
-              />
-            );
-          }
-          if (isReasoningPart(part)) {
-            return (
-              <div key={index} className="text-muted-foreground text-xs">
-                {part.text}
-              </div>
-            );
-          }
-          if (isToolPart(part)) {
-            const toolCallId = part.toolCallId;
-            const toolName = part.type.replace(/^tool-/, '') || 'unknown';
-            const state = part.state;
-            const input = part.input;
-            const output =
-              state === 'output-available' ? part.output : undefined;
-            const errorText =
-              state === 'output-error' ? part.errorText : undefined;
-            const isCompleted =
-              state === 'output-available' || state === 'output-error';
-            const additionalData = toolAdditionalData[toolCallId];
-
-            return (
-              <div key={`tool-call-${toolCallId}`}>
-                <ToolCallInfo
-                  toolName={toolName}
-                  input={input}
-                  isCompleted={isCompleted}
-                  state={state}
-                />
-                <div data-tool-call-id={toolCallId}>
-                  <ToolResult
-                    toolCallId={toolCallId}
-                    toolData={{
-                      toolCallId,
-                      name: toolName,
-                      state: state,
-                      args: input,
-                      result: output,
-                      errorText,
-                    }}
-                    additionalData={additionalData}
-                    isCompleted={isCompleted}
-                    errorMessage={
-                      state === 'output-error' ? errorText : undefined
-                    }
-                  />
-                </div>
-              </div>
-            );
-          }
-          return null;
-        })}
+      <div ref={divRef} className="flex w-full flex-col gap-4">
+        {enableReasoningBox ? (
+          <GroupedMessageParts
+            groupedParts={groupedParts}
+            totalPartsCount={uiMessageParts.length}
+            customMarkdownComponents={customMarkdownComponents}
+          />
+        ) : (
+          <MessagePartsList
+            parts={uiMessageParts}
+            customMarkdownComponents={customMarkdownComponents}
+          />
+        )}
         {analysisResult.errorMessage && (
           <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
         )}

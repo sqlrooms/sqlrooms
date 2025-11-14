@@ -1,6 +1,7 @@
 import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
 import React, {useRef} from 'react';
+import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
@@ -8,10 +9,21 @@ import {AiThinkingDots} from './AiThinkingDots';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-}> = ({className}) => {
+  enableReasoningBox?: boolean;
+  customMarkdownComponents?: Partial<Components>;
+  userTools?: string[];
+}> = ({
+  className,
+  enableReasoningBox = false,
+  customMarkdownComponents,
+  userTools,
+}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
+  );
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages || [],
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,7 +31,7 @@ export const AnalysisResultsContainer: React.FC<{
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
     endRef,
-    dataToObserve: currentAnalysisResults,
+    dataToObserve: uiMessages,
   });
 
   return (
@@ -33,6 +45,9 @@ export const AnalysisResultsContainer: React.FC<{
           <AnalysisResult
             key={analysisResult.id}
             analysisResult={analysisResult}
+            enableReasoningBox={enableReasoningBox}
+            customMarkdownComponents={customMarkdownComponents}
+            userTools={userTools}
           />
         ))}
         {isRunningAnalysis && (

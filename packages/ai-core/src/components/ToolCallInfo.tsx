@@ -22,17 +22,6 @@ type ToolCallInfoProps = {
 };
 
 /**
- * Truncates a string representation of arguments to a maximum length
- */
-const truncateArgs = (args: unknown, maxLength: number = 50): string => {
-  const argsStr = JSON.stringify(args) ?? '';
-  if (argsStr.length <= maxLength) {
-    return argsStr;
-  }
-  return `${argsStr.substring(0, maxLength)}...`;
-};
-
-/**
  * Component that renders a tool call is running
  * Shows the tool name and truncated arguments by default.
  * Click on the tool name to expand and see full arguments.
@@ -57,7 +46,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
     <div className="flex flex-col gap-1">
       <div className="flex items-center gap-2 pl-2 text-xs text-gray-700 dark:text-gray-300">
         {/* Loading/Completed Indicator */}
-        {!isCompleted && state === 'input-streaming' ? (
+        {state !== 'output-available' && state !== 'output-error' ? (
           <Loader2 className="h-4 w-4 shrink-0 animate-spin text-gray-400 dark:text-gray-500" />
         ) : (
           <CircleArrowRightIcon className="h-4 w-4 shrink-0 text-gray-400 dark:text-gray-500" />
@@ -77,7 +66,6 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
             <ChevronRightIcon className="h-3 w-3" />
           )}
           <span>{toolName}</span>
-          <span>{truncateArgs(input)}</span>
         </button>
       </div>
 
