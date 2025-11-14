@@ -47,6 +47,9 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
+  const toolAdditionalData = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
+  );
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [divWidth, setDivWidth] = useState<number>(0);
@@ -78,7 +81,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, []);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools, toolAdditionalData);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">

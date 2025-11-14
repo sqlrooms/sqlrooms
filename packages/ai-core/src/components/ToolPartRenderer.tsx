@@ -7,6 +7,73 @@ import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 
 /**
+ * Component that renders agent tool execution progress
+ */
+const AgentProgressRenderer: React.FC<{
+  agentToolCalls: Array<{
+    toolCallId: string;
+    toolName: string;
+    output?: unknown;
+    errorText?: string;
+    state: 'pending' | 'success' | 'error';
+  }>;
+  finalOutput?: string;
+}> = ({agentToolCalls, finalOutput}) => {
+  return (
+    <div className="mt-2 text-[0.9em]">
+      <div className="font-bold mb-2 text-gray-600">
+        Agent Tool Execution Progress:
+      </div>
+      <div className="ml-3">
+        {agentToolCalls.map((toolCall, index) => (
+          <div
+            key={toolCall.toolCallId}
+            className={`flex items-start mb-1 ${
+              toolCall.state === 'error' ? 'text-red-700' : 'text-gray-600'
+            }`}
+          >
+            <span className="mr-2 min-w-[16px]">
+              {toolCall.state === 'success' && '✓'}
+              {toolCall.state === 'error' && '✗'}
+              {toolCall.state === 'pending' && '○'}
+            </span>
+            <div className="flex-1">
+              <span className="font-medium">{toolCall.toolName}</span>
+              {toolCall.state === 'success' && toolCall.output !== undefined && (
+                <span className="text-gray-600 ml-2 text-[0.9em]">
+                  {(() => {
+                    try {
+                      return typeof toolCall.output === 'object'
+                        ? JSON.stringify(toolCall.output)
+                        : String(toolCall.output);
+                    } catch {
+                      return '[Output unavailable]';
+                    }
+                  })()}
+                </span>
+              )}
+              {toolCall.state === 'error' && toolCall.errorText && (
+                <div className="text-red-700 mt-0.5 text-[0.9em]">
+                  Error: {toolCall.errorText}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {finalOutput && (
+        <div className="mt-3 pt-2">
+          <div className="font-bold mb-1 text-gray-600">
+            Final Result:
+          </div>
+          <div className="text-gray-600">{finalOutput}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Props for the ToolPartRenderer component
  */
 type ToolPartRendererProps = {
@@ -71,6 +138,20 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
 
   // Otherwise, render <ToolResult>
   if (tools[toolName]?.execute) {
+    // Check if this is an agent tool (name starts with "agent-")
+    const isAgentTool = toolName.startsWith('agent-');
+    const agentData = additionalData as {
+      agentToolCalls?: Array<{
+        toolCallId: string;
+        toolName: string;
+        output?: unknown;
+        errorText?: string;
+        state: 'pending' | 'success' | 'error';
+      }>;
+      finalOutput?: string;
+    };
+    const hasAgentProgress = isAgentTool && agentData?.agentToolCalls && agentData.agentToolCalls.length > 0;
+
     return (
       <div>
         <ToolCallInfo
@@ -80,20 +161,29 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
           state={state}
         />
         <div data-tool-call-id={toolCallId}>
-          <ToolResult
-            toolCallId={toolCallId}
-            toolData={{
-              toolCallId,
-              name: toolName,
-              state: state,
-              args: input,
-              result: output,
-              errorText,
-            }}
-            additionalData={additionalData}
-            isCompleted={isCompleted}
-            errorMessage={state === 'output-error' ? errorText : undefined}
-          />
+          {hasAgentProgress ? (
+            // Render agent progress
+            <AgentProgressRenderer
+              agentToolCalls={agentData.agentToolCalls!}
+              finalOutput={agentData.finalOutput}
+            />
+          ) : (
+            // Render regular tool result
+            <ToolResult
+              toolCallId={toolCallId}
+              toolData={{
+                toolCallId,
+                name: toolName,
+                state: state,
+                args: input,
+                result: output,
+                errorText,
+              }}
+              additionalData={additionalData}
+              isCompleted={isCompleted}
+              errorMessage={state === 'output-error' ? errorText : undefined}
+            />
+          )}
         </div>
       </div>
     );

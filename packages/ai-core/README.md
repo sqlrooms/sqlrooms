@@ -10,6 +10,7 @@ An AI integration package for SQLRooms that provides components and utilities fo
 - 🧩 **UI Components**: Ready-to-use components for AI interactions
 - 📝 **Query History**: Track and manage AI query history
 - 🎯 **Tool Integration**: Framework for AI tools and actions
+- 🤖 **Agent Framework**: Framework for building AI agents
 
 ## Installation
 
@@ -290,7 +291,6 @@ const weatherTool: OpenAssistantTool = {
 
 ### Transfer Additional Tool Output Data to Client
 
-
 #### The Problem
 
 When tools execute, they often generate additional data (like detailed search results, charts, metadata) that needs to be sent to the client for UI rendering, but should NOT be included in the conversation history sent back to the LLM.
@@ -322,7 +322,7 @@ writer.write({
 Backend (route.ts)
   │
   ├─> Tool executes
-  │   └─> writer.write({ 
+  │   └─> writer.write({
   │         type: 'data-tool-additional-output',
   │         transient: true,  // ✅ SDK handles exclusion
   │         data: {...}
@@ -365,6 +365,175 @@ const toolData = currentSession?.toolAdditionalData?.[toolCallId];
 #### Alternative Considered: Message Annotations
 
 AI SDK v5 supports message annotations, but these are still part of the message structure. The `transient` flag is specifically designed for data that should only be sent once and not persist in conversation history.
+
+## Agent Framework
+
+The agent framework enables building autonomous AI agents that can use tools and make multi-step decisions. Built on top of AI SDK v5's `Experimental_Agent` class, it provides utilities for integrating agents as tools within the main chat interface.
+
+### What are Agents?
+
+Agents differ from regular tools in that they:
+- Can autonomously decide which tools to call and when
+- Execute multiple steps to accomplish a goal
+- Maintain their own reasoning loop until completion
+- Can be embedded as tools within the main conversation
+
+### Creating an Agent Tool
+
+Agent tools follow the same OpenAssistantTool pattern but use the `processAgentStream` utility to handle streaming and progress tracking:
+
+```typescript
+import {Experimental_Agent as Agent, tool} from 'ai';
+import {processAgentStream} from '@sqlrooms/ai';
+import {z} from 'zod';
+
+export function weatherAgentTool(store: StoreApi<RoomState>) {
+  return {
+    name: 'agent-weather',
+    description: 'A specialized agent for weather-related queries',
+    parameters: z.object({
+      prompt: z.string().describe('The user\'s weather question')
+    }),
+    execute: async ({prompt}, options) => {
+      const state = store.getState();
+      const currentSession = state.ai.getCurrentSession();
+
+      // Create the agent with its own set of tools
+      const weatherAgent = new Agent({
+        model: getModel(state),
+        tools: {
+          weather: tool({
+            description: 'Get current weather in a location',
+            inputSchema: z.object({
+              location: z.string()
+            }),
+            execute: async ({location}) => ({
+              location,
+              temperature: 72 + Math.floor(Math.random() * 21) - 10
+            })
+          }),
+          convertTemperature: tool({
+            description: 'Convert temperature units',
+            inputSchema: z.object({
+              temperature: z.number(),
+              from: z.enum(['F', 'C']),
+              to: z.enum(['F', 'C'])
+            }),
+            execute: async ({temperature, from, to}) => {
+              // Conversion logic
+            }
+          })
+        },
+        stopWhen: stepCountIs(10) // Limit agent steps
+      });
+
+      // Stream the agent's execution
+      const agentResult = await weatherAgent.stream({prompt});
+
+      // Process the stream and track progress
+      const resultText = await processAgentStream(
+        agentResult,
+        store,
+        options.toolCallId
+      );
+
+      return {
+        llmResult: {
+          success: true,
+          details: resultText
+        }
+      };
+    }
+  };
+}
+```
+
+Use the agent as a tool in your main LLM:
+
+```typescript
+createAiSlice({
+  tools: {
+    query: QueryTool,
+    'agent-weather': weatherAgentTool(store)  // ⚡ Agent as tool
+  }
+})
+```
+
+### The `processAgentStream` Utility
+
+The `processAgentStream` function handles the complexity of integrating agent execution into the main conversation:
+
+```typescript
+await processAgentStream(agentResult, store, parentToolCallId)
+```
+
+**What it handles:**
+
+1. **Progress Tracking**: Monitors all tool calls made by the agent in real-time
+2. **State Updates**: Updates `toolAdditionalData` with agent progress for UI rendering
+3. **Error Handling**: Captures and reports tool execution errors
+4. **Result Aggregation**: Collects the final text output from the agent
+
+**Stored Data Structure:**
+
+Each agent tool call stores structured progress data:
+
+```typescript
+interface AgentToolCallAdditionalData {
+  agentToolCalls: Array<{
+    toolCallId: string;
+    toolName: string;
+    output?: unknown;
+    errorText?: string;
+    state: 'pending' | 'success' | 'error';
+  }>;
+  finalOutput?: string;
+  timestamp: string;
+}
+```
+
+### Rendering Agent Progress
+
+If you are using the `sqlrooms/ai-core` package, the rendering of agent progress is handled automatically.
+
+However, you can also use the `useRoomStore` hook to access the agent progress data in your components to show real-time execution:
+
+```tsx
+const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
+const agentData = currentSession?.toolAdditionalData?.[toolCallId] as AgentToolCallAdditionalData;
+
+return (
+  <div>
+    <h3>Agent Progress:</h3>
+    {agentData?.agentToolCalls.map((call) => (
+      <div key={call.toolCallId}>
+        {call.toolName}: {call.state}
+        {call.output && <pre>{JSON.stringify(call.output, null, 2)}</pre>}
+        {call.errorText && <span className="error">{call.errorText}</span>}
+      </div>
+    ))}
+    {agentData?.finalOutput && (
+      <div className="final-result">{agentData.finalOutput}</div>
+    )}
+  </div>
+);
+```
+
+### Best Practices
+
+1. **Limit Steps**: Always use `stopWhen` to prevent infinite loops
+2. **Specific Tools**: Give agents focused, domain-specific tools
+3. **Clear Descriptions**: Write precise tool descriptions for better agent reasoning
+4. **Error Handling**: Handle agent errors gracefully with try-catch in execute
+5. **Progress UI**: Use `toolAdditionalData` to show agent progress to users
+
+### Use Cases
+
+- **Multi-step Analysis**: Agents that need to gather data from multiple sources
+- **Decision Trees**: Complex workflows requiring conditional logic
+- **Specialized Domains**: Weather, finance, or data analysis agents with domain-specific tools
+- **Autonomous Tasks**: Tasks that require planning and execution without human intervention
+
 
 ## Advanced Features
 

@@ -27,3 +27,14 @@ export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
 export {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
 export {convertToAiSDKTools, completeIncompleteToolCalls} from './chatTransport';
+
+export {
+  processAgentStream,
+  updateAgentToolCallData
+} from './agents/AgentUtils';
+export type {
+  AgentStreamResult,
+  UIMessageChunk,
+  AgentToolCall,
+  AgentToolCallAdditionalData
+} from './agents/AgentUtils';

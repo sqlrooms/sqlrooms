@@ -20,12 +20,14 @@ export type ToolGroup = {
  * @param uiMessageParts - Array of UI message parts from the assistant
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @param exclude - Array of tool names that should not be grouped and must be rendered separately
+ * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  * @returns Grouped parts with generated titles for tool groups
  */
 export function useToolGrouping(
   uiMessageParts: UIMessagePart[],
   containerWidth: number = 0,
-  exclude: string[] = []
+  exclude: string[] = [],
+  toolAdditionalData: Record<string, unknown> = {}
 ): ToolGroup[] {
   return useMemo(() => {
     if (!uiMessageParts.length) return [];
@@ -78,7 +80,7 @@ export function useToolGrouping(
             type: 'tool-group',
             parts: [part],
             startIndex: i,
-            title: generateToolGroupTitle([part], false, containerWidth),
+            title: generateToolGroupTitle([part], false, containerWidth, toolAdditionalData),
             defaultExpanded: true, // Excluded tools are expanded by default
           });
           i++;
@@ -146,7 +148,7 @@ export function useToolGrouping(
         }
 
         // Generate title for this tool group
-        const title = generateToolGroupTitle(toolParts, hasMoreToolsAfter, containerWidth);
+        const title = generateToolGroupTitle(toolParts, hasMoreToolsAfter, containerWidth, toolAdditionalData);
 
         groups.push({
           type: 'tool-group',
@@ -161,7 +163,7 @@ export function useToolGrouping(
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth, exclude]);
+  }, [uiMessageParts, containerWidth, exclude, toolAdditionalData]);
 }
 
 /**
@@ -197,8 +199,9 @@ function getToolIcon(toolName: string): React.ReactNode | null {
  * @param toolParts - The tool parts in this group
  * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
+ * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  */
-function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean, containerWidth: number): React.ReactNode {
+function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: boolean, containerWidth: number, toolAdditionalData: Record<string, unknown> = {}): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
     (p) =>
@@ -221,6 +224,9 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
   const toolNames = new Set(
     actualToolParts.map((p) => getToolName(p)).filter((name) => name !== 'unknown')
   );
+
+  // Check if any of the tools are agent tools
+  const hasAgentTool = Array.from(toolNames).some((name) => name.startsWith('agent-'));
 
   // Check if we have both 'createMapLayer' and 'chart' tools
   const hasMapLayer = toolNames.has('createMapLayer');
@@ -258,8 +264,41 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    const baseTitle =
-      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
+    // Use different base title for agent tools
+    let baseTitle: string;
+    if (hasAgentTool) {
+      // Extract agent tool names from toolAdditionalData
+      const agentToolNames: string[] = [];
+      for (const toolPart of actualToolParts) {
+        const toolCallId = (toolPart as any).toolCallId;
+        if (toolCallId && toolAdditionalData[toolCallId]) {
+          const agentData = toolAdditionalData[toolCallId] as {
+            agentToolCalls?: Array<{toolName: string; state: string}>;
+          };
+          if (agentData?.agentToolCalls) {
+            // Get currently executing or pending agent tools
+            const executingTools = agentData.agentToolCalls
+              .filter((call) => call.state === 'pending' || call.state === 'success')
+              .map((call) => call.toolName);
+            agentToolNames.push(...executingTools);
+          }
+        }
+      }
+
+      // Remove duplicates
+      const uniqueToolNames = Array.from(new Set(agentToolNames));
+
+      if (uniqueToolNames.length > 0) {
+        const toolNamesList = uniqueToolNames.join(', ');
+        baseTitle = uniqueToolNames.length === 1
+          ? `Agent is calling: ${toolNamesList}...`
+          : `Agent is calling: ${toolNamesList}...`;
+      } else {
+        baseTitle = toolCount === 1 ? 'Agent tool is executing...' : `Agent tools are executing... (${toolCount} tools)`;
+      }
+    } else {
+      baseTitle = toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
+    }
 
     // Calculate max reasoning length based on container width
     // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
