@@ -73,7 +73,6 @@ export type RoomShellSliceState = {
     roomFilesProgress: {[pathname: string]: RoomFileState};
     isDataAvailable: boolean; // Whether the data has been loaded (on initialization)
     dataSourceStates: {[tableName: string]: DataSourceState}; // TODO
-    autoDownloadDataSources?: boolean;
     /**
      * Load a file data source. A fileDataSourceLoader implementation can be passed to
      * createRoomShellSlice to specify how file data sources should be loaded.
