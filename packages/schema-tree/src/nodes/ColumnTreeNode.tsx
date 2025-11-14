@@ -23,13 +23,18 @@ export const ColumnTreeNode: FC<{
       className={cn(className, 'h-[18px]')}
       nodeObject={nodeObject}
     >
-      <div className="flex w-full items-center space-x-2">
+      <div className="relative flex w-full items-center space-x-2">
         <ColumnTypeBadge
           className="opacity-50"
           columnType={nodeObject.columnType}
           typeCategory={nodeObject.columnTypeCategory}
         />
-        <span className="text-xs">{nodeObject.name}</span>
+        <span
+          className="truncate whitespace-nowrap text-xs"
+          title={nodeObject.name}
+        >
+          {nodeObject.name}
+        </span>
       </div>
       <TreeNodeActionsMenu>
         <TreeNodeActionsMenuItem

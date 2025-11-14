@@ -23,7 +23,7 @@ export function BaseTreeNode<T>(
           className,
         )}
       >
-        <div className="absolute flex h-full w-full items-center">
+        <div className="absolute flex h-full w-full items-center whitespace-nowrap">
           {children}
         </div>
       </div>
