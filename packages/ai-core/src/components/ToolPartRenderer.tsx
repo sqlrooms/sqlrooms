@@ -20,7 +20,7 @@ const AgentProgressRenderer: React.FC<{
   finalOutput?: string;
 }> = ({agentToolCalls, finalOutput}) => {
   return (
-    <div className="mt-2 text-[0.9em]">
+    <div className="mt-2 px-5 text-[0.9em]">
       <div className="mb-2 font-bold text-gray-600">
         Agent Tool Execution Progress:
       </div>
