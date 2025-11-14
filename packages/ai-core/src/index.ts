@@ -30,3 +30,11 @@ export {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
 } from './chatTransport';
+
+export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
+export type {
+  AgentStreamResult,
+  UIMessageChunk,
+  AgentToolCall,
+  AgentToolCallAdditionalData,
+} from './agents/AgentUtils';

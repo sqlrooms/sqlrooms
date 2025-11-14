@@ -7,6 +7,72 @@ import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 
 /**
+ * Component that renders agent tool execution progress
+ */
+const AgentProgressRenderer: React.FC<{
+  agentToolCalls: Array<{
+    toolCallId: string;
+    toolName: string;
+    output?: unknown;
+    errorText?: string;
+    state: 'pending' | 'success' | 'error';
+  }>;
+  finalOutput?: string;
+}> = ({agentToolCalls, finalOutput}) => {
+  return (
+    <div className="mt-2 text-[0.9em]">
+      <div className="mb-2 font-bold text-gray-600">
+        Agent Tool Execution Progress:
+      </div>
+      <div className="ml-3">
+        {agentToolCalls.map((toolCall, index) => (
+          <div
+            key={toolCall.toolCallId}
+            className={`mb-1 flex items-start ${
+              toolCall.state === 'error' ? 'text-red-700' : 'text-gray-600'
+            }`}
+          >
+            <span className="mr-2 min-w-[16px]">
+              {toolCall.state === 'success' && '✓'}
+              {toolCall.state === 'error' && '✗'}
+              {toolCall.state === 'pending' && '○'}
+            </span>
+            <div className="flex-1">
+              <span className="font-medium">{toolCall.toolName}</span>
+              {toolCall.state === 'success' &&
+                toolCall.output !== undefined && (
+                  <span className="ml-2 text-[0.9em] text-gray-600">
+                    {(() => {
+                      try {
+                        return typeof toolCall.output === 'object'
+                          ? JSON.stringify(toolCall.output)
+                          : String(toolCall.output);
+                      } catch {
+                        return '[Output unavailable]';
+                      }
+                    })()}
+                  </span>
+                )}
+              {toolCall.state === 'error' && toolCall.errorText && (
+                <div className="mt-0.5 text-[0.9em] text-red-700">
+                  Error: {toolCall.errorText}
+                </div>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+      {finalOutput && (
+        <div className="mt-3 pt-2">
+          <div className="mb-1 font-bold text-gray-600">Final Result:</div>
+          <div className="text-gray-600">{finalOutput}</div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/**
  * Props for the ToolPartRenderer component
  */
 type ToolPartRendererProps = {
@@ -38,7 +104,7 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
   const toolCallId = (part as ToolUIPart).toolCallId;
   const toolName =
     part.type === 'dynamic-tool'
-      ? ((part as any).toolName || 'unknown')
+      ? (part as any).toolName || 'unknown'
       : part.type.replace(/^tool-/, '') || 'unknown';
   const state = (part as any).state;
   const input = (part as any).input;
@@ -46,19 +112,20 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
     state === 'output-available' ? (part as any).output : undefined;
   const errorText =
     state === 'output-error' ? (part as any).errorText : undefined;
-  const isCompleted =
-    state === 'output-available' || state === 'output-error';
+  const isCompleted = state === 'output-available' || state === 'output-error';
   const additionalData = toolAdditionalData[toolCallId];
 
   // Check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
   if (
     !tools[toolName]?.execute &&
-    (state === 'input-streaming' || state === 'input-available' || state === 'output-available')
+    (state === 'input-streaming' ||
+      state === 'input-available' ||
+      state === 'output-available')
   ) {
     const ToolComponent = findToolComponent(toolName);
     const props = {
       ...(input as Record<string, unknown>),
-      ...({ toolCallId, toolName, isCompleted } as Record<string, unknown>),
+      ...({toolCallId, toolName, isCompleted} as Record<string, unknown>),
     };
     return (
       <div>
@@ -71,6 +138,23 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
 
   // Otherwise, render <ToolResult>
   if (tools[toolName]?.execute) {
+    // Check if this is an agent tool (name starts with "agent-")
+    const isAgentTool = toolName.startsWith('agent-');
+    const agentData = additionalData as {
+      agentToolCalls?: Array<{
+        toolCallId: string;
+        toolName: string;
+        output?: unknown;
+        errorText?: string;
+        state: 'pending' | 'success' | 'error';
+      }>;
+      finalOutput?: string;
+    };
+    const hasAgentProgress =
+      isAgentTool &&
+      agentData?.agentToolCalls &&
+      agentData.agentToolCalls.length > 0;
+
     return (
       <div>
         <ToolCallInfo
@@ -80,20 +164,29 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
           state={state}
         />
         <div data-tool-call-id={toolCallId}>
-          <ToolResult
-            toolCallId={toolCallId}
-            toolData={{
-              toolCallId,
-              name: toolName,
-              state: state,
-              args: input,
-              result: output,
-              errorText,
-            }}
-            additionalData={additionalData}
-            isCompleted={isCompleted}
-            errorMessage={state === 'output-error' ? errorText : undefined}
-          />
+          {hasAgentProgress ? (
+            // Render agent progress
+            <AgentProgressRenderer
+              agentToolCalls={agentData.agentToolCalls!}
+              finalOutput={agentData.finalOutput}
+            />
+          ) : (
+            // Render regular tool result
+            <ToolResult
+              toolCallId={toolCallId}
+              toolData={{
+                toolCallId,
+                name: toolName,
+                state: state,
+                args: input,
+                result: output,
+                errorText,
+              }}
+              additionalData={additionalData}
+              isCompleted={isCompleted}
+              errorMessage={state === 'output-error' ? errorText : undefined}
+            />
+          )}
         </div>
       </div>
     );
@@ -101,4 +194,3 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
 
   return null;
 };
-

@@ -295,7 +295,6 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
 
         // Check if the stream was aborted before executing tool
         if (state.ai.analysisAbortController?.signal.aborted) {
-          console.log('Tool call skipped due to abort:', toolName);
           if (addToolResult) {
             addToolResult({
               tool: toolName,
@@ -364,10 +363,6 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
       } catch (error) {
         // Check if this is an abort error
         const isAbortError = error instanceof ToolAbortError;
-
-        if (isAbortError) {
-          console.log('Tool execution aborted:', toolName);
-        }
 
         if (addToolResult) {
           addToolResult({
