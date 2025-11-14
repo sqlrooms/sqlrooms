@@ -1,12 +1,12 @@
 name: Sync Examples
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'examples/**'
-      - 'docs/media/examples/**'
-      - '.github/workflows/sync-examples.yml'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'examples/**'
+  #     - 'docs/media/examples/**'
+  #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
 
 jobs:
@@ -78,6 +78,18 @@ jobs:
               )) as $deps
               | .dependencies = $deps' "$file" > temp.json
             mv temp.json "$file"
+          done
+
+          # Generate lockfiles for each example
+          find target -name "package.json" -type f | while read -r file; do
+            dir=$(dirname "$file")
+            # Skip if it's a nested node_modules
+            if [[ ! "$dir" =~ node_modules ]]; then
+              echo "Generating lockfile for $dir"
+              cd "$dir"
+              npm install --package-lock-only --legacy-peer-deps
+              cd - > /dev/null
+            fi
           done
 
           # Setup git config and commit changes

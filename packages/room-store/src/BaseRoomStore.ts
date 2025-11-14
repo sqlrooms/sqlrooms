@@ -15,7 +15,7 @@ export type BaseRoomStoreState = {
   };
 };
 
-export type RoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
+export type BaseRoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
 
 export type CreateBaseRoomSliceProps = {
   captureException?: BaseRoomStoreState['room']['captureException'];

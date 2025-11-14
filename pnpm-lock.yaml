@@ -18537,7 +18537,7 @@ snapshots:
       '@turf/difference': 7.2.0
       '@turf/distance': 7.2.0
       '@turf/ellipse': 7.2.0
-      '@turf/helpers': 6.5.0
+      '@turf/helpers': 7.2.0
       '@turf/intersect': 7.2.0
       '@turf/line-intersect': 7.2.0
       '@turf/nearest-point-on-line': 7.2.0
@@ -18563,19 +18563,19 @@ snapshots:
       '@luma.gl/constants': 8.5.21
       '@luma.gl/core': 9.2.2
       '@nebula.gl/edit-modes': 1.0.2-alpha.1
-      '@turf/bbox': 6.5.0
+      '@turf/bbox': 7.2.0
       '@turf/bbox-polygon': 7.2.0
       '@turf/bearing': 7.2.0
       '@turf/boolean-point-in-polygon': 7.2.0
       '@turf/buffer': 7.2.0
-      '@turf/center': 6.5.0
+      '@turf/center': 7.2.0
       '@turf/centroid': 7.2.0
       '@turf/circle': 7.2.0
       '@turf/destination': 7.2.0
       '@turf/difference': 7.2.0
       '@turf/distance': 7.2.0
       '@turf/ellipse': 7.2.0
-      '@turf/helpers': 6.5.0
+      '@turf/helpers': 7.2.0
       '@turf/intersect': 7.2.0
       '@turf/line-intersect': 7.2.0
       '@turf/nearest-point-on-line': 7.2.0
@@ -18589,7 +18589,7 @@ snapshots:
       geojson-types: 2.0.1
       global: 4.4.0
       h3-js: 3.7.2
-      viewport-mercator-project: 6.2.3
+      viewport-mercator-project: 7.0.4
 
   '@nebula.gl/layers@1.0.2-alpha.1(7d309fbdb5ce1ba7d1a535898d560bdc)':
     dependencies:
@@ -18602,19 +18602,19 @@ snapshots:
       '@luma.gl/constants': 8.5.21
       '@luma.gl/core': 9.2.2
       '@nebula.gl/edit-modes': 1.0.2-alpha.1
-      '@turf/bbox': 6.5.0
+      '@turf/bbox': 7.2.0
       '@turf/bbox-polygon': 7.2.0
       '@turf/bearing': 7.2.0
       '@turf/boolean-point-in-polygon': 7.2.0
       '@turf/buffer': 7.2.0
-      '@turf/center': 6.5.0
+      '@turf/center': 7.2.0
       '@turf/centroid': 7.2.0
       '@turf/circle': 7.2.0
       '@turf/destination': 7.2.0
       '@turf/difference': 7.2.0
       '@turf/distance': 7.2.0
       '@turf/ellipse': 7.2.0
-      '@turf/helpers': 6.5.0
+      '@turf/helpers': 7.2.0
       '@turf/intersect': 7.2.0
       '@turf/line-intersect': 7.2.0
       '@turf/nearest-point-on-line': 7.2.0
@@ -18628,7 +18628,7 @@ snapshots:
       geojson-types: 2.0.1
       global: 4.4.0
       h3-js: 3.7.2
-      viewport-mercator-project: 6.2.3
+      viewport-mercator-project: 7.0.4
 
   '@nebula.gl/layers@1.0.2-alpha.1(@deck.gl/core@8.9.27)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.27)(@luma.gl/constants@8.5.21))(@deck.gl/geo-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.27)(@luma.gl/constants@8.5.21))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.27))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4)))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.27))(@luma.gl/constants@8.5.21)':
     dependencies:
@@ -18640,19 +18640,19 @@ snapshots:
       '@deck.gl/mesh-layers': 8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.2)(@luma.gl/engine@9.2.2(@luma.gl/core@9.2.2)(@luma.gl/shadertools@9.2.2(@luma.gl/core@9.2.2)))(@luma.gl/gltools@8.5.21)(@luma.gl/webgl@9.2.2(@luma.gl/core@9.2.2))
       '@luma.gl/constants': 8.5.21
       '@nebula.gl/edit-modes': 1.0.2-alpha.1
-      '@turf/bbox': 6.5.0
+      '@turf/bbox': 7.2.0
       '@turf/bbox-polygon': 7.2.0
       '@turf/bearing': 7.2.0
       '@turf/boolean-point-in-polygon': 7.2.0
       '@turf/buffer': 7.2.0
-      '@turf/center': 6.5.0
+      '@turf/center': 7.2.0
       '@turf/centroid': 7.2.0
       '@turf/circle': 7.2.0
       '@turf/destination': 7.2.0
       '@turf/difference': 7.2.0
       '@turf/distance': 7.2.0
       '@turf/ellipse': 7.2.0
-      '@turf/helpers': 6.5.0
+      '@turf/helpers': 7.2.0
       '@turf/intersect': 7.2.0
       '@turf/line-intersect': 7.2.0
       '@turf/nearest-point-on-line': 7.2.0
@@ -18666,7 +18666,7 @@ snapshots:
       geojson-types: 2.0.1
       global: 4.4.0
       h3-js: 3.7.2
-      viewport-mercator-project: 6.2.3
+      viewport-mercator-project: 7.0.4
 
   '@next/env@15.5.3': {}
 

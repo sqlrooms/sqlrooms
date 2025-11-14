@@ -196,7 +196,10 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
-  return createSlice<KeplerSliceState, BaseRoomStoreState & KeplerSliceState & DuckDbSliceState>((set, get) => {
+  return createSlice<
+    KeplerSliceState,
+    BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
+  >((set, get) => {
     const keplerReducer = keplerGlReducer.initialState(initialKeplerState);
     const middlewares: Middleware[] = [
       taskMiddleware,
@@ -256,7 +259,7 @@ export function createKeplerSlice({
           set({
             kepler: {
               ...get().kepler,
-              map: keplerInitialState,              
+              map: keplerInitialState,
               dispatchAction: (mid, action) => {
                 // wrapDispatch(wrapTo(mapId)(action));
                 const dispatchToMap = get().kepler.forwardDispatch[mid];
@@ -530,10 +533,7 @@ export function createKeplerSlice({
       const keplerMaps = config.maps;
       for (const {id, config} of keplerMaps) {
         if (config) {
-          get().kepler.addConfigToMap(
-            id,
-            config as unknown as KeplerMapSchema,
-          );
+          get().kepler.addConfigToMap(id, config as unknown as KeplerMapSchema);
         }
       }
     }
@@ -555,7 +555,6 @@ export function createKeplerSlice({
         }),
       );
     }
-
 
     function getForwardDispatch(mapId: string): Dispatch<KeplerAction> {
       /** Adapted from  applyMiddleware in redux */

@@ -21,8 +21,8 @@ export {
   isRoomSliceWithInitialize,
   type BaseRoomStoreState,
   type CreateBaseRoomSliceProps,
-  type RoomStore,
-} from './RoomStore';
+  type BaseRoomStore,
+} from './BaseRoomStore';
 
 export {createPersistHelpers} from './createPersistHelpers';
 export type {StateCreator, StoreApi} from 'zustand';
