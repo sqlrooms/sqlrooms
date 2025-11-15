@@ -294,7 +294,8 @@ function generateToolGroupTitle(toolParts: UIMessagePart[], hasMoreToolsAfter: b
           ? `Agent is calling: ${toolNamesList}...`
           : `Agent is calling: ${toolNamesList}...`;
       } else {
-        baseTitle = toolCount === 1 ? 'Agent tool is executing...' : `Agent tools are executing... (${toolCount} tools)`;
+        // No agent tools are currently executing, fall back to regular "Thinking..."
+        baseTitle = toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
       }
     } else {
       baseTitle = toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
