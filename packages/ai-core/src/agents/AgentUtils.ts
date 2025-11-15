@@ -1,4 +1,4 @@
-import {StoreApi} from '@sqlrooms/room-shell';
+import {StoreApi} from '@sqlrooms/room-store';
 import {AiSliceState} from '../AiSlice';
 
 /**
