@@ -20,19 +20,43 @@ SQLRooms uses [Zustand](https://docs.pmnd.rs/zustand/getting-started/introductio
 
 ```ts
 import {persist} from 'zustand/middleware';
+import {
+  createRoomStore,
+  createRoomShellSlice,
+  RoomShellSliceState,
+  BaseRoomConfig,
+  LayoutConfig,
+  createPersistHelpers,
+  StateCreator,
+} from '@sqlrooms/room-shell';
 
-const {roomStore, useRoomStore} = createRoomStore(
+type RoomState = RoomShellSliceState;
+
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
-      // ...slices and state
+      ...createRoomShellSlice({
+        config: {
+          // Room configuration
+        },
+        layout: {
+          config: {
+            // Layout configuration
+          },
+          panels: {
+            // Panel definitions
+          },
+        },
+      })(set, get, store),
     }),
     {
       name: 'sql-editor-example-app-state-storage', // localStorage key
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
       }),
     },
-  ),
+  ) as StateCreator<RoomState>,
 );
 ```
 

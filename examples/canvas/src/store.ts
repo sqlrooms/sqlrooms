@@ -32,15 +32,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -49,7 +40,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              splitPercentage: 20,
+              first: 'data',
+              second: 'main',
+            },
+          },
           panels: {
             main: {
               title: 'Canvas',
