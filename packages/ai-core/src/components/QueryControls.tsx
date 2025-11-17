@@ -98,8 +98,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
             ref={textareaRef}
-            disabled={isRunningAnalysis}
-            className="min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
+            className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
             autoResize
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
