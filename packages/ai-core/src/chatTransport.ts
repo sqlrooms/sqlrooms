@@ -127,7 +127,7 @@ export type ChatTransportConfig = {
 /**
  * Creates a handler for tool completion that updates the tool additional data in the store
  */
-function createOnToolCompletedHandler(store: StoreApi<AiSliceState>) {
+export function createOnToolCompletedHandler(store: StoreApi<AiSliceState>) {
   return (toolCallId: string, additionalData: unknown) => {
     const sessionId = store.getState().ai.config.currentSessionId;
     if (!sessionId) return;

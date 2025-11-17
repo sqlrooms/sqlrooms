@@ -29,6 +29,7 @@ export {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
 export {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
+  createOnToolCompletedHandler,
 } from './chatTransport';
 
 export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';

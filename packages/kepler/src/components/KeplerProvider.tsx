@@ -34,6 +34,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
   return (
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
+        {/* @ts-expect-error - StyleSheetManager's shouldForwardProp is supported in v6 but types are outdated */}
         <StyleSheetManager shouldForwardProp={shouldForwardProp}>
           <ThemeProvider theme={darkTheme}>
             <KeplerGlContext.Provider value={keplerContext}>

@@ -319,8 +319,8 @@ function generateToolGroupTitle(
       } else {
         baseTitle =
           toolCount === 1
-            ? 'Agent tool is executing...'
-            : `Agent tools are executing... (${toolCount} tools)`;
+            ? 'Thinking...'
+            : `Thinking... (${toolCount} tools)`;
       }
     } else {
       baseTitle =
