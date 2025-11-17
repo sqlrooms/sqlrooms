@@ -40,12 +40,16 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
   return (
     <TooltipProvider>
       <div
-        className={cn('relative w-full', isVisible ? 'h-20' : 'h-0', className)}
+        className={cn(
+          'relative w-full py-1',
+          isVisible ? 'h-20' : 'h-0',
+          className,
+        )}
       >
         {/* Container with scrollable suggestions and hide button */}
         <div className="flex h-full w-full gap-2">
           {/* Scrollable suggestions container */}
-          <div className="flex flex-1 gap-2 overflow-x-auto overflow-y-hidden px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex flex-1 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {isLoading
               ? // Show placeholder buttons with spinners while loading
                 Array.from({length: 3}).map((_, index) => (

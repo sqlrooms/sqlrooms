@@ -66,7 +66,7 @@ export const MainView: React.FC = () => {
             <PromptSuggestions.Item text="Help me understand the data structure" />
           </PromptSuggestions.Container>
 
-          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+          <QueryControls placeholder="What would you like to learn about the data?">
             <div className="flex items-center justify-end gap-2">
               <PromptSuggestions.VisibilityToggle />
               <ModelSelector />
