@@ -663,6 +663,8 @@ export function createAiSlice(
             produce(state, (draft) => {
               draft.ai.analysisAbortController = abortController;
               draft.ai.isRunningAnalysis = true;
+              draft.ai.analysisPrompt = '';
+              draft.ai.promptSuggestionsVisible = false;
 
               // Add incomplete analysis result to session immediately for instant UI rendering
               const session = draft.ai.config.sessions.find(

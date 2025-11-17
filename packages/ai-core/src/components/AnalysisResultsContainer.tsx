@@ -1,6 +1,6 @@
 import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
@@ -33,6 +33,13 @@ export const AnalysisResultsContainer: React.FC<{
     endRef,
     dataToObserve: uiMessages,
   });
+
+  // Scroll to bottom when analysis starts
+  useEffect(() => {
+    if (isRunningAnalysis) {
+      scrollToBottom();
+    }
+  }, [isRunningAnalysis]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>

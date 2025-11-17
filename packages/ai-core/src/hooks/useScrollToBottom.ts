@@ -155,14 +155,14 @@ export function useScrollToBottom<T extends HTMLElement | null>({
     };
   }, [containerRef, onScroll]);
 
-  const scrollToBottom = () => {
+  const scrollToBottom = useCallback(() => {
     if (containerRef.current) {
       containerRef.current.scrollTo({
         top: containerRef.current.scrollHeight,
         behavior: 'smooth',
       });
     }
-  };
+  }, [containerRef]);
 
   return {
     showScrollButton,
