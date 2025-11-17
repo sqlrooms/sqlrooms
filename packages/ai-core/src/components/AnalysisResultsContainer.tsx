@@ -37,7 +37,7 @@ export const AnalysisResultsContainer: React.FC<{
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
-        ref={containerRef}
+        viewportRef={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
         {/* Render analysis results */}

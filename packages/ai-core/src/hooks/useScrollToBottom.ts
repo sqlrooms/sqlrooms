@@ -92,7 +92,8 @@ export function useScrollToBottom<T extends HTMLElement | null>({
   const [showScrollButton, setShowButton] = useState(false);
 
   // Track if user was at bottom before content changes
-  const wasAtBottomRef = useRef(scrollOnInitialLoad);
+  // Start as true since we're initially at the bottom
+  const wasAtBottomRef = useRef(true);
 
   // Track if this is the initial load
   const isInitialLoadRef = useRef(true);
