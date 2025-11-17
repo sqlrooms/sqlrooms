@@ -4,6 +4,7 @@ import {
   ModelSelector,
   QueryControls,
   SessionControls,
+  PromptSuggestions,
 } from '@sqlrooms/ai';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -58,16 +59,16 @@ export const MainView: React.FC = () => {
             )}
           </div>
 
-          <QueryControls
-            placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'"
-            promptSuggestions={[
-              'What questions can I ask to get insights from my data?',
-              'Show me a summary of the data',
-              'What are the key trends?',
-              'Help me understand the data structure',
-            ]}
-          >
+          <PromptSuggestions.Container>
+            <PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
+            <PromptSuggestions.Item text="Show me a summary of the data" />
+            <PromptSuggestions.Item text="What are the key trends?" />
+            <PromptSuggestions.Item text="Help me understand the data structure" />
+          </PromptSuggestions.Container>
+
+          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
             <div className="flex items-center justify-end gap-2">
+              <PromptSuggestions.VisibilityToggle />
               <ModelSelector />
             </div>
           </QueryControls>

@@ -45,9 +45,11 @@ export type AiSliceState = {
     config: AiSliceConfig;
     analysisPrompt: string;
     isRunningAnalysis: boolean;
+    promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
     setConfig: (config: AiSliceConfig) => void;
+    setPromptSuggestionsVisible: (visible: boolean) => void;
     /** Latest stop function from useChat to immediately halt local streaming */
     chatStop?: () => void;
     /** Register/replace the current chat stop function */
@@ -63,7 +65,10 @@ export type AiSliceState = {
     /** Register/replace the current addToolResult function */
     setAddToolResult: (addToolResult: AddToolResult | undefined) => void;
     /** Wait for a tool result to be added by UI component */
-    waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => Promise<void>;
+    waitForToolResult: (
+      toolCallId: string,
+      abortSignal?: AbortSignal,
+    ) => Promise<void>;
     setAnalysisPrompt: (prompt: string) => void;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
@@ -184,7 +189,8 @@ export function createAiSlice(
               : [];
             return {
               ...cleaned,
-              uiMessages: completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
+              uiMessages:
+                completedUiMessages as unknown as AnalysisSessionSchema['uiMessages'],
             };
           }),
         }
@@ -201,6 +207,7 @@ export function createAiSlice(
         config: createDefaultAiConfig(cleanedConfig),
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
+        promptSuggestionsVisible: true,
         tools,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
@@ -256,6 +263,14 @@ export function createAiSlice(
           );
         },
 
+        setPromptSuggestionsVisible: (visible: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.promptSuggestionsVisible = visible;
+            }),
+          );
+        },
+
         setChatSendMessage: (
           sendMessageFn: ((message: {text: string}) => void) | undefined,
         ) => {
@@ -268,18 +283,21 @@ export function createAiSlice(
 
         setAddToolResult: (addToolResultFn: AddToolResult | undefined) => {
           // Wrap addToolResult to intercept calls and resolve pending promises
-          const wrappedAddToolResult: AddToolResult | undefined = addToolResultFn
-            ? (options) => {
-                // Call the original addToolResult
-                addToolResultFn(options);
+          const wrappedAddToolResult: AddToolResult | undefined =
+            addToolResultFn
+              ? (options) => {
+                  // Call the original addToolResult
+                  addToolResultFn(options);
 
-                // Resolve the promise if there's a pending waiter for this toolCallId
-                const resolver = pendingToolCallResolvers.get(options.toolCallId);
-                if (resolver) {
-                  resolver.resolve();
+                  // Resolve the promise if there's a pending waiter for this toolCallId
+                  const resolver = pendingToolCallResolvers.get(
+                    options.toolCallId,
+                  );
+                  if (resolver) {
+                    resolver.resolve();
+                  }
                 }
-              }
-            : undefined;
+              : undefined;
 
           set((state) =>
             produce(state, (draft) => {
@@ -579,7 +597,14 @@ export function createAiSlice(
           // One-shot generateText path with explicit abort lifecycle management
           const state = get();
           const currentSession = state.ai.getCurrentSession();
-          const {systemInstructions, modelProvider, modelName, baseUrl, abortSignal, useTools = false} = options;
+          const {
+            systemInstructions,
+            modelProvider,
+            modelName,
+            baseUrl,
+            abortSignal,
+            useTools = false,
+          } = options;
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
@@ -606,7 +631,9 @@ export function createAiSlice(
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,
-              ...(useTools ? {tools: convertToAiSDKTools(toolsWithoutExecute)} : {}),
+              ...(useTools
+                ? {tools: convertToAiSDKTools(toolsWithoutExecute)}
+                : {}),
             });
             return response.text;
           } catch (error) {

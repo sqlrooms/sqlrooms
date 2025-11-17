@@ -1,15 +1,18 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
+import {
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useEffect,
+  ReactNode,
+} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useAiChat} from '../hooks/useAiChat';
-import {PromptSuggestionsContainer} from './PromptSuggestionsContainer';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
   placeholder?: string;
-  promptSuggestions?: string[];
-  isLoadingPromptSuggestions?: boolean;
   onRun?: () => void;
   onCancel?: () => void;
 }>;
@@ -17,8 +20,6 @@ type QueryControlsProps = PropsWithChildren<{
 export const QueryControls: React.FC<QueryControlsProps> = ({
   className,
   placeholder = 'What would you like to learn about the data?',
-  promptSuggestions,
-  isLoadingPromptSuggestions = false,
   children,
   onRun,
   onCancel,
@@ -93,14 +94,6 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         className,
       )}
     >
-      {(promptSuggestions && promptSuggestions.length > 0) ||
-      isLoadingPromptSuggestions ? (
-        <PromptSuggestionsContainer
-          promptSuggestions={promptSuggestions}
-          isLoading={isLoadingPromptSuggestions}
-          className="w-full"
-        />
-      ) : null}
       <div className="bg-muted/50 flex h-full w-full flex-row items-center gap-2 rounded-md border">
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
@@ -116,8 +109,8 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           />
           <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
             <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
-              <div className="min-w-0 flex-1 overflow-hidden pl-2">
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
                   {children}
                 </div>
               </div>
