@@ -30,7 +30,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         ],
       },
-      room: {
+      layout: {
         panels: {
           // For the minimal example we only define the main panel, no side panels
           main: {
