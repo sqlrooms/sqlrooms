@@ -7,10 +7,12 @@ import {
   SelectItem,
   SelectTrigger,
   SpinnerPane,
+  Button,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {MessageCircleQuestion} from 'lucide-react';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -33,6 +35,11 @@ export interface QueryResultPanelProps {
     row: Row<any>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /**
+   * Called when the "Ask AI" button is clicked on an error message.
+   * Receives the current query and error text.
+   */
+  onAskAiAboutError?: (query: string, error: string) => void;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
@@ -41,8 +48,12 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   fontSize = 'text-xs',
   onRowClick,
   onRowDoubleClick,
+  onAskAiAboutError,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
   const setQueryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setQueryResultLimit,
   );
@@ -52,6 +63,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   const queryResultLimitOptions = useStoreWithSqlEditor(
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
+
   const limitOptions = React.useMemo(() => {
     if (!queryResultLimitOptions.includes(queryResultLimit)) {
       return [queryResultLimit, ...queryResultLimitOptions];
@@ -61,6 +73,14 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   const arrowTableData = useArrowDataTable(
     isQueryWithResult(queryResult) ? queryResult.result : undefined,
   );
+
+  const handleAskAiAboutError = React.useCallback(() => {
+    if (queryResult?.status === 'error' && onAskAiAboutError) {
+      const currentQuery = getCurrentQuery();
+      const errorText = queryResult.error;
+      onAskAiAboutError(currentQuery, errorText);
+    }
+  }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
   if (!queryResult) {
     return null;
@@ -79,8 +99,24 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }
   if (queryResult?.status === 'error') {
     return (
-      <div className="h-full w-full overflow-auto p-5">
-        <pre className="whitespace-pre-wrap text-xs leading-tight text-red-500">
+      <div className="relative h-full w-full overflow-auto p-5">
+        {onAskAiAboutError && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-2 h-8 w-8"
+            onClick={handleAskAiAboutError}
+            title="Ask AI for help"
+          >
+            <MessageCircleQuestion className="h-4 w-4" />
+          </Button>
+        )}
+        <pre
+          className={cn(
+            'whitespace-pre-wrap text-xs leading-tight text-red-500',
+            onAskAiAboutError && 'pr-12',
+          )}
+        >
           {queryResult.error}
         </pre>
       </div>

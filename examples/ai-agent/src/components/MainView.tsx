@@ -1,11 +1,10 @@
 import {
-  AiSettingsPanel,
   AnalysisResultsContainer,
   ModelSelector,
   QueryControls,
   SessionControls,
-  PromptSuggestions,
-} from '@sqlrooms/ai';
+} from '@sqlrooms/ai-core';
+import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -14,7 +13,6 @@ export const MainView: React.FC = () => {
   const currentSessionId = useRoomStore(
     (s) => s.ai.config.currentSessionId || null,
   );
-  const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const settingsPanelOpen = useDisclosure();
 
@@ -45,30 +43,17 @@ export const MainView: React.FC = () => {
       ) : (
         <>
           <div className="flex-grow overflow-auto">
-            {isDataAvailable ? (
-              <AnalysisResultsContainer
-                key={currentSessionId} // will prevent scrolling to bottom after changing current session
-              />
-            ) : (
-              <div className="flex h-full w-full flex-col items-center justify-center">
-                <SkeletonPane className="p-4" />
-                <p className="text-muted-foreground mt-4">
-                  Loading database...
-                </p>
-              </div>
-            )}
+            <AnalysisResultsContainer
+              key={currentSessionId} // will prevent scrolling to bottom after changing current session
+            />
+            <div className="flex h-full w-full flex-col items-center justify-center">
+              <SkeletonPane className="p-4" />
+              <p className="text-muted-foreground mt-4">Loading database...</p>
+            </div>
           </div>
 
-          <PromptSuggestions.Container>
-            <PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-            <PromptSuggestions.Item text="Show me a summary of the data" />
-            <PromptSuggestions.Item text="What are the key trends?" />
-            <PromptSuggestions.Item text="Help me understand the data structure" />
-          </PromptSuggestions.Container>
-
-          <QueryControls placeholder="What would you like to learn about the data?">
+          <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
             <div className="flex items-center justify-end gap-2">
-              <PromptSuggestions.VisibilityToggle />
               <ModelSelector />
             </div>
           </QueryControls>
