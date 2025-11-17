@@ -6,6 +6,7 @@ import {
   BreadcrumbSeparator,
   Button,
   Checkbox,
+  Input,
   Table,
   TableBody,
   TableCell,
@@ -14,11 +15,37 @@ import {
   TableRow,
   cn,
 } from '@sqlrooms/ui';
-import {Undo2Icon, FolderIcon} from 'lucide-react';
+import {S3FileOrDirectory} from '../../s3-browser-config/dist';
+import {Undo2Icon, FolderIcon, Search} from 'lucide-react';
 import {formatBytes, formatTimeRelative} from '@sqlrooms/utils';
-import {FC, useCallback, useEffect, useMemo} from 'react';
-import {S3FileOrDirectory} from './S3FileOrDirectory';
+import {FC, useCallback, useEffect, useMemo, useState} from 'react';
 
+function renderFileName(
+  key: string,
+  searchQuery: string,
+  isDirectory: boolean,
+) {
+  return (
+    <>
+      {searchQuery ? (
+        <span
+          dangerouslySetInnerHTML={{
+            __html:
+              key.replace(
+                new RegExp(`(${searchQuery})`, 'gi'),
+                '<mark class="bg-yellow-200">$1</mark>',
+              ) + (isDirectory ? '/' : ''),
+          }}
+        />
+      ) : (
+        <span>
+          {key}
+          {isDirectory ? '/' : ''}
+        </span>
+      )}
+    </>
+  );
+}
 /**
  * A file browser component for navigating and selecting files from an S3-like storage.
  *
@@ -71,6 +98,7 @@ const S3FileBrowser: FC<{
   onCanConfirmChange: (canConfirm: boolean) => void;
   onChangeSelectedDirectory: (directory: string) => void;
   onChangeSelectedFiles: (files: string[]) => void;
+  renderFileActions?: () => React.ReactNode;
 }> = (props) => {
   const {
     files,
@@ -79,11 +107,23 @@ const S3FileBrowser: FC<{
     onCanConfirmChange,
     onChangeSelectedFiles,
     onChangeSelectedDirectory,
+    renderFileActions,
   } = props;
 
   useEffect(() => {
     onCanConfirmChange(Boolean(selectedFiles?.length));
   }, [selectedFiles, onCanConfirmChange]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredFiles = useMemo(() => {
+    if (!searchQuery.trim() || !files) {
+      return files;
+    }
+
+    return files.filter((file) =>
+      file.key.toLowerCase().includes(searchQuery.toLowerCase()),
+    );
+  }, [files, searchQuery]);
 
   const handleSelectFile = useCallback(
     (key: string) => {
@@ -115,7 +155,16 @@ const S3FileBrowser: FC<{
       onChangeSelectedFiles(filesInDirectory.map(({key}) => key) ?? []);
     }
   }, [filesInDirectory, onChangeSelectedFiles, selectedFiles.length]);
-
+  const handleSearchInputChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchQuery(value);
+      if (value.trim() === '') {
+        onChangeSelectedFiles([]);
+      }
+    },
+    [onChangeSelectedFiles, setSearchQuery],
+  );
   const parentDirectory = useMemo(() => {
     const dir = selectedDirectory.split('/').slice(0, -2).join('/');
     return dir ? `${dir}/` : '';
@@ -123,15 +172,31 @@ const S3FileBrowser: FC<{
 
   return (
     <div className="relative h-full w-full overflow-hidden">
+      {/* Search Box */}
+      <div className="flex w-full justify-end px-[1px] py-2">
+        {renderFileActions ? renderFileActions() : null}
+        <div className="relative w-[240px] shrink-0">
+          <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+            <Search className="h-5 w-5 text-gray-400" />
+          </div>
+          <Input
+            type="text"
+            placeholder="Search files by name"
+            value={searchQuery}
+            onChange={handleSearchInputChange}
+            className="h-8 py-2 pl-10 text-xs leading-5 md:text-xs"
+          />
+        </div>
+      </div>
       <div className="absolute flex h-full w-full flex-col items-start overflow-x-auto overflow-y-auto py-0">
-        <div className="w-full overflow-y-auto rounded-lg border border-gray-600">
+        <div className="border-border w-full overflow-y-auto rounded-lg border">
           <Table disableWrapper>
             <TableHeader>
               {selectedDirectory ? (
                 <TableRow>
                   <TableCell
                     colSpan={5}
-                    className="bg-gray-800 py-3 text-gray-100"
+                    className="bg-secondary text-secondary-foreground"
                   >
                     <div className="flex items-center gap-2">
                       <Button
@@ -149,7 +214,7 @@ const S3FileBrowser: FC<{
                           <BreadcrumbItem>
                             <BreadcrumbLink
                               onClick={() => onChangeSelectedDirectory('')}
-                              className="text-xs text-blue-400"
+                              className="text-primary text-xs"
                             >
                               Home
                             </BreadcrumbLink>
@@ -168,9 +233,10 @@ const S3FileBrowser: FC<{
                                 <BreadcrumbSeparator />
                                 <BreadcrumbLink
                                   className={cn(
-                                    'text-xs text-blue-400',
-                                    isCurrent &&
-                                      'cursor-default hover:no-underline',
+                                    'text-primary text-xs',
+                                    isCurrent
+                                      ? 'cursor-default hover:no-underline'
+                                      : 'cursor-pointer',
                                   )}
                                   onClick={() => {
                                     if (!isCurrent) {
@@ -189,7 +255,7 @@ const S3FileBrowser: FC<{
                   </TableCell>
                 </TableRow>
               ) : null}
-              <TableRow className="sticky top-0 z-[2] bg-gray-600">
+              <TableRow className="bg-accent text-primary-foreground sticky top-0 z-[2]">
                 <TableHead className="w-[1%]">
                   <Checkbox
                     checked={selectedFiles.length === filesInDirectory.length}
@@ -207,12 +273,12 @@ const S3FileBrowser: FC<{
               </TableRow>
             </TableHeader>
             <TableBody>
-              {files?.map((object) => {
+              {filteredFiles?.map((object) => {
                 const {key, isDirectory} = object;
                 return (
                   <TableRow
                     key={key}
-                    className="hover:text-foreground cursor-pointer text-blue-300 hover:bg-blue-700"
+                    className="text-foreground hover:bg-accent cursor-pointer"
                     onClick={(evt) => {
                       if (isDirectory) {
                         handleSelectDirectory(key);
@@ -232,10 +298,10 @@ const S3FileBrowser: FC<{
                       {isDirectory ? (
                         <div className="flex items-center gap-2">
                           <FolderIcon className="h-4 w-4" />
-                          <span>{`${key}/`}</span>
+                          {renderFileName(key, searchQuery, true)}
                         </div>
                       ) : (
-                        key
+                        renderFileName(key, searchQuery, false)
                       )}
                     </TableCell>
                     <TableCell className="text-xs">

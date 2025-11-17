@@ -21,7 +21,11 @@ type ReasoningBoxProps = {
  * @param props.defaultOpen - Whether the box should be expanded by default (default: false)
  * @returns A React component displaying a collapsible reasoning box
  */
-export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title, defaultOpen = false}) => {
+export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
+  children,
+  title,
+  defaultOpen = false,
+}) => {
   const displayTitle = title ?? 'Thought';
   // Start with defaultOpen state (collapsed by default unless specified)
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -46,7 +50,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title, defa
         ) : (
           <ChevronRightIcon className="h-3 w-3 shrink-0" />
         )}
-        <span className="truncate flex-1">{displayTitle}</span>
+        <span className="flex-1 truncate">{displayTitle}</span>
       </button>
       {isOpen && (
         <div
@@ -66,4 +70,3 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({children, title, defa
     </div>
   );
 };
-

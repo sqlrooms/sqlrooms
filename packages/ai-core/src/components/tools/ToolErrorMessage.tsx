@@ -63,11 +63,9 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
       </PopoverTrigger>
       <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
         <div className="flex flex-col gap-2">
-          <div className="border-b text-sm font-medium ">
-            {title}
-          </div>
+          <div className="border-b text-sm font-medium">{title}</div>
           {errorText ? (
-            <div className="whitespace-pre-wrap font-mono text-xs ">
+            <div className="whitespace-pre-wrap font-mono text-xs">
               {errorText}
             </div>
           ) : null}

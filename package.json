@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=30 --filter=@sqlrooms/*",
+    "dev": "turbo dev --concurrency=32 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",
@@ -83,8 +83,16 @@
   "pnpm": {
     "overrides": {
       "typescript": "5.8.3",
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "@types/react": "19.1.13",
+      "@types/react-dom": "19.1.9",
       "@duckdb/duckdb-wasm": "1.31.0",
-      "@types/react": "19.1.13"
+      "@luma.gl/core": "8.5.21",
+      "@deck.gl/core": "8.9.27",
+      "@deck.gl/react": "^8.9.27",
+      "deck.gl": "8.9.27",
+      "zod": "4.1.8"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

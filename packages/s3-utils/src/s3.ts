@@ -5,7 +5,7 @@ import {
   ListObjectsV2Command,
   S3Client,
 } from '@aws-sdk/client-s3';
-import {S3FileOrDirectory} from './S3FileOrDirectory';
+import {S3FileOrDirectory} from '@sqlrooms/s3-browser-config';
 
 export async function listFilesAndDirectoriesWithPrefix(
   S3: S3Client,

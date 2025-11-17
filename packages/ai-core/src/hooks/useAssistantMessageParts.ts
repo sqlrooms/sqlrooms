@@ -50,4 +50,3 @@ export function useAssistantMessageParts(
     return [];
   }, [uiMessages, analysisResultId]);
 }
-

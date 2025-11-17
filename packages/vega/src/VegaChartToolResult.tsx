@@ -40,17 +40,23 @@ export function VegaChartToolResult({
             sqlQuery={sqlQuery}
           />
           {result.error ? (
-            <Popover open={popoverOpen.isOpen} onOpenChange={popoverOpen.onToggle}>
+            <Popover
+              open={popoverOpen.isOpen}
+              onOpenChange={popoverOpen.onToggle}
+            >
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="flex items-center gap-2  transition-colors"
+                  className="flex items-center gap-2 transition-colors"
                   aria-label="Show error details"
                 >
                   <TriangleAlertIcon className="h-4 w-4" />
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" style={{width: '600px', maxWidth: '80%'}}>
+              <PopoverContent
+                align="start"
+                style={{width: '600px', maxWidth: '80%'}}
+              >
                 <div className="flex flex-col gap-2">
                   <div className="border-b text-sm font-medium">
                     Query Error

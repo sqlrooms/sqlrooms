@@ -111,7 +111,7 @@ export function useAiChat() {
 
   const initialMessages = useMemo(() => {
     return completeIncompleteToolCalls(
-      ((currentSession?.uiMessages as unknown as UIMessage[]) ?? []),
+      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     );
   }, [sessionId, messagesRevision]);
 
