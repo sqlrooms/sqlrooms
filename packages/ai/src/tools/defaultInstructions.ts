@@ -5,9 +5,13 @@ import {StoreApi} from '@sqlrooms/room-shell';
 /**
  * Formats table schema information in a clean, LLM-friendly format
  * @param tables Array of DataTable objects from the DuckDB state
+ * @param currentDatabase The current local database name to filter by
  * @returns Formatted string representation of table schemas
  */
-export function formatTablesForLLM(tables: DataTable[]): string {
+export function formatTablesForLLM(
+  tables: DataTable[],
+  currentDatabase?: string,
+): string {
   if (!tables || tables.length === 0) {
     return 'No tables available in the database.';
   }
@@ -15,7 +19,15 @@ export function formatTablesForLLM(tables: DataTable[]): string {
   return tables
     .filter((table) => {
       const schemaName = table.table?.schema || table.schema;
-      return !schemaName || schemaName === 'main';
+      const databaseName = table.table?.database || table.database;
+
+      // Only include tables from 'main' schema and the current local database
+      // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
+      const isMainSchema = !schemaName || schemaName === 'main';
+      const isLocalDatabase =
+        !databaseName || databaseName === currentDatabase;
+
+      return isMainSchema && isLocalDatabase;
     })
     .map((table) => {
       const tableName = table.table?.table || table.tableName;
@@ -27,13 +39,12 @@ export function formatTablesForLLM(tables: DataTable[]): string {
 
       // Build table header with metadata
       const header = [fullTableName];
-      if (table.isView) header.push('(view)');
       if (table.rowCount !== undefined)
         header.push(`[${table.rowCount.toLocaleString()} rows]`);
 
       // Format columns with proper indentation
       const columns = table.columns
-        .map((col) => `  ${col.name}: ${col.type}`)
+        .map((col) => `  ${col.name}`)
         .join('\n');
 
       // Add comment if available
@@ -75,10 +86,6 @@ Instructions for analysis:
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
 - Please don't modify data
-- IMPORTANT: When you receive an error response from a tool call (where success: false):
-  * Stop making any further tool calls immediately
-  * Return a final answer that includes the error message
-  * Explain what went wrong and suggest possible fixes if applicable
 
 When creating visualizations:
 - Follow VegaLite syntax
@@ -98,7 +105,7 @@ For your final answer:
   * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
   * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
-Available tables in the database (format: tableName [rowCount] followed by indented columns):
+Available tables in the local databases (format: tableName [rowCount] followed by indented columns):
 
 `;
 
@@ -108,6 +115,8 @@ Available tables in the database (format: tableName [rowCount] followed by inden
 export function createDefaultAiInstructions(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
 ): string {
-  const tables = store.getState().db.tables;
-  return `${DEFAULT_INSTRUCTIONS}\n${formatTablesForLLM(tables)}`;
+  const dbState = store.getState().db;
+  const tables = dbState.tables;
+  const currentDatabase = dbState.currentDatabase;
+  return `${DEFAULT_INSTRUCTIONS}\n${formatTablesForLLM(tables, currentDatabase)}`;
 }
