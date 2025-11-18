@@ -206,7 +206,7 @@ function getToolIcon(toolName: string): React.ReactNode | null {
 /**
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
- * @param hasMoreToolsAfter - Whether there are more tool calls after this group
+ * @param hasMoreToolsAfter - Whether there are more tool calls after this group (in the same chain)
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
  * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  */
@@ -239,11 +239,6 @@ function generateToolGroupTitle(
     actualToolParts
       .map((p) => getToolName(p))
       .filter((name) => name !== 'unknown'),
-  );
-
-  // Check if any of the tools are agent tools
-  const hasAgentTool = Array.from(toolNames).some((name) =>
-    name.startsWith('agent-'),
   );
 
   // Check if we have both 'createMapLayer' and 'chart' tools
@@ -284,48 +279,8 @@ function generateToolGroupTitle(
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    // Use different base title for agent tools
-    let baseTitle: string;
-    if (hasAgentTool) {
-      // Extract agent tool names from toolAdditionalData
-      const agentToolNames: string[] = [];
-      for (const toolPart of actualToolParts) {
-        const toolCallId = (toolPart as any).toolCallId;
-        if (toolCallId && toolAdditionalData[toolCallId]) {
-          const agentData = toolAdditionalData[toolCallId] as {
-            agentToolCalls?: Array<{toolName: string; state: string}>;
-          };
-          if (agentData?.agentToolCalls) {
-            // Get currently executing or pending agent tools
-            const executingTools = agentData.agentToolCalls
-              .filter(
-                (call) => call.state === 'pending' || call.state === 'success',
-              )
-              .map((call) => call.toolName);
-            agentToolNames.push(...executingTools);
-          }
-        }
-      }
-
-      // Remove duplicates
-      const uniqueToolNames = Array.from(new Set(agentToolNames));
-
-      if (uniqueToolNames.length > 0) {
-        const toolNamesList = uniqueToolNames.join(', ');
-        baseTitle =
-          uniqueToolNames.length === 1
-            ? `Agent is calling: ${toolNamesList}...`
-            : `Agent is calling: ${toolNamesList}...`;
-      } else {
-        baseTitle =
-          toolCount === 1
-            ? 'Thinking...'
-            : `Thinking... (${toolCount} tools)`;
-      }
-    } else {
-      baseTitle =
-        toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
-    }
+    const baseTitle =
+      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
 
     // Calculate max reasoning length based on container width
     // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
