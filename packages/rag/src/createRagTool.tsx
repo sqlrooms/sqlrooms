@@ -58,7 +58,7 @@ function RagResultItem({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="rounded border border-gray-200 bg-white p-2 dark:border-gray-700 dark:bg-gray-800">
+    <div className="rounded border border-gray-200 p-2 dark:border-gray-700 dark:bg-gray-800">
       <button
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between text-left"
@@ -73,7 +73,7 @@ function RagResultItem({
 
       {isExpanded && (
         <div className="mt-2 space-y-2">
-          <p className="whitespace-pre-wrap text-xs text-gray-700 dark:text-gray-300">
+          <p className="whitespace-pre-wrap font-mono text-xs text-gray-700 dark:text-gray-300">
             {result.text}
           </p>
           {result.metadata &&

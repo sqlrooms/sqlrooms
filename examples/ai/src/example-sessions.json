@@ -1,0 +1,1176 @@
+{
+  "sessions": [
+    {
+      "id": "xefziloqhpwqlj8kb31szv1q",
+      "name": "Time series of earthquakes",
+      "modelProvider": "openai",
+      "model": "gpt-4.1",
+      "analysisResults": [
+        {
+          "id": "hq9x8r95oennvhst8o6ollpm",
+          "prompt": "draw time series",
+          "streamMessage": {
+            "toolCallMessages": [
+              {
+                "args": {
+                  "type": "sql",
+                  "sqlQuery": "SUMMARIZE earthquakes",
+                  "reasoning": "To get an overview of the earthquakes table and understand its structure and relevant columns for time series analysis."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "data": {
+                    "type": "sql",
+                    "summary": [
+                      {
+                        "column_name": "DateTime",
+                        "column_type": "TIMESTAMP",
+                        "min": "1967-08-01 10:33:50.000047",
+                        "max": "2018-04-03 10:58:17.000037",
+                        "approx_unique": 60701,
+                        "avg": "null",
+                        "std": "null",
+                        "q25": "1982-07-06 23:50:27.064417",
+                        "q50": "1992-07-01 17:50:33.980239",
+                        "q75": "2003-11-02 18:15:42.018471",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Latitude",
+                        "column_type": "DOUBLE",
+                        "min": "25.692",
+                        "max": "49.687",
+                        "approx_unique": 25840,
+                        "avg": "37.75115901612765",
+                        "std": "1.9960500340538565",
+                        "q25": "36.430686447143344",
+                        "q50": "37.50005093119062",
+                        "q75": "39.2281191038326",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Longitude",
+                        "column_type": "DOUBLE",
+                        "min": "-129.851",
+                        "max": "-111.094",
+                        "approx_unique": 22042,
+                        "avg": "-120.90899882572384",
+                        "std": "2.3177872441672673",
+                        "q25": "-122.22176736947921",
+                        "q50": "-121.07079403487708",
+                        "q75": "-118.86369398183346",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Depth",
+                        "column_type": "DOUBLE",
+                        "min": "-3.116",
+                        "max": "120.335",
+                        "approx_unique": 25688,
+                        "avg": "7.584963703218178",
+                        "std": "7.287107853510413",
+                        "q25": "3.2181321277639343",
+                        "q50": "5.851666501364937",
+                        "q75": "9.511285234254988",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Magnitude",
+                        "column_type": "DOUBLE",
+                        "min": "2.5",
+                        "max": "7.39",
+                        "approx_unique": 313,
+                        "avg": "2.9858588175330616",
+                        "std": "0.46504849087174344",
+                        "q25": "2.6461253511493856",
+                        "q50": "2.8575034318290684",
+                        "q75": "3.1781528399265118",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "MagType",
+                        "column_type": "VARCHAR",
+                        "min": "ML",
+                        "max": "Unk",
+                        "approx_unique": 6,
+                        "avg": "null",
+                        "std": "null",
+                        "q25": "null",
+                        "q50": "null",
+                        "q75": "null",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "NbStations",
+                        "column_type": "BIGINT",
+                        "min": "0",
+                        "max": "400",
+                        "approx_unique": 301,
+                        "avg": "31.64900975680792",
+                        "std": "26.024028568096305",
+                        "q25": "13",
+                        "q50": "24",
+                        "q75": "42",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Gap",
+                        "column_type": "BIGINT",
+                        "min": "0",
+                        "max": "357",
+                        "approx_unique": 360,
+                        "avg": "140.7653269258774",
+                        "std": "89.6220571417897",
+                        "q25": "62",
+                        "q50": "116",
+                        "q75": "218",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Distance",
+                        "column_type": "BIGINT",
+                        "min": "0",
+                        "max": "534",
+                        "approx_unique": 305,
+                        "avg": "25.515964030872286",
+                        "std": "37.992330833205095",
+                        "q25": "4",
+                        "q50": "10",
+                        "q75": "29",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "RMS",
+                        "column_type": "DOUBLE",
+                        "min": "0.0",
+                        "max": "45.4",
+                        "approx_unique": 291,
+                        "avg": "0.12162243337703785",
+                        "std": "0.5262386004243313",
+                        "q25": "0.05",
+                        "q50": "0.07453769954290952",
+                        "q75": "0.12",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Source",
+                        "column_type": "VARCHAR",
+                        "min": "NCSN",
+                        "max": "NCSN",
+                        "approx_unique": 1,
+                        "avg": "null",
+                        "std": "null",
+                        "q25": "null",
+                        "q50": "null",
+                        "q75": "null",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "EventID",
+                        "column_type": "BIGINT",
+                        "min": "383",
+                        "max": "72994165",
+                        "approx_unique": 49574,
+                        "avg": "19510661.168414153",
+                        "std": "26233706.9969775",
+                        "q25": "1007120",
+                        "q50": "1092322",
+                        "q75": "30088848",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      }
+                    ],
+                    "firstTwoRows": [
+                      {
+                        "column_name": "DateTime",
+                        "column_type": "TIMESTAMP",
+                        "min": "1967-08-01 10:33:50.000047",
+                        "max": "2018-04-03 10:58:17.000037",
+                        "approx_unique": 60701,
+                        "avg": "null",
+                        "std": "null",
+                        "q25": "1982-07-06 23:50:27.064417",
+                        "q50": "1992-07-01 17:50:33.980239",
+                        "q75": "2003-11-02 18:15:42.018471",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Latitude",
+                        "column_type": "DOUBLE",
+                        "min": "25.692",
+                        "max": "49.687",
+                        "approx_unique": 25840,
+                        "avg": "37.75115901612765",
+                        "std": "1.9960500340538565",
+                        "q25": "36.430686447143344",
+                        "q50": "37.50005093119062",
+                        "q75": "39.2281191038326",
+                        "count": 54936,
+                        "null_percentage": "0"
+                      }
+                    ]
+                  }
+                },
+                "additionalData": {
+                  "title": "Query Result",
+                  "sqlQuery": "SUMMARIZE earthquakes"
+                },
+                "text": "",
+                "toolCallId": "call_lQ7AI9O1Wgos5kAaHOY1DDdH",
+                "toolName": "query"
+              },
+              {
+                "args": {
+                  "type": "sql",
+                  "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                  "reasoning": "To aggregate the number of earthquakes by month for time series analysis."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "data": {
+                    "type": "sql",
+                    "summary": [
+                      {
+                        "column_name": "Month",
+                        "column_type": "VARCHAR",
+                        "min": "1967-08",
+                        "max": "2018-04",
+                        "approx_unique": 592,
+                        "avg": "null",
+                        "std": "null",
+                        "q25": "null",
+                        "q50": "null",
+                        "q75": "null",
+                        "count": 605,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "EarthquakeCount",
+                        "column_type": "BIGINT",
+                        "min": "2",
+                        "max": "795",
+                        "approx_unique": 183,
+                        "avg": "90.80330578512397",
+                        "std": "71.10375770600746",
+                        "q25": "60",
+                        "q50": "77",
+                        "q75": "99",
+                        "count": 605,
+                        "null_percentage": "0"
+                      }
+                    ],
+                    "firstTwoRows": [
+                      {
+                        "Month": "1967-08",
+                        "EarthquakeCount": 16
+                      },
+                      {
+                        "Month": "1968-01",
+                        "EarthquakeCount": 2
+                      }
+                    ]
+                  }
+                },
+                "additionalData": {
+                  "title": "Query Result",
+                  "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month"
+                },
+                "text": "",
+                "toolCallId": "call_0DdzVQ9hf3rXQ7JeUSpmCuqN",
+                "toolName": "query"
+              },
+              {
+                "args": {
+                  "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                  "vegaLiteSpec": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"title\":\"Monthly Earthquake Counts (1967-2018)\",\"data\":{\"values\":[]},\"mark\":\"line\",\"encoding\":{\"x\":{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},\"y\":{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Number of Earthquakes\"},\"tooltip\":[{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Earthquake Count\"}]}}",
+                  "reasoning": "To visualize the number of earthquakes over time, showing trends and patterns in the data."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "details": "Chart created successfully."
+                },
+                "additionalData": {
+                  "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                  "vegaLiteSpec": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"title\":\"Monthly Earthquake Counts (1967-2018)\",\"data\":{\"values\":[]},\"mark\":\"line\",\"encoding\":{\"x\":{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},\"y\":{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Number of Earthquakes\"},\"tooltip\":[{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Earthquake Count\"}]}}"
+                },
+                "text": "",
+                "toolCallId": "call_YaP2NfAqZ1fKKv6Ozl8dN5GV",
+                "toolName": "chart"
+              }
+            ],
+            "reasoning": "",
+            "text": "To create a time series visualization of the earthquake data, I will first need to summarize the data to understand the structure and the relevant columns. The DateTime column will be essential for the time series, and I will also consider the Magnitude of the earthquakes.\n\nLet's start by summarizing the \"earthquakes\" table to get an overview of its structure. \n\nI'll proceed with that now.I have aggregated the earthquake data by month, counting the number of earthquakes that occurred in each month from August 1967 to April 2018. Here are some key statistics from the analysis:\n\n- The dataset contains a total of 605 months of data.\n- The minimum number of earthquakes recorded in a month is 2, while the maximum is 795.\n- On average, there are approximately 91 earthquakes per month, with a standard deviation of about 71, indicating some variability in monthly counts.\n- The 25th percentile of monthly counts is 60, the median (50th percentile) is 77, and the 75th percentile is 99.\n\nNext, I will create a time series visualization to display the number of earthquakes over time. This will help in understanding trends and patterns in earthquake occurrences. \n\nLet's proceed with creating the visualization.I have created a time series visualization that displays the number of earthquakes recorded each month from August 1967 to April 2018. \n\n### Explanation of the Analysis:\n1. **Data Aggregation**: I aggregated the earthquake data by month, counting the total number of earthquakes for each month.\n2. **Time Series Visualization**: The resulting data was used to create a line chart, which effectively shows trends over time.\n\n### Summary Statistics:\n- The dataset contains a total of **605 months** of data.\n- The average number of earthquakes per month is approximately **90.8**, with a standard deviation of about **71.1**.\n- The maximum number of earthquakes recorded in a single month is **795**, while the minimum is **2**.\n\n### Visualization Details:\n- **X-axis**: Represents the months (from August 1967 to April 2018).\n- **Y-axis**: Represents the count of earthquakes.\n- **Tooltip**: Displays the month and the corresponding earthquake count when hovering over the data points.\n\nThis visualization allows for easy identification of trends and patterns in earthquake occurrences over the specified time period. If you have any further questions or need additional analysis, feel free to ask!",
+            "analysis": "",
+            "parts": [
+              {
+                "type": "text",
+                "text": "To create a time series visualization of the earthquake data, I will first need to summarize the data to understand the structure and the relevant columns. The DateTime column will be essential for the time series, and I will also consider the Magnitude of the earthquakes.\n\nLet's start by summarizing the \"earthquakes\" table to get an overview of its structure. \n\nI'll proceed with that now."
+              },
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "args": {
+                      "type": "sql",
+                      "sqlQuery": "SUMMARIZE earthquakes",
+                      "reasoning": "To get an overview of the earthquakes table and understand its structure and relevant columns for time series analysis."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "data": {
+                        "type": "sql",
+                        "summary": [
+                          {
+                            "column_name": "DateTime",
+                            "column_type": "TIMESTAMP",
+                            "min": "1967-08-01 10:33:50.000047",
+                            "max": "2018-04-03 10:58:17.000037",
+                            "approx_unique": 60701,
+                            "avg": "null",
+                            "std": "null",
+                            "q25": "1982-07-06 23:50:27.064417",
+                            "q50": "1992-07-01 17:50:33.980239",
+                            "q75": "2003-11-02 18:15:42.018471",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Latitude",
+                            "column_type": "DOUBLE",
+                            "min": "25.692",
+                            "max": "49.687",
+                            "approx_unique": 25840,
+                            "avg": "37.75115901612765",
+                            "std": "1.9960500340538565",
+                            "q25": "36.430686447143344",
+                            "q50": "37.50005093119062",
+                            "q75": "39.2281191038326",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Longitude",
+                            "column_type": "DOUBLE",
+                            "min": "-129.851",
+                            "max": "-111.094",
+                            "approx_unique": 22042,
+                            "avg": "-120.90899882572384",
+                            "std": "2.3177872441672673",
+                            "q25": "-122.22176736947921",
+                            "q50": "-121.07079403487708",
+                            "q75": "-118.86369398183346",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Depth",
+                            "column_type": "DOUBLE",
+                            "min": "-3.116",
+                            "max": "120.335",
+                            "approx_unique": 25688,
+                            "avg": "7.584963703218178",
+                            "std": "7.287107853510413",
+                            "q25": "3.2181321277639343",
+                            "q50": "5.851666501364937",
+                            "q75": "9.511285234254988",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Magnitude",
+                            "column_type": "DOUBLE",
+                            "min": "2.5",
+                            "max": "7.39",
+                            "approx_unique": 313,
+                            "avg": "2.9858588175330616",
+                            "std": "0.46504849087174344",
+                            "q25": "2.6461253511493856",
+                            "q50": "2.8575034318290684",
+                            "q75": "3.1781528399265118",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "MagType",
+                            "column_type": "VARCHAR",
+                            "min": "ML",
+                            "max": "Unk",
+                            "approx_unique": 6,
+                            "avg": "null",
+                            "std": "null",
+                            "q25": "null",
+                            "q50": "null",
+                            "q75": "null",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "NbStations",
+                            "column_type": "BIGINT",
+                            "min": "0",
+                            "max": "400",
+                            "approx_unique": 301,
+                            "avg": "31.64900975680792",
+                            "std": "26.024028568096305",
+                            "q25": "13",
+                            "q50": "24",
+                            "q75": "42",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Gap",
+                            "column_type": "BIGINT",
+                            "min": "0",
+                            "max": "357",
+                            "approx_unique": 360,
+                            "avg": "140.7653269258774",
+                            "std": "89.6220571417897",
+                            "q25": "62",
+                            "q50": "116",
+                            "q75": "218",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Distance",
+                            "column_type": "BIGINT",
+                            "min": "0",
+                            "max": "534",
+                            "approx_unique": 305,
+                            "avg": "25.515964030872286",
+                            "std": "37.992330833205095",
+                            "q25": "4",
+                            "q50": "10",
+                            "q75": "29",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "RMS",
+                            "column_type": "DOUBLE",
+                            "min": "0.0",
+                            "max": "45.4",
+                            "approx_unique": 291,
+                            "avg": "0.12162243337703785",
+                            "std": "0.5262386004243313",
+                            "q25": "0.05",
+                            "q50": "0.07453769954290952",
+                            "q75": "0.12",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Source",
+                            "column_type": "VARCHAR",
+                            "min": "NCSN",
+                            "max": "NCSN",
+                            "approx_unique": 1,
+                            "avg": "null",
+                            "std": "null",
+                            "q25": "null",
+                            "q50": "null",
+                            "q75": "null",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "EventID",
+                            "column_type": "BIGINT",
+                            "min": "383",
+                            "max": "72994165",
+                            "approx_unique": 49574,
+                            "avg": "19510661.168414153",
+                            "std": "26233706.9969775",
+                            "q25": "1007120",
+                            "q50": "1092322",
+                            "q75": "30088848",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          }
+                        ],
+                        "firstTwoRows": [
+                          {
+                            "column_name": "DateTime",
+                            "column_type": "TIMESTAMP",
+                            "min": "1967-08-01 10:33:50.000047",
+                            "max": "2018-04-03 10:58:17.000037",
+                            "approx_unique": 60701,
+                            "avg": "null",
+                            "std": "null",
+                            "q25": "1982-07-06 23:50:27.064417",
+                            "q50": "1992-07-01 17:50:33.980239",
+                            "q75": "2003-11-02 18:15:42.018471",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Latitude",
+                            "column_type": "DOUBLE",
+                            "min": "25.692",
+                            "max": "49.687",
+                            "approx_unique": 25840,
+                            "avg": "37.75115901612765",
+                            "std": "1.9960500340538565",
+                            "q25": "36.430686447143344",
+                            "q50": "37.50005093119062",
+                            "q75": "39.2281191038326",
+                            "count": 54936,
+                            "null_percentage": "0"
+                          }
+                        ]
+                      }
+                    },
+                    "additionalData": {
+                      "title": "Query Result",
+                      "sqlQuery": "SUMMARIZE earthquakes"
+                    },
+                    "text": "",
+                    "toolCallId": "call_lQ7AI9O1Wgos5kAaHOY1DDdH",
+                    "toolName": "query"
+                  }
+                ]
+              },
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "args": {
+                      "type": "sql",
+                      "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                      "reasoning": "To aggregate the number of earthquakes by month for time series analysis."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "data": {
+                        "type": "sql",
+                        "summary": [
+                          {
+                            "column_name": "Month",
+                            "column_type": "VARCHAR",
+                            "min": "1967-08",
+                            "max": "2018-04",
+                            "approx_unique": 592,
+                            "avg": "null",
+                            "std": "null",
+                            "q25": "null",
+                            "q50": "null",
+                            "q75": "null",
+                            "count": 605,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "EarthquakeCount",
+                            "column_type": "BIGINT",
+                            "min": "2",
+                            "max": "795",
+                            "approx_unique": 183,
+                            "avg": "90.80330578512397",
+                            "std": "71.10375770600746",
+                            "q25": "60",
+                            "q50": "77",
+                            "q75": "99",
+                            "count": 605,
+                            "null_percentage": "0"
+                          }
+                        ],
+                        "firstTwoRows": [
+                          {
+                            "Month": "1967-08",
+                            "EarthquakeCount": 16
+                          },
+                          {
+                            "Month": "1968-01",
+                            "EarthquakeCount": 2
+                          }
+                        ]
+                      }
+                    },
+                    "additionalData": {
+                      "title": "Query Result",
+                      "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month"
+                    },
+                    "text": "",
+                    "toolCallId": "call_0DdzVQ9hf3rXQ7JeUSpmCuqN",
+                    "toolName": "query"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I have aggregated the earthquake data by month, counting the number of earthquakes that occurred in each month from August 1967 to April 2018. Here are some key statistics from the analysis:\n\n- The dataset contains a total of 605 months of data.\n- The minimum number of earthquakes recorded in a month is 2, while the maximum is 795.\n- On average, there are approximately 91 earthquakes per month, with a standard deviation of about 71, indicating some variability in monthly counts.\n- The 25th percentile of monthly counts is 60, the median (50th percentile) is 77, and the 75th percentile is 99.\n\nNext, I will create a time series visualization to display the number of earthquakes over time. This will help in understanding trends and patterns in earthquake occurrences. \n\nLet's proceed with creating the visualization."
+              },
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "args": {
+                      "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                      "vegaLiteSpec": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"title\":\"Monthly Earthquake Counts (1967-2018)\",\"data\":{\"values\":[]},\"mark\":\"line\",\"encoding\":{\"x\":{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},\"y\":{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Number of Earthquakes\"},\"tooltip\":[{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Earthquake Count\"}]}}",
+                      "reasoning": "To visualize the number of earthquakes over time, showing trends and patterns in the data."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "details": "Chart created successfully."
+                    },
+                    "additionalData": {
+                      "sqlQuery": "SELECT strftime(DateTime, '%Y-%m') AS Month, COUNT(*) AS EarthquakeCount FROM earthquakes GROUP BY Month ORDER BY Month",
+                      "vegaLiteSpec": "{\"$schema\":\"https://vega.github.io/schema/vega-lite/v5.json\",\"title\":\"Monthly Earthquake Counts (1967-2018)\",\"data\":{\"values\":[]},\"mark\":\"line\",\"encoding\":{\"x\":{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},\"y\":{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Number of Earthquakes\"},\"tooltip\":[{\"field\":\"Month\",\"type\":\"temporal\",\"title\":\"Month\"},{\"field\":\"EarthquakeCount\",\"type\":\"quantitative\",\"title\":\"Earthquake Count\"}]}}"
+                    },
+                    "text": "",
+                    "toolCallId": "call_YaP2NfAqZ1fKKv6Ozl8dN5GV",
+                    "toolName": "chart"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I have created a time series visualization that displays the number of earthquakes recorded each month from August 1967 to April 2018. \n\n### Explanation of the Analysis:\n1. **Data Aggregation**: I aggregated the earthquake data by month, counting the total number of earthquakes for each month.\n2. **Time Series Visualization**: The resulting data was used to create a line chart, which effectively shows trends over time.\n\n### Summary Statistics:\n- The dataset contains a total of **605 months** of data.\n- The average number of earthquakes per month is approximately **90.8**, with a standard deviation of about **71.1**.\n- The maximum number of earthquakes recorded in a single month is **795**, while the minimum is **2**.\n\n### Visualization Details:\n- **X-axis**: Represents the months (from August 1967 to April 2018).\n- **Y-axis**: Represents the count of earthquakes.\n- **Tooltip**: Displays the month and the corresponding earthquake count when hovering over the data points.\n\nThis visualization allows for easy identification of trends and patterns in earthquake occurrences over the specified time period. If you have any further questions or need additional analysis, feel free to ask!"
+              }
+            ]
+          },
+          "isCompleted": true
+        }
+      ],
+      "createdAt": "2025-03-09T19:43:24.607Z"
+    },
+    {
+      "id": "wz49jbb35umuwi7gom6cnk5g",
+      "name": "Magnitude vs Depth Binned Heatmap",
+      "modelProvider": "openai",
+      "model": "gpt-4o-mini",
+      "analysisResults": [
+        {
+          "id": "g3lsikbsc9civ04ge6hl27t3",
+          "prompt": "draw scatter plot Magnitude binned into integers  vs Depth binned into 10 meter bins",
+          "streamMessage": {
+            "reasoning": "",
+            "toolCallMessages": [
+              {
+                "toolName": "query",
+                "toolCallId": "call_R1tYNmH5MYn2jbSfJ7bfAbGB",
+                "args": {
+                  "type": "sql",
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                  "reasoning": "To create a scatter plot of Magnitude binned into integers versus Depth binned into 10 meter bins, I will first aggregate the data by binning the Magnitude and Depth values. The COUNT(*) will provide the number of occurrences for each bin."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "data": {
+                    "type": "sql",
+                    "summary": [
+                      {
+                        "column_name": "Magnitude_Binned",
+                        "column_type": "INTEGER",
+                        "min": "2",
+                        "max": "7",
+                        "approx_unique": 6,
+                        "avg": "4.020408163265306",
+                        "std": "1.4647211896007057",
+                        "q25": "3",
+                        "q50": "4",
+                        "q75": "5",
+                        "count": 49,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Depth_Binned",
+                        "column_type": "DOUBLE",
+                        "min": "-10.0",
+                        "max": "120.0",
+                        "approx_unique": 13,
+                        "avg": "34.69387755102041",
+                        "std": "33.73314645964747",
+                        "q25": "10.0",
+                        "q50": "30.0",
+                        "q75": "60.0",
+                        "count": 49,
+                        "null_percentage": "0"
+                      },
+                      {
+                        "column_name": "Count",
+                        "column_type": "BIGINT",
+                        "min": "1",
+                        "max": "32717",
+                        "approx_unique": 35,
+                        "avg": "1121.142857142857",
+                        "std": "4789.270882225533",
+                        "q25": "2",
+                        "q50": "12",
+                        "q75": "116",
+                        "count": 49,
+                        "null_percentage": "0"
+                      }
+                    ],
+                    "firstTwoRows": [
+                      {
+                        "Magnitude_Binned": 2,
+                        "Depth_Binned": -10,
+                        "Count": 91
+                      },
+                      {
+                        "Magnitude_Binned": 2,
+                        "Depth_Binned": 0,
+                        "Count": 745
+                      }
+                    ]
+                  }
+                },
+                "additionalData": {
+                  "title": "Query Result",
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;"
+                },
+                "text": ""
+              },
+              {
+                "toolName": "chart",
+                "toolCallId": "call_ytOzwCeLIhpef2vO0tExHEip",
+                "args": {
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                  "vegaLiteSpec": "{ \"data\": { \"values\": [] }, \"mark\": \"point\", \"encoding\": { \"x\": { \"field\": \"Depth_Binned\", \"type\": \"quantitative\", \"title\": \"Depth (binned into 10 meter bins)\" }, \"y\": { \"field\": \"Magnitude_Binned\", \"type\": \"quantitative\", \"title\": \"Magnitude (binned into integers)\" }, \"size\": { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count of Earthquakes\" }, \"tooltip\": [ { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count\" } ] } }",
+                  "reasoning": "The scatter plot will visualize the relationship between binned Magnitude and binned Depth, with the size of the points representing the count of earthquakes in each bin."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "details": "Chart created successfully."
+                },
+                "additionalData": {
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                  "vegaLiteSpec": {
+                    "data": {
+                      "values": []
+                    },
+                    "mark": "point",
+                    "encoding": {
+                      "x": {
+                        "field": "Depth_Binned",
+                        "type": "quantitative",
+                        "title": "Depth (binned into 10 meter bins)"
+                      },
+                      "y": {
+                        "field": "Magnitude_Binned",
+                        "type": "quantitative",
+                        "title": "Magnitude (binned into integers)"
+                      },
+                      "size": {
+                        "field": "Count",
+                        "type": "quantitative",
+                        "title": "Count of Earthquakes"
+                      },
+                      "tooltip": [
+                        {
+                          "field": "Count",
+                          "type": "quantitative",
+                          "title": "Count"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "text": ""
+              }
+            ],
+            "analysis": "",
+            "text": "I created a scatter plot that visualizes the relationship between binned Magnitude (in integers) and binned Depth (in 10-meter increments) for earthquake data.\n\n### Explanation of the Analysis:\n1. **Binning**: \n   - Magnitude values were binned into integers, ranging from 2 to 7.\n   - Depth values were binned into 10-meter increments, with the lowest bin starting at -10 meters and the highest at 120 meters.\n\n2. **Data Aggregation**: \n   - The count of earthquakes was calculated for each combination of Magnitude and Depth bins.\n\n3. **Summary Statistics**:\n   - **Magnitude Binned**: \n     - Range: 2 to 7\n     - Average: Approximately 4.02\n     - Standard Deviation: About 1.46\n   - **Depth Binned**: \n     - Range: -10 to 120 meters\n     - Average: Approximately 34.69 meters\n     - Standard Deviation: About 33.73 meters\n   - **Count of Earthquakes**: \n     - Minimum: 1\n     - Maximum: 32,717\n     - Average: Approximately 1,121\n\n### Visualization:\n- The scatter plot effectively displays how the frequency of earthquakes varies with different combinations of Magnitude and Depth bins. The size of the points indicates the number of earthquakes in each bin, providing insight into the distribution of earthquake occurrences across these dimensions.\n\nIf you have any further questions or need additional analysis, feel free to ask!",
+            "parts": [
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "toolName": "query",
+                    "toolCallId": "call_R1tYNmH5MYn2jbSfJ7bfAbGB",
+                    "args": {
+                      "type": "sql",
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                      "reasoning": "To create a scatter plot of Magnitude binned into integers versus Depth binned into 10 meter bins, I will first aggregate the data by binning the Magnitude and Depth values. The COUNT(*) will provide the number of occurrences for each bin."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "data": {
+                        "type": "sql",
+                        "summary": [
+                          {
+                            "column_name": "Magnitude_Binned",
+                            "column_type": "INTEGER",
+                            "min": "2",
+                            "max": "7",
+                            "approx_unique": 6,
+                            "avg": "4.020408163265306",
+                            "std": "1.4647211896007057",
+                            "q25": "3",
+                            "q50": "4",
+                            "q75": "5",
+                            "count": 49,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Depth_Binned",
+                            "column_type": "DOUBLE",
+                            "min": "-10.0",
+                            "max": "120.0",
+                            "approx_unique": 13,
+                            "avg": "34.69387755102041",
+                            "std": "33.73314645964747",
+                            "q25": "10.0",
+                            "q50": "30.0",
+                            "q75": "60.0",
+                            "count": 49,
+                            "null_percentage": "0"
+                          },
+                          {
+                            "column_name": "Count",
+                            "column_type": "BIGINT",
+                            "min": "1",
+                            "max": "32717",
+                            "approx_unique": 35,
+                            "avg": "1121.142857142857",
+                            "std": "4789.270882225533",
+                            "q25": "2",
+                            "q50": "12",
+                            "q75": "116",
+                            "count": 49,
+                            "null_percentage": "0"
+                          }
+                        ],
+                        "firstTwoRows": [
+                          {
+                            "Magnitude_Binned": 2,
+                            "Depth_Binned": -10,
+                            "Count": 91
+                          },
+                          {
+                            "Magnitude_Binned": 2,
+                            "Depth_Binned": 0,
+                            "Count": 745
+                          }
+                        ]
+                      }
+                    },
+                    "additionalData": {
+                      "title": "Query Result",
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;"
+                    },
+                    "text": ""
+                  }
+                ]
+              },
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "toolName": "chart",
+                    "toolCallId": "call_ytOzwCeLIhpef2vO0tExHEip",
+                    "args": {
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                      "vegaLiteSpec": "{ \"data\": { \"values\": [] }, \"mark\": \"point\", \"encoding\": { \"x\": { \"field\": \"Depth_Binned\", \"type\": \"quantitative\", \"title\": \"Depth (binned into 10 meter bins)\" }, \"y\": { \"field\": \"Magnitude_Binned\", \"type\": \"quantitative\", \"title\": \"Magnitude (binned into integers)\" }, \"size\": { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count of Earthquakes\" }, \"tooltip\": [ { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count\" } ] } }",
+                      "reasoning": "The scatter plot will visualize the relationship between binned Magnitude and binned Depth, with the size of the points representing the count of earthquakes in each bin."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "details": "Chart created successfully."
+                    },
+                    "additionalData": {
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                      "vegaLiteSpec": {
+                        "data": {
+                          "values": []
+                        },
+                        "mark": "point",
+                        "encoding": {
+                          "x": {
+                            "field": "Depth_Binned",
+                            "type": "quantitative",
+                            "title": "Depth (binned into 10 meter bins)"
+                          },
+                          "y": {
+                            "field": "Magnitude_Binned",
+                            "type": "quantitative",
+                            "title": "Magnitude (binned into integers)"
+                          },
+                          "size": {
+                            "field": "Count",
+                            "type": "quantitative",
+                            "title": "Count of Earthquakes"
+                          },
+                          "tooltip": [
+                            {
+                              "field": "Count",
+                              "type": "quantitative",
+                              "title": "Count"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "text": ""
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I created a scatter plot that visualizes the relationship between binned Magnitude (in integers) and binned Depth (in 10-meter increments) for earthquake data.\n\n### Explanation of the Analysis:\n1. **Binning**: \n   - Magnitude values were binned into integers, ranging from 2 to 7.\n   - Depth values were binned into 10-meter increments, with the lowest bin starting at -10 meters and the highest at 120 meters.\n\n2. **Data Aggregation**: \n   - The count of earthquakes was calculated for each combination of Magnitude and Depth bins.\n\n3. **Summary Statistics**:\n   - **Magnitude Binned**: \n     - Range: 2 to 7\n     - Average: Approximately 4.02\n     - Standard Deviation: About 1.46\n   - **Depth Binned**: \n     - Range: -10 to 120 meters\n     - Average: Approximately 34.69 meters\n     - Standard Deviation: About 33.73 meters\n   - **Count of Earthquakes**: \n     - Minimum: 1\n     - Maximum: 32,717\n     - Average: Approximately 1,121\n\n### Visualization:\n- The scatter plot effectively displays how the frequency of earthquakes varies with different combinations of Magnitude and Depth bins. The size of the points indicates the number of earthquakes in each bin, providing insight into the distribution of earthquake occurrences across these dimensions.\n\nIf you have any further questions or need additional analysis, feel free to ask!"
+              }
+            ]
+          },
+          "isCompleted": true
+        },
+        {
+          "id": "kztjuqumwps8nj1yqy0dxdfq",
+          "prompt": "render the same data as a heatmap grid instead using square cells",
+          "streamMessage": {
+            "reasoning": "",
+            "toolCallMessages": [
+              {
+                "toolName": "chart",
+                "toolCallId": "call_TOSzmKc4M2KGlAGDaBEXtlk7",
+                "args": {
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                  "vegaLiteSpec": "{ \"data\": { \"values\": [] }, \"mark\": \"rect\", \"encoding\": { \"x\": { \"field\": \"Depth_Binned\", \"type\": \"ordinal\", \"title\": \"Depth (binned into 10 meter bins)\" }, \"y\": { \"field\": \"Magnitude_Binned\", \"type\": \"ordinal\", \"title\": \"Magnitude (binned into integers)\" }, \"color\": { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count of Earthquakes\", \"scale\": { \"scheme\": \"blues\" } }, \"tooltip\": [ { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count\" } ] } }",
+                  "reasoning": "The heatmap will represent the count of earthquakes for each combination of binned Magnitude and Depth using colored square cells, where the color intensity indicates the number of occurrences."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "details": "Chart created successfully."
+                },
+                "additionalData": {
+                  "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                  "vegaLiteSpec": {
+                    "data": {
+                      "values": []
+                    },
+                    "mark": "rect",
+                    "encoding": {
+                      "x": {
+                        "field": "Depth_Binned",
+                        "type": "ordinal",
+                        "title": "Depth (binned into 10 meter bins)"
+                      },
+                      "y": {
+                        "field": "Magnitude_Binned",
+                        "type": "ordinal",
+                        "title": "Magnitude (binned into integers)"
+                      },
+                      "color": {
+                        "field": "Count",
+                        "type": "quantitative",
+                        "title": "Count of Earthquakes",
+                        "scale": {
+                          "scheme": "blues"
+                        }
+                      },
+                      "tooltip": [
+                        {
+                          "field": "Count",
+                          "type": "quantitative",
+                          "title": "Count"
+                        }
+                      ]
+                    }
+                  }
+                },
+                "text": ""
+              }
+            ],
+            "analysis": "",
+            "text": "I have created a heatmap grid that visualizes the count of earthquakes based on binned Magnitude (in integers) and binned Depth (in 10-meter increments).\n\n### Explanation of the Heatmap:\n1. **Data Representation**:\n   - Each cell in the heatmap corresponds to a specific combination of binned Magnitude and Depth.\n   - The color intensity of each cell indicates the number of earthquakes that fall within that bin, with a gradient from light to dark blue representing lower to higher counts.\n\n2. **Binning**:\n   - Magnitude values are binned into integers ranging from 2 to 7.\n   - Depth values are binned into 10-meter increments, starting from -10 meters up to 120 meters.\n\n3. **Visual Insights**:\n   - The heatmap allows for quick visual identification of areas with high earthquake counts, making it easier to spot trends and patterns in the data.\n\nIf you have any further questions or need additional visualizations, feel free to ask!",
+            "parts": [
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "toolName": "chart",
+                    "toolCallId": "call_TOSzmKc4M2KGlAGDaBEXtlk7",
+                    "args": {
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                      "vegaLiteSpec": "{ \"data\": { \"values\": [] }, \"mark\": \"rect\", \"encoding\": { \"x\": { \"field\": \"Depth_Binned\", \"type\": \"ordinal\", \"title\": \"Depth (binned into 10 meter bins)\" }, \"y\": { \"field\": \"Magnitude_Binned\", \"type\": \"ordinal\", \"title\": \"Magnitude (binned into integers)\" }, \"color\": { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count of Earthquakes\", \"scale\": { \"scheme\": \"blues\" } }, \"tooltip\": [ { \"field\": \"Count\", \"type\": \"quantitative\", \"title\": \"Count\" } ] } }",
+                      "reasoning": "The heatmap will represent the count of earthquakes for each combination of binned Magnitude and Depth using colored square cells, where the color intensity indicates the number of occurrences."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "details": "Chart created successfully."
+                    },
+                    "additionalData": {
+                      "sqlQuery": "SELECT CAST(Magnitude AS INTEGER) AS Magnitude_Binned, FLOOR(Depth / 10) * 10 AS Depth_Binned, COUNT(*) AS Count FROM earthquakes GROUP BY Magnitude_Binned, Depth_Binned ORDER BY Magnitude_Binned, Depth_Binned;",
+                      "vegaLiteSpec": {
+                        "data": {
+                          "values": []
+                        },
+                        "mark": "rect",
+                        "encoding": {
+                          "x": {
+                            "field": "Depth_Binned",
+                            "type": "ordinal",
+                            "title": "Depth (binned into 10 meter bins)"
+                          },
+                          "y": {
+                            "field": "Magnitude_Binned",
+                            "type": "ordinal",
+                            "title": "Magnitude (binned into integers)"
+                          },
+                          "color": {
+                            "field": "Count",
+                            "type": "quantitative",
+                            "title": "Count of Earthquakes",
+                            "scale": {
+                              "scheme": "blues"
+                            }
+                          },
+                          "tooltip": [
+                            {
+                              "field": "Count",
+                              "type": "quantitative",
+                              "title": "Count"
+                            }
+                          ]
+                        }
+                      }
+                    },
+                    "text": ""
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I have created a heatmap grid that visualizes the count of earthquakes based on binned Magnitude (in integers) and binned Depth (in 10-meter increments).\n\n### Explanation of the Heatmap:\n1. **Data Representation**:\n   - Each cell in the heatmap corresponds to a specific combination of binned Magnitude and Depth.\n   - The color intensity of each cell indicates the number of earthquakes that fall within that bin, with a gradient from light to dark blue representing lower to higher counts.\n\n2. **Binning**:\n   - Magnitude values are binned into integers ranging from 2 to 7.\n   - Depth values are binned into 10-meter increments, starting from -10 meters up to 120 meters.\n\n3. **Visual Insights**:\n   - The heatmap allows for quick visual identification of areas with high earthquake counts, making it easier to spot trends and patterns in the data.\n\nIf you have any further questions or need additional visualizations, feel free to ask!"
+              }
+            ]
+          },
+          "isCompleted": true
+        }
+      ],
+      "createdAt": "2025-03-10T09:03:14.207Z"
+    },
+    {
+      "id": "qejzk4rjeofiaby238nhdxnb",
+      "name": "Custom tool",
+      "modelProvider": "openai",
+      "model": "gpt-4o-mini",
+      "analysisResults": [
+        {
+          "id": "h6dip19ytufv9q5n95sb8rl9",
+          "prompt": "use the echo tool",
+          "streamMessage": {
+            "toolCallMessages": [
+              {
+                "args": {
+                  "text": "This is a test message."
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "details": "Echo: This is a test message."
+                },
+                "text": "",
+                "toolCallId": "call_hEOMrrFw7Af7E6QNg7Cui2SP",
+                "toolName": "echo"
+              }
+            ],
+            "reasoning": "",
+            "text": "I used the echo tool to send a test message, and it successfully returned the same message: \"This is a test message.\" If you have any specific requests or questions, feel free to ask!",
+            "analysis": "",
+            "parts": [
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "args": {
+                      "text": "This is a test message."
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "details": "Echo: This is a test message."
+                    },
+                    "text": "",
+                    "toolCallId": "call_hEOMrrFw7Af7E6QNg7Cui2SP",
+                    "toolName": "echo"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I used the echo tool to send a test message, and it successfully returned the same message: \"This is a test message.\" If you have any specific requests or questions, feel free to ask!"
+              }
+            ]
+          },
+          "isCompleted": true
+        },
+        {
+          "id": "llr3iu5zx1cnlwddsojmfvm3",
+          "prompt": "can you send message \"hello\" to it",
+          "streamMessage": {
+            "toolCallMessages": [
+              {
+                "args": {
+                  "text": "hello"
+                },
+                "isCompleted": true,
+                "llmResult": {
+                  "success": true,
+                  "details": "Echo: hello"
+                },
+                "text": "",
+                "toolCallId": "call_TFPh6ML8LQ2MdsNTi8INgu2w",
+                "toolName": "echo"
+              }
+            ],
+            "reasoning": "",
+            "text": "I sent the message \"hello\" using the echo tool, and it successfully returned the same message: \"hello.\" If you have any other requests or questions, let me know!",
+            "analysis": "",
+            "parts": [
+              {
+                "type": "tool",
+                "toolCallMessages": [
+                  {
+                    "args": {
+                      "text": "hello"
+                    },
+                    "isCompleted": true,
+                    "llmResult": {
+                      "success": true,
+                      "details": "Echo: hello"
+                    },
+                    "text": "",
+                    "toolCallId": "call_TFPh6ML8LQ2MdsNTi8INgu2w",
+                    "toolName": "echo"
+                  }
+                ]
+              },
+              {
+                "type": "text",
+                "text": "I sent the message \"hello\" using the echo tool, and it successfully returned the same message: \"hello.\" If you have any other requests or questions, let me know!"
+              }
+            ]
+          },
+          "isCompleted": true
+        }
+      ],
+      "createdAt": "2025-03-09T17:07:26.163Z"
+    }
+  ],
+  "currentSessionId": "xefziloqhpwqlj8kb31szv1q"
+}
