@@ -8,7 +8,7 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/rag';
+import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/ai-rag';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,

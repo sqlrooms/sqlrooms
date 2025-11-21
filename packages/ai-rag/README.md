@@ -1,4 +1,4 @@
-# @sqlrooms/rag
+# @sqlrooms/ai-rag
 
 Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings stored in DuckDB for semantic search and AI-powered applications.
 
@@ -15,14 +15,14 @@ Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings
 ## Installation
 
 ```bash
-npm install @sqlrooms/rag @sqlrooms/duckdb @sqlrooms/room-store
+npm install @sqlrooms/ai-rag @sqlrooms/duckdb @sqlrooms/room-store
 ```
 
 ## Quick Start
 
 ```typescript
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 import {createRoomStore} from '@sqlrooms/room-store';
 import {openai} from '@ai-sdk/openai';
 
@@ -197,7 +197,7 @@ You can attach multiple embedding databases, each with its own embedding model:
 ```typescript
 import {openai} from '@ai-sdk/openai';
 import {google} from '@ai-sdk/google';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 const embeddingsDatabases = [
   {
@@ -308,7 +308,7 @@ The `createAiEmbeddingProvider()` function works with any provider from the Verc
 
 ```typescript
 import {openai} from '@ai-sdk/openai';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 const embeddingProvider = createAiEmbeddingProvider(
   openai,
@@ -321,7 +321,7 @@ const embeddingProvider = createAiEmbeddingProvider(
 
 ```typescript
 import {google} from '@ai-sdk/google';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 const embeddingProvider = createAiEmbeddingProvider(
   google,
@@ -333,7 +333,7 @@ const embeddingProvider = createAiEmbeddingProvider(
 ### Custom Provider
 
 ```typescript
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 // Any provider that implements the AiProvider interface
 const embeddingProvider = createAiEmbeddingProvider(
@@ -350,7 +350,7 @@ You can use different providers for different databases:
 ```typescript
 import {openai} from '@ai-sdk/openai';
 import {google} from '@ai-sdk/google';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 const embeddingsDatabases = [
   {

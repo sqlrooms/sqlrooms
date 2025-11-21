@@ -9,7 +9,7 @@ The `createRagTool()` function creates an AI tool that enables semantic search t
 ### 1. Install Dependencies
 
 ```bash
-npm install @sqlrooms/rag @sqlrooms/ai openai
+npm install @sqlrooms/ai-rag @sqlrooms/ai openai
 ```
 
 ### 2. Prepare Embedding Database
@@ -34,7 +34,7 @@ Create a helper to generate embeddings (must match the model used during prepara
 ```typescript
 // src/embeddings.ts
 import OpenAI from 'openai';
-import type {EmbeddingProvider} from '@sqlrooms/rag';
+import type {EmbeddingProvider} from '@sqlrooms/ai-rag';
 
 export function createOpenAIEmbeddingProvider(
   apiKey: string,
@@ -59,7 +59,7 @@ export function createOpenAIEmbeddingProvider(
 ```typescript
 // src/store.ts
 import {createAiSlice} from '@sqlrooms/ai';
-import {createRagSlice, createRagTool} from '@sqlrooms/rag';
+import {createRagSlice, createRagTool} from '@sqlrooms/ai-rag';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 
 const {roomStore, useRoomStore} = createRoomStore({
@@ -83,7 +83,7 @@ const {roomStore, useRoomStore} = createRoomStore({
       tools: {
         // Add the RAG tool
         search_documentation: createRagTool(),
-        
+
         // ... other tools
       },
     }),
@@ -117,6 +117,7 @@ When a user asks a question, the AI can decide to search documentation:
 **User**: "How do I create a table in DuckDB?"
 
 **AI Internal Process**:
+
 1. Recognizes this requires DuckDB knowledge
 2. Calls `search_documentation` tool:
    ```json
@@ -203,7 +204,7 @@ Use this for questions about:
 The tool includes a default React component for displaying results. You can customize it:
 
 ```typescript
-import {createRagTool} from '@sqlrooms/rag';
+import {createRagTool} from '@sqlrooms/ai-rag';
 
 const ragTool = createRagTool();
 ragTool.component = CustomRagResultComponent;
@@ -218,10 +219,18 @@ ragTool.component = CustomRagResultComponent;
 ```typescript
 // ✅ Correct - same model
 // Prepared with: text-embedding-3-small (1536d)
-embeddingProvider: createOpenAIEmbeddingProvider(apiKey, 'text-embedding-3-small', 1536)
+embeddingProvider: createOpenAIEmbeddingProvider(
+  apiKey,
+  'text-embedding-3-small',
+  1536,
+);
 
 // ❌ Wrong - different model
-embeddingProvider: createOpenAIEmbeddingProvider(apiKey, 'text-embedding-3-large', 3072)
+embeddingProvider: createOpenAIEmbeddingProvider(
+  apiKey,
+  'text-embedding-3-large',
+  3072,
+);
 ```
 
 ### 2. Descriptive Tool Names
@@ -260,7 +269,7 @@ createAiSlice({
   tools: {
     search_documentation: createRagTool(),
   },
-})
+});
 ```
 
 ## Troubleshooting
@@ -276,7 +285,7 @@ createAiSlice({
   tools: {
     search_documentation: createRagTool(), // Add this
   },
-})
+});
 ```
 
 ### Store Not Available
@@ -303,9 +312,9 @@ console.log(metadata); // {dimensions: 1536, model: 'text-embedding-3-small', ..
 // Use matching provider
 embeddingProvider: createOpenAIEmbeddingProvider(
   apiKey,
-  metadata.model,      // Match the model
-  metadata.dimensions  // Match the dimensions
-)
+  metadata.model, // Match the model
+  metadata.dimensions, // Match the dimensions
+);
 ```
 
 ### No Results
@@ -342,26 +351,24 @@ You can wrap `createRagTool()` with custom logic:
 ```typescript
 function createSmartRagTool() {
   const baseTool = createRagTool();
-  
+
   return {
     ...baseTool,
     execute: async (params) => {
       // Pre-process query
       const enhancedQuery = enhanceQuery(params.query);
-      
+
       // Call base tool
       const result = await baseTool.execute({
         ...params,
         query: enhancedQuery,
       });
-      
+
       // Post-process results
       if (result.llmResult.success) {
-        result.llmResult.results = filterResults(
-          result.llmResult.results
-        );
+        result.llmResult.results = filterResults(result.llmResult.results);
       }
-      
+
       return result;
     },
   };
@@ -373,4 +380,3 @@ function createSmartRagTool() {
 - [RAG Package README](./README.md) - Full RAG package documentation
 - [Embedding Preparation](../../python/rag/README.md) - Python tools for preparing embeddings
 - [AI Tools Guide](../ai/TOOLS.md) - General guide to AI tools
-

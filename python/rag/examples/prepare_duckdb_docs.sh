@@ -73,7 +73,7 @@ echo ""
 echo "Example usage in TypeScript:"
 cat << 'EOF'
 
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice} from '@sqlrooms/ai-rag';
 
 const store = createRoomStore({
   slices: [

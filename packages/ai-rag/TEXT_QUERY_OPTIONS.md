@@ -5,7 +5,7 @@
 ### Option 1: Configure Provider at Creation ✅ Recommended
 
 ```typescript
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
+import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/ai-rag';
 
 const embeddingProvider: EmbeddingProvider = async (text) => {
   // Your embedding generation logic
@@ -200,7 +200,7 @@ const embeddingProvider: EmbeddingProvider = async (text) => {
 ```typescript
 import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
+import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/ai-rag';
 import OpenAI from 'openai';
 
 // 1. Create OpenAI client
@@ -258,7 +258,7 @@ console.log(results);
 ```typescript
 import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
+import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/ai-rag';
 import {pipeline} from '@xenova/transformers';
 
 // 1. Create embedder (lazy-loaded)

@@ -2,26 +2,26 @@
 
 ## Overview
 
-The `@sqlrooms/rag` package provides `createAiEmbeddingProvider()` - a generic function that works with any provider from the Vercel AI SDK. This allows you to use OpenAI, Google, Anthropic, or any custom provider with a consistent API.
+The `@sqlrooms/ai-rag` package provides `createAiEmbeddingProvider()` - a generic function that works with any provider from the Vercel AI SDK. This allows you to use OpenAI, Google, Anthropic, or any custom provider with a consistent API.
 
 ## Installation
 
 ```bash
-npm install @sqlrooms/rag ai @ai-sdk/openai
+npm install @sqlrooms/ai-rag ai @ai-sdk/openai
 # Or for Google
-npm install @sqlrooms/rag ai @ai-sdk/google
+npm install @sqlrooms/ai-rag ai @ai-sdk/google
 ```
 
 ## Basic Usage
 
 ```typescript
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 import {openai} from '@ai-sdk/openai';
 
 const embeddingProvider = createAiEmbeddingProvider(
-  openai,                      // Provider instance
-  'text-embedding-3-small',    // Model ID
-  1536                         // Dimensions (optional)
+  openai, // Provider instance
+  'text-embedding-3-small', // Model ID
+  1536, // Dimensions (optional)
 );
 ```
 
@@ -31,7 +31,7 @@ const embeddingProvider = createAiEmbeddingProvider(
 
 ```typescript
 import {openai} from '@ai-sdk/openai';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 // text-embedding-3-small (1536d)
 const provider = createAiEmbeddingProvider(
@@ -65,6 +65,7 @@ const providerAda = createAiEmbeddingProvider(
 **API Key**: Set `OPENAI_API_KEY` environment variable or pass via `openai.apiKey`.
 
 **Pricing** (as of 2024):
+
 - text-embedding-3-small: $0.02 / 1M tokens
 - text-embedding-3-large: $0.13 / 1M tokens
 
@@ -72,26 +73,19 @@ const providerAda = createAiEmbeddingProvider(
 
 ```typescript
 import {google} from '@ai-sdk/google';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 // text-embedding-004 (768d)
-const provider = createAiEmbeddingProvider(
-  google,
-  'text-embedding-004',
-  768,
-);
+const provider = createAiEmbeddingProvider(google, 'text-embedding-004', 768);
 
 // Older models
-const provider003 = createAiEmbeddingProvider(
-  google,
-  'embedding-001',
-  768,
-);
+const provider003 = createAiEmbeddingProvider(google, 'embedding-001', 768);
 ```
 
 **API Key**: Set `GOOGLE_GENERATIVE_AI_API_KEY` environment variable.
 
 **Pricing** (as of 2024):
+
 - text-embedding-004: Free (rate limited)
 
 ### Anthropic
@@ -103,7 +97,7 @@ Anthropic doesn't currently provide embedding models, but you can use their comp
 You can create a custom provider that implements the `AiProvider` interface:
 
 ```typescript
-import {createAiEmbeddingProvider, type AiProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider, type AiProvider} from '@sqlrooms/ai-rag';
 
 // Custom provider that implements the interface
 const myProvider: AiProvider = {
@@ -125,7 +119,7 @@ const embeddingProvider = createAiEmbeddingProvider(
 ## Complete Example
 
 ```typescript
-import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 import {openai} from '@ai-sdk/openai';
 import {google} from '@ai-sdk/google';
 
@@ -187,13 +181,13 @@ console.log(metadata);
 
 ```typescript
 import {openai} from '@ai-sdk/openai';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 // Match the metadata
 const embeddingProvider = createAiEmbeddingProvider(
-  openai,                           // Provider matches 'openai'
-  metadata.model,                   // Model matches
-  metadata.dimensions               // Dimensions match
+  openai, // Provider matches 'openai'
+  metadata.model, // Model matches
+  metadata.dimensions, // Dimensions match
 );
 ```
 
@@ -228,12 +222,12 @@ python -m sqlrooms_rag.cli prepare-embeddings \
 
 ## Provider Comparison
 
-| Provider | Model | Dimensions | Cost | Speed | Quality |
-|----------|-------|-----------|------|-------|---------|
-| OpenAI | text-embedding-3-small | 1536 | $0.02/1M | Fast | Excellent |
-| OpenAI | text-embedding-3-small | 512 | $0.02/1M | Very Fast | Good |
-| OpenAI | text-embedding-3-large | 3072 | $0.13/1M | Moderate | Best |
-| Google | text-embedding-004 | 768 | Free | Fast | Excellent |
+| Provider | Model                  | Dimensions | Cost     | Speed     | Quality   |
+| -------- | ---------------------- | ---------- | -------- | --------- | --------- |
+| OpenAI   | text-embedding-3-small | 1536       | $0.02/1M | Fast      | Excellent |
+| OpenAI   | text-embedding-3-small | 512        | $0.02/1M | Very Fast | Good      |
+| OpenAI   | text-embedding-3-large | 3072       | $0.13/1M | Moderate  | Best      |
+| Google   | text-embedding-004     | 768        | Free     | Fast      | Excellent |
 
 ## Best Practices
 
@@ -246,16 +240,16 @@ Always use the same model for preparation and querying:
 // Prepared with: text-embedding-3-small
 embeddingProvider: createAiEmbeddingProvider(
   openai,
-  'text-embedding-3-large',  // Different model!
-  3072
-)
+  'text-embedding-3-large', // Different model!
+  3072,
+);
 
 // ✅ Correct - same model
 embeddingProvider: createAiEmbeddingProvider(
   openai,
-  'text-embedding-3-small',  // Same model
-  1536
-)
+  'text-embedding-3-small', // Same model
+  1536,
+);
 ```
 
 ### 2. Dimension Matching
@@ -268,15 +262,15 @@ Ensure dimensions match exactly:
 embeddingProvider: createAiEmbeddingProvider(
   openai,
   'text-embedding-3-small',
-  512  // Different dimensions!
-)
+  512, // Different dimensions!
+);
 
 // ✅ Correct - same dimensions
 embeddingProvider: createAiEmbeddingProvider(
   openai,
   'text-embedding-3-small',
-  1536  // Same dimensions
-)
+  1536, // Same dimensions
+);
 ```
 
 ### 3. Environment Variables
@@ -292,7 +286,7 @@ GOOGLE_GENERATIVE_AI_API_KEY=...
 ```typescript
 // No need to pass API keys explicitly
 const embeddingProvider = createAiEmbeddingProvider(
-  openai,  // Uses OPENAI_API_KEY automatically
+  openai, // Uses OPENAI_API_KEY automatically
   'text-embedding-3-small',
   1536,
 );
@@ -301,6 +295,7 @@ const embeddingProvider = createAiEmbeddingProvider(
 ### 4. Cost Optimization
 
 For lower costs:
+
 - Use smaller dimensions (512 vs 1536)
 - Use Google (free tier)
 - Cache embeddings when possible
@@ -310,7 +305,7 @@ For lower costs:
 const embeddingProvider = createAiEmbeddingProvider(
   openai,
   'text-embedding-3-small',
-  512,  // 3x faster, same cost per token
+  512, // 3x faster, same cost per token
 );
 ```
 
@@ -338,6 +333,7 @@ try {
 **Cause**: API key missing or invalid
 
 **Solution**: Check environment variables:
+
 ```bash
 echo $OPENAI_API_KEY
 echo $GOOGLE_GENERATIVE_AI_API_KEY
@@ -348,23 +344,26 @@ echo $GOOGLE_GENERATIVE_AI_API_KEY
 **Cause**: Query embedding dimensions don't match database
 
 **Solution**: Check database metadata and update provider:
+
 ```typescript
 const metadata = await store.getState().rag.getMetadata('docs');
 const embeddingProvider = createAiEmbeddingProvider(
   openai,
   metadata.model,
-  metadata.dimensions
+  metadata.dimensions,
 );
 ```
 
 ### Poor Search Results
 
 **Causes**:
+
 1. Wrong embedding model
 2. Different model versions
 3. Database prepared with different settings
 
 **Solution**: Re-prepare database with matching settings:
+
 ```bash
 python -m sqlrooms_rag.cli prepare-embeddings \
   docs/ \

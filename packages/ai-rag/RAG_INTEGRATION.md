@@ -146,8 +146,8 @@ This creates:
 ```typescript
 // src/embeddings.ts
 import {openai} from '@ai-sdk/openai';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
-import type {EmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
+import type {EmbeddingProvider} from '@sqlrooms/ai-rag';
 
 // Generic function - works with any Vercel AI SDK provider
 export function createOpenAIEmbeddingProvider(
@@ -180,7 +180,7 @@ export function createOpenAIEmbeddingProviderWithPreset(
 ```typescript
 // src/store.ts
 import {createAiSlice} from '@sqlrooms/ai';
-import {createRagSlice, createRagTool} from '@sqlrooms/rag';
+import {createRagSlice, createRagTool} from '@sqlrooms/ai-rag';
 import {createOpenAIEmbeddingProviderWithPreset} from './embeddings';
 
 const {roomStore, useRoomStore} = createRoomStore({
@@ -292,7 +292,7 @@ You can configure multiple databases with different providers:
 ```typescript
 import {openai} from '@ai-sdk/openai';
 import {google} from '@ai-sdk/google';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
 
 createRagSlice({
   embeddingsDatabases: [

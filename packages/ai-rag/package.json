@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/rag",
+  "name": "@sqlrooms/ai-rag",
   "version": "0.26.0-rc.3",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

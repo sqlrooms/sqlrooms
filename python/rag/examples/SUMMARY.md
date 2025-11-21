@@ -25,7 +25,7 @@ This single command will:
 ```typescript
 import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice} from '@sqlrooms/ai-rag';
 
 const store = createRoomStore({
   config: {name: 'duckdb-docs-search'},
@@ -421,7 +421,7 @@ After completing this guide, you have:
 
 - [Python Package README](../README.md)
 - [Examples README](./README.md)
-- [TypeScript @sqlrooms/rag Package](../../../packages/rag/README.md)
+- [TypeScript @sqlrooms/ai-rag Package](../../../packages/rag/README.md)
 - [Full RAG Examples](../../../packages/rag/EXAMPLE.md)
 - [SQL Query Reference](../QUERYING.md)
 

@@ -438,7 +438,7 @@ uv run python examples/test_duckdb_docs_query.py "What is a window function?"
 Then use it in your SQLRooms app:
 
 ```typescript
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice} from '@sqlrooms/ai-rag';
 
 const store = createRoomStore({
   slices: [

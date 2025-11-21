@@ -203,7 +203,7 @@ Examples:
         # Show example usage
         print("\nExample usage in TypeScript:")
         print("""
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice} from '@sqlrooms/ai-rag';
 
 const store = createRoomStore({
   slices: [

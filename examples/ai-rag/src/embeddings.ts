@@ -1,6 +1,6 @@
 import {openai, createOpenAI} from '@ai-sdk/openai';
-import {createAiEmbeddingProvider} from '@sqlrooms/rag';
-import type {EmbeddingProvider} from '@sqlrooms/rag';
+import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
+import type {EmbeddingProvider} from '@sqlrooms/ai-rag';
 
 /**
  * Create an OpenAI embedding provider using Vercel AI SDK.

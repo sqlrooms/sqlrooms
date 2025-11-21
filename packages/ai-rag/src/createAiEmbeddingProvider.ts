@@ -38,7 +38,7 @@ export type AiProviderFactory = (apiKey?: string) => AiProvider;
  * @example Static provider (uses environment variables)
  * ```typescript
  * import {openai} from '@ai-sdk/openai';
- * import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+ * import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
  *
  * // OpenAI text-embedding-3-small (1536 dimensions)
  * const provider = createAiEmbeddingProvider(
@@ -51,7 +51,7 @@ export type AiProviderFactory = (apiKey?: string) => AiProvider;
  * @example Dynamic provider with runtime API key
  * ```typescript
  * import {createOpenAI} from '@ai-sdk/openai';
- * import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+ * import {createAiEmbeddingProvider} from '@sqlrooms/ai-rag';
  *
  * // Provider factory that creates OpenAI instance with runtime API key
  * const provider = createAiEmbeddingProvider(

@@ -229,7 +229,7 @@ After preparing the embeddings, use them in your SQLRooms app:
 ```typescript
 import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice} from '@sqlrooms/ai-rag';
 
 const store = createRoomStore({
   config: {name: 'my-app'},
@@ -345,4 +345,4 @@ uv run python prepare_duckdb_docs.py --chunk-size 256
 - [Main README](../README.md) - Package documentation
 - [QUERYING.md](../QUERYING.md) - SQL query reference
 - [PUBLISHING.md](../PUBLISHING.md) - Publishing guide
-- [@sqlrooms/rag Package](../../../packages/rag/README.md) - TypeScript package
+- [@sqlrooms/ai-rag Package](../../../packages/rag/README.md) - TypeScript package
