@@ -23,7 +23,7 @@ This single command will:
 ### 2. Use in Your SQLRooms App
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice} from '@sqlrooms/rag';
 

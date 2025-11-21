@@ -4,7 +4,7 @@ import {
   createSlice,
   StateCreator,
   useBaseRoomStore,
-} from '@sqlrooms/room-shell';
+} from '@sqlrooms/room-store';
 
 export type EmbeddingResult = {
   score: number;

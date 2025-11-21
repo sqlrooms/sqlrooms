@@ -198,7 +198,7 @@ const embeddingProvider: EmbeddingProvider = async (text) => {
 ## Complete Example: OpenAI Provider
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
 import OpenAI from 'openai';
@@ -256,7 +256,7 @@ console.log(results);
 ## Complete Example: Transformers.js (No Server!)
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
 import {pipeline} from '@xenova/transformers';

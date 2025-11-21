@@ -5,7 +5,7 @@ This example shows how to set up and use the RAG (Retrieval Augmented Generation
 ## Complete Example
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice, EmbeddingResult} from '@sqlrooms/rag';
 

@@ -15,7 +15,7 @@ Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings
 ## Installation
 
 ```bash
-npm install @sqlrooms/rag @sqlrooms/duckdb @sqlrooms/room-shell
+npm install @sqlrooms/rag @sqlrooms/duckdb @sqlrooms/room-store
 ```
 
 ## Quick Start
@@ -23,7 +23,7 @@ npm install @sqlrooms/rag @sqlrooms/duckdb @sqlrooms/room-shell
 ```typescript
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/rag';
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {openai} from '@ai-sdk/openai';
 
 // 1. Create an embedding provider (matches your database preparation)
@@ -54,10 +54,9 @@ const store = createRoomStore({
 // 4. Initialize and query
 await store.getState().rag.initialize();
 
-const results = await store.getState().rag.queryByText(
-  'How do I create a table?',
-  {topK: 5},
-);
+const results = await store
+  .getState()
+  .rag.queryByText('How do I create a table?', {topK: 5});
 
 console.log(results);
 ```
@@ -137,6 +136,7 @@ const results = await store.getState().rag.queryByText('search query', {
 ```
 
 **Hybrid Search** combines:
+
 - **Vector similarity**: Semantic understanding of the query
 - **Full-text search (BM25)**: Keyword matching and ranking
 - **Reciprocal Rank Fusion**: Smart combination of both result sets

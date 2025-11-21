@@ -227,7 +227,7 @@ uv run python query_duckdb_direct.py "How to connect to S3?"
 After preparing the embeddings, use them in your SQLRooms app:
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
+import {createRoomStore} from '@sqlrooms/room-store';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
 import {createRagSlice} from '@sqlrooms/rag';
 
