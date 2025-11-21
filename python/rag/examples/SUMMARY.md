@@ -34,7 +34,7 @@ const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: './embeddings/duckdb_docs.duckdb',
+          databaseFilePathOrUrl: './embeddings/duckdb_docs.duckdb',
           databaseName: 'duckdb_docs',
         },
       ],
@@ -393,9 +393,9 @@ uv run python examples/prepare_duckdb_docs.py --chunk-size 256
 Check file paths are correct relative to your app:
 
 ```typescript
-databaseFilePath: '/absolute/path/to/duckdb_docs.duckdb',
+databaseFilePathOrUrl: '/absolute/path/to/duckdb_docs.duckdb',
 // or
-databaseFilePath: './relative/path/to/duckdb_docs.duckdb',
+databaseFilePathOrUrl: './relative/path/to/duckdb_docs.duckdb',
 ```
 
 ## 📚 What You've Built

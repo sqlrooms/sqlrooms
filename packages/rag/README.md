@@ -49,11 +49,11 @@ const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: '/embeddings/docs.duckdb',
+          databaseFilePathOrUrl: '/embeddings/docs.duckdb',
           databaseName: 'docs_embeddings',
         },
         {
-          databaseFilePath: '/embeddings/api.duckdb',
+          databaseFilePathOrUrl: '/embeddings/api.duckdb',
           databaseName: 'api_embeddings',
         },
       ],
@@ -171,7 +171,7 @@ Creates a RAG slice for the room store.
 **Options:**
 
 - `embeddingsDatabases` - Array of embedding database configurations
-  - `databaseFilePath` - Path to the .duckdb file
+  - `databaseFilePathOrUrl` - Path to the .duckdb file
   - `databaseName` - Name to use when attaching the database
 - `embeddingProvider` (optional) - Function to generate embeddings from text
   - Type: `(text: string) => Promise<number[]>`

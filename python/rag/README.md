@@ -46,6 +46,7 @@ uv sync
 **Optional dependencies:**
 
 For OpenAI embeddings:
+
 ```bash
 pip install llama-index-embeddings-openai
 # or with uv
@@ -165,6 +166,7 @@ The tool creates **two files**:
 ### 1. DuckDB Database (`.duckdb`)
 
 Contains:
+
 - **Chunks**: Text split by markdown sections with embeddings
 - **Source documents**: Original full documents before chunking
 - **Embeddings**: Vector embeddings (384-1536 dimensional)
@@ -178,6 +180,7 @@ Contains:
 ### 2. Metadata YAML (`.yaml`)
 
 Human-readable file documenting:
+
 - Embedding model used (provider, name, dimensions)
 - Chunking strategy and parameters
 - Document and chunk statistics
@@ -185,6 +188,7 @@ Human-readable file documenting:
 - Creation timestamp
 
 **Why?** The metadata ensures:
+
 - ✓ Query-time uses the same model
 - ✓ Easy debugging of poor results
 - ✓ Reproducible builds
@@ -238,6 +242,7 @@ for doc in source_docs:
 **Why hybrid?** Combines semantic understanding (vector search) with exact keyword matching (FTS). Best for technical queries with specific terms, function names, or acronyms. See [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for details.
 
 **New features:**
+
 - Full source documents stored alongside chunks for complete context
 - Comprehensive metadata tracking (model, settings, stats)
 - Automatic model validation at query time
@@ -441,7 +446,7 @@ const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: './embeddings/duckdb_docs.duckdb',
+          databaseFilePathOrUrl: './embeddings/duckdb_docs.duckdb',
           databaseName: 'duckdb_docs',
         },
       ],
@@ -473,10 +478,10 @@ Uses local sentence-transformer models. No API costs, works offline.
 
 Uses OpenAI's embedding API. Requires API key and internet connection.
 
-| Model                  | Dimension      | Cost (per 1M tokens) | Description                 |
-| ---------------------- | -------------- | -------------------- | --------------------------- |
-| text-embedding-3-small | 1536 (or less) | $0.02                | Best value, high quality    |
-| text-embedding-3-large | 3072 (or less) | $0.13                | Highest quality             |
+| Model                  | Dimension      | Cost (per 1M tokens) | Description                  |
+| ---------------------- | -------------- | -------------------- | ---------------------------- |
+| text-embedding-3-small | 1536 (or less) | $0.02                | Best value, high quality     |
+| text-embedding-3-large | 3072 (or less) | $0.13                | Highest quality              |
 | text-embedding-ada-002 | 1536           | $0.10                | Legacy (use 3-small instead) |
 
 **Pros:** High quality, no local storage, consistent results
@@ -547,6 +552,7 @@ uv run prepare-embeddings docs -o kb.duckdb \
 ```
 
 **Why this happens:**
+
 - Markdown-aware chunking can create very large chunks from huge document sections
 - Header weighting multiplies chunk size (3x weight = 3x tokens)
 - Token estimation isn't perfect

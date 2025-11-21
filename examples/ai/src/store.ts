@@ -130,7 +130,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createRagSlice({
         embeddingsDatabases: [
           {
-            databaseFilePath: './examples/ai/embeddings/docs.duckdb',
+            databaseFilePathOrUrl: './examples/ai/embeddings/docs.duckdb',
             databaseName: 'docs',
           },
         ],

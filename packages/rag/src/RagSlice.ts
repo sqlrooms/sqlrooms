@@ -14,7 +14,7 @@ export type EmbeddingResult = {
 };
 
 export type EmbeddingDatabase = {
-  databaseFilePath: string;
+  databaseFilePathOrUrl: string;
   databaseName: string;
 };
 
@@ -102,11 +102,14 @@ export function createRagSlice({
           const connector = get().db.connector;
 
           // Attach each embedding database
-          for (const {databaseFilePath, databaseName} of embeddingsDatabases) {
+          for (const {
+            databaseFilePathOrUrl,
+            databaseName,
+          } of embeddingsDatabases) {
             try {
               // ATTACH DATABASE 'path/to/file.duckdb' AS database_name (READ_ONLY)
               await connector.query(
-                `ATTACH DATABASE '${databaseFilePath}' AS ${databaseName} (READ_ONLY)`,
+                `ATTACH DATABASE '${databaseFilePathOrUrl}' AS ${databaseName} (READ_ONLY)`,
               );
               attachedDatabases.add(databaseName);
               console.log(`✓ Attached embedding database: ${databaseName}`);

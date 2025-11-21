@@ -211,7 +211,7 @@ const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: './embeddings/duckdb_docs.duckdb',
+          databaseFilePathOrUrl: './embeddings/duckdb_docs.duckdb',
           databaseName: 'duckdb_docs',
         },
       ],

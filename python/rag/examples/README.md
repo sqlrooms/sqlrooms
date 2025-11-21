@@ -238,7 +238,7 @@ const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: '/path/to/duckdb_docs.duckdb',
+          databaseFilePathOrUrl: '/path/to/duckdb_docs.duckdb',
           databaseName: 'duckdb_docs',
         },
       ],
@@ -294,9 +294,15 @@ Then query them all:
 ```typescript
 createRagSlice({
   embeddingsDatabases: [
-    {databaseFilePath: './embeddings/duckdb.duckdb', databaseName: 'duckdb'},
-    {databaseFilePath: './embeddings/node.duckdb', databaseName: 'nodejs'},
-    {databaseFilePath: './embeddings/typescript.duckdb', databaseName: 'ts'},
+    {
+      databaseFilePathOrUrl: './embeddings/duckdb.duckdb',
+      databaseName: 'duckdb',
+    },
+    {databaseFilePathOrUrl: './embeddings/node.duckdb', databaseName: 'nodejs'},
+    {
+      databaseFilePathOrUrl: './embeddings/typescript.duckdb',
+      databaseName: 'ts',
+    },
   ],
 });
 ```

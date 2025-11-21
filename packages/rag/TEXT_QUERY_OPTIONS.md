@@ -225,7 +225,7 @@ export const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: './embeddings/docs.duckdb',
+          databaseFilePathOrUrl: './embeddings/docs.duckdb',
           databaseName: 'docs',
         },
       ],
@@ -288,7 +288,7 @@ export const store = createRoomStore({
     createRagSlice({
       embeddingsDatabases: [
         {
-          databaseFilePath: './embeddings/docs.duckdb',
+          databaseFilePathOrUrl: './embeddings/docs.duckdb',
           databaseName: 'docs',
         },
       ],
