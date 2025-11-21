@@ -160,16 +160,37 @@ See [CHUNKING.md](./CHUNKING.md) for detailed comparison and best practices.
 
 ## Output
 
-The tool creates a DuckDB database file (`.duckdb`) that contains:
+The tool creates **two files**:
 
-- Document chunks (text split by markdown sections)
-- Vector embeddings (384-dimensional by default)
-- Metadata including:
+### 1. DuckDB Database (`.duckdb`)
+
+Contains:
+- **Chunks**: Text split by markdown sections with embeddings
+- **Source documents**: Original full documents before chunking
+- **Embeddings**: Vector embeddings (384-1536 dimensional)
+- **FTS index**: Full-text search index for hybrid retrieval
+- **Metadata table**: Model info, settings, statistics
+- **Metadata** per chunk:
   - File paths
   - Section titles (`Header_1`, `Header_2`, etc.)
   - Document structure information
 
-This database can be used with llama-index's query engine or any RAG application that supports DuckDB vector stores.
+### 2. Metadata YAML (`.yaml`)
+
+Human-readable file documenting:
+- Embedding model used (provider, name, dimensions)
+- Chunking strategy and parameters
+- Document and chunk statistics
+- Available capabilities
+- Creation timestamp
+
+**Why?** The metadata ensures:
+- ✓ Query-time uses the same model
+- ✓ Easy debugging of poor results
+- ✓ Reproducible builds
+- ✓ Version compatibility checks
+
+See [METADATA.md](./METADATA.md) for details.
 
 ## Using the Generated Database
 
@@ -216,7 +237,10 @@ for doc in source_docs:
 
 **Why hybrid?** Combines semantic understanding (vector search) with exact keyword matching (FTS). Best for technical queries with specific terms, function names, or acronyms. See [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for details.
 
-**New:** Full source documents are automatically stored alongside chunks, making it easy to retrieve complete document context after finding relevant snippets.
+**New features:**
+- Full source documents stored alongside chunks for complete context
+- Comprehensive metadata tracking (model, settings, stats)
+- Automatic model validation at query time
 
 #### Vector-Only Search
 
@@ -294,7 +318,17 @@ uv run python examples/hybrid_search_example.py
 uv run python examples/hybrid_search_example.py --compare
 ```
 
-See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL, and [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for hybrid retrieval details.
+**Inspect metadata:**
+
+```bash
+# View database metadata
+uv run python examples/inspect_metadata.py --inspect kb.duckdb
+
+# Validate model compatibility
+uv run python examples/inspect_metadata.py --validate kb.duckdb "BAAI/bge-small-en-v1.5"
+```
+
+See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL, [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for hybrid retrieval details, and [METADATA.md](./METADATA.md) for metadata tracking.
 
 ## Visualization
 
@@ -355,7 +389,8 @@ sqlrooms-rag/
 │   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
 │   ├── example_query.py         # Query using llama-index
 │   ├── query_duckdb_direct.py   # Direct DuckDB queries (including hybrid)
-│   └── hybrid_search_example.py # Hybrid search examples
+│   ├── hybrid_search_example.py # Hybrid search examples
+│   └── inspect_metadata.py      # Inspect and validate metadata
 ├── scripts/                # Documentation for utility scripts
 ├── generated-embeddings/   # Output directory
 ├── pyproject.toml         # Package configuration
@@ -485,6 +520,40 @@ See `examples/prepare_with_openai.py` for detailed examples and cost estimates.
 
 ## Troubleshooting
 
+### OpenAI Token Limit Errors
+
+**The system automatically validates and splits chunks** that exceed OpenAI's 8192 token limit.
+
+**If you still get token limit errors**, use more conservative settings:
+
+```bash
+# Recommended: small chunks + minimal header weight
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 256 \
+  --header-weight 1
+
+# If that fails: disable header weighting entirely
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 256 \
+  --no-header-weighting
+
+# Last resort: disable markdown chunking
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 256 \
+  --no-markdown-chunking
+```
+
+**Why this happens:**
+- Markdown-aware chunking can create very large chunks from huge document sections
+- Header weighting multiplies chunk size (3x weight = 3x tokens)
+- Token estimation isn't perfect
+- Technical text has higher token density
+
+See [EXTERNAL_APIS.md](./EXTERNAL_APIS.md#openai-token-limits) for details.
+
 ### Out of Memory
 
 If you run out of memory with large document sets, try:
@@ -498,6 +567,7 @@ If you run out of memory with large document sets, try:
 - First run downloads the embedding model (one-time operation)
 - Subsequent runs use the cached model
 - Consider using a smaller/faster model for large document sets
+- OpenAI API has higher latency but doesn't need local models
 
 ## License
 

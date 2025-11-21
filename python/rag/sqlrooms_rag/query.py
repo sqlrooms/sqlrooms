@@ -4,8 +4,141 @@ Query functionality for hybrid retrieval combining vector similarity and full-te
 
 import duckdb
 import json
+from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from sentence_transformers import SentenceTransformer
+
+
+def get_embedding_metadata(
+    db_path: str = "generated-embeddings/sqlrooms_docs.duckdb"
+) -> Dict[str, Any]:
+    """
+    Retrieve embedding metadata from the database.
+    
+    This metadata includes:
+    - Embedding model provider and name
+    - Embedding dimensions
+    - Chunking strategy and parameters
+    - Document and chunk statistics
+    - Available capabilities (hybrid search, FTS, etc.)
+    
+    Args:
+        db_path: Path to the DuckDB database
+    
+    Returns:
+        Dictionary with embedding metadata
+    
+    Raises:
+        RuntimeError: If metadata table doesn't exist
+    """
+    conn = duckdb.connect(db_path, read_only=True)
+    
+    try:
+        # Check if metadata table exists
+        tables = conn.execute(
+            "SELECT name FROM information_schema.tables WHERE table_name = 'embedding_metadata'"
+        ).fetchall()
+        
+        if not tables:
+            raise RuntimeError(
+                "No metadata found in database. "
+                "This database may have been created with an older version. "
+                "Consider regenerating embeddings to include metadata."
+            )
+        
+        # Retrieve all metadata
+        results = conn.execute(
+            "SELECT key, value FROM embedding_metadata"
+        ).fetchall()
+        
+        # Convert to dictionary
+        flat_metadata = {key: value for key, value in results}
+        
+        # Reconstruct nested structure
+        metadata = {
+            'version': flat_metadata.get('version', 'unknown'),
+            'created_at': flat_metadata.get('created_at', 'unknown'),
+            'embedding': {
+                'provider': flat_metadata.get('embedding_provider', 'unknown'),
+                'model': flat_metadata.get('embedding_model', 'unknown'),
+                'dimensions': int(flat_metadata.get('embedding_dimensions', '0')),
+            },
+            'chunking': {
+                'strategy': flat_metadata.get('chunking_strategy', 'unknown'),
+                'chunk_size': int(flat_metadata.get('chunk_size', '0')),
+                'include_headers': flat_metadata.get('include_headers', 'false').lower() == 'true',
+                'header_weight': int(flat_metadata.get('header_weight', '0')),
+            },
+            'source_documents': {
+                'total_documents': int(flat_metadata.get('total_source_documents', '0')),
+                'unique_files': int(flat_metadata.get('unique_files', '0')),
+                'total_characters': int(flat_metadata.get('source_total_characters', '0')),
+            },
+            'chunks': {
+                'total_chunks': int(flat_metadata.get('total_chunks', '0')),
+                'min_chunk_size': int(flat_metadata.get('min_chunk_size', '0')),
+                'max_chunk_size': int(flat_metadata.get('max_chunk_size', '0')),
+                'median_chunk_size': int(flat_metadata.get('median_chunk_size', '0')),
+                'mean_chunk_size': int(flat_metadata.get('mean_chunk_size', '0')),
+                'total_characters': int(flat_metadata.get('chunks_total_characters', '0')),
+            },
+            'capabilities': {
+                'hybrid_search': flat_metadata.get('hybrid_search_enabled', 'false').lower() == 'true',
+                'fts_enabled': flat_metadata.get('fts_enabled', 'false').lower() == 'true',
+                'source_documents_stored': flat_metadata.get('source_documents_stored', 'false').lower() == 'true',
+            }
+        }
+        
+        return metadata
+        
+    finally:
+        conn.close()
+
+
+def validate_embedding_model(
+    db_path: str,
+    model_name: str,
+    expected_dimensions: Optional[int] = None
+) -> bool:
+    """
+    Validate that the query model matches the database's embedding model.
+    
+    This is important to ensure embeddings are comparable. Using a different
+    model at query time will result in poor or meaningless results.
+    
+    Args:
+        db_path: Path to the DuckDB database
+        model_name: Name of the model being used for queries
+        expected_dimensions: Expected embedding dimensions
+    
+    Returns:
+        True if model matches, False otherwise
+    
+    Raises:
+        RuntimeError: If metadata cannot be read
+    """
+    metadata = get_embedding_metadata(db_path)
+    
+    stored_model = metadata['embedding']['model']
+    stored_dims = metadata['embedding']['dimensions']
+    
+    # Check model name
+    if stored_model != model_name:
+        print(f"⚠ Warning: Model mismatch!")
+        print(f"  Database was created with: {stored_model}")
+        print(f"  You are using: {model_name}")
+        print(f"  Results may be poor or meaningless.")
+        return False
+    
+    # Check dimensions if provided
+    if expected_dimensions and stored_dims != expected_dimensions:
+        print(f"⚠ Warning: Dimension mismatch!")
+        print(f"  Database embeddings: {stored_dims} dimensions")
+        print(f"  Your model: {expected_dimensions} dimensions")
+        print(f"  Results will be meaningless.")
+        return False
+    
+    return True
 
 
 def get_source_documents(

@@ -5,12 +5,14 @@ This guide covers using external embedding APIs (like OpenAI) instead of local H
 ## When to Use External APIs
 
 ### Use OpenAI (or other APIs) when:
+
 - **Quality matters more than cost** - OpenAI embeddings are state-of-the-art
 - **No local storage** - Don't want to download large model files
 - **Consistency needed** - Same results across different machines
 - **Small-medium datasets** - API costs are reasonable
 
 ### Use HuggingFace (local) when:
+
 - **Cost matters** - Completely free, no usage limits
 - **Large datasets** - API costs add up quickly
 - **Privacy sensitive** - Data never leaves your machine
@@ -24,6 +26,7 @@ This guide covers using external embedding APIs (like OpenAI) instead of local H
 Currently the main external provider supported. Others can be added.
 
 **Models:**
+
 - `text-embedding-3-small` - 1536 dims, $0.02/1M tokens (recommended)
 - `text-embedding-3-large` - 3072 dims, $0.13/1M tokens (highest quality)
 - `text-embedding-ada-002` - 1536 dims, $0.10/1M tokens (legacy)
@@ -100,13 +103,13 @@ prepare_embeddings(
 
 Based on OpenAI `text-embedding-3-small` at $0.02 per 1M tokens:
 
-| Document Size | Approximate Tokens | Estimated Cost |
-|---------------|-------------------|----------------|
-| 100 pages (~50k words) | ~65,000 | $0.0013 |
-| 500 pages (~250k words) | ~325,000 | $0.0065 |
-| 1,000 pages (~500k words) | ~650,000 | $0.013 |
-| 5,000 pages (~2.5M words) | ~3,250,000 | $0.065 |
-| 10,000 pages (~5M words) | ~6,500,000 | $0.13 |
+| Document Size             | Approximate Tokens | Estimated Cost |
+| ------------------------- | ------------------ | -------------- |
+| 100 pages (~50k words)    | ~65,000            | $0.0013        |
+| 500 pages (~250k words)   | ~325,000           | $0.0065        |
+| 1,000 pages (~500k words) | ~650,000           | $0.013         |
+| 5,000 pages (~2.5M words) | ~3,250,000         | $0.065         |
+| 10,000 pages (~5M words)  | ~6,500,000         | $0.13          |
 
 **For `text-embedding-3-large`:** Multiply costs by ~6.5x
 
@@ -137,12 +140,14 @@ prepare_embeddings(
 ```
 
 **Benefits of reduced dimensions:**
+
 - Smaller database size (3-6x smaller)
 - Faster similarity searches
 - Lower memory usage
 - Minimal quality loss (~5-10%)
 
 **Recommended dimensions:**
+
 - 512: Good balance (87-90% quality of full model)
 - 1024: Better quality (93-95% of full model)
 - 1536: Full quality (no reduction)
@@ -159,23 +164,105 @@ Approximate quality ranking for English text:
 
 For most applications, the **default HuggingFace model** (bge-small) provides good results at zero cost.
 
+## OpenAI Token Limits
+
+### The Limit
+
+OpenAI embedding models have a **hard limit of 8192 tokens** per request. This is OpenAI's limit, not ours.
+
+### Automatic Protection
+
+The system automatically handles this for you:
+
+1. **Validates all chunks** before sending to OpenAI
+2. **Splits oversized chunks** (anything over 8000 tokens)
+3. **Preserves metadata** during splitting
+4. **Shows warnings** if splitting occurs
+
+**You don't need to worry about this** - the system handles it automatically!
+
+### Why Chunks Might Exceed 8192 Tokens
+
+Even with reasonable settings, chunks can exceed limits because:
+
+1. **Markdown-aware chunking** respects document structure
+   - A single giant markdown section becomes one chunk
+   - Some docs have 50K+ word sections!
+
+2. **Header weighting** multiplies chunk size
+   - `header_weight=3` repeats headers 3 times
+   - A 3000 token chunk becomes 9000 tokens
+
+3. **Long technical content**
+   - Code blocks, tables, lists add up fast
+
+### Recommended Settings
+
+**Recommended for OpenAI (safest):**
+
+```bash
+# Conservative settings to avoid token limit issues
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 256 \
+  --header-weight 1
+```
+
+**Default (may require splitting):**
+
+```bash
+uv run prepare-embeddings docs -o kb.duckdb --provider openai
+# Uses chunk_size=512, header_weight=3
+# Chunks automatically split if >6000 estimated tokens
+```
+
+**If you still get token limit errors:**
+
+```bash
+# Minimum chunk size
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 128 \
+  --no-header-weighting
+
+# Or disable markdown chunking (size-based only)
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --chunk-size 256 \
+  --no-markdown-chunking
+```
+
+### HuggingFace (No Limits)
+
+Local models don't have strict token limits:
+
+```bash
+# Can use larger chunks and higher header weights
+uv run prepare-embeddings docs -o kb.duckdb \
+  --chunk-size 1024 \
+  --header-weight 5
+```
+
 ## Performance Characteristics
 
 ### HuggingFace (Local)
 
 **First run:**
+
 - Downloads model (~150MB)
 - Caches locally
 - Embeddings: ~100-500 docs/sec (CPU)
 - Embeddings: ~1000+ docs/sec (GPU)
 
 **Subsequent runs:**
+
 - No download needed
 - Same speed as first run
 
 ### OpenAI (API)
 
 **Every run:**
+
 - API latency: ~100-300ms per request
 - Batch size: ~2048 tokens per request
 - Rate limits apply
@@ -190,6 +277,7 @@ For most applications, the **default HuggingFace model** (bge-small) provides go
 **Never commit API keys to version control!**
 
 Good practices:
+
 ```bash
 # Use environment variables
 export OPENAI_API_KEY=your_key_here
@@ -202,11 +290,13 @@ source .env
 ### Data Privacy
 
 **When using external APIs:**
+
 - Your document content is sent to the API provider
 - Review provider's data retention policies
 - Consider compliance requirements (GDPR, HIPAA, etc.)
 
 **For sensitive data:**
+
 - Use local HuggingFace models
 - Data never leaves your machine
 - No external dependencies
@@ -216,28 +306,55 @@ source .env
 Common errors and solutions:
 
 ### Missing API Key
+
 ```
 Error: OpenAI API key required...
 ```
+
 **Solution:** Set `OPENAI_API_KEY` environment variable
 
 ### Missing Package
+
 ```
 ImportError: OpenAI embeddings require 'llama-index-embeddings-openai'
 ```
+
 **Solution:** `pip install llama-index-embeddings-openai`
 
 ### Rate Limit Exceeded
+
 ```
 Error: Rate limit exceeded...
 ```
+
 **Solution:** Add delay between requests or upgrade OpenAI tier
 
 ### Invalid Dimensions
+
 ```
 Error: Dimension reduction not supported for this model
 ```
+
 **Solution:** Only v3 models support dimension reduction. Use full dimensions with ada-002.
+
+### Token Limit Exceeded
+
+```
+Error: This model's maximum context length is 8192 tokens, however you requested X tokens
+```
+
+**This error should not happen anymore!** The system now automatically:
+
+- Validates all chunks before sending to OpenAI
+- Splits any chunk over 8000 tokens
+- Shows warnings if splitting occurs
+
+**If you still see this error:**
+
+1. Update to latest version of the code
+2. Use smaller chunks: `--chunk-size 256`
+3. Reduce header weight: `--header-weight 1`
+4. Report as a bug (this shouldn't happen!)
 
 ## Examples
 
@@ -303,4 +420,3 @@ Open an issue if you need a specific provider!
 - [OpenAI Pricing](https://openai.com/pricing)
 - [Dimension Reduction Guide](https://platform.openai.com/docs/guides/embeddings/use-cases)
 - [HuggingFace Models](https://huggingface.co/models?pipeline_tag=sentence-similarity)
-

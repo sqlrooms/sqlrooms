@@ -112,6 +112,12 @@ Examples:
         help="Number of times to repeat headers in chunks for higher weight (default: 3, min: 1)",
     )
     
+    parser.add_argument(
+        "--overwrite",
+        action="store_true",
+        help="Overwrite existing database if it exists",
+    )
+    
     args = parser.parse_args()
     
     try:
@@ -127,17 +133,35 @@ Examples:
             use_markdown_chunking=not args.no_markdown_chunking,
             include_headers_in_chunks=not args.no_header_weighting,
             header_weight=args.header_weight,
+            overwrite=args.overwrite,
         )
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.", file=sys.stderr)
         sys.exit(130)
+    except FileExistsError as e:
+        print(f"\n{e}", file=sys.stderr)
+        sys.exit(1)
     except (FileNotFoundError, ValueError, ImportError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        print(f"\nError: {e}", file=sys.stderr)
-        import traceback
-        traceback.print_exc()
+        error_msg = str(e)
+        
+        # Provide helpful guidance for common errors
+        if "maximum context length" in error_msg.lower() and "openai" in error_msg.lower():
+            print(f"\nError: OpenAI token limit exceeded", file=sys.stderr)
+            print(f"\nThe error indicates a chunk exceeded OpenAI's token limit.", file=sys.stderr)
+            print(f"This has been fixed - please re-run with the same command.", file=sys.stderr)
+            print(f"\nIf the problem persists, try:", file=sys.stderr)
+            print(f"  1. Use smaller chunks: --chunk-size 512", file=sys.stderr)
+            print(f"  2. Reduce header weight: --header-weight 1", file=sys.stderr)
+            print(f"  3. Disable header weighting: --no-header-weighting", file=sys.stderr)
+            print(f"\nOriginal error: {error_msg}", file=sys.stderr)
+        else:
+            print(f"\nError: {e}", file=sys.stderr)
+            import traceback
+            traceback.print_exc()
+        
         sys.exit(1)
 
 

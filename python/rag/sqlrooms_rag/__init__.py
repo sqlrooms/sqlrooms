@@ -11,6 +11,8 @@ from .query import (
     hybrid_query,
     reciprocal_rank_fusion,
     get_source_documents,
+    get_embedding_metadata,
+    validate_embedding_model,
     print_results,
 )
 from .generate_umap import (
@@ -38,6 +40,8 @@ __all__ = [
     "hybrid_query",
     "reciprocal_rank_fusion",
     "get_source_documents",
+    "get_embedding_metadata",
+    "validate_embedding_model",
     "print_results",
     "extract_title_from_markdown",
     "extract_filename_from_metadata",
