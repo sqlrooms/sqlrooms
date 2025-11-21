@@ -20,6 +20,8 @@
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/ai-core": "workspace:*",
     "ai": "^5.0.44",
     "zod": "^4.1.8",
     "@openassistant/utils": "1.0.0-alpha.0"

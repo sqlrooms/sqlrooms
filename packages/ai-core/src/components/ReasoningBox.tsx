@@ -4,25 +4,13 @@ import {cn} from '@sqlrooms/ui';
 
 type ReasoningBoxProps = {
   children: React.ReactNode;
-  title?: React.ReactNode;
-  /** Whether the box should be expanded by default (default: false) */
+  className?: string;
+  title?: string;
   defaultOpen?: boolean;
 };
-
-/**
- * Component that renders a collapsible box for grouping consecutive tool parts.
- * Starts collapsed by default (content hidden) unless defaultOpen is true.
- * Clicking the title expands to show full content.
- *
- * @component
- * @param props - Component props
- * @param props.children - The tool parts to render inside the box
- * @param props.title - Custom title to display (default: "Thought")
- * @param props.defaultOpen - Whether the box should be expanded by default (default: false)
- * @returns A React component displaying a collapsible reasoning box
- */
 export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   children,
+  className,
   title,
   defaultOpen = false,
 }) => {
@@ -35,7 +23,7 @@ export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
   };
 
   return (
-    <div className="border-muted rounded-md border">
+    <div className={cn('border-muted rounded-md border', className)}>
       <button
         onClick={handleToggle}
         className={cn(

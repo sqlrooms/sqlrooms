@@ -2314,12 +2314,18 @@ importers:
       '@openassistant/utils':
         specifier: 1.0.0-alpha.0
         version: 1.0.0-alpha.0
+      '@sqlrooms/ai-core':
+        specifier: workspace:*
+        version: link:../ai-core
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
       ai:
         specifier: ^5.0.44
         version: 5.0.93(zod@4.1.8)

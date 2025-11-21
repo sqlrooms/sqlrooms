@@ -1,6 +1,8 @@
+import {OpenAssistantTool} from '@openassistant/utils';
+import {ReasoningBox} from '@sqlrooms/ai-core';
+import {Button} from '@sqlrooms/ui';
 import {useState} from 'react';
 import {z} from 'zod';
-import {OpenAssistantTool} from '@openassistant/utils';
 import type {RagSliceState} from './RagSlice';
 
 /**
@@ -58,32 +60,25 @@ function RagResultItem({
   const [isExpanded, setIsExpanded] = useState(false);
 
   return (
-    <div className="rounded border border-gray-200 p-2 dark:border-gray-700 dark:bg-gray-800">
-      <button
+    <div>
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={() => setIsExpanded(!isExpanded)}
         className="flex w-full items-center justify-between text-left"
       >
         <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">
           {isExpanded ? '▼' : '▶'} Result #{index + 1}
         </span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">
+        <span className="text-muted-foreground/50 text-xs">
           Score: {result.score.toFixed(3)}
         </span>
-      </button>
+      </Button>
 
       {isExpanded && (
-        <div className="mt-2 space-y-2">
-          <p className="whitespace-pre-wrap font-mono text-xs text-gray-700 dark:text-gray-300">
-            {result.text}
-          </p>
-          {result.metadata &&
-            typeof result.metadata.file_path === 'string' &&
-            result.metadata.file_path && (
-              <div className="text-xs text-gray-500 dark:text-gray-400">
-                📄 {result.metadata.file_path}
-              </div>
-            )}
-        </div>
+        <p className="text-muted-foreground/50 whitespace-pre-wrap p-5 font-mono text-xs">
+          {result.text}
+        </p>
       )}
     </div>
   );
@@ -105,23 +100,16 @@ function RagToolResult(result: RagToolLlmResult) {
   const {query, results, database} = result;
 
   return (
-    <div className="space-y-2 rounded border border-blue-200 bg-blue-50 p-3 dark:border-blue-800 dark:bg-blue-900/20">
-      <div>
-        <p className="text-xs font-semibold text-blue-900 dark:text-blue-300">
-          RAG Search: "{query}"
-        </p>
-        <p className="text-xs text-blue-700 dark:text-blue-400">
-          Database: {database} | Found {results?.length || 0} results
-        </p>
+    <ReasoningBox title={`Found ${results?.length || 0} results`}>
+      <div className="space-y-2 p-3">
+        <div className="space-y-2">
+          {results &&
+            results.map((result, i) => (
+              <RagResultItem key={i} result={result} index={i} />
+            ))}
+        </div>
       </div>
-
-      <div className="space-y-2">
-        {results &&
-          results.map((result, i) => (
-            <RagResultItem key={i} result={result} index={i} />
-          ))}
-      </div>
-    </div>
+    </ReasoningBox>
   );
 }
 
