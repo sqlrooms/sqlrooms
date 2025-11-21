@@ -127,8 +127,8 @@ importers:
   examples/ai:
     dependencies:
       '@ai-sdk/openai':
-        specifier: ^1.3.24
-        version: 1.3.24(zod@4.1.8)
+        specifier: ^2.0.32
+        version: 2.0.65(zod@4.1.8)
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.3.1
@@ -2214,15 +2214,30 @@ importers:
 
   packages/rag:
     dependencies:
+      '@openassistant/utils':
+        specifier: 1.0.0-alpha.0
+        version: 1.0.0-alpha.0
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
+      ai:
+        specifier: ^5.0.44
+        version: 5.0.93(zod@4.1.8)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
+      react:
+        specifier: 19.2.0
+        version: 19.2.0
+      react-dom:
+        specifier: 19.2.0
+        version: 19.2.0(react@19.2.0)
+      zod:
+        specifier: 4.1.8
+        version: 4.1.8
 
   packages/recharts:
     dependencies:
@@ -2720,12 +2735,6 @@ packages:
 
   '@ai-sdk/openai-compatible@1.0.27':
     resolution: {integrity: sha512-bpYruxVLhrTbVH6CCq48zMJNeHu6FmHtEedl9FXckEgcIEAi036idFhJlcRwC1jNCwlacbzb8dPD7OAH1EKJaQ==}
-    engines: {node: '>=18'}
-    peerDependencies:
-      zod: 4.1.8
-
-  '@ai-sdk/openai@1.3.24':
-    resolution: {integrity: sha512-GYXnGJTHRTZc4gJMSmFRgEQudjqd4PUN0ZjQhPwOAYH1yOAvQoG/Ikqs+HyISRbLPCrhbZnPKCNHuRU4OfpW0Q==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.8
@@ -13570,12 +13579,6 @@ snapshots:
     dependencies:
       '@ai-sdk/provider': 2.0.0
       '@ai-sdk/provider-utils': 3.0.17(zod@4.1.8)
-      zod: 4.1.8
-
-  '@ai-sdk/openai@1.3.24(zod@4.1.8)':
-    dependencies:
-      '@ai-sdk/provider': 1.1.3
-      '@ai-sdk/provider-utils': 2.2.8(zod@4.1.8)
       zod: 4.1.8
 
   '@ai-sdk/openai@2.0.65(zod@4.1.8)':

@@ -1,16 +1,15 @@
 # @sqlrooms/rag
 
-RAG (Retrieval Augmented Generation) helper module for SQLRooms. This package provides a Zustand slice for querying vector embeddings stored in DuckDB databases.
+Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings stored in DuckDB for semantic search and AI-powered applications.
 
 ## Features
 
-- 🔍 **Vector Similarity Search** - Query embeddings using cosine similarity
-- 💬 **Text Queries** - Query directly with text using configurable embedding providers
-- 📊 **Multiple Databases** - Search across multiple embedding databases simultaneously
-- ⚡ **Efficient** - Uses DuckDB's native vector functions (`array_cosine_similarity`)
-- 🔄 **Lazy Loading** - Databases are attached on-demand
-- 🌐 **Flexible Embedding** - Works with OpenAI, Transformers.js, Cohere, and custom providers
-- 📦 **Type-Safe** - Full TypeScript support
+- 🔍 **Semantic Search** - Query embeddings using vector similarity (cosine similarity)
+- 🗄️ **Multiple Databases** - Attach and search across multiple embedding databases
+- 🎯 **Per-Database Embedding Providers** - Each database can use a different embedding model
+- ✅ **Metadata Validation** - Automatic validation of embedding dimensions and models
+- 📊 **DuckDB-Powered** - Fast, in-process vector search with SQL
+- 🔄 **Flexible** - Works with OpenAI, HuggingFace, Transformers.js, or custom embeddings
 
 ## Installation
 
@@ -18,379 +17,409 @@ RAG (Retrieval Augmented Generation) helper module for SQLRooms. This package pr
 npm install @sqlrooms/rag @sqlrooms/duckdb @sqlrooms/room-shell
 ```
 
-## Usage
-
-### 1. Create embeddings databases
-
-First, prepare your embeddings using the Python tool:
-
-```bash
-pip install sqlrooms-rag
-
-# Generate embeddings from markdown files
-prepare-embeddings ./docs -o embeddings/docs.duckdb
-```
-
-See the [sqlrooms-rag Python package](../../python/rag) for details.
-
-### 2. Add RAG slice to your store
+## Quick Start
 
 ```typescript
-import {createRoomStore} from '@sqlrooms/room-shell';
 import {createDuckDbSlice} from '@sqlrooms/duckdb';
-import {createRagSlice} from '@sqlrooms/rag';
+import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {createRoomStore} from '@sqlrooms/room-shell';
+import {openai} from '@ai-sdk/openai';
 
-const store = createRoomStore({
-  config: {
-    name: 'my-rag-app',
+// 1. Create an embedding provider (matches your database preparation)
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  1536,
+);
+
+// 2. Configure your embedding databases
+const embeddingsDatabases = [
+  {
+    databaseFilePathOrUrl: '/path/to/docs.duckdb',
+    databaseName: 'docs',
+    embeddingProvider,
+    embeddingDimensions: 1536,
   },
+];
+
+// 3. Create the store with RAG capabilities
+const store = createRoomStore({
   slices: [
-    createDuckDbSlice(),
-    createRagSlice({
-      embeddingsDatabases: [
-        {
-          databaseFilePathOrUrl: '/embeddings/docs.duckdb',
-          databaseName: 'docs_embeddings',
-        },
-        {
-          databaseFilePathOrUrl: '/embeddings/api.duckdb',
-          databaseName: 'api_embeddings',
-        },
-      ],
-    }),
+    createDuckDbSlice({databasePath: ':memory:'}),
+    createRagSlice({embeddingsDatabases}),
   ],
 });
-```
 
-### 3. Initialize and query embeddings
-
-```typescript
-// Initialize (attaches databases)
+// 4. Initialize and query
 await store.getState().rag.initialize();
 
-// Query with a pre-computed embedding vector
-const queryEmbedding = [0.1, 0.2, 0.3, ...]; // 384-dimensional vector
-
-const results = await store.getState().rag.queryEmbeddings(
-  queryEmbedding,
-  {
-    topK: 5, // Return top 5 results
-    databases: ['docs_embeddings'], // Optional: search specific databases
-  }
-);
-
-// Process results
-results.forEach(result => {
-  console.log(`Score: ${result.score}`);
-  console.log(`Text: ${result.text}`);
-  console.log(`Source: ${result.metadata?.file_name}`);
-});
-```
-
-### 4. Query with text (automatic embedding generation)
-
-**New!** Configure an embedding provider to query directly with text:
-
-```typescript
-import OpenAI from 'openai';
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
-
-const openai = new OpenAI();
-
-// Define embedding provider
-const embeddingProvider: EmbeddingProvider = async (text) => {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: text,
-  });
-  return response.data[0].embedding;
-};
-
-// Option 1: Configure at creation
-const store = createRoomStore({
-  slices: [
-    createDuckDbSlice(),
-    createRagSlice({
-      embeddingsDatabases: [...],
-      embeddingProvider, // 👈 Pass provider here
-    }),
-  ],
-});
-
-// Now you can query with plain text!
 const results = await store.getState().rag.queryByText(
-  'How do I use window functions?',
-  {topK: 5}
+  'How do I create a table?',
+  {topK: 5},
 );
 
-// Option 2: Set provider later
-store.getState().rag.setEmbeddingProvider(embeddingProvider);
-const results2 = await store.getState().rag.queryByText('another query');
-```
-
-**See [EMBEDDING_PROVIDERS.md](./EMBEDDING_PROVIDERS.md) for complete examples including:**
-
-- OpenAI
-- Transformers.js (client-side, no server!)
-- Cohere
-- HuggingFace
-- Custom APIs
-- Caching, retry logic, and more
-
-### 5. Using with an embedding API (manual)
-
-Alternatively, generate embeddings manually before querying:
-
-```typescript
-async function searchDocs(query: string) {
-  // 1. Generate embedding from query text
-  const response = await fetch('/api/embeddings', {
-    method: 'POST',
-    body: JSON.stringify({text: query}),
-  });
-  const {embedding} = await response.json();
-
-  // 2. Query the vector database
-  const results = await store.getState().rag.queryEmbeddings(embedding, {
-    topK: 10,
-  });
-
-  return results;
-}
-
-// Usage
-const results = await searchDocs('How do I use DuckDB?');
+console.log(results);
 ```
 
 ## API Reference
 
 ### `createRagSlice(options)`
 
-Creates a RAG slice for the room store.
+Creates a RAG slice for your store.
 
-**Options:**
+#### Options
 
 - `embeddingsDatabases` - Array of embedding database configurations
-  - `databaseFilePathOrUrl` - Path to the .duckdb file
-  - `databaseName` - Name to use when attaching the database
-- `embeddingProvider` (optional) - Function to generate embeddings from text
-  - Type: `(text: string) => Promise<number[]>`
-  - Enables `queryByText()` method
 
-**Returns:** StateCreator for the RAG slice
+#### Returns
 
-### `RagSliceState`
+A state creator function for Zustand.
 
-The slice adds a `rag` object to the store with the following methods:
+### `EmbeddingDatabase`
 
-#### `initialize(): Promise<void>`
+Configuration for an embedding database:
 
-Attaches all configured embedding databases. Called automatically on first query if not called explicitly.
+```typescript
+type EmbeddingDatabase = {
+  /** Path or URL to the DuckDB embedding database file */
+  databaseFilePathOrUrl: string;
+
+  /** Name to use when attaching the database */
+  databaseName: string;
+
+  /**
+   * Embedding provider for this database.
+   * MUST match the model used during database preparation.
+   */
+  embeddingProvider: EmbeddingProvider;
+
+  /**
+   * Expected embedding dimensions (for validation).
+   * Optional but recommended.
+   */
+  embeddingDimensions?: number;
+};
+```
+
+### `EmbeddingProvider`
+
+Function that converts text to embeddings:
+
+```typescript
+type EmbeddingProvider = (text: string) => Promise<number[]>;
+```
+
+**Important**: The embedding provider MUST match the model used when preparing the database. Check your database metadata to ensure compatibility.
+
+### Store Methods
+
+#### `rag.initialize()`
+
+Initialize RAG by attaching all embedding databases and validating metadata.
 
 ```typescript
 await store.getState().rag.initialize();
 ```
 
-#### `queryEmbeddings(queryEmbedding, options?): Promise<EmbeddingResult[]>`
+#### `rag.queryByText(text, options)`
 
-Queries embeddings using a pre-computed vector embedding.
-
-**Parameters:**
-
-- `queryEmbedding` - Array of numbers (embedding vector, e.g., 384 dimensions)
-- `options` (optional)
-  - `topK` - Number of results to return (default: 5)
-  - `databases` - Array of database names to search (default: all attached databases)
-
-**Example:**
+Query embeddings using text. The embedding provider for the specified database will be used to convert text to embeddings.
 
 ```typescript
-const embedding = [0.1, 0.2, ...]; // Pre-computed embedding
-const results = await store.getState().rag.queryEmbeddings(embedding, {topK: 5});
-```
-
-#### `queryByText(queryText, options?): Promise<EmbeddingResult[]>`
-
-Queries embeddings using text (requires embedding provider).
-
-**Parameters:**
-
-- `queryText` - The text query string
-- `options` (optional)
-  - `topK` - Number of results to return (default: 5)
-  - `databases` - Array of database names to search (default: all attached databases)
-
-**Example:**
-
-```typescript
-const results = await store
-  .getState()
-  .rag.queryByText('How do I use window functions?', {topK: 5});
-```
-
-**Throws:** Error if no embedding provider is configured
-
-#### `setEmbeddingProvider(provider): void`
-
-Sets or updates the embedding provider for text queries.
-
-**Parameters:**
-
-- `provider` - Function that converts text to embeddings
-  - Type: `(text: string) => Promise<number[]>`
-
-**Example:**
-
-```typescript
-store.getState().rag.setEmbeddingProvider(async (text) => {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: text,
-  });
-  return response.data[0].embedding;
+const results = await store.getState().rag.queryByText('search query', {
+  topK: 5, // Number of results to return (default: 5)
+  database: 'docs', // Database to search (default: first database)
 });
 ```
 
-**Returns:** Promise resolving to array of `EmbeddingResult`:
+Returns:
 
 ```typescript
 type EmbeddingResult = {
-  score: number; // Cosine similarity score (0-1)
-  text: string; // The document text
-  nodeId: string; // Unique identifier
-  metadata?: {
-    // Optional metadata
-    file_name?: string;
-    [key: string]: unknown;
-  };
+  score: number; // Cosine similarity (0-1, higher is better)
+  text: string; // The matched text chunk
+  nodeId: string; // Unique identifier for the chunk
+  metadata?: Record<string, unknown>; // Optional metadata (file path, etc.)
 };
 ```
 
-#### `listDatabases(): string[]`
+#### `rag.queryEmbeddings(embedding, options)`
 
-Returns array of attached database names.
+Query embeddings using a pre-computed embedding vector.
+
+```typescript
+const embedding = await embeddingProvider('search query');
+const results = await store.getState().rag.queryEmbeddings(embedding, {
+  topK: 5,
+  database: 'docs',
+});
+```
+
+#### `rag.getMetadata(databaseName)`
+
+Get metadata for a specific database:
+
+```typescript
+const metadata = await store.getState().rag.getMetadata('docs');
+console.log(metadata);
+// {
+//   provider: 'openai',
+//   model: 'text-embedding-3-small',
+//   dimensions: 1536,
+//   chunkingStrategy: 'markdown-aware'
+// }
+```
+
+#### `rag.listDatabases()`
+
+List all attached embedding databases:
 
 ```typescript
 const databases = store.getState().rag.listDatabases();
-// => ['docs_embeddings', 'api_embeddings']
+console.log(databases); // ['docs', 'tutorials', 'api']
 ```
+
+## Multiple Databases
+
+You can attach multiple embedding databases, each with its own embedding model:
+
+```typescript
+import {openai} from '@ai-sdk/openai';
+import {google} from '@ai-sdk/google';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+const embeddingsDatabases = [
+  {
+    databaseFilePathOrUrl: '/data/duckdb_docs.duckdb',
+    databaseName: 'duckdb_docs',
+    // OpenAI text-embedding-3-small (1536d)
+    embeddingProvider: createAiEmbeddingProvider(
+      openai,
+      'text-embedding-3-small',
+      1536,
+    ),
+    embeddingDimensions: 1536,
+  },
+  {
+    databaseFilePathOrUrl: '/data/react_docs.duckdb',
+    databaseName: 'react_docs',
+    // OpenAI text-embedding-3-small with reduced dimensions (512d)
+    embeddingProvider: createAiEmbeddingProvider(
+      openai,
+      'text-embedding-3-small',
+      512,
+    ),
+    embeddingDimensions: 512,
+  },
+  {
+    databaseFilePathOrUrl: '/data/python_docs.duckdb',
+    databaseName: 'python_docs',
+    // Google text-embedding-004 (768d)
+    embeddingProvider: createAiEmbeddingProvider(
+      google,
+      'text-embedding-004',
+      768,
+    ),
+    embeddingDimensions: 768,
+  },
+];
+```
+
+Query a specific database:
+
+```typescript
+// Query DuckDB docs
+const duckdbResults = await store
+  .getState()
+  .rag.queryByText('How to create a table?', {
+    database: 'duckdb_docs',
+  });
+
+// Query React docs
+const reactResults = await store
+  .getState()
+  .rag.queryByText('How to use hooks?', {
+    database: 'react_docs',
+  });
+```
+
+## Embedding Providers
+
+The `createAiEmbeddingProvider()` function works with any provider from the Vercel AI SDK.
+
+### OpenAI
+
+```typescript
+import {openai} from '@ai-sdk/openai';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  1536,
+);
+```
+
+### Google
+
+```typescript
+import {google} from '@ai-sdk/google';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+const embeddingProvider = createAiEmbeddingProvider(
+  google,
+  'text-embedding-004',
+  768,
+);
+```
+
+### Custom Provider
+
+```typescript
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+// Any provider that implements the AiProvider interface
+const embeddingProvider = createAiEmbeddingProvider(
+  myCustomProvider,
+  'my-model-id',
+  512,
+);
+```
+
+### Multiple Providers Example
+
+You can use different providers for different databases:
+
+```typescript
+import {openai} from '@ai-sdk/openai';
+import {google} from '@ai-sdk/google';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+const embeddingsDatabases = [
+  {
+    databaseName: 'docs_openai',
+    databaseFilePathOrUrl: './embeddings/docs_openai.duckdb',
+    embeddingProvider: createAiEmbeddingProvider(
+      openai,
+      'text-embedding-3-small',
+      1536,
+    ),
+    embeddingDimensions: 1536,
+  },
+  {
+    databaseName: 'docs_google',
+    databaseFilePathOrUrl: './embeddings/docs_google.duckdb',
+    embeddingProvider: createAiEmbeddingProvider(
+      google,
+      'text-embedding-004',
+      768,
+    ),
+    embeddingDimensions: 768,
+  },
+];
+```
+
+## Preparing Databases
+
+Use the Python `sqlrooms_rag` package to prepare embedding databases:
+
+```bash
+# Install the package
+pip install sqlrooms-rag
+
+# Prepare embeddings with OpenAI
+python -m sqlrooms_rag.cli prepare-embeddings \
+  docs/ \
+  -o embeddings.duckdb \
+  --provider openai \
+  --model text-embedding-3-small \
+  --embed-dim 1536
+
+# Prepare embeddings with HuggingFace (local, free)
+python -m sqlrooms_rag.cli prepare-embeddings \
+  docs/ \
+  -o embeddings.duckdb \
+  --provider huggingface \
+  --model BAAI/bge-small-en-v1.5
+```
+
+See the [Python package documentation](../../python/rag/README.md) for more details.
 
 ## Database Schema
 
-The embeddings databases should have a `documents` table with the following schema:
+The embedding databases created by `sqlrooms_rag` have the following structure:
 
 ```sql
+-- Main documents table with embeddings
 CREATE TABLE documents (
-  node_id VARCHAR,           -- Unique identifier
-  text VARCHAR,              -- Document text
-  embedding FLOAT[384],      -- Embedding vector (dimension depends on model)
-  metadata_ JSON             -- Optional metadata (file_name, etc.)
+  node_id VARCHAR PRIMARY KEY,
+  text TEXT,
+  metadata_ JSON,
+  embedding FLOAT[],  -- Vector embedding
+  doc_id VARCHAR      -- Link to source document
+);
+
+-- Original source documents (full, unchunked)
+CREATE TABLE source_documents (
+  doc_id VARCHAR PRIMARY KEY,
+  file_path VARCHAR,
+  file_name VARCHAR,
+  text TEXT,
+  metadata_ JSON,
+  created_at TIMESTAMP
+);
+
+-- Metadata about the embedding process
+CREATE TABLE embedding_metadata (
+  key VARCHAR PRIMARY KEY,
+  value VARCHAR,
+  created_at TIMESTAMP
 );
 ```
 
-This schema is automatically created by the `sqlrooms-rag` Python package.
-
-## Integration Examples
-
-### With OpenAI Embeddings
+## Error Handling
 
 ```typescript
-import OpenAI from 'openai';
-
-const openai = new OpenAI();
-
-async function searchWithOpenAI(query: string) {
-  // Generate embedding using OpenAI
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: query,
+try {
+  const results = await store.getState().rag.queryByText('search query', {
+    database: 'nonexistent',
   });
+} catch (error) {
+  // Error: Database "nonexistent" not found. Available: docs, tutorials
+}
 
-  const embedding = response.data[0].embedding;
-
-  // Search the vector database
-  return await store.getState().rag.queryEmbeddings(embedding, {
-    topK: 10,
+try {
+  const wrongDimEmbedding = new Array(384).fill(0);
+  await store.getState().rag.queryEmbeddings(wrongDimEmbedding, {
+    database: 'docs', // Expects 1536 dimensions
   });
+} catch (error) {
+  // Error: Dimension mismatch: query has 384 dimensions,
+  //        but database "docs" expects 1536 dimensions
 }
 ```
 
-### With Transformers.js (Client-side)
+## Best Practices
 
-```typescript
-import {pipeline} from '@xenova/transformers';
+1. **Match Embedding Models**: Always use the same embedding model and dimensions when querying as when preparing the database.
 
-// Initialize the embedding model (runs in browser!)
-const embedder = await pipeline(
-  'feature-extraction',
-  'Xenova/all-MiniLM-L6-v2',
-);
+2. **Check Metadata**: Use `getMetadata()` to verify the model and dimensions before querying.
 
-async function searchClientSide(query: string) {
-  // Generate embedding in the browser
-  const output = await embedder(query, {
-    pooling: 'mean',
-    normalize: true,
-  });
-  const embedding = Array.from(output.data);
+3. **Dimension Validation**: Provide `embeddingDimensions` in your database configuration for automatic validation.
 
-  // Search the vector database
-  return await store.getState().rag.queryEmbeddings(embedding, {
-    topK: 5,
-  });
-}
-```
+4. **Database Naming**: Use descriptive database names (e.g., `duckdb_docs`, `react_docs`) to easily identify them.
 
-### With a Custom Embedding Service
+5. **Error Handling**: Always wrap queries in try-catch blocks to handle dimension mismatches and missing databases.
 
-```typescript
-async function generateEmbedding(text: string): Promise<number[]> {
-  const response = await fetch('https://your-service.com/embed', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({text}),
-  });
+6. **Performance**: For large databases, consider using reduced dimensions (e.g., 512 instead of 1536) for faster queries and lower costs.
 
-  const {embedding} = await response.json();
-  return embedding;
-}
+## Examples
 
-async function search(query: string) {
-  const embedding = await generateEmbedding(query);
-  return await store.getState().rag.queryEmbeddings(embedding);
-}
-```
+See the [examples/ai](../../examples/ai) directory for complete examples:
 
-## Performance Tips
-
-1. **Batch queries** - Initialize once, query multiple times
-2. **Limit topK** - Only retrieve as many results as you need
-3. **Use specific databases** - Search only relevant databases when possible
-4. **Pre-compute embeddings** - Generate embeddings server-side if possible
-
-## Troubleshooting
-
-### "No embedding databases available to search"
-
-Make sure you've called `initialize()` or that your database configurations are correct.
-
-### "array_cosine_similarity function not found"
-
-Ensure you're using a version of DuckDB that supports vector functions (v0.9.0+).
-
-### Embedding dimension mismatch
-
-Ensure your query embeddings have the same dimensions as the stored embeddings. Common dimensions:
-
-- `BAAI/bge-small-en-v1.5`: 384
-- `text-embedding-ada-002`: 1536
-- `all-MiniLM-L6-v2`: 384
-
-## Related Packages
-
-- [`@sqlrooms/duckdb`](../duckdb) - DuckDB integration for SQLRooms
-- [`@sqlrooms/room-shell`](../room-shell) - Core room state management
-- [`sqlrooms-rag` (Python)](../../python/rag) - Embedding preparation tool
+- `src/embeddings.ts` - OpenAI embedding provider implementations
+- `src/rag-example.ts` - Comprehensive usage examples
+- `src/store.ts` - Store configuration with RAG
 
 ## License
 

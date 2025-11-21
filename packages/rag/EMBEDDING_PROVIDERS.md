@@ -1,502 +1,383 @@
-# Embedding Provider Examples
-
-This guide shows how to implement embedding providers for the `@sqlrooms/rag` package to enable text-based queries using `queryByText()`.
+# Embedding Providers Guide
 
 ## Overview
 
-An embedding provider is a function that converts text into a vector embedding:
+The `@sqlrooms/rag` package provides `createAiEmbeddingProvider()` - a generic function that works with any provider from the Vercel AI SDK. This allows you to use OpenAI, Google, Anthropic, or any custom provider with a consistent API.
 
-```typescript
-type EmbeddingProvider = (text: string) => Promise<number[]>;
+## Installation
+
+```bash
+npm install @sqlrooms/rag ai @ai-sdk/openai
+# Or for Google
+npm install @sqlrooms/rag ai @ai-sdk/google
 ```
 
-## Option 1: Configure at Creation
+## Basic Usage
 
 ```typescript
-const store = createRoomStore({
-  slices: [
-    createDuckDbSlice(),
-    createRagSlice({
-      embeddingsDatabases: [{...}],
-      embeddingProvider: async (text) => {
-        // Your embedding logic here
-        return embedding;
-      },
-    }),
-  ],
-});
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {openai} from '@ai-sdk/openai';
 
-// Now you can query with text
-const results = await store.getState().rag.queryByText('What is a window function?');
-```
-
-## Option 2: Set After Creation
-
-```typescript
-const store = createRoomStore({
-  slices: [
-    createDuckDbSlice(),
-    createRagSlice({
-      embeddingsDatabases: [{...}],
-      // No provider initially
-    }),
-  ],
-});
-
-// Set provider later
-store.getState().rag.setEmbeddingProvider(async (text) => {
-  const embedding = await generateEmbedding(text);
-  return embedding;
-});
-
-// Now you can query
-const results = await store.getState().rag.queryByText('query text');
-```
-
-## Option 3: Use Pre-computed Embeddings
-
-```typescript
-// No provider needed - generate embeddings yourself
-const embedding = await myEmbeddingService(query);
-const results = await store.getState().rag.queryEmbeddings(embedding);
-```
-
----
-
-## Implementation Examples
-
-### OpenAI API
-
-```typescript
-import OpenAI from 'openai';
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-const openaiProvider: EmbeddingProvider = async (text) => {
-  const response = await openai.embeddings.create({
-    model: 'text-embedding-ada-002',
-    input: text,
-  });
-
-  return response.data[0].embedding;
-};
-
-// Use in store
-createRagSlice({
-  embeddingsDatabases: [{...}],
-  embeddingProvider: openaiProvider,
-});
-
-// Query with text
-const results = await store.getState().rag.queryByText(
-  'How do I use window functions?'
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,                      // Provider instance
+  'text-embedding-3-small',    // Model ID
+  1536                         // Dimensions (optional)
 );
 ```
 
-**Note:** OpenAI embeddings are 1536-dimensional, so make sure your database embeddings match!
+## Supported Providers
 
-### Transformers.js (Client-side, no server needed!)
+### OpenAI
 
 ```typescript
-import {pipeline} from '@xenova/transformers';
-import {createRagSlice, type EmbeddingProvider} from '@sqlrooms/rag';
+import {openai} from '@ai-sdk/openai';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
 
-// Initialize model once
-let embedder: any = null;
+// text-embedding-3-small (1536d)
+const provider = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  1536,
+);
 
-const transformersProvider: EmbeddingProvider = async (text) => {
-  // Lazy load the model
-  if (!embedder) {
-    embedder = await pipeline(
-      'feature-extraction',
-      'Xenova/all-MiniLM-L6-v2',
-    );
-  }
+// text-embedding-3-small with reduced dimensions (512d)
+const provider512 = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  512,
+);
 
-  // Generate embedding
-  const output = await embedder(text, {
-    pooling: 'mean',
-    normalize: true,
-  });
+// text-embedding-3-large (3072d)
+const providerLarge = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-large',
+  3072,
+);
 
-  return Array.from(output.data);
-};
-
-// Use in store
-createRagSlice({
-  embeddingsDatabases: [{...}],
-  embeddingProvider: transformersProvider,
-});
-
-// Works entirely in the browser!
-const results = await store.getState().rag.queryByText('query');
+// Legacy ada-002 (1536d)
+const providerAda = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-ada-002',
+  1536,
+);
 ```
 
-**Benefits:**
+**API Key**: Set `OPENAI_API_KEY` environment variable or pass via `openai.apiKey`.
 
-- ✅ Runs entirely in browser
-- ✅ No API costs
-- ✅ Works offline
-- ✅ Privacy-friendly
+**Pricing** (as of 2024):
+- text-embedding-3-small: $0.02 / 1M tokens
+- text-embedding-3-large: $0.13 / 1M tokens
 
-**Considerations:**
-
-- First load downloads model (~25MB)
-- Model is cached for subsequent uses
-
-### Custom API Endpoint
+### Google
 
 ```typescript
-import {type EmbeddingProvider} from '@sqlrooms/rag';
+import {google} from '@ai-sdk/google';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
 
-const customApiProvider: EmbeddingProvider = async (text) => {
-  const response = await fetch('/api/embeddings', {
-    method: 'POST',
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({text}),
-  });
+// text-embedding-004 (768d)
+const provider = createAiEmbeddingProvider(
+  google,
+  'text-embedding-004',
+  768,
+);
 
-  if (!response.ok) {
-    throw new Error(`Embedding generation failed: ${response.statusText}`);
-  }
+// Older models
+const provider003 = createAiEmbeddingProvider(
+  google,
+  'embedding-001',
+  768,
+);
+```
 
-  const {embedding} = await response.json();
-  return embedding;
+**API Key**: Set `GOOGLE_GENERATIVE_AI_API_KEY` environment variable.
+
+**Pricing** (as of 2024):
+- text-embedding-004: Free (rate limited)
+
+### Anthropic
+
+Anthropic doesn't currently provide embedding models, but you can use their completion models with OpenAI or Google embeddings.
+
+### Custom Providers
+
+You can create a custom provider that implements the `AiProvider` interface:
+
+```typescript
+import {createAiEmbeddingProvider, type AiProvider} from '@sqlrooms/rag';
+
+// Custom provider that implements the interface
+const myProvider: AiProvider = {
+  textEmbeddingModel(modelId: string, settings?: {dimensions?: number}) {
+    return {
+      // Your custom implementation
+      // Must be compatible with Vercel AI SDK's embed() function
+    };
+  },
 };
 
-createRagSlice({
-  embeddingsDatabases: [{...}],
-  embeddingProvider: customApiProvider,
+const embeddingProvider = createAiEmbeddingProvider(
+  myProvider,
+  'my-custom-model',
+  512,
+);
+```
+
+## Complete Example
+
+```typescript
+import {createRagSlice, createAiEmbeddingProvider} from '@sqlrooms/rag';
+import {openai} from '@ai-sdk/openai';
+import {google} from '@ai-sdk/google';
+
+// Set API keys in environment
+// OPENAI_API_KEY=sk-...
+// GOOGLE_GENERATIVE_AI_API_KEY=...
+
+const embeddingsDatabases = [
+  {
+    databaseName: 'duckdb_docs',
+    databaseFilePathOrUrl: './embeddings/duckdb_openai.duckdb',
+    // Prepared with OpenAI text-embedding-3-small
+    embeddingProvider: createAiEmbeddingProvider(
+      openai,
+      'text-embedding-3-small',
+      1536,
+    ),
+    embeddingDimensions: 1536,
+  },
+  {
+    databaseName: 'react_docs',
+    databaseFilePathOrUrl: './embeddings/react_google.duckdb',
+    // Prepared with Google text-embedding-004
+    embeddingProvider: createAiEmbeddingProvider(
+      google,
+      'text-embedding-004',
+      768,
+    ),
+    embeddingDimensions: 768,
+  },
+];
+
+const store = createRoomStore({
+  slices: [
+    createRagSlice({embeddingsDatabases}),
+    // ... other slices
+  ],
 });
 ```
 
-**Example API endpoint (Next.js):**
+## Matching Database Models
+
+**Critical**: The embedding provider MUST match the model used when preparing the database.
+
+### Check Database Metadata
 
 ```typescript
-// pages/api/embeddings.ts
-import {OpenAI} from 'openai';
-import type {NextApiRequest, NextApiResponse} from 'next';
+const metadata = await store.getState().rag.getMetadata('duckdb_docs');
+console.log(metadata);
+// {
+//   provider: 'openai',
+//   model: 'text-embedding-3-small',
+//   dimensions: 1536,
+//   chunkingStrategy: 'markdown-aware'
+// }
+```
 
-const openai = new OpenAI();
+### Create Matching Provider
 
-export default async function handler(
-  req: NextApiRequest,
-  res: NextApiResponse,
-) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({error: 'Method not allowed'});
+```typescript
+import {openai} from '@ai-sdk/openai';
+import {createAiEmbeddingProvider} from '@sqlrooms/rag';
+
+// Match the metadata
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,                           // Provider matches 'openai'
+  metadata.model,                   // Model matches
+  metadata.dimensions               // Dimensions match
+);
+```
+
+## Preparing Databases
+
+Use the Python `sqlrooms_rag` package to prepare databases with different providers:
+
+### OpenAI
+
+```bash
+python -m sqlrooms_rag.cli prepare-embeddings \
+  docs/ \
+  -o embeddings/docs_openai.duckdb \
+  --provider openai \
+  --model text-embedding-3-small \
+  --embed-dim 1536 \
+  --api-key $OPENAI_API_KEY
+```
+
+### HuggingFace (Local)
+
+```bash
+python -m sqlrooms_rag.cli prepare-embeddings \
+  docs/ \
+  -o embeddings/docs_local.duckdb \
+  --provider huggingface \
+  --model BAAI/bge-small-en-v1.5 \
+  --embed-dim 384
+```
+
+**Note**: For HuggingFace models, you'll need to implement a custom provider or use a different client-side embedding solution (like Transformers.js) since the Vercel AI SDK doesn't currently support HuggingFace embeddings.
+
+## Provider Comparison
+
+| Provider | Model | Dimensions | Cost | Speed | Quality |
+|----------|-------|-----------|------|-------|---------|
+| OpenAI | text-embedding-3-small | 1536 | $0.02/1M | Fast | Excellent |
+| OpenAI | text-embedding-3-small | 512 | $0.02/1M | Very Fast | Good |
+| OpenAI | text-embedding-3-large | 3072 | $0.13/1M | Moderate | Best |
+| Google | text-embedding-004 | 768 | Free | Fast | Excellent |
+
+## Best Practices
+
+### 1. Consistent Models
+
+Always use the same model for preparation and querying:
+
+```typescript
+// ❌ Wrong - different models
+// Prepared with: text-embedding-3-small
+embeddingProvider: createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-large',  // Different model!
+  3072
+)
+
+// ✅ Correct - same model
+embeddingProvider: createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',  // Same model
+  1536
+)
+```
+
+### 2. Dimension Matching
+
+Ensure dimensions match exactly:
+
+```typescript
+// ❌ Wrong - different dimensions
+// Prepared with 1536 dimensions
+embeddingProvider: createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  512  // Different dimensions!
+)
+
+// ✅ Correct - same dimensions
+embeddingProvider: createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  1536  // Same dimensions
+)
+```
+
+### 3. Environment Variables
+
+Use environment variables for API keys:
+
+```bash
+# .env
+OPENAI_API_KEY=sk-...
+GOOGLE_GENERATIVE_AI_API_KEY=...
+```
+
+```typescript
+// No need to pass API keys explicitly
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,  // Uses OPENAI_API_KEY automatically
+  'text-embedding-3-small',
+  1536,
+);
+```
+
+### 4. Cost Optimization
+
+For lower costs:
+- Use smaller dimensions (512 vs 1536)
+- Use Google (free tier)
+- Cache embeddings when possible
+
+```typescript
+// Reduced dimensions = lower cost + faster
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,
+  'text-embedding-3-small',
+  512,  // 3x faster, same cost per token
+);
+```
+
+### 5. Error Handling
+
+Always handle errors gracefully:
+
+```typescript
+try {
+  const results = await store.getState().rag.queryByText('query');
+} catch (error) {
+  if (error.message.includes('dimension mismatch')) {
+    // Check database metadata and update provider
+  } else if (error.message.includes('API key')) {
+    // Check environment variables
   }
-
-  const {text} = req.body;
-
-  try {
-    const response = await openai.embeddings.create({
-      model: 'text-embedding-ada-002',
-      input: text,
-    });
-
-    res.status(200).json({embedding: response.data[0].embedding});
-  } catch (error) {
-    console.error('Embedding error:', error);
-    res.status(500).json({error: 'Failed to generate embedding'});
-  }
+  console.error('RAG query failed:', error);
 }
 ```
-
-### Cohere API
-
-```typescript
-import {CohereClient} from 'cohere-ai';
-import {type EmbeddingProvider} from '@sqlrooms/rag';
-
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY,
-});
-
-const cohereProvider: EmbeddingProvider = async (text) => {
-  const response = await cohere.embed({
-    texts: [text],
-    model: 'embed-english-v3.0',
-    inputType: 'search_query',
-  });
-
-  return response.embeddings[0];
-};
-
-createRagSlice({
-  embeddingsDatabases: [{...}],
-  embeddingProvider: cohereProvider,
-});
-```
-
-### Anthropic (Claude with embeddings)
-
-```typescript
-// Note: Anthropic doesn't provide embeddings directly
-// Use via a proxy or another service
-
-const anthropicProvider: EmbeddingProvider = async (text) => {
-  const response = await fetch('https://your-embedding-proxy.com/embed', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${process.env.ANTHROPIC_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({text}),
-  });
-
-  const {embedding} = await response.json();
-  return embedding;
-};
-```
-
-### HuggingFace Inference API
-
-```typescript
-import {HfInference} from '@huggingface/inference';
-import {type EmbeddingProvider} from '@sqlrooms/rag';
-
-const hf = new HfInference(process.env.HUGGINGFACE_API_KEY);
-
-const huggingfaceProvider: EmbeddingProvider = async (text) => {
-  const response = await hf.featureExtraction({
-    model: 'sentence-transformers/all-MiniLM-L6-v2',
-    inputs: text,
-  });
-
-  // HuggingFace returns various formats, handle accordingly
-  return Array.from(response as number[]);
-};
-
-createRagSlice({
-  embeddingsDatabases: [{...}],
-  embeddingProvider: huggingfaceProvider,
-});
-```
-
----
-
-## Advanced Patterns
-
-### Caching Embeddings
-
-```typescript
-const embeddingCache = new Map<string, number[]>();
-
-const cachedProvider: EmbeddingProvider = async (text) => {
-  const cacheKey = text.toLowerCase().trim();
-
-  if (embeddingCache.has(cacheKey)) {
-    return embeddingCache.get(cacheKey)!;
-  }
-
-  const embedding = await generateEmbedding(text);
-  embeddingCache.set(cacheKey, embedding);
-
-  return embedding;
-};
-```
-
-### Retry Logic
-
-```typescript
-const providerWithRetry: EmbeddingProvider = async (text) => {
-  const maxRetries = 3;
-  let lastError: Error | null = null;
-
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      return await generateEmbedding(text);
-    } catch (error) {
-      lastError = error as Error;
-      await new Promise((resolve) => setTimeout(resolve, 1000 * (i + 1)));
-    }
-  }
-
-  throw new Error(`Failed after ${maxRetries} retries: ${lastError?.message}`);
-};
-```
-
-### Fallback Provider
-
-```typescript
-const fallbackProvider: EmbeddingProvider = async (text) => {
-  try {
-    // Try primary provider
-    return await openaiProvider(text);
-  } catch (error) {
-    console.warn('Primary provider failed, using fallback:', error);
-    // Fallback to Transformers.js
-    return await transformersProvider(text);
-  }
-};
-```
-
-### Rate Limiting
-
-```typescript
-import pLimit from 'p-limit';
-
-const limit = pLimit(5); // Max 5 concurrent requests
-
-const rateLimitedProvider: EmbeddingProvider = async (text) => {
-  return limit(() => generateEmbedding(text));
-};
-```
-
----
-
-## Complete Example: React Component
-
-```typescript
-import {useState} from 'react';
-import {useRoomStore} from './store';
-import type {EmbeddingResult} from '@sqlrooms/rag';
-
-function DocumentSearch() {
-  const [query, setQuery] = useState('');
-  const [results, setResults] = useState<EmbeddingResult[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const store = useRoomStore();
-
-  const handleSearch = async () => {
-    if (!query.trim()) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      // Query directly with text - provider handles embedding generation
-      const searchResults = await store.rag.queryByText(query, {
-        topK: 10,
-      });
-
-      setResults(searchResults);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Search failed');
-      console.error('Search error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div>
-      <div>
-        <input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-          placeholder="Search documentation..."
-          disabled={loading}
-        />
-        <button onClick={handleSearch} disabled={loading || !query.trim()}>
-          {loading ? 'Searching...' : 'Search'}
-        </button>
-      </div>
-
-      {error && <div style={{color: 'red'}}>Error: {error}</div>}
-
-      {results.length > 0 && (
-        <div>
-          <h3>Results ({results.length})</h3>
-          {results.map((result) => (
-            <div key={result.nodeId}>
-              <div>Score: {(result.score * 100).toFixed(1)}%</div>
-              <div>{result.text.slice(0, 200)}...</div>
-              {result.metadata?.file_name && (
-                <small>Source: {result.metadata.file_name}</small>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-```
-
----
-
-## Choosing the Right Provider
-
-| Provider            | Best For         | Pros                     | Cons                   |
-| ------------------- | ---------------- | ------------------------ | ---------------------- |
-| **OpenAI**          | Production apps  | High quality, reliable   | Costs $, API required  |
-| **Transformers.js** | Privacy, offline | Free, client-side        | Large initial download |
-| **Cohere**          | Production apps  | Good quality, affordable | API required           |
-| **HuggingFace**     | Experimentation  | Many models, free tier   | Rate limits            |
-| **Custom API**      | Enterprise       | Full control             | Need to maintain       |
-
-## Embedding Dimension Compatibility
-
-**Important:** Your query embeddings must match your database embeddings in dimension!
-
-Common dimensions:
-
-- `text-embedding-ada-002` (OpenAI): **1536**
-- `BAAI/bge-small-en-v1.5`: **384**
-- `all-MiniLM-L6-v2`: **384**
-- `all-mpnet-base-v2`: **768**
-
-Make sure to use the **same model** for both:
-
-1. Preparing embeddings (Python `sqlrooms-rag`)
-2. Querying embeddings (TypeScript provider)
-
----
-
-## Migration from queryEmbeddings
-
-**Before:**
-
-```typescript
-// Manual embedding generation
-const embedding = await generateEmbedding(query);
-const results = await store.rag.queryEmbeddings(embedding);
-```
-
-**After:**
-
-```typescript
-// Automatic embedding generation
-const results = await store.rag.queryByText(query);
-```
-
-**Both work!** `queryEmbeddings` is still available if you want full control.
-
----
 
 ## Troubleshooting
 
-### "No embedding provider configured"
+### "Failed to generate embedding"
 
-Configure a provider:
+**Cause**: API key missing or invalid
 
-```typescript
-store.rag.setEmbeddingProvider(myProvider);
+**Solution**: Check environment variables:
+```bash
+echo $OPENAI_API_KEY
+echo $GOOGLE_GENERATIVE_AI_API_KEY
 ```
 
-### Dimension mismatch errors
+### "Dimension mismatch"
 
-Ensure your provider uses the same model dimensions as your database embeddings.
+**Cause**: Query embedding dimensions don't match database
 
-### Slow queries
+**Solution**: Check database metadata and update provider:
+```typescript
+const metadata = await store.getState().rag.getMetadata('docs');
+const embeddingProvider = createAiEmbeddingProvider(
+  openai,
+  metadata.model,
+  metadata.dimensions
+);
+```
 
-- Cache embeddings for repeated queries
-- Use client-side models (Transformers.js) to avoid network latency
-- Batch process multiple queries if possible
+### Poor Search Results
 
----
+**Causes**:
+1. Wrong embedding model
+2. Different model versions
+3. Database prepared with different settings
 
-## Related Documentation
+**Solution**: Re-prepare database with matching settings:
+```bash
+python -m sqlrooms_rag.cli prepare-embeddings \
+  docs/ \
+  -o embeddings/docs.duckdb \
+  --provider openai \
+  --model text-embedding-3-small \
+  --embed-dim 1536 \
+  --overwrite
+```
 
-- [Main README](./README.md) - Package overview
-- [Examples](./EXAMPLE.md) - Complete integration examples
-- [TypeScript API](./src/RagSlice.ts) - Source code and types
+## See Also
+
+- [RAG Package README](./README.md)
+- [RAG Tool Guide](./RAG_TOOL.md)
+- [Python Package Docs](../../python/rag/README.md)
+- [Vercel AI SDK Docs](https://sdk.vercel.ai/docs)

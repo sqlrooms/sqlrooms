@@ -8,7 +8,8 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {createRagSlice, RagSliceState} from '@sqlrooms/rag';
+import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/rag';
+import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -33,7 +34,6 @@ import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
 import {AI_SETTINGS} from './config';
-import exampleSessions from './example-sessions.json';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -52,18 +52,18 @@ export type RoomState = RoomShellSliceState &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
         config: {
           dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
+            // {
+            //   tableName: 'earthquakes',
+            //   type: 'url',
+            //   url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            // },
           ],
         },
         layout: {
@@ -93,53 +93,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      // ...createDuckDbSlice()(set, get, store),
-
-      // ...createLayoutSlice({
-      //   config: {
-      //     type: LayoutTypes.enum.mosaic,
-      //     nodes: {
-      //       direction: 'row',
-      //       first: RoomPanelTypes.enum['data-sources'],
-      //       second: MAIN_VIEW,
-      //       splitPercentage: 30,
-      //     },
-      //   },
-      //   panels: {
-      //     [RoomPanelTypes.enum['data-sources']]: {
-      //       title: 'Data Sources',
-      //       icon: DatabaseIcon,
-      //       component: DataSourcesPanel,
-      //       placement: 'sidebar',
-      //     },
-      //     main: {
-      //       title: 'Main view',
-      //       icon: () => null,
-      //       component: MainView,
-      //       placement: 'main',
-      //     },
-      //   },
-      // })(set, get, store),
-
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
+      // RAG slice - semantic search through documentation
       ...createRagSlice({
         embeddingsDatabases: [
           {
-            databaseFilePathOrUrl: './examples/ai/embeddings/docs.duckdb',
-            databaseName: 'docs',
+            databaseFilePathOrUrl:
+              window.location.origin + '/rag/duckdb_docs_openai.duckdb',
+            databaseName: 'duckdb_docs',
+            // Use OpenAI text-embedding-3-small (must match database preparation)
+            // Pass getApiKey to retrieve API key from user settings at runtime
+            embeddingProvider: createOpenAIEmbeddingProvider(
+              'text-embedding-3-small',
+              1536,
+              () => get().aiSettings.config.providers?.['openai']?.apiKey,
+            ),
+            embeddingDimensions: 1536,
           },
         ],
-      }),
+      })(set, get, store),
 
       // Ai slice
       ...createAiSlice({
-        config: AiSliceConfig.parse(exampleSessions),
-
         getInstructions: () => {
           return createDefaultAiInstructions(store);
         },
@@ -147,6 +127,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         // Add custom tools
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
+
+          // RAG tool - search through documentation
+          search_documentation: createRagTool(),
 
           // Add the VegaChart tool from the vega package with a custom description
           chart: createVegaChartTool(),
@@ -187,3 +170,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     },
   ) as StateCreator<RoomState>,
 );
+
+// Make store available globally for RAG tool
+(globalThis as any).__ROOM_STORE__ = roomStore;
+
+export {roomStore, useRoomStore};
