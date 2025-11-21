@@ -4,11 +4,12 @@ Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings
 
 ## Features
 
-- 🔍 **Semantic Search** - Query embeddings using vector similarity (cosine similarity)
+- 🔍 **Hybrid Search** - Combines vector similarity with full-text search (BM25) using Reciprocal Rank Fusion
+- 🚀 **Semantic Search** - Query embeddings using vector similarity (cosine similarity)
 - 🗄️ **Multiple Databases** - Attach and search across multiple embedding databases
 - 🎯 **Per-Database Embedding Providers** - Each database can use a different embedding model
 - ✅ **Metadata Validation** - Automatic validation of embedding dimensions and models
-- 📊 **DuckDB-Powered** - Fast, in-process vector search with SQL
+- 📊 **DuckDB-Powered** - Fast, in-process vector search with SQL and FTS
 - 🔄 **Flexible** - Works with OpenAI, HuggingFace, Transformers.js, or custom embeddings
 
 ## Installation
@@ -123,14 +124,24 @@ await store.getState().rag.initialize();
 
 #### `rag.queryByText(text, options)`
 
-Query embeddings using text. The embedding provider for the specified database will be used to convert text to embeddings.
+Query embeddings using text. By default, performs **hybrid search** combining vector similarity with full-text search (BM25) using Reciprocal Rank Fusion (RRF).
 
 ```typescript
 const results = await store.getState().rag.queryByText('search query', {
   topK: 5, // Number of results to return (default: 5)
   database: 'docs', // Database to search (default: first database)
+  hybrid: true, // Enable hybrid search (default: true)
+  // hybrid: false, // Disable hybrid search (vector-only)
+  // hybrid: 60, // Custom RRF k value (default: 60)
 });
 ```
+
+**Hybrid Search** combines:
+- **Vector similarity**: Semantic understanding of the query
+- **Full-text search (BM25)**: Keyword matching and ranking
+- **Reciprocal Rank Fusion**: Smart combination of both result sets
+
+This approach typically provides better results than vector-only search, especially for queries with specific keywords or technical terms.
 
 Returns:
 
@@ -242,6 +253,52 @@ const reactResults = await store
     database: 'react_docs',
   });
 ```
+
+## Hybrid Search
+
+Hybrid search combines vector similarity (semantic understanding) with full-text search (keyword matching) to provide more accurate and comprehensive results.
+
+### How It Works
+
+1. **Vector Search**: Uses embedding similarity to find semantically related content
+2. **Full-Text Search (BM25)**: Uses DuckDB's FTS extension for keyword-based ranking
+3. **Reciprocal Rank Fusion (RRF)**: Intelligently combines both result sets
+
+### Benefits
+
+- **Better Recall**: Finds results even when exact keywords aren't in the query
+- **Improved Precision**: Keyword matching helps rank exact matches higher
+- **Balanced Results**: RRF prevents either method from dominating unfairly
+
+### Configuration
+
+```typescript
+// Default: Hybrid search enabled with k=60
+const results = await store.getState().rag.queryByText('query', {
+  hybrid: true, // Enable hybrid search (default)
+});
+
+// Pure vector search only
+const vectorOnly = await store.getState().rag.queryByText('query', {
+  hybrid: false, // Disable hybrid search
+});
+
+// Custom RRF k value (lower = more weight to top-ranked results)
+const customRRF = await store.getState().rag.queryByText('query', {
+  hybrid: 60, // Custom k value for Reciprocal Rank Fusion
+});
+```
+
+### When to Use What
+
+- **Hybrid (default)**: Best for most use cases, especially technical documentation
+- **Vector-only**: When you want pure semantic matching without keyword bias
+- **Lower k value** (e.g., 30): Give more weight to top-ranked results
+- **Higher k value** (e.g., 100): More balanced combination, less bias to top results
+
+### Requirements
+
+Hybrid search requires that the embedding database was prepared with FTS indexing enabled (which is the default in the Python `prepare-embeddings` command). If FTS is not available, the system automatically falls back to vector-only search.
 
 ## Embedding Providers
 

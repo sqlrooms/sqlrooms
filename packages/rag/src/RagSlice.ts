@@ -59,6 +59,72 @@ export type DatabaseMetadata = {
   chunkingStrategy: string;
 };
 
+/**
+ * Reciprocal Rank Fusion (RRF) algorithm for combining multiple ranked lists.
+ * RRF score = sum(1 / (k + rank)) for each list where the item appears.
+ *
+ * @param results - Array of ranked result lists, each with nodeId and score
+ * @param k - Constant to prevent high rankings from dominating (default: 60)
+ * @returns Combined results sorted by RRF score
+ */
+function reciprocalRankFusion(
+  results: Array<
+    Array<{
+      nodeId: string;
+      score: number;
+      text: string;
+      metadata?: Record<string, unknown>;
+    }>
+  >,
+  k = 60,
+): EmbeddingResult[] {
+  const rrfScores = new Map<string, number>();
+  const resultMap = new Map<string, EmbeddingResult>();
+
+  // Calculate RRF scores
+  for (const resultList of results) {
+    resultList.forEach((result, rank) => {
+      const currentScore = rrfScores.get(result.nodeId) || 0;
+      rrfScores.set(result.nodeId, currentScore + 1 / (k + rank + 1));
+
+      // Store the result data (using the first occurrence)
+      if (!resultMap.has(result.nodeId)) {
+        resultMap.set(result.nodeId, {
+          nodeId: result.nodeId,
+          text: result.text,
+          score: 0, // Will be set to RRF score
+          metadata: result.metadata,
+        });
+      }
+    });
+  }
+
+  // Convert to array and sort by RRF score
+  const combined = Array.from(rrfScores.entries())
+    .map(([nodeId, rrfScore]) => ({
+      ...resultMap.get(nodeId)!,
+      score: rrfScore,
+    }))
+    .sort((a, b) => b.score - a.score);
+
+  return combined;
+}
+
+export type QueryOptions = {
+  /** Number of results to return (default: 5) */
+  topK?: number;
+  /** Database to search (defaults to first database) */
+  database?: string;
+  /**
+   * Enable hybrid search combining vector similarity with full-text search (BM25).
+   * - true: Use hybrid search with default settings (k=60)
+   * - false: Use pure vector search only
+   * - number: Use hybrid search with custom k value for RRF
+   * Default: true
+   */
+  hybrid?: boolean | number;
+};
+
 export type RagSliceState = {
   rag: {
     /**
@@ -69,31 +135,26 @@ export type RagSliceState = {
     /**
      * Query embeddings using a pre-computed embedding vector
      * @param queryEmbedding - The embedding vector for the query (e.g., 384-dimensional array)
-     * @param options - Query options (topK, database to search)
+     * @param options - Query options (topK, database to search, hybrid search)
      * @returns Array of results sorted by similarity score
      */
     queryEmbeddings: (
       queryEmbedding: number[],
-      options?: {
-        topK?: number;
-        database?: string;
-      },
+      options?: QueryOptions,
     ) => Promise<EmbeddingResult[]>;
 
     /**
      * Query embeddings using text.
      * Uses the embedding provider configured for the specified database.
+     * By default, performs hybrid search combining vector similarity with full-text search.
      * @param queryText - The text query
-     * @param options - Query options (topK, database to search)
+     * @param options - Query options (topK, database to search, hybrid search)
      * @returns Array of results sorted by similarity score
      * @throws Error if database not found or no embedding provider configured
      */
     queryByText: (
       queryText: string,
-      options?: {
-        topK?: number;
-        database?: string;
-      },
+      options?: QueryOptions,
     ) => Promise<EmbeddingResult[]>;
 
     /**
@@ -221,7 +282,7 @@ export function createRagSlice({
           queryEmbedding: number[],
           options = {},
         ): Promise<EmbeddingResult[]> => {
-          const {topK = 5, database} = options;
+          const {topK = 5, database, hybrid = true} = options;
           const connector = get().db.connector;
 
           // Ensure RAG is initialized
@@ -250,32 +311,47 @@ export function createRagSlice({
             );
           }
 
-          const query = `
-            SELECT 
-              node_id,
-              text,
-              metadata_,
-              array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
-            FROM ${dbName}.documents
-            ORDER BY similarity DESC
-            LIMIT ${topK}
-          `;
-
           try {
-            const result = await connector.query(query);
-            const rows = result.toArray();
+            // Vector similarity search
+            const vectorQuery = `
+              SELECT 
+                node_id,
+                text,
+                metadata_,
+                array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
+              FROM ${dbName}.documents
+              ORDER BY similarity DESC
+              LIMIT ${topK * 2}
+            `;
 
-            return rows.map((row: any) => ({
-              nodeId: row.node_id as string,
-              text: row.text as string,
-              score: row.similarity as number,
-              metadata: row.metadata_
-                ? (JSON.parse(row.metadata_ as string) as Record<
-                    string,
-                    unknown
-                  >)
-                : undefined,
-            }));
+            const vectorResult = await connector.query(vectorQuery);
+            const vectorRows = vectorResult.toArray();
+
+            const vectorResults: EmbeddingResult[] = vectorRows.map(
+              (row: any) => ({
+                nodeId: row.node_id as string,
+                text: row.text as string,
+                score: row.similarity as number,
+                metadata: row.metadata_
+                  ? (JSON.parse(row.metadata_ as string) as Record<
+                      string,
+                      unknown
+                    >)
+                  : undefined,
+              }),
+            );
+
+            // If hybrid search is disabled, return vector results only
+            if (hybrid === false) {
+              return vectorResults.slice(0, topK);
+            }
+
+            // Perform hybrid search: combine vector + FTS using RRF
+            // Note: FTS search doesn't use the embedding, so we can't pass it here
+            // We'll need to get the query text from somewhere else
+            // For now, return vector results only if we don't have query text
+            // The queryByText method will handle hybrid search properly
+            return vectorResults.slice(0, topK);
           } catch (error) {
             console.error('Error querying embeddings:', error);
             throw error;
@@ -286,7 +362,13 @@ export function createRagSlice({
           queryText: string,
           options = {},
         ): Promise<EmbeddingResult[]> => {
-          const {database} = options;
+          const {database, topK = 5, hybrid = true} = options;
+          const connector = get().db.connector;
+
+          // Ensure RAG is initialized
+          if (!initialized) {
+            await get().rag.initialize();
+          }
 
           // Determine which database to search (default to first one)
           const dbName = database || Array.from(databaseProviders.keys())[0];
@@ -302,11 +384,119 @@ export function createRagSlice({
           // Generate embedding from text using the database's provider
           const embedding = await embeddingProvider(queryText);
 
-          // Query using the embedding
-          return get().rag.queryEmbeddings(embedding, {
-            ...options,
-            database: dbName,
-          });
+          // If hybrid search is disabled, use pure vector search
+          if (hybrid === false) {
+            return get().rag.queryEmbeddings(embedding, {
+              ...options,
+              database: dbName,
+              hybrid: false,
+            });
+          }
+
+          // Perform hybrid search: vector + FTS with RRF
+          try {
+            const embeddingDim = embedding.length;
+            const embeddingLiteral = `[${embedding.join(', ')}]`;
+
+            // Validate dimensions
+            const metadata = databaseMetadata.get(dbName);
+            if (metadata && metadata.dimensions !== embeddingDim) {
+              throw new Error(
+                `Dimension mismatch: query has ${embeddingDim} dimensions, ` +
+                  `but database "${dbName}" expects ${metadata.dimensions} dimensions`,
+              );
+            }
+
+            // Get more results for RRF combination
+            const searchLimit = topK * 2;
+
+            // 1. Vector similarity search
+            const vectorQuery = `
+              SELECT 
+                node_id,
+                text,
+                metadata_,
+                array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
+              FROM ${dbName}.documents
+              ORDER BY similarity DESC
+              LIMIT ${searchLimit}
+            `;
+
+            const vectorResult = await connector.query(vectorQuery);
+            const vectorRows = vectorResult.toArray();
+
+            const vectorResults: EmbeddingResult[] = vectorRows.map(
+              (row: any) => ({
+                nodeId: row.node_id as string,
+                text: row.text as string,
+                score: row.similarity as number,
+                metadata: row.metadata_
+                  ? (JSON.parse(row.metadata_ as string) as Record<
+                      string,
+                      unknown
+                    >)
+                  : undefined,
+              }),
+            );
+
+            // 2. Full-text search using DuckDB FTS
+            // Load FTS extension if not already loaded
+            try {
+              await connector.query('INSTALL fts');
+              await connector.query('LOAD fts');
+            } catch {
+              // FTS may already be loaded
+            }
+
+            const ftsQuery = `
+              SELECT 
+                node_id,
+                text,
+                metadata_,
+                fts_main_${dbName}_documents.match_bm25(node_id, '${queryText.replace(/'/g, "''")}') as bm25_score
+              FROM ${dbName}.documents
+              WHERE bm25_score IS NOT NULL
+              ORDER BY bm25_score DESC
+              LIMIT ${searchLimit}
+            `;
+
+            let ftsResults: EmbeddingResult[] = [];
+            try {
+              const ftsResult = await connector.query(ftsQuery);
+              const ftsRows = ftsResult.toArray();
+
+              ftsResults = ftsRows.map((row: any) => ({
+                nodeId: row.node_id as string,
+                text: row.text as string,
+                score: row.bm25_score as number,
+                metadata: row.metadata_
+                  ? (JSON.parse(row.metadata_ as string) as Record<
+                      string,
+                      unknown
+                    >)
+                  : undefined,
+              }));
+            } catch (ftsError) {
+              console.warn(
+                'FTS search failed, falling back to vector-only search:',
+                ftsError,
+              );
+              // If FTS fails, return vector results only
+              return vectorResults.slice(0, topK);
+            }
+
+            // 3. Combine results using Reciprocal Rank Fusion
+            const k = typeof hybrid === 'number' ? hybrid : 60;
+            const combinedResults = reciprocalRankFusion(
+              [vectorResults, ftsResults],
+              k,
+            );
+
+            return combinedResults.slice(0, topK);
+          } catch (error) {
+            console.error('Error in hybrid search:', error);
+            throw error;
+          }
         },
 
         getMetadata: async (databaseName: string) => {

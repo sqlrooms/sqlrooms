@@ -10,6 +10,7 @@ export {
   type EmbeddingDatabase,
   type EmbeddingProvider,
   type DatabaseMetadata,
+  type QueryOptions,
 } from './RagSlice';
 export {
   createRagTool,
