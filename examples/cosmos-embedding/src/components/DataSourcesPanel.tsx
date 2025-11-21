@@ -17,7 +17,7 @@ import {RoomPanelTypes, useRoomStore} from '../store';
 
 const DataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   const roomFiles = useRoomStore((state) => state.room.roomFiles);
-  const dataSources = useRoomStore((state) => state.config.dataSources);
+  const dataSources = useRoomStore((state) => state.room.config.dataSources);
   const queryDataSources = useMemo(
     () => dataSources.filter((ds) => ds.type === DataSourceTypes.enum.sql),
     [dataSources],

@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# 0.26.0 (2025-11-17)
+
+**Note:** Version bump only for package @sqlrooms/preset-eslint
+
+# 0.26.0-rc.6 (2025-11-12)
+
+**Note:** Version bump only for package @sqlrooms/preset-eslint
+
+# 0.26.0-rc.5 (2025-11-12)
+
+### Features
+
+* Separate config for every slice ([#156](https://github.com/sqlrooms/sqlrooms/issues/156)) ([ae600c1](https://github.com/sqlrooms/sqlrooms/commit/ae600c124bec754bea9a71218dcb8203f11a5cce))
+
+# 0.26.0-rc.4 (2025-11-10)
+
+### Bug Fixes
+
+* Styles of schema tree node and mosaic layout (main) ([#182](https://github.com/sqlrooms/sqlrooms/issues/182)) ([0b4d55f](https://github.com/sqlrooms/sqlrooms/commit/0b4d55ff407b6a978acb47fecc3dd71203df3a69))
+
 # 0.26.0-rc.3 (2025-10-23)
 
 ### Features

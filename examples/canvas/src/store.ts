@@ -6,8 +6,10 @@ import {
 } from '@sqlrooms/canvas';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   RoomShellSliceState,
   StateCreator,
@@ -25,23 +27,11 @@ export type RoomState = RoomShellSliceState &
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore, useRoomStore} = createRoomStore<
-  BaseRoomConfig,
-  RoomState
->(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -50,7 +40,16 @@ export const {roomStore, useRoomStore} = createRoomStore<
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              splitPercentage: 20,
+              first: 'data',
+              second: 'main',
+            },
+          },
           panels: {
             main: {
               title: 'Canvas',
@@ -83,21 +82,24 @@ export const {roomStore, useRoomStore} = createRoomStore<
     {
       // Local storage key
       name: 'canvas-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        apiKey: state.apiKey,
-        config: BaseRoomConfig.parse(state.config),
-        canvas: CanvasSliceConfig.parse(state.canvas.config),
-      }),
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        apiKey: persistedState.apiKey,
-        config: BaseRoomConfig.parse(persistedState.config),
-        canvas: {
-          ...currentState.canvas,
-          config: CanvasSliceConfig.parse(persistedState.canvas),
-        },
-      }),
+      // Helper to extract and merge slice configs
+      ...(() => {
+        const {partialize, merge} = createPersistHelpers({
+          room: BaseRoomConfig,
+          layout: LayoutConfig,
+          canvas: CanvasSliceConfig,
+        });
+        return {
+          partialize: (state: RoomState) => ({
+            apiKey: state.apiKey,
+            ...partialize(state),
+          }),
+          merge: (persistedState: any, currentState: RoomState) => ({
+            ...merge(persistedState, currentState),
+            apiKey: persistedState.apiKey,
+          }),
+        };
+      })(),
     },
   ) as StateCreator<RoomState>,
 );

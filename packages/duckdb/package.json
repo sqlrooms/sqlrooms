@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/duckdb",
-  "version": "0.26.0-rc.3",
+  "version": "0.26.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -19,7 +19,6 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.30.0",
-    "@sqlrooms/duckdb-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

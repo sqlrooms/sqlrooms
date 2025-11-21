@@ -1,9 +1,7 @@
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {AiSliceState} from '@sqlrooms/ai-core';
 import {
-  BaseRoomConfig,
-  createBaseSlice,
-  RoomState,
+  createSlice,
   useBaseRoomStore,
   type StateCreator,
 } from '@sqlrooms/room-store';
@@ -13,6 +11,7 @@ import {createDefaultAiSettingsConfig} from './defaultSettings';
 export type AiSettingsSliceState = {
   aiSettings: {
     config: AiSettingsSliceConfig;
+    setConfig: (config: AiSettingsSliceConfig) => void;
     setMaxSteps: (maxSteps: number) => void;
     setAdditionalInstruction: (additionalInstruction: string) => void;
     updateProvider: (
@@ -45,13 +44,21 @@ type CreateAiSettingsSliceParams = {
   config?: Partial<AiSettingsSliceConfig>;
 };
 
-export function createAiSettingsSlice<PC extends BaseRoomConfig>(
+export function createAiSettingsSlice(
   props?: CreateAiSettingsSliceParams,
 ): StateCreator<AiSettingsSliceState> {
   const config = createDefaultAiSettingsConfig(props?.config);
-  return createBaseSlice<PC, AiSettingsSliceState>((set, get) => ({
+  return createSlice<AiSettingsSliceState>((set, get) => ({
     aiSettings: {
       config,
+
+      setConfig: (config) => {
+        set((state) =>
+          produce(state, (draft) => {
+            draft.aiSettings.config = config;
+          }),
+        );
+      },
 
       setMaxSteps: (maxSteps: number) => {
         set((state) =>
@@ -219,15 +226,13 @@ export function createAiSettingsSlice<PC extends BaseRoomConfig>(
   }));
 }
 
-type RoomStateWithAiSettings = RoomState<BaseRoomConfig> &
-  AiSliceState &
-  AiSettingsSliceState;
+type AiStateWithSettings = AiSliceState & AiSettingsSliceState;
 
 // Hook to access aiSettings from the room store
 export function useStoreWithAiSettings<T>(
-  selector: (state: RoomStateWithAiSettings) => T,
+  selector: (state: AiStateWithSettings) => T,
 ): T {
-  return useBaseRoomStore<BaseRoomConfig, RoomState<BaseRoomConfig>, T>(
-    (state) => selector(state as unknown as RoomStateWithAiSettings),
+  return useBaseRoomStore<AiStateWithSettings, T>((state) =>
+    selector(state as unknown as AiStateWithSettings),
   );
 }

@@ -19,7 +19,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {RoomFileInfo, RoomFileState} from '../types';
 const FileDataSourceCard: FC<{
   isReadOnly?: boolean;

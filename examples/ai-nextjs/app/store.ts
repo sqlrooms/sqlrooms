@@ -5,26 +5,26 @@ import {
   createAiSettingsSlice,
 } from '@sqlrooms/ai-settings';
 import {
-  BaseRoomConfig,
-  createRoomSlice,
+  BaseRoomStoreState,
+  createBaseRoomSlice,
+  createPersistHelpers,
   createRoomStore,
-  RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
 import {persist} from 'zustand/middleware';
 import {AI_SETTINGS} from '../config';
 import {getClientTools} from './lib/tools';
 
-type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
+type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
+export const {roomStore, useRoomStore} = createRoomStore<State>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<BaseRoomConfig>()(set, get, store),
+      ...createBaseRoomSlice()(set, get, store),
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
@@ -49,22 +49,10 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
     {
       // Local storage key
       name: 'ai-nextjs-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
       }),
     },
   ) as StateCreator<State>,
