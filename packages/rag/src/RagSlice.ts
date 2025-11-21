@@ -1,10 +1,9 @@
-import {DuckDbSliceConfig} from '@sqlrooms/duckdb';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
+  BaseRoomStoreState,
   createSlice,
-  RoomShellSliceState,
   StateCreator,
-  useBaseRoomShellStore,
+  useBaseRoomStore,
 } from '@sqlrooms/room-shell';
 
 export type EmbeddingResult = {
@@ -78,14 +77,17 @@ export type RagSliceState = {
   };
 };
 
-export function createRagSlice<PC extends BaseRoomConfig & DuckDbSliceConfig>({
+export function createRagSlice({
   embeddingsDatabases,
   embeddingProvider,
 }: {
   embeddingsDatabases: EmbeddingDatabase[];
   embeddingProvider?: EmbeddingProvider;
 }): StateCreator<RagSliceState> {
-  return createSlice<PC, RagSliceState>((set, get) => {
+  return createSlice<
+    RagSliceState,
+    BaseRoomStoreState & DuckDbSliceState & RagSliceState
+  >((set, get) => {
     let initialized = false;
     const attachedDatabases = new Set<string>();
     let currentEmbeddingProvider = embeddingProvider;
@@ -172,7 +174,7 @@ export function createRagSlice<PC extends BaseRoomConfig & DuckDbSliceConfig>({
             const result = await connector.query(query);
             const rows = result.toArray();
 
-            return rows.map((row) => ({
+            return rows.map((row: any) => ({
               nodeId: row.node_id as string,
               text: row.text as string,
               score: row.similarity as number,
@@ -221,14 +223,12 @@ export function createRagSlice<PC extends BaseRoomConfig & DuckDbSliceConfig>({
   });
 }
 
+type RoomStateWithRag = BaseRoomStoreState & DuckDbSliceState & RagSliceState;
+
 export function useStoreWithRag<T>(
-  selector: (state: RoomShellSliceState<BaseRoomConfig>) => T,
+  selector: (state: RoomStateWithRag) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig,
-    RoomShellSliceState<BaseRoomConfig>,
-    T
-  >((state) =>
-    selector(state as unknown as RoomShellSliceState<BaseRoomConfig>),
+  return useBaseRoomStore<DuckDbSliceState, T>((state) =>
+    selector(state as unknown as RoomStateWithRag),
   );
 }

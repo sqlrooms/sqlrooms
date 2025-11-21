@@ -19,7 +19,7 @@
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
-    "zod": "^4.1.8"
+    "@sqlrooms/room-store": "workspace:*"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0"
