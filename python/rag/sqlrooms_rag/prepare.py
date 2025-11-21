@@ -4,7 +4,9 @@ Core functionality for preparing embeddings from markdown files.
 
 import sys
 import json
+import os
 from pathlib import Path
+from typing import Optional, Literal
 
 import duckdb
 from llama_index.core import (
@@ -16,6 +18,112 @@ from llama_index.core import (
 from llama_index.core.node_parser import MarkdownNodeParser
 from llama_index.embeddings.huggingface import HuggingFaceEmbedding
 from llama_index.vector_stores.duckdb import DuckDBVectorStore
+
+
+def _get_embedding_model(
+    provider: Literal["huggingface", "openai"] = "huggingface",
+    model_name: Optional[str] = None,
+    api_key: Optional[str] = None,
+    embed_dim: Optional[int] = None,
+    verbose: bool = True
+):
+    """
+    Get an embedding model based on the provider.
+    
+    Args:
+        provider: Either "huggingface" (local) or "openai" (API)
+        model_name: Model name/identifier. Defaults depend on provider:
+            - huggingface: "BAAI/bge-small-en-v1.5"
+            - openai: "text-embedding-3-small"
+        api_key: API key for external providers (required for OpenAI).
+            If not provided, will look for OPENAI_API_KEY environment variable.
+        embed_dim: Expected embedding dimension. If None, will be auto-detected.
+        verbose: Whether to print progress messages
+    
+    Returns:
+        Tuple of (embed_model, actual_embed_dim)
+    
+    Raises:
+        ValueError: If API key is required but not provided
+        ImportError: If required package is not installed
+    """
+    if provider == "huggingface":
+        # Local HuggingFace embeddings (default)
+        if model_name is None:
+            model_name = "BAAI/bge-small-en-v1.5"
+        
+        if verbose:
+            print(f"Loading HuggingFace embedding model: {model_name}...")
+        
+        embed_model = HuggingFaceEmbedding(model_name=model_name)
+        
+        # Test to get actual dimension
+        test_embeddings = embed_model.get_text_embedding("test")
+        actual_dim = len(test_embeddings)
+        
+        if verbose:
+            print(f"Embedding dimension: {actual_dim}")
+        
+        if embed_dim and actual_dim != embed_dim:
+            if verbose:
+                print(f"Warning: Expected dimension {embed_dim}, got {actual_dim}")
+        
+        return embed_model, actual_dim
+    
+    elif provider == "openai":
+        # OpenAI API embeddings
+        try:
+            from llama_index.embeddings.openai import OpenAIEmbedding
+        except ImportError:
+            raise ImportError(
+                "OpenAI embeddings require 'llama-index-embeddings-openai'. "
+                "Install with: pip install llama-index-embeddings-openai"
+            )
+        
+        # Get API key
+        if api_key is None:
+            api_key = os.environ.get("OPENAI_API_KEY")
+        
+        if not api_key:
+            raise ValueError(
+                "OpenAI API key required. Provide via api_key parameter or "
+                "set OPENAI_API_KEY environment variable."
+            )
+        
+        # Set default model if not specified
+        if model_name is None:
+            model_name = "text-embedding-3-small"
+        
+        if verbose:
+            print(f"Using OpenAI embedding model: {model_name}...")
+        
+        # Determine embedding dimension based on model
+        dimension_map = {
+            "text-embedding-3-small": 1536,
+            "text-embedding-3-large": 3072,
+            "text-embedding-ada-002": 1536,
+        }
+        
+        if embed_dim is None:
+            embed_dim = dimension_map.get(model_name, 1536)
+        
+        embed_model = OpenAIEmbedding(
+            model=model_name,
+            api_key=api_key,
+            dimensions=embed_dim if "text-embedding-3" in model_name else None
+        )
+        
+        if verbose:
+            print(f"Embedding dimension: {embed_dim}")
+            print("Note: Using OpenAI API will incur costs per token")
+        
+        return embed_model, embed_dim
+    
+    else:
+        raise ValueError(
+            f"Unknown provider: {provider}. "
+            f"Supported providers: 'huggingface', 'openai'"
+        )
 
 
 def _create_source_documents_table(
@@ -178,8 +286,10 @@ def prepare_embeddings(
     input_dir: str,
     output_db: str,
     chunk_size: int = 512,
-    embed_model_name: str = "BAAI/bge-small-en-v1.5",
-    embed_dim: int = 384,
+    embed_model_name: Optional[str] = None,
+    embed_dim: Optional[int] = None,
+    embedding_provider: Literal["huggingface", "openai"] = "huggingface",
+    api_key: Optional[str] = None,
     verbose: bool = True,
     use_markdown_chunking: bool = True,
     include_headers_in_chunks: bool = True,
@@ -192,8 +302,17 @@ def prepare_embeddings(
         input_dir: Directory containing .md files to process
         output_db: Path to output DuckDB database file (without extension)
         chunk_size: Size of text chunks in tokens (default: 512)
-        embed_model_name: HuggingFace model name (default: BAAI/bge-small-en-v1.5)
-        embed_dim: Embedding dimension size (default: 384 for bge-small)
+        embed_model_name: Model name. Defaults depend on provider:
+            - huggingface: "BAAI/bge-small-en-v1.5"
+            - openai: "text-embedding-3-small"
+        embed_dim: Embedding dimension. If None, auto-detected from model.
+            Common values:
+            - BAAI/bge-small-en-v1.5: 384
+            - text-embedding-3-small: 1536
+            - text-embedding-3-large: 3072
+        embedding_provider: "huggingface" (local, free) or "openai" (API, paid)
+        api_key: API key for external providers (required for OpenAI).
+            Can also be set via OPENAI_API_KEY environment variable.
         verbose: Whether to print progress messages (default: True)
         use_markdown_chunking: Use markdown-aware chunking by headers (default: True)
         include_headers_in_chunks: Prepend headers to chunk text for higher weight (default: True)
@@ -204,7 +323,8 @@ def prepare_embeddings(
     
     Raises:
         FileNotFoundError: If input directory doesn't exist
-        ValueError: If no markdown files found in input directory
+        ValueError: If no markdown files found in input directory or API key missing
+        ImportError: If required package for provider is not installed
     """
     input_path = Path(input_dir)
     
@@ -224,21 +344,13 @@ def prepare_embeddings(
         print(f"Found {len(md_files)} markdown file(s) in '{input_dir}'")
     
     # Initialize the embedding model
-    if verbose:
-        print(f"Loading embedding model: {embed_model_name}...")
-    embed_model = HuggingFaceEmbedding(model_name=embed_model_name)
-    
-    # Test the model
-    test_embeddings = embed_model.get_text_embedding("test")
-    actual_dim = len(test_embeddings)
-    
-    if verbose:
-        print(f"Embedding dimension: {actual_dim}")
-    
-    if actual_dim != embed_dim:
-        if verbose:
-            print(f"Warning: Expected embedding dimension {embed_dim}, got {actual_dim}")
-        embed_dim = actual_dim
+    embed_model, embed_dim = _get_embedding_model(
+        provider=embedding_provider,
+        model_name=embed_model_name,
+        api_key=api_key,
+        embed_dim=embed_dim,
+        verbose=verbose
+    )
     
     # Load documents from the input directory
     if verbose:

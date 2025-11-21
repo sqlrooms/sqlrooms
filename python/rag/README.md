@@ -34,7 +34,7 @@ uv sync
 
 ### Dependencies
 
-The package includes:
+**Core dependencies** (always installed):
 
 - llama-index (core RAG framework)
 - llama-index-embeddings-huggingface (HuggingFace embeddings)
@@ -42,6 +42,15 @@ The package includes:
 - sentence-transformers (embedding models)
 - torch (ML framework)
 - duckdb (database)
+
+**Optional dependencies:**
+
+For OpenAI embeddings:
+```bash
+pip install llama-index-embeddings-openai
+# or with uv
+uv pip install llama-index-embeddings-openai
+```
 
 ## Usage
 
@@ -58,12 +67,23 @@ Or use the Python API:
 ```python
 from sqlrooms_rag import prepare_embeddings
 
+# Using local HuggingFace embeddings (default, free)
 prepare_embeddings(
     input_dir="/path/to/docs",
     output_db="generated-embeddings/knowledge_base.duckdb",
+    embedding_provider="huggingface",  # default
+    embed_model_name="BAAI/bge-small-en-v1.5",  # default
     chunk_size=512,
-    embed_model_name="BAAI/bge-small-en-v1.5",
-    embed_dim=384
+)
+
+# Using OpenAI embeddings (requires API key, paid)
+prepare_embeddings(
+    input_dir="/path/to/docs",
+    output_db="generated-embeddings/knowledge_base.duckdb",
+    embedding_provider="openai",
+    api_key="your-openai-api-key",  # or set OPENAI_API_KEY env var
+    # embed_model_name defaults to "text-embedding-3-small"
+    # embed_dim defaults to 1536 for OpenAI models
 )
 ```
 
@@ -331,17 +351,21 @@ sqlrooms-rag/
 ├── examples/               # Example scripts (not installed)
 │   ├── prepare_duckdb_docs.py   # Download & prepare DuckDB docs
 │   ├── prepare_duckdb_docs.sh   # Bash version of above
+│   ├── prepare_with_openai.py   # Using OpenAI API for embeddings
 │   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
 │   ├── example_query.py         # Query using llama-index
-│   ├── query_duckdb_direct.py   # Direct DuckDB queries
+│   ├── query_duckdb_direct.py   # Direct DuckDB queries (including hybrid)
 │   └── hybrid_search_example.py # Hybrid search examples
 ├── scripts/                # Documentation for utility scripts
 ├── generated-embeddings/   # Output directory
 ├── pyproject.toml         # Package configuration
 ├── README.md
 ├── HYBRID_SEARCH.md       # Hybrid retrieval documentation
+├── EXTERNAL_APIS.md       # Using external embedding APIs (OpenAI, etc.)
+├── ARCHITECTURE.md        # System architecture and design decisions
 ├── QUERYING.md            # Query documentation
-└── CHUNKING.md            # Chunking strategies
+├── CHUNKING.md            # Chunking strategies
+└── VISUALIZATION_GUIDE.md # UMAP visualization guide
 ```
 
 ## Example: DuckDB Documentation
@@ -394,9 +418,11 @@ const store = createRoomStore({
 const results = await store.getState().rag.queryEmbeddings(embedding);
 ```
 
-## Supported Models
+## Embedding Providers
 
-The tool works with any HuggingFace sentence-transformer model. Popular choices:
+### HuggingFace (Local, Free)
+
+Uses local sentence-transformer models. No API costs, works offline.
 
 | Model                                   | Dimension | Max Tokens | Description           |
 | --------------------------------------- | --------- | ---------- | --------------------- |
@@ -404,6 +430,45 @@ The tool works with any HuggingFace sentence-transformer model. Popular choices:
 | sentence-transformers/all-MiniLM-L6-v2  | 384       | 256        | Fast, lightweight     |
 | BAAI/bge-base-en-v1.5                   | 768       | 512        | Better accuracy       |
 | sentence-transformers/all-mpnet-base-v2 | 768       | 384        | High quality          |
+
+**Pros:** Free, fast for large datasets, works offline, data stays local
+**Cons:** Requires model download (~150MB), slower on CPU-only machines
+
+### OpenAI (API, Paid)
+
+Uses OpenAI's embedding API. Requires API key and internet connection.
+
+| Model                  | Dimension      | Cost (per 1M tokens) | Description                 |
+| ---------------------- | -------------- | -------------------- | --------------------------- |
+| text-embedding-3-small | 1536 (or less) | $0.02                | Best value, high quality    |
+| text-embedding-3-large | 3072 (or less) | $0.13                | Highest quality             |
+| text-embedding-ada-002 | 1536           | $0.10                | Legacy (use 3-small instead) |
+
+**Pros:** High quality, no local storage, consistent results
+**Cons:** Costs money, requires internet, API latency, data sent to OpenAI
+
+**Note:** OpenAI's v3 models support dimension reduction (e.g., 512 dims) while maintaining quality.
+
+**Usage:**
+
+```bash
+# Using HuggingFace (default)
+uv run prepare-embeddings docs -o kb.duckdb
+
+# Using OpenAI
+export OPENAI_API_KEY=your_key_here
+uv run prepare-embeddings docs -o kb.duckdb --provider openai
+
+# OpenAI with custom model and dimensions
+uv run prepare-embeddings docs -o kb.duckdb \
+  --provider openai \
+  --model text-embedding-3-large \
+  --embed-dim 1024
+```
+
+See `examples/prepare_with_openai.py` for detailed examples and cost estimates.
+
+**Complete guide:** See [EXTERNAL_APIS.md](./EXTERNAL_APIS.md) for full documentation on using external embedding APIs.
 
 ## Notes
 

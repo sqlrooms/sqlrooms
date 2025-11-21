@@ -27,6 +27,13 @@ Examples:
   
   # Use a different embedding model
   %(prog)s docs -o generated-embeddings/kb.duckdb --model "sentence-transformers/all-MiniLM-L6-v2" --embed-dim 384
+  
+  # Use OpenAI embeddings (requires API key)
+  %(prog)s docs -o generated-embeddings/kb.duckdb --provider openai --api-key YOUR_API_KEY
+  
+  # Use OpenAI with environment variable OPENAI_API_KEY
+  export OPENAI_API_KEY=your_key_here
+  %(prog)s docs -o generated-embeddings/kb.duckdb --provider openai
         """,
     )
     
@@ -51,17 +58,32 @@ Examples:
     )
     
     parser.add_argument(
+        "--provider",
+        dest="embedding_provider",
+        choices=["huggingface", "openai"],
+        default="huggingface",
+        help="Embedding provider: 'huggingface' (local, free) or 'openai' (API, paid). Default: huggingface",
+    )
+    
+    parser.add_argument(
         "--model",
         dest="embed_model_name",
-        default="BAAI/bge-small-en-v1.5",
-        help="HuggingFace embedding model name (default: BAAI/bge-small-en-v1.5)",
+        default=None,
+        help="Embedding model name. Defaults: huggingface='BAAI/bge-small-en-v1.5', openai='text-embedding-3-small'",
     )
     
     parser.add_argument(
         "--embed-dim",
         type=int,
-        default=384,
-        help="Embedding dimension size (default: 384 for bge-small-en-v1.5)",
+        default=None,
+        help="Embedding dimension size. Auto-detected if not specified. Common: bge-small=384, openai-small=1536",
+    )
+    
+    parser.add_argument(
+        "--api-key",
+        dest="api_key",
+        default=None,
+        help="API key for external providers (e.g., OpenAI). Can also use OPENAI_API_KEY environment variable.",
     )
     
     parser.add_argument(
@@ -99,6 +121,8 @@ Examples:
             chunk_size=args.chunk_size,
             embed_model_name=args.embed_model_name,
             embed_dim=args.embed_dim,
+            embedding_provider=args.embedding_provider,
+            api_key=args.api_key,
             verbose=not args.quiet,
             use_markdown_chunking=not args.no_markdown_chunking,
             include_headers_in_chunks=not args.no_header_weighting,
@@ -107,7 +131,7 @@ Examples:
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.", file=sys.stderr)
         sys.exit(130)
-    except (FileNotFoundError, ValueError) as e:
+    except (FileNotFoundError, ValueError, ImportError) as e:
         print(f"Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
