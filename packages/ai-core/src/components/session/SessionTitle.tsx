@@ -34,7 +34,6 @@ export const SessionTitle: React.FC<SessionTitleProps> = ({className}) => {
           }}
           placeholder="Session name"
           className="text-sm font-medium"
-          maxWidth={300}
         />
       ) : (
         <span className="text-muted-foreground text-sm font-medium">
