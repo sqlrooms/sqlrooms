@@ -6,6 +6,7 @@ import {
   removeDataset,
   requestMapStyles,
   wrapTo,
+  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
@@ -15,6 +16,7 @@ import {
   restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
 } from '@kepler.gl/duckdb';
+import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
   INITIAL_UI_STATE,
@@ -130,6 +132,7 @@ export type KeplerSliceState = {
      * the latest table schemas in the database
      */
     syncKeplerDatasets: () => Promise<void>;
+    addLayer: (mapId: string, layer: Layer, datasetId: string) => void;
     addTableToMap: (
       mapId: string,
       tableName: string,
@@ -290,6 +293,11 @@ export function createKeplerSlice({
           updateMapConfigs();
           await get().kepler.syncKeplerDatasets();
           requestMapStyle(config.currentMapId);
+        },
+
+        addLayer: (mapId, layer, datasetId) => {
+          get().kepler.registerKeplerMapIfNotExists(mapId);
+          get().kepler.dispatchAction(mapId, addLayerAction(layer, datasetId));
         },
 
         addTableToMap: async (mapId, tableName, options = {}) => {
@@ -552,13 +560,19 @@ export function createKeplerSlice({
           // Delete redux state of maps that are not in the config
           for (const mapId of Object.keys(draft.kepler.map)) {
             if (!draft.kepler.config.maps.some((map) => map.id === mapId)) {
-              draft.kepler.map = keplerReducer(draft.kepler.map, deleteEntry(mapId));
+              draft.kepler.map = keplerReducer(
+                draft.kepler.map,
+                deleteEntry(mapId),
+              );
             }
           }
           // Register redux state of maps that are not in the config
           for (const map of draft.kepler.config.maps) {
             if (!draft.kepler.map[map.id]) {
-              draft.kepler.map = keplerReducer(draft.kepler.map, registerEntry({id: map.id}));
+              draft.kepler.map = keplerReducer(
+                draft.kepler.map,
+                registerEntry({id: map.id}),
+              );
               draft.kepler.forwardDispatch[map.id] = getForwardDispatch(map.id);
             }
           }
