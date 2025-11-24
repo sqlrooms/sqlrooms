@@ -53,6 +53,13 @@ features:
     details: Work with your data, run queries, and analyze results even without an internet connection. SQLRooms supports offline workflows using persistent storage via OPFS.
 ---
 
+---
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/_4znL3eCpY0" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
+
 ## Get Started in Minutes
 
 To create a new project from the minimal example, run:
