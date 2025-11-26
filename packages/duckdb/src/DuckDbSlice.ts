@@ -392,9 +392,9 @@ export function createDuckDbSlice({
             ${
               schema || database || table
                 ? `WHERE ${[
-                    schema ? `schema = '${escapeId(schema)}'` : '',
-                    database ? `database = '${escapeId(database)}'` : '',
-                    table ? `name = '${escapeId(table)}'` : '',
+                    schema ? `schema = ${escapeVal(schema)}` : '',
+                    database ? `database = ${escapeVal(database)}` : '',
+                    table ? `name = ${escapeVal(table)}` : '',
                   ]
                     .filter(Boolean)
                     .join(' AND ')}`

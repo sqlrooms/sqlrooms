@@ -149,7 +149,12 @@ export function convertToAiSDKTools(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
       acc[name] = convertToVercelAiToolV5({
         ...tool,
-        onToolCompleted,
+        onToolCompleted: (toolCallId: string, additionalData: unknown) => {
+          if (tool.onToolCompleted) {
+            tool.onToolCompleted(toolCallId, additionalData);
+          }
+          onToolCompleted?.(toolCallId, additionalData);
+        },
       });
       return acc;
     },
