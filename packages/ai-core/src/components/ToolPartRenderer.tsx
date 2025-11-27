@@ -19,48 +19,72 @@ const AgentProgressRenderer: React.FC<{
   }>;
   finalOutput?: string;
 }> = ({agentToolCalls, finalOutput}) => {
+  const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
+
   return (
     <div className="mt-2 px-5 text-[0.9em]">
       <div className="mb-2 font-bold text-gray-600">
         Agent Tool Execution Progress:
       </div>
       <div className="ml-3">
-        {agentToolCalls.map((toolCall, index) => (
-          <div
-            key={toolCall.toolCallId}
-            className={`mb-1 flex items-start ${
-              toolCall.state === 'error' ? 'text-red-700' : 'text-gray-600'
-            }`}
-          >
-            <span className="mr-2 min-w-[16px]">
-              {toolCall.state === 'success' && '✓'}
-              {toolCall.state === 'error' && '✗'}
-              {toolCall.state === 'pending' && '○'}
-            </span>
-            <div className="flex-1">
-              <span className="font-medium">{toolCall.toolName}</span>
-              {toolCall.state === 'success' &&
-                toolCall.output !== undefined && (
-                  <span className="ml-2 text-[0.9em] text-gray-600">
-                    {(() => {
-                      try {
-                        return typeof toolCall.output === 'object'
-                          ? JSON.stringify(toolCall.output)
-                          : String(toolCall.output);
-                      } catch {
-                        return '[Output unavailable]';
-                      }
-                    })()}
-                  </span>
-                )}
-              {toolCall.state === 'error' && toolCall.errorText && (
-                <div className="mt-0.5 text-[0.9em] text-red-700">
-                  Error: {toolCall.errorText}
+        {agentToolCalls.map((toolCall, index) => {
+          const ToolComponent = findToolComponent(toolCall.toolName);
+          const isSuccess = toolCall.state === 'success';
+          const isError = toolCall.state === 'error';
+          const hasComponent =
+            ToolComponent && typeof ToolComponent === 'function';
+          const hasObjectOutput =
+            toolCall.output &&
+            typeof toolCall.output === 'object' &&
+            toolCall.output !== null;
+
+          return (
+            <div
+              key={toolCall.toolCallId}
+              className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
+            >
+              <div className="mb-1 flex items-start">
+                <span className="mr-2 min-w-[16px]">
+                  {isSuccess && '✓'}
+                  {isError && '✗'}
+                  {toolCall.state === 'pending' && '○'}
+                </span>
+                <div className="flex-1">
+                  <span className="font-medium">{toolCall.toolName}</span>
+                  {isError && toolCall.errorText && (
+                    <div className="mt-0.5 text-[0.9em] text-red-700">
+                      Error: {toolCall.errorText}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {/* Render ToolComponent if available and successful */}
+              {isSuccess && hasComponent && hasObjectOutput ? (
+                <div className="ml-6 mt-1">
+                  <ToolComponent
+                    {...(toolCall.output as Record<string, unknown>)}
+                  />
+                </div>
+              ) : null}
+
+              {/* Fallback: render output as text if no ToolComponent */}
+              {isSuccess && !hasComponent && toolCall.output !== undefined ? (
+                <div className="ml-6 mt-1 text-[0.9em] text-gray-600">
+                  {(() => {
+                    try {
+                      return typeof toolCall.output === 'object'
+                        ? JSON.stringify(toolCall.output)
+                        : String(toolCall.output);
+                    } catch {
+                      return '[Output unavailable]';
+                    }
+                  })()}
+                </div>
+              ) : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
