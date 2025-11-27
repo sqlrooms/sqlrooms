@@ -628,6 +628,7 @@ export function createAiSlice(
           try {
             const response = await generateText({
               model,
+              temperature: 0.0,
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,

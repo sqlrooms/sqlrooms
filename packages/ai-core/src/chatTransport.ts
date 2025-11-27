@@ -221,11 +221,11 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        // Ensure we always pass an array of messages
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
+        temperature: 0.0,
       });
 
       return result.toUIMessageStreamResponse();
