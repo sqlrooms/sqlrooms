@@ -1924,43 +1924,43 @@ importers:
         specifier: ^6.1.0
         version: 6.3.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@kepler.gl/actions':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/components':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(9541985bf89cd47c667bc1ab704210b9)
       '@kepler.gl/constants':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3
       '@kepler.gl/duckdb':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/layers':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(typescript@5.8.3)
       '@kepler.gl/localization':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(typescript@5.8.3)
       '@kepler.gl/processors':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/reducers':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(8835d7f17e98d3fa0ef545cddf51f361)
       '@kepler.gl/schemas':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@8.5.21)(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@8.5.21)(@luma.gl/webgl@8.5.21)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/styles':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@kepler.gl/table':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@loaders.gl/core@4.3.4)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)
       '@kepler.gl/types':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3
       '@kepler.gl/utils':
-        specifier: 3.2.3
+        specifier: ^3.2.3
         version: 3.2.3(@loaders.gl/core@4.3.4)(react-dom@19.2.0(react@19.2.0))
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
