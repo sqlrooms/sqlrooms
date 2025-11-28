@@ -23,7 +23,7 @@ export const SessionTitle: React.FC<SessionTitleProps> = ({className}) => {
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
 
   return (
-    <div className={cn('flex items-center gap-2', className)}>
+    <div className={cn('flex w-full items-center gap-2', className)}>
       {currentSession ? (
         <EditableText
           value={currentSession.name}

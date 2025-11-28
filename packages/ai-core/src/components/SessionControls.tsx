@@ -23,14 +23,17 @@ export const SessionControls: React.FC<{
     <>
       {/* Header with session controls */}
       <div
-        className={cn('flex flex-wrap items-center justify-between', className)}
+        className={cn(
+          'flex flex-wrap items-center justify-between gap-2',
+          className,
+        )}
       >
         {/* Left side - History Button and Editable Session Title */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-grow items-center gap-3">
           <SessionDropdown />
           <SessionTitle />
           {currentSession && (
-            <div className="text-muted-foreground text-xs">
+            <div className="text-muted-foreground whitespace-nowrap text-xs">
               {currentSession.model}
             </div>
           )}
