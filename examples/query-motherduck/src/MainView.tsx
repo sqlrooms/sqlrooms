@@ -64,7 +64,7 @@ export const MainView: FC = () => {
           <ResizablePanel
             defaultSize={50}
             // this is for Monaco's completion menu to not being cut off
-            className="!overflow-visible"
+            // className="!overflow-visible"
           >
             <QueryEditorPanel />
           </ResizablePanel>
