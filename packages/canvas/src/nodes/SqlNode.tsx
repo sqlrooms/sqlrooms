@@ -1,7 +1,7 @@
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Button, useToast} from '@sqlrooms/ui';
-import {FC} from 'react';
+import {FC, useMemo, useState} from 'react';
 import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
 // import type * as Monaco from 'monaco-editor';
@@ -14,6 +14,7 @@ const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
   scrollbar: {
     handleMouseWheel: false,
   },
+  fixedOverflowWidgets: false,
 };
 
 type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
@@ -37,6 +38,27 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   //   [execute],
   // );
 
+  // const reactFlowContainerRef = useRef<HTMLDivElement>(null);
+  // useEffect(() => {
+  //   reactFlowContainerRef.current = document.querySelector<HTMLDivElement>(
+  //     '.react-flow__renderer',
+  //   );
+  // }, []);
+  const [overflowWidgetsDomNode, setOverflowWidgetsDomNode] =
+    useState<HTMLDivElement | null>(null);
+
+  const editorOptions = useMemo(
+    (): typeof EDITOR_OPTIONS =>
+      overflowWidgetsDomNode
+        ? {
+            ...EDITOR_OPTIONS,
+            overflowWidgetsDomNode: overflowWidgetsDomNode ?? undefined,
+            fixedOverflowWidgets: false,
+          }
+        : EDITOR_OPTIONS,
+    [overflowWidgetsDomNode],
+  );
+
   return (
     <CanvasNodeContainer
       id={id}
@@ -54,7 +76,7 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           <SqlMonacoEditor
             className="absolute inset-0 p-1"
             value={sql}
-            options={EDITOR_OPTIONS}
+            options={editorOptions}
             onChange={(v) =>
               updateNode(id, (d) => ({...(d as SqlData), sql: v || ''}))
             }
@@ -76,6 +98,21 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           </div>
         )}
       </div>
+      {/* {reactFlowContainerRef.current &&
+        createPortal(
+          <div
+            ref={(node) => {
+              if (node && !overflowWidgetsDomNode) {
+                setOverflowWidgetsDomNode(node);
+              }
+            }}
+            // CRITICAL: You must re-apply the monaco class here!
+            className="monaco-editor"
+            // CRITICAL: Styles to ensure overlays position correctly relative to window
+            style={{position: 'absolute', top: 0, left: 0}}
+          />,
+          reactFlowContainerRef.current,
+        )} */}
     </CanvasNodeContainer>
   );
 };

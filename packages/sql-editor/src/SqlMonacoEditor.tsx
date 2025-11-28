@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {MonacoEditor} from '@sqlrooms/monaco-editor';
 import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
@@ -35,6 +35,12 @@ export interface SqlMonacoEditorProps
   };
 }
 
+const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
+  formatOnPaste: true,
+  formatOnType: true,
+  wordWrap: 'on',
+};
+
 /**
  * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
  * This is an internal component used by SqlEditor
@@ -47,7 +53,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   getLatestSchemas,
   onMount,
   className,
-  ...props
+  options,
+  ...restProps
 }) => {
   // Store references to editor and monaco
   const editorRef = useRef<any>(null);
@@ -287,17 +294,20 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
 
+  const combinedOptions = useMemo(
+    (): MonacoEditorProps['options'] => ({
+      ...EDITOR_OPTIONS,
+      ...options,
+    }),
+    [options],
+  );
   return (
     <MonacoEditor
       language="sql"
       onMount={handleEditorDidMount}
       className={cn('h-full', className)}
-      options={{
-        formatOnPaste: true,
-        formatOnType: true,
-        wordWrap: 'on',
-      }}
-      {...props}
+      options={combinedOptions}
+      {...restProps}
     />
   );
 };
