@@ -324,7 +324,7 @@ export function createKeplerSlice({
 
           if (fields && cols) {
             const datasets: AddDataToMapPayload['datasets'] = {
-              data: {fields, cols, rows: []},
+              data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {label: tableName, id: tableName},
               metadata: {tableName},
             };
