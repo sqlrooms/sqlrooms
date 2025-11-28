@@ -9,15 +9,15 @@ import {
   AddLayerButtonFactory,
   SidePanelSection,
 } from '@kepler.gl/components';
-import {
-  PANEL_VIEW_TOGGLES,
-  SIDEBAR_PANELS,
-} from '@kepler.gl/constants';
+import {PANEL_VIEW_TOGGLES, SIDEBAR_PANELS} from '@kepler.gl/constants';
 import {LayerClassesType} from '@kepler.gl/layers';
 import {getApplicationConfig} from '@kepler.gl/utils';
 
 import {KeplerInjector} from './KeplerInjector';
-import {KeplerActions, useKeplerStateActions} from '../hooks/useKeplerStateActions';
+import {
+  KeplerActions,
+  useKeplerStateActions,
+} from '../hooks/useKeplerStateActions';
 import {RGBColor} from '@kepler.gl/types';
 
 // Get the kepler.gl components through the injector
@@ -39,7 +39,7 @@ const CustomLayerManagerContainer = styled.div`
   }
 
   .add-layer-button {
-    background-color: ${props => props.theme.sidePanelBg || props.theme.panelBackground};
+    background-color: ${(props) => props.theme.sidePanelBg || props.theme.panelBackground};
     color: #2563EB; 
     border: 0px;
     height: 28px;
@@ -53,6 +53,23 @@ const CustomLayerManagerContainer = styled.div`
 
   .layer-panel__header {
     height: 36px;
+  }
+
+  .layer__title {
+    min-width: 0;
+  }
+
+  .layer__title > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .layer__title__editor {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
   }
 }
 `;
@@ -71,12 +88,12 @@ function useCustomSidePanelActions(keplerActions: KeplerActions) {
     (dataId: string) => openDeleteModal(dataId),
     [openDeleteModal],
   );
-  
+
   const onShowAddDataModal = useCallback(
     () => toggleModal('addData'),
     [toggleModal],
   );
-  
+
   const onUpdateTableColor = useCallback(
     (dataId: string, newColor: RGBColor) => updateTableColor(dataId, newColor),
     [updateTableColor],
@@ -101,20 +118,21 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
     useCustomSidePanelActions(keplerActions);
 
   const {addLayer} = keplerActions.visStateActions;
-  
+
   const onAddLayer = useCallback(
     (dataset: string) => {
       addLayer(undefined, dataset);
     },
-    [addLayer]
+    [addLayer],
   );
 
-  const isSortByDatasetMode = keplerState?.uiState.layerPanelListView === PANEL_VIEW_TOGGLES.byDataset;
+  const isSortByDatasetMode =
+    keplerState?.uiState.layerPanelListView === PANEL_VIEW_TOGGLES.byDataset;
 
   // Filter layer classes based on application config
   const enableRasterTileLayer = getApplicationConfig().enableRasterTileLayer;
   const enableWMSLayer = getApplicationConfig().enableWMSLayer;
-  
+
   const filteredLayerClasses = useMemo(() => {
     let filteredClasses = keplerState?.visState.layerClasses || {};
     if (!enableRasterTileLayer && 'rasterTile' in filteredClasses) {
@@ -126,7 +144,11 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
       filteredClasses = rest as LayerClassesType;
     }
     return filteredClasses as LayerClassesType;
-  }, [enableRasterTileLayer, enableWMSLayer, keplerState?.visState.layerClasses]);
+  }, [
+    enableRasterTileLayer,
+    enableWMSLayer,
+    keplerState?.visState.layerClasses,
+  ]);
 
   if (!keplerState || !keplerActions) {
     return null;
@@ -138,12 +160,17 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
         <SidePanelSection>
           <PanelTitle
             className="layer-manager-title"
-            title={intl.formatMessage({id: layerPanelMetadata?.label || 'Layers'})}
+            title={intl.formatMessage({
+              id: layerPanelMetadata?.label || 'Layers',
+            })}
           >
-            <AddLayerButton datasets={keplerState.visState.datasets} onAdd={onAddLayer} />
+            <AddLayerButton
+              datasets={keplerState.visState.datasets}
+              onAdd={onAddLayer}
+            />
           </PanelTitle>
         </SidePanelSection>
-        
+
         <SidePanelSection>
           {isSortByDatasetMode ? (
             <DatasetLayerGroup
