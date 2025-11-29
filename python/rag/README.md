@@ -157,7 +157,7 @@ options:
 - May break sections mid-content
 - Use only if your docs lack clear structure
 
-See [CHUNKING.md](./CHUNKING.md) for detailed comparison and best practices.
+See [CHUNKING.md](./docs/CHUNKING.md) for detailed comparison and best practices.
 
 ## Output
 
@@ -194,7 +194,7 @@ Human-readable file documenting:
 - ✓ Reproducible builds
 - ✓ Version compatibility checks
 
-See [METADATA.md](./METADATA.md) for details.
+See [METADATA.md](./docs/METADATA.md) for details.
 
 ## Using the Generated Database
 
@@ -239,7 +239,7 @@ for doc in source_docs:
     print(f"Full document: {doc['file_name']}")
 ```
 
-**Why hybrid?** Combines semantic understanding (vector search) with exact keyword matching (FTS). Best for technical queries with specific terms, function names, or acronyms. See [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for details.
+**Why hybrid?** Combines semantic understanding (vector search) with exact keyword matching (FTS). Best for technical queries with specific terms, function names, or acronyms. See [HYBRID_SEARCH.md](./docs/HYBRID_SEARCH.md) for details.
 
 **New features:**
 
@@ -333,7 +333,7 @@ uv run python examples/inspect_metadata.py --inspect kb.duckdb
 uv run python examples/inspect_metadata.py --validate kb.duckdb "BAAI/bge-small-en-v1.5"
 ```
 
-See [QUERYING.md](./QUERYING.md) for detailed documentation on querying the database directly with SQL, [HYBRID_SEARCH.md](./HYBRID_SEARCH.md) for hybrid retrieval details, and [METADATA.md](./METADATA.md) for metadata tracking.
+See [QUERYING.md](./docs/QUERYING.md) for detailed documentation on querying the database directly with SQL, [HYBRID_SEARCH.md](./docs/HYBRID_SEARCH.md) for hybrid retrieval details, and [METADATA.md](./docs/METADATA.md) for metadata tracking.
 
 ## Visualization
 
@@ -373,9 +373,9 @@ The output includes two Parquet files:
 - **Topic Detection:** Automatically clusters documents and assigns descriptive topic names using TF-IDF keyword extraction. Disable with `--no-topics`.
 - **Link Extraction:** Parses markdown links to build a chunk-level graph. Source chunks keep individual outdegree values; target documents expand to all chunks. Disable with `--no-links`.
 
-See [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
+See [VISUALIZATION_GUIDE.md](./docs/VISUALIZATION_GUIDE.md) for complete visualization examples and usage details.
 
-See [CHUNKING.md](./CHUNKING.md) for information about markdown-aware chunking.
+See [CHUNKING.md](./docs/CHUNKING.md) for information about markdown-aware chunking.
 
 ## Package Structure
 
@@ -508,7 +508,7 @@ uv run prepare-embeddings docs -o kb.duckdb \
 
 See `examples/prepare_with_openai.py` for detailed examples and cost estimates.
 
-**Complete guide:** See [EXTERNAL_APIS.md](./EXTERNAL_APIS.md) for full documentation on using external embedding APIs.
+**Complete guide:** See [EXTERNAL_APIS.md](./docs/EXTERNAL_APIS.md) for full documentation on using external embedding APIs.
 
 ## Notes
 
@@ -558,7 +558,7 @@ uv run prepare-embeddings docs -o kb.duckdb \
 - Token estimation isn't perfect
 - Technical text has higher token density
 
-See [EXTERNAL_APIS.md](./EXTERNAL_APIS.md#openai-token-limits) for details.
+See [EXTERNAL_APIS.md](./docs/EXTERNAL_APIS.md#openai-token-limits) for details.
 
 ### Out of Memory
 

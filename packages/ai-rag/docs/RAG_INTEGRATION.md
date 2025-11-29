@@ -565,9 +565,9 @@ console.log(results);
 
 ## Resources
 
-- [RAG Package README](./README.md) - Main package documentation
+- [RAG Package README](../README.md) - Main package documentation
 - [RAG Tool Guide](./RAG_TOOL.md) - AI tool usage guide
 - [Embedding Providers Guide](./EMBEDDING_PROVIDERS.md) - Provider setup and comparison
-- [Python Package Docs](../../python/rag/README.md) - Database preparation
-- [Example Implementation](../../examples/ai/src/store.ts) - Working example
+- [Python Package Docs](../../../python/rag/README.md) - Database preparation
+- [Example Implementation](../../../examples/ai/src/store.ts) - Working example
 - [Vercel AI SDK Docs](https://sdk.vercel.ai/docs) - AI SDK documentation

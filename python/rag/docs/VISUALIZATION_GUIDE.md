@@ -545,6 +545,6 @@ python -c "import pandas as pd; pd.read_parquet('file.parquet').to_json('file.js
 
 ## Related Documentation
 
-- [scripts/README.md](./scripts/README.md) - Detailed script documentation
-- [README.md](./README.md) - Main package documentation
+- [scripts/README.md](../scripts/README.md) - Detailed script documentation
+- [README.md](../README.md) - Main package documentation
 - [UMAP Documentation](https://umap-learn.readthedocs.io/) - Official UMAP docs

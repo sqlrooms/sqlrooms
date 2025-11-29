@@ -323,5 +323,5 @@ df['topic'] = [topic_names[label] for label in cluster_labels]
 ## Related Documentation
 
 - [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) - Complete visualization guide
-- [README.md](./README.md) - Main package documentation
-- [scripts/README.md](./scripts/README.md) - Script documentation
+- [README.md](../README.md) - Main package documentation
+- [scripts/README.md](../scripts/README.md) - Script documentation

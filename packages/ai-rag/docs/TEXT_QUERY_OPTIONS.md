@@ -375,5 +375,5 @@ const embeddingProvider: EmbeddingProvider = async (text) => {
 ## Related Documentation
 
 - **[EMBEDDING_PROVIDERS.md](./EMBEDDING_PROVIDERS.md)** - Detailed provider examples
-- **[README.md](./README.md)** - Main package documentation
+- **[README.md](../README.md)** - Main package documentation
 - **[EXAMPLE.md](./EXAMPLE.md)** - Complete integration examples

@@ -377,6 +377,6 @@ function createSmartRagTool() {
 
 ## See Also
 
-- [RAG Package README](./README.md) - Full RAG package documentation
-- [Embedding Preparation](../../python/rag/README.md) - Python tools for preparing embeddings
-- [AI Tools Guide](../ai/TOOLS.md) - General guide to AI tools
+- [RAG Package README](../README.md) - Full RAG package documentation
+- [Embedding Preparation](../../../python/rag/README.md) - Python tools for preparing embeddings
+- [AI Tools Guide](../../ai/TOOLS.md) - General guide to AI tools

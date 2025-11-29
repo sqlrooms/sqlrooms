@@ -521,4 +521,4 @@ links_df = create_links_table(outgoing, node_ids)
 
 - [VISUALIZATION_GUIDE.md](./VISUALIZATION_GUIDE.md) - Complete visualization guide
 - [TOPIC_DETECTION.md](./TOPIC_DETECTION.md) - Topic detection guide
-- [README.md](./README.md) - Main package documentation
+- [README.md](../README.md) - Main package documentation
