@@ -23,7 +23,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.475.0",
+    "lucide-react": "^0.555.0",
     "react-vega": "^7.7.1",
     "vega": "^6.2.0",
     "vega-lite": "^6.4.0",

@@ -28,7 +28,7 @@
     "@sqlrooms/utils": "workspace:*",
     "ai": "^5.0.44",
     "immer": "^10.1.1",
-    "lucide-react": "^0.475.0",
+    "lucide-react": "^0.555.0",
     "react-markdown": "^10.1.0",
     "recharts": "^2.12.7",
     "rehype-raw": "^7.0.0",
