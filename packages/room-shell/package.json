@@ -35,7 +35,7 @@
     "@sqlrooms/utils": "workspace:*",
     "apache-arrow": "17.0.0",
     "immer": "^10.1.3",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.555.0",
     "react-mosaic-component": "^6.1.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
