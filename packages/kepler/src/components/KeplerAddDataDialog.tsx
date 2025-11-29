@@ -91,9 +91,9 @@ export const KeplerAddDataDialog = ({
   loadFiles,
   listS3Files,
   loadS3Files,
-  saveS3Credential,
+  saveS3Credentials,
   loadS3Credentials,
-  deleteS3Credential,
+  deleteS3Credentials,
   s3Browser,
   method = AddDataMethods.Upload,
   acceptedFormats = DEFAULT_ACCEPTED_FORMATS,
@@ -185,9 +185,9 @@ export const KeplerAddDataDialog = ({
                 listS3Files={listS3Files}
                 s3Browser={s3Browser}
                 loadS3Files={onLoadS3Files}
-                saveS3Credential={saveS3Credential}
+                saveS3Credentials={saveS3Credentials}
                 loadS3Credentials={loadS3Credentials}
-                deleteS3Credential={deleteS3Credential}
+                deleteS3Credentials={deleteS3Credentials}
               />
             </TabsContent>
           </Tabs>

@@ -15,7 +15,7 @@ import {
   TableRow,
   cn,
 } from '@sqlrooms/ui';
-import {S3FileOrDirectory} from '../../s3-browser-config/dist';
+import {S3FileOrDirectory} from '@sqlrooms/s3-browser-config';
 import {Undo2Icon, FolderIcon, Search} from 'lucide-react';
 import {formatBytes, formatTimeRelative} from '@sqlrooms/utils';
 import {FC, useCallback, useEffect, useMemo, useState} from 'react';

@@ -14,7 +14,7 @@ import {
   TabsTrigger,
 } from '@sqlrooms/ui';
 import {ListCollapseIcon, PlusIcon, XIcon, SearchIcon} from 'lucide-react';
-import React, {useCallback, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
 import {QueryTabMenuItem} from './QueryTabMenuItem';
@@ -26,6 +26,9 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
   const closedTabIds = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.closedTabIds,
+  );
+  const selectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.config.selectedQueryId,
   );
   const openedTabs = queries.filter((q) => !closedTabIds.includes(q.id));
   const closedTabs = queries.filter((q) => closedTabIds.includes(q.id));
@@ -45,6 +48,8 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   // Ref for the scrollable container
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  // Track previous selectedQueryId to only scroll when it actually changes
+  const prevSelectedQueryIdRef = useRef<string | null>(null);
 
   const closeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.closeQueryTab);
   const openQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.openQueryTab);
@@ -108,16 +113,61 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   // Handle new query creation
   const handleNewQuery = useCallback(() => {
     createQueryTab();
-    // Auto-scroll to the right after a short delay to ensure the tab is rendered
-    setTimeout(() => {
-      if (scrollContainerRef.current) {
-        scrollContainerRef.current.scrollTo({
-          left: scrollContainerRef.current.scrollWidth,
+  }, [createQueryTab]);
+
+  useEffect(() => {
+    if (!selectedQueryId) return;
+
+    // Only react when the selected tab actually changes
+    if (prevSelectedQueryIdRef.current === selectedQueryId) return;
+    prevSelectedQueryIdRef.current = selectedQueryId;
+
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Only scroll if the selected tab is still open
+    const isOpened = openedTabs.some((tab) => tab.id === selectedQueryId);
+    if (!isOpened) return;
+
+    // After the DOM is painted
+    const frameId = requestAnimationFrame(() => {
+      const activeTab = container.querySelector<HTMLElement>(
+        '[data-state="active"]',
+      );
+      if (!activeTab) return;
+
+      const visibleLeft = container.scrollLeft;
+      const visibleRight = visibleLeft + container.clientWidth;
+
+      const tabLeft = activeTab.offsetLeft;
+      const tabRight = tabLeft + activeTab.offsetWidth;
+
+      // If the tab is already fully visible, don't scroll
+      if (tabLeft >= visibleLeft && tabRight <= visibleRight) return;
+
+      let newScrollLeft = visibleLeft;
+
+      if (tabLeft < visibleLeft) {
+        newScrollLeft = Math.max(0, tabLeft - 10);
+      } else if (tabRight > visibleRight) {
+        newScrollLeft = Math.min(
+          container.scrollWidth - container.clientWidth,
+          tabRight - container.clientWidth + 10,
+        );
+      }
+
+      if (newScrollLeft !== visibleLeft) {
+        container.scrollTo({
+          left: newScrollLeft,
           behavior: 'smooth',
         });
       }
-    }, 0);
-  }, [createQueryTab]);
+    });
+
+    return () => {
+      cancelAnimationFrame(frameId);
+    };
+  }, [selectedQueryId, openedTabs]);
 
   const handleConfirmDeleteQuery = useCallback(() => {
     if (queryToDelete) {
@@ -208,6 +258,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
               </div>
 
               <Button
+                asChild
                 size="xs"
                 variant="ghost"
                 className="hover:bg-primary/10 h-4 w-4 p-1"
@@ -221,7 +272,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   closeQueryTab(q.id);
                 }}
               >
-                <XIcon size={12} />
+                <XIcon className="h-5 w-5" />
               </Button>
             </TabsTrigger>
           ))}

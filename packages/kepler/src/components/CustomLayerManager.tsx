@@ -54,6 +54,23 @@ const CustomLayerManagerContainer = styled.div`
   .layer-panel__header {
     height: 36px;
   }
+
+  .layer__title {
+    min-width: 0;
+  }
+
+  .layer__title > div {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .layer__title__editor {
+    width: 100%;
+    min-width: 0;
+    flex: 1;
+  }
 }
 `;
 
