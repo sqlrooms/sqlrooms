@@ -11,7 +11,7 @@ export const S3ConfigSchema = z.object({
 
 export type S3Config = z.infer<typeof S3ConfigSchema>;
 
-export const S3CredentialSchema = z.object({
+export const S3CredentialsSchema = z.object({
   name: z.string().min(1, 'Name is required'),
   accessKeyId: z.string().min(1, 'Access Key ID is required'),
   secretAccessKey: z.string().min(1, 'Secret Access Key is required'),
@@ -23,4 +23,4 @@ export const S3CredentialSchema = z.object({
   updatedAt: z.string().datetime('Invalid date format'),
 });
 
-export type S3Credential = z.infer<typeof S3CredentialSchema>;
+export type S3Credentials = z.infer<typeof S3CredentialsSchema>;

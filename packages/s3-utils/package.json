@@ -1,6 +1,7 @@
 {
   "name": "@sqlrooms/s3-utils",
   "version": "0.13.1",
+  "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
