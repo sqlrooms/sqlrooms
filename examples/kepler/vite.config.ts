@@ -5,10 +5,17 @@ import path from 'path';
 import {defineConfig} from 'vite';
 
 /**
- * Create aliases for deck.gl v8 and luma.gl v8 packages to avoid conflicts with v9
+ * Create aliases for deck.gl v8 and luma.gl v8 packages to avoid conflicts with v9.
+ * Only needed in the monorepo where both v8 and v9 exist simultaneously.
  */
 function createDeckGLv8Aliases() {
   const rootNodeModules = path.resolve(__dirname, '../../node_modules/.pnpm');
+
+  // Check if we're in the monorepo (pnpm structure exists)
+  if (!fs.existsSync(rootNodeModules)) {
+    return [];
+  }
+
   const aliases: any[] = [];
 
   // List of deck.gl packages to alias
