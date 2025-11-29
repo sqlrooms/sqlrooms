@@ -37,7 +37,6 @@
     "@sqlrooms/kepler-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/s3-browser": "workspace:*",
-    "@sqlrooms/s3-utils": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "apache-arrow": "17.0.0",
     "immer": "^10.1.1",
