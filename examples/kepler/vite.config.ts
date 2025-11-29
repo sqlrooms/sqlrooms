@@ -4,18 +4,52 @@ import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
 
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react()],
+  resolve: {
+    alias: (() => {
+      const aliases: any[] = [];
+
+      // Check if we're in the monorepo (pnpm structure exists)
+      const monorepoRoot = path.resolve(__dirname, '../..');
+      const pnpmModules = path.join(monorepoRoot, 'node_modules/.pnpm');
+      const isMonorepo = fs.existsSync(pnpmModules);
+
+      if (isMonorepo) {
+        // Avoid issues with double styled-components
+        aliases.push({
+          find: 'styled-components',
+          replacement: path.join(
+            monorepoRoot,
+            'packages/kepler/node_modules/styled-components',
+          ),
+        });
+        // Force deck.gl v8 and luma.gl v8 for kepler.gl compatibility
+        aliases.push(...createDeckGLv8Aliases(pnpmModules));
+      }
+
+      return aliases;
+    })(),
+  },
+  build: {
+    minify: false,
+  },
+  optimizeDeps: {
+    esbuildOptions: {
+      plugins: [
+        // See https://github.com/bvaughn/react-virtualized/issues/1722#issuecomment-1911672178
+        fixReactVirtualized as any,
+      ],
+    },
+  },
+});
+
 /**
  * Create aliases for deck.gl v8 and luma.gl v8 packages to avoid conflicts with v9.
  * Only needed in the monorepo where both v8 and v9 exist simultaneously.
  */
-function createDeckGLv8Aliases() {
-  const rootNodeModules = path.resolve(__dirname, '../../node_modules/.pnpm');
-
-  // Check if we're in the monorepo (pnpm structure exists)
-  if (!fs.existsSync(rootNodeModules)) {
-    return [];
-  }
-
+function createDeckGLv8Aliases(rootNodeModules: string) {
   const aliases: any[] = [];
 
   // List of deck.gl packages to alias
@@ -85,34 +119,3 @@ function createDeckGLv8Aliases() {
 
   return aliases;
 }
-
-// https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  resolve: {
-    alias: [
-      {find: '@', replacement: path.resolve(__dirname, './src')},
-      // Avoid issues with double styled-components
-      {
-        find: 'styled-components',
-        replacement: path.resolve(
-          __dirname,
-          '../../packages/kepler/node_modules/styled-components',
-        ),
-      },
-      // Force deck.gl v8 and luma.gl v8 for kepler.gl compatibility
-      ...createDeckGLv8Aliases(),
-    ],
-  },
-  build: {
-    minify: false,
-  },
-  optimizeDeps: {
-    esbuildOptions: {
-      plugins: [
-        // See https://github.com/bvaughn/react-virtualized/issues/1722#issuecomment-1911672178
-        fixReactVirtualized as any,
-      ],
-    },
-  },
-});
