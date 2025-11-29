@@ -1,14 +1,14 @@
 import {
   MapboxOverlay as DeckOverlay,
   MapboxOverlayProps,
-} from '@deck.gl/mapbox/typed';
-import {GeoJsonLayer} from 'deck.gl/typed';
+} from '@deck.gl/mapbox';
+import {cn} from '@sqlrooms/ui';
+import {GeoJsonLayer} from 'deck.gl';
 import {MessageCircle, PlusCircle} from 'lucide-react';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import {FC, useMemo, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
 import {useRoomStore} from '../store';
-import {cn} from '@sqlrooms/ui';
 
 const INITIAL_VIEW_STATE = {
   latitude: 51.47,
@@ -21,9 +21,7 @@ const INITIAL_VIEW_STATE = {
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
 function DeckGLOverlay(props: MapboxOverlayProps) {
-  // @ts-ignore
   const overlay = useControl(() => new DeckOverlay(props));
-  // @ts-ignore
   overlay.setProps(props);
   return null;
 }
@@ -42,7 +40,9 @@ type PopupInfo = {
   rootDiscussionText: string;
 };
 
-export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
+export const MapView: FC<{features: AirportFeature[] | undefined}> = ({
+  features,
+}) => {
   const [selected, setSelected] = useState<AirportFeature>();
   const [commentText, setCommentText] = useState('');
 
@@ -58,6 +58,12 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
       (d) => d.id === state.discuss.highlightedDiscussionId,
     ),
   );
+
+  // useEffect(() => {
+  //   if (features) {
+  //     setVi
+  //   }
+  // }, [features]);
 
   // Create a map of airport abbrev -> discussions
   const discussionsByAirport = useMemo(() => {
@@ -79,23 +85,25 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
   // Create popup info for airports with discussions
   const airportsWithDiscussions = useMemo(() => {
     return features
-      .filter((feature) => discussionsByAirport[feature.properties.abbrev])
-      .map((feature) => {
-        const [longitude, latitude] = feature.geometry.coordinates;
-        const airportDiscussions =
-          discussionsByAirport[feature.properties.abbrev] || [];
-        const firstDiscussion = airportDiscussions[0];
-        return {
-          featureId: feature.properties.abbrev,
-          longitude,
-          latitude,
-          name: feature.properties.name,
-          discussionCount: airportDiscussions.length,
-          rootDiscussionText: firstDiscussion
-            ? firstDiscussion.rootComment.text
-            : '',
-        } satisfies PopupInfo;
-      });
+      ? features
+          .filter((feature) => discussionsByAirport[feature.properties.abbrev])
+          .map((feature) => {
+            const [longitude, latitude] = feature.geometry.coordinates;
+            const airportDiscussions =
+              discussionsByAirport[feature.properties.abbrev] || [];
+            const firstDiscussion = airportDiscussions[0];
+            return {
+              featureId: feature.properties.abbrev,
+              longitude,
+              latitude,
+              name: feature.properties.name,
+              discussionCount: airportDiscussions.length,
+              rootDiscussionText: firstDiscussion
+                ? firstDiscussion.rootComment.text
+                : '',
+            } satisfies PopupInfo;
+          })
+      : [];
   }, [features, discussionsByAirport]);
 
   // Handle clicking on an airport
@@ -240,7 +248,7 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
         </Popup>
       ))}
 
-      <DeckGLOverlay layers={layers} />
+      <DeckGLOverlay layers={layers} interleaved />
       <NavigationControl position="top-left" />
     </Map>
   );

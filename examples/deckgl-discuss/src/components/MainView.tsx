@@ -38,13 +38,8 @@ export const MainView: React.FC = () => {
   if (!table) return null;
   return (
     <div className="flex h-full w-full items-center justify-center">
-      {isLoading ? (
-        <SpinnerPane className="h-full w-full" />
-      ) : error ? (
-        <div>Error: {error.message}</div>
-      ) : features ? (
-        <MapView features={features} />
-      ) : null}
+      {error ? <div>Error: {error.message}</div> : null}
+      <MapView features={features} />
     </div>
   );
 };
