@@ -2,10 +2,10 @@ import React, {useState, useEffect, useCallback} from 'react';
 
 import {
   S3FileBrowser,
-  S3CredentialForm,
+  S3CredentialsForm,
   S3BrowserState,
 } from '@sqlrooms/s3-browser';
-import {S3FileOrDirectory, S3Config, S3Credential} from '@sqlrooms/s3-browser';
+import {S3FileOrDirectory, S3Config, S3Credentials} from '@sqlrooms/s3-browser';
 import {ChevronLeft} from 'lucide-react';
 import {
   DialogFooter,
@@ -26,17 +26,17 @@ export type KeplerS3BrowserProps = {
     files: string[];
   }) => Promise<void>;
   s3Browser: S3BrowserState['s3Browser'];
-  saveS3Credential: (s3Config: S3Config) => Promise<void>;
-  loadS3Credentials: () => Promise<S3Credential[]>;
-  deleteS3Credential: (id: string) => Promise<void>;
+  saveS3Credentials: (s3Config: S3Config) => Promise<void>;
+  loadS3Credentials: () => Promise<S3Credentials[]>;
+  deleteS3Credentials: (id: string) => Promise<void>;
 };
 export const KeplerS3Browser = ({
   listS3Files,
   s3Browser,
   loadS3Files,
-  saveS3Credential,
+  saveS3Credentials,
   loadS3Credentials,
-  deleteS3Credential,
+  deleteS3Credentials,
 }: KeplerS3BrowserProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
@@ -120,12 +120,12 @@ export const KeplerS3Browser = ({
               </Alert>
             </div>
           ) : null}
-          <S3CredentialForm
+          <S3CredentialsForm
             onConnect={onConnect}
             isLoading={isConnecting}
-            saveS3Credential={saveS3Credential}
+            saveS3Credentials={saveS3Credentials}
             loadS3Credentials={loadS3Credentials}
-            deleteS3Credential={deleteS3Credential}
+            deleteS3Credentials={deleteS3Credentials}
             onInputChange={() => setError('')}
           />
         </>
