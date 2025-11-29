@@ -1,4 +1,3 @@
-'use client';
 import {FileDropzone} from '@sqlrooms/dropzone';
 import {
   FileDataSourcesPanel,
