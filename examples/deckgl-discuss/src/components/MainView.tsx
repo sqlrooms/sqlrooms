@@ -1,12 +1,11 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {SpinnerPane} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {AirportFeature, MapView} from './MapView';
 
 export const MainView: React.FC = () => {
   const table = useRoomStore((s) => s.db.findTableByName('airports'));
-  const {data, isLoading, error} = useSql<{
+  const {data, error} = useSql<{
     name: string;
     abbrev: string;
     scalerank: number;
