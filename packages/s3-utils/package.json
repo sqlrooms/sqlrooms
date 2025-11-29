@@ -14,11 +14,9 @@
   "files": [
     "dist"
   ],
-  "publishConfig": {
-    "access": "public"
-  },
+  "private": true,
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.726.1",
+    "@aws-sdk/client-s3": "^3.940.0",
     "@sqlrooms/s3-browser-config": "workspace:*"
   },
   "scripts": {
