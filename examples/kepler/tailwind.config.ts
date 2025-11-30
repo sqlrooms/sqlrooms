@@ -6,11 +6,10 @@ const config = {
   ...preset,
   content: [
     'src/**/*.{ts,tsx}',
-    // @sqlrooms-packages-content-start
-    // !IMPORTANT! Replace the following by
-    //             when not developing sqlrooms in the monorepo
-    '../../packages/*/src/**/*.{ts,tsx}',
-    // @sqlrooms-packages-content-end
+    // If you make a precise list of packages used, instead of @sqlrooms/*,
+    // it would help Vite start faster in dev mode
+    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
+    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
   ],
   theme: {
     ...preset.theme,
