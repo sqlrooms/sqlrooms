@@ -37,6 +37,10 @@ caseStudies:
     href: '/case-studies.html#cosmograph'
     img: '/carousel/cosmograph.webp'
     alt: 'Cosmograph screenshot'
+  - title: 'Transcality'
+    href: '/case-studies.html#transcality'
+    img: '/carousel/transcality-600px.webp'
+    alt: 'Transcality screenshot'
 
 features:
   - title: Local Analytics, No Backend Required

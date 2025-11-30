@@ -2,7 +2,7 @@
 
 Example demonstrating the use of the core AI module with agents
 
-[More about this example](https://sqlrooms.github.io/examples/)s
+[More about SQLRooms examples](https://sqlrooms.org/examples/)
 
 # Running locally
 
