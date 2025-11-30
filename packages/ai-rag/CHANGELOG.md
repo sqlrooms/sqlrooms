@@ -1,0 +1,238 @@
+# RAG Slice Changelog
+
+## 2025-11-21 - Per-Database Embedding Providers
+
+### Breaking Changes
+
+- **Removed global `embeddingProvider`** from `createRagSlice()` options
+- **Added per-database `embeddingProvider`** to `EmbeddingDatabase` config
+- **Changed query behavior**: Now queries a single database at a time (not UNION across all)
+- **Removed `setEmbeddingProvider()`** method (no longer needed)
+
+### New Features
+
+#### Per-Database Embedding Providers
+
+Each database can now use its own embedding model:
+
+```typescript
+const embeddingsDatabases = [
+  {
+    databaseName: 'duckdb_docs',
+    databaseFilePathOrUrl: '/data/duckdb.duckdb',
+    embeddingProvider: createOpenAIProvider('text-embedding-3-small', 1536),
+    embeddingDimensions: 1536,
+  },
+  {
+    databaseName: 'react_docs',
+    databaseFilePathOrUrl: '/data/react.duckdb',
+    embeddingProvider: createTransformersJsProvider('BAAI/bge-small-en-v1.5'),
+    embeddingDimensions: 384,
+  },
+];
+```
+
+#### Metadata Support
+
+- Added `getMetadata(databaseName)` method
+- Automatically fetches metadata from `embedding_metadata` table
+- Validates embedding dimensions against metadata
+- Displays model info during initialization
+
+#### Improved Error Messages
+
+- Clear dimension mismatch errors
+- Database not found with suggestions
+- Better validation feedback
+
+### API Changes
+
+#### Before (Old API)
+
+```typescript
+// Global embedding provider
+createRagSlice({
+  embeddingsDatabases: [
+    {
+      databaseFilePathOrUrl: '/data/docs.duckdb',
+      databaseName: 'docs',
+    },
+  ],
+  embeddingProvider, // One provider for all databases
+});
+
+// Searched across ALL databases with UNION
+await store.getState().rag.queryByText('query', {
+  databases: ['docs', 'tutorials'], // Multi-database search
+});
+```
+
+#### After (New API)
+
+```typescript
+// Per-database embedding providers
+createRagSlice({
+  embeddingsDatabases: [
+    {
+      databaseFilePathOrUrl: '/data/docs.duckdb',
+      databaseName: 'docs',
+      embeddingProvider: createOpenAIProvider(...), // Each DB has its own
+      embeddingDimensions: 1536,
+    },
+  ],
+});
+
+// Search one database at a time
+await store.getState().rag.queryByText('query', {
+  database: 'docs', // Single database (default: first one)
+});
+```
+
+### Type Changes
+
+#### Added Types
+
+```typescript
+type DatabaseMetadata = {
+  provider: string;
+  model: string;
+  dimensions: number;
+  chunkingStrategy: string;
+};
+```
+
+#### Updated Types
+
+```typescript
+// EmbeddingDatabase now includes provider and dimensions
+type EmbeddingDatabase = {
+  databaseFilePathOrUrl: string;
+  databaseName: string;
+  embeddingProvider: EmbeddingProvider; // NEW: Required
+  embeddingDimensions?: number; // NEW: Optional validation
+};
+
+// Query options changed from 'databases' to 'database'
+queryByText(
+  text: string,
+  options?: {
+    topK?: number;
+    database?: string; // Changed from 'databases?: string[]'
+  },
+);
+```
+
+### Migration Guide
+
+#### Step 1: Move embedding provider to database config
+
+```typescript
+// Before
+createRagSlice({
+  embeddingsDatabases: [{databaseName: 'docs', ...}],
+  embeddingProvider,
+});
+
+// After
+createRagSlice({
+  embeddingsDatabases: [
+    {
+      databaseName: 'docs',
+      embeddingProvider, // Move here
+      embeddingDimensions: 1536, // Add for validation
+      ...
+    },
+  ],
+});
+```
+
+#### Step 2: Update query calls
+
+```typescript
+// Before
+queryByText('query', {databases: ['docs', 'tutorials']});
+
+// After - query one database
+queryByText('query', {database: 'docs'});
+```
+
+#### Step 3: Remove setEmbeddingProvider() calls
+
+```typescript
+// Before
+store.getState().rag.setEmbeddingProvider(newProvider);
+
+// After - not needed, provider is set in config
+// If you need to change providers, recreate the store
+```
+
+### Rationale
+
+**Why per-database providers?**
+
+Different datasets are often prepared with different embedding models:
+- OpenAI models (text-embedding-3-small, ada-002)
+- HuggingFace models (BGE, E5, etc.)
+- Custom models
+- Different dimensions (384, 512, 1536, 3072, etc.)
+
+The old design with a single global provider couldn't handle this properly. The query embedding would be generated with one model, but the database might have been prepared with a different model, causing poor results.
+
+**Why single-database queries?**
+
+UNION queries across databases with different embedding models don't make sense - you can't meaningfully compare cosine similarities from different embedding spaces. Searching one database at a time ensures consistency.
+
+If you need to search multiple databases, make separate queries:
+
+```typescript
+const [docsResults, tutResults] = await Promise.all([
+  store.getState().rag.queryByText('query', {database: 'docs'}),
+  store.getState().rag.queryByText('query', {database: 'tutorials'}),
+]);
+```
+
+### Implementation Details
+
+#### Initialization Flow
+
+1. Attach each database with `ATTACH DATABASE ... AS ... (READ_ONLY)`
+2. Store the embedding provider for each database in a Map
+3. Query `embedding_metadata` table to get model info
+4. Validate dimensions if provided
+5. Store metadata in a Map for later access
+
+#### Query Flow
+
+1. Determine which database to query (from options or default to first)
+2. Get the embedding provider for that database
+3. Generate embedding from query text
+4. Validate dimensions against metadata
+5. Execute SQL query with cosine similarity
+6. Return results sorted by similarity
+
+### Files Changed
+
+- `packages/rag/src/RagSlice.ts` - Main implementation
+- `examples/ai/src/embeddings.ts` - NEW: OpenAI provider helpers
+- `examples/ai/src/rag-example.ts` - NEW: Usage examples
+- `packages/rag/README.md` - NEW: Comprehensive documentation
+
+### Testing
+
+All linter checks pass. Manual testing recommended for:
+- [ ] Multiple databases with different models
+- [ ] Metadata validation
+- [ ] Dimension mismatch errors
+- [ ] Database not found errors
+- [ ] Query results quality
+
+### Future Enhancements
+
+Potential improvements for future versions:
+
+1. **Hybrid Search**: Add BM25 full-text search with Reciprocal Rank Fusion
+2. **Batch Queries**: Query multiple databases efficiently
+3. **Caching**: Cache embeddings for repeated queries
+4. **Streaming**: Stream results for long-running queries
+5. **Filters**: Add metadata filtering to queries
+6. **Reranking**: Add cross-encoder reranking for better results

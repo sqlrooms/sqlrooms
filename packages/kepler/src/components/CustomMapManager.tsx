@@ -9,40 +9,47 @@ import {
   Button,
   Icons,
 } from '@kepler.gl/components';
-import {
-  SIDEBAR_PANELS,
-  ADD_MAP_STYLE_ID,
-} from '@kepler.gl/constants';
+import {SIDEBAR_PANELS, ADD_MAP_STYLE_ID} from '@kepler.gl/constants';
 import {MapStyle} from '@kepler.gl/reducers';
 
 import {KeplerInjector} from './KeplerInjector';
-import {KeplerActions, useKeplerStateActions} from '../hooks/useKeplerStateActions';
+import {
+  KeplerActions,
+  useKeplerStateActions,
+} from '../hooks/useKeplerStateActions';
 
-import { DropdownMenu, DropdownMenuContent, DropdownMenuCheckboxItem, DropdownMenuTrigger } from '@sqlrooms/ui';
-import { ChevronDown } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuTrigger,
+} from '@sqlrooms/ui';
+import {ChevronDown} from 'lucide-react';
 
 // Get the kepler.gl components through the injector
 const LayerGroupSelector = KeplerInjector.get(LayerGroupSelectorFactory);
 const PanelTitle = KeplerInjector.get(PanelTitleFactory);
 
 // Import icons from kepler.gl
-const { Add, Trash } = Icons;
+const {Add, Trash} = Icons;
 
 const mapPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'map');
 
 // Custom styled components for the map manager
-const CustomMapManagerContainer = styled.div<{ isOpen?: boolean }>`
+const CustomMapManagerContainer = styled.div<{isOpen?: boolean}>`
   .map-style-panel {
     /* Add your custom styles here */
   }
-  
+
   .map-manager-title {
     /* Custom title styling */
   }
 
   .add-map-style-button {
-    background-color: ${props => props.theme.sidePanelBg || props.theme.panelBackground || '#fff'};
-    color: ${props => props.theme.activeColor || props.theme.textColorHl || '#2563EB'};
+    background-color: ${(props) =>
+      props.theme.sidePanelBg || props.theme.panelBackground || '#fff'};
+    color: ${(props) =>
+      props.theme.activeColor || props.theme.textColorHl || '#2563EB'};
     border: 0px;
     height: 28px;
     font-weight: 500;
@@ -93,83 +100,85 @@ const MapStyleDropdown: React.FC<{
   mapStyle: MapStyle;
   onChange: (styleType: string) => void;
   customMapStylesActions?: any;
-}> = ({ mapStyle, onChange, customMapStylesActions }) => {
-  const { mapStyles, styleType } = mapStyle;
+}> = ({mapStyle, onChange, customMapStylesActions}) => {
+  const {mapStyles, styleType} = mapStyle;
   const currentStyle = mapStyles[styleType];
 
-  const handleStyleSelect = (styleId: string) => 
-    onChange(styleId);
-;
-
+  const handleStyleSelect = (styleId: string) => onChange(styleId);
   return (
-    <div className='w-full'>
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild className="w-full">
-        <div className="flex w-full items-center justify-between min-h-[40px] px-3 py-2 cursor-pointer border rounded transition-colors border-primary-foreground bg-muted hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:hover:bg-gray-700 dark:text-white">
-          <div className="flex items-center gap-2">
-            <img 
-              className="w-6 h-6 rounded-sm object-cover" 
-              src={currentStyle?.icon || ''} 
-              alt={currentStyle?.label || 'Map Style'}
-            />
-            <span className="text-sm font-medium dark:text-white">{currentStyle?.label || 'Select Style'}</span>
+    <div className="w-full">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild className="w-full">
+          <div className="border-primary-foreground bg-muted flex min-h-[40px] w-full cursor-pointer items-center justify-between rounded border px-3 py-2 transition-colors hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:hover:bg-gray-700">
+            <div className="flex items-center gap-2">
+              <img
+                className="h-6 w-6 rounded-sm object-cover"
+                src={currentStyle?.icon || ''}
+                alt={currentStyle?.label || 'Map Style'}
+              />
+              <span className="text-sm font-medium dark:text-white">
+                {currentStyle?.label || 'Select Style'}
+              </span>
+            </div>
+            <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </div>
-          <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
-        </div>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-[var(--radix-dropdown-menu-trigger-width)] max-h-64 overflow-y-auto bg-white dark:bg-gray-700">
-        {Object.values(mapStyles).map((style: any) => (
-          <DropdownMenuCheckboxItem
-            key={style.id}
-            onClick={() => handleStyleSelect(style.id)}
-            className="flex items-center gap-2 p-2 cursor-pointer bg-white dark:hover:bg-gray-600 dark:bg-gray-700 text-gray-900 dark:text-white"
-          >
-            <img 
-              src={style.icon || ''} 
-              alt={style.label || 'Untitled'}
-              className="w-6 h-6 rounded-sm object-cover flex-shrink-0"
-            />
-            <span className="flex-1 text-sm truncate">{style.label || 'Untitled'}</span>
-            {style.custom && customMapStylesActions?.[style.id] && (
-              <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
-                {customMapStylesActions[style.id].map((action: any) => (
-                  <button
-                    key={action.id}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      action.onClick();
-                    }}
-                    className="p-1 rounded transition-colors bg-white hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title={action.tooltip}
-                  >
-                    <action.IconComponent height="16px" />
-                  </button>
-                ))}
-              </div>
-            )}
-          </DropdownMenuCheckboxItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="max-h-64 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto bg-white dark:bg-gray-700">
+          {Object.values(mapStyles).map((style: any) => (
+            <DropdownMenuCheckboxItem
+              key={style.id}
+              onClick={() => handleStyleSelect(style.id)}
+              className="flex cursor-pointer items-center gap-2 bg-white p-2 text-gray-900 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600"
+            >
+              <img
+                src={style.icon || ''}
+                alt={style.label || 'Untitled'}
+                className="h-6 w-6 flex-shrink-0 rounded-sm object-cover"
+              />
+              <span className="flex-1 truncate text-sm">
+                {style.label || 'Untitled'}
+              </span>
+              {style.custom && customMapStylesActions?.[style.id] && (
+                <div
+                  className="flex items-center"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {customMapStylesActions[style.id].map((action: any) => (
+                    <button
+                      key={action.id}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        action.onClick();
+                      }}
+                      className="rounded bg-white p-1 transition-colors hover:bg-gray-100 dark:hover:bg-gray-700"
+                      title={action.tooltip}
+                    >
+                      <action.IconComponent height="16px" />
+                    </button>
+                  ))}
+                </div>
+              )}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   );
-
 };
 
 // Main Custom Map Manager Component
-export const CustomMapManager: React.FC<CustomMapManagerProps> = ({
-  mapId,
-}) => {
+export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const intl = useIntl();
 
-  const {onShowAddMapStyleModal, onMapStyleChange, onRemoveCustomMapStyle} = useCustomMapActions(keplerActions);
+  const {onShowAddMapStyleModal, onMapStyleChange, onRemoveCustomMapStyle} =
+    useCustomMapActions(keplerActions);
 
   if (!keplerState || !keplerActions) {
     return null;
   }
 
-  const { mapStyle } = keplerState;
+  const {mapStyle} = keplerState;
   const currentStyle = mapStyle.mapStyles[mapStyle.styleType] || {};
   const editableLayers = (currentStyle as any).layerGroups || [];
 
@@ -184,8 +193,8 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({
             id: `remove-map-style-${style.id}`,
             IconComponent: Trash,
             tooltip: 'tooltip.removeBaseMapStyle',
-            onClick: () => onRemoveCustomMapStyle(style.id)
-          }
+            onClick: () => onRemoveCustomMapStyle(style.id),
+          },
         ];
       });
     return actionsPerCustomStyle;
@@ -197,9 +206,14 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({
         <SidePanelSection>
           <PanelTitle
             className="map-manager-title"
-            title={intl.formatMessage({id: mapPanelMetadata?.label || 'Base map'})}
+            title={intl.formatMessage({
+              id: mapPanelMetadata?.label || 'Base map',
+            })}
           >
-            <Button className="add-map-style-button" onClick={onShowAddMapStyleModal}>
+            <Button
+              className="add-map-style-button"
+              onClick={onShowAddMapStyleModal}
+            >
               <Add height="12px" />
               <span>{intl.formatMessage({id: 'mapManager.addMapStyle'})}</span>
             </Button>
@@ -222,9 +236,13 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({
               topLayers={mapStyle.topLayerGroups}
               onChange={keplerActions.mapStyleActions.mapConfigChange}
               threeDBuildingColor={mapStyle.threeDBuildingColor}
-              on3dBuildingColorChange={keplerActions.mapStyleActions.set3dBuildingColor}
+              on3dBuildingColorChange={
+                keplerActions.mapStyleActions.set3dBuildingColor
+              }
               backgroundColor={mapStyle.backgroundColor}
-              onBackgroundColorChange={keplerActions.mapStyleActions.setBackgroundColor}
+              onBackgroundColorChange={
+                keplerActions.mapStyleActions.setBackgroundColor
+              }
             />
           ) : null}
         </SidePanelSection>
