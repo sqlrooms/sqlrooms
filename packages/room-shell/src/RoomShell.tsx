@@ -130,6 +130,7 @@ export const LoadingProgress: FC<{className?: string}> = ({className}) => {
 export const RoomShell = Object.assign(RoomShellBase, {
   Sidebar: RoomSidebar,
   SidebarButton: SidebarButton,
+  SidebarButtons: RoomShellSidebarButtons,
   LayoutComposer: LayoutComposer,
   LoadingProgress: LoadingProgress,
 });

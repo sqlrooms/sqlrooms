@@ -10,21 +10,23 @@ export const Room = () => {
   const ragTest = useDisclosure();
   return (
     <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar className="gap-2">
-        <RoomShell.SidebarButton
-          title="SQL Editor"
-          onClick={sqlEditor.onToggle}
-          isSelected={false}
-          icon={TerminalIcon}
-        />
+      <div className="bg-muted/70 flex h-full w-12 flex-col items-center gap-2 px-1 py-4">
+        <RoomShell.SidebarButtons className="h-auto grow-0" />
         <RoomShell.SidebarButton
           title="Test RAG Search"
           onClick={ragTest.onToggle}
           isSelected={false}
           icon={SearchIcon}
         />
+        <div className="flex-1" />
+        <RoomShell.SidebarButton
+          title="SQL Editor"
+          onClick={sqlEditor.onToggle}
+          isSelected={false}
+          icon={TerminalIcon}
+        />
         <ThemeSwitch />
-      </RoomShell.Sidebar>
+      </div>
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
       <SqlEditorModal isOpen={sqlEditor.isOpen} onClose={sqlEditor.onClose} />
