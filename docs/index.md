@@ -55,9 +55,13 @@ features:
 
 ---
 
-<div style="display: flex; justify-content: center; margin: 2rem 0;">
+<!-- <div style="display: flex; justify-content: center; margin: 2rem 0;">
 
   <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div> -->
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+  <video src="/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
 </div>
 
 ## Get Started in Minutes

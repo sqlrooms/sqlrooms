@@ -11,12 +11,7 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-<!-- ![SQLRooms example apps](docs/media/overview/collage.webp) -->
-
-<div style="display: flex; justify-content: center; margin: 2rem 0;">
-
-  <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
-</div>
+![SQLRooms example apps](docs/media/overview/collage.webp)
 
 ## Why SQLRooms?
 
@@ -26,6 +21,15 @@ SQLRooms is designed to empower developers and users with a modern, modular anal
 - **Modular Architecture:** Mix and match packages, and combine state _slices_ to include only the features you need—no bloat, just what your app requires.
 - **AI‑Powered Analytics:** Built-in support for agents that can write and execute SQL queries, and generate insights directly in your browser—no server roundtrips required.
 - **Developer Experience:** A composable, React-based framework with ready-to-use components, state management, and visualization tools, making it easy to build custom analytics solutions.
+
+<!-- <div style="display: flex; justify-content: center; margin: 2rem 0;">
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div> -->
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+  <video src="docs/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
+</div>
 
 ## Why Single-Node?
 

@@ -1,6 +1,8 @@
-# @sqlrooms/ai-rag
-
 Retrieval Augmented Generation (RAG) slice for SQLRooms. Query vector embeddings stored in DuckDB for semantic search and AI-powered applications.
+
+This package is designed to work with [sqlrooms-rag](https://pypi.org/project/sqlrooms-rag/), a Python package that prepares embedding/FTS-index databases for RAG search.
+
+Refer to the [ai-rag example](https://github.com/sqlrooms/examples/tree/main/ai-rag) for a complete working example.
 
 ## Features
 
