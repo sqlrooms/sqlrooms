@@ -12,3 +12,4 @@ export * from './str';
 export * from './xhr';
 export * from './filepaths';
 export {safeJsonParse} from './json';
+export {memoizeOnce} from './memoization';

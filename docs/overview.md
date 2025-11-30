@@ -7,7 +7,12 @@ outline: deep
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-![SQLRooms example apps](/media/overview/collage.webp)
+<!-- ![SQLRooms example apps](/media/overview/collage.webp) -->
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
 
 ## Why SQLRooms?
 
@@ -36,12 +41,12 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Check the [Example applications](/examples)** to see what can be built with the framework.
+- **Review the [Key Concepts](/key-concepts)** to understand the core ideas and architecture.
 
 - **Explore the [Modular Architecture](/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](/key-concepts)** to understand the core ideas and architecture.
+- **Check the [Example Applications](/examples)** to see what can be built with the framework.
 
-- **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
+<!-- - **Quick start the [Getting Started Guide](/getting-started)** to set up your first room.
 
-- **Read the [API reference](/packages/)** for deeper integration.
+- **Read the [API reference](/packages/)** for deeper integration. -->

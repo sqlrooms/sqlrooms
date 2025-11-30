@@ -1,8 +1,5 @@
-import {
-  DataTablePaginated,
-  DataTablePaginatedProps,
-  useArrowDataTable,
-} from '@sqlrooms/data-table';
+import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
+import type {Row} from '@tanstack/react-table';
 import {
   cn,
   Select,
@@ -10,10 +7,12 @@ import {
   SelectItem,
   SelectTrigger,
   SpinnerPane,
+  Button,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {MessageCircleQuestion} from 'lucide-react';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -21,24 +20,67 @@ export interface QueryResultPanelProps {
   /** Custom actions to render in the query result panel */
   renderActions?: (query: string) => React.ReactNode;
   /** Custom font size for the table e.g. text-xs, text-sm, text-md, text-lg, text-base */
-  fontSize?: DataTablePaginatedProps<any>['fontSize'];
+  fontSize?: string;
+  /**
+   * Called when a row in the results table is clicked.
+   */
+  onRowClick?: (args: {
+    row: Row<any>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
+  /**
+   * Called when a row in the results table is double-clicked.
+   */
+  onRowDoubleClick?: (args: {
+    row: Row<any>;
+    event: React.MouseEvent<HTMLTableRowElement>;
+  }) => void;
+  /**
+   * Called when the "Ask AI" button is clicked on an error message.
+   * Receives the current query and error text.
+   */
+  onAskAiAboutError?: (query: string, error: string) => void;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   className,
   renderActions,
   fontSize = 'text-xs',
+  onRowClick,
+  onRowDoubleClick,
+  onAskAiAboutError,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
   const setQueryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setQueryResultLimit,
   );
   const queryResultLimit = useStoreWithSqlEditor(
     (s) => s.sqlEditor.queryResultLimit,
   );
+  const queryResultLimitOptions = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.queryResultLimitOptions,
+  );
+
+  const limitOptions = React.useMemo(() => {
+    if (!queryResultLimitOptions.includes(queryResultLimit)) {
+      return [queryResultLimit, ...queryResultLimitOptions];
+    }
+    return queryResultLimitOptions;
+  }, [queryResultLimitOptions, queryResultLimit]);
   const arrowTableData = useArrowDataTable(
     isQueryWithResult(queryResult) ? queryResult.result : undefined,
   );
+
+  const handleAskAiAboutError = React.useCallback(() => {
+    if (queryResult?.status === 'error' && onAskAiAboutError) {
+      const currentQuery = getCurrentQuery();
+      const errorText = queryResult.error;
+      onAskAiAboutError(currentQuery, errorText);
+    }
+  }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
   if (!queryResult) {
     return null;
@@ -57,8 +99,24 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }
   if (queryResult?.status === 'error') {
     return (
-      <div className="h-full w-full overflow-auto p-5">
-        <pre className="whitespace-pre-line text-xs leading-tight text-red-500">
+      <div className="relative h-full w-full overflow-auto p-5">
+        {onAskAiAboutError && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute right-2 top-2 h-8 w-8"
+            onClick={handleAskAiAboutError}
+            title="Ask AI for help"
+          >
+            <MessageCircleQuestion className="h-4 w-4" />
+          </Button>
+        )}
+        <pre
+          className={cn(
+            'whitespace-pre-wrap text-xs leading-tight text-red-500',
+            onAskAiAboutError && 'pr-12',
+          )}
+        >
           {queryResult.error}
         </pre>
       </div>
@@ -80,6 +138,8 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
               className="flex-grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
+              onRowClick={onRowClick}
+              onRowDoubleClick={onRowDoubleClick}
             />
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
               {queryResult.result ? (
@@ -100,7 +160,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                       </div>
                     </SelectTrigger>
                     <SelectContent>
-                      {[100, 500, 1000].map((limit) => (
+                      {limitOptions.map((limit) => (
                         <SelectItem key={limit} value={limit.toString()}>
                           {`${formatCount(limit)} rows`}
                         </SelectItem>

@@ -11,14 +11,20 @@ export {
 } from './RoomStateProvider';
 
 export {
-  createRoomStore,
-  createRoomSlice,
-  type RoomStateActions,
-  type RoomStateProps,
-  type RoomState,
-  type RoomStore,
-  type TaskProgress,
+  createBaseRoomSlice,
   createBaseSlice,
-} from './RoomStore';
+  createSlice,
+  createRoomSlice,
+  createRoomStore,
+  createRoomStoreCreator,
+  isRoomSliceWithDestroy,
+  isRoomSliceWithInitialize,
+  type BaseRoomStoreState,
+  type CreateBaseRoomSliceProps,
+  type BaseRoomStore,
+} from './BaseRoomStore';
+
+export {createPersistHelpers} from './createPersistHelpers';
+export type {StateCreator, StoreApi} from 'zustand';
 
 export * from '@sqlrooms/room-config';

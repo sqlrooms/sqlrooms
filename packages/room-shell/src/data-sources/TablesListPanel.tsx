@@ -2,7 +2,7 @@ import {DataTableModal} from '@sqlrooms/data-table';
 import {DataTable} from '@sqlrooms/duckdb';
 import {cn, useDisclosure} from '@sqlrooms/ui';
 import {FC, useState} from 'react';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {TableCard} from './TableCard';
 
 const TablesListPanel: FC<{

@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/layout-config",
-  "version": "0.20.0",
+  "version": "0.26.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,7 +18,7 @@
     "access": "public"
   },
   "dependencies": {
-    "zod": "^3.25.57"
+    "zod": "^4.1.8"
   },
   "scripts": {
     "dev": "tsc -w",

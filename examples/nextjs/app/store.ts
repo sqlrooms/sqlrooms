@@ -1,35 +1,28 @@
 // import {MainView} from '@/components/main-view';
 import {MainView} from '@/components/main-view';
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
+import {
+  createDefaultSqlEditorConfig,
+  createSqlEditorSlice,
+  SqlEditorSliceState,
+} from '@sqlrooms/sql-editor';
 import {MapIcon} from 'lucide-react';
-import {z} from 'zod';
-
-/**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.extend({
-  // Add custom config here
-});
-export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & {
-  // Add custom state type definitions here (fields and methods)
-};
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         title: 'Demo App Room',
         dataSources: [
@@ -39,8 +32,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
           },
         ],
+        ...createDefaultSqlEditorConfig(),
       },
-      room: {
+      layout: {
         panels: {
           main: {
             title: 'Main view',
@@ -51,5 +45,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       },
     })(set, get, store),
+    // Sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
   }),
 );

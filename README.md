@@ -11,7 +11,12 @@ Building blocks for React data analytics applications powered by [DuckDB](https:
 SQLRooms provides a comprehensive foundation and rich set of building blocks for creating modern, interactive data-analytics applications that can run entirely in the browser.
 At its core is the concept of a **_Room_** — a self‑contained workspace where data lives, analysis happens, and (soon) collaborators meet. It combines essential components like a SQL query engine (DuckDB), data visualization tools, state management, and UI components into a cohesive toolkit, making it significantly easier to create powerful analytics tools with or without a backend.
 
-![SQLRooms example apps](docs/media/overview/collage.webp)
+<!-- ![SQLRooms example apps](docs/media/overview/collage.webp) -->
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div>
 
 ## Why SQLRooms?
 
@@ -40,15 +45,15 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 ## Next Steps
 
-- **Check the [Example applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
+- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
 
 - **Explore the [Modular Architecture](http://sqlrooms.org/modular-architecture)** to see how you can compose and extend your app.
 
-- **Review the [Key Concepts](http://sqlrooms.org/key-concepts)** to understand the core ideas and architecture.
+- **Check the [Example Applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
 
-- **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
+<!-- - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
 
-- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration.
+- **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration. -->
 
 <!-- END:overview.md -->
 
@@ -56,7 +61,7 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 # Getting Started with SQLRooms
 
-SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Modular Architecture](http://sqlrooms.org/modular-architecture) and [Key Concepts](http://sqlrooms.org/key-concepts) pages.
+SQLRooms is a powerful framework and a set of building blocks for creating DuckDB-backed analytics applications in React. This guide will help you integrate SQLRooms into your application. For a detailed overview of the framework's architecture and core ideas, check out the [Key Concepts](http://sqlrooms.org/key-concepts) and [Modular Architecture](http://sqlrooms.org/modular-architecture) pages.
 
 ## Try the Minimal Example
 
@@ -94,11 +99,11 @@ This Vite application demonstrates loading a CSV data source and running SQL que
 
 Your application should have the following dependencies:
 
-- [React 18](https://react.dev/) or higher
+- [React 18+](https://react.dev/) (React 19 is supported)
 - [Tailwind CSS](https://tailwindcss.com/)
-- [Zustand](https://zustand.docs.pmnd.rs) for state management
-- [Zod](https://zod.dev) for schema validation
-- [Node.js](https://nodejs.org/) >= 20
+- [Node.js](https://nodejs.org/) >= 22
+
+SQLRooms uses [Zustand](https://zustand.docs.pmnd.rs) for state management and [Zod](https://zod.dev) for schema validation internally, but you don't need to install them separately
 
 ### Installation
 
@@ -107,20 +112,41 @@ Install the required SQLRooms packages:
 ::: code-group
 
 ```bash [npm]
-npm install @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
+npm install @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 ```
 
 ```bash [pnpm]
-pnpm add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
+pnpm add @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 ```
 
 ```bash [yarn]
-yarn add @sqlrooms/room-shell @sqlrooms/room-store @sqlrooms/ui
+yarn add @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 ```
 
 :::
 
 ### Configure Tailwind CSS
+
+You can follow [this guide](https://v3.tailwindcss.com/docs/installation) to install and configure Tailwind 3 (Tailwind 4 support is still experimental).
+
+::: code-group
+
+```bash [npm]
+npm install -D tailwindcss@3
+npx tailwindcss init
+```
+
+```bash [pnpm]
+pnpm add -D tailwindcss@3
+npx tailwindcss init
+```
+
+```bash [yarn]
+yarn add -D tailwindcss@3
+npx tailwindcss init
+```
+
+:::
 
 SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
 
@@ -149,58 +175,60 @@ Make sure to import the preset Tailwind styles in your main CSS file:
 
 ### Setting Up the Room Store
 
-1. First, define your panel types and room configuration:
+1. Define your application state type:
 
 ```typescript
-import {BaseRoomConfig, LayoutTypes, MAIN_VIEW} from '@sqlrooms/room-store';
-import {z} from 'zod';
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+} from '@sqlrooms/room-shell';
 
-// Define panel types
-export const RoomPanelTypes = z.enum([
-  'room-details',
-  'data-sources',
-  MAIN_VIEW,
-] as const);
-export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
-
-// Define your room config
-// This holds all state necessary for persisting/saving the state of the app
-export const RoomConfig = BaseRoomConfig;
-// If using additional slices like SQL Editor:
-// export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-// Define your application state type
-export type RoomState = RoomState<RoomConfig>;
-// If using additional slices:
-// export type RoomState = RoomState<RoomConfig> & SqlEditorSliceState;
+/**
+ * The whole app state.
+ */
+export type RoomState = RoomShellSliceState & {
+  // Add your custom app state types here
+  // If using additional slices:
+  // & SqlEditorSliceState
+};
 ```
 
 2. Create your room store:
 
 ```typescript
-import {createRoomSlice, createRoomStore} from '@sqlrooms/room-shell';
+import {LayoutTypes} from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
+import {MainView} from './components/MainView';
+import {DataSourcesPanel} from './components/DataSourcesPanel';
 
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+/**
+ * Create the room store. You can combine your custom state and logic
+ * with the slices from the SQLRooms modules.
+ */
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    // Base room slice
-    ...createRoomSlice<RoomConfig>({
-      // config holds all state that should be persisted between sessions
+    ...createRoomShellSlice({
       config: {
-        title: 'My SQLRooms Room',
-        layout: {
+        title: 'My SQLRooms App',
+        dataSources: [
+          {
+            tableName: 'earthquakes',
+            type: 'url',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+          },
+        ],
+      },
+      layout: {
+        config: {
           type: LayoutTypes.enum.mosaic,
           nodes: {
             direction: 'row',
-            first: RoomPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
+            first: 'data-sources',
+            second: 'main',
             splitPercentage: 30,
           },
         },
-        dataSources: [],
-      },
-      room: {
         panels: {
           'data-sources': {
             title: 'Data Sources',
@@ -208,8 +236,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             component: DataSourcesPanel,
             placement: 'sidebar',
           },
-          [MAIN_VIEW]: {
-            title: 'Main View',
+          main: {
+            title: 'Main view',
             icon: () => null,
             component: MainView,
             placement: 'main',
@@ -224,22 +252,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 );
 ```
 
-3. Optionally add persistence:
+3. Optionally add persistence using Zustand's persist middleware:
 
 ```typescript
+import {
+  BaseRoomConfig,
+  createPersistHelpers,
+  LayoutConfig,
+  StateCreator,
+} from '@sqlrooms/room-shell';
 import {persist} from 'zustand/middleware';
 
-// The config is meant to be saved for persistence between sessions
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       // Store configuration as shown above
-      ...createRoomSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
-          title: 'My SQLRooms Room',
-          // ...other configuration
+          title: 'My SQLRooms App',
+          dataSources: [],
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              // layout configuration
+            },
+          },
           panels: {
             // Panel definitions
           },
@@ -247,15 +286,17 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       })(set, get, store),
     }),
     {
+      // Local storage key
       name: 'app-state-storage',
-      // Specify which parts of the state to persist
-      partialize: (state) => ({
-        // Persist configuration between sessions
-        config: state.config,
-        // Add other state properties you want to persist
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        // Add other slice configs as needed
+        // sqlEditor: SqlEditorSliceConfig,
       }),
     },
-  ),
+  ) as StateCreator<RoomState>,
 );
 ```
 
@@ -265,33 +306,83 @@ Wrap your application with a `RoomShell` which provides the room store context:
 
 ```typescript
 import {RoomShell} from '@sqlrooms/room-shell';
+import {ThemeProvider} from '@sqlrooms/ui';
 import {roomStore} from './store';
 
-function App() {
-  return (
+export const Room = () => (
+  <ThemeProvider defaultTheme="light" storageKey="sqlrooms-ui-theme">
     <RoomShell className="h-screen" roomStore={roomStore}>
-      <RoomShell.Sidebar/>
+      <RoomShell.Sidebar />
       <RoomShell.LayoutComposer />
       <RoomShell.LoadingProgress />
     </RoomShell>
-  );
-}
+  </ThemeProvider>
+);
 ```
 
 Access the store in your components:
 
 ```typescript
+import {useRoomStore} from './store';
+
 function YourComponent() {
-  // Config is now accessed directly from state, not from state.room.config
-  const roomConfig = useRoomStore((state) => state.config);
-  // Other state properties remain in the room object
-  const dataSources = useRoomStore((state) => state.room.dataSources);
+  // Access config from room
+  const roomConfig = useRoomStore((state) => state.room.config);
+
+  // Access database state
+  const tables = useRoomStore((state) => state.db.tables);
+
+  // Check if a table is ready
+  const tableReady = useRoomStore((state) =>
+    state.db.findTableByName('earthquakes'),
+  );
 
   return (
     // Your component JSX
   );
 }
 ```
+
+### Querying Data
+
+Use the `useSql` hook from `@sqlrooms/duckdb` to run SQL queries:
+
+```typescript
+import {useSql} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
+
+function MainView() {
+  const tableReady = useRoomStore((state) =>
+    state.db.findTableByName('earthquakes'),
+  );
+
+  const {data, isLoading, error} = useSql<{
+    count: number;
+    maxMag: number;
+  }>({
+    query: `
+      SELECT
+        COUNT(*)::int AS count,
+        max(Magnitude) AS maxMag
+      FROM earthquakes
+    `,
+    enabled: Boolean(tableReady),
+  });
+
+  if (isLoading) return <div>Loading...</div>;
+  if (error) return <div>Error: {error.message}</div>;
+
+  const row = data?.toArray()[0];
+  return (
+    <div>
+      <div>Total records: {row?.count}</div>
+      <div>Max magnitude: {row?.maxMag}</div>
+    </div>
+  );
+}
+```
+
+The `useSql` hook automatically re-runs queries when the database state changes and provides loading/error states out of the box.
 
 ## Need Help?
 

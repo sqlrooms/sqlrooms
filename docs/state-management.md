@@ -23,22 +23,32 @@ Slices are combined in the store creation process. Here's an example from the AI
 
 ```typescript
 import {AiSliceState} from '@sqlrooms/ai';
-import {RoomState} from '@sqlrooms/room-shell';
+import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
 // Combining multiple slices into a unified application state type
-export type RoomState = RoomState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   AiSliceState &
-  SqlEditorSliceState &
-  CustomRoomState;
+  SqlEditorSliceState & {
+    // Custom application state types
+  };
 
 // Creating a store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Base room state
-    ...createRoomShellSlice<RoomConfig>({
-      // Room configuration
-      // ...
+    ...createRoomShellSlice({
+      config: {
+        // Room configuration
+      },
+      layout: {
+        config: {
+          // Layout configuration
+        },
+        panels: {
+          // Panel definitions
+        },
+      },
     })(set, get, store),
 
     // SQL editor slice
@@ -75,7 +85,7 @@ export const MyCustomView: React.FC = () => {
   const isDataAvailable = useRoomStore((state) => state.room.isDataAvailable);
 
   // Access AI slice config (persistable state)
-  const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
+  const currentSessionId = useRoomStore((s) => s.ai.config.currentSessionId);
 
   // Access custom app state
   const apiKey = useRoomStore((s) => s.apiKey);
@@ -95,7 +105,6 @@ SQLRooms uses [Zod](https://zod.dev/) for runtime type validation. When combinin
 Here's an example from the AI example application showing how to combine configuration types:
 
 ```typescript
-import {AiSliceConfig} from '@sqlrooms/ai';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 import {SqlEditorSliceConfig} from '@sqlrooms/sql-editor';
 import {z} from 'zod';
@@ -103,13 +112,11 @@ import {z} from 'zod';
 /**
  * Room config for saving - combining multiple slice configs
  */
-export const RoomConfig = BaseRoomConfig.merge(AiSliceConfig)
-  .merge(SqlEditorSliceConfig)
-  .merge(
-    z.object({
-      // Custom app config
-    }),
-  );
+export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig).merge(
+  z.object({
+    // Custom app config
+  }),
+);
 export type RoomConfig = z.infer<typeof RoomConfig>;
 ```
 
@@ -124,15 +131,20 @@ When using the combined configuration type in your store, you can ensure that al
 
 ```typescript
 // Using the combined RoomConfig in the store
-...createRoomSlice<RoomConfig>({
+...createRoomShellSlice({
   config: {
-    // AI slice configuration
-    ...createDefaultAiConfig(),
     // SQL Editor slice configuration
     ...createDefaultSqlEditorConfig(),
     // Other configuration properties...
   },
-  // Rest of room configuration...
+  layout: {
+    config: {
+      // Layout configuration
+    },
+    panels: {
+      // Panel definitions
+    },
+  },
 })(set, get, store)
 ```
 

@@ -1,5 +1,4 @@
 import {
-  createDefaultDiscussConfig,
   createDiscussSlice,
   DiscussSliceConfig,
   DiscussSliceState,
@@ -7,24 +6,26 @@ import {
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
-  RoomShellSliceState,
-  StateCreator,
+  LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
+  RoomShellSliceState,
+  StateCreator,
 } from '@sqlrooms/room-shell';
-import {MessageCircleIcon} from 'lucide-react';
-import {z} from 'zod';
-import {persist} from 'zustand/middleware';
-import DiscussionPanel from './components/DiscussionPanel';
-import {MainView} from './components/MainView';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {MessageCircleIcon} from 'lucide-react';
+import {z} from 'zod';
+import {persist} from 'zustand/middleware';
+import DiscussionPanel from './components/DiscussionPanel';
+import {MainView} from './components/MainView';
 
 export const RoomPanelTypes = z.enum([
   'data-sources',
@@ -33,15 +34,11 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const RoomConfig =
-  BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
+export type RoomState = RoomShellSliceState &
+  SqlEditorSliceState &
+  DiscussSliceState;
 
-export type RoomState = RoomShellSliceState<RoomConfig> &
-  DiscussSliceState &
-  SqlEditorSliceState;
-
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
@@ -50,21 +47,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       ...createSqlEditorSlice()(set, get, store),
 
       // Room shell slice
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         connector: createWasmDuckDbConnector({
           initializationQuery: 'LOAD spatial',
         }),
         config: {
-          ...createDefaultDiscussConfig(),
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              first: RoomPanelTypes.enum['discuss'],
-              second: RoomPanelTypes.enum['main'],
-              splitPercentage: 30,
-            },
-          },
           ...createDefaultSqlEditorConfig(),
           dataSources: [
             {
@@ -78,7 +65,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              first: RoomPanelTypes.enum['discuss'],
+              second: RoomPanelTypes.enum['main'],
+              splitPercentage: 30,
+            },
+          },
           panels: {
             [RoomPanelTypes.enum['discuss']]: {
               title: 'Discuss',
@@ -101,9 +97,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     {
       // Local storage key
       name: 'discuss-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+        discuss: DiscussSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

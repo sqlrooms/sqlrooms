@@ -5,7 +5,7 @@ import {
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {splitFilePath} from '@sqlrooms/utils';
+import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
 import {
   BaseDuckDbConnectorImpl,
@@ -13,6 +13,7 @@ import {
 } from './BaseDuckDbConnector';
 import {DuckDbConnector} from './DuckDbConnector';
 import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
+import {getSqlErrorWithPointer} from '../duckdb-utils';
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */
@@ -94,10 +95,7 @@ export function createWasmDuckDbConnector(
           path: restConfig.path ?? dbPath,
         });
 
-        conn = augmentConnectionQueryError(await db.connect());
-        if (initializationQuery) {
-          await conn.query(initializationQuery);
-        }
+        conn = await db.connect();
       } catch (err) {
         db = null;
         conn = null;
@@ -133,7 +131,7 @@ export function createWasmDuckDbConnector(
         throw new Error('Query aborted before execution');
       }
 
-      const localConn = augmentConnectionQueryError(await db.connect());
+      const localConn = await db.connect();
       const streamPromise = localConn.send<T>(query, true);
       let reader: arrow.RecordBatchReader<T> | null = null;
 
@@ -164,6 +162,22 @@ export function createWasmDuckDbConnector(
 
       try {
         return await Promise.race([buildTable(), abortPromise]);
+      } catch (e) {
+        // Some errors are returned as JSON, so we try to parse them
+        if (e instanceof Error) {
+          const parsed: any = safeJsonParse(e.message);
+          if (
+            parsed !== null &&
+            typeof parsed === 'object' &&
+            'exception_message' in parsed
+          ) {
+            throw new Error(
+              `${parsed.exception_type} ${parsed.error_subtype}: ${parsed.exception_message}` +
+                `\n${getSqlErrorWithPointer(query, Number(parsed.position)).formatted}`,
+            );
+          }
+        }
+        throw e;
       } finally {
         if (abortHandler) {
           signal.removeEventListener('abort', abortHandler);
@@ -280,40 +294,4 @@ export function createWasmDuckDbConnector(
       return 'wasm' as const;
     },
   };
-}
-
-function augmentConnectionQueryError(conn: duckdb.AsyncDuckDBConnection) {
-  const originalQuery = conn.query;
-  conn.query = (async (q: string) => {
-    const stack = new Error().stack;
-    try {
-      return await originalQuery.call(conn, q);
-    } catch (err) {
-      throw new DuckQueryError(err, q, stack);
-    }
-  }) as typeof conn.query;
-  return conn;
-}
-
-export class DuckQueryError extends Error {
-  readonly cause: unknown;
-  readonly query: string | undefined;
-  readonly queryCallStack: string | undefined;
-  constructor(err: unknown, query: string, stack: string | undefined) {
-    super(err instanceof Error ? err.message : `${err}`);
-    this.cause = err;
-    this.query = query;
-    this.queryCallStack = stack;
-    Object.setPrototypeOf(this, DuckQueryError.prototype);
-  }
-  getDetailedMessage() {
-    const {message, query, queryCallStack: stack} = this;
-    return (
-      `DB query failed: ${message}` +
-      `\n\nFull query:\n\n${query}\n\nQuery call stack:\n\n${stack}\n\n`
-    );
-  }
-  getMessageForUser() {
-    return this.message;
-  }
 }

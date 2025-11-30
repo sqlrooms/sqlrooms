@@ -14,14 +14,16 @@ The `RoomStore` is a Zustand store that holds the entire state of a room. It is 
 
 ### RoomState
 
-The `RoomState` is the object that defines the shape of the store. It has two main properties:
+The `RoomState` is the object that defines the shape of the store. It includes state from the base room shell slice and any additional slices you add:
 
-- `config`: This holds the configuration of the room that is persisted. This is defined by a `zod` schema, often extending the `BaseRoomConfig` from `@sqlrooms/room-config`.
+- `room.config`: This holds the configuration of the room that is persisted. This is defined by a `zod` schema, often extending the `BaseRoomConfig` from `@sqlrooms/room-config`.
 - `room`: This holds the client-side state of the room, such as task progress, and provides actions for interacting with the room.
+- `db`: DuckDB database state and methods
+- `layout`: Layout configuration and panel definitions
 
 ### Slices
 
-A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
+A slice is a piece of the room's state and its associated actions. You can create your own slices to add custom functionality to your room. The framework provides `createRoomShellSlice` to create the base slice with core room functionality. You combine this with your own slices inside the `createRoomStore` composer function.
 
 ## Basic Usage
 
@@ -30,54 +32,50 @@ Here's an example of how to create a room store with a custom feature slice.
 ```typescript
 import {
   createRoomStore,
-  createRoomSlice,
-  RoomState,
+  createRoomShellSlice,
+  RoomShellSliceState,
 } from '@sqlrooms/room-store';
-import {BaseRoomConfig} from '@sqlrooms/room-config';
-import {z} from 'zod';
 import {StateCreator} from 'zustand';
 
-// 1. Define your persisted room configuration schema using Zod.
-// This extends the base config with a custom property.
-export const MyRoomConfig = BaseRoomConfig.extend({
-  defaultChartType: z.enum(['bar', 'line', 'scatter']).default('bar'),
-});
-export type MyRoomConfig = z.infer<typeof MyRoomConfig>;
-
-// 2. Define the state and actions for your custom feature slice.
+// 1. Define the state and actions for your custom feature slice.
 export interface MyFeatureSlice {
   activeChartId: string | null;
   setActiveChartId: (id: string | null) => void;
 }
 
-// 3. Create your custom slice.
+// 2. Create your custom slice.
 export const createMyFeatureSlice: StateCreator<MyFeatureSlice> = (set) => ({
   activeChartId: null,
   setActiveChartId: (id) => set({activeChartId: id}),
 });
 
-// 4. Define the full state of your room, combining the base RoomState
+// 3. Define the full state of your room, combining the base RoomShellSliceState
 // with your custom slice's state.
-export type MyRoomState = RoomState<MyRoomConfig> & MyFeatureSlice;
+export type MyRoomState = RoomShellSliceState & MyFeatureSlice;
 
-// 5. Create the room store by composing the base slice and your custom slice.
-export const {roomStore, useRoomStore} = createRoomStore<
-  MyRoomConfig,
-  MyRoomState
->((set, get, store) => ({
-  ...createRoomSlice<MyRoomConfig>({
-    config: {
-      // You can provide initial values for your config here
-      title: 'My First Room',
-      defaultChartType: 'line',
-      // other properties from BaseRoomConfig will have defaults
-    },
-    room: {},
-  })(set, get, store),
+// 4. Create the room store by composing the base slice and your custom slice.
+export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice({
+      config: {
+        // You can provide initial values for your config here
+        title: 'My First Room',
+        dataSources: [],
+      },
+      layout: {
+        config: {
+          // Layout configuration
+        },
+        panels: {
+          // Panel definitions
+        },
+      },
+    })(set, get, store),
 
-  // Add your custom slice to the store
-  ...createMyFeatureSlice(set, get, store),
-}));
+    // Add your custom slice to the store
+    ...createMyFeatureSlice(set, get, store),
+  }),
+);
 
 export {roomStore, useRoomStore};
 ```
@@ -107,7 +105,7 @@ You can use the `useRoomStore` hook returned by `createRoomStore` to access the 
 import {useRoomStore} from './my-room-store';
 
 function RoomTitle() {
-  const title = useRoomStore((state) => state.config.title);
+  const title = useRoomStore((state) => state.room.config.title);
   const activeChartId = useRoomStore((state) => state.activeChartId);
   const setActiveChartId = useRoomStore((state) => state.setActiveChartId);
 

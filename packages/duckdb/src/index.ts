@@ -16,6 +16,7 @@ export {
   createDuckDbSlice,
   type DuckDbSliceState,
   useStoreWithDuckDb,
+  type SchemaAndDatabase,
 } from './DuckDbSlice';
 export * from './connectors/DuckDbConnector';
 export * from './connectors/BaseDuckDbConnector';
@@ -25,6 +26,7 @@ export {
   isWasmDuckDbConnector,
   type WasmDuckDbConnector,
 } from './connectors/createDuckDbConnector';
+export {createWebSocketDuckDbConnector} from './connectors/WebSocketDuckDbConnector';
 export * from './connectors/load/load';
 export * from './duckdb-utils';
 export {
@@ -37,5 +39,4 @@ export {
   createTypedRowAccessor,
 } from './typedRowAccessor';
 export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
-export * from '@sqlrooms/duckdb-config';
 export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';

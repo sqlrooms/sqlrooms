@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {MonacoEditor} from '@sqlrooms/monaco-editor';
 import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
@@ -8,11 +8,12 @@ import {
   DUCKDB_FUNCTIONS,
   SQL_LANGUAGE_CONFIGURATION,
 } from './constants/duckdb-dialect';
-import type {DataTable} from '@sqlrooms/duckdb';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-
+import {getFunctionSuggestions} from './constants/functionSuggestions';
 export interface SqlMonacoEditorProps
   extends Omit<MonacoEditorProps, 'language'> {
+  connector?: DuckDbConnector;
   /**
    * Custom SQL keywords to add to the completion provider
    */
@@ -34,18 +35,26 @@ export interface SqlMonacoEditorProps
   };
 }
 
+const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
+  formatOnPaste: true,
+  formatOnType: true,
+  wordWrap: 'on',
+};
+
 /**
  * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
  * This is an internal component used by SqlEditor
  */
 export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
+  connector,
   customKeywords = [],
   customFunctions = [],
   tableSchemas = [],
   getLatestSchemas,
   onMount,
   className,
-  ...props
+  options,
+  ...restProps
 }) => {
   // Store references to editor and monaco
   const editorRef = useRef<any>(null);
@@ -66,7 +75,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     // Register SQL completion provider
     const disposable = monaco.languages.registerCompletionItemProvider('sql', {
       triggerCharacters: [' ', '.', ',', '(', '='],
-      provideCompletionItems: (model: any, position: any) => {
+      provideCompletionItems: async (model: any, position: any) => {
         try {
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
@@ -130,6 +139,26 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                 sortText: isTableContext ? 'z' + func : 'b' + func, // Lower priority in table context
               });
             });
+            if (connector) {
+              const functionSuggestions = await getFunctionSuggestions(
+                connector,
+                word.word,
+              );
+              for (const {name, documentation} of functionSuggestions) {
+                suggestions.push({
+                  label: name,
+                  insertText: name,
+                  documentation: {
+                    value: documentation,
+                    isTrusted: true,
+                    supportHtml: true,
+                  },
+                  range: range,
+                  kind: monaco.languages.CompletionItemKind.Function,
+                  sortText: isTableContext ? 'z' + name : 'b' + name, // Lower priority in table context
+                });
+              }
+            }
           }
 
           // Add table and column suggestions from schemas
@@ -262,26 +291,23 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         onMount(editor, monaco);
       }
     },
-    [
-      customKeywords,
-      customFunctions,
-      tableSchemas,
-      onMount,
-      registerCompletionProvider,
-    ],
+    [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
 
+  const combinedOptions = useMemo(
+    (): MonacoEditorProps['options'] => ({
+      ...EDITOR_OPTIONS,
+      ...options,
+    }),
+    [options],
+  );
   return (
     <MonacoEditor
       language="sql"
       onMount={handleEditorDidMount}
       className={cn('h-full', className)}
-      options={{
-        formatOnPaste: true,
-        formatOnType: true,
-        wordWrap: 'on',
-      }}
-      {...props}
+      options={combinedOptions}
+      {...restProps}
     />
   );
 };

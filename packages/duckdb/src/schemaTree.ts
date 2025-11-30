@@ -18,7 +18,7 @@ export function createDbSchemaTrees(tables: DataTable[]): DbSchemaNode[] {
       createColumnNode(schema, tableName, column.name, column.type),
     );
 
-    const tableNode = createTableNode(database, schema, tableName, columnNodes);
+    const tableNode = createTableNode(table, columnNodes);
 
     if (!databaseMap.has(database)) {
       databaseMap.set(database, new Map<string, DbSchemaNode[]>());
@@ -61,18 +61,15 @@ function createColumnNode(
 }
 
 function createTableNode(
-  database: string,
-  schema: string,
-  tableName: string,
+  table: DataTable,
   columnNodes: DbSchemaNode[],
 ): DbSchemaNode {
   return {
-    key: `${schema}.${tableName}`,
+    key: `${table.schema}.${table.tableName}`,
     object: {
       type: 'table',
-      schema,
-      database,
-      name: tableName,
+      ...table,
+      name: table.tableName,
     },
     isInitialOpen: false,
     children: columnNodes,

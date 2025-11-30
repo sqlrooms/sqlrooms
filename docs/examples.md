@@ -44,7 +44,7 @@ A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Fea
 - Tabbed interface for working with multiple queries
 - Query execution with results data table
 - Support for query cancellation
-- Offline functionality: supports Progressive Web App (PWA) features, persistent database storage with OPFS, and state persistence via local storage
+- There is a [version of the example with offline functionality](https://github.com/sqlrooms/examples/tree/main/query-pwa) which supports Progressive Web App (PWA) features, persistent database storage with OPFS, and state persistence via local storage
 
 To create a new project from the query example run this:
 
@@ -192,6 +192,8 @@ To create a new project from the mosaic example run this:
 ```bash
 npx degit sqlrooms/examples/mosaic my-new-app/
 ```
+
+<!--@include: ../examples/query-motherduck/README.md-->
 
 ## Looking for More?
 

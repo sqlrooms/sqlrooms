@@ -9,7 +9,9 @@ import {
 import {useRoomStore} from '../store.js';
 
 export function MainView() {
-  const tableReady = useRoomStore((s) => s.db.findTableByName('earthquakes'));
+  const tableReady = useRoomStore((state) =>
+    state.db.findTableByName('earthquakes'),
+  );
   const {data, isLoading, error} = useSql<{
     count: number;
     maxMag: number;

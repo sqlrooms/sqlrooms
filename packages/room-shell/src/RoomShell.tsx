@@ -1,6 +1,5 @@
-import {RoomStateProvider, RoomStore} from '../../room-store/dist';
 import {MosaicLayout} from '@sqlrooms/layout';
-import {BaseRoomConfig} from '@sqlrooms/room-config';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 import {
   cn,
   ErrorBoundary,
@@ -15,15 +14,15 @@ import {
   RoomShellSidebarButtons,
   SidebarButton,
 } from './RoomShellSidebarButtons';
-import {useBaseRoomShellStore} from './RoomShellStore';
+import {RoomShellStore, useBaseRoomShellStore} from './RoomShellSlice';
 
-export function RoomShellBase<PC extends BaseRoomConfig>({
+export function RoomShellBase({
   className,
   children,
   roomStore,
 }: React.PropsWithChildren<{
   className?: string;
-  roomStore?: RoomStore<PC>;
+  roomStore?: RoomShellStore;
 }>) {
   return (
     <RoomStateProvider roomStore={roomStore}>
@@ -56,8 +55,11 @@ export const RoomSidebar: FC<PropsWithChildren<{className?: string}>> = ({
   );
 };
 
-export const LayoutComposer: FC<{className?: string}> = ({className}) => {
-  const layout = useBaseRoomShellStore((state) => state.config.layout);
+export const LayoutComposer: FC<{
+  className?: string;
+  tileClassName?: string;
+}> = ({className, tileClassName}) => {
+  const layout = useBaseRoomShellStore((state) => state.layout.config);
   const setLayout = useBaseRoomShellStore((state) => state.layout.setLayout);
   const panels = useBaseRoomShellStore((state) => state.layout.panels);
   const ErrorBoundary = useBaseRoomShellStore(
@@ -81,7 +83,7 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
     // const panelId = visibleRoomPanels.find((p) => p === id);
     const PanelComp = panelId && panels[panelId]?.component;
     if (!PanelComp) {
-      return null;
+      return <></>;
     }
     return (
       <ErrorBoundary key={panelId}>
@@ -102,6 +104,7 @@ export const LayoutComposer: FC<{className?: string}> = ({className}) => {
           renderTile={renderTile}
           value={layout.nodes}
           onChange={handleLayoutChange}
+          tileClassName={tileClassName}
         />
       ) : null}
     </div>

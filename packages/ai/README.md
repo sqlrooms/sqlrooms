@@ -1,3 +1,5 @@
+# @sqlrooms/ai
+
 An AI integration package for SQLRooms that provides components and utilities for adding AI-powered features to your data applications. This package enables natural language querying, data analysis, and AI-assisted insights.
 
 ## Features
@@ -17,40 +19,50 @@ npm install @sqlrooms/ai
 yarn add @sqlrooms/ai
 ```
 
-Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use OpenAI, you can install the `@ai-sdk/openai` package:
-
-```bash
-npm install @ai-sdk/openai
-```
-
-Google LLM provider:
-
-```bash
-npm install @ai-sdk/google
-```
-
-Anthropic LLM provider:
-
-```bash
-npm install @ai-sdk/anthropic
-```
-
-DeepSeek LLM provider:
-
-```bash
-npm install @ai-sdk/deepseek
-```
-
-XAI LLM provider:
+Since version 0.8.2, you will need to install the LLM providers you want to use. For example, to use XAI, you can install the `@ai-sdk/xai` package:
 
 ```bash
 npm install @ai-sdk/xai
 ```
 
-ollama LLM provider:
+Since version 0.26.0, you don't need to install the LLM providers anymore. You can use AiSettingsSlice to configure the LLM providers, and sqlrooms/ai will use the configured LLM providers via OpenAI compatible SDK.
 
-```bash
-npm install ollama-ai-provider
+```tsx
+import {createAiSettingsSlice} from '@sqlrooms/ai';
+
+// Create a room store with AI capabilities
+const {roomStore, useRoomStore} = createRoomStore({
+  ...createAiSettingsSlice({
+    config: {
+      providers: {
+    openai: {
+      baseUrl: 'https://api.openai.com/v1',
+      apiKey: '',
+      models: [
+        {
+          id: 'gpt-4.1',
+          modelName: 'gpt-4.1',
+        },
+      },
+    },
+  }),
+});
+```
+
+You can also pass a custom model provider to the AiSlice.
+
+```tsx
+import {createAiSlice} from '@sqlrooms/ai';
+
+// Create a room store with AI capabilities
+const {roomStore, useRoomStore} = createRoomStore({
+  ...createAiSlice({
+    getCustomModel: () => {
+      return xai('grok-4');
+    },
+    ...
+  }),
+});
 ```
 
 ## Basic Usage
@@ -58,27 +70,28 @@ npm install ollama-ai-provider
 ### Setting Up AI Integration
 
 ```tsx
-import {createAiSlice, createDefaultAiConfig} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {createRoomStore} from '@sqlrooms/room-shell';
 
 // Create a room store with AI capabilities
 const {roomStore, useRoomStore} = createRoomStore({
   // Base room configuration
-  ...createRoomSlice({
+  ...createRoomShellSlice({
     config: {
       // Your room configuration
-      ...createDefaultAiConfig(), // Default AI configuration
+    },
+  }),
+  // Add AI settings slice
+  ...createAiSettingsSlice({
+    config: {
+      // Your AI settings configuration
     },
   }),
   // Add AI slice
   ...createAiSlice({
-    getApiKey: (modelProvider) => {
-      // Return API key for the specified model provider
-      return process.env.OPENAI_API_KEY || '';
-    },
     initialAnalysisPrompt: 'What insights can you provide from my data?',
     // Optional: Add custom tools
-    customTools: {
+    tools: {
       // Your custom tools
     },
     // Optional: Custom instructions for the AI
@@ -102,16 +115,12 @@ function MyApp() {
 For more complex applications, you can combine multiple slices:
 
 ```tsx
-import {
-  createAiSlice,
-  createDefaultAiConfig,
-  AiSliceConfig,
-} from '@sqlrooms/ai';
+import {createAiSlice} from '@sqlrooms/ai';
 import {
   createSqlEditorSlice,
   createDefaultSqlEditorConfig,
 } from '@sqlrooms/sql-editor';
-import {createRoomStore, createRoomSlice} from '@sqlrooms/room-shell';
+import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
 
 // Define your application state type
 export type RoomState = RoomState<RoomConfig> &
@@ -122,33 +131,43 @@ export type RoomState = RoomState<RoomConfig> &
 export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomSlice({
+    ...createRoomShellSlice({
       config: {
-        // Your base configuration
-        ...createDefaultAiConfig({
-          // Optional: Pre-configured AI sessions
-          sessions: [
-            {
-              id: 'default-session',
-              name: 'Default Analysis',
-              modelProvider: 'openai',
-              model: 'gpt-4o',
-              analysisResults: [],
-              createdAt: new Date(),
-            },
-          ],
-          currentSessionId: 'default-session',
-        }),
         ...createDefaultSqlEditorConfig(),
+      },
+    }),
+    // AI settings slice
+    ...createAiSettingsSlice({
+      config: {
+        // Your AI settings configuration
+      },
+    }),
+    // Ai config slice
+    ...createAiConfigSlice({
+      config: {
+        // Optional: Pre-configured AI sessions
+        sessions: [
+          {
+            id: 'default-session',
+            name: 'Default Analysis',
+            modelProvider: 'openai',
+            model: 'gpt-4o',
+            analysisResults: [],
+            createdAt: new Date(),
+          },
+        ],
+        currentSessionId: 'default-session',
       },
     }),
     // AI slice
     ...createAiSlice({
-      getApiKey: (modelProvider) => {
-        // Return API key based on provider
-        return apiKeys[modelProvider] || '';
+      initialAnalysisPrompt: 'What insights can you provide from my data?',
+      tools: {
+        // Your custom tools
       },
-      // Custom tools and instructions
+      getInstructions: (tablesSchema) => {
+        return `Analyze the following tables: ${tablesSchema.map((t) => t.name).join(', ')}`;
+      },
     }),
     // SQL Editor slice
     ...createSqlEditorSlice(),
@@ -366,119 +385,7 @@ const ChartComponent = useRoomStore((state) =>
 
 ## Data Structure
 
-The basic data structure of the AI package is:
-
-```ts
-ai: {
-  sessions: [
-    {
-      id: defaultSessionId,
-      name: 'Default Session',
-      modelProvider: 'openai',
-      model: 'gpt-4o-mini',
-      analysisResults: [],
-      createdAt: new Date(),
-    },
-  ],
-  currentSessionId: defaultSessionId,
-}
-```
-
-Each session has a `analysisResults` which is an array of `AnalysisResult`. Each `AnalysisResult` has the following properties:
-
-- `id`: The unique identifier for the analysis result
-- `prompt`: The user prompt that was used to generate the analysis result
-- `streamMessage`: The stream message from the LLM
-- `errorMessage`: The error message from the LLM
-- `isCompleted`: Whether the analysis result has been completed
-
-For each user prompt, the LLM will run multiple tools (e.g. `query`, `chart`) and return the result as the `streamMessage`. The structure of the `streamMessage` is as follows:
-
-- `text`: the final response from the LLM (streamable)
-- `reasoning`: the reasoning of the LLM (only for reason models)
-- `toolCallMessages`: the message array of the tool calls executed by the LLM
-
-Each `toolCallMessages` has the following properties:
-
-- `toolName`: the name of the tool
-- `toolCallId`: the id of the tool call
-- `args`: the arguments of the tool call
-- `llmResult`: the result from the execution of the tool, which will be sent back to the LLM as response.
-- `additionalData`: the additional data of the tool, which can be used to pass the output of the tool to next tool call or the component for rendering.
-
-## Rendering
-
-```
-|--------------------------------|
-| AnalysisResultsContainer       |
-|--------------------------------|
-|  |--------------------------|  |
-|  | AnalysisResult           |  |
-|  |                          |  |
-|  | streamMessage            |  |
-|  |                          |  |
-|  | |---------------------|  |  |
-|  | | Tools               |  |  |
-|  | |---------------------|  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolCallMessage|   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |---------------|   |  |  |
-|  | | |ToolCallMessage|   |  |  |
-|  | | |---------------|   |  |  |
-|  | |    ...              |  |  |
-|  | |---------------------|  |  |
-|  |                          |  |
-|  | text                     |  |
-|  |--------------------------|  |
-|--------------------------------|
-```
-
-## Tools
-
-In AI package, we provide a tool() to allow creating function tool for LLM to use. It is an extension of the `tool` from `vercel ai sdk`, and it supports not only `execute` function, but also `context` object and `component` object:
-
-- `execute` needs to return
-  - llmResult: the result send back to LLM (no raw data)
-  - additionalData: the data will be used by `component` and next `tool`
-- `context`
-  - provide e.g. runtime or async data for `execute`
-  - `execute` can access `context` via `options.context`
-- `component`
-  - use `additionalData` to render a React component for this `tool`
-
-For example, the `query` tool is defined as follows:
-
-```ts
-const functions = {
-  weather: tool({
-    description: 'Get the weather in a city from a weather station',
-    parameters: z.object({cityName: z.string()}),
-    execute: async ({cityName}, options) => {
-      const getStation = options.context?.getStation;
-      const station = getStation ? await getStation(cityName) : null;
-      return {
-        llmResult: `The weather in ${cityName} is sunny from weather station ${station}.`,
-        additionalData: {
-          weather: 'sunny',
-          station,
-        },
-      };
-    },
-    context: {
-      getStation: async (cityName: string) => {
-        const stations = {
-          'New York': '123',
-          'Los Angeles': '456',
-          Chicago: '789',
-        };
-        return stations[cityName];
-      },
-    },
-    component: WeatherStation,
-  }),
-};
-```
+See [ai-core](https://github.com/sqlrooms/sqlrooms/tree/main/packages/ai-core) for the data structure.
 
 ## Advanced Features
 
@@ -490,3 +397,67 @@ const functions = {
 - **Feedback Loop**: Collect user feedback to improve AI responses
 
 For more information, visit the SQLRooms documentation.
+
+## AI Settings Configuration
+
+This package now includes comprehensive AI settings components. These components provide a complete set of UI elements for managing AI model configuration, parameters, and usage tracking.
+
+### AI Settings Features
+
+- **createAiSettingsSlice**: Function to create a Zustand slice for managing AI model configuration with room-shell integration
+- **AiSettingsPanel**: Main configuration panel with modular sub-components for different configuration aspects
+- **ProvidersSettings**: Component for configuring AI providers (OpenAI, Anthropic, etc.) with API keys and base URLs
+- **ModelsSettings**: Component for managing available models and their parameters
+- **ModelParametersSettings**: Component for configuring model parameters like max steps and system instructions
+- **ModelSelector**: Standalone model selector component for quick model switching
+
+### AI Settings Usage
+
+#### Individual Components
+
+```tsx
+import {
+  AiSettingsPanel,
+  ModelSelector,
+} from '@sqlrooms/ai';
+import {useRoomStore} from '../store';
+
+// Main configuration panel with sub-components
+<AiSettingsPanel isOpen={isConfigOpen} setIsOpen={setIsConfigOpen}>
+  <AiSettingsPanel.ProvidersSettings />
+  <AiSettingsPanel.ModelsSettings />
+  <AiSettingsPanel.ModelParametersSettings  />
+</AiSettingsPanel>
+
+// Standalone model selector
+<ModelSelector />
+```
+
+### AI Settings API Reference
+
+#### Core Components
+
+- **`AiSettingsPanel`**: Main configuration panel with modular sub-components
+  - `AiSettingsPanel.ProvidersSettings`: Configure AI providers (OpenAI, Anthropic, etc.)
+  - `AiSettingsPanel.ModelsSettings`: Manage available models and their parameters
+  - `AiSettingsPanel.ModelParametersSettings`: Configure model parameters and instructions
+- **`ModelSelector`**: Standalone model selector for quick switching
+
+#### Slice Configuration
+
+The package uses a slice-based configuration system that integrates with SQLRooms room-shell:
+
+- **`createAiSettingsSlice()`**: Creates the AI settings configuration slice for state management
+- **`AiSettingsSliceConfig`**: TypeScript type for configuration schema
+- **`createDefaultAiSettings(providers)`**: Helper to create default configuration with providers
+- **`getApiKey(config, provider, model)`**: Utility to get API key from configuration
+- **`getBaseUrl(config, provider, model)`**: Utility to get base URL from configuration
+
+#### Store Integration
+
+The AI settings configuration integrates with the main AI slice through helper functions:
+
+- **`getApiKey()`**: Function to retrieve API key from current session and model config
+- **`getMaxSteps()`**: Function to get max steps from model configuration
+- **`getBaseUrl()`**: Function to get base URL from current session and model config
+- **`getInstructions(tablesSchema)`**: Function to generate system instructions with optional custom instructions

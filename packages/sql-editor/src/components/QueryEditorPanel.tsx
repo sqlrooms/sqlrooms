@@ -16,9 +16,9 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   // Get state and actions from store in a single call
 
   const selectedQueryId = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.selectedQueryId,
+    (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
+  const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
   const setSelectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setSelectedQueryId,
   );
@@ -27,11 +27,17 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     <Tabs
       value={selectedQueryId}
       onValueChange={setSelectedQueryId}
-      className={cn('flex h-full flex-col overflow-hidden', className)}
+      className={cn(
+        'flex h-full flex-col',
+        // this is for Monaco's completion menu to not being cut off
+        'overflow-visible',
+        className,
+      )}
     >
-      <div className="border-border flex items-center border-b p-1">
-        <QueryEditorPanelActions />
+      <div className="border-border flex items-center gap-4 border-b px-2 pt-1">
         <QueryEditorPanelTabsList />
+        <div className="flex-1" />
+        <QueryEditorPanelActions />
       </div>
       {queries.map((q) => (
         <TabsContent

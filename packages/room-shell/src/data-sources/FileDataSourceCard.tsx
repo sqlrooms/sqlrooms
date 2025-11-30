@@ -19,7 +19,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import {FC, useCallback} from 'react';
-import {useBaseRoomShellStore} from '../RoomShellStore';
+import {useBaseRoomShellStore} from '../RoomShellSlice';
 import {RoomFileInfo, RoomFileState} from '../types';
 const FileDataSourceCard: FC<{
   isReadOnly?: boolean;
@@ -69,7 +69,7 @@ const FileDataSourceCard: FC<{
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={handleRemoveFromRoom}>
                   <XIcon className="mr-2 h-4 w-4" />
-                  Remove from room
+                  Remove file
                 </DropdownMenuItem>
                 <DropdownMenuItem disabled>
                   <FileDownIcon className="mr-2 h-4 w-4" />

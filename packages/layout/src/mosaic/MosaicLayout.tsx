@@ -2,6 +2,7 @@ import React, {FC, useCallback} from 'react';
 import {Mosaic, MosaicNode, MosaicProps} from 'react-mosaic-component';
 import 'react-mosaic-component/react-mosaic-component.css';
 import MosaicTile from './MosaicTile';
+import {cn} from '@sqlrooms/ui';
 
 // Add custom styles for the mosaic split line hover effect
 const customMosaicStyles = `
@@ -11,10 +12,21 @@ const customMosaicStyles = `
   .mosaic-split:hover {
     background-color: hsl(var(--primary) / 0.4);
   }
+  .mosaic-root {
+    top: 0px;
+    left: 0px;
+    right: 0px;
+    bottom: 0px;
+  }
+  .mosaic-tile {
+    margin: 0;
+  }
 `;
 
-const MosaicLayout: FC<MosaicProps<string>> = (props) => {
-  const {onChange, onRelease, renderTile} = props;
+const MosaicLayout: FC<MosaicProps<string> & {tileClassName?: string}> = (
+  props,
+) => {
+  const {onChange, onRelease, renderTile, tileClassName} = props;
   const [isDragging, setDragging] = React.useState(false);
   const handleLayoutChange = useCallback(
     (nodes: MosaicNode<string> | null) => {
@@ -42,7 +54,7 @@ const MosaicLayout: FC<MosaicProps<string>> = (props) => {
         renderTile={(id, path) => (
           <MosaicTile
             id={id}
-            className="bg-secondary/10"
+            className={cn('bg-secondary/10', tileClassName)}
             path={path}
             isDragging={isDragging}
             content={renderTile(id, path)}

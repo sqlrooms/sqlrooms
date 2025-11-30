@@ -1,61 +1,96 @@
-import {Input, SkeletonPane} from '@sqlrooms/ui';
-import {KeyIcon} from 'lucide-react';
 import {
+  AiSettingsPanel,
   AnalysisResultsContainer,
-  SessionControls,
-  QueryControls,
   ModelSelector,
+  QueryControls,
+  SessionControls,
+  PromptSuggestions,
 } from '@sqlrooms/ai';
+import {
+  Button,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  SkeletonPane,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+  useDisclosure,
+} from '@sqlrooms/ui';
+import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
-import {LLM_MODELS} from '../models';
-import {capitalize} from '@sqlrooms/utils';
-import {useMemo} from 'react';
 
 export const MainView: React.FC = () => {
-  const currentSessionId = useRoomStore((s) => s.config.ai.currentSessionId);
-  const currentSession = useRoomStore((s) => {
-    const sessions = s.config.ai.sessions;
-    return sessions.find((session) => session.id === currentSessionId);
-  });
-
-  // Check if data is available
+  const currentSessionId = useRoomStore(
+    (s) => s.ai.config.currentSessionId || null,
+  );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
-  const apiKeys = useRoomStore((s) => s.apiKeys);
-  const setProviderApiKey = useRoomStore((s) => s.setProviderApiKey);
-
-  // The current model is from the session
-  const currentModelProvider =
-    currentSession?.modelProvider || LLM_MODELS[0].name;
-
-  const apiKey = apiKeys[currentModelProvider] || '';
-
-  const onApiKeyChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setProviderApiKey(currentModelProvider, e.target.value);
-  };
-
-  // Transform LLM_MODELS into the format expected by ModelSelector
-  const modelOptions = useMemo(
-    () =>
-      LLM_MODELS.flatMap((provider) =>
-        provider.models.map((model) => ({
-          provider: provider.name,
-          label: model,
-          value: model,
-        })),
-      ),
-    [],
-  );
+  const settingsPanelOpen = useDisclosure();
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-      {/* Display SessionControls at the top */}
-      <div className="mb-4">
-        <SessionControls />
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <SessionControls className="w-full" />
+        {currentSessionId && (
+          <Dialog
+            open={settingsPanelOpen.isOpen}
+            onOpenChange={(open) => {
+              if (open) {
+                settingsPanelOpen.onOpen();
+              } else {
+                settingsPanelOpen.onClose();
+              }
+            }}
+          >
+            <DialogTrigger asChild>
+              <Button
+                variant="outline"
+                className="hover:bg-accent flex items-center justify-center transition-colors"
+                title="Configuration"
+                size="sm"
+              >
+                <Settings className="h-4 w-4" />
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="flex h-[80vh] w-[90vw] max-w-3xl flex-col overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>AI Assistant Settings</DialogTitle>
+              </DialogHeader>
+              <Tabs
+                defaultValue="providers"
+                className="flex min-h-0 flex-1 flex-col"
+              >
+                <TabsList className="grid w-full flex-shrink-0 grid-cols-3">
+                  <TabsTrigger value="providers">Providers</TabsTrigger>
+                  <TabsTrigger value="models">Models</TabsTrigger>
+                  <TabsTrigger value="parameters">Parameters</TabsTrigger>
+                </TabsList>
+                <TabsContent
+                  value="providers"
+                  className="flex-1 overflow-y-auto"
+                >
+                  <AiSettingsPanel.ProvidersSettings />
+                </TabsContent>
+                <TabsContent value="models" className="flex-1 overflow-y-auto">
+                  <AiSettingsPanel.ModelsSettings />
+                </TabsContent>
+                <TabsContent
+                  value="parameters"
+                  className="flex-1 overflow-y-auto"
+                >
+                  <AiSettingsPanel.ModelParametersSettings />
+                </TabsContent>
+              </Tabs>
+            </DialogContent>
+          </Dialog>
+        )}
       </div>
 
-      {/* Display AnalysisResultsContainer without the session controls UI */}
-      <div className="flex-grow overflow-auto">
+      <div className="print-container flex-grow overflow-auto">
         {isDataAvailable ? (
           <AnalysisResultsContainer
             key={currentSessionId} // will prevent scrolling to bottom after changing current session
@@ -68,19 +103,17 @@ export const MainView: React.FC = () => {
         )}
       </div>
 
-      <QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+      <PromptSuggestions.Container>
+        <PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
+        <PromptSuggestions.Item text="Show me a summary of the data" />
+        <PromptSuggestions.Item text="What are the key trends?" />
+        <PromptSuggestions.Item text="Help me understand the data structure" />
+      </PromptSuggestions.Container>
+
+      <QueryControls placeholder="What would you like to learn about the data?">
         <div className="flex items-center justify-end gap-2">
-          <div className="relative flex items-center">
-            <KeyIcon className="absolute left-2 h-4 w-4" />
-            <Input
-              className="w-[165px] pl-8"
-              type="password"
-              placeholder={`${capitalize(currentModelProvider)} API Key`}
-              value={apiKey}
-              onChange={onApiKeyChange}
-            />
-          </div>
-          <ModelSelector models={modelOptions} className="w-[200px]" />
+          <PromptSuggestions.VisibilityToggle />
+          <ModelSelector />
         </div>
       </QueryControls>
     </div>

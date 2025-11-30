@@ -1,10 +1,11 @@
 <script setup>
 import DefaultTheme from 'vitepress/theme';
-import {ref, onMounted, watchEffect} from 'vue';
+import {ref, onMounted} from 'vue';
 import {useData} from 'vitepress';
 const {frontmatter} = useData();
+import CaseStudiesCarousel from './CaseStudiesCarousel.vue';
 
-const SHOW_BANNER = true; // Set to false to hide banner and margin everywhere
+const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
@@ -21,6 +22,8 @@ function dismiss() {
   document.documentElement.classList.add('banner-dismissed');
   localStorage.setItem(`sqlrooms-banner-${BANNER_ID}`, 'true');
 }
+
+// Case studies carousel moved to CaseStudiesCarousel.vue and reads data from frontmatter
 </script>
 
 <template>
@@ -67,6 +70,7 @@ function dismiss() {
       </template>
 
       <template #layout-bottom>
+        <CaseStudiesCarousel v-if="frontmatter.layout === 'home'" />
         <div class="foursquare-footer">
           Supported by
           <a
@@ -232,4 +236,6 @@ html:not(.dark) .foursquare-footer img {
     word-break: break-word;
   }
 }
+
+/* Carousel styles moved to CaseStudiesCarousel.vue */
 </style>

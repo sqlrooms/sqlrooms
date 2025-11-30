@@ -20,19 +20,43 @@ SQLRooms uses [Zustand](https://docs.pmnd.rs/zustand/getting-started/introductio
 
 ```ts
 import {persist} from 'zustand/middleware';
+import {
+  createRoomStore,
+  createRoomShellSlice,
+  RoomShellSliceState,
+  BaseRoomConfig,
+  LayoutConfig,
+  createPersistHelpers,
+  StateCreator,
+} from '@sqlrooms/room-shell';
 
-const {roomStore, useRoomStore} = createRoomStore(
+type RoomState = RoomShellSliceState;
+
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
-      // ...slices and state
+      ...createRoomShellSlice({
+        config: {
+          // Room configuration
+        },
+        layout: {
+          config: {
+            // Layout configuration
+          },
+          panels: {
+            // Panel definitions
+          },
+        },
+      })(set, get, store),
     }),
     {
       name: 'sql-editor-example-app-state-storage', // localStorage key
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
       }),
     },
-  ),
+  ) as StateCreator<RoomState>,
 );
 ```
 
@@ -89,7 +113,7 @@ See [`examples/query/vite.config.ts`](https://github.com/sqlrooms/examples/blob/
 
 ## 4. Example: SQL Query Editor
 
-The [SQL Query Editor example](https://sqlrooms.org/examples.html#sql-query-editor) demonstrates all of these offline techniques in a real app. It persists state, stores data in OPFS, and works offline as a PWA.
+The [PWA SQL Query Editor example](https://github.com/sqlrooms/examples/tree/main/query-pwa) demonstrates all of these offline techniques in a real app. It persists state, stores data in OPFS, and works offline as a PWA.
 
 ---
 

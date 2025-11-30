@@ -2,28 +2,29 @@ import {z} from 'zod';
 
 // Saved state (persisted)
 export const SqlEditorSliceConfig = z.object({
-  sqlEditor: z.object({
-    queries: z.array(
-      z.object({
-        id: z.string().describe('Query identifier.'),
-        name: z.string().describe('Query name.'),
-        query: z.string().describe('SQL query to execute.'),
-      }),
-    ),
-    selectedQueryId: z
-      .string()
-      .default('default')
-      .describe('The id of the currently selected query.'),
-    lastExecutedQuery: z.string().optional().describe('Last executed query'),
-  }),
+  queries: z.array(
+    z.object({
+      id: z.string().describe('Query identifier.'),
+      name: z.string().describe('Query name.'),
+      query: z.string().describe('SQL query to execute.'),
+    }),
+  ),
+  selectedQueryId: z
+    .string()
+    .default('default')
+    .describe('The id of the currently selected query.'),
+  lastExecutedQuery: z.string().optional().describe('Last executed query'),
+  closedTabIds: z
+    .array(z.string())
+    .default([])
+    .describe('List of closed tab ids'),
 });
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
 
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
-    sqlEditor: {
-      queries: [{id: 'default', name: 'Untitled', query: ''}],
-      selectedQueryId: 'default',
-    },
+    queries: [{id: 'default', name: 'SQL', query: ''}],
+    selectedQueryId: 'default',
+    closedTabIds: [],
   };
 }

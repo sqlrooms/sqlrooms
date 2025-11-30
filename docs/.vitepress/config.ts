@@ -1,5 +1,6 @@
 import {defineConfig} from 'vitepress';
 import {apiSidebarConfig} from './gen-api-sidebar';
+import llmstxt from 'vitepress-plugin-llms';
 
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
@@ -18,6 +19,7 @@ const PACKAGE_CATEGORIES = {
     'dropzone',
     'monaco-editor',
     'mosaic',
+    'motherduck',
     'recharts',
     's3-browser',
     'schema-tree',
@@ -29,6 +31,23 @@ const PACKAGE_CATEGORIES = {
 
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
+  vite: {
+    plugins: [
+      // @ts-ignore
+      llmstxt({
+        // generateLLMsFullTxt: true,
+        // ignoreFiles: ['sponsors/*'],
+        // customLLMsTxtTemplate: `# {title}\n\n{foo}`,
+        // title: 'Awesome tool',
+        // customTemplateVariables: {
+        //   foo: 'bar',
+        // },
+        // experimental: {
+        //   depth: 2, // Generate llms.txt and llms-full.txt in root and first-level subdirectories
+        // },
+      }),
+    ],
+  },
   ignoreDeadLinks: true,
   title: 'SQLRooms',
   description: 'Build powerful analytics apps with DuckDB',
@@ -53,9 +72,15 @@ export default defineConfig({
     nav: [
       {text: 'Home', link: '/'},
       {text: 'Overview', link: '/overview'},
+      //{text: 'Concepts', link: '/key-concepts'},
       {text: 'Examples', link: '/examples'},
+      {text: 'Case Studies', link: '/case-studies'},
       {text: 'Get started', link: '/getting-started'},
-      {text: 'Reference', link: '/packages'},
+      // {
+      //   text: 'Join Slack',
+      //   link: '/join-slack',
+      // },
+      // {text: 'Reference', link: '/packages'},
     ],
 
     sidebar: [
@@ -67,12 +92,12 @@ export default defineConfig({
             link: '/overview',
           },
           {
-            text: 'Modular Architecture',
-            link: '/modular-architecture',
-          },
-          {
             text: 'Key Concepts',
             link: '/key-concepts',
+          },
+          {
+            text: 'Modular Architecture',
+            link: '/modular-architecture',
           },
         ],
       },
@@ -126,8 +151,12 @@ export default defineConfig({
 
       {
         text: 'Reference',
-        items: Object.entries(PACKAGE_CATEGORIES).map(
-          ([category, packages]) => {
+        items: [
+          {
+            text: 'Docs for LLMs',
+            link: '/llms',
+          },
+          ...Object.entries(PACKAGE_CATEGORIES).map(([category, packages]) => {
             return {
               text: category,
               link: `/packages#${category.toLowerCase().replace(/ /g, '-')}`,
@@ -135,12 +164,13 @@ export default defineConfig({
                 packages.includes(item.text),
               ),
             };
-          },
-        ),
+          }),
+        ],
       },
     ],
 
     socialLinks: [
+      {icon: 'slack', link: '/join-slack'},
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
   },
