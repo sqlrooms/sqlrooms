@@ -9,10 +9,7 @@ export const App = () => {
         <RoomShell.Sidebar>
           <ThemeSwitch />
         </RoomShell.Sidebar>
-        <div className="relative flex h-full w-full">
-          <div> Hello world </div>
-          <RoomShell.LayoutComposer />
-        </div>
+        <RoomShell.LayoutComposer />
       </RoomShell>
     </ThemeProvider>
   );
