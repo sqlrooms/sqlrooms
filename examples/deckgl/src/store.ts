@@ -1,43 +1,29 @@
-import {
-  createDefaultDiscussConfig,
-  DiscussSliceConfig,
-} from '@sqlrooms/discuss';
+import {createDefaultDiscussConfig} from '@sqlrooms/discuss';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
   LayoutTypes,
-  MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
-  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
-import {z} from 'zod';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
 
-export const RoomPanelTypes = z.enum(['data', MAIN_VIEW] as const);
-export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
-export const RoomConfig =
-  BaseRoomConfig.merge(DiscussSliceConfig).merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
-
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),
 
     // Room shell slice
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       connector: createWasmDuckDbConnector({
         initializationQuery: 'LOAD spatial',
       }),
@@ -47,8 +33,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           type: LayoutTypes.enum.mosaic,
           nodes: {
             direction: 'row',
-            first: RoomPanelTypes.enum['data'],
-            second: RoomPanelTypes.enum['main'],
+            first: 'data',
+            second: 'main',
             splitPercentage: 30,
           },
         },
@@ -67,7 +53,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       },
       room: {
         panels: {
-          [RoomPanelTypes.enum['data']]: {
+          data: {
             title: 'Data sources',
             icon: DatabaseIcon,
             component: DataPanel,

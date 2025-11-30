@@ -1,7 +1,7 @@
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {TableStructurePanel} from '@sqlrooms/sql-editor';
 import {FileDropzone} from '@sqlrooms/dropzone';
-import {useRoomStore, RoomPanelTypes} from '../store';
+import {useRoomStore} from '../store';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useToast} from '@sqlrooms/ui';
 
@@ -13,7 +13,7 @@ export const DataPanel = () => {
   const {toast} = useToast();
 
   return (
-    <RoomPanel type={RoomPanelTypes.enum['data']}>
+    <RoomPanel type="data">
       <FileDropzone
         className="h-[200px] p-5"
         acceptedFormats={{

@@ -1,8 +1,8 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {SpinnerPane} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {AirportFeature, MapView} from './MapView';
+import {SpinnerPane} from '@sqlrooms/ui';
 
 export const MainView: React.FC = () => {
   const table = useRoomStore((s) => s.db.findTableByName('airports'));
@@ -31,19 +31,18 @@ export const MainView: React.FC = () => {
             geometry: JSON.parse(geometry),
             properties,
           }) satisfies AirportFeature,
-      ),
+      ) ?? [],
     [data],
   );
 
-  if (!table) return null;
   return (
-    <div className="flex h-full w-full items-center justify-center">
-      {isLoading ? (
-        <SpinnerPane className="h-full w-full" />
-      ) : error ? (
-        <div>Error: {error.message}</div>
-      ) : features ? (
-        <MapView features={features} />
+    <div className="relative flex h-full w-full items-center justify-center">
+      <MapView features={features} />
+      {isLoading ? <SpinnerPane className="h-full w-full" /> : null}
+      {error ? (
+        <div className="absolute left-5 top-5 whitespace-pre-wrap font-mono text-xs text-red-500">
+          Error: {error.message}
+        </div>
       ) : null}
     </div>
   );

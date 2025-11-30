@@ -8,15 +8,16 @@ import {FC, useState} from 'react';
 import {Map, NavigationControl, Popup, useControl} from 'react-map-gl/maplibre';
 
 const INITIAL_VIEW_STATE = {
-  latitude: 51.47,
-  longitude: 0.45,
-  zoom: 4,
+  latitude: 0,
+  longitude: 0,
+  zoom: 1,
   bearing: 0,
   pitch: 0,
 };
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json';
+
 function DeckGLOverlay(props: MapboxOverlayProps) {
   const overlay = useControl(() => new DeckOverlay(props));
   overlay.setProps(props);
@@ -70,7 +71,7 @@ export const MapView: FC<{features: AirportFeature[]}> = ({features}) => {
         </Popup>
       )}
 
-      <DeckGLOverlay layers={layers} />
+      <DeckGLOverlay layers={layers} interleaved />
       <NavigationControl position="top-left" />
     </Map>
   );
