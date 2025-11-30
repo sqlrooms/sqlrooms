@@ -18,7 +18,6 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "ai": "^4.1.24",
     "immer": "^10.1.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
