@@ -5,4 +5,4 @@ See [Conventional Commits](https://conventionalcommits.org) for commit guideline
 
 ## 0.26.1-rc.0 (2025-11-30)
 
-**Note:** Version bump only for package @sqlrooms/s3-utils
+**Note:** Version bump only for package @sqlrooms/kepler-config

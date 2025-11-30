@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ai-rag",
-  "version": "0.26.0-rc.3",
+  "version": "0.26.1-rc.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -18,13 +18,13 @@
     "access": "public"
   },
   "dependencies": {
+    "@openassistant/utils": "1.0.0-alpha.0",
+    "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/ai-core": "workspace:*",
     "ai": "^5.0.44",
-    "zod": "^4.1.8",
-    "@openassistant/utils": "1.0.0-alpha.0"
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0",

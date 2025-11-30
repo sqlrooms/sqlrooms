@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/s3-utils",
-  "version": "0.13.1",
+  "version": "0.26.1-rc.0",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,7 +15,6 @@
   "files": [
     "dist"
   ],
-  "private": true,
   "dependencies": {
     "@aws-sdk/client-s3": "^3.940.0",
     "@sqlrooms/s3-browser-config": "workspace:*"
