@@ -1,0 +1,12 @@
+{
+  "name": "sqlrooms-rag-python",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "check-fix": "uv run ruff check --fix",
+    "format": "uv run ruff format",
+    "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",
+    "release": "uv build && uvx twine upload --skip-existing ./dist/sqlrooms_rag*",
+    "test": "uv run pytest -s --log-cli-level=DEBUG"
+  }
+}

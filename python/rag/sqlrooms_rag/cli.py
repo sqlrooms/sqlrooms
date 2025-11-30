@@ -36,12 +36,12 @@ Examples:
   %(prog)s docs -o generated-embeddings/kb.duckdb --provider openai
         """,
     )
-    
+
     parser.add_argument(
         "input_dir",
         help="Directory containing markdown (.md) files to process",
     )
-    
+
     parser.add_argument(
         "-o",
         "--output",
@@ -49,14 +49,14 @@ Examples:
         default="generated-embeddings/knowledge_base.duckdb",
         help="Output DuckDB database file path (default: generated-embeddings/knowledge_base.duckdb)",
     )
-    
+
     parser.add_argument(
         "--chunk-size",
         type=int,
         default=512,
         help="Size of text chunks in tokens (default: 512)",
     )
-    
+
     parser.add_argument(
         "--provider",
         dest="embedding_provider",
@@ -64,62 +64,62 @@ Examples:
         default="huggingface",
         help="Embedding provider: 'huggingface' (local, free) or 'openai' (API, paid). Default: huggingface",
     )
-    
+
     parser.add_argument(
         "--model",
         dest="embed_model_name",
         default=None,
         help="Embedding model name. Defaults: huggingface='BAAI/bge-small-en-v1.5', openai='text-embedding-3-small'",
     )
-    
+
     parser.add_argument(
         "--embed-dim",
         type=int,
         default=None,
         help="Embedding dimension size. Auto-detected if not specified. Common: bge-small=384, openai-small=1536",
     )
-    
+
     parser.add_argument(
         "--api-key",
         dest="api_key",
         default=None,
         help="API key for external providers (e.g., OpenAI). Can also use OPENAI_API_KEY environment variable.",
     )
-    
+
     parser.add_argument(
         "-q",
         "--quiet",
         action="store_true",
         help="Suppress progress messages",
     )
-    
+
     parser.add_argument(
         "--no-markdown-chunking",
         action="store_true",
         help="Disable markdown-aware chunking (use simple size-based chunking instead)",
     )
-    
+
     parser.add_argument(
         "--no-header-weighting",
         action="store_true",
         help="Disable prepending headers to chunks (reduces header weight in embeddings)",
     )
-    
+
     parser.add_argument(
         "--header-weight",
         type=int,
         default=3,
         help="Number of times to repeat headers in chunks for higher weight (default: 3, min: 1)",
     )
-    
+
     parser.add_argument(
         "--overwrite",
         action="store_true",
         help="Overwrite existing database if it exists",
     )
-    
+
     args = parser.parse_args()
-    
+
     try:
         prepare_embeddings(
             input_dir=args.input_dir,
@@ -146,25 +146,36 @@ Examples:
         sys.exit(1)
     except Exception as e:
         error_msg = str(e)
-        
+
         # Provide helpful guidance for common errors
-        if "maximum context length" in error_msg.lower() and "openai" in error_msg.lower():
-            print(f"\nError: OpenAI token limit exceeded", file=sys.stderr)
-            print(f"\nThe error indicates a chunk exceeded OpenAI's token limit.", file=sys.stderr)
-            print(f"This has been fixed - please re-run with the same command.", file=sys.stderr)
-            print(f"\nIf the problem persists, try:", file=sys.stderr)
-            print(f"  1. Use smaller chunks: --chunk-size 512", file=sys.stderr)
-            print(f"  2. Reduce header weight: --header-weight 1", file=sys.stderr)
-            print(f"  3. Disable header weighting: --no-header-weighting", file=sys.stderr)
+        if (
+            "maximum context length" in error_msg.lower()
+            and "openai" in error_msg.lower()
+        ):
+            print("\nError: OpenAI token limit exceeded", file=sys.stderr)
+            print(
+                "\nThe error indicates a chunk exceeded OpenAI's token limit.",
+                file=sys.stderr,
+            )
+            print(
+                "This has been fixed - please re-run with the same command.",
+                file=sys.stderr,
+            )
+            print("\nIf the problem persists, try:", file=sys.stderr)
+            print("  1. Use smaller chunks: --chunk-size 512", file=sys.stderr)
+            print("  2. Reduce header weight: --header-weight 1", file=sys.stderr)
+            print(
+                "  3. Disable header weighting: --no-header-weighting", file=sys.stderr
+            )
             print(f"\nOriginal error: {error_msg}", file=sys.stderr)
         else:
             print(f"\nError: {e}", file=sys.stderr)
             import traceback
+
             traceback.print_exc()
-        
+
         sys.exit(1)
 
 
 if __name__ == "__main__":
     main()
-

@@ -37,7 +37,7 @@ def main():
     print(f"✓ Loaded {len(df)} documents")
     
     # 2. Process embeddings and generate UMAP
-    print(f"\n🗺️  Generating UMAP projection...")
+    print("\n🗺️  Generating UMAP projection...")
     result_df = process_embeddings(
         df,
         n_neighbors=15,  # Balance local and global structure
@@ -46,7 +46,7 @@ def main():
     )
     
     # 3. Save to parquet
-    print(f"\n💾 Saving results...")
+    print("\n💾 Saving results...")
     save_to_parquet(result_df, output_path)
     
     print("\n" + "=" * 80)

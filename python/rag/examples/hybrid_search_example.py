@@ -74,7 +74,7 @@ def main():
             
             if source_docs:
                 doc = source_docs[0]
-                print(f"\nSource Document:")
+                print("\nSource Document:")
                 print(f"  File: {doc['file_name']}")
                 print(f"  Path: {doc['file_path']}")
                 print(f"  Length: {len(doc['text'])} characters")

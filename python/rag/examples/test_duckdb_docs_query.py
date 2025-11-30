@@ -69,7 +69,7 @@ def test_query(
         FROM documents
     """).fetchone()
     
-    print(f"✓ Connected to database")
+    print("✓ Connected to database")
     print(f"  - Total document chunks: {stats[0]}")
     print(f"  - Total source files: {stats[1]}")
     print()
@@ -103,7 +103,7 @@ def test_query(
         print(f"🔖 Result #{i}")
         print(f"   Score: {similarity:.4f} ({similarity * 100:.1f}%)")
         print(f"   Source: {file_name or 'Unknown'}")
-        print(f"   Text:")
+        print("   Text:")
         
         # Display text with word wrap
         max_length = 500

@@ -1,6 +1,6 @@
 # SQLRooms RAG
 
-A Python package for preparing and querying vector embeddings stored in DuckDB for RAG (Retrieval Augmented Generation) applications.
+A Python package for preparing and querying vector embeddings stored in DuckDB for RAG (Retrieval Augmented Generation) applications. The was meant primarily for use with the [SQLRooms](https://sqlrooms.org) framework, but can be used independently as well.
 
 ## Overview
 
@@ -13,10 +13,27 @@ This tool follows the approach outlined in [Developing a RAG Knowledge Base with
 
 ## Installation
 
-### From PyPI (when published)
+### From PyPI
+
+The easiest way to use the package is with `uvx` (no install needed):
+
+```bash
+# Generate embeddings (uses local HuggingFace model by default - free)
+uvx --from sqlrooms-rag prepare-embeddings /path/to/docs -o embeddings.duckdb
+
+# Or use OpenAI embeddings (requires OPENAI_API_KEY env var)
+OPENAI_API_KEY=your-key uvx --from sqlrooms-rag prepare-embeddings /path/to/docs -o embeddings.duckdb --provider openai
+
+# Generate UMAP visualization
+uvx --from sqlrooms-rag generate-umap-embeddings embeddings.duckdb
+```
+
+Or install with pip/uv:
 
 ```bash
 pip install sqlrooms-rag
+# or
+uv pip install sqlrooms-rag
 ```
 
 ### From source with uv
@@ -575,6 +592,26 @@ If you run out of memory with large document sets, try:
 - Consider using a smaller/faster model for large document sets
 - OpenAI API has higher latency but doesn't need local models
 
+## Publishing
+
+### Bumping the Version
+
+Edit the `version` field in `pyproject.toml`:
+
+```toml
+[project]
+name = "sqlrooms-rag"
+version = "0.1.0a2"  # bump this
+```
+
+### Building and Publishing
+
+1. Run checks: `pnpm prerelease`
+2. Build: `uv build`
+3. Publish: `pnpm release`
+
+We publish using tokens so when asked, set the username to `__token__` and use your PyPI token as the password. Alternatively, create a [`.pypirc` file](https://packaging.python.org/en/latest/guides/distributing-packages-using-setuptools/#create-an-account).
+
 ## License
 
-Part of the SQLRooms project.
+MIT, Part of the SQLRooms project.

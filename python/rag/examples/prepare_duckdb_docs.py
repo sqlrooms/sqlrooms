@@ -13,7 +13,6 @@ Requirements:
 """
 
 import argparse
-import os
 import shutil
 import subprocess
 import sys
@@ -52,7 +51,7 @@ def download_duckdb_docs(output_dir: str, version: str = "stable") -> Path:
     
     # Download using degit
     repo_path = f"duckdb/duckdb-web/docs/{version}"
-    print(f"Downloading DuckDB documentation from GitHub...")
+    print("Downloading DuckDB documentation from GitHub...")
     print(f"Repository: {repo_path}")
     
     try:

@@ -219,11 +219,11 @@ def hybrid_query_direct(
         print(f"      Found {len(fts_results)} FTS results")
     except Exception as e:
         print(f"      Warning: FTS search failed: {e}")
-        print(f"      Continuing with vector-only results...")
+        print("      Continuing with vector-only results...")
         fts_results = []
     
     # 3. Combine with Reciprocal Rank Fusion
-    print(f"[3/3] Combining results with Reciprocal Rank Fusion...")
+    print("[3/3] Combining results with Reciprocal Rank Fusion...")
     
     # Extract rankings (node_ids in order)
     vector_ranking = [r[0] for r in vector_results]
@@ -233,7 +233,7 @@ def hybrid_query_direct(
     rrf_scores = reciprocal_rank_fusion([vector_ranking, fts_ranking])
     
     # Get top_k by RRF score
-    top_node_ids = [node_id for node_id, _ in rrf_scores[:top_k]]
+    [node_id for node_id, _ in rrf_scores[:top_k]]
     
     # Create lookup map for full details
     result_map = {}

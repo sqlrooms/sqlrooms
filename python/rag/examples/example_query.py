@@ -35,7 +35,7 @@ def query_knowledge_base(query_text: str, database_name: str = "generated-embedd
     )
     
     # Create storage context
-    storage_context = StorageContext.from_defaults(vector_store=vector_store)
+    StorageContext.from_defaults(vector_store=vector_store)
     
     # Load the index from the vector store
     print("Loading index...")

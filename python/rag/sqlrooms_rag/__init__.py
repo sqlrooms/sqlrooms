@@ -61,4 +61,3 @@ __all__ = [
     "calculate_graph_metrics",
     "create_links_table",
 ]
-

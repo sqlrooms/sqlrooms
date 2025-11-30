@@ -43,4 +43,3 @@ __all__ = [
     "store_metadata_in_db",
     "save_metadata_yaml",
 ]
-
