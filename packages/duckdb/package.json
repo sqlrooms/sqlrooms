@@ -23,7 +23,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "fast-deep-equal": "^3.1.3",
-    "immer": "^10.1.3",
+    "immer": "^11.0.1",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
