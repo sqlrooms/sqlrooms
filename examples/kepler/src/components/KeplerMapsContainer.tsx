@@ -47,11 +47,11 @@ export const KeplerMapsContainer: FC<{
   };
 
   return (
-    <div className={cn('flex h-full w-full flex-col', className)}>
+    <div className={cn('relative flex h-full w-full flex-col', className)}>
       <Tabs
         value={currentMap?.id}
         onValueChange={setCurrentMapId}
-        className="h-full w-full"
+        className="absolute inset-0 flex h-full w-full flex-col"
       >
         <TabsList className="flex items-center gap-1">
           {maps.map((map) => (

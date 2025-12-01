@@ -16,7 +16,7 @@ const MosaicTile: FC<{
   const body = (
     <div
       className={cn(
-        'h-full flex-1 flex-col overflow-hidden rounded-md p-2',
+        'h-full flex-1 flex-col overflow-hidden p-2',
         className,
         isDragging ? 'pointer-events-none' : '',
       )}
