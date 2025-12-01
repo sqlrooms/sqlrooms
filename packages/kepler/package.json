@@ -39,7 +39,7 @@
     "@sqlrooms/s3-browser": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "apache-arrow": "17.0.0",
-    "immer": "^10.1.1",
+    "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "mapbox-gl": "^1.13.1",
     "maplibre-gl": "^3.6.2",
