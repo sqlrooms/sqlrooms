@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/preset-eslint",
-  "version": "0.26.1-rc.1",
+  "version": "0.26.1-rc.2",
   "type": "module",
   "private": true,
   "exports": {

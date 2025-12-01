@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ai-rag",
-  "version": "0.26.1-rc.1",
+  "version": "0.26.1-rc.2",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
