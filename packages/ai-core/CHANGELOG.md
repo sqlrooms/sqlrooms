@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.26.1-rc.4 (2025-12-01)
+
+### Bug Fixes
+
+* Upgrade immer to prevent Object.freeze errors in kepler ([#218](https://github.com/sqlrooms/sqlrooms/issues/218)) ([1fe2250](https://github.com/sqlrooms/sqlrooms/commit/1fe2250ca2acf578c26931632baa229f4b8ce881))
+
 ## [0.26.1-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.2...v0.26.1-rc.3) (2025-12-01)
 
 **Note:** Version bump only for package @sqlrooms/ai-core
