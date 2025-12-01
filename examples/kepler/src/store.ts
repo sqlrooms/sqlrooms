@@ -33,6 +33,7 @@ import {
   KeplerSidePanelInteractionManager,
   KeplerSidePanelLayerManager,
 } from './components/KeplerSidePanels';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 
 export const RoomPanelTypes = z.enum([
   'data',
@@ -64,12 +65,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             {
               tableName: 'earthquakes',
               type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+              url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
             },
           ],
           ...createDefaultKeplerConfig(),
           ...createDefaultSqlEditorConfig(),
         },
+        connector: createWasmDuckDbConnector({
+          query: {
+            // Prevents bigint errors in Kepler
+            castTimestampToDate: true,
+            castBigIntToDouble: true,
+          },
+        }),
         layout: {
           config: {
             type: LayoutTypes.enum.mosaic,
@@ -123,11 +131,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       initialize: async () => {
-        console.log('initialize');
         const id = get().kepler.getCurrentMap()?.id;
         if (id) {
-          console.log('current tables', get().db.tables);
-          console.log('add table to map', id);
           await get().kepler.addTableToMap(id, 'earthquakes', {
             autoCreateLayers: true,
             centerMap: true,
@@ -136,7 +141,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
 
       ...createKeplerSlice({
-        actionLogging: true,
+        actionLogging: false,
       })(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),

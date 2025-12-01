@@ -3,7 +3,7 @@ import {useForm, SubmitHandler} from 'react-hook-form';
 import {zodResolver} from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@sqlrooms/ui';
-import {S3Config, S3Credential} from '@sqlrooms/s3-browser-config';
+import {S3Config, S3Credentials} from '@sqlrooms/s3-browser-config';
 
 import {
   Input,
@@ -150,33 +150,33 @@ const parseCredentialProcess = (text: string): ParsedType => {
  * };
  *
  * return (
- *   <S3CredentialForm
+ *   <S3CredentialsForm
  *     onConnect={handleConnect}
  *     isLoading={false}
- *     saveS3Credential={handleSaveCredential}
+ *     saveS3Credentials={handleSaveCredential}
  *     loadS3Credentials={handleLoadCredentials}
- *     deleteS3Credential={handleDeleteCredential}
+ *     deleteS3Credentials={handleDeleteCredential}
  *   />
  * );
  * ```
  */
-export type S3CredentialFormProps = {
+export type S3CredentialsFormProps = {
   onConnect: (data: FormData) => void;
   isLoading?: boolean;
-  saveS3Credential: (data: S3Config) => Promise<void>;
-  loadS3Credentials: () => Promise<S3Credential[]>;
-  deleteS3Credential?: (id: string) => Promise<void>;
+  saveS3Credentials: (data: S3Config) => Promise<void>;
+  loadS3Credentials: () => Promise<S3Credentials[]>;
+  deleteS3Credentials?: (id: string) => Promise<void>;
   onInputChange?: () => void;
 };
 
-export function S3CredentialForm({
+export function S3CredentialsForm({
   onConnect,
   isLoading,
-  saveS3Credential,
+  saveS3Credentials,
   loadS3Credentials,
-  deleteS3Credential,
+  deleteS3Credentials,
   onInputChange,
-}: S3CredentialFormProps) {
+}: S3CredentialsFormProps) {
   const [showSecrets, setShowSecrets] = useState({
     secretAccessKey: false,
     sessionToken: false,
@@ -187,7 +187,7 @@ export function S3CredentialForm({
     message: '',
     type: 'success',
   });
-  const [savedCredentials, setSavedCredentials] = useState<S3Credential[]>([]);
+  const [savedCredentials, setSavedCredentials] = useState<S3Credentials[]>([]);
   const [tab, setTab] = useState('new');
 
   // Load saved connections on component mount
@@ -282,7 +282,7 @@ export function S3CredentialForm({
       onConnect(data);
       if (data.saveCredential) {
         try {
-          await saveS3Credential({
+          await saveS3Credentials({
             accessKeyId: data.accessKeyId,
             secretAccessKey: data.secretAccessKey,
             sessionToken: data.sessionToken || undefined,
@@ -296,18 +296,18 @@ export function S3CredentialForm({
         }
       }
     },
-    [onConnect, saveS3Credential, showNotification],
+    [onConnect, saveS3Credentials, showNotification],
   );
 
   const deleteCredential = useCallback(
     async (id: string) => {
-      if (deleteS3Credential) {
-        await deleteS3Credential(id);
+      if (deleteS3Credentials) {
+        await deleteS3Credentials(id);
         const credentials = await loadS3Credentials();
         setSavedCredentials(credentials);
       }
     },
-    [deleteS3Credential, setSavedCredentials, loadS3Credentials],
+    [deleteS3Credentials, setSavedCredentials, loadS3Credentials],
   );
 
   // Add a handler for input changes

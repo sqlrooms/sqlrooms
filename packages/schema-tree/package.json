@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/schema-tree",
-  "version": "0.26.0",
+  "version": "0.26.1-rc.4",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -28,7 +28,7 @@
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.544.0"
+    "lucide-react": "^0.555.0"
   },
   "peerDependencies": {
     "react": ">=18",

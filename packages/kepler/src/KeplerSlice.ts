@@ -24,7 +24,7 @@ import {
   KeplerGlState,
   MapStyle,
 } from '@kepler.gl/reducers';
-import KeplerGLSchemaManager from '@kepler.gl/schemas';
+import {KeplerGLSchemaClass} from '@kepler.gl/schemas';
 import {KeplerTable} from '@kepler.gl/table';
 import {AddDataToMapPayload} from '@kepler.gl/types';
 import {
@@ -43,7 +43,8 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-shell';
 import * as arrow from 'apache-arrow';
-import {produce} from 'immer';
+import {produce, setAutoFreeze} from 'immer';
+setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
   Action,
@@ -53,6 +54,8 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+
+const KeplerGLSchemaManager = new KeplerGLSchemaClass();
 
 class DesktopKeplerTable extends KeplerTable {
   static getInputDataValidator = function () {
@@ -324,7 +327,7 @@ export function createKeplerSlice({
 
           if (fields && cols) {
             const datasets: AddDataToMapPayload['datasets'] = {
-              data: {fields, cols, rows: []},
+              data: {fields, cols, rows: [], arrowTable: arrowResult},
               info: {label: tableName, id: tableName},
               metadata: {tableName},
             };
@@ -381,9 +384,14 @@ export function createKeplerSlice({
               // Only include tables from 'main' schema and the current local database
               // This excludes tables from attached databases (MotherDuck, Iceberg, etc.)
               const isMainSchema = !schemaName || schemaName === 'main';
-              const isLocalDatabase = !databaseName || databaseName === currentDatabase;
+              const isLocalDatabase =
+                !databaseName || databaseName === currentDatabase;
 
-              if (isMainSchema && isLocalDatabase && !keplerDatasets?.[table.table]) {
+              if (
+                isMainSchema &&
+                isLocalDatabase &&
+                !keplerDatasets?.[table.table]
+              ) {
                 await get().kepler.addTableToMap(mapId, table.table, {
                   autoCreateLayers: false,
                   centerMap: false,

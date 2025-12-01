@@ -3,4 +3,4 @@
  * @packageDocumentation
  */
 export * from './S3FileOrDirectory';
-export * from './S3Credential';
+export * from './S3Credentials';

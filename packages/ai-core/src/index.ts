@@ -39,3 +39,4 @@ export type {
   AgentToolCall,
   AgentToolCallAdditionalData,
 } from './agents/AgentUtils';
+export {ReasoningBox} from './components/ReasoningBox';

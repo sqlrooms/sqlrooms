@@ -8,17 +8,17 @@ import {
   AddFilterButtonFactory,
   SidePanelSection,
 } from '@kepler.gl/components';
-import {
-  FILTER_VIEW_TYPES,
-  SIDEBAR_PANELS,
-} from '@kepler.gl/constants';
+import {FILTER_VIEW_TYPES, SIDEBAR_PANELS} from '@kepler.gl/constants';
 import {Filter} from '@kepler.gl/types';
 import {Layer} from '@kepler.gl/layers';
 import {isSideFilter} from '@kepler.gl/utils';
 import {Datasets} from '@kepler.gl/table';
 
 import {KeplerInjector} from './KeplerInjector';
-import {KeplerActions, useKeplerStateActions} from '../hooks/useKeplerStateActions';
+import {
+  KeplerActions,
+  useKeplerStateActions,
+} from '../hooks/useKeplerStateActions';
 
 // Get the kepler.gl components through the injector
 const FilterPanel = KeplerInjector.get(FilterPanelFactory);
@@ -32,14 +32,15 @@ const CustomFilterManagerContainer = styled.div`
   .filter-manager {
     /* Add your custom styles here */
   }
-  
+
   .filter-manager-title {
     /* Custom title styling */
   }
 
   .add-filter-button {
-    background-color: ${props => props.theme.sidePanelBg || props.theme.panelBackground};
-    color: #2563EB;
+    background-color: ${(props) =>
+      props.theme.sidePanelBg || props.theme.panelBackground};
+    color: #2563eb;
     border: 0px;
     height: 28px;
     font-weight: 500;
@@ -65,12 +66,15 @@ type FilterListProps = {
 };
 
 // Based on Kepler.gl's filterPanelCallbacks pattern
-type FilterPanelCallbacks = Record<string, {
-  removeFilter: () => void;
-  setFilterView: (view: string) => void;
-  toggleAnimation: () => void;
-  toggleFilterFeature: () => void;
-}>;
+type FilterPanelCallbacks = Record<
+  string,
+  {
+    removeFilter: () => void;
+    setFilterView: (view: string) => void;
+    toggleAnimation: () => void;
+    toggleFilterFeature: () => void;
+  }
+>;
 
 // Filter List Component
 const FilterList: React.FC<FilterListProps> = ({
@@ -79,9 +83,14 @@ const FilterList: React.FC<FilterListProps> = ({
   datasets,
   layers,
   isAnyFilterAnimating,
-  keplerActions
+  keplerActions,
 }) => {
-  const {removeFilter, setFilterView, toggleFilterAnimation, toggleFilterFeature} = keplerActions.visStateActions;
+  const {
+    removeFilter,
+    setFilterView,
+    toggleFilterAnimation,
+    toggleFilterFeature,
+  } = keplerActions.visStateActions;
 
   const filterPanelProps = useMemo(() => {
     return filtersByIndex.reduce(
@@ -92,15 +101,23 @@ const FilterList: React.FC<FilterListProps> = ({
           setFilterView: (view: string) =>
             setFilterView(
               idx,
-              isSideFilter(filter) ? FILTER_VIEW_TYPES.enlarged : FILTER_VIEW_TYPES.side
+              isSideFilter(filter)
+                ? FILTER_VIEW_TYPES.enlarged
+                : FILTER_VIEW_TYPES.side,
             ),
           toggleAnimation: () => toggleFilterAnimation(idx),
-          toggleFilterFeature: () => toggleFilterFeature(idx)
-        }
+          toggleFilterFeature: () => toggleFilterFeature(idx),
+        },
       }),
-      {} as FilterPanelCallbacks
+      {} as FilterPanelCallbacks,
     );
-  }, [filtersByIndex, removeFilter, setFilterView, toggleFilterAnimation, toggleFilterFeature]);
+  }, [
+    filtersByIndex,
+    removeFilter,
+    setFilterView,
+    toggleFilterAnimation,
+    toggleFilterFeature,
+  ]);
 
   return (
     <>
@@ -127,10 +144,10 @@ const FilterList: React.FC<FilterListProps> = ({
 // Custom hook for filter actions
 function useCustomFilterActions(keplerActions: KeplerActions) {
   const {addFilter} = keplerActions.visStateActions;
-  
+
   const onClickAddFilter = useCallback(
     (dataset: string) => addFilter(dataset),
-    [addFilter]
+    [addFilter],
   );
 
   return {
@@ -152,15 +169,17 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
   }
 
   const {filters, datasets, layers} = keplerState.visState;
-  const isAnyFilterAnimating = Object.values(filters).some(f => f.isAnimating);
+  const isAnyFilterAnimating = Object.values(filters).some(
+    (f) => f.isAnimating,
+  );
 
   const filtersByIndex = useMemo(
     () =>
       filters.map((f, idx) => ({
         filter: f,
-        idx
+        idx,
       })),
-    [filters]
+    [filters],
   );
 
   return (
@@ -169,12 +188,14 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
         <SidePanelSection>
           <PanelTitle
             className="filter-manager-title"
-            title={intl.formatMessage({id: filterPanelMetadata?.label || 'Filters'})}
+            title={intl.formatMessage({
+              id: filterPanelMetadata?.label || 'Filters',
+            })}
           >
             <AddFilterButton datasets={datasets} onAdd={onClickAddFilter} />
           </PanelTitle>
         </SidePanelSection>
-        
+
         <SidePanelSection>
           <FilterList
             filtersByIndex={filtersByIndex}

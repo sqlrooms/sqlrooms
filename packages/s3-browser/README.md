@@ -28,7 +28,7 @@ yarn add @sqlrooms/s3-browser
 
 ```tsx
 import {useState} from 'react';
-import {S3FileBrowser, S3CredentialForm, S3State} from '@sqlrooms/s3-browser';
+import {S3FileBrowser, S3CredentialsForm, S3State} from '@sqlrooms/s3-browser';
 import {S3FileOrDirectory, S3Config, S3Connection} from '@sqlrooms/s3-utils';
 
 type S3BrowserProps = {
@@ -42,18 +42,18 @@ type S3BrowserProps = {
     files: string[];
   }) => Promise<void>;
   s3: S3State['s3'];
-  saveS3Credential: (s3Config: S3Config) => Promise<void>;
+  saveS3Credentials: (s3Config: S3Config) => Promise<void>;
   loadS3Credentials: () => Promise<S3Connection[]>;
-  deleteS3Credential: (id: string) => Promise<void>;
+  deleteS3Credentials: (id: string) => Promise<void>;
 };
 
 export const S3Browser = ({
   listS3Files,
   s3,
   loadS3Files,
-  saveS3Credential,
+  saveS3Credentials,
   loadS3Credentials,
-  deleteS3Credential,
+  deleteS3Credentials,
 }: S3BrowserProps) => {
   const [isConnecting, setIsConnecting] = useState(false);
   const [error, setError] = useState('');
@@ -91,15 +91,15 @@ export const S3Browser = ({
     <div className="flex h-full flex-col items-center gap-4">
       {/* Connection Panel */}
       {!files ? (
-        <S3CredentialForm
+        <S3CredentialsForm
           onConnect={(values) => {
             setIsConnecting(true);
             listFiles(values, '');
           }}
           isLoading={isConnecting}
-          saveS3Credential={saveS3Credential}
+          saveS3Credentials={saveS3Credentials}
           loadS3Credentials={loadS3Credentials}
-          deleteS3Credential={deleteS3Credential}
+          deleteS3Credentials={deleteS3Credentials}
         />
       ) : (
         <div className="flex h-full w-full flex-col items-start justify-start gap-2">
@@ -127,7 +127,7 @@ export const S3Browser = ({
 
 This example demonstrates:
 
-- Integrating both `S3FileBrowser` and `S3CredentialForm` components
+- Integrating both `S3FileBrowser` and `S3CredentialsForm` components
 - Managing S3 connection state
 - Handling file listing and selection
 - Error handling and loading states
@@ -169,12 +169,12 @@ function MyS3Browser() {
 }
 ```
 
-### S3CredentialForm Component
+### S3CredentialsForm Component
 
-The `S3CredentialForm` component provides a form interface for managing S3 credentials and saved connections.
+The `S3CredentialsForm` component provides a form interface for managing S3 credentials and saved connections.
 
 ```tsx
-import {S3CredentialForm} from '@sqlrooms/s3-browser';
+import {S3CredentialsForm} from '@sqlrooms/s3-browser';
 import {S3Config, S3Connection} from '@sqlrooms/s3-utils';
 
 function MyS3ConnectionManager() {
@@ -223,12 +223,12 @@ function MyS3ConnectionManager() {
   };
 
   return (
-    <S3CredentialForm
+    <S3CredentialsForm
       onConnect={handleConnect}
       isLoading={false}
-      saveS3Credential={handleSaveCredential}
+      saveS3Credentials={handleSaveCredential}
       loadS3Credentials={handleLoadCredentials}
-      deleteS3Credential={handleDeleteCredential}
+      deleteS3Credentials={handleDeleteCredential}
     />
   );
 }
@@ -246,7 +246,7 @@ Features:
 #### Props
 
 ```tsx
-interface S3CredentialFormProps {
+interface S3CredentialsFormProps {
   /**
    * Callback fired when the connect button is clicked
    */
@@ -260,7 +260,7 @@ interface S3CredentialFormProps {
   /**
    * Callback to save a new S3 credential
    */
-  saveS3Credential: (data: S3Config) => Promise<void>;
+  saveS3Credentials: (data: S3Config) => Promise<void>;
 
   /**
    * Callback to load saved S3 credentials
@@ -270,7 +270,7 @@ interface S3CredentialFormProps {
   /**
    * Optional callback to delete a saved credential
    */
-  deleteS3Credential?: (id: string) => Promise<void>;
+  deleteS3Credentials?: (id: string) => Promise<void>;
 }
 ```
 

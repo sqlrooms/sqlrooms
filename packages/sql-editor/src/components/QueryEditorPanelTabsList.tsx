@@ -258,6 +258,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
               </div>
 
               <Button
+                asChild
                 size="xs"
                 variant="ghost"
                 className="hover:bg-primary/10 h-4 w-4 p-1"
@@ -271,7 +272,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
                   closeQueryTab(q.id);
                 }}
               >
-                <XIcon size={12} />
+                <XIcon className="h-5 w-5" />
               </Button>
             </TabsTrigger>
           ))}

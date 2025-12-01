@@ -5,6 +5,79 @@
   height: 100vh;
 }
 
+/* Hide print-only elements in normal view */
+.print-only {
+  display: none;
+}
+
+/* Print styles */
+@media print {
+  /* Hide everything except the print container */
+  .no-print {
+    display: none !important;
+  }
+
+  /* Show print-only elements */
+  .print-only {
+    display: block !important;
+  }
+
+  /* Force light mode for printing */
+  html {
+    color-scheme: light !important;
+  }
+
+  body,
+  #root {
+    background-color: white !important;
+    color: hsl(222.2 84% 4.9%) !important;
+  }
+
+  /* Reset root and body for printing */
+  #root,
+  body,
+  html {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  /* Make the print container take full width and remove overflow */
+  .print-container {
+    overflow: visible !important;
+    height: auto !important;
+    flex-grow: 0 !important;
+  }
+
+  /* Expand Radix scroll areas to full height for printing */
+  [data-radix-scroll-area-viewport] {
+    height: auto !important;
+    max-height: none !important;
+    overflow: visible !important;
+    display: block !important;
+  }
+
+  /* Ensure the scroll area content is fully visible */
+  [data-radix-scroll-area-viewport] > div {
+    height: auto !important;
+    display: block !important;
+  }
+
+  /* Hide scrollbars */
+  [data-radix-scroll-area-scrollbar] {
+    display: none !important;
+  }
+
+  /* Remove any fixed positioning */
+  * {
+    position: static !important;
+  }
+
+  /* Optimize for printing */
+  @page {
+    margin: 1cm;
+  }
+}
+
 @layer base {
   :root {
     --background: 0 0% 100%;
@@ -34,30 +107,32 @@
     --chart-5: 27 87% 67%;
   }
 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
-    --primary: 217.2 91.2% 59.8%;
-    --primary-foreground: 222.2 47.4% 11.2%;
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 224.3 76.3% 48%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
+  @media screen {
+    .dark {
+      --background: 222.2 84% 4.9%;
+      --foreground: 210 40% 98%;
+      --card: 222.2 84% 4.9%;
+      --card-foreground: 210 40% 98%;
+      --popover: 222.2 84% 4.9%;
+      --popover-foreground: 210 40% 98%;
+      --primary: 217.2 91.2% 59.8%;
+      --primary-foreground: 222.2 47.4% 11.2%;
+      --secondary: 217.2 32.6% 17.5%;
+      --secondary-foreground: 210 40% 98%;
+      --muted: 217.2 32.6% 17.5%;
+      --muted-foreground: 215 20.2% 65.1%;
+      --accent: 217.2 32.6% 17.5%;
+      --accent-foreground: 210 40% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 217.2 32.6% 17.5%;
+      --input: 217.2 32.6% 17.5%;
+      --ring: 224.3 76.3% 48%;
+      --chart-1: 220 70% 50%;
+      --chart-2: 160 60% 45%;
+      --chart-3: 30 80% 55%;
+      --chart-4: 280 65% 60%;
+      --chart-5: 340 75% 55%;
+    }
   }
 }
