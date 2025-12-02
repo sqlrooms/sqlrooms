@@ -2,8 +2,9 @@ import {createId} from '@paralleldrive/cuid2';
 import {
   DuckDbSliceState,
   getSqlErrorWithPointer,
+  joinStatements,
   makeLimitQuery,
-  splitSqlStatements,
+  separateLastStatement,
 } from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
@@ -396,15 +397,9 @@ export function createSqlEditorSlice({
             const connector = await get().db.getConnector();
             const signal = queryController.signal;
 
-            const statements = splitSqlStatements(query);
-            const allButLastStatements = statements.slice(0, -1);
-            const lastQueryStatement = statements[
-              statements.length - 1
-            ] as string;
-
-            if (!statements?.length) {
-              throw new Error('Empty query');
-            }
+            const {precedingStatements, lastStatement: lastQueryStatement} =
+              separateLastStatement(query);
+            const hasMultipleStatements = precedingStatements.length > 0;
 
             if (signal.aborted) {
               throw new Error('Query aborted');
@@ -421,13 +416,14 @@ export function createSqlEditorSlice({
 
             if (isValidSelectQuery) {
               // Add limit to the last statement
-              const queryWithLimit = [
-                ...allButLastStatements,
-                makeLimitQuery(lastQueryStatement, {
-                  sanitize: false, // should already be sanitized
-                  limit: get().sqlEditor.queryResultLimit,
-                }),
-              ].join(';\n');
+              const limitedLastStatement = makeLimitQuery(lastQueryStatement, {
+                sanitize: false, // should already be sanitized
+                limit: get().sqlEditor.queryResultLimit,
+              });
+              const queryWithLimit = joinStatements(
+                precedingStatements,
+                limitedLastStatement,
+              );
               const result = await connector.query(queryWithLimit, {signal});
               queryResult = {
                 status: 'success',
@@ -478,7 +474,7 @@ export function createSqlEditorSlice({
             }
             // Refresh table schemas if there are multiple statements or if the
             // last statement is not a select query
-            if (statements.length > 1 || !isValidSelectQuery) {
+            if (hasMultipleStatements || !isValidSelectQuery) {
               get().db.refreshTableSchemas();
             }
             if (signal.aborted) {

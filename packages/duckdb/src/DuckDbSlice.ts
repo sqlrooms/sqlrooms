@@ -14,9 +14,10 @@ import {
   escapeVal,
   getColValAsNumber,
   isQualifiedTableName,
+  joinStatements,
   makeQualifiedTableName,
   QualifiedTableName,
-  splitSqlStatements,
+  separateLastStatement,
 } from './duckdb-utils';
 import {createDbSchemaTrees} from './schemaTree';
 import {DataTable, DbSchemaNode, TableColumn} from './types';
@@ -322,20 +323,17 @@ export function createDuckDbSlice({
 
             const connector = await get().db.getConnector();
 
-            const statements = splitSqlStatements(query);
-            if (statements.length === 0) {
-              throw new Error('Query must contain at least one statement');
-            }
+            const {precedingStatements, lastStatement} =
+              separateLastStatement(query);
 
-            if (!allowMultipleStatements && statements.length !== 1) {
+            if (!allowMultipleStatements && precedingStatements.length > 0) {
               throw new Error(
                 'Query must contain exactly one statement (set allowMultipleStatements: true to execute multiple statements)',
               );
             }
 
             // The last statement must be a SELECT
-            const selectStatement = statements[statements.length - 1] as string;
-            const parsedQuery = await get().db.sqlSelectToJson(selectStatement);
+            const parsedQuery = await get().db.sqlSelectToJson(lastStatement);
             if (parsedQuery.error) {
               throw new Error(
                 'Final statement must be a valid SELECT statement',
@@ -353,16 +351,13 @@ export function createDuckDbSlice({
               .join(' ');
 
             const createStatement = `${createKeyword} ${qualifiedName} AS (
-              ${selectStatement}
+              ${lastStatement}
             )`;
 
-            // Concatenate all statements into one query for transactional consistency
-            const precedingStatements = statements.slice(0, -1);
-            const fullQuery =
-              precedingStatements.length > 0
-                ? [...precedingStatements, createStatement].join(';\n')
-                : createStatement;
-
+            const fullQuery = joinStatements(
+              precedingStatements,
+              createStatement,
+            );
             const result = await connector.query(fullQuery);
             // Views don't have a row count, only tables do
             const rowCount = view ? undefined : getColValAsNumber(result);
