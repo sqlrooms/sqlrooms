@@ -9,7 +9,6 @@ const PACKAGE_CATEGORIES = {
     'room-shell',
     'room-store',
     'duckdb',
-    'duckdb-node',
     'ui',
     'layout',
   ],

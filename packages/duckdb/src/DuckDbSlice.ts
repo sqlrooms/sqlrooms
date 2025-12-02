@@ -1,3 +1,4 @@
+import {DuckDbConnector, QueryHandle} from '@sqlrooms/duckdb-core';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -7,7 +8,6 @@ import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {StateCreator} from 'zustand';
-import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
   escapeId,
@@ -18,7 +18,7 @@ import {
   makeQualifiedTableName,
   QualifiedTableName,
   separateLastStatement,
-} from './duckdb-utils';
+} from '@sqlrooms/duckdb-core';
 import {createDbSchemaTrees} from './schemaTree';
 import {DataTable, DbSchemaNode, TableColumn} from './types';
 

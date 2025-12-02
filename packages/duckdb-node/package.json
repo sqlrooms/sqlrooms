@@ -18,7 +18,8 @@
     "access": "public"
   },
   "dependencies": {
-    "@duckdb/node-api": "^1.4.2-r.1"
+    "@duckdb/node-api": "^1.4.2-r.1",
+    "@sqlrooms/duckdb-core": "workspace:*"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

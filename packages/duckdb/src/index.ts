@@ -3,23 +3,18 @@
  * @packageDocumentation
  */
 
-export * from './types';
-export * from './useDuckDb';
-export * from './exportToCsv';
-export {arrowTableToJson} from './arrow-utils';
+export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
+export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';
+export * from '@sqlrooms/duckdb-core';
 export {
-  getDuckDbTypeCategory,
-  getArrowColumnTypeCategory,
-} from './typeCategories';
-export * from './useSql';
+  createTypedRowAccessor,
+  type TypedRowAccessor,
+} from '@sqlrooms/duckdb-core';
 export {
-  createDuckDbSlice,
-  type DuckDbSliceState,
-  useStoreWithDuckDb,
-  type SchemaAndDatabase,
-} from './DuckDbSlice';
-export * from './connectors/DuckDbConnector';
-export * from './connectors/BaseDuckDbConnector';
+  isSpatialLoadFileOptions,
+  LoadFileOptions,
+  SpatialLoadFileOptions,
+} from '@sqlrooms/room-config';
 export {
   createDuckDbConnector,
   createWasmDuckDbConnector,
@@ -27,16 +22,17 @@ export {
   type WasmDuckDbConnector,
 } from './connectors/createDuckDbConnector';
 export {createWebSocketDuckDbConnector} from './connectors/WebSocketDuckDbConnector';
-export * from './connectors/load/load';
-export * from './duckdb-utils';
 export {
-  LoadFileOptions,
-  SpatialLoadFileOptions,
-  isSpatialLoadFileOptions,
-} from '@sqlrooms/room-config';
+  createDuckDbSlice,
+  useStoreWithDuckDb,
+  type DuckDbSliceState,
+  type SchemaAndDatabase,
+} from './DuckDbSlice';
+export * from './exportToCsv';
 export {
-  type TypedRowAccessor,
-  createTypedRowAccessor,
-} from './typedRowAccessor';
-export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
-export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';
+  getArrowColumnTypeCategory,
+  getDuckDbTypeCategory,
+} from './typeCategories';
+export * from './types';
+export * from './useDuckDb';
+export * from './useSql';

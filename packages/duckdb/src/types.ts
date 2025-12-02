@@ -1,4 +1,4 @@
-import {QualifiedTableName} from './duckdb-utils';
+import {QualifiedTableName} from '@sqlrooms/duckdb-core';
 
 export type TableColumn = {
   name: string;

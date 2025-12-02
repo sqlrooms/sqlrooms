@@ -4,10 +4,9 @@ import {
   StandardLoadOptions,
 } from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
-import {TypeMap} from 'apache-arrow';
 import {DuckDbConnector, QueryHandle, QueryOptions} from './DuckDbConnector';
 import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
-import {createTypedRowAccessor} from '../typedRowAccessor';
+import {createTypedRowAccessor} from './typedRowAccessor';
 
 export interface BaseDuckDbConnectorOptions {
   dbPath?: string;
@@ -17,7 +16,7 @@ export interface BaseDuckDbConnectorOptions {
 export interface BaseDuckDbConnectorImpl {
   initializeInternal?(): Promise<void>;
   destroyInternal?(): Promise<void>;
-  executeQueryInternal<T extends TypeMap = any>(
+  executeQueryInternal<T extends arrow.TypeMap = any>(
     query: string,
     signal: AbortSignal,
     queryId?: string,
@@ -139,7 +138,7 @@ export function createBaseDuckDbConnector(
       options,
     );
 
-  const query = <T extends TypeMap = any>(
+  const query = <T extends arrow.TypeMap = any>(
     queryStr: string,
     options?: QueryOptions,
   ): QueryHandle<arrow.Table<T>> =>

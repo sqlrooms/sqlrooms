@@ -127,6 +127,8 @@ export function createNodeDuckDbConnector(
 
   /**
    * Converts DuckDB result to an Apache Arrow table.
+   *
+   * TODO: remove this once duckdb-node-neo supports arrow tables directly https://github.com/duckdb/duckdb-node-neo/issues/45
    */
   async function resultToArrowTable<T extends arrow.TypeMap = any>(
     conn: DuckDBConnection,

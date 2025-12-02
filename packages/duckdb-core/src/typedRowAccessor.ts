@@ -1,5 +1,4 @@
 import * as arrow from 'apache-arrow';
-import {TypeMap} from 'apache-arrow';
 
 export interface TypedRowAccessor<T> extends Iterable<T> {
   /** Returns a typed row at the specified index by converting on demand */
@@ -15,7 +14,7 @@ export interface TypedRowAccessor<T> extends Iterable<T> {
 /**
  * Creates a row accessor wrapper around an Arrow table that provides typed row access.
  */
-export function createTypedRowAccessor<T extends TypeMap = any>({
+export function createTypedRowAccessor<T extends arrow.TypeMap = any>({
   arrowTable,
   validate,
 }: {
