@@ -278,10 +278,34 @@ export function createDuckDbSlice({
             }
           },
 
+          /**
+           * Creates a table or view from a SQL query.
+           * @param tableName - Name of the table/view to create
+           * @param query - SQL query (must be a SELECT statement, or multiple statements ending with a SELECT when allowMultipleStatements is true)
+           * @param options - Creation options
+           * @param options.replace - If true, uses CREATE OR REPLACE (default: false)
+           * @param options.temp - If true, creates a temporary table/view (default: false)
+           * @param options.view - If true, creates a view instead of a table (default: false)
+           * @param options.allowMultipleStatements - If true, allows multiple statements where preceding statements are executed first and the final SELECT is wrapped in CREATE TABLE/VIEW (default: false)
+           * @returns Object with tableName and rowCount (rowCount is undefined for views)
+           */
           async createTableFromQuery(
             tableName: string | QualifiedTableName,
             query: string,
+            options?: {
+              replace?: boolean;
+              temp?: boolean;
+              view?: boolean;
+              allowMultipleStatements?: boolean;
+            },
           ) {
+            const {
+              replace = false,
+              temp = false,
+              view = false,
+              allowMultipleStatements = false,
+            } = options || {};
+
             const qualifiedName = isQualifiedTableName(tableName)
               ? tableName
               : makeQualifiedTableName({table: tableName});
@@ -289,21 +313,48 @@ export function createDuckDbSlice({
             const connector = await get().db.getConnector();
 
             const statements = splitSqlStatements(query);
-            if (statements.length !== 1) {
-              throw new Error('Query must contain exactly one statement');
-            }
-            const statement = statements[0] as string;
-            const parsedQuery = await get().db.sqlSelectToJson(statement);
-            if (parsedQuery.error) {
-              throw new Error('Query is not a valid SELECT statement');
+            if (statements.length === 0) {
+              throw new Error('Query must contain at least one statement');
             }
 
+            if (!allowMultipleStatements && statements.length !== 1) {
+              throw new Error(
+                'Query must contain exactly one statement (set allowMultipleStatements: true to execute multiple statements)',
+              );
+            }
+
+            // The last statement must be a SELECT
+            const selectStatement = statements[statements.length - 1] as string;
+            const parsedQuery = await get().db.sqlSelectToJson(selectStatement);
+            if (parsedQuery.error) {
+              throw new Error(
+                'Final statement must be a valid SELECT statement',
+              );
+            }
+
+            // Build CREATE statement with options
+            const createKeyword = [
+              'CREATE',
+              replace ? 'OR REPLACE' : '',
+              temp ? 'TEMP' : '',
+              view ? 'VIEW' : 'TABLE',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            const createStatement = `${createKeyword} ${qualifiedName} AS (
+              ${selectStatement}
+            )`;
+
+            // Concatenate all statements into one query for transactional consistency
+            const precedingStatements = statements.slice(0, -1);
+            const fullQuery =
+              precedingStatements.length > 0
+                ? [...precedingStatements, createStatement].join(';\n')
+                : createStatement;
+
             const rowCount = getColValAsNumber(
-              await connector.query(
-                `CREATE OR REPLACE TABLE ${qualifiedName} AS (
-              ${statements[0]}
-            )`,
-              ),
+              await connector.query(fullQuery),
             );
             return {tableName, rowCount};
           },
