@@ -184,15 +184,25 @@ export type DuckDbSliceState = {
     dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
 
     /**
-     * Create a table from a query.
-     * @param tableName - The name of the table to create.
-     * @param query - The query to create the table from.
-     * @returns The table that was created.
+     * Create a table or view from a query.
+     * @param tableName - The name of the table/view to create.
+     * @param query - The query to create the table/view from.
+     * @param options - Creation options.
+     * @returns The table/view name and rowCount (undefined for views).
      */
     createTableFromQuery: (
       tableName: string | QualifiedTableName,
       query: string,
-    ) => Promise<{tableName: string | QualifiedTableName; rowCount: number}>;
+      options?: {
+        replace?: boolean;
+        temp?: boolean;
+        view?: boolean;
+        allowMultipleStatements?: boolean;
+      },
+    ) => Promise<{
+      tableName: string | QualifiedTableName;
+      rowCount: number | undefined;
+    }>;
 
     /**
      * Parse a SQL SELECT statement to JSON
@@ -353,9 +363,9 @@ export function createDuckDbSlice({
                 ? [...precedingStatements, createStatement].join(';\n')
                 : createStatement;
 
-            const rowCount = getColValAsNumber(
-              await connector.query(fullQuery),
-            );
+            const result = await connector.query(fullQuery);
+            // Views don't have a row count, only tables do
+            const rowCount = view ? undefined : getColValAsNumber(result);
             return {tableName, rowCount};
           },
 
