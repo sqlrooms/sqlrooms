@@ -1,27 +1,26 @@
 import {
+  createDefaultNotebookConfig,
+  createNotebookSlice,
   Notebook,
   NotebookSliceConfig,
   NotebookSliceState,
-  createNotebookSlice,
-  createDefaultNotebookConfig,
 } from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
-import {DatabaseIcon} from 'lucide-react';
 
-export const RoomConfig = BaseRoomConfig.merge(NotebookSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   NotebookSliceState & {
     apiKey: string;
     setApiKey: (apiKey: string) => void;
@@ -29,10 +28,10 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
           ...createDefaultNotebookConfig(),
           // NotebookSliceConfig.parse(exampleNotebook).notebook,
@@ -71,7 +70,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       })(set, get, store),
 
-      ...createNotebookSlice<RoomConfig>()(set, get, store),
+      ...createNotebookSlice()(set, get, store),
       // {
       // getApiKey: () => get().apiKey,
       // numberOfRowsToShareWithLLM: 2,
@@ -79,7 +78,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // }
 
       apiKey: '',
-      setApiKey: (apiKey) => set({apiKey}),
+      setApiKey: (apiKey: string) => set({apiKey}),
     }),
 
     // Persist settings
@@ -87,9 +86,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Local storage key
       name: 'notebook-example-app-state-storage',
       // Subset of the state to persist
-      partialize: (state) => ({
-        // apiKey: state.apiKey,
-        config: RoomConfig.parse(state.config),
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        notebook: NotebookSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

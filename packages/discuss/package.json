@@ -1,7 +1,6 @@
 {
   "name": "@sqlrooms/discuss",
-  "version": "0.26.0-rc.1",
-  "private": false,
+  "version": "0.26.1-rc.4",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -19,9 +18,9 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "immer": "^10.1.3",
-    "lucide-react": "^0.544.0",
-    "zod": "^3.25.76"
+    "immer": "^11.0.1",
+    "lucide-react": "^0.555.0",
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
     "react": ">=18",

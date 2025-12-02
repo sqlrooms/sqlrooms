@@ -1,4 +1,3 @@
-import {useBaseRoomShellStore} from '@sqlrooms/room-shell';
 import {
   Button,
   ResizableHandle,
@@ -16,6 +15,7 @@ import {
   TableStructurePanelProps,
 } from './components/TableStructurePanel';
 import {useStoreWithSqlEditor} from './SqlEditorSlice';
+
 export type SqlEditorProps = {
   /** The database schema to use. Defaults to '*'.
    * If '*' is provided, all tables will be shown.
@@ -40,20 +40,9 @@ export type SqlEditorProps = {
 const SqlEditor = React.memo<SqlEditorProps>((props) => {
   const {schema = '*', documentationPanel, queryResultProps} = props;
 
-  // Store access
-  const addOrUpdateSqlQueryDataSource = useBaseRoomShellStore(
-    (state) => state.room.addOrUpdateSqlQueryDataSource,
+  const lastQuery = useStoreWithSqlEditor(({sqlEditor: {queryResult: qr}}) =>
+    qr?.status === 'success' && qr?.type === 'select' ? qr.query : '',
   );
-  const lastQueryStatement = useStoreWithSqlEditor((s) =>
-    s.sqlEditor.queryResult?.status === 'success' &&
-    s.sqlEditor.queryResult?.type === 'select'
-      ? s.sqlEditor.queryResult.lastQueryStatement
-      : '',
-  );
-  // const currentQuery = useStoreWithSqlEditor((s) =>
-  //   s.sqlEditor.getCurrentQuery(),
-  // );
-
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
@@ -85,11 +74,7 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
                     <TableStructurePanel schema={schema} />
                   </ResizablePanel>
                   <ResizableHandle withHandle />
-                  <ResizablePanel
-                    defaultSize={80}
-                    // this is for Monaco's completion menu to not being cut off
-                    className="!overflow-visible"
-                  >
+                  <ResizablePanel defaultSize={80}>
                     <QueryEditorPanel />
                   </ResizablePanel>
                 </ResizablePanelGroup>
@@ -122,10 +107,11 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
         </ResizablePanelGroup>
       </div>
       <CreateTableModal
-        query={lastQueryStatement}
+        query={lastQuery}
         isOpen={createTableModalOpen}
         onClose={() => setCreateTableModalOpen(false)}
-        onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
+        allowMultipleStatements={true}
+        showSchemaSelection={true}
       />
     </div>
   );

@@ -10,15 +10,16 @@ import {
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
+  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
   RoomShellSliceState,
   StateCreator,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
@@ -41,13 +42,7 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-/**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState;
@@ -55,13 +50,22 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persist(
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
-          layout: {
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
+          ],
+        },
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
@@ -70,16 +74,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               splitPercentage: 30,
             },
           },
-          dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
-          ],
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
@@ -96,6 +90,34 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         },
       })(set, get, store),
+
+      // ...createDuckDbSlice()(set, get, store),
+
+      // ...createLayoutSlice({
+      //   config: {
+      //     type: LayoutTypes.enum.mosaic,
+      //     nodes: {
+      //       direction: 'row',
+      //       first: RoomPanelTypes.enum['data-sources'],
+      //       second: MAIN_VIEW,
+      //       splitPercentage: 30,
+      //     },
+      //   },
+      //   panels: {
+      //     [RoomPanelTypes.enum['data-sources']]: {
+      //       title: 'Data Sources',
+      //       icon: DatabaseIcon,
+      //       component: DataSourcesPanel,
+      //       placement: 'sidebar',
+      //     },
+      //     main: {
+      //       title: 'Main view',
+      //       icon: () => null,
+      //       component: MainView,
+      //       placement: 'main',
+      //     },
+      //   },
+      // })(set, get, store),
 
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
@@ -120,6 +142,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
 
           // Example of adding a simple echo tool
           echo: {
+            name: 'echo',
             description: 'A simple echo tool that returns the input text',
             parameters: z.object({
               text: z.string().describe('The text to echo back'),
@@ -142,24 +165,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     {
       // Local storage key
       name: 'ai-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        config: RoomConfig.parse(persistedState.config),
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
+      // Helper to extract and merge slice configs
+      ...createPersistHelpers({
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        sqlEditor: SqlEditorSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

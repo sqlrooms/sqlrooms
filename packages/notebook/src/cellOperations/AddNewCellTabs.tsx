@@ -12,7 +12,7 @@ type Props = {
 
 export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
 
   return (

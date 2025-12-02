@@ -19,7 +19,7 @@ const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
 };
 
 export const SqlCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
   const cancel = useStoreWithNotebook((s) => s.notebook.cancelRunCell);

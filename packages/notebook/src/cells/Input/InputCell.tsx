@@ -71,7 +71,7 @@ const RenderInput: React.FC<{
 };
 
 export const InputItem: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
   const remove = useStoreWithNotebook((s) => s.notebook.removeCell);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   if (!cell || cell.type !== 'input') return null;
@@ -92,7 +92,7 @@ export const InputItem: React.FC<{id: string}> = ({id}) => {
         <EditableText
           value={input.varName}
           onChange={(varName) => updateInput({varName})}
-          className="h-6 text-xs font-semibold"
+          className="h-6 text-xs font-semibold shadow-none outline-none ring-0"
         />
         <InputConfigPanel
           input={input}

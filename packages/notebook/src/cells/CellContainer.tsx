@@ -13,11 +13,11 @@ export const CellContainer: React.FC<{
   children?: React.ReactNode;
   className?: string;
 }> = ({id, typeLabel, rightControls, leftControls, children, className}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
   const currentCellId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentCellId,
+    (s) => s.notebook.config.currentCellId,
   );
   const isCurrent = currentCellId === id;
 
@@ -38,7 +38,7 @@ export const CellContainer: React.FC<{
           <EditableText
             value={cell.name}
             onChange={(v) => onRename(id, v)}
-            minWidth={20}
+            className="shadow-none outline-none ring-0"
           />
           {leftControls}
         </div>

@@ -93,11 +93,9 @@ export type NotebookTab = z.infer<typeof NotebookTabSchema>;
 
 /** Notebook Slice */
 export const NotebookSliceConfig = z.object({
-  notebook: z.object({
-    tabs: z.array(NotebookTabSchema).default([]),
-    currentTabId: z.string().optional(),
-    cells: z.record(z.string(), NotebookCellSchema).default({}),
-    currentCellId: z.string().optional(),
-  }),
+  tabs: z.array(NotebookTabSchema).default([]),
+  currentTabId: z.string().optional(),
+  cells: z.record(z.string(), NotebookCellSchema).default({}),
+  currentCellId: z.string().optional(),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;

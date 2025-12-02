@@ -27,18 +27,28 @@ import {RoomShellSliceState} from '@sqlrooms/room-shell';
 import {SqlEditorSliceState} from '@sqlrooms/sql-editor';
 
 // Combining multiple slices into a unified application state type
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   AiSliceState &
-  SqlEditorSliceState &
-  CustomRoomState;
+  SqlEditorSliceState & {
+    // Custom application state types
+  };
 
 // Creating a store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Base room state
-    ...createRoomShellSlice<RoomConfig>({
-      // Room configuration
-      // ...
+    ...createRoomShellSlice({
+      config: {
+        // Room configuration
+      },
+      layout: {
+        config: {
+          // Layout configuration
+        },
+        panels: {
+          // Panel definitions
+        },
+      },
     })(set, get, store),
 
     // SQL editor slice
@@ -121,13 +131,20 @@ When using the combined configuration type in your store, you can ensure that al
 
 ```typescript
 // Using the combined RoomConfig in the store
-...createRoomShellSlice<RoomConfig>({
+...createRoomShellSlice({
   config: {
     // SQL Editor slice configuration
     ...createDefaultSqlEditorConfig(),
     // Other configuration properties...
   },
-  // Rest of room configuration...
+  layout: {
+    config: {
+      // Layout configuration
+    },
+    panels: {
+      // Panel definitions
+    },
+  },
 })(set, get, store)
 ```
 

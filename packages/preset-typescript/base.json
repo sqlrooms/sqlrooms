@@ -17,6 +17,7 @@
     "strict": true,
     "inlineSources": true,
     "target": "ES2022",
-    "sourceMap": true
+    "sourceMap": true,
+    "outDir": "dist"
   }
 }

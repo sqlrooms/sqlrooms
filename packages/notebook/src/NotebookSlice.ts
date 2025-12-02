@@ -1,23 +1,26 @@
 import {createId} from '@paralleldrive/cuid2';
-import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
+  DuckDbSliceState,
+  escapeId,
+  makeQualifiedTableName,
+} from '@sqlrooms/duckdb';
+import {
+  BaseRoomStoreState,
   createSlice,
-  useBaseRoomShellStore,
-  type RoomShellSliceState,
+  useBaseRoomStore,
 } from '@sqlrooms/room-shell';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import React from 'react';
 import {InputCell} from './cells/Input/InputCell';
-import {generateUniqueName} from '@sqlrooms/utils';
 import {SqlCell} from './cells/SqlCell';
 import {TextCell} from './cells/TextCell';
 import {VegaCell} from './cells/Vega/VegaCell';
 import {
+  InputCell as InputCellType,
   NotebookCell,
   NotebookCellTypes,
   NotebookSliceConfig,
-  InputCell as InputCellType,
 } from './cellSchemas';
 import {findTab, getCellTypeLabel} from './NotebookUtils';
 
@@ -37,6 +40,7 @@ export type CellRegistry = Record<string, NotebookCellRegistryItem>;
 
 export type NotebookSliceState = {
   notebook: {
+    config: NotebookSliceConfig;
     schemaName: string;
     setSchemaName: (name: string) => void;
     addTab: () => string;
@@ -84,27 +88,25 @@ export type NotebookSliceState = {
 };
 
 /**
- * Create default `config.notebook` structure with one tab and no cells.
+ * Create default `notebook.config` structure with one tab and no cells.
  */
 export function createDefaultNotebookConfig(
-  props: Partial<NotebookSliceConfig['notebook']> = {},
+  props: Partial<NotebookSliceConfig> = {},
 ): NotebookSliceConfig {
   const defaultTabId = createId();
   return {
-    notebook: {
-      tabs: [
-        {
-          id: defaultTabId,
-          title: 'Notebook 1',
-          cellOrder: [],
-          inputBarOrder: [],
-          showInputBar: true,
-        },
-      ],
-      currentTabId: defaultTabId,
-      cells: {},
-      ...props,
-    },
+    tabs: [
+      {
+        id: defaultTabId,
+        title: 'Notebook 1',
+        cellOrder: [],
+        inputBarOrder: [],
+        showInputBar: true,
+      },
+    ],
+    currentTabId: defaultTabId,
+    cells: {},
+    ...props,
   };
 }
 
@@ -112,67 +114,19 @@ export function createDefaultNotebookConfig(
  * Create the Notebook slice with tabs, cells, execution and dependency handling.
  * Supports pluggable custom renderers via options.
  */
-export function createNotebookSlice<
-  PC extends BaseRoomConfig & NotebookSliceConfig,
->() {
-  return createSlice<PC, NotebookSliceState>((set, get) => {
-    /**
-     * Find dependencies for a cell by scanning other cells for references.
-     * Matches input variables ({{var}} or :var) and SQL cell names or their result view names.
-     */
-    const findDependenciesCommon = (
-      cell: NotebookCell,
-      cells: Record<string, NotebookCell>,
-      status: NotebookSliceState['notebook']['cellStatus'],
-    ): string[] => {
-      const deps: string[] = [];
-      const text = (cell as any).sql as string;
-      for (const otherId in cells) {
-        if (otherId === cell.id) continue;
-        const other = cells[otherId];
-        if (!other) continue;
-        if (other.type === 'input') {
-          const vn = other.input.varName;
-          if (
-            (text && text.indexOf(`{{${vn}}}`) >= 0) ||
-            (text && text.indexOf(`:${vn}`) >= 0)
-          )
-            deps.push(other.id);
-        } else if (other.type === 'sql') {
-          const st = status[other.id];
-          const otherView = st && st.type === 'sql' ? st.resultView : undefined;
-          if (
-            (text && text.indexOf(other.name) >= 0) ||
-            (otherView && text && text.indexOf(otherView) >= 0)
-          )
-            deps.push(other.id);
-        }
-      }
-      return Array.from(new Set(deps));
-    };
-
-    /**
-     * Cascade execution to cells that depend on the given source cell id.
-     */
-    const cascadeFrom = async (sourceCellId: string) => {
-      const cellsMap = get().config.notebook.cells;
-      const statusMap = get().notebook.cellStatus;
-      for (const candidateId in cellsMap) {
-        if (candidateId === sourceCellId) continue;
-        const candidate = cellsMap[candidateId];
-        if (!candidate) continue;
-        const reg2 = get().notebook.cellRegistry[candidate.type];
-        if (!reg2 || !reg2.findDependencies) continue;
-        const deps = reg2.findDependencies(candidate, cellsMap, statusMap);
-        if (deps.indexOf(sourceCellId) >= 0) {
-          await get().notebook.runCell(candidateId, {cascade: true});
-        }
-      }
-    };
-
+export function createNotebookSlice(props?: {
+  config?: Partial<NotebookSliceConfig>;
+}) {
+  return createSlice<
+    NotebookSliceState,
+    BaseRoomStoreState & DuckDbSliceState & NotebookSliceState
+  >((set, get) => {
     return {
       notebook: {
         schemaName: 'notebook',
+
+        config: createDefaultNotebookConfig(props?.config ?? {}),
+
         setSchemaName: (name) =>
           set((state) =>
             produce(state, (draft) => {
@@ -187,14 +141,14 @@ export function createNotebookSlice<
           const id = createId();
           set((state) =>
             produce(state, (draft) => {
-              draft.config.notebook.tabs.push({
+              draft.notebook.config.tabs.push({
                 id,
-                title: `Notebook ${draft.config.notebook.tabs.length + 1}`,
+                title: `Notebook ${draft.notebook.config.tabs.length + 1}`,
                 cellOrder: [],
                 inputBarOrder: [],
                 showInputBar: true,
               });
-              draft.config.notebook.currentTabId = id;
+              draft.notebook.config.currentTabId = id;
             }),
           );
           return id;
@@ -203,7 +157,7 @@ export function createNotebookSlice<
         renameTab: (id, title) => {
           set((state) =>
             produce(state, (draft) => {
-              const tab = findTab(draft.config.notebook, id);
+              const tab = findTab(draft.notebook.config, id);
               if (tab) tab.title = title;
             }),
           );
@@ -212,13 +166,13 @@ export function createNotebookSlice<
         setCurrentTab: (id) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.notebook.currentTabId = id;
+              draft.notebook.config.currentTabId = id;
             }),
           );
         },
 
         removeTab: (id) => {
-          const tab = get().config.notebook.tabs.find((t) => t.id === id);
+          const tab = get().notebook.config.tabs.find((t) => t.id === id);
           if (tab) {
             for (const cellId of tab.cellOrder) {
               const abortController =
@@ -231,12 +185,12 @@ export function createNotebookSlice<
 
           set((state) =>
             produce(state, (draft) => {
-              draft.config.notebook.tabs = draft.config.notebook.tabs.filter(
+              draft.notebook.config.tabs = draft.notebook.config.tabs.filter(
                 (t) => t.id !== id,
               );
-              if (draft.config.notebook.currentTabId === id) {
-                draft.config.notebook.currentTabId =
-                  draft.config.notebook.tabs[0]?.id;
+              if (draft.notebook.config.currentTabId === id) {
+                draft.notebook.config.currentTabId =
+                  draft.notebook.config.tabs[0]?.id;
               }
             }),
           );
@@ -245,7 +199,7 @@ export function createNotebookSlice<
         toggleShowInputBar: (id) => {
           set((state) =>
             produce(state, (draft) => {
-              const tab = findTab(draft.config.notebook, id);
+              const tab = findTab(draft.notebook.config, id);
               if (tab) tab.showInputBar = !tab.showInputBar;
             }),
           );
@@ -255,12 +209,12 @@ export function createNotebookSlice<
           const id = createId();
           set((state) =>
             produce(state, (draft) => {
-              const tab = findTab(draft.config.notebook, tabId);
+              const tab = findTab(draft.notebook.config, tabId);
               const reg = get().notebook.cellRegistry[type];
               if (!reg) return;
               const cell = reg.createCell(id) as NotebookCell;
               // Assign a readable unique name using shared utility
-              const usedNames = Object.values(draft.config.notebook.cells).map(
+              const usedNames = Object.values(draft.notebook.config.cells).map(
                 (c) => c.name,
               );
               const baseLabel = getCellTypeLabel(cell.type);
@@ -270,7 +224,7 @@ export function createNotebookSlice<
 
               if (type === 'input') {
                 const usedInputNames = Object.values(
-                  draft.config.notebook.cells,
+                  draft.notebook.config.cells,
                 )
                   .filter((c) => c.type === 'input')
                   .map((c) => c.input.varName);
@@ -279,7 +233,7 @@ export function createNotebookSlice<
                   usedInputNames,
                 );
               }
-              draft.config.notebook.cells[id] = cell;
+              draft.notebook.config.cells[id] = cell;
 
               // cellOrder
               const newIndex = index ?? tab.cellOrder.length;
@@ -309,7 +263,7 @@ export function createNotebookSlice<
                 draft.notebook.cellStatus[id] = {type: 'other'};
               }
 
-              draft.config.notebook.currentCellId = id;
+              draft.notebook.config.currentCellId = id;
             }),
           );
           return id;
@@ -318,7 +272,7 @@ export function createNotebookSlice<
         moveCell: (tabId, cellId, direction) => {
           set((state) =>
             produce(state, (draft) => {
-              const tab = findTab(draft.config.notebook, tabId);
+              const tab = findTab(draft.notebook.config, tabId);
 
               const idx = tab.cellOrder.indexOf(cellId);
               if (idx >= 0) {
@@ -340,10 +294,10 @@ export function createNotebookSlice<
 
           set((state) =>
             produce(state, (draft) => {
-              delete draft.config.notebook.cells[cellId];
+              delete draft.notebook.config.cells[cellId];
               delete draft.notebook.cellStatus[cellId];
               delete draft.notebook.activeAbortControllers[cellId];
-              for (const tab of draft.config.notebook.tabs) {
+              for (const tab of draft.notebook.config.tabs) {
                 tab.cellOrder = tab.cellOrder.filter((id) => id !== cellId);
                 tab.inputBarOrder = tab.inputBarOrder.filter(
                   (id) => id !== cellId,
@@ -356,7 +310,7 @@ export function createNotebookSlice<
         renameCell: (cellId, name) => {
           set((state) =>
             produce(state, (draft) => {
-              const cell = draft.config.notebook.cells[cellId];
+              const cell = draft.notebook.config.cells[cellId];
               if (cell && 'name' in cell) cell.name = name;
             }),
           );
@@ -365,12 +319,12 @@ export function createNotebookSlice<
         updateCell: (cellId, updater) => {
           set((state) =>
             produce(state, (draft) => {
-              const cell = draft.config.notebook.cells[cellId];
+              const cell = draft.notebook.config.cells[cellId];
               if (!cell) return;
-              draft.config.notebook.cells[cellId] = updater(cell);
+              draft.notebook.config.cells[cellId] = updater(cell);
             }),
           );
-          const next = get().config.notebook.cells[cellId];
+          const next = get().notebook.config.cells[cellId];
           if (!next) return;
           void cascadeFrom(cellId);
         },
@@ -378,7 +332,7 @@ export function createNotebookSlice<
         setCurrentCell: (id) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.config.notebook.currentCellId = id;
+              draft.notebook.config.currentCellId = id;
             }),
           );
         },
@@ -401,15 +355,15 @@ export function createNotebookSlice<
         },
 
         runAllCells: async (tabId) => {
-          const tab = findTab(get().config.notebook, tabId);
+          const tab = findTab(get().notebook.config, tabId);
           for (const cellId of tab.cellOrder) {
             await get().notebook.runCell(cellId, {cascade: false});
           }
         },
 
         runAllCellsCascade: async (tabId) => {
-          const tab = findTab(get().config.notebook, tabId);
-          const cellsMap = get().config.notebook.cells;
+          const tab = findTab(get().notebook.config, tabId);
+          const cellsMap = get().notebook.config.cells;
           const statusMap = get().notebook.cellStatus;
           const rootCells: string[] = tab.cellOrder.filter((cellId) => {
             const cell = cellsMap[cellId];
@@ -425,7 +379,7 @@ export function createNotebookSlice<
         },
 
         runCell: async (cellId, opts) => {
-          const cell = get().config.notebook.cells[cellId];
+          const cell = get().notebook.config.cells[cellId];
           if (!cell) return;
           const {runCell} = get().notebook.cellRegistry[cell.type] || {};
           if (runCell) {
@@ -446,7 +400,7 @@ export function createNotebookSlice<
             renderComponent: (id: string) => React.createElement(SqlCell, {id}),
             findDependencies: findDependenciesCommon,
             runCell: async ({id, opts}) => {
-              const cell = get().config.notebook.cells[id];
+              const cell = get().notebook.config.cells[id];
               if (!cell || cell.type !== 'sql') return;
               const rawSql = cell.sql || '';
 
@@ -468,7 +422,7 @@ export function createNotebookSlice<
 
               try {
                 const inputs: any[] = [];
-                const cellsMap2 = get().config.notebook.cells;
+                const cellsMap2 = get().notebook.config.cells;
                 for (const key in cellsMap2) {
                   const c = cellsMap2[key];
                   if (c?.type === 'input') inputs.push(c);
@@ -591,19 +545,70 @@ export function createNotebookSlice<
         },
       },
     };
+
+    /**
+     * Cascade execution to cells that depend on the given source cell id.
+     */
+    async function cascadeFrom(sourceCellId: string) {
+      const cellsMap = get().notebook.config.cells;
+      const statusMap = get().notebook.cellStatus;
+      for (const candidateId in cellsMap) {
+        if (candidateId === sourceCellId) continue;
+        const candidate = cellsMap[candidateId];
+        if (!candidate) continue;
+        const reg2 = get().notebook.cellRegistry[candidate.type];
+        if (!reg2 || !reg2.findDependencies) continue;
+        const deps = reg2.findDependencies(candidate, cellsMap, statusMap);
+        if (deps.indexOf(sourceCellId) >= 0) {
+          await get().notebook.runCell(candidateId, {cascade: true});
+        }
+      }
+    }
   });
 }
 
-export type RoomConfigWithNotebook = BaseRoomConfig & NotebookSliceConfig;
-export type RoomShellSliceStateWithNotebook =
-  RoomShellSliceState<RoomConfigWithNotebook> & NotebookSliceState;
+/**
+ * Find dependencies for a cell by scanning other cells for references.
+ * Matches input variables ({{var}} or :var) and SQL cell names or their result view names.
+ */
+function findDependenciesCommon(
+  cell: NotebookCell,
+  cells: Record<string, NotebookCell>,
+  status: NotebookSliceState['notebook']['cellStatus'],
+): string[] {
+  const deps: string[] = [];
+  const text = (cell as any).sql as string;
+  for (const otherId in cells) {
+    if (otherId === cell.id) continue;
+    const other = cells[otherId];
+    if (!other) continue;
+    if (other.type === 'input') {
+      const vn = other.input.varName;
+      if (
+        (text && text.indexOf(`{{${vn}}}`) >= 0) ||
+        (text && text.indexOf(`:${vn}`) >= 0)
+      )
+        deps.push(other.id);
+    } else if (other.type === 'sql') {
+      const st = status[other.id];
+      const otherView = st && st.type === 'sql' ? st.resultView : undefined;
+      if (
+        (text && text.indexOf(other.name) >= 0) ||
+        (otherView && text && text.indexOf(otherView) >= 0)
+      )
+        deps.push(other.id);
+    }
+  }
+  return Array.from(new Set(deps));
+}
+
+export type DuckDbSliceStateWithNotebook = DuckDbSliceState &
+  NotebookSliceState;
 
 export function useStoreWithNotebook<T>(
-  selector: (state: RoomShellSliceStateWithNotebook) => T,
+  selector: (state: DuckDbSliceStateWithNotebook) => T,
 ): T {
-  return useBaseRoomShellStore<
-    BaseRoomConfig & NotebookSliceConfig,
-    RoomShellSliceState<RoomConfigWithNotebook>,
-    T
-  >((state) => selector(state as unknown as RoomShellSliceStateWithNotebook));
+  return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
+    selector(state as unknown as DuckDbSliceStateWithNotebook),
+  );
 }

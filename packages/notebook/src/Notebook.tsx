@@ -10,9 +10,9 @@ import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {CellView} from './cells/CellView';
 
 export const TabsBar: React.FC = () => {
-  const tabs = useStoreWithNotebook((s) => s.config.notebook.tabs);
+  const tabs = useStoreWithNotebook((s) => s.notebook.config.tabs);
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
   const setCurrent = useStoreWithNotebook((s) => s.notebook.setCurrentTab);
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);
@@ -31,7 +31,6 @@ export const TabsBar: React.FC = () => {
         >
           <EditableText
             value={t.title}
-            minWidth={80}
             onChange={(v: string) => renameTab(t.id, v)}
           />
         </button>
@@ -45,13 +44,13 @@ export const TabsBar: React.FC = () => {
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
   const currentCellId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentCellId,
+    (s) => s.notebook.config.currentCellId,
   );
   const tab = useStoreWithNotebook((s) =>
-    s.config.notebook.tabs.find((t) => t.id === currentTabId),
+    s.notebook.config.tabs.find((t) => t.id === currentTabId),
   );
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
   const runAllCellsCascade = useStoreWithNotebook(

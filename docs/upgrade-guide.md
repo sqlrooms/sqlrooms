@@ -8,6 +8,26 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.26.0-rc.5
+
+- There's no combined config in the store anymore. We decided to split the config into individual slices' configs to avoid confusion and simplify the store typing.
+
+      state.config.title -> state.room.config.title
+      state.config.dataSources -> state.room.config.dataSources
+      state.config.sqlEditor -> state.sqlEditor.config
+      state.config.layout -> state.layout.config
+      ...
+
+  If you were saving the combined config, make sure to update the persistence logic (check out the examples).
+
+- createStore, createSlice now only have one generic type parameter
+
+- room.setRoomConfig removed, use .setConfig in all individual slices
+
+- RoomState renamed to BaseRoomStoreState (meant to be internal) and RoomStore interface renamed to BaseRoomStore to avoid confusion with RoomState/RoomStore introduced in many of the examples
+
+- room.onSaveConfig, hasUnsavedChanges, lastSavedConfig were removed.
+
 ## 0.25.0-rc.1
 
 - createAiSlice init parameters changed:
@@ -198,7 +218,6 @@ const result = await connector.query('SELECT * FROM some_table').result;
 - `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
 - A number of project store props and moved from `.project` to `.db`:
-
   - `.tables`
   - `.addTable`
   - `.getTable`

@@ -4,9 +4,9 @@ import {useCallback} from 'react';
 import {RoomPanelTypes, useRoomStore} from '../store';
 
 export default function RoomDetailsPanel() {
-  const title = useRoomStore((state) => state.config.title);
+  const title = useRoomStore((state) => state.room.config.title);
   const setRoomTitle = useRoomStore((state) => state.room.setRoomTitle);
-  const description = useRoomStore((state) => state.config.description);
+  const description = useRoomStore((state) => state.room.config.description);
   const setDescription = useRoomStore((state) => state.room.setDescription);
 
   const handleSetRoomTitle = useCallback(

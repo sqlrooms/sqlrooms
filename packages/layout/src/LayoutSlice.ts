@@ -1,20 +1,15 @@
 import {
-  RoomState,
-  createBaseSlice,
-  useBaseRoomStore,
-} from '@sqlrooms/room-store';
-import {BaseRoomConfig} from '@sqlrooms/room-config';
-import {produce} from 'immer';
-import {z} from 'zod';
-import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
-import React from 'react';
-import {StateCreator} from 'zustand';
-import {
-  LayoutConfig,
   DEFAULT_MOSAIC_LAYOUT,
+  LayoutConfig,
   MAIN_VIEW,
   isMosaicLayoutParent,
 } from '@sqlrooms/layout-config';
+import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
+import {produce} from 'immer';
+import React from 'react';
+import {z} from 'zod';
+import {StateCreator} from 'zustand';
+import {makeMosaicStack, removeMosaicNodeByKey} from './mosaic';
 
 export type RoomPanelInfo = {
   title?: string;
@@ -23,53 +18,52 @@ export type RoomPanelInfo = {
   placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'top-bar';
 };
 
-export const LayoutSliceConfig = z.object({
-  layout: z
-    .any()
-    .describe('Mosaic layout configuration.')
-    .default(DEFAULT_MOSAIC_LAYOUT),
-});
+export const LayoutSliceConfig = LayoutConfig;
 
 export type LayoutSliceConfig = z.infer<typeof LayoutSliceConfig>;
 
 export function createDefaultLayoutConfig(): LayoutSliceConfig {
-  return {
-    layout: DEFAULT_MOSAIC_LAYOUT,
-  };
+  return DEFAULT_MOSAIC_LAYOUT;
 }
 
 export type LayoutSliceState = {
   layout: {
+    config: LayoutSliceConfig;
     panels: Record<string, RoomPanelInfo>;
+    setConfig(layout: LayoutConfig): void;
+    /** @deprecated Use setConfig instead */
     setLayout(layout: LayoutConfig): void;
     togglePanel: (panel: string, show?: boolean) => void;
     togglePanelPin: (panel: string) => void;
   };
 };
 
-export function createLayoutSlice<
-  PC extends BaseRoomConfig & LayoutSliceConfig,
->({
-  panels = {},
-}: {
+export type CreateLayoutSliceProps = {
+  config?: LayoutSliceConfig;
   panels?: Record<string, RoomPanelInfo>;
-} = {}): StateCreator<LayoutSliceState> {
-  return createBaseSlice<PC, LayoutSliceState>((set, get) => ({
+};
+
+export function createLayoutSlice({
+  config: initialConfig = createDefaultLayoutConfig(),
+  panels = {},
+}: CreateLayoutSliceProps = {}): StateCreator<LayoutSliceState> {
+  return createSlice<LayoutSliceState>((set, get) => ({
     layout: {
+      config: initialConfig,
       panels,
-      setLayout: (layout) =>
+      setConfig: (config) =>
         set((state) =>
           produce(state, (draft) => {
-            draft.config.layout = layout;
+            draft.layout.config = config;
           }),
         ),
+      setLayout: (layout) => get().layout.setConfig(layout),
       togglePanel: (panel, show) => {
-        const {config} = get();
-        if (config.layout?.nodes === panel) {
+        if (get().layout.config?.nodes === panel) {
           // don't hide the view if it's the only one
           return;
         }
-        const result = removeMosaicNodeByKey(config.layout?.nodes, panel);
+        const result = removeMosaicNodeByKey(get().layout.config?.nodes, panel);
         const isShown = result.success;
         if (isShown) {
           if (show || panel === MAIN_VIEW /*&& areViewsReadyToRender()*/) {
@@ -77,7 +71,7 @@ export function createLayoutSlice<
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.config.layout;
+              const layout = draft.layout.config;
               layout.nodes = result.nextTree;
               if (layout.pinned?.includes(panel)) {
                 layout.pinned = layout.pinned.filter(
@@ -92,9 +86,9 @@ export function createLayoutSlice<
           }
           set((state) =>
             produce(state, (draft) => {
-              const layout = draft.config.layout;
+              const layout = draft.layout.config;
               const root = layout.nodes;
-              const placement = get().layout.panels[panel]?.placement;
+              const placement = draft.layout.panels[panel]?.placement;
               const side = placement === 'sidebar' ? 'first' : 'second';
               const toReplace = isMosaicLayoutParent(root)
                 ? root[side]
@@ -112,7 +106,7 @@ export function createLayoutSlice<
               } else {
                 const panelNode = {node: panel, weight: 1};
                 const restNode = {
-                  node: config.layout?.nodes,
+                  node: draft.layout.config?.nodes,
                   weight: 3,
                 };
                 // add to to the left
@@ -135,7 +129,7 @@ export function createLayoutSlice<
       togglePanelPin: (panel: string) => {
         set((state) =>
           produce(state, (draft) => {
-            const layout = draft.config.layout;
+            const layout = draft.layout.config;
             const pinned = layout.pinned ?? [];
             if (pinned.includes(panel)) {
               layout.pinned = pinned.filter((p: string) => p !== panel);
@@ -149,15 +143,8 @@ export function createLayoutSlice<
   }));
 }
 
-type RoomConfigWithLayout = BaseRoomConfig & LayoutSliceConfig;
-type RoomStateWithLayout = RoomState<RoomConfigWithLayout> & LayoutSliceState;
-
 export function useStoreWithLayout<T>(
-  selector: (state: RoomStateWithLayout) => T,
+  selector: (state: LayoutSliceState) => T,
 ): T {
-  return useBaseRoomStore<
-    BaseRoomConfig & LayoutSliceConfig,
-    RoomState<RoomConfigWithLayout>,
-    T
-  >((state) => selector(state as unknown as RoomStateWithLayout));
+  return useBaseRoomStore<LayoutSliceState, T>((state) => selector(state));
 }

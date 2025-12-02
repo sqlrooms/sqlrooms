@@ -1,8 +1,8 @@
-import {DuckDbConnector} from './DuckDbConnector';
+import {DuckDbConnector} from '@sqlrooms/duckdb-core';
 import {
   createWasmDuckDbConnector,
-  WasmDuckDbConnectorOptions,
   WasmDuckDbConnector,
+  WasmDuckDbConnectorOptions,
 } from './WasmDuckDbConnector';
 import {createWebSocketDuckDbConnector} from './WebSocketDuckDbConnector';
 
@@ -10,7 +10,7 @@ export type DuckDbConnectorType = 'wasm' | 'ws';
 
 /**
  * Options for creating a DuckDB connector instance.
- *
+ * @deprecated Use `createWasmDuckDbConnector` or `createWebSocketDuckDbConnector` instead.
  * @public
  */
 export type DuckDbConnectorOptions =

@@ -8,10 +8,10 @@ import {useStoreWithNotebook} from '../NotebookSlice';
 import {getCellTypeLabel} from '../NotebookUtils';
 
 export const TextCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentCellId,
+    (s) => s.notebook.config.currentCellId,
   );
   const [isEditing, setIsEditing] = useState(currentCellId === id);
   const [draftText, setDraftText] = useState(

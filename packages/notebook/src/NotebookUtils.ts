@@ -11,7 +11,7 @@ import {
 } from './cellSchemas';
 
 export const findTab = (
-  notebook: NotebookSliceConfig['notebook'],
+  notebook: NotebookSliceConfig,
   tabId: string,
 ): NotebookTab => {
   const tab = notebook.tabs.find((t) => t.id === tabId);

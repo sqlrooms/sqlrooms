@@ -1,4 +1,3 @@
-import {RoomState} from '@sqlrooms/room-store';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 
 /**
@@ -6,7 +5,7 @@ import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
  * @param store
  * @returns
  */
-export function hasAiSettingsConfig<S extends RoomState<any>>(
+export function hasAiSettingsConfig<S extends object>(
   store: S,
 ): store is S & {aiSettings: {config: AiSettingsSliceConfig}} {
   return (

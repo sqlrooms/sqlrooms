@@ -26,7 +26,7 @@ export const AddNewCellDropdown: FC<Props> = ({
   triggerComponent = <TriggerButton />,
 }) => {
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
   const [open, setOpen] = useState(false);
 

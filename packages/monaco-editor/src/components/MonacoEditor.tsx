@@ -1,7 +1,6 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
-import {ensureMonacoLoaderConfigured} from '../loader';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
-import React, {useEffect, useRef} from 'react';
+import React, {useEffect, useMemo, useRef} from 'react';
 import {
   getCssColor,
   getJsonEditorTheme,
@@ -50,6 +49,14 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
+const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions =
+  {
+    minimap: {enabled: false},
+    scrollBeyondLastLine: false,
+    automaticLayout: true,
+    fontLigatures: true,
+    fixedOverflowWidgets: true,
+  };
 /**
  * A wrapper around the Monaco Editor component
  */
@@ -64,17 +71,16 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   options = {},
   ...props
 }) => {
-  // Ensure the loader is configured before the editor mounts
-  ensureMonacoLoaderConfigured();
-  // Get the app theme from the ThemeProvider
   const {theme: appTheme} = useTheme();
   const [renderKey, setRenderKey] = React.useState(0);
 
-  // If a theme is explicitly provided, use it. Otherwise, determine from the app theme
+  // Determine editor theme based on app theme
+  // Use typeof window check to avoid SSR errors in Next.js when accessing window.matchMedia
   const theme =
     explicitTheme ||
     (appTheme === 'dark' ||
     (appTheme === 'system' &&
+      typeof window !== 'undefined' &&
       window.matchMedia('(prefers-color-scheme: dark)').matches)
       ? 'vs-dark'
       : 'light');
@@ -237,15 +243,15 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   // Get monospace font for code editor
   const fontFamily = getMonospaceFont();
 
-  const defaultOptions = {
-    minimap: {enabled: false},
-    scrollBeyondLastLine: false,
-    automaticLayout: true,
-    readOnly,
-    fontFamily,
-    fontLigatures: true,
-    ...options,
-  };
+  const combinedOptions = useMemo(
+    () => ({
+      ...DEFAULT_MONACO_OPTIONS,
+      readOnly,
+      fontFamily,
+      ...options,
+    }),
+    [options, fontFamily, readOnly],
+  );
 
   return (
     <div className={cn('h-[300px] w-full', className)}>
@@ -255,7 +261,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         language={language}
         theme={theme}
         value={value}
-        options={defaultOptions}
+        options={combinedOptions}
         onMount={handleEditorDidMount}
         onChange={onChange}
         loading={<Spinner />}

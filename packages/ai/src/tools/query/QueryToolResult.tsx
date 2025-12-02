@@ -8,26 +8,30 @@ type QueryToolResultProps = {
   sqlQuery: string;
   /** Provided in case the query result is already an arrow table */
   arrowTable?: arrow.Table;
+  /** Whether to show the SQL text in the result */
+  showSql?: boolean;
 };
 
 export function QueryToolResult(props: QueryToolResultProps) {
-  const {title, sqlQuery} = props;
+  const {title, sqlQuery, showSql = true} = props;
   const tableModal = useDisclosure();
   return (
     <>
-      <div className="text-muted-foreground bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
-        <pre className="whitespace-pre-wrap break-words pr-8">{sqlQuery}</pre>
-        <div className="absolute right-1 top-1">
-          <CopyButton
-            text={sqlQuery}
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            ariaLabel="Copy SQL"
-          />
+      {showSql && (
+        <div className="text-muted-foreground bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
+          <pre className="whitespace-pre-wrap break-words pr-8">{sqlQuery}</pre>
+          <div className="absolute right-1 top-1">
+            <CopyButton
+              text={sqlQuery}
+              variant="ghost"
+              size="icon"
+              className="h-6 w-6"
+              ariaLabel="Copy SQL"
+            />
+          </div>
         </div>
-      </div>
-      <div className="flex items-center gap-2">
+      )}
+      <div className="flex items-center gap-1 text-gray-500 dark:text-gray-400">
         <Button variant="ghost" size="xs" onClick={tableModal.onOpen}>
           <TableIcon className="h-4 w-4" />
           <h3 className="text-xs">Show Query Result</h3>

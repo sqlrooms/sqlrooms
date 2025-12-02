@@ -1,0 +1,8 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_OPTIONS = "--max-old-space-size=4096"
+  NPM_FLAGS = "--force"
+  CI = "false"

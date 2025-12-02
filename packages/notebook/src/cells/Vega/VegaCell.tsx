@@ -19,14 +19,14 @@ import {IconWithTooltip} from '../../cellOperations/IconWithTooltip';
 
 export const VegaCell: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook(
-    (s) => s.config.notebook.cells[id],
+    (s) => s.notebook.config.cells[id],
   ) as VegaCellType;
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentCellId,
+    (s) => s.notebook.config.currentCellId,
   );
   const availableSqlCells = Object.values(
-    useStoreWithNotebook((s) => s.config.notebook.cells),
+    useStoreWithNotebook((s) => s.notebook.config.cells),
   ).filter((c) => c.type === 'sql');
 
   const selectedSqlStatus = useStoreWithNotebook(

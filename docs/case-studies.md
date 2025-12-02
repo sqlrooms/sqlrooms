@@ -4,6 +4,10 @@ outline: deep
 
 # Case Studies
 
+Built something with SQLRooms? We'd love to feature it!
+
+[Submit your app](https://github.com/sqlrooms/sqlrooms/discussions/categories/case-studies) to be included on this page.
+
 ## Foursquare Spatial Desktop
 
 [Foursquare Spatial Desktop](https://foursquare.com/products/spatial-desktop) is a powerful geospatial computing tool that transforms your desktop into a comprehensive spatial analysis environment. Built on SQLRooms, it delivers native DuckDB query performance and real-time visualization rendering—all powered natively on your machine without requiring server infrastructure.
@@ -49,3 +53,18 @@ Key features include:
 - **Community Detection**: Identify clusters and anomalies within your data
 - **Interactive Analysis**: Use filters and histograms to explore data distributions
 - **GPU-Accelerated**: Performs all calculations locally using your GPU for optimal performance
+
+## Transcality
+
+[Transcality](https://www.transcality.com/) is a Swiss company building transport modeling software using SQLRooms. Their platform creates digital twins of transportation systems, enabling planners and engineers to simulate infrastructure changes—like adding or closing a road—and immediately see the effects on traffic flow.
+
+[<img src=/media/case-studies/transcality.webp width=450>](https://www.transcality.com/)
+
+By leveraging SQLRooms, Transcality enables visualization, filtering, and aggregation of simulation results to run directly on end-users' machines, providing fast and interactive exploration of traffic scenarios.
+
+Key features include:
+
+- **Traffic Flow Modeling**: Simulate and analyze traffic patterns at various resolutions
+- **Infrastructure Scenarios**: Model the impact of road closures, new routes, or construction
+- **Digital Transportation Twins**: Build comprehensive models of transportation systems
+- **Local Data Exploration**: Visualize, filter, and aggregate simulation results directly in the browser

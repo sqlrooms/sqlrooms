@@ -11,7 +11,7 @@ type Props = {
 export const MoveCellButtons: FC<Props> = ({id}) => {
   const moveCell = useStoreWithNotebook((s) => s.notebook.moveCell);
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
   if (!currentTabId) return null;
 

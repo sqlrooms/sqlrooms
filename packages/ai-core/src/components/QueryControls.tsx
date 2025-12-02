@@ -1,7 +1,14 @@
-import {Button, cn, Spinner, Textarea} from '@sqlrooms/ui';
+import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
+import {
+  PropsWithChildren,
+  useCallback,
+  useRef,
+  useEffect,
+  ReactNode,
+} from 'react';
 import {useStoreWithAi} from '../AiSlice';
+import {useAiChat} from '../hooks/useAiChat';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -25,6 +32,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const model = currentSession?.model;
+
+  // Use the custom hook for chat functionality
+  const {sendMessage} = useAiChat();
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -51,11 +61,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis();
+          runAnalysis(sendMessage);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis],
+    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
   );
 
   const canStart = Boolean(model && analysisPrompt.trim().length);
@@ -65,15 +75,22 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       cancelAnalysis();
       onCancel?.();
     } else {
-      runAnalysis();
+      runAnalysis(sendMessage);
       onRun?.();
     }
-  }, [isRunningAnalysis, cancelAnalysis, runAnalysis]);
+  }, [
+    isRunningAnalysis,
+    cancelAnalysis,
+    onCancel,
+    runAnalysis,
+    sendMessage,
+    onRun,
+  ]);
 
   return (
     <div
       className={cn(
-        'flex w-full flex-col items-center justify-center gap-4',
+        'flex w-full flex-col items-center justify-center gap-2',
         className,
       )}
     >
@@ -81,8 +98,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         <div className="flex w-full flex-col gap-1 overflow-hidden">
           <Textarea
             ref={textareaRef}
-            disabled={isRunningAnalysis}
-            className="min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
+            className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
             autoResize
             value={analysisPrompt}
             onChange={(e) => setAnalysisPrompt(e.target.value)}
@@ -92,18 +108,18 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
           />
           <div className="align-stretch flex w-full items-center gap-2 overflow-hidden">
             <div className="flex h-full w-full min-w-0 items-center gap-2 overflow-hidden">
-              <div className="min-w-0 flex-1 overflow-hidden pl-2">
-                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1">
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div className="flex flex-nowrap items-center gap-2 overflow-x-auto py-1 pl-2">
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 pr-2">
+              <div className="ml-auto shrink-0 gap-2 pr-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!canStart}
+                  disabled={!isRunningAnalysis && !canStart}
                 >
                   {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>

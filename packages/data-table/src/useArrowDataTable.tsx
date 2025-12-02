@@ -89,12 +89,19 @@ export default function useArrowDataTable(
                       </pre>
                       <Button
                         variant="ghost"
-                        size="icon"
-                        className="absolute right-0 top-0 h-6 w-6"
+                        size="xs"
                         onClick={() => navigator.clipboard.writeText(valueStr)}
                       >
                         <ClipboardIcon className="h-3 w-3" />
                       </Button>
+                    </div>
+                    <div
+                      className="h-full w-full overflow-auto"
+                      style={{maxHeight: '200px', maxWidth: '500px'}}
+                    >
+                      <div className="whitespace-pre-wrap font-mono text-xs">
+                        {valueStr}
+                      </div>
                     </div>
                   </div>
                 </PopoverContent>

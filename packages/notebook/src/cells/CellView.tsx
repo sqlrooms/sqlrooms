@@ -1,7 +1,7 @@
 import {useStoreWithNotebook} from '../NotebookSlice';
 
 export const CellView: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.config.notebook.cells[id]);
+  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
   const render = useStoreWithNotebook(
     (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
   );

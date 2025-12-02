@@ -9,11 +9,11 @@ export const ShowInputBarToggle = () => {
     (s) => s.notebook.toggleShowInputBar,
   );
   const currentTabId = useStoreWithNotebook(
-    (s) => s.config.notebook.currentTabId,
+    (s) => s.notebook.config.currentTabId,
   );
   const showInputBar = useStoreWithNotebook(
     (s) =>
-      s.config.notebook.tabs.find((t) => t.id === currentTabId)?.showInputBar,
+      s.notebook.config.tabs.find((t) => t.id === currentTabId)?.showInputBar,
   );
 
   if (!currentTabId) return null;
