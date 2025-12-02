@@ -202,9 +202,19 @@ export function createAiSlice(
       {resolve: () => void; reject: (error: Error) => void}
     >();
 
+    // Initialize base config and ensure the initial session respects default provider/model
+    const baseConfig = createDefaultAiConfig(cleanedConfig);
+    if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
+      const firstSession = baseConfig.sessions[0];
+      if (firstSession) {
+        firstSession.modelProvider = defaultProvider;
+        firstSession.model = defaultModel;
+      }
+    }
+
     return {
       ai: {
-        config: createDefaultAiConfig(cleanedConfig),
+        config: baseConfig,
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
@@ -375,8 +385,11 @@ export function createAiSlice(
                 id: newSessionId,
                 name: sessionName,
                 modelProvider:
-                  modelProvider || currentSession?.modelProvider || 'openai',
-                model: model || currentSession?.model || 'gpt-4.1',
+                  modelProvider ||
+                  currentSession?.modelProvider ||
+                  defaultProvider,
+                model:
+                  model || currentSession?.model || defaultModel,
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
@@ -645,7 +658,6 @@ export function createAiSlice(
 
         /**
          * Start the analysis
-         * TODO: how to pass the history analysisResults?
          */
         startAnalysis: async (
           sendMessage: (message: {text: string}) => void,
