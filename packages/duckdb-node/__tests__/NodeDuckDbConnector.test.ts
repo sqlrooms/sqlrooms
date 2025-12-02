@@ -175,13 +175,20 @@ describe('NodeDuckDbConnector', () => {
       await expect(handle.cancel()).resolves.toBeUndefined();
     });
 
-    it('should support external AbortSignal', async () => {
+    it('should reject when signal is already aborted', async () => {
       const controller = new AbortController();
       controller.abort();
 
       const handle = connector.query('SELECT 1', {signal: controller.signal});
 
-      await expect(handle.result).rejects.toThrow();
+      // Should reject - either with AbortError or native error depending on timing
+      let rejected = false;
+      try {
+        await handle.result;
+      } catch {
+        rejected = true;
+      }
+      expect(rejected).toBe(true);
     });
   });
 
