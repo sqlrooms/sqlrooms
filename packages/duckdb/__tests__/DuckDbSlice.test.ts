@@ -95,8 +95,16 @@ describe('DuckDbSlice', () => {
       expect(result.tableName).toBe('test_view');
       expect(result.rowCount).toBeUndefined(); // Views don't have row count
 
-      // Verify the view exists
+      // Verify the view exists in duckdb_views()
       const connector = await store.getState().db.getConnector();
+      const viewCheck = await connector.queryJson<{view_name: string}>(
+        "SELECT view_name FROM duckdb_views() WHERE view_name = 'test_view'",
+      );
+      const views = Array.from(viewCheck);
+      expect(views.length).toBe(1);
+      expect(views[0]?.view_name).toBe('test_view');
+
+      // Also verify we can query from it
       const viewResult = await connector.query('SELECT * FROM test_view');
       expect(viewResult.numRows).toBe(1);
     });
