@@ -13,4 +13,6 @@ export {
   type NodeDuckDbConnectorOptions,
   type QueryHandle,
   type QueryOptions,
+  type LoadFileOptions,
+  type LoadObjectsOptions,
 } from './NodeDuckDbConnector';

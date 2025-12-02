@@ -28,6 +28,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@sqlrooms/duckdb-node": "workspace:*",
     "@types/jest": "^30.0.0",
     "jest": "^30.1.3",
     "ts-jest": "^29.4.4"
@@ -41,7 +42,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch"
   }
 }

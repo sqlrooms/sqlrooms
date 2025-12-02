@@ -41,6 +41,24 @@ export type QueryHandle<T = any> = PromiseLike<T> & {
 };
 
 /**
+ * Options for loading files into DuckDB.
+ */
+export interface LoadFileOptions {
+  method?: string;
+  schema?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Options for loading objects into DuckDB.
+ */
+export interface LoadObjectsOptions {
+  schema?: string;
+  replace?: boolean;
+  [key: string]: unknown;
+}
+
+/**
  * DuckDB connector interface for Node.js environments.
  */
 export interface NodeDuckDbConnector {
@@ -56,6 +74,21 @@ export interface NodeDuckDbConnector {
     query: string,
     options?: QueryOptions,
   ): QueryHandle<Iterable<T>>;
+  loadFile(
+    fileName: string,
+    tableName: string,
+    opts?: LoadFileOptions,
+  ): Promise<void>;
+  loadArrow(
+    table: arrow.Table | Uint8Array,
+    tableName: string,
+    opts?: {schema?: string},
+  ): Promise<void>;
+  loadObjects(
+    data: Record<string, unknown>[],
+    tableName: string,
+    opts?: LoadObjectsOptions,
+  ): Promise<void>;
   getInstance(): DuckDBInstance;
   getConnection(): DuckDBConnection;
 }
@@ -260,6 +293,95 @@ export function createNodeDuckDbConnector(
         const rowObjects = reader.getRowObjectsJson() as T[];
         return rowObjects;
       }, options);
+    },
+
+    async loadFile(
+      fileName: string,
+      tableName: string,
+      opts?: LoadFileOptions,
+    ): Promise<void> {
+      if (!connection) {
+        throw new Error('DuckDB not initialized');
+      }
+      const method = opts?.method ?? 'auto';
+      const schema = opts?.schema;
+      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
+
+      let sql: string;
+      if (method === 'auto') {
+        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`;
+      } else {
+        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
+      }
+      await connection.run(sql);
+    },
+
+    async loadArrow(
+      table: arrow.Table | Uint8Array,
+      tableName: string,
+      opts?: {schema?: string},
+    ): Promise<void> {
+      if (!connection) {
+        throw new Error('DuckDB not initialized');
+      }
+      const schema = opts?.schema;
+      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
+
+      // Convert Arrow table to JSON and insert
+      if (table instanceof arrow.Table) {
+        const rows: Record<string, unknown>[] = [];
+        for (let i = 0; i < table.numRows; i++) {
+          const row: Record<string, unknown> = {};
+          for (const field of table.schema.fields) {
+            const col = table.getChild(field.name);
+            row[field.name] = col?.get(i);
+          }
+          rows.push(row);
+        }
+        await this.loadObjects(rows, tableName, {schema, replace: true});
+      } else {
+        // Uint8Array - Arrow IPC format
+        throw new Error(
+          'Loading Arrow IPC streams is not yet supported in Node connector',
+        );
+      }
+    },
+
+    async loadObjects(
+      data: Record<string, unknown>[],
+      tableName: string,
+      opts?: LoadObjectsOptions,
+    ): Promise<void> {
+      if (!connection) {
+        throw new Error('DuckDB not initialized');
+      }
+      if (data.length === 0) {
+        throw new Error('Cannot load empty data array');
+      }
+
+      const schema = opts?.schema;
+      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
+
+      // Convert objects to VALUES clause
+      const columns = Object.keys(data[0] as Record<string, unknown>);
+      const columnList = columns.map((c) => `"${c}"`).join(', ');
+
+      const valueRows = data.map((row) => {
+        const values = columns.map((col) => {
+          const val = row[col];
+          if (val === null || val === undefined) return 'NULL';
+          if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
+          if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
+          if (typeof val === 'bigint') return val.toString();
+          if (typeof val === 'object') return `'${JSON.stringify(val)}'`;
+          return String(val);
+        });
+        return `(${values.join(', ')})`;
+      });
+
+      const sql = `CREATE OR REPLACE TABLE ${qualifiedName} (${columnList}) AS 
+        SELECT * FROM (VALUES ${valueRows.join(', ')}) AS t(${columnList})`;
+      await connection.run(sql);
     },
 
     getInstance() {
