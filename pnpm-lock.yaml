@@ -2100,6 +2100,9 @@ importers:
       '@duckdb/duckdb-wasm':
         specifier: 1.31.0
         version: 1.31.0
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
@@ -2125,6 +2128,53 @@ importers:
         specifier: ^5.0.8
         version: 5.0.8(@types/react@19.1.13)(immer@11.0.1)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
+      '@sqlrooms/duckdb-node':
+        specifier: workspace:*
+        version: link:../duckdb-node
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      jest:
+        specifier: ^30.1.3
+        version: 30.2.0(@types/node@22.19.1)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.5(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.1))(typescript@5.8.3)
+
+  packages/duckdb-core:
+    dependencies:
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+    devDependencies:
+      '@types/jest':
+        specifier: ^30.0.0
+        version: 30.0.0
+      jest:
+        specifier: ^30.1.3
+        version: 30.2.0(@types/node@22.19.1)
+      ts-jest:
+        specifier: ^29.4.4
+        version: 29.4.5(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@22.19.1))(typescript@5.8.3)
+
+  packages/duckdb-node:
+    dependencies:
+      '@duckdb/node-api':
+        specifier: ^1.4.2-r.1
+        version: 1.4.2-r.1
+      '@sqlrooms/duckdb-core':
+        specifier: workspace:*
+        version: link:../duckdb-core
+      '@sqlrooms/room-config':
+        specifier: workspace:*
+        version: link:../room-config
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
+    devDependencies:
       '@types/jest':
         specifier: ^30.0.0
         version: 30.0.0
@@ -2145,7 +2195,7 @@ importers:
         version: 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/components':
         specifier: ^3.2.3
-        version: 3.2.3(53b8e5ff1c6525e137d56e90d4020eb5)
+        version: 3.2.3(2fde29d63629d651af770274af77fc9b)
       '@kepler.gl/constants':
         specifier: ^3.2.3
         version: 3.2.3
@@ -2163,7 +2213,7 @@ importers:
         version: 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/reducers':
         specifier: ^3.2.3
-        version: 3.2.3(02ea27ec7aa03edd2f3158616f209982)
+        version: 3.2.3(939a3b8ca86821a547ecd192341da86e)
       '@kepler.gl/schemas':
         specifier: ^3.2.3
         version: 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
@@ -4082,6 +4132,37 @@ packages:
 
   '@duckdb/duckdb-wasm@1.31.0':
     resolution: {integrity: sha512-HcR5XFmNpi7ua0IFohO2dFDNh0LkZgnkfkiD5BDlP8SAmhhcHe+zfOPD1izpmuBxLel25LHO608NY/3RolwztQ==}
+
+  '@duckdb/node-api@1.4.2-r.1':
+    resolution: {integrity: sha512-8Ef4R/Lq+rXTpcqZIJZe6ALfgMGxy88HmiPvRpWrRw1fUTy85x1U0NnGrqCklZsmWyZUdPwVYj90MQOF2MY/TA==}
+
+  '@duckdb/node-bindings-darwin-arm64@1.4.2-r.1':
+    resolution: {integrity: sha512-C4yBI3zBX7iZ9iq8zJDvPatXA+2xM22sg1kX3fx76nG+qTqKtU/dGFVYL7Fx6cBYxBO1ZZ8Y+vjgYb6/bich8A==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@duckdb/node-bindings-darwin-x64@1.4.2-r.1':
+    resolution: {integrity: sha512-dgTSBuEfWyhymYovsGoRESjqcJuZWwJqla9l89SSsBDrGYcUp+EHsXUF73oUCspzTesT2lOvHrDufO8pKgtudw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@duckdb/node-bindings-linux-arm64@1.4.2-r.1':
+    resolution: {integrity: sha512-r2Ml1LvU2vkVMx4YU04T79FjGkYg8YMVtbOz7j740SZGIi5Cch5P1/oy48jJBWRqoaXuqimpYWeTZiGVeCQiZA==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@duckdb/node-bindings-linux-x64@1.4.2-r.1':
+    resolution: {integrity: sha512-ed5KiNIu1rqSva5rgo4PRVYSmBolAMVqGFWsYWLoRZ94ka2F/dHwJNkarCTmBFCEDGVZWzWzjRyWTQgYTvQxTg==}
+    cpu: [x64]
+    os: [linux]
+
+  '@duckdb/node-bindings-win32-x64@1.4.2-r.1':
+    resolution: {integrity: sha512-kIIT8tuoW3mzr9EPcdSoKfv9CgOhTqRryHDI10Z0nuhc9UhqOWPUM/LnSUebfo1mdD9Drm7YrKCKYxNTr5dqBQ==}
+    cpu: [x64]
+    os: [win32]
+
+  '@duckdb/node-bindings@1.4.2-r.1':
+    resolution: {integrity: sha512-z0pJCdEnIj0Famkip6w7JZ/A17nm5VcYc6H7isOHXfEnPhBQ9PBusUTFgIzl6+3J8HOFQOv0szJq46zldbsHfQ==}
 
   '@emnapi/core@1.7.1':
     resolution: {integrity: sha512-o1uhUASyo921r2XtHYOHy7gdkGLge8ghBEQHMWmyJFoXlpU58kIrhhN3w26lpQb6dspetweapMn2CSNwQ8I4wg==}
@@ -15814,39 +15895,6 @@ snapshots:
       '@luma.gl/shadertools': 9.2.4(@luma.gl/core@9.2.4)
       '@math.gl/core': 4.1.0
 
-  '@deck.gl/geo-layers@8.9.36(835cb881bfc488415e6cd31b7bd1b08e)':
-    dependencies:
-      '@babel/runtime': 7.28.4
-      '@deck.gl/core': 8.9.27
-      '@deck.gl/extensions': 9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))
-      '@deck.gl/layers': 8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21)
-      '@deck.gl/mesh-layers': 9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))
-      '@loaders.gl/3d-tiles': 3.4.15(@loaders.gl/core@4.3.4)
-      '@loaders.gl/core': 4.3.4
-      '@loaders.gl/gis': 3.4.15
-      '@loaders.gl/loader-utils': 3.4.15
-      '@loaders.gl/mvt': 3.4.15
-      '@loaders.gl/schema': 3.4.15
-      '@loaders.gl/terrain': 3.4.15
-      '@loaders.gl/tiles': 3.4.15(@loaders.gl/core@4.3.4)
-      '@loaders.gl/wms': 3.4.15
-      '@luma.gl/constants': 8.5.21
-      '@luma.gl/core': 8.5.21
-      '@luma.gl/experimental': 8.5.21(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))
-      '@math.gl/core': 3.6.3
-      '@math.gl/culling': 3.6.3
-      '@math.gl/web-mercator': 3.6.3
-      '@types/geojson': 7946.0.16
-      h3-js: 3.7.2
-      long: 3.2.0
-    transitivePeerDependencies:
-      - '@loaders.gl/gltf'
-      - '@loaders.gl/images'
-      - '@luma.gl/engine'
-      - '@luma.gl/gltools'
-      - '@luma.gl/shadertools'
-      - '@luma.gl/webgl'
-
   '@deck.gl/geo-layers@8.9.36(@deck.gl/core@8.9.27)(@deck.gl/extensions@8.9.36(@deck.gl/core@8.9.27)(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(gl-matrix@3.4.4))(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4))(@deck.gl/mesh-layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@8.5.21)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))':
     dependencies:
       '@babel/runtime': 7.28.4
@@ -15965,6 +16013,39 @@ snapshots:
       '@luma.gl/constants': 8.5.21
       '@luma.gl/core': 9.2.4
       '@luma.gl/experimental': 8.5.21(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))
+      '@math.gl/core': 3.6.3
+      '@math.gl/culling': 3.6.3
+      '@math.gl/web-mercator': 3.6.3
+      '@types/geojson': 7946.0.16
+      h3-js: 3.7.2
+      long: 3.2.0
+    transitivePeerDependencies:
+      - '@loaders.gl/gltf'
+      - '@loaders.gl/images'
+      - '@luma.gl/engine'
+      - '@luma.gl/gltools'
+      - '@luma.gl/shadertools'
+      - '@luma.gl/webgl'
+
+  '@deck.gl/geo-layers@8.9.36(a3b58aae3a4df3ea6da6b9ac1a6f404a)':
+    dependencies:
+      '@babel/runtime': 7.28.4
+      '@deck.gl/core': 8.9.27
+      '@deck.gl/extensions': 9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))
+      '@deck.gl/layers': 8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21)
+      '@deck.gl/mesh-layers': 9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))
+      '@loaders.gl/3d-tiles': 3.4.15(@loaders.gl/core@4.3.4)
+      '@loaders.gl/core': 4.3.4
+      '@loaders.gl/gis': 3.4.15
+      '@loaders.gl/loader-utils': 3.4.15
+      '@loaders.gl/mvt': 3.4.15
+      '@loaders.gl/schema': 3.4.15
+      '@loaders.gl/terrain': 3.4.15
+      '@loaders.gl/tiles': 3.4.15(@loaders.gl/core@4.3.4)
+      '@loaders.gl/wms': 3.4.15
+      '@luma.gl/constants': 8.5.21
+      '@luma.gl/core': 8.5.21
+      '@luma.gl/experimental': 8.5.21(@loaders.gl/gltf@3.4.15)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))
       '@math.gl/core': 3.6.3
       '@math.gl/culling': 3.6.3
       '@math.gl/web-mercator': 3.6.3
@@ -16225,6 +16306,33 @@ snapshots:
   '@duckdb/duckdb-wasm@1.31.0':
     dependencies:
       apache-arrow: 17.0.0
+
+  '@duckdb/node-api@1.4.2-r.1':
+    dependencies:
+      '@duckdb/node-bindings': 1.4.2-r.1
+
+  '@duckdb/node-bindings-darwin-arm64@1.4.2-r.1':
+    optional: true
+
+  '@duckdb/node-bindings-darwin-x64@1.4.2-r.1':
+    optional: true
+
+  '@duckdb/node-bindings-linux-arm64@1.4.2-r.1':
+    optional: true
+
+  '@duckdb/node-bindings-linux-x64@1.4.2-r.1':
+    optional: true
+
+  '@duckdb/node-bindings-win32-x64@1.4.2-r.1':
+    optional: true
+
+  '@duckdb/node-bindings@1.4.2-r.1':
+    optionalDependencies:
+      '@duckdb/node-bindings-darwin-arm64': 1.4.2-r.1
+      '@duckdb/node-bindings-darwin-x64': 1.4.2-r.1
+      '@duckdb/node-bindings-linux-arm64': 1.4.2-r.1
+      '@duckdb/node-bindings-linux-x64': 1.4.2-r.1
+      '@duckdb/node-bindings-win32-x64': 1.4.2-r.1
 
   '@emnapi/core@1.7.1':
     dependencies:
@@ -17122,7 +17230,7 @@ snapshots:
       h3-js: 3.7.2
       type-analyzer: 0.4.0
 
-  '@kepler.gl/components@3.2.3(53b8e5ff1c6525e137d56e90d4020eb5)':
+  '@kepler.gl/components@3.2.3(2fde29d63629d651af770274af77fc9b)':
     dependencies:
       '@deck.gl/core': 8.9.27
       '@deck.gl/react': 8.9.36(@deck.gl/core@8.9.27)(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -17140,7 +17248,7 @@ snapshots:
       '@kepler.gl/layers': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(typescript@5.8.3)
       '@kepler.gl/localization': 3.2.3(typescript@5.8.3)
       '@kepler.gl/processors': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
-      '@kepler.gl/reducers': 3.2.3(46c1a53510d54071d47e962918ae30f8)
+      '@kepler.gl/reducers': 3.2.3(15de8b1e38080c1999bfa9ff08fefc8c)
       '@kepler.gl/schemas': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@4.1.0)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/styles': 3.2.3(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
       '@kepler.gl/table': 3.2.3(@loaders.gl/core@4.3.4)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)
@@ -17403,12 +17511,12 @@ snapshots:
       - '@luma.gl/webgl'
       - react-dom
 
-  '@kepler.gl/deckgl-layers@3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))':
+  '@kepler.gl/deckgl-layers@3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@3.4.15)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))':
     dependencies:
       '@danmarshall/deckgl-typings': 4.9.22
       '@deck.gl/aggregation-layers': 8.9.36(@deck.gl/core@8.9.27)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/core@8.5.21)
       '@deck.gl/core': 8.9.27
-      '@deck.gl/geo-layers': 8.9.36(835cb881bfc488415e6cd31b7bd1b08e)
+      '@deck.gl/geo-layers': 8.9.36(a3b58aae3a4df3ea6da6b9ac1a6f404a)
       '@deck.gl/layers': 8.9.36(@deck.gl/core@8.9.27)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21)
       '@kepler.gl/constants': 3.2.3
       '@kepler.gl/types': 3.2.3
@@ -17740,14 +17848,14 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@kepler.gl/reducers@3.2.3(02ea27ec7aa03edd2f3158616f209982)':
+  '@kepler.gl/reducers@3.2.3(15de8b1e38080c1999bfa9ff08fefc8c)':
     dependencies:
       '@kepler.gl/actions': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/cloud-providers': 3.2.3
       '@kepler.gl/common-utils': 3.2.3
       '@kepler.gl/constants': 3.2.3
-      '@kepler.gl/deckgl-arrow-layers': 3.2.3(29e749c64d8bee3a2213808ab685cd30)
-      '@kepler.gl/deckgl-layers': 3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))
+      '@kepler.gl/deckgl-arrow-layers': 3.2.3(167d660e8ab37d42eb4d8c507ac215da)
+      '@kepler.gl/deckgl-layers': 3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@3.4.15)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))
       '@kepler.gl/effects': 3.2.3(@loaders.gl/core@4.3.4)(react-dom@19.2.0(react@19.2.0))
       '@kepler.gl/layers': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(typescript@5.8.3)
       '@kepler.gl/localization': 3.2.3(typescript@5.8.3)
@@ -17805,14 +17913,14 @@ snapshots:
       - typescript
       - utf-8-validate
 
-  '@kepler.gl/reducers@3.2.3(46c1a53510d54071d47e962918ae30f8)':
+  '@kepler.gl/reducers@3.2.3(939a3b8ca86821a547ecd192341da86e)':
     dependencies:
       '@kepler.gl/actions': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/core@4.3.4)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(react@19.2.0)(typescript@5.8.3)
       '@kepler.gl/cloud-providers': 3.2.3
       '@kepler.gl/common-utils': 3.2.3
       '@kepler.gl/constants': 3.2.3
-      '@kepler.gl/deckgl-arrow-layers': 3.2.3(167d660e8ab37d42eb4d8c507ac215da)
-      '@kepler.gl/deckgl-layers': 3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@4.3.4(@loaders.gl/core@4.3.4))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))
+      '@kepler.gl/deckgl-arrow-layers': 3.2.3(29e749c64d8bee3a2213808ab685cd30)
+      '@kepler.gl/deckgl-layers': 3.2.3(@deck.gl/extensions@9.2.2(@deck.gl/core@9.2.2)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@deck.gl/mesh-layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltf@9.2.4(@luma.gl/constants@8.5.21)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@loaders.gl/core@4.3.4)(@loaders.gl/gltf@3.4.15)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(react-dom@19.2.0(react@19.2.0))
       '@kepler.gl/effects': 3.2.3(@loaders.gl/core@4.3.4)(react-dom@19.2.0(react@19.2.0))
       '@kepler.gl/layers': 3.2.3(@deck.gl/aggregation-layers@9.2.2(@deck.gl/core@9.2.2)(@deck.gl/layers@9.2.2(@deck.gl/core@9.2.2)(@loaders.gl/core@4.3.4)(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))))(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/core@9.2.4)(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))(@math.gl/core@4.1.0)(@math.gl/web-mercator@3.6.3)(enzyme-adapter-utils@1.14.2(react@19.2.0))(enzyme@3.11.0)(gl-matrix@3.4.4)(react-dom@19.2.0(react@19.2.0))(react-test-renderer@16.14.0(react@19.2.0))(typescript@5.8.3)
       '@kepler.gl/localization': 3.2.3(typescript@5.8.3)
@@ -18647,6 +18755,18 @@ snapshots:
       '@luma.gl/engine': 9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))
       '@luma.gl/gltools': 8.5.21
       '@luma.gl/shadertools': 8.5.21
+      '@luma.gl/webgl': 9.2.4(@luma.gl/core@9.2.4)
+      '@math.gl/core': 3.6.3
+      earcut: 2.2.4
+
+  '@luma.gl/experimental@8.5.21(@loaders.gl/gltf@3.4.15)(@loaders.gl/images@4.3.4(@loaders.gl/core@4.3.4))(@luma.gl/engine@9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4)))(@luma.gl/gltools@8.5.21)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))(@luma.gl/webgl@9.2.4(@luma.gl/core@9.2.4))':
+    dependencies:
+      '@loaders.gl/gltf': 3.4.15
+      '@loaders.gl/images': 4.3.4(@loaders.gl/core@4.3.4)
+      '@luma.gl/constants': 8.5.21
+      '@luma.gl/engine': 9.2.4(@luma.gl/core@9.2.4)(@luma.gl/shadertools@9.2.4(@luma.gl/core@9.2.4))
+      '@luma.gl/gltools': 8.5.21
+      '@luma.gl/shadertools': 9.2.4(@luma.gl/core@9.2.4)
       '@luma.gl/webgl': 9.2.4(@luma.gl/core@9.2.4)
       '@math.gl/core': 3.6.3
       earcut: 2.2.4

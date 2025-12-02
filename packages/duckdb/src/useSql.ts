@@ -1,8 +1,8 @@
+import {createTypedRowAccessor, TypedRowAccessor} from '@sqlrooms/duckdb-core';
 import * as arrow from 'apache-arrow';
 import {useEffect, useState} from 'react';
 import {z} from 'zod';
 import {useStoreWithDuckDb} from './DuckDbSlice';
-import {createTypedRowAccessor, TypedRowAccessor} from './typedRowAccessor';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,

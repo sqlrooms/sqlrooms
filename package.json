@@ -11,7 +11,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=32 --filter=@sqlrooms/*",
+    "dev": "turbo dev --concurrency=100 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",

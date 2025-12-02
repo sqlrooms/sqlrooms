@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/duckdb",
+  "name": "@sqlrooms/duckdb-node",
   "version": "0.26.1-rc.4",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -18,23 +18,16 @@
     "access": "public"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.30.0",
-    "@sqlrooms/duckdb-core": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
-    "@sqlrooms/room-store": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
-    "fast-deep-equal": "^3.1.3",
-    "immer": "^11.0.1",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
+    "@duckdb/node-api": "^1.4.2-r.1",
+    "@sqlrooms/duckdb-core": "workspace:*"
   },
   "devDependencies": {
-    "@sqlrooms/duckdb-node": "workspace:*",
     "@types/jest": "^30.0.0",
     "jest": "^30.1.3",
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
+    "@sqlrooms/room-config": "workspace:*",
     "apache-arrow": "17.0.0"
   },
   "scripts": {
