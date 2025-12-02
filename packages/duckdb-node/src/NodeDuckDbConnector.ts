@@ -6,6 +6,12 @@ import {
 } from '@sqlrooms/duckdb-core';
 import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
+import {
+  arrowTableToRows,
+  buildQualifiedName,
+  objectsToCreateTableSql,
+  queryToArrowTable,
+} from './helpers';
 
 /**
  * Options for the Node.js DuckDB connector.
@@ -39,6 +45,10 @@ export interface NodeDuckDbConnector extends DuckDbConnector {
   getConnection(): DuckDBConnection;
 }
 
+// ============================================================================
+// Connector Factory
+// ============================================================================
+
 /**
  * Creates a DuckDB connector for Node.js environments using @duckdb/node-api.
  *
@@ -65,44 +75,12 @@ export function createNodeDuckDbConnector(
   let instance: DuckDBInstance | null = null;
   let connection: DuckDBConnection | null = null;
 
-  /**
-   * Converts DuckDB result to an Apache Arrow table.
-   *
-   * TODO: remove this once duckdb-node-neo supports arrow tables directly
-   * https://github.com/duckdb/duckdb-node-neo/issues/45
-   */
-  async function resultToArrowTable<T extends arrow.TypeMap = any>(
-    conn: DuckDBConnection,
-    sql: string,
-  ): Promise<arrow.Table<T>> {
-    const reader = await conn.runAndReadAll(sql);
-    const columnNames = reader.columnNames();
-    const columns = reader.getColumnsJson();
-
-    if (columnNames.length === 0 || reader.currentRowCount === 0) {
-      return arrow.tableFromArrays({}) as unknown as arrow.Table<T>;
+  const ensureConnection = (): DuckDBConnection => {
+    if (!connection) {
+      throw new Error('DuckDB not initialized');
     }
-
-    // Build a simple object with column name -> array mapping
-    const columnsObject: Record<string, unknown[]> = {};
-    for (let i = 0; i < columnNames.length; i++) {
-      const name = columnNames[i] as string;
-      const columnData = columns[i] ?? [];
-      // Convert BigInt to number for Arrow compatibility
-      columnsObject[name] = (columnData as unknown[]).map((v) => {
-        if (typeof v === 'bigint') {
-          // Convert to number if within safe range
-          if (v >= Number.MIN_SAFE_INTEGER && v <= Number.MAX_SAFE_INTEGER) {
-            return Number(v);
-          }
-          return v.toString();
-        }
-        return v;
-      });
-    }
-
-    return arrow.tableFromArrays(columnsObject) as unknown as arrow.Table<T>;
-  }
+    return connection;
+  };
 
   const impl: BaseDuckDbConnectorImpl = {
     async initializeInternal() {
@@ -122,13 +100,10 @@ export function createNodeDuckDbConnector(
       sql: string,
       signal: AbortSignal,
     ): Promise<arrow.Table<T>> {
-      if (!connection) {
-        throw new Error('DuckDB not initialized');
-      }
       if (signal.aborted) {
         throw new DOMException('Query was cancelled', 'AbortError');
       }
-      return resultToArrowTable<T>(connection, sql);
+      return queryToArrowTable<T>(ensureConnection(), sql);
     },
 
     async loadArrowInternal(
@@ -136,28 +111,13 @@ export function createNodeDuckDbConnector(
       tableName: string,
       opts?: {schema?: string},
     ): Promise<void> {
-      if (!connection) {
-        throw new Error('DuckDB not initialized');
-      }
-      const schema = opts?.schema;
-
-      // Convert Arrow table to JSON and insert
       if (table instanceof arrow.Table) {
-        const rows: Record<string, unknown>[] = [];
-        for (let i = 0; i < table.numRows; i++) {
-          const row: Record<string, unknown> = {};
-          for (const field of table.schema.fields) {
-            const col = table.getChild(field.name);
-            row[field.name] = col?.get(i);
-          }
-          rows.push(row);
-        }
+        const rows = arrowTableToRows(table);
         await impl.loadObjectsInternal!(rows, tableName, {
-          schema,
+          schema: opts?.schema,
           replace: true,
         });
       } else {
-        // Uint8Array - Arrow IPC format
         throw new Error(
           'Loading Arrow IPC streams is not yet supported in Node connector',
         );
@@ -169,36 +129,13 @@ export function createNodeDuckDbConnector(
       tableName: string,
       opts?: StandardLoadOptions,
     ): Promise<void> {
-      if (!connection) {
-        throw new Error('DuckDB not initialized');
-      }
       if (data.length === 0) {
         throw new Error('Cannot load empty data array');
       }
 
-      const schema = opts?.schema;
-      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
-
-      // Convert objects to VALUES clause
-      const columns = Object.keys(data[0] as Record<string, unknown>);
-      const columnList = columns.map((c) => `"${c}"`).join(', ');
-
-      const valueRows = data.map((row) => {
-        const values = columns.map((col) => {
-          const val = row[col];
-          if (val === null || val === undefined) return 'NULL';
-          if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-          if (typeof val === 'boolean') return val ? 'TRUE' : 'FALSE';
-          if (typeof val === 'bigint') return val.toString();
-          if (typeof val === 'object') return `'${JSON.stringify(val)}'`;
-          return String(val);
-        });
-        return `(${values.join(', ')})`;
-      });
-
-      const sql = `CREATE OR REPLACE TABLE ${qualifiedName} (${columnList}) AS 
-        SELECT * FROM (VALUES ${valueRows.join(', ')}) AS t(${columnList})`;
-      await connection.run(sql);
+      const qualifiedName = buildQualifiedName(tableName, opts?.schema);
+      const sql = objectsToCreateTableSql(data, qualifiedName);
+      await ensureConnection().run(sql);
     },
 
     async loadFileInternal(
@@ -206,24 +143,19 @@ export function createNodeDuckDbConnector(
       tableName: string,
       opts?: LoadFileOptions,
     ): Promise<void> {
-      if (!connection) {
-        throw new Error('DuckDB not initialized');
-      }
       if (fileName instanceof File) {
         throw new Error('File objects are not supported in Node connector');
       }
 
+      const qualifiedName = buildQualifiedName(tableName, opts?.schema);
       const method = opts?.method ?? 'auto';
-      const schema = opts?.schema;
-      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
 
-      let sql: string;
-      if (method === 'auto') {
-        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`;
-      } else {
-        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
-      }
-      await connection.run(sql);
+      const sql =
+        method === 'auto'
+          ? `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`
+          : `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
+
+      await ensureConnection().run(sql);
     },
   };
 
@@ -241,10 +173,7 @@ export function createNodeDuckDbConnector(
       return instance;
     },
     getConnection() {
-      if (!connection) {
-        throw new Error('DuckDB not initialized');
-      }
-      return connection;
+      return ensureConnection();
     },
   };
 }

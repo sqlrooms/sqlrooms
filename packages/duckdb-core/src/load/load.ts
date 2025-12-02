@@ -7,7 +7,10 @@ import {
   StandardLoadOptions,
 } from '@sqlrooms/room-config';
 import {createSchema, createTable} from './create';
-import {sqlFrom} from './sql-from';
+import {literalToSQL, sqlFrom} from './sql-from';
+
+// Re-export for external use
+export {literalToSQL, sqlFrom};
 
 /**
  * Generic function to load data from a file into a DuckDB table
