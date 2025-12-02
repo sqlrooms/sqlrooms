@@ -294,7 +294,7 @@ export function createDuckDbSlice({
            * @param tableName - Name of the table/view to create
            * @param query - SQL query (must be a SELECT statement, or multiple statements ending with a SELECT when allowMultipleStatements is true)
            * @param options - Creation options
-           * @param options.replace - If true, uses CREATE OR REPLACE (default: false)
+           * @param options.replace - If true, uses CREATE OR REPLACE (default: true)
            * @param options.temp - If true, creates a temporary table/view (default: false)
            * @param options.view - If true, creates a view instead of a table (default: false)
            * @param options.allowMultipleStatements - If true, allows multiple statements where preceding statements are executed first and the final SELECT is wrapped in CREATE TABLE/VIEW (default: false)
@@ -311,7 +311,7 @@ export function createDuckDbSlice({
             },
           ) {
             const {
-              replace = false,
+              replace = true,
               temp = false,
               view = false,
               allowMultipleStatements = false,
