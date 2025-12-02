@@ -21,14 +21,18 @@ describe('NodeDuckDbConnector', () => {
     it('should initialize successfully', async () => {
       const newConnector = createNodeDuckDbConnector();
       await newConnector.initialize();
-      expect(newConnector.type).toBe('node');
+      // Verify it works by running a query
+      const result = await newConnector.query('SELECT 1 as test');
+      expect(result.numRows).toBe(1);
       await newConnector.destroy();
     });
 
     it('should be idempotent', async () => {
       await connector.initialize();
       await connector.initialize();
-      expect(connector.type).toBe('node');
+      // Verify it still works
+      const result = await connector.query('SELECT 1 as test');
+      expect(result.numRows).toBe(1);
     });
 
     it('should run initialization query', async () => {

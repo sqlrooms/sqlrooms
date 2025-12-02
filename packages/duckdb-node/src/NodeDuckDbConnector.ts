@@ -1,4 +1,10 @@
-import {DuckDBInstance, DuckDBConnection} from '@duckdb/node-api';
+import {DuckDBConnection, DuckDBInstance} from '@duckdb/node-api';
+import {
+  BaseDuckDbConnectorImpl,
+  createBaseDuckDbConnector,
+  DuckDbConnector,
+} from '@sqlrooms/duckdb-core';
+import {LoadFileOptions, StandardLoadOptions} from '@sqlrooms/room-config';
 import * as arrow from 'apache-arrow';
 
 /**
@@ -23,73 +29,13 @@ export interface NodeDuckDbConnectorOptions {
 }
 
 /**
- * Interface representing query options.
+ * Extended DuckDB connector for Node.js environments.
+ * Includes access to the underlying DuckDB instance and connection.
  */
-export interface QueryOptions {
-  signal?: AbortSignal;
-}
-
-/**
- * Handle for managing query execution and cancellation.
- */
-export type QueryHandle<T = any> = PromiseLike<T> & {
-  result: Promise<T>;
-  cancel: () => Promise<void>;
-  signal: AbortSignal;
-  catch: Promise<T>['catch'];
-  finally: Promise<T>['finally'];
-};
-
-/**
- * Options for loading files into DuckDB.
- */
-export interface LoadFileOptions {
-  method?: string;
-  schema?: string;
-  [key: string]: unknown;
-}
-
-/**
- * Options for loading objects into DuckDB.
- */
-export interface LoadObjectsOptions {
-  schema?: string;
-  replace?: boolean;
-  [key: string]: unknown;
-}
-
-/**
- * DuckDB connector interface for Node.js environments.
- */
-export interface NodeDuckDbConnector {
-  readonly type: 'node';
-  initialize(): Promise<void>;
-  destroy(): Promise<void>;
-  execute(sql: string, options?: QueryOptions): QueryHandle;
-  query<T extends arrow.TypeMap = any>(
-    query: string,
-    options?: QueryOptions,
-  ): QueryHandle<arrow.Table<T>>;
-  queryJson<T = Record<string, any>>(
-    query: string,
-    options?: QueryOptions,
-  ): QueryHandle<Iterable<T>>;
-  loadFile(
-    fileName: string,
-    tableName: string,
-    opts?: LoadFileOptions,
-  ): Promise<void>;
-  loadArrow(
-    table: arrow.Table | Uint8Array,
-    tableName: string,
-    opts?: {schema?: string},
-  ): Promise<void>;
-  loadObjects(
-    data: Record<string, unknown>[],
-    tableName: string,
-    opts?: LoadObjectsOptions,
-  ): Promise<void>;
+export interface NodeDuckDbConnector extends DuckDbConnector {
+  /** Get the underlying DuckDB instance */
   getInstance(): DuckDBInstance;
+  /** Get the underlying DuckDB connection */
   getConnection(): DuckDBConnection;
 }
 
@@ -118,17 +64,12 @@ export function createNodeDuckDbConnector(
 
   let instance: DuckDBInstance | null = null;
   let connection: DuckDBConnection | null = null;
-  let initialized = false;
-  let initializing: Promise<void> | null = null;
-  const activeQueries = new Map<string, AbortController>();
-
-  const generateQueryId = () =>
-    `q_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   /**
    * Converts DuckDB result to an Apache Arrow table.
    *
-   * TODO: remove this once duckdb-node-neo supports arrow tables directly https://github.com/duckdb/duckdb-node-neo/issues/45
+   * TODO: remove this once duckdb-node-neo supports arrow tables directly
+   * https://github.com/duckdb/duckdb-node-neo/issues/45
    */
   async function resultToArrowTable<T extends arrow.TypeMap = any>(
     conn: DuckDBConnection,
@@ -163,162 +104,34 @@ export function createNodeDuckDbConnector(
     return arrow.tableFromArrays(columnsObject) as unknown as arrow.Table<T>;
   }
 
-  /**
-   * Creates a QueryHandle that wraps a promise with cancellation support.
-   */
-  function createQueryHandle<T>(
-    queryPromiseFactory: (signal: AbortSignal, queryId: string) => Promise<T>,
-    options?: QueryOptions,
-  ): QueryHandle<T> {
-    const abortController = new AbortController();
-    const queryId = generateQueryId();
-
-    if (options?.signal) {
-      const userSignal = options.signal;
-      if (userSignal.aborted) {
-        abortController.abort();
-      } else {
-        userSignal.addEventListener('abort', () => abortController.abort());
-      }
-    }
-
-    activeQueries.set(queryId, abortController);
-
-    const resultPromise = queryPromiseFactory(
-      abortController.signal,
-      queryId,
-    ).finally(() => {
-      activeQueries.delete(queryId);
-    });
-
-    const handle: QueryHandle<T> = {
-      result: resultPromise,
-      signal: abortController.signal,
-      cancel: async () => {
-        abortController.abort();
-        activeQueries.delete(queryId);
-        // DuckDB node-api doesn't have explicit cancel, but aborting prevents result processing
-      },
-      then: resultPromise.then.bind(resultPromise),
-      catch: resultPromise.catch.bind(resultPromise),
-      finally: resultPromise.finally?.bind(resultPromise),
-    } as unknown as QueryHandle<T>;
-
-    return handle;
-  }
-
-  const connector: NodeDuckDbConnector = {
-    get type() {
-      return 'node' as const;
+  const impl: BaseDuckDbConnectorImpl = {
+    async initializeInternal() {
+      instance = await DuckDBInstance.create(dbPath, config);
+      connection = await instance.connect();
     },
 
-    async initialize() {
-      if (initialized) {
-        return;
-      }
-      if (initializing) {
-        return initializing;
-      }
-
-      initializing = (async () => {
-        try {
-          instance = await DuckDBInstance.create(dbPath, config);
-          connection = await instance.connect();
-
-          if (initializationQuery) {
-            await connection.run(initializationQuery);
-          }
-
-          initialized = true;
-          initializing = null;
-        } catch (err) {
-          initialized = false;
-          initializing = null;
-          instance = null;
-          connection = null;
-          throw err;
-        }
-      })();
-
-      return initializing;
-    },
-
-    async destroy() {
+    async destroyInternal() {
       if (connection) {
         connection.closeSync();
         connection = null;
       }
       instance = null;
-      initialized = false;
-      initializing = null;
     },
 
-    execute(sql: string, options?: QueryOptions): QueryHandle {
-      return createQueryHandle(async (signal) => {
-        if (!connection) {
-          throw new Error('DuckDB not initialized');
-        }
-        if (signal.aborted) {
-          throw new DOMException('Query was cancelled', 'AbortError');
-        }
-        await connection.run(sql);
-      }, options);
-    },
-
-    query<T extends arrow.TypeMap = any>(
+    async executeQueryInternal<T extends arrow.TypeMap = any>(
       sql: string,
-      options?: QueryOptions,
-    ): QueryHandle<arrow.Table<T>> {
-      return createQueryHandle(async (signal) => {
-        if (!connection) {
-          throw new Error('DuckDB not initialized');
-        }
-        if (signal.aborted) {
-          throw new DOMException('Query was cancelled', 'AbortError');
-        }
-        return resultToArrowTable<T>(connection, sql);
-      }, options);
-    },
-
-    queryJson<T = Record<string, any>>(
-      sql: string,
-      options?: QueryOptions,
-    ): QueryHandle<Iterable<T>> {
-      return createQueryHandle(async (signal) => {
-        if (!connection) {
-          throw new Error('DuckDB not initialized');
-        }
-        if (signal.aborted) {
-          throw new DOMException('Query was cancelled', 'AbortError');
-        }
-        const reader = await connection.runAndReadAll(sql);
-        const rowObjects = reader.getRowObjectsJson() as T[];
-        return rowObjects;
-      }, options);
-    },
-
-    async loadFile(
-      fileName: string,
-      tableName: string,
-      opts?: LoadFileOptions,
-    ): Promise<void> {
+      signal: AbortSignal,
+    ): Promise<arrow.Table<T>> {
       if (!connection) {
         throw new Error('DuckDB not initialized');
       }
-      const method = opts?.method ?? 'auto';
-      const schema = opts?.schema;
-      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
-
-      let sql: string;
-      if (method === 'auto') {
-        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`;
-      } else {
-        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
+      if (signal.aborted) {
+        throw new DOMException('Query was cancelled', 'AbortError');
       }
-      await connection.run(sql);
+      return resultToArrowTable<T>(connection, sql);
     },
 
-    async loadArrow(
+    async loadArrowInternal(
       table: arrow.Table | Uint8Array,
       tableName: string,
       opts?: {schema?: string},
@@ -327,7 +140,6 @@ export function createNodeDuckDbConnector(
         throw new Error('DuckDB not initialized');
       }
       const schema = opts?.schema;
-      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
 
       // Convert Arrow table to JSON and insert
       if (table instanceof arrow.Table) {
@@ -340,7 +152,10 @@ export function createNodeDuckDbConnector(
           }
           rows.push(row);
         }
-        await this.loadObjects(rows, tableName, {schema, replace: true});
+        await impl.loadObjectsInternal!(rows, tableName, {
+          schema,
+          replace: true,
+        });
       } else {
         // Uint8Array - Arrow IPC format
         throw new Error(
@@ -349,10 +164,10 @@ export function createNodeDuckDbConnector(
       }
     },
 
-    async loadObjects(
+    async loadObjectsInternal(
       data: Record<string, unknown>[],
       tableName: string,
-      opts?: LoadObjectsOptions,
+      opts?: StandardLoadOptions,
     ): Promise<void> {
       if (!connection) {
         throw new Error('DuckDB not initialized');
@@ -386,13 +201,45 @@ export function createNodeDuckDbConnector(
       await connection.run(sql);
     },
 
+    async loadFileInternal(
+      fileName: string | File,
+      tableName: string,
+      opts?: LoadFileOptions,
+    ): Promise<void> {
+      if (!connection) {
+        throw new Error('DuckDB not initialized');
+      }
+      if (fileName instanceof File) {
+        throw new Error('File objects are not supported in Node connector');
+      }
+
+      const method = opts?.method ?? 'auto';
+      const schema = opts?.schema;
+      const qualifiedName = schema ? `${schema}.${tableName}` : tableName;
+
+      let sql: string;
+      if (method === 'auto') {
+        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM '${fileName}'`;
+      } else {
+        sql = `CREATE OR REPLACE TABLE ${qualifiedName} AS SELECT * FROM ${method}('${fileName}')`;
+      }
+      await connection.run(sql);
+    },
+  };
+
+  const baseConnector = createBaseDuckDbConnector(
+    {dbPath, initializationQuery},
+    impl,
+  );
+
+  return {
+    ...baseConnector,
     getInstance() {
       if (!instance) {
         throw new Error('DuckDB not initialized');
       }
       return instance;
     },
-
     getConnection() {
       if (!connection) {
         throw new Error('DuckDB not initialized');
@@ -400,6 +247,4 @@ export function createNodeDuckDbConnector(
       return connection;
     },
   };
-
-  return connector;
 }

@@ -27,6 +27,7 @@
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
+    "@sqlrooms/room-config": "workspace:*",
     "apache-arrow": "17.0.0"
   },
   "scripts": {
@@ -35,7 +36,7 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch"
   }
 }

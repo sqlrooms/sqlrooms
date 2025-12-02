@@ -11,8 +11,11 @@ export {
   createNodeDuckDbConnector,
   type NodeDuckDbConnector,
   type NodeDuckDbConnectorOptions,
-  type QueryHandle,
-  type QueryOptions,
-  type LoadFileOptions,
-  type LoadObjectsOptions,
 } from './NodeDuckDbConnector';
+
+// Re-export common types from duckdb-core for convenience
+export type {
+  DuckDbConnector,
+  QueryHandle,
+  QueryOptions,
+} from '@sqlrooms/duckdb-core';
