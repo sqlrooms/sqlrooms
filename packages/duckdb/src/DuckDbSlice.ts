@@ -322,9 +322,18 @@ export function createDuckDbSlice({
               allowMultipleStatements = false,
             } = options || {};
 
-            const qualifiedName = isQualifiedTableName(tableName)
+            // For temp tables/views, DuckDB requires the "temp" database
+            const baseQualifiedName = isQualifiedTableName(tableName)
               ? tableName
               : makeQualifiedTableName({table: tableName});
+
+            const qualifiedName = temp
+              ? makeQualifiedTableName({
+                  table: baseQualifiedName.table,
+                  schema: baseQualifiedName.schema,
+                  database: 'temp',
+                })
+              : baseQualifiedName;
 
             const connector = await get().db.getConnector();
 

@@ -31,11 +31,13 @@ export type QueryResult =
       status: 'success';
       type: 'pragma' | 'explain' | 'select';
       result: arrow.Table | undefined;
+      query: string;
       lastQueryStatement: string;
     }
   | {
       status: 'success';
       type: 'exec';
+      query: string;
       lastQueryStatement: string;
     };
 
@@ -428,6 +430,7 @@ export function createSqlEditorSlice({
               queryResult = {
                 status: 'success',
                 type: 'select',
+                query,
                 lastQueryStatement,
                 result,
               };
@@ -451,6 +454,7 @@ export function createSqlEditorSlice({
                 queryResult = {
                   status: 'success',
                   type: 'explain',
+                  query,
                   lastQueryStatement,
                   result,
                 };
@@ -458,6 +462,7 @@ export function createSqlEditorSlice({
                 queryResult = {
                   status: 'success',
                   type: 'pragma',
+                  query,
                   lastQueryStatement,
                   result,
                 };
@@ -465,6 +470,7 @@ export function createSqlEditorSlice({
                 queryResult = {
                   status: 'success',
                   type: 'exec',
+                  query,
                   lastQueryStatement,
                 };
               }
