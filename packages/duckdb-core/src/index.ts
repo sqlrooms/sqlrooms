@@ -6,3 +6,7 @@ export * from './load/load';
 export * from './DuckDbConnector';
 export * from './arrow-utils';
 export * from './duckdb-utils';
+export * from './schema-tree/typeCategories';
+export * from './schema-tree/schemaTree';
+export * from './schema-tree/types';
+export * from './types';

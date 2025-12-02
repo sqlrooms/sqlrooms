@@ -1,5 +1,14 @@
-import {ColumnTypeCategory} from './types';
 import {DataType} from 'apache-arrow';
+
+export type ColumnTypeCategory =
+  | 'number'
+  | 'string'
+  | 'datetime'
+  | 'boolean'
+  | 'binary'
+  | 'json'
+  | 'struct'
+  | 'geometry';
 
 const DUCKDB_TYPE_CATEGORIES = {
   string: [/^varchar/, /^char/, /^text/, /^string/, /^uuid/, /^bit/],

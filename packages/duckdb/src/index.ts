@@ -29,10 +29,5 @@ export {
   type SchemaAndDatabase,
 } from './DuckDbSlice';
 export * from './exportToCsv';
-export {
-  getArrowColumnTypeCategory,
-  getDuckDbTypeCategory,
-} from './typeCategories';
-export * from './types';
 export * from './useDuckDb';
 export * from './useSql';

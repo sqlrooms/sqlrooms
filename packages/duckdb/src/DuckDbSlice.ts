@@ -1,4 +1,11 @@
-import {DuckDbConnector, QueryHandle} from '@sqlrooms/duckdb-core';
+import {
+  createDbSchemaTrees,
+  DataTable,
+  DbSchemaNode,
+  DuckDbConnector,
+  QueryHandle,
+  TableColumn,
+} from '@sqlrooms/duckdb-core';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -19,8 +26,6 @@ import {
   QualifiedTableName,
   separateLastStatement,
 } from '@sqlrooms/duckdb-core';
-import {createDbSchemaTrees} from './schemaTree';
-import {DataTable, DbSchemaNode, TableColumn} from './types';
 
 export type SchemaAndDatabase = {
   schema?: string;
