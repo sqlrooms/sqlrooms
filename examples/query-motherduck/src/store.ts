@@ -3,7 +3,6 @@ import {
   createRoomShellSlice,
   LayoutTypes,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
   BaseRoomConfig,
