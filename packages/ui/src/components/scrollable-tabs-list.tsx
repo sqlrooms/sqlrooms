@@ -252,8 +252,8 @@ export interface ScrollableTabsListProps<
   TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
 > {
   className?: string;
-  openedTabs: TTab[];
-  closedTabs?: TTab[];
+  tabs: TTab[];
+  closedTabIds: string[];
   selectedTabId?: string | null;
   onCloseTab?: (tab: TTab) => void;
   onOpenTab?: (tab: TTab) => void;
@@ -267,8 +267,8 @@ export const ScrollableTabsList = <
   TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
 >({
   className,
-  openedTabs,
-  closedTabs = [],
+  tabs,
+  closedTabIds = [],
   selectedTabId,
   onCloseTab,
   onOpenTab,
@@ -283,6 +283,9 @@ export const ScrollableTabsList = <
   const prevSelectedIdRef = useRef<string | null>(null);
 
   const trimmedSearch = search.trim().toLowerCase();
+
+  const openedTabs = tabs.filter((tab) => !closedTabIds.includes(tab.id));
+  const closedTabs = tabs.filter((tab) => closedTabIds.includes(tab.id));
 
   const filteredOpenedTabs = useMemo(
     () =>

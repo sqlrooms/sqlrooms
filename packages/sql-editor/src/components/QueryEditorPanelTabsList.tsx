@@ -15,8 +15,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const selectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const openedTabs = queries.filter((q) => !closedTabIds.includes(q.id));
-  const closedTabs = queries.filter((q) => closedTabIds.includes(q.id));
 
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
@@ -98,17 +96,15 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     <>
       <ScrollableTabsList
         className={className}
-        openedTabs={openedTabs}
-        closedTabs={closedTabs}
+        tabs={queries}
+        closedTabIds={closedTabIds}
         selectedTabId={selectedQueryId}
-        onCloseTab={(tab: QueryTab) => closeQueryTab(tab.id)}
-        onOpenTab={(tab: QueryTab) => openQueryTab(tab.id)}
+        onCloseTab={(tab) => closeQueryTab(tab.id)}
+        onOpenTab={(tab) => openQueryTab(tab.id)}
         onCreateTab={handleNewQuery}
-        onRenameTab={(tab: QueryTab, newName: string) =>
-          handleRename(tab.id, newName)
-        }
-        onRequestRename={(tab: QueryTab) => handleStartRename(tab.id, tab.name)}
-        onDeleteTab={(tab: QueryTab) => handleDeleteQuery(tab.id)}
+        onRenameTab={(tab, newName) => handleRename(tab.id, newName)}
+        onRequestRename={(tab) => handleStartRename(tab.id, tab.name)}
+        onDeleteTab={(tab) => handleDeleteQuery(tab.id)}
       />
 
       <DeleteSqlQueryModal
