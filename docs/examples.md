@@ -34,6 +34,8 @@ npx degit sqlrooms/examples/get-started my-new-app/
 
 <!--@include: ../examples/ai/README.md-->
 
+<!--@include: ../examples/app-builder/README.md-->
+
 ## Geospatial
 
 <!--@include: ../examples/deckgl/README.md-->
