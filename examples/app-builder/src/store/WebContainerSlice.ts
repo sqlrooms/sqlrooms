@@ -3,8 +3,12 @@ import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
 import z from 'zod';
 import {setFileContentInTree} from './utils/setFileContentInTree';
-
-// helper moved to ./utils/setFileContentInTree
+import {
+  getCachedServerUrl,
+  getCachedWebContainer,
+  setCachedServerUrl,
+  setCachedWebContainer,
+} from './webContainerCache';
 
 export const WebContainerSliceConfig = z.object({
   filesTree: z.custom<FileSystemTree>(),
@@ -74,12 +78,31 @@ export function createWebContainerSlice(props?: {
           if (get().webContainer.serverStatus.type !== 'not-initialized') {
             return;
           }
+
+          // Reuse cached instance if available (survives HMR)
+          const cachedInstance = getCachedWebContainer();
+          const cachedUrl = getCachedServerUrl();
+          if (cachedInstance && cachedUrl) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webContainer.instance = cachedInstance;
+                draft.webContainer.serverStatus = {
+                  type: 'ready',
+                  url: cachedUrl,
+                };
+              }),
+            );
+            await get().webContainer.openFile('/src/App.jsx');
+            return;
+          }
+
           set((state) =>
             produce(state, (draft) => {
               draft.webContainer.serverStatus = {type: 'initializing'};
             }),
           );
           const instance = await WebContainer.boot();
+          setCachedWebContainer(instance);
           await instance.mount(get().webContainer.config.filesTree);
           set((state) =>
             produce(state, (draft) => {
@@ -154,6 +177,7 @@ export function createWebContainerSlice(props?: {
           // Wait for `server-ready` event
           instance.on('server-ready', (port, url) => {
             console.log(`Server ready on port ${port} at ${url}`);
+            setCachedServerUrl(url);
             set((state) =>
               produce(state, (draft) => {
                 draft.webContainer.serverStatus = {type: 'ready', url: url};

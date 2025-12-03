@@ -5,7 +5,7 @@ export const BrowserView = () => {
   const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
   return (
     <div className="bg-background h-full w-full">
-      {serverStatus.type === 'ready' ? (
+      {serverStatus.type === 'ready' && serverStatus.url ? (
         <iframe
           className="h-full w-full overflow-auto bg-white"
           src={serverStatus.url}
