@@ -8,6 +8,7 @@ declare global {
   interface Window {
     __webContainerInstance?: WebContainer;
     __webContainerServerUrl?: string;
+    __webContainerBootPromise?: Promise<WebContainer>;
   }
 }
 
@@ -33,4 +34,32 @@ export function setCachedServerUrl(url: string): void {
   if (typeof window !== 'undefined') {
     window.__webContainerServerUrl = url;
   }
+}
+
+/**
+ * Boot WebContainer or return existing/in-progress boot.
+ * Prevents multiple concurrent boot attempts.
+ */
+export async function bootWebContainer(): Promise<WebContainer> {
+  if (typeof window === 'undefined') {
+    throw new Error('WebContainer can only be booted in browser');
+  }
+
+  // Return existing instance
+  if (window.__webContainerInstance) {
+    return window.__webContainerInstance;
+  }
+
+  // Wait for in-progress boot
+  if (window.__webContainerBootPromise) {
+    return window.__webContainerBootPromise;
+  }
+
+  // Start new boot and cache the promise
+  window.__webContainerBootPromise = WebContainer.boot().then((instance) => {
+    window.__webContainerInstance = instance;
+    return instance;
+  });
+
+  return window.__webContainerBootPromise;
 }

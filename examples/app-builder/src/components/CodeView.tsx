@@ -4,8 +4,10 @@ import {useMemo} from 'react';
 import {useRoomStore} from '../store/store';
 
 export const CodeView = () => {
-  const openedFiles = useRoomStore((s) => s.webContainer.openedFiles);
-  const activeFilePath = useRoomStore((s) => s.webContainer.activeFilePath);
+  const openedFiles = useRoomStore((s) => s.webContainer.config.openedFiles);
+  const activeFilePath = useRoomStore(
+    (s) => s.webContainer.config.activeFilePath,
+  );
   const setActiveFile = useRoomStore((s) => s.webContainer.setActiveFile);
   const updateFileContent = useRoomStore(
     (s) => s.webContainer.updateFileContent,
