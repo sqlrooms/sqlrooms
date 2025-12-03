@@ -252,7 +252,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     }),
     [options, fontFamily, readOnly],
   );
-  console.log(combinedOptions);
 
   return (
     <div className={cn('h-[300px] w-full', className)}>

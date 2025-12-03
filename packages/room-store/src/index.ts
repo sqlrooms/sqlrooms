@@ -24,7 +24,10 @@ export {
   type BaseRoomStore,
 } from './BaseRoomStore';
 
-export {createPersistHelpers} from './createPersistHelpers';
+export {
+  createPersistHelpers,
+  persistSliceConfigs,
+} from './createPersistHelpers';
 export type {StateCreator, StoreApi} from 'zustand';
 
 export * from '@sqlrooms/room-config';

@@ -315,3 +315,48 @@ export function makeLimitQuery(
     ${sanitize ? sanitizeQuery(query) : query}
   ) LIMIT ${limit} OFFSET ${offset}`;
 }
+
+/**
+ * Result of separating the last SQL statement from preceding ones.
+ */
+export type SeparatedStatements = {
+  /** All statements except the last one */
+  precedingStatements: string[];
+  /** The last statement */
+  lastStatement: string;
+};
+
+/**
+ * Separates a SQL query into preceding statements and the last statement.
+ * Useful when you need to execute multiple statements but handle the last one differently
+ * (e.g., wrap it in CREATE TABLE, add LIMIT, etc.).
+ *
+ * @param query - The SQL query string containing one or more statements
+ * @returns Object containing preceding statements and the last statement
+ * @throws Error if the query contains no statements
+ */
+export function separateLastStatement(query: string): SeparatedStatements {
+  const statements = splitSqlStatements(query);
+  if (statements.length === 0) {
+    throw new Error('Query must contain at least one statement');
+  }
+  return {
+    precedingStatements: statements.slice(0, -1),
+    lastStatement: statements[statements.length - 1] as string,
+  };
+}
+
+/**
+ * Joins preceding statements with a (potentially modified) last statement into a single query.
+ * @param precedingStatements - Statements to execute before the last one
+ * @param lastStatement - The final statement (can be modified, e.g., wrapped in CREATE TABLE)
+ * @returns A single query string with all statements joined by semicolons
+ */
+export function joinStatements(
+  precedingStatements: string[],
+  lastStatement: string,
+): string {
+  return precedingStatements.length > 0
+    ? [...precedingStatements, lastStatement].join(';\n')
+    : lastStatement;
+}

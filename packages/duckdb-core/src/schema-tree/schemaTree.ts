@@ -1,5 +1,6 @@
+import type {DataTable} from '../types';
 import {getDuckDbTypeCategory} from './typeCategories';
-import {DbSchemaNode, DataTable} from './types';
+import type {DbSchemaNode} from './types';
 
 /**
  * Group tables by database, schema and create a tree of databases, schemas, tables, and columns.

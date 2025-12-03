@@ -5,14 +5,14 @@
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/ai?embed=1&file=components/app-shell.tsx)
 
 <a href="https://sqlrooms-ai.netlify.app/" target="_blank">
-  <video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" autoplay loop muted></video>
+  <video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" controls loop muted></video>
 </a>
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms. Features include:
 
 - Natural language data exploration
 - AI-driven data analysis
-- Integration with [Vercel AI SDK](https://sdk.vercel.ai/docs/introduction)
+- Integration with [SQLRooms AI assistant](/api/ai/)
 - Custom visualization components
 - Room state persistence
 
@@ -26,5 +26,5 @@ npx degit sqlrooms/examples/ai my-new-app/
 
 ```sh
 npm install
-npm dev
+npm run dev
 ```

@@ -38,16 +38,14 @@ console.log(roomConfig.name); // 'My SQL Room'
 
 ### Persisting Room Configuration
 
-Room configuration is designed to be saved and restored between sessions. Here's how to use it with Zustand's persist middleware:
+Room configuration is designed to be saved and restored between sessions. Here's how to use the `persistSliceConfigs` helper:
 
 ```tsx
-import {persist} from 'zustand/middleware';
 import {
   createRoomStore,
   createRoomShellSlice,
   RoomShellSliceState,
-  StateCreator,
-  createPersistHelpers,
+  persistSliceConfigs,
   LayoutConfig,
 } from '@sqlrooms/room-shell';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
@@ -56,7 +54,14 @@ type MyRoomState = RoomShellSliceState;
 
 // Create a store with persistence for configuration
 const {useRoomStore} = createRoomStore<MyRoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'room-config-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
+    },
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
@@ -73,15 +78,7 @@ const {useRoomStore} = createRoomStore<MyRoomState>(
         },
       })(set, get, store),
     }),
-    {
-      name: 'room-config-storage',
-      // Use helper to persist configuration
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-      }),
-    },
-  ) as StateCreator<MyRoomState>,
+  ),
 );
 
 // Access the config in components

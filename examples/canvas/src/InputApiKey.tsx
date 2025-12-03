@@ -4,8 +4,8 @@ import {useRoomStore} from './store';
 import {FC} from 'react';
 
 export const InputApiKey: FC<{className?: string}> = ({className}) => {
-  const apiKey = useRoomStore((s) => s.apiKey);
-  const setApiKey = useRoomStore((s) => s.setApiKey);
+  const apiKey = useRoomStore((s) => s.app.config.apiKey);
+  const setApiKey = useRoomStore((s) => s.app.setApiKey);
   return (
     <div
       className={cn(

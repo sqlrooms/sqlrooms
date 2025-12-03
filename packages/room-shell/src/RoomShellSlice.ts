@@ -329,7 +329,9 @@ export function createRoomShellSlice(
                 )
               : tableName;
           const {rowCount} = await db.createTableFromQuery(newTableName, query);
-          get().db.setTableRowCount(newTableName, rowCount);
+          if (rowCount !== undefined) {
+            get().db.setTableRowCount(newTableName, rowCount);
+          }
           set((state) =>
             produce(state, (draft) => {
               const newDataSource = {
@@ -657,7 +659,9 @@ export function createRoomShellSlice(
             tableName,
             sqlQuery,
           );
-          get().db.setTableRowCount(tableName, rowCount);
+          if (rowCount !== undefined) {
+            get().db.setTableRowCount(tableName, rowCount);
+          }
           set((state) =>
             produce(state, (draft) => {
               draft.room.dataSourceStates[tableName] = {

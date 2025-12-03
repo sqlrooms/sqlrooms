@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {VegaChartToolResult} from './VegaChartToolResult';
-import {OpenAssistantTool} from '@openassistant/utils';
+import type {OpenAssistantTool} from '@openassistant/utils';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
 

@@ -1,4 +1,12 @@
 import {
+  createDbSchemaTrees,
+  DataTable,
+  DbSchemaNode,
+  DuckDbConnector,
+  QueryHandle,
+  TableColumn,
+} from '@sqlrooms/duckdb-core';
+import {
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
@@ -7,19 +15,17 @@ import * as arrow from 'apache-arrow';
 import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {StateCreator} from 'zustand';
-import {DuckDbConnector, QueryHandle} from './connectors/DuckDbConnector';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
   escapeId,
   escapeVal,
   getColValAsNumber,
   isQualifiedTableName,
+  joinStatements,
   makeQualifiedTableName,
   QualifiedTableName,
-  splitSqlStatements,
-} from './duckdb-utils';
-import {createDbSchemaTrees} from './schemaTree';
-import {DataTable, DbSchemaNode, TableColumn} from './types';
+  separateLastStatement,
+} from '@sqlrooms/duckdb-core';
 
 export type SchemaAndDatabase = {
   schema?: string;
@@ -184,15 +190,25 @@ export type DuckDbSliceState = {
     dropTable: (tableName: string | QualifiedTableName) => Promise<void>;
 
     /**
-     * Create a table from a query.
-     * @param tableName - The name of the table to create.
-     * @param query - The query to create the table from.
-     * @returns The table that was created.
+     * Create a table or view from a query.
+     * @param tableName - The name of the table/view to create.
+     * @param query - The query to create the table/view from.
+     * @param options - Creation options.
+     * @returns The table/view name and rowCount (undefined for views).
      */
     createTableFromQuery: (
       tableName: string | QualifiedTableName,
       query: string,
-    ) => Promise<{tableName: string | QualifiedTableName; rowCount: number}>;
+      options?: {
+        replace?: boolean;
+        temp?: boolean;
+        view?: boolean;
+        allowMultipleStatements?: boolean;
+      },
+    ) => Promise<{
+      tableName: string | QualifiedTableName;
+      rowCount: number | undefined;
+    }>;
 
     /**
      * Parse a SQL SELECT statement to JSON
@@ -278,33 +294,87 @@ export function createDuckDbSlice({
             }
           },
 
+          /**
+           * Creates a table or view from a SQL query.
+           * @param tableName - Name of the table/view to create
+           * @param query - SQL query (must be a SELECT statement, or multiple statements ending with a SELECT when allowMultipleStatements is true)
+           * @param options - Creation options
+           * @param options.replace - If true, uses CREATE OR REPLACE (default: true)
+           * @param options.temp - If true, creates a temporary table/view (default: false)
+           * @param options.view - If true, creates a view instead of a table (default: false)
+           * @param options.allowMultipleStatements - If true, allows multiple statements where preceding statements are executed first and the final SELECT is wrapped in CREATE TABLE/VIEW (default: false)
+           * @returns Object with tableName and rowCount (rowCount is undefined for views)
+           */
           async createTableFromQuery(
             tableName: string | QualifiedTableName,
             query: string,
+            options?: {
+              replace?: boolean;
+              temp?: boolean;
+              view?: boolean;
+              allowMultipleStatements?: boolean;
+            },
           ) {
-            const qualifiedName = isQualifiedTableName(tableName)
+            const {
+              replace = true,
+              temp = false,
+              view = false,
+              allowMultipleStatements = false,
+            } = options || {};
+
+            // For temp tables/views, DuckDB requires the "temp" database
+            const baseQualifiedName = isQualifiedTableName(tableName)
               ? tableName
               : makeQualifiedTableName({table: tableName});
 
+            const qualifiedName = temp
+              ? makeQualifiedTableName({
+                  table: baseQualifiedName.table,
+                  schema: baseQualifiedName.schema,
+                  database: 'temp',
+                })
+              : baseQualifiedName;
+
             const connector = await get().db.getConnector();
 
-            const statements = splitSqlStatements(query);
-            if (statements.length !== 1) {
-              throw new Error('Query must contain exactly one statement');
-            }
-            const statement = statements[0] as string;
-            const parsedQuery = await get().db.sqlSelectToJson(statement);
-            if (parsedQuery.error) {
-              throw new Error('Query is not a valid SELECT statement');
+            const {precedingStatements, lastStatement} =
+              separateLastStatement(query);
+
+            if (!allowMultipleStatements && precedingStatements.length > 0) {
+              throw new Error(
+                'Query must contain exactly one statement (set allowMultipleStatements: true to execute multiple statements)',
+              );
             }
 
-            const rowCount = getColValAsNumber(
-              await connector.query(
-                `CREATE OR REPLACE TABLE ${qualifiedName} AS (
-              ${statements[0]}
-            )`,
-              ),
+            // The last statement must be a SELECT
+            const parsedQuery = await get().db.sqlSelectToJson(lastStatement);
+            if (parsedQuery.error) {
+              throw new Error(
+                'Final statement must be a valid SELECT statement',
+              );
+            }
+
+            // Build CREATE statement with options
+            const createKeyword = [
+              'CREATE',
+              replace ? 'OR REPLACE' : '',
+              temp ? 'TEMP' : '',
+              view ? 'VIEW' : 'TABLE',
+            ]
+              .filter(Boolean)
+              .join(' ');
+
+            const createStatement = `${createKeyword} ${qualifiedName} AS (
+              ${lastStatement}
+            )`;
+
+            const fullQuery = joinStatements(
+              precedingStatements,
+              createStatement,
             );
+            const result = await connector.query(fullQuery);
+            // Views don't have a row count, only tables do
+            const rowCount = view ? undefined : getColValAsNumber(result);
             return {tableName, rowCount};
           },
 

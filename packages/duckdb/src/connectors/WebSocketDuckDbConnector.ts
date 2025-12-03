@@ -1,16 +1,20 @@
-import * as arrow from 'apache-arrow';
 import {
   BaseDuckDbConnectorImpl,
+  DuckDbConnector,
   createBaseDuckDbConnector,
-} from './BaseDuckDbConnector';
-import {DuckDbConnector} from './DuckDbConnector';
+} from '@sqlrooms/duckdb-core';
+import {
+  load,
+  loadObjects,
+  loadSpatial,
+} from '@sqlrooms/duckdb-core/src/load/load';
 import {
   LoadFileOptions,
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {load, loadObjects, loadSpatial} from './load/load';
 import {splitFilePath} from '@sqlrooms/utils';
+import * as arrow from 'apache-arrow';
 
 /**
  * Options for the WebSocket DuckDB connector.
