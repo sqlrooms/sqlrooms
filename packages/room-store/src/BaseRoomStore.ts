@@ -29,16 +29,25 @@ export function createBaseRoomSlice(
       initialized: false,
       initialize: async () => {
         await Promise.all(
-          Object.values(store.getState())
-            .filter(isRoomSliceWithInitialize)
-            .map((slice) => slice.initialize),
+          Object.entries(store.getState())
+            .filter(
+              ([key, slice]) =>
+                key !== 'room' && isRoomSliceWithInitialize(slice),
+            )
+            .map(async ([_key, slice]) => {
+              await slice.initialize();
+            }),
         );
       },
       destroy: async () => {
         await Promise.all(
-          Object.values(store.getState())
-            .filter(isRoomSliceWithDestroy)
-            .map((slice) => slice.destroy),
+          Object.entries(store.getState())
+            .filter(
+              ([key, slice]) => key !== 'room' && isRoomSliceWithDestroy(slice),
+            )
+            .map(async ([_key, slice]) => {
+              await slice.destroy();
+            }),
         );
       },
       captureException:

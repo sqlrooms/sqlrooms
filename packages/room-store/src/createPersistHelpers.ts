@@ -34,7 +34,13 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
     partialize: (state: any) => {
       const result: Record<string, any> = {};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
-        result[key] = schema.parse(state[key].config);
+        try {
+          result[key] = schema.parse(state[key]?.config);
+        } catch (error) {
+          throw new Error(`Error parsing config key "${key}"`, {
+            cause: error,
+          });
+        }
       }
       return result;
     },
@@ -42,10 +48,16 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
     merge: (persistedState: any, currentState: any) => {
       const merged = {...currentState};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
-        merged[key] = {
-          ...currentState[key],
-          config: schema.parse(persistedState[key]),
-        };
+        try {
+          merged[key] = {
+            ...currentState[key],
+            config: schema.parse(persistedState[key]),
+          };
+        } catch (error) {
+          throw new Error(`Error parsing config key "${key}"`, {
+            cause: error,
+          });
+        }
       }
       return merged;
     },

@@ -1,0 +1,44 @@
+{
+  "names": [
+    "get-started"
+  ],
+  "scaffolds": {
+    "get-started": {
+      "index.html": {
+        "file": {
+          "contents": "<!doctype html>\n<html>\n  <head>\n    <meta charset=\"UTF-8\" />\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\" />\n    <title>Vite + React</title>\n  </head>\n  <body style=\"background-color: #111; color: #fff\">\n    <div id=\"root\"></div>\n    <script type=\"module\" src=\"/src/main.jsx\"></script>\n  </body>\n</html>\n"
+        }
+      },
+      "package.json": {
+        "file": {
+          "contents": "{\n  \"name\": \"vite-react-webcontainer\",\n  \"private\": true,\n  \"version\": \"0.0.0\",\n  \"type\": \"module\",\n  \"scripts\": {\n    \"dev\": \"vite\",\n    \"build\": \"vite build\",\n    \"preview\": \"vite preview --port 5173\"\n  },\n  \"dependencies\": {\n    \"react\": \"^18.3.1\",\n    \"react-dom\": \"^18.3.1\",\n    \"@sqlrooms/room-store\": \"v0.26.0-rc.0\",\n    \"@sqlrooms/duckdb\": \"v0.26.0-rc.0\"\n  },\n  \"devDependencies\": {\n    \"@vitejs/plugin-react\": \"^4.3.0\",\n    \"vite\": \"^5.4.0\"\n  }\n}\n"
+        }
+      },
+      "src": {
+        "directory": {
+          "App.jsx": {
+            "file": {
+              "contents": "import {createDuckDbSlice, useSql} from '@sqlrooms/duckdb';\nimport {\n  createRoomSlice,\n  createRoomStore,\n  RoomStateProvider,\n} from '@sqlrooms/room-store';\n\nconst {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({\n  ...createRoomSlice()(set, get, store),\n  ...createDuckDbSlice({})(set, get, store),\n}));\n\nfunction MyRoom() {\n  const queryResult = useSql({\n    query: `SELECT 'Hello, world!' as message`,\n  });\n  const row = queryResult.data?.toArray()[0];\n  return row ? `Message: ${row.message}` : 'Loading...';\n}\n\nexport default function App() {\n  return (\n    <div style={{fontFamily: 'system-ui', padding: 24}}>\n      <h1>SQLRooms in WebContainer</h1>\n      <RoomStateProvider roomStore={roomStore}>\n        <MyRoom />\n      </RoomStateProvider>\n    </div>\n  );\n}\n"
+            }
+          },
+          "main.jsx": {
+            "file": {
+              "contents": "import React from 'react';\nimport ReactDOM from 'react-dom/client';\nimport App from './App.jsx';\n\nReactDOM.createRoot(document.getElementById('root')).render(\n  <React.StrictMode>\n    <App />\n  </React.StrictMode>,\n);\n"
+            }
+          }
+        }
+      },
+      "vite.config.js": {
+        "file": {
+          "contents": "import {defineConfig} from 'vite';\nimport react from '@vitejs/plugin-react';\n\nexport default defineConfig({\n  plugins: [react()],\n  server: {host: true, port: 5173},\n});\n"
+        }
+      }
+    }
+  },
+  "defaults": {
+    "get-started": {
+      "editableFilePath": "/src/App.jsx",
+      "editableFileContents": "import {createDuckDbSlice, useSql} from '@sqlrooms/duckdb';\nimport {\n  createRoomSlice,\n  createRoomStore,\n  RoomStateProvider,\n} from '@sqlrooms/room-store';\n\nconst {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({\n  ...createRoomSlice()(set, get, store),\n  ...createDuckDbSlice({})(set, get, store),\n}));\n\nfunction MyRoom() {\n  const queryResult = useSql({\n    query: `SELECT 'Hello, world!' as message`,\n  });\n  const row = queryResult.data?.toArray()[0];\n  return row ? `Message: ${row.message}` : 'Loading...';\n}\n\nexport default function App() {\n  return (\n    <div style={{fontFamily: 'system-ui', padding: 24}}>\n      <h1>SQLRooms in WebContainer</h1>\n      <RoomStateProvider roomStore={roomStore}>\n        <MyRoom />\n      </RoomStateProvider>\n    </div>\n  );\n}\n"
+    }
+  }
+}
