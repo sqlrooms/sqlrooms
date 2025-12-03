@@ -1,4 +1,4 @@
-import {ScrollableTabsList} from '@sqlrooms/ui';
+import {TabStrip} from '@sqlrooms/ui';
 import React, {useCallback, useState} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
@@ -94,7 +94,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 
   return (
     <>
-      <ScrollableTabsList
+      <TabStrip
         className={className}
         tabs={queries}
         openTabIds={openTabIds}
