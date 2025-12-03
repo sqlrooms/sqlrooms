@@ -8,7 +8,7 @@ import {
   BaseRoomStoreState,
   createBaseRoomSlice,
   createPersistHelpers,
-  createRoomStoreCreator,
+  createRoomStore,
   StateCreator,
 } from '@sqlrooms/room-store';
 import {persist} from 'zustand/middleware';
@@ -33,51 +33,49 @@ type RoomState = BaseRoomStoreState &
 /**
  * Create a customized room store
  */
-export const {createRoomStore, useRoomStore} =
-  createRoomStoreCreator<RoomState>()(
-    () =>
-      persist(
-        (set, get, store) => ({
-          // Base room slice
-          ...createBaseRoomSlice()(set, get, store),
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persist(
+    (set, get, store) => ({
+      // Base room slice
+      ...createBaseRoomSlice()(set, get, store),
 
-          // Ai model config slice
-          ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
+      // Ai model config slice
+      ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
-          // WebContainer slice
-          ...createWebContainerSlice({
-            config: {filesTree: scaffolds['get-started']},
-          })(set, get, store),
+      // WebContainer slice
+      ...createWebContainerSlice({
+        config: {filesTree: scaffolds['get-started']},
+      })(set, get, store),
 
-          // Ai slice
-          ...createAiSlice({
-            getInstructions: () => {
-              const instructions = `${LLM_INSTRUCTIONS} 
+      // Ai slice
+      ...createAiSlice({
+        getInstructions: () => {
+          const instructions = `${LLM_INSTRUCTIONS} 
             <file_list>
             ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
-              return instructions;
-            },
-
-            // Add custom tools
-            tools: {
-              // Example of adding a simple echo tool
-              listFiles: createListFilesTool(store),
-              getFileContent: createGetFileContentTool(store),
-              updateFileContent: createUpdateFileContentTool(store),
-            },
-          })(set, get, store),
-        }),
-
-        // Persist settings
-        {
-          // Local storage key
-          name: 'sqlrooms-app-builder',
-          ...createPersistHelpers({
-            ai: AiSliceConfig,
-            aiSettings: AiSettingsSliceConfig,
-            webContainer: WebContainerSliceConfig,
-          }),
+          return instructions;
         },
-      ) as StateCreator<RoomState>,
-  );
+
+        // Add custom tools
+        tools: {
+          // Example of adding a simple echo tool
+          listFiles: createListFilesTool(store),
+          getFileContent: createGetFileContentTool(store),
+          updateFileContent: createUpdateFileContentTool(store),
+        },
+      })(set, get, store),
+    }),
+
+    // Persist settings
+    {
+      // Local storage key
+      name: 'sqlrooms-app-builder',
+      ...(createPersistHelpers({
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        webContainer: WebContainerSliceConfig,
+      }) as Partial<import('zustand/middleware').PersistOptions<RoomState>>),
+    },
+  ) as StateCreator<RoomState>,
+);

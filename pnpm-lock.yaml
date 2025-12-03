@@ -565,6 +565,9 @@ importers:
 
   examples/app-builder:
     dependencies:
+      '@openassistant/utils':
+        specifier: 1.0.0-alpha.0
+        version: 1.0.0-alpha.0
       '@sqlrooms/ai-core':
         specifier: workspace:*
         version: link:../../packages/ai-core

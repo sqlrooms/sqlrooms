@@ -3,8 +3,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from '@sqlrooms/ui';
-import {useRef} from 'react';
-import {createRoomStore} from '../store/store';
+import {roomStore} from '../store/store';
 import {AssistantView} from './AssistantView';
 import {BrowserView} from './BrowserView';
 import {CodeView} from './CodeView';
@@ -13,13 +12,8 @@ import {FileTreeView} from './filetree/FileTreeView';
 import {RoomStateProvider} from '@sqlrooms/room-store';
 
 export const Room = () => {
-  const storeRef = useRef<ReturnType<typeof createRoomStore>>(null);
-  if (!storeRef.current) {
-    storeRef.current = createRoomStore();
-    storeRef.current.getState().webContainer.initialize();
-  }
   return (
-    <RoomStateProvider roomStore={storeRef.current}>
+    <RoomStateProvider roomStore={roomStore}>
       <div className="flex h-full w-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={30}>

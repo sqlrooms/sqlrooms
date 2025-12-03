@@ -8,7 +8,7 @@ import {BaseTreeNode} from '@sqlrooms/schema-tree';
 /**
  * Default renderer for a file tree node.
  */
-export const renderFileTreeNode = (
+export const RenderFileTreeNode = (
   node: TreeNodeData<FileNodeObject>,
   _isOpen: boolean,
 ) => {
@@ -46,7 +46,7 @@ export const FileTreeView: FC<{
     node: TreeNodeData<FileNodeObject>,
     isOpen: boolean,
   ) => React.ReactNode;
-}> = ({className, renderNode = renderFileTreeNode}) => {
+}> = ({className, renderNode = RenderFileTreeNode}) => {
   const filesTree = useRoomStore((s) => s.webContainer.config.filesTree);
   const rootNode = useMemo(
     () => fileSystemTreeToNodes(filesTree, '/'),

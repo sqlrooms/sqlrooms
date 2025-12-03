@@ -23,7 +23,7 @@ export const CodeView = () => {
       <div className="flex items-center justify-between gap-2 p-1">
         <Tabs
           className="truncate"
-          value={activeFilePath ?? undefined}
+          value={activeFilePath ?? ''}
           onValueChange={setActiveFile}
         >
           <TabsList>

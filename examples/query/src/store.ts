@@ -35,7 +35,7 @@ export type RoomState = RoomShellSliceState &
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persist<RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
@@ -73,11 +73,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Local storage key
       name: 'sql-editor-example-app-state-storage',
       // Helper to extract and merge slice configs
-      ...createPersistHelpers({
+      ...(createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
         sqlEditor: SqlEditorSliceConfig,
-      }),
+      }) as Partial<import('zustand/middleware').PersistOptions<RoomState>>),
     },
   ) as StateCreator<RoomState>,
 );

@@ -86,7 +86,7 @@ export function createWebContainerSlice(props?: {
               draft.webContainer.instance = instance;
             }),
           );
-          get().webContainer.openFile('/src/App.jsx');
+          await get().webContainer.openFile('/src/App.jsx');
 
           const exitCode = await get().webContainer.installDependencies();
           if (exitCode !== 0) {
