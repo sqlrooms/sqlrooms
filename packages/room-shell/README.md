@@ -105,18 +105,16 @@ function MyComponent() {
 
 ### Persisting Room Configuration
 
-The room configuration is designed to be persisted between sessions. You can use Zustand's persist middleware to save the configuration to localStorage or any other storage:
+The room configuration is designed to be persisted between sessions. You can use the `persistSliceConfigs` helper to save the configuration to localStorage or any other storage:
 
 ```tsx
-import {persist} from 'zustand/middleware';
 import {
   createRoomShellSlice,
   createRoomStore,
   RoomShellSliceState,
   BaseRoomConfig,
   LayoutConfig,
-  createPersistHelpers,
-  StateCreator,
+  persistSliceConfigs,
 } from '@sqlrooms/room-shell';
 
 // Define your custom app state
@@ -127,7 +125,14 @@ type MyRoomState = RoomShellSliceState & {
 
 // Create a store with persistence
 export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'my-room-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
@@ -152,15 +157,7 @@ export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
           myFeatureData: [...state.myFeatureData, item],
         })),
     }),
-    {
-      name: 'my-room-storage',
-      // Use helper to persist configuration
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-      }),
-    },
-  ) as StateCreator<MyRoomState>,
+  ),
 );
 ```
 

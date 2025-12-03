@@ -256,19 +256,26 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 );
 ```
 
-3. Optionally add persistence using Zustand's persist middleware:
+3. Optionally add persistence using the `persistSliceConfigs` helper:
 
 ```typescript
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   LayoutConfig,
-  StateCreator,
+  persistSliceConfigs,
 } from '@sqlrooms/room-shell';
-import {persist} from 'zustand/middleware';
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        // Add other slice configs as needed
+        // sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Store configuration as shown above
       ...createRoomShellSlice({
@@ -289,18 +296,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
     }),
-    {
-      // Local storage key
-      name: 'app-state-storage',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        // Add other slice configs as needed
-        // sqlEditor: SqlEditorSliceConfig,
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );
 ```
 

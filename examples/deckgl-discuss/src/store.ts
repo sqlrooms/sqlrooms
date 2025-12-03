@@ -6,14 +6,13 @@ import {
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
@@ -23,7 +22,6 @@ import {
 } from '@sqlrooms/sql-editor';
 import {MessageCircleIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import DiscussionPanel from './components/DiscussionPanel';
 import {MainView} from './components/MainView';
 
@@ -39,7 +37,16 @@ export type RoomState = RoomShellSliceState &
   DiscussSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'discuss-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+        discuss: DiscussSliceConfig,
+      },
+    },
     (set, get, store) => ({
       ...createDiscussSlice({userId: 'user1'})(set, get, store),
 
@@ -92,18 +99,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'discuss-example-app-state-storage',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        sqlEditor: SqlEditorSliceConfig,
-        discuss: DiscussSliceConfig,
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );
