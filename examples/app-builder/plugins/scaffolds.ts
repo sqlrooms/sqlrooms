@@ -32,7 +32,9 @@ export default function scaffoldsPlugin(): Plugin {
       const watcher = server.watcher;
       watcher.add(scaffoldsRoot);
       const onFsEvent = async (changedPath: string) => {
+        // Ignore changes outside scaffolds root or to the generated output file
         if (!changedPath.startsWith(scaffoldsRoot)) return;
+        if (changedPath === outputFile) return;
         await runGenerate();
       };
       watcher.on('add', onFsEvent);

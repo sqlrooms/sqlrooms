@@ -28,7 +28,6 @@ export function createBaseRoomSlice(
     room: {
       initialized: false,
       initialize: async () => {
-        console.debug('Initializing base "room" slice...');
         await Promise.all(
           Object.entries(store.getState())
             .filter(
@@ -36,12 +35,9 @@ export function createBaseRoomSlice(
                 key !== 'room' && isRoomSliceWithInitialize(slice),
             )
             .map(async ([_key, slice]) => {
-              console.debug(`Initializing slice "${_key}"...`);
               await slice.initialize();
-              console.debug(`Done initializing slice "${_key}"`);
             }),
         );
-        console.debug('Done initializing base "room" slice');
       },
       destroy: async () => {
         await Promise.all(
