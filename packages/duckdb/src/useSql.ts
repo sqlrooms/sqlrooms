@@ -1,9 +1,8 @@
+import {createTypedRowAccessor, TypedRowAccessor} from '@sqlrooms/duckdb-core';
 import * as arrow from 'apache-arrow';
 import {useEffect, useState} from 'react';
 import {z} from 'zod';
 import {useStoreWithDuckDb} from './DuckDbSlice';
-import {createTypedRowAccessor, TypedRowAccessor} from './typedRowAccessor';
-import {QueryHandle} from './connectors/DuckDbConnector';
 
 /**
  * A wrapper interface that exposes the underlying Arrow table,
@@ -228,7 +227,9 @@ export function useSql<
         // Create a row accessor that optionally validates with the schema
         const rowAccessor = createTypedRowAccessor<Row>({
           arrowTable: result,
-          validate: schema ? (row: unknown) => schema.parse(row) : undefined,
+          validate: schema
+            ? (row: unknown) => schema.parse(row) as Row
+            : undefined,
         });
 
         setData({...rowAccessor, arrowTable: result});

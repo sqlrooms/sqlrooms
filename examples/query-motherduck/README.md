@@ -1,4 +1,4 @@
-## [MotherDuck Cloud Query Editor](https://motherduck.sqlrooms.org/)
+### [MotherDuck Cloud Query Editor](https://motherduck.sqlrooms.org/)
 
 [Try live](https://motherduck.sqlrooms.org/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/query-motherduck)

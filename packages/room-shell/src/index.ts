@@ -22,10 +22,9 @@ export {
 
 export {
   createRoomShellSlice,
-  createSlice,
   useBaseRoomShellStore,
   type RoomShellSliceState,
-} from './RoomShellStore';
+} from './RoomShellSlice';
 
 export type {StateCreator, StoreApi} from 'zustand';
 

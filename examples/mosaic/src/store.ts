@@ -1,15 +1,13 @@
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomShellSliceState,
-  BaseRoomConfig,
   LayoutTypes,
   MAIN_VIEW,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
-  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
@@ -29,34 +27,19 @@ export const RoomPanelTypes = z.enum([
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         title: 'Demo App Room',
-        layout: {
-          type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: RoomPanelTypes.enum['data-sources'],
-            second: MAIN_VIEW,
-            splitPercentage: 30,
-          },
-        },
         dataSources: [
           {
             type: 'url',
@@ -66,7 +49,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         ],
         ...createDefaultSqlEditorConfig(),
       },
-      room: {
+      layout: {
+        config: {
+          type: LayoutTypes.enum.mosaic,
+          nodes: {
+            direction: 'row',
+            first: RoomPanelTypes.enum['data-sources'],
+            second: MAIN_VIEW,
+            splitPercentage: 30,
+          },
+        },
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
             title: 'Room Details',

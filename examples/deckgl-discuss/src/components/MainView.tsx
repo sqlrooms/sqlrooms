@@ -1,12 +1,11 @@
 import {useSql} from '@sqlrooms/duckdb';
-import {SpinnerPane} from '@sqlrooms/ui';
 import {useMemo} from 'react';
 import {useRoomStore} from '../store';
 import {AirportFeature, MapView} from './MapView';
 
 export const MainView: React.FC = () => {
   const table = useRoomStore((s) => s.db.findTableByName('airports'));
-  const {data, isLoading, error} = useSql<{
+  const {data, error} = useSql<{
     name: string;
     abbrev: string;
     scalerank: number;
@@ -38,13 +37,8 @@ export const MainView: React.FC = () => {
   if (!table) return null;
   return (
     <div className="flex h-full w-full items-center justify-center">
-      {isLoading ? (
-        <SpinnerPane className="h-full w-full" />
-      ) : error ? (
-        <div>Error: {error.message}</div>
-      ) : features ? (
-        <MapView features={features} />
-      ) : null}
+      {error ? <div>Error: {error.message}</div> : null}
+      <MapView features={features} />
     </div>
   );
 };

@@ -4,14 +4,14 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.18.0",
+  "packageManager": "pnpm@10.24.0",
   "workspaces": [
     "packages/*",
     "examples/*"
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=30 --filter=@sqlrooms/*",
+    "dev": "turbo dev --concurrency=100 --filter=@sqlrooms/*",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",
@@ -67,8 +67,8 @@
     "lint-staged": "^16.2.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
-    "react": "19.1.1",
-    "react-dom": "19.1.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "remove": "^0.1.5",
     "shx": "^0.4.0",
     "turbo": "^2.5.8",
@@ -83,9 +83,12 @@
   "pnpm": {
     "overrides": {
       "typescript": "5.8.3",
-      "react": "19.1.0",
-      "react-dom": "19.1.0",
-      "@duckdb/duckdb-wasm": "1.31.0"
+      "react": "19.2.0",
+      "react-dom": "19.2.0",
+      "@types/react": "19.1.13",
+      "@types/react-dom": "19.1.9",
+      "@duckdb/duckdb-wasm": "1.31.0",
+      "zod": "4.1.8"
     },
     "onlyBuiltDependencies": [
       "@swc/core",

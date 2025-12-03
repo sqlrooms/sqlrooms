@@ -16,7 +16,7 @@ build
 dist
 .env
 .env.local
-
+.cpuprofile
 
 docs/.vitepress/dist
 docs/.vitepress/cache

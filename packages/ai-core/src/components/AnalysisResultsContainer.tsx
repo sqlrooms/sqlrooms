@@ -1,45 +1,65 @@
-import {cn, ScrollArea, ScrollBar, SkeletonPane} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
+import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
+import {AiThinkingDots} from './AiThinkingDots';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-}> = ({className}) => {
+  enableReasoningBox?: boolean;
+  customMarkdownComponents?: Partial<Components>;
+  userTools?: string[];
+}> = ({
+  className,
+  enableReasoningBox = false,
+  customMarkdownComponents,
+  userTools,
+}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
+  const currentAnalysisResults = useStoreWithAi((s) =>
+    s.ai.getAnalysisResults(),
+  );
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages || [],
+  );
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
     endRef,
-    dataToObserve: currentSession?.analysisResults,
+    dataToObserve: uiMessages,
   });
 
-  const onDeleteAnalysisResult = (id: string) => {
-    if (currentSession) {
-      deleteAnalysisResult(currentSession.id, id);
+  // Scroll to bottom when analysis starts
+  useEffect(() => {
+    if (isRunningAnalysis) {
+      scrollToBottom();
     }
-  };
+  }, [isRunningAnalysis]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
-        ref={containerRef}
+        viewportRef={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
-        {currentSession?.analysisResults.map((result) => (
+        {/* Render analysis results */}
+        {currentAnalysisResults.map((analysisResult) => (
           <AnalysisResult
-            key={result.id}
-            result={result}
-            onDeleteAnalysisResult={onDeleteAnalysisResult}
+            key={analysisResult.id}
+            analysisResult={analysisResult}
+            enableReasoningBox={enableReasoningBox}
+            customMarkdownComponents={customMarkdownComponents}
+            userTools={userTools}
           />
         ))}
-        {isRunningAnalysis && <SkeletonPane className="p-4" />}
+        {isRunningAnalysis && (
+          <AiThinkingDots className="text-muted-foreground p-4" />
+        )}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />

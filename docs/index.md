@@ -37,6 +37,10 @@ caseStudies:
     href: '/case-studies.html#cosmograph'
     img: '/carousel/cosmograph.webp'
     alt: 'Cosmograph screenshot'
+  - title: 'Transcality'
+    href: '/case-studies.html#transcality'
+    img: '/carousel/transcality-600px.webp'
+    alt: 'Transcality screenshot'
 
 features:
   - title: Local Analytics, No Backend Required
@@ -52,6 +56,17 @@ features:
   - title: Offline Use
     details: Work with your data, run queries, and analyze results even without an internet connection. SQLRooms supports offline workflows using persistent storage via OPFS.
 ---
+
+---
+
+<!-- <div style="display: flex; justify-content: center; margin: 2rem 0;">
+
+  <iframe width="560" height="315" src="https://www.youtube.com/embed/GjR91iw_R4I" title="SQLRooms: Building browser-based AI-assisted analytics apps with DuckDB" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowfullscreen></iframe>
+</div> -->
+
+<div style="display: flex; justify-content: center; margin: 2rem 0;">
+  <video src="/media/sqlrooms-intro-2.mp4" alt="SQLRooms AI example app" width="450" controls></video>
+</div>
 
 ## Get Started in Minutes
 
@@ -69,19 +84,31 @@ npm run dev
 Set up a simple room that loads and queries a single data table:
 
 ```tsx
-const {roomStore, useRoomStore} = createRoomStore((set, get, store) => ({
-  ...createRoomShellSlice({
-    config: {
-      dataSources: [
-        {
-          type: 'url',
-          tableName: 'earthquakes',
-          url: 'https://.../earthquakes.parquet',
-        },
-      ],
-    },
-  })(set, get, store),
-}));
+import {
+  createRoomShellSlice,
+  createRoomStore,
+  RoomShellSliceState,
+  RoomShell,
+} from '@sqlrooms/room-shell';
+import {useSql} from '@sqlrooms/duckdb';
+
+type RoomState = RoomShellSliceState;
+
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    ...createRoomShellSlice({
+      config: {
+        dataSources: [
+          {
+            type: 'url',
+            tableName: 'earthquakes',
+            url: 'https://.../earthquakes.parquet',
+          },
+        ],
+      },
+    })(set, get, store),
+  }),
+);
 
 export const MyRoom = () => (
   <RoomShell roomStore={roomStore}>

@@ -1,5 +1,4 @@
-import {extendedTool} from '@openassistant/utils';
-import {AiSliceState, AiSliceTool} from '@sqlrooms/ai-core';
+import {AiSliceState} from '@sqlrooms/ai-core';
 import {
   arrowTableToJson,
   DuckDbConnector,
@@ -15,7 +14,24 @@ export const QueryToolParameters = z.object({
   sqlQuery: z.string(),
   reasoning: z.string(),
 });
+
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
+
+export type QueryToolLlmResult = {
+  success: boolean;
+  data?: {
+    type: 'query';
+    summary: Record<string, unknown>[] | null;
+    firstRows?: Record<string, unknown>[];
+  };
+  details?: string;
+  errorMessage?: string;
+};
+
+export type QueryToolAdditionalData = {
+  title: string;
+  sqlQuery: string;
+};
 
 export type QueryToolOptions = {
   readOnly?: boolean;
@@ -26,23 +42,32 @@ export type QueryToolOptions = {
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: QueryToolOptions,
-): AiSliceTool {
+) {
   const {
     readOnly = true,
     autoSummary = false,
     numberOfRowsToShareWithLLM = 0,
   } = options || {};
-  return extendedTool({
+  return {
+    name: 'query',
     description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    execute: async ({type, sqlQuery}) => {
-      try {
-        const connector = await store.getState().db.getConnector();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await connector.query(sqlQuery);
+    execute: async (
+      params: QueryToolParameters,
+      options?: {abortSignal?: AbortSignal},
+    ) => {
+      const {type, sqlQuery} = params;
+      const abortSignal = options?.abortSignal;
 
+      try {
+        // Check if aborted before starting
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
+
+        const connector = await store.getState().db.getConnector();
         const parsedQuery = await store.getState().db.sqlSelectToJson(sqlQuery);
 
         if (
@@ -67,9 +92,25 @@ If a query fails, please don't try to run it again with the same syntax.`,
           }
         }
 
+        // Check if aborted before running query
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
+
+        const result = await connector.query(sqlQuery);
+
+        // Check if aborted after query execution
+        if (abortSignal?.aborted) {
+          throw new Error('Query execution was aborted');
+        }
+
         const summaryData = await (async () => {
           if (!autoSummary) return null;
           if (parsedQuery.error) return null;
+
+          // Check if aborted before generating summary
+          if (abortSignal?.aborted) return null;
+
           const lastNode =
             parsedQuery.statements[parsedQuery.statements.length - 1]?.node;
 
@@ -118,7 +159,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
       }
     },
     component: QueryToolResult,
-  });
+  };
 }
 
 /**
@@ -127,7 +168,10 @@ If a query fails, please don't try to run it again with the same syntax.`,
  * @param sqlQuery - SQL SELECT query to analyze
  * @returns Summary statistics as JSON object, or null if the query is not a SELECT statement or if summary generation fails
  */
-async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
+export async function getQuerySummary(
+  connector: DuckDbConnector,
+  sqlQuery: string,
+) {
   if (!sqlQuery.toLowerCase().trim().startsWith('select')) {
     return null;
   }
