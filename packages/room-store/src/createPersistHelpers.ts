@@ -76,6 +76,8 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * @param options - Persist configuration object
  * @param options.name - Unique storage key (required)
  * @param options.sliceConfigSchemas - Map of slice names to Zod schemas for their configs
+ * @param options.partialize - Optional custom partialize function (overrides auto-generated one)
+ * @param options.merge - Optional custom merge function (overrides auto-generated one)
  * @param options.storage - Custom storage implementation (optional, defaults to localStorage)
  * @param options.version - Schema version for migrations (optional)
  * @param options.migrate - Migration function for version changes (optional)
@@ -86,6 +88,7 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  * @see {@link https://zustand.docs.pmnd.rs/middlewares/persist | Zustand persist middleware docs}
  *
  * @example
+ * Basic usage:
  * ```ts
  * export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
  *   persistSliceConfigs(
@@ -104,17 +107,46 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
  *   )
  * );
  * ```
+ *
+ * @example
+ * With custom partialize/merge for additional state:
+ * ```ts
+ * export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+ *   persistSliceConfigs(
+ *     {
+ *       name: 'my-app-state-storage',
+ *       sliceConfigSchemas: {
+ *         room: BaseRoomConfig,
+ *         layout: LayoutConfig,
+ *       },
+ *       partialize: (state) => ({
+ *         apiKey: state.apiKey, // Persist additional field
+ *         ...createPersistHelpers({room: BaseRoomConfig, layout: LayoutConfig}).partialize(state),
+ *       }),
+ *       merge: (persisted, current) => ({
+ *         ...createPersistHelpers({room: BaseRoomConfig, layout: LayoutConfig}).merge(persisted, current),
+ *         apiKey: persisted.apiKey, // Restore additional field
+ *       }),
+ *     },
+ *     (set, get, store) => ({...})
+ *   )
+ * );
+ * ```
  */
 export function persistSliceConfigs<S>(
-  options: Omit<PersistOptions<S>, 'partialize' | 'merge'> & {
+  options: {
     sliceConfigSchemas: Record<string, z.ZodType>;
-  },
+    partialize?: (state: S) => Partial<S>;
+    merge?: (persistedState: unknown, currentState: S) => S;
+  } & Omit<PersistOptions<S>, 'partialize' | 'merge'>,
   stateCreator: StateCreator<S>,
 ): StateCreator<S> {
-  const {sliceConfigSchemas, ...persistOptions} = options;
+  const {sliceConfigSchemas, partialize, merge, ...persistOptions} = options;
   const helpers = createPersistHelpers(sliceConfigSchemas);
+
   return persist<S>(stateCreator, {
     ...persistOptions,
-    ...(helpers as Pick<PersistOptions<S>, 'partialize' | 'merge'>),
+    partialize: partialize || helpers.partialize,
+    merge: merge || helpers.merge,
   } as PersistOptions<S>) as StateCreator<S>;
 }

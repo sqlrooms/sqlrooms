@@ -6,28 +6,44 @@ import {
 } from '@sqlrooms/canvas';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist, PersistOptions} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
+
+// App config schema
+export const AppConfig = z.object({
+  apiKey: z.string().default(''),
+});
+export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
   CanvasSliceState & {
-    apiKey: string;
-    setApiKey: (apiKey: string) => void;
+    app: {
+      config: AppConfig;
+      setApiKey: (apiKey: string) => void;
+    };
   };
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'canvas-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        canvas: CanvasSliceConfig,
+        app: AppConfig,
+      },
+    },
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
@@ -68,35 +84,22 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       ...createCanvasSlice({
         ai: {
-          getApiKey: () => get().apiKey,
+          getApiKey: () => get().app.config.apiKey,
           defaultModel: 'gpt-4.1-mini',
         },
       })(set, get, store),
 
-      apiKey: '',
-      setApiKey: (apiKey) => set({apiKey}),
+      // App slice with config
+      app: {
+        config: AppConfig.parse({}),
+        setApiKey: (apiKey) =>
+          set((state) => ({
+            app: {
+              ...state.app,
+              config: {...state.app.config, apiKey},
+            },
+          })),
+      },
     }),
-
-    // Persist settings with custom partialize/merge for apiKey
-    {
-      name: 'canvas-example-app-state-storage',
-      ...(() => {
-        const {partialize, merge} = createPersistHelpers({
-          room: BaseRoomConfig,
-          layout: LayoutConfig,
-          canvas: CanvasSliceConfig,
-        });
-        return {
-          partialize: (state: RoomState) => ({
-            apiKey: state.apiKey,
-            ...partialize(state),
-          }),
-          merge: (persistedState: any, currentState: RoomState) => ({
-            ...merge(persistedState, currentState),
-            apiKey: persistedState.apiKey,
-          }),
-        } as Pick<PersistOptions<RoomState>, 'partialize' | 'merge'>;
-      })(),
-    },
   ),
 );
