@@ -12,11 +12,10 @@ import {
   LayoutConfig,
   LayoutTypes,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
+import {persist, PersistOptions} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
 
 export type RoomState = RoomShellSliceState &
@@ -28,7 +27,7 @@ export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persist<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
@@ -78,11 +77,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       setApiKey: (apiKey) => set({apiKey}),
     }),
 
-    // Persist settings
+    // Persist settings with custom partialize/merge for apiKey
     {
-      // Local storage key
       name: 'canvas-example-app-state-storage',
-      // Helper to extract and merge slice configs
       ...(() => {
         const {partialize, merge} = createPersistHelpers({
           room: BaseRoomConfig,
@@ -98,8 +95,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             ...merge(persistedState, currentState),
             apiKey: persistedState.apiKey,
           }),
-        };
+        } as Pick<PersistOptions<RoomState>, 'partialize' | 'merge'>;
       })(),
     },
-  ) as StateCreator<RoomState>,
+  ),
 );

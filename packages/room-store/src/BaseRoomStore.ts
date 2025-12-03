@@ -1,6 +1,9 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
 
+// Re-export for convenience
+export type {StateCreator};
+
 export interface SliceFunctions {
   initialize?: () => Promise<void>;
   destroy?: () => Promise<void>;

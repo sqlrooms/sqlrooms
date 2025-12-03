@@ -7,9 +7,9 @@ import {
 } from '@sqlrooms/room-shell';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomStoreCreator,
   LayoutConfig,
+  persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {
   createSqlEditorSlice,
@@ -18,7 +18,6 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
 
@@ -32,7 +31,15 @@ export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
   (mdToken: string) =>
-    persist(
+    persistSliceConfigs(
+      {
+        name: 'md-sql-editor-example-app-state-storage',
+        sliceConfigSchemas: {
+          room: BaseRoomConfig,
+          layout: LayoutConfig,
+          sqlEditor: SqlEditorSliceConfig,
+        },
+      },
       (set, get, store) => ({
         ...createRoomShellSlice({
           connector: createWasmMotherDuckDbConnector({
@@ -66,18 +73,7 @@ const {createRoomStore, useRoomStore} = createRoomStoreCreator<RoomState>()(
         // Sql editor slice
         ...createSqlEditorSlice()(set, get, store),
       }),
-      // Persist settings
-      {
-        // Local storage key
-        name: 'md-sql-editor-example-app-state-storage',
-        // Helper to extract and merge slice configs
-        ...createPersistHelpers({
-          room: BaseRoomConfig,
-          layout: LayoutConfig,
-          sqlEditor: SqlEditorSliceConfig,
-        }),
-      },
-    ) as StateCreator<RoomState>,
+    ),
 );
 
 export {createRoomStore, useRoomStore};

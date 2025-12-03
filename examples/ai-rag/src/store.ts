@@ -12,14 +12,13 @@ import {createRagSlice, createRagTool, RagSliceState} from '@sqlrooms/ai-rag';
 import {createOpenAIEmbeddingProvider} from './embeddings';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
@@ -29,7 +28,6 @@ import {
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
 import {MainView} from './components/MainView';
@@ -53,7 +51,17 @@ export type RoomState = RoomShellSliceState &
  * Create a customized room store
  */
 const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'ai-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
@@ -154,21 +162,7 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'ai-example-app-state-storage',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
-        sqlEditor: SqlEditorSliceConfig,
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );
 
 // Make store available globally for RAG tool

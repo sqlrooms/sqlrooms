@@ -7,11 +7,9 @@ import {
 import {
   BaseRoomStoreState,
   createBaseRoomSlice,
-  createPersistHelpers,
   createRoomStore,
-  StateCreator,
+  persistSliceConfigs,
 } from '@sqlrooms/room-store';
-import {persist} from 'zustand/middleware';
 import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
@@ -34,7 +32,15 @@ type RoomState = BaseRoomStoreState &
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'sqlrooms-app-builder',
+      sliceConfigSchemas: {
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        webContainer: WebContainerSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createBaseRoomSlice()(set, get, store),
@@ -69,16 +75,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sqlrooms-app-builder',
-      ...(createPersistHelpers({
-        ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
-        webContainer: WebContainerSliceConfig,
-      }) as Partial<import('zustand/middleware').PersistOptions<RoomState>>),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );
