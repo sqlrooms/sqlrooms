@@ -206,6 +206,7 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.queries.push(newQuery);
+              draft.sqlEditor.config.openTabIds.push(newQuery.id);
               draft.sqlEditor.config.selectedQueryId = newQuery.id;
             }),
           );
@@ -231,6 +232,10 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.queries = filteredQueries;
+              draft.sqlEditor.config.openTabIds =
+                draft.sqlEditor.config.openTabIds.filter(
+                  (id) => id !== queryId,
+                );
 
               // If we're deleting the selected tab, select the previous one or the first one
               if (isSelected && filteredQueries.length > 0) {
@@ -263,17 +268,18 @@ export function createSqlEditorSlice({
         closeQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.closedTabIds.push(queryId);
-              const openedTabs = draft.sqlEditor.config.queries.filter(
-                (q) => !draft.sqlEditor.config.closedTabIds.includes(q.id),
-              );
+              draft.sqlEditor.config.openTabIds =
+                draft.sqlEditor.config.openTabIds.filter(
+                  (id) => id !== queryId,
+                );
 
-              if (
-                draft.sqlEditor.config.selectedQueryId === queryId &&
-                openedTabs.length > 0 &&
-                openedTabs[0]
-              ) {
-                draft.sqlEditor.config.selectedQueryId = openedTabs[0].id;
+              if (draft.sqlEditor.config.selectedQueryId === queryId) {
+                const firstOpenedId = draft.sqlEditor.config.queries.find((q) =>
+                  draft.sqlEditor.config.openTabIds.includes(q.id),
+                )?.id;
+                if (firstOpenedId) {
+                  draft.sqlEditor.config.selectedQueryId = firstOpenedId;
+                }
               }
             }),
           );
@@ -282,10 +288,9 @@ export function createSqlEditorSlice({
         openQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.closedTabIds =
-                draft.sqlEditor.config.closedTabIds?.filter(
-                  (id) => id !== queryId,
-                );
+              if (!draft.sqlEditor.config.openTabIds.includes(queryId)) {
+                draft.sqlEditor.config.openTabIds.push(queryId);
+              }
               draft.sqlEditor.config.selectedQueryId = queryId;
             }),
           );

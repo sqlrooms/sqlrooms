@@ -9,14 +9,12 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
   type QueryTab = (typeof queries)[number];
-  const closedTabIds = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.config.closedTabIds,
+  const openTabIds = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.config.openTabIds,
   );
   const selectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const openedTabs = queries.filter((q) => !closedTabIds.includes(q.id));
-  const closedTabs = queries.filter((q) => closedTabIds.includes(q.id));
 
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
@@ -98,8 +96,8 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     <>
       <ScrollableTabsList
         className={className}
-        openedTabs={openedTabs}
-        closedTabs={closedTabs}
+        tabs={queries}
+        openTabIds={openTabIds}
         selectedTabId={selectedQueryId}
         onCloseTab={(tab: QueryTab) => closeQueryTab(tab.id)}
         onOpenTab={(tab: QueryTab) => openQueryTab(tab.id)}

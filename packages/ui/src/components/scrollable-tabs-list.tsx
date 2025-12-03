@@ -163,41 +163,54 @@ function ScrollableTabsDropdown<
           <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
             Closed
           </DropdownMenuLabel>
-          {renderDropdownItems(
-            closedTabs,
-            'No closed tabs',
-            onOpenTab,
-            onRequestRename,
-            onDeleteTab,
-          )}
+          <DropdownTabItems
+            tabs={closedTabs}
+            emptyMessage="No closed tabs"
+            onOpenTab={onOpenTab}
+            onRequestRename={onRequestRename}
+            onDeleteTab={onDeleteTab}
+          />
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
           <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
             Opened
           </DropdownMenuLabel>
-          {renderDropdownItems(
-            openedTabs,
-            'No opened tabs',
-            onOpenTab,
-            onRequestRename,
-            onDeleteTab,
-          )}
+          <DropdownTabItems
+            tabs={openedTabs}
+            emptyMessage="No opened tabs"
+            onOpenTab={onOpenTab}
+            onRequestRename={onRequestRename}
+            onDeleteTab={onDeleteTab}
+          />
         </DropdownMenuGroup>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 }
 
-function renderDropdownItems<
+interface DropdownTabItemsProps<
   TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
->(
-  tabs: TTab[],
-  emptyMessage: string,
-  onOpenTab?: (tab: TTab) => void,
-  onRequestRename?: (tab: TTab) => void,
-  onDeleteTab?: (tab: TTab) => void,
-) {
+> {
+  tabs: TTab[];
+  emptyMessage: string;
+  onOpenTab?: (tab: TTab) => void;
+  onRequestRename?: (tab: TTab) => void;
+  onDeleteTab?: (tab: TTab) => void;
+}
+
+/**
+ * Renders a list of tabs in a dropdown menu with optional actions.
+ */
+function DropdownTabItems<
+  TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
+>({
+  tabs,
+  emptyMessage,
+  onOpenTab,
+  onRequestRename,
+  onDeleteTab,
+}: DropdownTabItemsProps<TTab>) {
   if (tabs.length === 0) {
     return (
       <DropdownMenuItem
@@ -209,51 +222,57 @@ function renderDropdownItems<
     );
   }
 
-  return tabs.map((tab) => (
-    <DropdownMenuItem
-      key={tab.id}
-      onClick={() => onOpenTab?.(tab)}
-      className="flex h-7 cursor-pointer items-center justify-between truncate"
-    >
-      <span className="xs truncate pl-1">{tab.name}</span>
-      <div className="flex items-center gap-1">
-        {onRequestRename && (
-          <Button
-            size="xs"
-            variant="ghost"
-            className="text-muted-foreground h-3 w-3"
-            onClick={(event) => {
-              event.stopPropagation();
-              onRequestRename(tab);
-            }}
-          >
-            <PencilIcon size={12} className="!size-3" />
-          </Button>
-        )}
-        {onDeleteTab && (
-          <Button
-            size="xs"
-            variant="ghost"
-            className="text-muted-foreground h-3 w-3"
-            onClick={(event) => {
-              event.stopPropagation();
-              onDeleteTab(tab);
-            }}
-          >
-            <TrashIcon size={12} className="!size-3" />
-          </Button>
-        )}
-      </div>
-    </DropdownMenuItem>
-  ));
+  return (
+    <>
+      {tabs.map((tab) => (
+        <DropdownMenuItem
+          key={tab.id}
+          onClick={() => onOpenTab?.(tab)}
+          className="flex h-7 cursor-pointer items-center justify-between truncate"
+        >
+          <span className="xs truncate pl-1">{tab.name}</span>
+          <div className="flex items-center gap-1">
+            {onRequestRename && (
+              <Button
+                size="xs"
+                variant="ghost"
+                className="text-muted-foreground h-3 w-3"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onRequestRename(tab);
+                }}
+              >
+                <PencilIcon size={12} className="!size-3" />
+              </Button>
+            )}
+            {onDeleteTab && (
+              <Button
+                size="xs"
+                variant="ghost"
+                className="text-muted-foreground h-3 w-3"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onDeleteTab(tab);
+                }}
+              >
+                <TrashIcon size={12} className="!size-3" />
+              </Button>
+            )}
+          </div>
+        </DropdownMenuItem>
+      ))}
+    </>
+  );
 }
 
 export interface ScrollableTabsListProps<
   TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
 > {
   className?: string;
-  openedTabs: TTab[];
-  closedTabs?: TTab[];
+  /** All available tabs. */
+  tabs: TTab[];
+  /** IDs of tabs that are currently open. */
+  openTabIds: string[];
   selectedTabId?: string | null;
   onCloseTab?: (tab: TTab) => void;
   onOpenTab?: (tab: TTab) => void;
@@ -267,8 +286,8 @@ export const ScrollableTabsList = <
   TTab extends ScrollableTabDescriptor = ScrollableTabDescriptor,
 >({
   className,
-  openedTabs,
-  closedTabs = [],
+  tabs,
+  openTabIds,
   selectedTabId,
   onCloseTab,
   onOpenTab,
@@ -281,6 +300,18 @@ export const ScrollableTabsList = <
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const prevSelectedIdRef = useRef<string | null>(null);
+
+  const openTabIdsSet = useMemo(() => new Set(openTabIds), [openTabIds]);
+
+  const openedTabs = useMemo(
+    () => tabs.filter((tab) => openTabIdsSet.has(tab.id)),
+    [tabs, openTabIdsSet],
+  );
+
+  const closedTabs = useMemo(
+    () => tabs.filter((tab) => !openTabIdsSet.has(tab.id)),
+    [tabs, openTabIdsSet],
+  );
 
   const trimmedSearch = search.trim().toLowerCase();
 
