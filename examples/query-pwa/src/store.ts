@@ -1,13 +1,12 @@
 import {createWasmDuckDbConnector, DuckDBBundles} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
   createSqlEditorSlice,
@@ -16,7 +15,6 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
 
@@ -68,7 +66,15 @@ const EXTENSIONS_PATH = `${globalThis.location.origin}/extensions`;
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'sqlrooms-query-pwa',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
@@ -109,17 +115,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sqlrooms-query-pwa',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        sqlEditor: SqlEditorSliceConfig,
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

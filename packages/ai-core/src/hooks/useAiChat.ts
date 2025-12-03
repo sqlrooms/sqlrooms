@@ -4,7 +4,7 @@ import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {UIMessage} from 'ai';
+import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import type {ToolCall} from '../chatTransport';
 import {completeIncompleteToolCalls} from '../chatTransport';
@@ -19,6 +19,16 @@ export type AddToolResult = (
         errorText: string;
       },
 ) => void;
+
+/**
+ * Return type for the useAiChat hook.
+ */
+export type UseAiChatResult = {
+  messages: UIMessage[];
+  sendMessage: AbstractChat<UIMessage>['sendMessage'];
+  stop: AbstractChat<UIMessage>['stop'];
+  status: ChatStatus;
+};
 
 /**
  * Custom hook that provides AI chat functionality with automatic transport setup,
@@ -46,7 +56,7 @@ export type AddToolResult = (
  * }
  * ```
  */
-export function useAiChat() {
+export function useAiChat(): UseAiChatResult {
   // Get current session and configuration
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;

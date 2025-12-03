@@ -1,13 +1,12 @@
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
-  createPersistHelpers,
   createRoomShellSlice,
   createRoomStore,
   LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
@@ -17,7 +16,6 @@ import {
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
 
@@ -69,7 +67,15 @@ export type RoomState = RoomShellSliceState & SqlEditorSliceState;
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'sql-editor-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
@@ -119,17 +125,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sql-editor-example-app-state-storage',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        sqlEditor: SqlEditorSliceConfig,
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

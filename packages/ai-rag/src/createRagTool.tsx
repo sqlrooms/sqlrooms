@@ -1,4 +1,4 @@
-import {OpenAssistantTool} from '@openassistant/utils';
+import type {OpenAssistantTool} from '@openassistant/utils';
 import {ReasoningBox} from '@sqlrooms/ai-core';
 import {Button} from '@sqlrooms/ui';
 import {useState} from 'react';

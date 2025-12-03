@@ -6,13 +6,11 @@ import {
 } from '@sqlrooms/ai-settings';
 import {
   createBaseRoomSlice,
-  createPersistHelpers,
   createRoomStore,
   BaseRoomStoreState,
-  StateCreator,
+  persistSliceConfigs,
 } from '@sqlrooms/room-store';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import EchoToolResult from './components/EchoToolResult';
 import {AI_SETTINGS} from './config';
 
@@ -22,7 +20,14 @@ type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<State>(
-  persist(
+  persistSliceConfigs(
+    {
+      name: 'ai-core-example-app-state-storage',
+      sliceConfigSchemas: {
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
       ...createBaseRoomSlice()(set, get, store),
@@ -58,16 +63,5 @@ export const {roomStore, useRoomStore} = createRoomStore<State>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'ai-core-example-app-state-storage',
-      // Helper to extract and merge slice configs
-      ...createPersistHelpers({
-        ai: AiSliceConfig,
-        aiSettings: AiSettingsSliceConfig,
-      }),
-    },
-  ) as StateCreator<State>,
+  ),
 );

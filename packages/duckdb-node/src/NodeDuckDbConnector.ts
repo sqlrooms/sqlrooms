@@ -90,10 +90,17 @@ export function createNodeDuckDbConnector(
 
     async destroyInternal() {
       if (connection) {
-        connection.closeSync();
+        try {
+          connection.closeSync();
+        } catch (error) {
+          // Connection might already be closed, ignore errors
+          console.warn('Error closing connection:', error);
+        }
         connection = null;
       }
       instance = null;
+      // Give native module time to clean up resources
+      await new Promise((resolve) => setTimeout(resolve, 0));
     },
 
     async executeQueryInternal<T extends arrow.TypeMap = any>(
