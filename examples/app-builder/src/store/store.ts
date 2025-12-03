@@ -44,7 +44,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       // WebContainer slice
       ...createWebContainerSlice({
-        config: {filesTree: scaffolds['get-started']},
+        config: {
+          filesTree: scaffolds['get-started'],
+          activeFilePath: '/src/App.jsx',
+        },
       })(set, get, store),
 
       // Ai slice

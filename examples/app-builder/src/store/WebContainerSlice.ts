@@ -114,7 +114,10 @@ export function createWebContainerSlice(props?: {
               draft.webContainer.instance = instance;
             }),
           );
-          await get().webContainer.openFile('/src/App.jsx');
+          const activeFilePath = get().webContainer.config.activeFilePath;
+          if (activeFilePath) {
+            await get().webContainer.openFile(activeFilePath);
+          }
 
           const exitCode = await get().webContainer.installDependencies();
           if (exitCode !== 0) {
