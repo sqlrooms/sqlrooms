@@ -37,7 +37,7 @@ const ErrorPane = React.forwardRef<HTMLDivElement, ErrorPaneProps>(
         <Alert
           variant="destructive"
           className={cn(
-            'flex min-h-[200px] max-w-[450px] flex-col items-center justify-center rounded-lg px-6 py-6 text-center',
+            'flex min-h-[200px] max-w-[450px] flex-col items-center justify-center rounded-lg border-none px-6 py-6 text-center',
             !embed && 'min-w-[350px]',
           )}
         >

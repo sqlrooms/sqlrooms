@@ -21,7 +21,7 @@ export function createListFilesTool(
         llmResult: {
           success: true,
           details: fileSystemTreeToNodes(
-            store.getState().wc.filesTree,
+            store.getState().webContainer.filesTree,
             basePath,
           ),
         },

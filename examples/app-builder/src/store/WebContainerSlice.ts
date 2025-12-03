@@ -1,14 +1,28 @@
-import {BaseRoomConfig} from '@sqlrooms/room-config';
-import {createBaseSlice, StateCreator} from '@sqlrooms/room-store';
+import {createSlice, StateCreator} from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
+import z from 'zod';
 import {setFileContentInTree} from './utils/setFileContentInTree';
 
 // helper moved to ./utils/setFileContentInTree
 
+export const WebContainerSliceConfig = z.object({
+  filesTree: z.custom<FileSystemTree>(),
+});
+export type WebContainerSliceConfig = z.infer<typeof WebContainerSliceConfig>;
+
+export function creatDefaultWebContainerSliceConfig(
+  props?: Partial<WebContainerSliceConfig>,
+): WebContainerSliceConfig {
+  return {
+    filesTree: {},
+    ...props,
+  };
+}
+
 export type WebContainerSliceState = {
-  wc: {
-    filesTree: FileSystemTree;
+  webContainer: {
+    config: WebContainerSliceConfig;
     instance: WebContainer | null;
     output: string;
     openedFiles: {path: string; content: string; dirty: boolean}[];
@@ -43,225 +57,232 @@ export type WebContainerSliceState = {
   };
 };
 
-export function createWebContainerSlice(props: {
-  filesTree: FileSystemTree;
+export function createWebContainerSlice(props?: {
+  config: WebContainerSliceConfig;
 }): StateCreator<WebContainerSliceState> {
   {
-    return createBaseSlice<BaseRoomConfig, WebContainerSliceState>(
-      (set, get) => ({
-        wc: {
-          instance: null,
-          output: '',
-          filesTree: props.filesTree,
-          openedFiles: [],
-          activeFilePath: null,
-          iframeUrl: undefined,
-          serverStatus: {type: 'not-initialized'},
-          initialize: async () => {
-            if (get().wc.serverStatus.type !== 'not-initialized') {
-              return;
-            }
-            set((state) =>
-              produce(state, (draft) => {
-                draft.wc.serverStatus = {type: 'initializing'};
-              }),
-            );
-            const instance = await WebContainer.boot();
-            await instance.mount(get().wc.filesTree);
-            set((state) =>
-              produce(state, (draft) => {
-                draft.wc.instance = instance;
-              }),
-            );
-            get().wc.openFile('/src/App.jsx');
+    return createSlice<WebContainerSliceState>((set, get) => ({
+      webContainer: {
+        config: creatDefaultWebContainerSliceConfig(props?.config),
+        instance: null,
+        output: '',
+        openedFiles: [],
+        activeFilePath: null,
+        iframeUrl: undefined,
+        serverStatus: {type: 'not-initialized'},
+        initialize: async () => {
+          if (get().webContainer.serverStatus.type !== 'not-initialized') {
+            return;
+          }
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.serverStatus = {type: 'initializing'};
+            }),
+          );
+          const instance = await WebContainer.boot();
+          await instance.mount(get().webContainer.config.filesTree);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.instance = instance;
+            }),
+          );
+          get().webContainer.openFile('/src/App.jsx');
 
-            const exitCode = await get().wc.installDependencies();
-            if (exitCode !== 0) {
-              throw new Error('Installation failed');
-            }
+          const exitCode = await get().webContainer.installDependencies();
+          if (exitCode !== 0) {
+            throw new Error('Installation failed');
+          }
 
-            get().wc.startDevServer();
+          get().webContainer.startDevServer();
 
-            // see files.ts in bolt.new
-            // const WORK_DIR = '';
-            // (instance as any).internal.watchPaths(
-            //   {
-            //     include: [`${WORK_DIR}/**`],
-            //     exclude: ['**/node_modules', '.git'],
-            //     includeContent: true,
-            //   },
-            //   // bufferWatchEvents(100, this.#processEventBuffer.bind(this)),
-            //   (event: any) => {
-            //     console.log('fs-change', event);
-            //   },
-            // );
-          },
-
-          async installDependencies() {
-            const instance = get().wc.instance;
-            if (!instance) {
-              throw new Error('WebContainer instance not found');
-            }
-            // Install dependencies
-            set((state) =>
-              produce(state, (draft) => {
-                draft.wc.serverStatus = {type: 'install-deps'};
-              }),
-            );
-            const installProcess = await instance.spawn('npm', ['install']);
-            installProcess.output.pipeTo(
-              new WritableStream({
-                write(data) {
-                  set((state) => ({
-                    wc: {
-                      ...state.wc,
-                      output: state.wc.output + data,
-                    },
-                  }));
-                },
-              }),
-            );
-            // Wait for install command to exit
-            return installProcess.exit;
-          },
-
-          async startDevServer() {
-            const instance = get().wc.instance;
-            if (!instance) {
-              throw new Error('WebContainer instance not found');
-            }
-            // Run `npm run dev` to start the Vite dev server
-            await instance.spawn('npm', ['run', 'dev']);
-            set((state) =>
-              produce(state, (draft) => {
-                draft.wc.serverStatus = {type: 'starting-dev'};
-              }),
-            );
-
-            // Wait for `server-ready` event
-            instance.on('server-ready', (port, url) => {
-              console.log(`Server ready on port ${port} at ${url}`);
-              set((state) =>
-                produce(state, (draft) => {
-                  draft.wc.serverStatus = {type: 'ready', url: url};
-                }),
-              );
-            });
-
-            instance.on('error', (error) => {
-              console.error('Server error', error);
-              set((state) =>
-                produce(state, (draft) => {
-                  draft.wc.serverStatus = {type: 'error', error: error};
-                }),
-              );
-            });
-          },
-
-          async openFile(path, content) {
-            const state = get();
-            const existing = state.wc.openedFiles.find((f) => f.path === path);
-            if (existing) {
-              set((s) => ({wc: {...s.wc, activeFilePath: path}}));
-              return;
-            }
-            let fileContent = content;
-            if (fileContent === undefined) {
-              fileContent = await get().wc.getFileContent(path);
-            }
-            set((s) =>
-              produce(s, (draft) => {
-                draft.wc.openedFiles.push({
-                  path,
-                  content: fileContent ?? '',
-                  dirty: false,
-                });
-                draft.wc.activeFilePath = path;
-              }),
-            );
-          },
-
-          closeFile(path) {
-            set((s) =>
-              produce(s, (draft) => {
-                const wasActive = draft.wc.activeFilePath === path;
-                draft.wc.openedFiles = draft.wc.openedFiles.filter(
-                  (f) => f.path !== path,
-                );
-                if (wasActive) {
-                  const len = draft.wc.openedFiles.length;
-                  draft.wc.activeFilePath =
-                    len > 0 ? draft.wc.openedFiles[len - 1].path : null;
-                }
-              }),
-            );
-          },
-
-          setActiveFile(path) {
-            set((s) => ({wc: {...s.wc, activeFilePath: path}}));
-          },
-
-          updateFileContent(path, content) {
-            set((s) =>
-              produce(s, (draft) => {
-                const file = draft.wc.openedFiles.find((f) => f.path === path);
-                if (file) {
-                  file.content = content;
-                  file.dirty = true;
-                }
-                // Keep the in-memory FileSystemTree in sync (immutably)
-                draft.wc.filesTree = setFileContentInTree(
-                  draft.wc.filesTree,
-                  path,
-                  content,
-                );
-              }),
-            );
-          },
-
-          hasDirtyFiles() {
-            return get().wc.openedFiles.some((f) => f.dirty);
-          },
-
-          async saveAllOpenFiles() {
-            const instance = get().wc.instance;
-            if (!instance) {
-              throw new Error('WebContainer instance not found');
-            }
-            const files = get().wc.openedFiles;
-            for (const f of files) {
-              await instance.fs.writeFile(f.path, f.content);
-            }
-            set((s) =>
-              produce(s, (draft) => {
-                for (const f of draft.wc.openedFiles) {
-                  f.dirty = false;
-                }
-              }),
-            );
-          },
-
-          // Helper to read file content from the WebContainer instance
-          // Returns empty string on error or if instance is not available
-          async getFileContent(path) {
-            const state = get();
-            const opened = state.wc.openedFiles.find((f) => f.path === path);
-            if (opened) return opened.content;
-            const instance = state.wc.instance;
-            try {
-              if (instance) {
-                const data = await instance.fs.readFile(path, 'utf-8');
-                return typeof data === 'string'
-                  ? data
-                  : new TextDecoder().decode(data as any);
-              }
-            } catch (_e) {
-              // Swallow and return empty string
-            }
-            return '';
-          },
+          // see files.ts in bolt.new
+          // const WORK_DIR = '';
+          // (instance as any).internal.watchPaths(
+          //   {
+          //     include: [`${WORK_DIR}/**`],
+          //     exclude: ['**/node_modules', '.git'],
+          //     includeContent: true,
+          //   },
+          //   // bufferWatchEvents(100, this.#processEventBuffer.bind(this)),
+          //   (event: any) => {
+          //     console.log('fs-change', event);
+          //   },
+          // );
         },
-      }),
-    );
+
+        async installDependencies() {
+          const instance = get().webContainer.instance;
+          if (!instance) {
+            throw new Error('WebContainer instance not found');
+          }
+          // Install dependencies
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.serverStatus = {type: 'install-deps'};
+            }),
+          );
+          const installProcess = await instance.spawn('npm', ['install']);
+          installProcess.output.pipeTo(
+            new WritableStream({
+              write(data) {
+                set((state) => ({
+                  webContainer: {
+                    ...state.webContainer,
+                    output: state.webContainer.output + data,
+                  },
+                }));
+              },
+            }),
+          );
+          // Wait for install command to exit
+          return installProcess.exit;
+        },
+
+        async startDevServer() {
+          const instance = get().webContainer.instance;
+          if (!instance) {
+            throw new Error('WebContainer instance not found');
+          }
+          // Run `npm run dev` to start the Vite dev server
+          await instance.spawn('npm', ['run', 'dev']);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.webContainer.serverStatus = {type: 'starting-dev'};
+            }),
+          );
+
+          // Wait for `server-ready` event
+          instance.on('server-ready', (port, url) => {
+            console.log(`Server ready on port ${port} at ${url}`);
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webContainer.serverStatus = {type: 'ready', url: url};
+              }),
+            );
+          });
+
+          instance.on('error', (error) => {
+            console.error('Server error', error);
+            set((state) =>
+              produce(state, (draft) => {
+                draft.webContainer.serverStatus = {type: 'error', error: error};
+              }),
+            );
+          });
+        },
+
+        async openFile(path, content) {
+          const state = get();
+          const existing = state.webContainer.openedFiles.find(
+            (f) => f.path === path,
+          );
+          if (existing) {
+            set((s) => ({
+              webContainer: {...s.webContainer, activeFilePath: path},
+            }));
+            return;
+          }
+          let fileContent = content;
+          if (fileContent === undefined) {
+            fileContent = await get().webContainer.getFileContent(path);
+          }
+          set((s) =>
+            produce(s, (draft) => {
+              draft.webContainer.openedFiles.push({
+                path,
+                content: fileContent ?? '',
+                dirty: false,
+              });
+              draft.webContainer.activeFilePath = path;
+            }),
+          );
+        },
+
+        closeFile(path) {
+          set((s) =>
+            produce(s, (draft) => {
+              const wasActive = draft.webContainer.activeFilePath === path;
+              draft.webContainer.openedFiles =
+                draft.webContainer.openedFiles.filter((f) => f.path !== path);
+              if (wasActive) {
+                const len = draft.webContainer.openedFiles.length;
+                draft.webContainer.activeFilePath =
+                  len > 0 ? draft.webContainer.openedFiles[len - 1].path : null;
+              }
+            }),
+          );
+        },
+
+        setActiveFile(path) {
+          set((s) => ({
+            webContainer: {...s.webContainer, activeFilePath: path},
+          }));
+        },
+
+        updateFileContent(path, content) {
+          set((s) =>
+            produce(s, (draft) => {
+              const file = draft.webContainer.openedFiles.find(
+                (f) => f.path === path,
+              );
+              if (file) {
+                file.content = content;
+                file.dirty = true;
+              }
+              // Keep the in-memory FileSystemTree in sync (immutably)
+              draft.webContainer.config.filesTree = setFileContentInTree(
+                draft.webContainer.config.filesTree,
+                path,
+                content,
+              );
+            }),
+          );
+        },
+
+        hasDirtyFiles() {
+          return get().webContainer.openedFiles.some((f) => f.dirty);
+        },
+
+        async saveAllOpenFiles() {
+          const instance = get().webContainer.instance;
+          if (!instance) {
+            throw new Error('WebContainer instance not found');
+          }
+          const files = get().webContainer.openedFiles;
+          for (const f of files) {
+            await instance.fs.writeFile(f.path, f.content);
+          }
+          set((s) =>
+            produce(s, (draft) => {
+              for (const f of draft.webContainer.openedFiles) {
+                f.dirty = false;
+              }
+            }),
+          );
+        },
+
+        // Helper to read file content from the WebContainer instance
+        // Returns empty string on error or if instance is not available
+        async getFileContent(path) {
+          const state = get();
+          const opened = state.webContainer.openedFiles.find(
+            (f) => f.path === path,
+          );
+          if (opened) return opened.content;
+          const instance = state.webContainer.instance;
+          try {
+            if (instance) {
+              const data = await instance.fs.readFile(path, 'utf-8');
+              return typeof data === 'string'
+                ? data
+                : new TextDecoder().decode(data as any);
+            }
+          } catch (_e) {
+            // Swallow and return empty string
+          }
+          return '';
+        },
+      },
+    }));
   }
 }

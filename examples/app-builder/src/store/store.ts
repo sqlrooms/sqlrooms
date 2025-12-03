@@ -1,121 +1,83 @@
 import {AiSliceConfig, AiSliceState, createAiSlice} from '@sqlrooms/ai-core';
-
 import {
   AiSettingsSliceConfig,
   AiSettingsSliceState,
   createAiSettingsSlice,
 } from '@sqlrooms/ai-settings';
 import {
-  BaseRoomConfig,
-  createRoomSlice,
+  BaseRoomStoreState,
+  createBaseRoomSlice,
+  createPersistHelpers,
   createRoomStoreCreator,
-  RoomState,
   StateCreator,
 } from '@sqlrooms/room-store';
 import {persist} from 'zustand/middleware';
 import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
+import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
 import {LLM_INSTRUCTIONS} from '../instructions';
-import {createListFilesTool} from '../tools/listFiles/createListFilesTool';
 import {createGetFileContentTool} from '../tools/getFileContent/getFileContentTool';
+import {createListFilesTool} from '../tools/listFiles/createListFilesTool';
+import {createUpdateFileContentTool} from '../tools/updateFileContent/updateFileContentTool';
 import {
   createWebContainerSlice,
+  WebContainerSliceConfig,
   WebContainerSliceState,
 } from './WebContainerSlice';
-import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
-import {createUpdateFileContentTool} from '../tools/updateFileContent/updateFileContentTool';
 
-type State = RoomState<BaseRoomConfig> &
+type RoomState = BaseRoomStoreState &
   AiSliceState &
   AiSettingsSliceState &
   WebContainerSliceState;
-// LayoutSliceState;
 
 /**
  * Create a customized room store
  */
-export const {createRoomStore, useRoomStore} = createRoomStoreCreator<State>()(
-  () =>
-    persist(
-      (set, get, store) => ({
-        // Base room slice
-        ...createRoomSlice<BaseRoomConfig>()(set, get, store),
+export const {createRoomStore, useRoomStore} =
+  createRoomStoreCreator<RoomState>()(
+    () =>
+      persist(
+        (set, get, store) => ({
+          // Base room slice
+          ...createBaseRoomSlice()(set, get, store),
 
-        // ...createLayoutSlice({
-        //   config: {
-        //     type: LayoutTypes.enum.mosaic,
-        //     nodes: {
-        //       direction: 'row',
-        //       first: 'main',
-        //       second: 'sidebar',
-        //     },
-        //   },
-        //   panels: {
-        //     main: {
-        //       title: 'Main View',
-        //       icon: () => null,
-        //       component: BrowserView,
-        //       placement: 'main',
-        //     },
-        //   },
-        // })(set, get, store),
+          // Ai model config slice
+          ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
-        // Ai model config slice
-        ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
+          // WebContainer slice
+          ...createWebContainerSlice({
+            config: {filesTree: scaffolds['get-started']},
+          })(set, get, store),
 
-        // WebContainer slice
-        ...createWebContainerSlice({
-          filesTree: scaffolds['get-started'],
-        })(set, get, store),
-
-        // Ai slice
-        ...createAiSlice({
-          getInstructions: () => {
-            const instructions = `${LLM_INSTRUCTIONS} 
+          // Ai slice
+          ...createAiSlice({
+            getInstructions: () => {
+              const instructions = `${LLM_INSTRUCTIONS} 
             <file_list>
-            ${JSON.stringify(fileSystemTreeToNodes(get().wc.filesTree, '/'), null, 2)}
+            ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
-            return instructions;
-          },
+              return instructions;
+            },
 
-          // Add custom tools
-          tools: {
-            // Example of adding a simple echo tool
-            listFiles: createListFilesTool(store),
-            getFileContent: createGetFileContentTool(store),
-            updateFileContent: createUpdateFileContentTool(store),
-          },
-        })(set, get, store),
-      }),
-
-      // Persist settings
-      {
-        // Local storage key
-        name: 'sqlrooms-app-builder',
-        // Subset of the state to persist
-        partialize: (state) => ({
-          ai: AiSliceConfig.parse(state.ai.config),
-          aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-          filesTree: state.wc.filesTree,
+            // Add custom tools
+            tools: {
+              // Example of adding a simple echo tool
+              listFiles: createListFilesTool(store),
+              getFileContent: createGetFileContentTool(store),
+              updateFileContent: createUpdateFileContentTool(store),
+            },
+          })(set, get, store),
         }),
-        // Combining the persisted state with the current one when loading from local storage
-        merge: (persistedState: any, currentState) => {
-          return {
-            ...currentState,
-            ai: {
-              ...currentState.ai,
-              config: AiSliceConfig.parse(persistedState.ai),
-            },
-            aiSettings: {
-              ...currentState.aiSettings,
-              config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-            },
-            wc: {
-              ...currentState.wc,
-              filesTree: persistedState.filesTree,
-            },
-          };
+
+        // Persist settings
+        {
+          // Local storage key
+          name: 'sqlrooms-app-builder',
+          ...createPersistHelpers({
+            ai: AiSliceConfig,
+            aiSettings: AiSettingsSliceConfig,
+            webContainer: WebContainerSliceConfig,
+          }),
         },
-      },
-    ) as StateCreator<State>,
-);
+      ) as StateCreator<RoomState>,
+  );

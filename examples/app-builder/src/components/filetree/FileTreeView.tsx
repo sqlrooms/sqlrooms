@@ -13,7 +13,7 @@ export const renderFileTreeNode = (
   _isOpen: boolean,
 ) => {
   const {object} = node;
-  const openFile = useRoomStore((s) => s.wc.openFile);
+  const openFile = useRoomStore((s) => s.webContainer.openFile);
   return (
     <BaseTreeNode asChild className={cn('h-[22px]')} nodeObject={object}>
       {object.type === 'directory' ? (
@@ -47,7 +47,7 @@ export const FileTreeView: FC<{
     isOpen: boolean,
   ) => React.ReactNode;
 }> = ({className, renderNode = renderFileTreeNode}) => {
-  const filesTree = useRoomStore((s) => s.wc.filesTree);
+  const filesTree = useRoomStore((s) => s.webContainer.config.filesTree);
   const rootNode = useMemo(
     () => fileSystemTreeToNodes(filesTree, '/'),
     [filesTree],

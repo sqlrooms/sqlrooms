@@ -16,7 +16,6 @@
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@webcontainer/api": "^1.6.1",

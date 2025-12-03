@@ -4,12 +4,14 @@ import {useMemo} from 'react';
 import {useRoomStore} from '../store/store';
 
 export const CodeView = () => {
-  const openedFiles = useRoomStore((s) => s.wc.openedFiles);
-  const activeFilePath = useRoomStore((s) => s.wc.activeFilePath);
-  const setActiveFile = useRoomStore((s) => s.wc.setActiveFile);
-  const updateFileContent = useRoomStore((s) => s.wc.updateFileContent);
-  const saveAll = useRoomStore((s) => s.wc.saveAllOpenFiles);
-  const hasDirty = useRoomStore((s) => s.wc.hasDirtyFiles());
+  const openedFiles = useRoomStore((s) => s.webContainer.openedFiles);
+  const activeFilePath = useRoomStore((s) => s.webContainer.activeFilePath);
+  const setActiveFile = useRoomStore((s) => s.webContainer.setActiveFile);
+  const updateFileContent = useRoomStore(
+    (s) => s.webContainer.updateFileContent,
+  );
+  const saveAll = useRoomStore((s) => s.webContainer.saveAllOpenFiles);
+  const hasDirty = useRoomStore((s) => s.webContainer.hasDirtyFiles());
 
   const activeFile = useMemo(
     () => openedFiles.find((f) => f.path === activeFilePath) ?? null,

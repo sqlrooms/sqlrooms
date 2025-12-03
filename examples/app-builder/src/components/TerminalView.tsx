@@ -5,8 +5,8 @@ import {useEffect, useRef} from 'react';
 import {useRoomStore} from '../store/store';
 
 export const TerminalView = () => {
-  const serverStatus = useRoomStore((s) => s.wc.serverStatus);
-  const output = useRoomStore((s) => s.wc.output);
+  const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
+  const output = useRoomStore((s) => s.webContainer.output);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);

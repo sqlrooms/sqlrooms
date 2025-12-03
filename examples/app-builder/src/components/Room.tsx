@@ -1,4 +1,3 @@
-import {RoomShell} from '@sqlrooms/room-shell';
 import {
   ResizableHandle,
   ResizablePanel,
@@ -11,15 +10,16 @@ import {BrowserView} from './BrowserView';
 import {CodeView} from './CodeView';
 import {TerminalView} from './TerminalView';
 import {FileTreeView} from './filetree/FileTreeView';
+import {RoomStateProvider} from '@sqlrooms/room-store';
 
 export const Room = () => {
   const storeRef = useRef<ReturnType<typeof createRoomStore>>(null);
   if (!storeRef.current) {
     storeRef.current = createRoomStore();
-    storeRef.current.getState().wc.initialize();
+    storeRef.current.getState().webContainer.initialize();
   }
   return (
-    <RoomShell roomStore={storeRef.current}>
+    <RoomStateProvider roomStore={storeRef.current}>
       <div className="flex h-full w-full">
         <ResizablePanelGroup direction="horizontal">
           <ResizablePanel defaultSize={30}>
@@ -51,6 +51,6 @@ export const Room = () => {
           </ResizablePanel>
         </ResizablePanelGroup>
       </div>
-    </RoomShell>
+    </RoomStateProvider>
   );
 };

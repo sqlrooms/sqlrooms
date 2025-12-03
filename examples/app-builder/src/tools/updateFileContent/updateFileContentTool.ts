@@ -14,8 +14,8 @@ export function createUpdateFileContentTool(
       content: z.string().describe('The content to set'),
     }),
     execute: async ({path, content}: {path: string; content: string}) => {
-      await store.getState().wc.updateFileContent(path, content);
-      await store.getState().wc.saveAllOpenFiles();
+      await store.getState().webContainer.updateFileContent(path, content);
+      await store.getState().webContainer.saveAllOpenFiles();
       return {
         llmResult: {
           success: true,

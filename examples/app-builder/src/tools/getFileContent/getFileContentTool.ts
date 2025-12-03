@@ -13,7 +13,7 @@ export function createGetFileContentTool(
       path: z.string().describe('The path to the file'),
     }),
     execute: async ({path}: {path: string}) => {
-      const content = await store.getState().wc.getFileContent(path);
+      const content = await store.getState().webContainer.getFileContent(path);
       return {
         llmResult: {
           success: true,
