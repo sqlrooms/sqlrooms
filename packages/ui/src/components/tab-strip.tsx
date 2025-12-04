@@ -230,7 +230,19 @@ function TabStripSearchDropdown({
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => event.stopPropagation()}
+            onKeyDown={(event) => {
+              if (event.key === 'ArrowDown' || event.key === 'Tab') {
+                event.preventDefault();
+                const firstItem = event.currentTarget
+                  .closest('[role="menu"]')
+                  ?.querySelector<HTMLElement>(
+                    '[role="menuitem"]:not([disabled])',
+                  );
+                firstItem?.focus();
+              } else {
+                event.stopPropagation();
+              }
+            }}
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
             placeholder="Search tabs..."
@@ -300,6 +312,7 @@ function DropdownTabItems({
               <Button
                 size="xs"
                 variant="ghost"
+                tabIndex={-1}
                 aria-label={`Rename ${tab.name}`}
                 className="text-muted-foreground h-3 w-3"
                 onClick={(event) => {
@@ -314,6 +327,7 @@ function DropdownTabItems({
               <Button
                 size="xs"
                 variant="ghost"
+                tabIndex={-1}
                 aria-label={`Delete ${tab.name}`}
                 className="text-muted-foreground h-3 w-3"
                 onClick={(event) => {
