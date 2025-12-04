@@ -13,7 +13,7 @@ export const SqlEditorSliceConfig = z.object({
     .string()
     .describe('The id of the currently selected query.'),
   lastExecutedQuery: z.string().optional().describe('Last executed query'),
-  openTabIds: z.array(z.string()).describe('IDs of opened tabs'),
+  openTabIds: z.array(z.string()).describe('IDs of open tabs'),
 });
 
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;

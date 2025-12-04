@@ -42,7 +42,7 @@ export interface TabDescriptor {
 
 interface TabStripContextValue {
   // Data
-  openedTabs: TabDescriptor[];
+  openTabs: TabDescriptor[];
   closedTabs: TabDescriptor[];
   closedTabIds: Set<string>;
   filteredTabs: TabDescriptor[];
@@ -89,7 +89,7 @@ interface TabStripTabsProps {
  */
 function TabStripTabs({className}: TabStripTabsProps) {
   const {
-    openedTabs,
+    openTabs,
     editingTabId,
     scrollContainerRef,
     onClose,
@@ -106,7 +106,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
         className,
       )}
     >
-      {openedTabs.map((tab) => (
+      {openTabs.map((tab) => (
         <TabsTrigger
           key={tab.id}
           value={tab.id}
@@ -418,7 +418,7 @@ function TabStripRoot({
 
   const openTabIdsSet = useMemo(() => new Set(openTabIds), [openTabIds]);
 
-  const openedTabs = useMemo(
+  const openTabs = useMemo(
     () => tabs.filter((tab) => openTabIdsSet.has(tab.id)),
     [tabs, openTabIdsSet],
   );
@@ -452,8 +452,8 @@ function TabStripRoot({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const isOpened = openedTabs.some((tab) => tab.id === selectedTabId);
-    if (!isOpened) return;
+    const isOpen = openTabs.some((tab) => tab.id === selectedTabId);
+    if (!isOpen) return;
 
     const frameId = requestAnimationFrame(() => {
       const activeTab = container.querySelector<HTMLElement>(
@@ -491,7 +491,7 @@ function TabStripRoot({
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [selectedTabId, openedTabs]);
+  }, [selectedTabId, openTabs]);
 
   const handleInlineRename = (tabId: string, newName: string) => {
     if (!onRename) return;
@@ -515,7 +515,7 @@ function TabStripRoot({
   };
 
   const contextValue: TabStripContextValue = {
-    openedTabs,
+    openTabs,
     closedTabs,
     closedTabIds,
     filteredTabs,
