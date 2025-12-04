@@ -186,6 +186,13 @@ function TabStripSearchDropdown({
 
   const isSearching = search.trim().length > 0;
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (!open) {
+      setSearch('');
+    }
+  };
+
   const handleTabClick = (tabId: string) => {
     if (closedTabIds.has(tabId)) {
       onOpen?.(tabId);
@@ -196,7 +203,7 @@ function TabStripSearchDropdown({
   };
 
   return (
-    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
+    <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
