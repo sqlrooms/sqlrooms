@@ -76,10 +76,9 @@ interface TabStripContextValue {
   onSelect?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
-  onRenameRequest?: (tabId: string) => void;
-  onDelete?: (tabId: string) => void;
   onReorder?: (tabIds: string[]) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
+  renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
   setSearch: (value: string) => void;
@@ -272,6 +271,41 @@ function TabStripMenuSeparator({className}: TabStripMenuSeparatorProps) {
   return <DropdownMenuSeparator className={className} />;
 }
 
+interface TabStripSearchItemActionProps {
+  icon: React.ReactNode;
+  onClick?: () => void;
+  'aria-label': string;
+  className?: string;
+}
+
+/**
+ * An action button for search dropdown items.
+ */
+function TabStripSearchItemAction({
+  icon,
+  onClick,
+  'aria-label': ariaLabel,
+  className,
+}: TabStripSearchItemActionProps) {
+  return (
+    <span
+      role="button"
+      tabIndex={-1}
+      aria-label={ariaLabel}
+      className={cn(
+        'text-muted-foreground hover:text-foreground flex h-4 w-4 cursor-pointer items-center justify-center rounded',
+        className,
+      )}
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+    >
+      {icon}
+    </span>
+  );
+}
+
 /**
  * Renders the scrollable row of open tabs with drag-to-reorder support.
  */
@@ -373,8 +407,7 @@ function TabStripSearchDropdown({
     closedTabIds,
     onOpen,
     onSelect,
-    onRenameRequest,
-    onDelete,
+    renderSearchItemActions,
   } = useTabStripContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -450,16 +483,14 @@ function TabStripSearchDropdown({
               tabs={filteredTabs}
               emptyMessage="No matching tabs"
               onTabClick={handleTabClick}
-              onRenameRequest={onRenameRequest}
-              onDelete={onDelete}
+              renderActions={renderSearchItemActions}
             />
           ) : (
             <DropdownTabItems
               tabs={closedTabs}
               emptyMessage="No closed tabs"
               onTabClick={handleTabClick}
-              onRenameRequest={onRenameRequest}
-              onDelete={onDelete}
+              renderActions={renderSearchItemActions}
             />
           )}
         </div>
@@ -472,16 +503,14 @@ interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
   emptyMessage?: string;
   onTabClick?: (tabId: string) => void;
-  onRenameRequest?: (tabId: string) => void;
-  onDelete?: (tabId: string) => void;
+  renderActions?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 function DropdownTabItems({
   tabs,
   emptyMessage,
   onTabClick,
-  onRenameRequest,
-  onDelete,
+  renderActions,
 }: DropdownTabItemsProps) {
   if (tabs.length === 0) {
     if (!emptyMessage) return null;
@@ -501,38 +530,9 @@ function DropdownTabItems({
           className="flex h-7 cursor-pointer items-center justify-between truncate"
         >
           <span className="xs truncate pl-1">{tab.name}</span>
-          <div className="flex items-center gap-1">
-            {onRenameRequest && (
-              <Button
-                size="xs"
-                variant="ghost"
-                tabIndex={-1}
-                aria-label={`Rename ${tab.name}`}
-                className="text-muted-foreground h-3 w-3"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onRenameRequest(tab.id);
-                }}
-              >
-                <PencilIcon size={12} className="!size-3" />
-              </Button>
-            )}
-            {onDelete && (
-              <Button
-                size="xs"
-                variant="ghost"
-                tabIndex={-1}
-                aria-label={`Delete ${tab.name}`}
-                className="text-muted-foreground h-3 w-3"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onDelete(tab.id);
-                }}
-              >
-                <TrashIcon size={12} className="!size-3" />
-              </Button>
-            )}
-          </div>
+          {renderActions && (
+            <div className="flex items-center gap-2">{renderActions(tab)}</div>
+          )}
         </DropdownMenuItem>
       ))}
     </>
@@ -589,14 +589,12 @@ export interface TabStripProps {
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
   onRename?: (tabId: string, newName: string) => void;
-  /** Called when rename is requested via dropdown (for modal). */
-  onRenameRequest?: (tabId: string) => void;
-  /** Called when a tab is permanently deleted. */
-  onDelete?: (tabId: string) => void;
   /** Called when tabs are reordered via drag-and-drop. Receives new order of open tab IDs. */
   onReorder?: (tabIds: string[]) => void;
   /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
+  /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
+  renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -631,10 +629,9 @@ function TabStripRoot({
   onSelect,
   onCreate,
   onRename,
-  onRenameRequest,
-  onDelete,
   onReorder,
   renderTabMenu,
+  renderSearchItemActions,
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -749,10 +746,9 @@ function TabStripRoot({
     onSelect,
     onCreate,
     onRename,
-    onRenameRequest,
-    onDelete,
     onReorder,
     renderTabMenu,
+    renderSearchItemActions,
     setSearch,
     handleStartEditing,
     handleStopEditing,
@@ -797,6 +793,7 @@ export const TabStrip = Object.assign(TabStripRoot, {
   NewButton: TabStripNewButton,
   MenuItem: TabStripMenuItem,
   MenuSeparator: TabStripMenuSeparator,
+  SearchItemAction: TabStripSearchItemAction,
 });
 
 export type {
@@ -804,5 +801,6 @@ export type {
   TabStripMenuSeparatorProps,
   TabStripNewButtonProps,
   TabStripSearchDropdownProps,
+  TabStripSearchItemActionProps,
   TabStripTabsProps,
 };

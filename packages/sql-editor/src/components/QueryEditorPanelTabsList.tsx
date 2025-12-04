@@ -110,6 +110,20 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
             </TabStrip.MenuItem>
           </>
         )}
+        renderSearchItemActions={(tab) => (
+          <>
+            <TabStrip.SearchItemAction
+              icon={<PencilIcon className="h-3 w-3" size={5} />}
+              aria-label={`Rename ${tab.name}`}
+              onClick={() => handleRenameRequest(tab.id)}
+            />
+            <TabStrip.SearchItemAction
+              icon={<TrashIcon className="h-3 w-3" />}
+              aria-label={`Delete ${tab.name}`}
+              onClick={() => handleDelete(tab.id)}
+            />
+          </>
+        )}
       />
 
       <DeleteSqlQueryModal
