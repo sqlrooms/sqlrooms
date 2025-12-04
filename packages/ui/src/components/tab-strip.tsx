@@ -49,6 +49,12 @@ import {
 import {EditableText} from './editable-text';
 import {Input} from './input';
 import {Tabs, TabsList, TabsTrigger} from './tabs';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from './tooltip';
 
 export interface TabDescriptor {
   id: string;
@@ -388,6 +394,10 @@ interface TabStripSearchDropdownProps {
   triggerClassName?: string;
   /** Whether to auto-focus the search input when dropdown opens. Defaults to true. */
   autoFocus?: boolean;
+  /** Optional tooltip content for the trigger button. */
+  tooltip?: React.ReactNode;
+  /** Optional custom icon for the trigger button. */
+  triggerIcon?: React.ReactNode;
 }
 
 /**
@@ -398,6 +408,8 @@ function TabStripSearchDropdown({
   className,
   triggerClassName,
   autoFocus = true,
+  tooltip,
+  triggerIcon,
 }: TabStripSearchDropdownProps) {
   const {
     search,
@@ -430,20 +442,33 @@ function TabStripSearchDropdown({
     setIsOpen(false);
   };
 
+  const triggerButton = (
+    <DropdownMenuTrigger asChild>
+      <Button
+        variant="ghost"
+        aria-label="Browse tabs"
+        className={cn(
+          'hover:bg-primary/10 h-full flex-shrink-0',
+          triggerClassName,
+        )}
+      >
+        {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
+      </Button>
+    </DropdownMenuTrigger>
+  );
+
   return (
     <DropdownMenu open={isOpen} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          aria-label="Browse closed tabs"
-          className={cn(
-            'hover:bg-primary/10 h-full flex-shrink-0',
-            triggerClassName,
-          )}
-        >
-          <ListCollapseIcon className="h-4 w-4" />
-        </Button>
-      </DropdownMenuTrigger>
+      {tooltip ? (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>{triggerButton}</TooltipTrigger>
+            <TooltipContent>{tooltip}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : (
+        triggerButton
+      )}
 
       <DropdownMenuContent
         align="start"
@@ -470,8 +495,8 @@ function TabStripSearchDropdown({
             }}
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
-            placeholder="Search tabs..."
-            aria-label="Search tabs"
+            placeholder="Search..."
+            aria-label="Search"
             autoFocus={autoFocus}
           />
         </div>
@@ -541,19 +566,21 @@ function DropdownTabItems({
 
 interface TabStripNewButtonProps {
   className?: string;
+  /** Optional tooltip content for the button. */
+  tooltip?: React.ReactNode;
 }
 
 /**
  * Renders a button to create a new tab.
  */
-function TabStripNewButton({className}: TabStripNewButtonProps) {
+function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
   const {onCreate} = useTabStripContext();
 
   if (!onCreate) {
     return null;
   }
 
-  return (
+  const button = (
     <Button
       size="icon"
       variant="ghost"
@@ -564,6 +591,19 @@ function TabStripNewButton({className}: TabStripNewButtonProps) {
       <PlusIcon className="h-4 w-4" />
     </Button>
   );
+
+  if (tooltip) {
+    return (
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger asChild>{button}</TooltipTrigger>
+          <TooltipContent>{tooltip}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+    );
+  }
+
+  return button;
 }
 
 // -----------------------------------------------------------------------------
@@ -572,6 +612,7 @@ function TabStripNewButton({className}: TabStripNewButtonProps) {
 
 export interface TabStripProps {
   className?: string;
+  tabsListClassName?: string;
   children?: React.ReactNode;
   /** All available tabs. */
   tabs: TabDescriptor[];
@@ -620,6 +661,7 @@ export interface TabStripProps {
  */
 function TabStripRoot({
   className,
+  tabsListClassName,
   children,
   tabs,
   openTabIds,
@@ -764,13 +806,13 @@ function TabStripRoot({
     <Tabs
       value={selectedTabId ?? undefined}
       onValueChange={handleValueChange}
-      className="min-w-0"
+      className={cn('w-full min-w-0', className)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex min-w-0 justify-start gap-2 bg-transparent p-0',
-            className,
+            'flex w-full min-w-0 justify-start gap-2 bg-transparent p-0',
+            tabsListClassName,
           )}
         >
           {children ?? (
