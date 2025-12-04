@@ -334,9 +334,9 @@ function TabStripSearchDropdown({
       <DropdownMenuContent
         align="start"
         onCloseAutoFocus={(event) => event.preventDefault()}
-        className={cn('max-h-[400px] max-w-[240px] overflow-y-auto', className)}
+        className={cn('flex max-h-[400px] max-w-[240px] flex-col', className)}
       >
-        <div className="flex items-center gap-1 px-2">
+        <div className="flex flex-shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
           <Input
             value={search}
@@ -361,25 +361,27 @@ function TabStripSearchDropdown({
             autoFocus={autoFocus}
           />
         </div>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator className="flex-shrink-0" />
 
-        {isSearching ? (
-          <DropdownTabItems
-            tabs={filteredTabs}
-            emptyMessage="No matching tabs"
-            onTabClick={handleTabClick}
-            onRenameRequest={onRenameRequest}
-            onDelete={onDelete}
-          />
-        ) : (
-          <DropdownTabItems
-            tabs={closedTabs}
-            emptyMessage="No closed tabs"
-            onTabClick={handleTabClick}
-            onRenameRequest={onRenameRequest}
-            onDelete={onDelete}
-          />
-        )}
+        <div className="overflow-y-auto">
+          {isSearching ? (
+            <DropdownTabItems
+              tabs={filteredTabs}
+              emptyMessage="No matching tabs"
+              onTabClick={handleTabClick}
+              onRenameRequest={onRenameRequest}
+              onDelete={onDelete}
+            />
+          ) : (
+            <DropdownTabItems
+              tabs={closedTabs}
+              emptyMessage="No closed tabs"
+              onTabClick={handleTabClick}
+              onRenameRequest={onRenameRequest}
+              onDelete={onDelete}
+            />
+          )}
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
