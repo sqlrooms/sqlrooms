@@ -1,5 +1,5 @@
 import React from 'react';
-import {cn, Tabs} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {QueryEditorPanelActions} from './QueryEditorPanelActions';
 import {QueryEditorPanelEditor} from './QueryEditorPanelEditor';
@@ -19,16 +19,11 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   const openTabIds = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.openTabIds,
   );
-  const setSelectedQueryId = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.setSelectedQueryId,
-  );
 
   const isSelectedOpen = openTabIds.includes(selectedQueryId);
 
   return (
-    <Tabs
-      value={selectedQueryId}
-      onValueChange={setSelectedQueryId}
+    <div
       className={cn(
         'flex h-full flex-col',
         // this is for Monaco's completion menu to not being cut off
@@ -52,6 +47,6 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
           No open queries
         </div>
       )}
-    </Tabs>
+    </div>
   );
 };

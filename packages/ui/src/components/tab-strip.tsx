@@ -47,7 +47,7 @@ import {
 } from './dropdown-menu';
 import {EditableText} from './editable-text';
 import {Input} from './input';
-import {TabsList, TabsTrigger} from './tabs';
+import {Tabs, TabsList, TabsTrigger} from './tabs';
 
 export interface TabDescriptor {
   id: string;
@@ -658,23 +658,33 @@ function TabStripRoot({
     handleInlineRename,
   };
 
+  const handleValueChange = (value: string) => {
+    onSelect?.(value);
+  };
+
   return (
-    <TabStripContext.Provider value={contextValue}>
-      <TabsList
-        className={cn(
-          'flex min-w-0 justify-start gap-2 bg-transparent p-0 pt-1.5',
-          className,
-        )}
-      >
-        {children ?? (
-          <>
-            <TabStripSearchDropdown />
-            <TabStripTabs />
-            <TabStripNewButton />
-          </>
-        )}
-      </TabsList>
-    </TabStripContext.Provider>
+    <Tabs
+      value={selectedTabId ?? undefined}
+      onValueChange={handleValueChange}
+      className="min-w-0"
+    >
+      <TabStripContext.Provider value={contextValue}>
+        <TabsList
+          className={cn(
+            'flex min-w-0 justify-start gap-2 bg-transparent p-0 pt-1.5',
+            className,
+          )}
+        >
+          {children ?? (
+            <>
+              <TabStripSearchDropdown />
+              <TabStripTabs />
+              <TabStripNewButton />
+            </>
+          )}
+        </TabsList>
+      </TabStripContext.Provider>
+    </Tabs>
   );
 }
 
