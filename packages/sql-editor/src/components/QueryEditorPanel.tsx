@@ -35,9 +35,11 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         <QueryEditorPanelActions />
       </div>
       {isSelectedOpen ? (
-        <div className="relative h-full flex-grow">
-          <div className="absolute inset-0">
-            <QueryEditorPanelEditor queryId={selectedQueryId} />
+        <div className="bg-background h-full w-full py-1">
+          <div className="relative h-full flex-grow">
+            <div className="absolute inset-0">
+              <QueryEditorPanelEditor queryId={selectedQueryId} />
+            </div>
           </div>
         </div>
       ) : (

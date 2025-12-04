@@ -175,7 +175,7 @@ export const SessionControls: React.FC<{
               triggerIcon={<HistoryIcon className="h-4 w-4" />}
               tooltip="Session history"
             />
-            <TabStrip.Tabs />
+            <TabStrip.Tabs tabClassName="rounded-md" />
             <TabStrip.NewButton tooltip="New session" />
           </TabStrip>
         </div>

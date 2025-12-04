@@ -108,10 +108,13 @@ function useTabStripContext() {
 
 interface TabStripTabsProps {
   className?: string;
+  /** Custom className for individual tab triggers. */
+  tabClassName?: string;
 }
 
 interface SortableTabProps {
   tab: TabDescriptor;
+  tabClassName?: string;
   editingTabId: string | null;
   onClose: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
@@ -125,6 +128,7 @@ interface SortableTabProps {
  */
 function SortableTab({
   tab,
+  tabClassName,
   editingTabId,
   onClose,
   onStartEditing,
@@ -156,7 +160,10 @@ function SortableTab({
     >
       <TabsTrigger
         value={tab.id}
-        className="data-[state=active]:bg-primary/20 data-[state=inactive]:hover:bg-primary/5 group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-1 overflow-hidden rounded-b-none py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none"
+        className={cn(
+          'data-[state=active]:bg-primary/20 data-[state=inactive]:hover:bg-primary/5 group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-1 overflow-hidden rounded-b-none py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
+          tabClassName,
+        )}
       >
         <div
           className="flex min-w-0 items-center"
@@ -313,7 +320,7 @@ function TabStripSearchItemAction({
 /**
  * Renders the scrollable row of open tabs with drag-to-reorder support.
  */
-function TabStripTabs({className}: TabStripTabsProps) {
+function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
   const {
     openTabItems,
     editingTabId,
@@ -373,6 +380,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
             <SortableTab
               key={tab.id}
               tab={tab}
+              tabClassName={tabClassName}
               editingTabId={editingTabId}
               onClose={handleClose}
               onStartEditing={handleStartEditing}
