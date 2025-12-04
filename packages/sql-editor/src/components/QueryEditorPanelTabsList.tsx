@@ -18,13 +18,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const renameQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.renameQueryTab,
   );
-
-  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
-  const [queryToRename, setQueryToRename] = useState<{
-    id: string;
-    name: string;
-  } | null>(null);
-
   const closeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.closeQueryTab);
   const openQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.openQueryTab);
   const createQueryTab = useStoreWithSqlEditor(
@@ -34,12 +27,20 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     (s) => s.sqlEditor.deleteQueryTab,
   );
 
-  // Handle rename query
-  const handleStartRename = useCallback(
-    (queryId: string, currentName: string) => {
-      setQueryToRename({id: queryId, name: currentName});
+  const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
+  const [queryToRename, setQueryToRename] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+
+  const handleRenameRequest = useCallback(
+    (queryId: string) => {
+      const query = queries.find((q) => q.id === queryId);
+      if (query) {
+        setQueryToRename({id: queryId, name: query.name});
+      }
     },
-    [],
+    [queries],
   );
 
   const handleFinishRename = useCallback(
@@ -51,25 +52,12 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     },
     [queryToRename, renameQueryTab],
   );
-  // Handle rename query
-  const handleRename = useCallback(
-    (queryId: string, newName: string) => {
-      const trimmed = newName.trim();
-      if (trimmed !== '') {
-        renameQueryTab(queryId, trimmed);
-      }
-    },
-    [renameQueryTab],
-  );
 
-  // Handle delete query
-  const handleDeleteQuery = useCallback(
+  const handleDelete = useCallback(
     (queryId: string) => {
-      // Find the query to check if it's empty
-      const queryToDelete = queries.find((q) => q.id === queryId);
-
+      const query = queries.find((q) => q.id === queryId);
       // If query is empty (no content), delete immediately without confirmation
-      if (queryToDelete && queryToDelete.query.trim() === '') {
+      if (query && query.query.trim() === '') {
         deleteQueryTab(queryId);
       } else {
         // Otherwise, show confirmation modal
@@ -79,12 +67,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     [queries, deleteQueryTab],
   );
 
-  // Handle new query creation
-  const handleNewQuery = useCallback(() => {
-    createQueryTab();
-  }, [createQueryTab]);
-
-  const handleConfirmDeleteQuery = useCallback(() => {
+  const handleConfirmDelete = useCallback(() => {
     if (queryToDelete) {
       deleteQueryTab(queryToDelete);
       setQueryToDelete(null);
@@ -98,18 +81,18 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         tabs={queries}
         openTabIds={openTabIds}
         selectedTabId={selectedQueryId}
-        onCloseTab={(tab) => closeQueryTab(tab.id)}
-        onOpenTab={(tab) => openQueryTab(tab.id)}
-        onCreateTab={handleNewQuery}
-        onRenameTab={(tab, newName) => handleRename(tab.id, newName)}
-        onRequestRename={(tab) => handleStartRename(tab.id, tab.name)}
-        onDeleteTab={(tab) => handleDeleteQuery(tab.id)}
+        onClose={closeQueryTab}
+        onOpen={openQueryTab}
+        onCreate={createQueryTab}
+        onRename={renameQueryTab}
+        onRenameRequest={handleRenameRequest}
+        onDelete={handleDelete}
       />
 
       <DeleteSqlQueryModal
         isOpen={queryToDelete !== null}
         onClose={() => setQueryToDelete(null)}
-        onConfirm={handleConfirmDeleteQuery}
+        onConfirm={handleConfirmDelete}
       />
       <RenameSqlQueryModal
         isOpen={queryToRename !== null}
