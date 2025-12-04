@@ -275,17 +275,24 @@ export function createSqlEditorSlice({
         closeQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.openTabIds =
-                draft.sqlEditor.config.openTabIds.filter(
-                  (id) => id !== queryId,
-                );
+              const openTabIds = draft.sqlEditor.config.openTabIds;
+              const closingIndex = openTabIds.indexOf(queryId);
 
+              draft.sqlEditor.config.openTabIds = openTabIds.filter(
+                (id) => id !== queryId,
+              );
+
+              // If closing the selected tab, select the one to the left (or right if leftmost)
               if (draft.sqlEditor.config.selectedQueryId === queryId) {
-                const firstOpenedId = draft.sqlEditor.config.queries.find((q) =>
-                  draft.sqlEditor.config.openTabIds.includes(q.id),
-                )?.id;
-                if (firstOpenedId) {
-                  draft.sqlEditor.config.selectedQueryId = firstOpenedId;
+                const remainingIds = draft.sqlEditor.config.openTabIds;
+                if (remainingIds.length > 0) {
+                  // Select the tab to the left, or the first one if we closed the leftmost
+                  const newIndex = Math.min(
+                    Math.max(0, closingIndex - 1),
+                    remainingIds.length - 1,
+                  );
+                  draft.sqlEditor.config.selectedQueryId =
+                    remainingIds[newIndex]!;
                 }
               }
             }),

@@ -1,5 +1,5 @@
 import React from 'react';
-import {cn, Tabs, TabsContent} from '@sqlrooms/ui';
+import {cn, Tabs} from '@sqlrooms/ui';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {QueryEditorPanelActions} from './QueryEditorPanelActions';
 import {QueryEditorPanelEditor} from './QueryEditorPanelEditor';
@@ -13,15 +13,17 @@ export interface QueryEditorPanelProps {
 export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   className,
 }) => {
-  // Get state and actions from store in a single call
-
   const selectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
+  const openTabIds = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.config.openTabIds,
+  );
   const setSelectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setSelectedQueryId,
   );
+
+  const isSelectedOpen = openTabIds.includes(selectedQueryId);
 
   return (
     <Tabs
@@ -39,19 +41,17 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         <div className="flex-1" />
         <QueryEditorPanelActions />
       </div>
-      {queries.map((q) => (
-        <TabsContent
-          key={q.id}
-          value={q.id}
-          className="relative h-full flex-grow flex-col data-[state=active]:flex"
-        >
-          <div className="absolute inset-0 h-full w-full flex-grow">
-            {q.id === selectedQueryId && (
-              <QueryEditorPanelEditor queryId={q.id} />
-            )}
+      {isSelectedOpen ? (
+        <div className="relative h-full flex-grow">
+          <div className="absolute inset-0">
+            <QueryEditorPanelEditor queryId={selectedQueryId} />
           </div>
-        </TabsContent>
-      ))}
+        </div>
+      ) : (
+        <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+          No open queries
+        </div>
+      )}
     </Tabs>
   );
 };

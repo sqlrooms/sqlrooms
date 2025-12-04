@@ -1,11 +1,3 @@
-import React, {
-  createContext,
-  useContext,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
 import {
   DndContext,
   DragEndEvent,
@@ -24,8 +16,6 @@ import {
   horizontalListSortingStrategy,
   useSortable,
 } from '@dnd-kit/sortable';
-
-const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToParentElement];
 import {
   ListCollapseIcon,
   PencilIcon,
@@ -34,12 +24,22 @@ import {
   TrashIcon,
   XIcon,
 } from 'lucide-react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
+const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToParentElement];
+
+import {cn} from '../lib/utils';
 import {Button} from './button';
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -48,7 +48,6 @@ import {
 import {EditableText} from './editable-text';
 import {Input} from './input';
 import {TabsList, TabsTrigger} from './tabs';
-import {cn} from '../lib/utils';
 
 export interface TabDescriptor {
   id: string;
@@ -687,7 +686,7 @@ export const TabStrip = Object.assign(TabStripRoot, {
 });
 
 export type {
-  TabStripTabsProps,
-  TabStripSearchDropdownProps,
   TabStripNewButtonProps,
+  TabStripSearchDropdownProps,
+  TabStripTabsProps,
 };
