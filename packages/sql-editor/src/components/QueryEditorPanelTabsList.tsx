@@ -1,4 +1,5 @@
 import {TabStrip} from '@sqlrooms/ui';
+import {PencilIcon, TrashIcon} from 'lucide-react';
 import React, {useCallback, useState} from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import DeleteSqlQueryModal from './DeleteSqlQueryModal';
@@ -92,9 +93,23 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         onSelect={setSelectedQueryId}
         onCreate={createQueryTab}
         onRename={renameQueryTab}
-        onRenameRequest={handleRenameRequest}
-        onDelete={handleDelete}
         onReorder={reorderQueryTabs}
+        renderTabMenu={(tab) => (
+          <>
+            <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>
+              <PencilIcon className="mr-2 h-4 w-4" />
+              Rename
+            </TabStrip.MenuItem>
+            <TabStrip.MenuSeparator />
+            <TabStrip.MenuItem
+              variant="destructive"
+              onClick={() => handleDelete(tab.id)}
+            >
+              <TrashIcon className="mr-2 h-4 w-4" />
+              Delete
+            </TabStrip.MenuItem>
+          </>
+        )}
       />
 
       <DeleteSqlQueryModal

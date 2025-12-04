@@ -17,6 +17,7 @@ import {
   useSortable,
 } from '@dnd-kit/sortable';
 import {
+  EllipsisVerticalIcon,
   ListCollapseIcon,
   PencilIcon,
   PlusIcon,
@@ -78,6 +79,7 @@ interface TabStripContextValue {
   onRenameRequest?: (tabId: string) => void;
   onDelete?: (tabId: string) => void;
   onReorder?: (tabIds: string[]) => void;
+  renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
   setSearch: (value: string) => void;
@@ -112,6 +114,7 @@ interface SortableTabProps {
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
+  renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -124,6 +127,7 @@ function SortableTab({
   onStartEditing,
   onStopEditing,
   onInlineRename,
+  renderTabMenu,
 }: SortableTabProps) {
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({id: tab.id});
@@ -137,6 +141,8 @@ function SortableTab({
     opacity: isDragging ? 0.5 : 1,
   };
 
+  const menuContent = renderTabMenu?.(tab);
+
   return (
     <div
       ref={setNodeRef}
@@ -147,7 +153,7 @@ function SortableTab({
     >
       <TabsTrigger
         value={tab.id}
-        className="data-[state=inactive]:hover:bg-primary/5 flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-2 overflow-hidden rounded-b-none py-0 pl-4 pr-2 font-normal data-[state=active]:shadow-none"
+        className="data-[state=inactive]:hover:bg-primary/5 group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-1 overflow-hidden rounded-b-none py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none"
       >
         <div
           className="flex min-w-0 items-center"
@@ -170,26 +176,100 @@ function SortableTab({
           )}
         </div>
 
-        <span
-          role="button"
-          tabIndex={-1}
-          aria-label="Close tab"
-          className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
-          onMouseDown={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-          }}
-          onClick={(event) => {
-            event.stopPropagation();
-            event.preventDefault();
-            onClose(tab.id);
-          }}
-        >
-          <XIcon className="h-4 w-4" />
-        </span>
+        <div className="flex flex-shrink-0 items-center">
+          {menuContent && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <span
+                  role="button"
+                  tabIndex={-1}
+                  aria-label="Tab options"
+                  className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <EllipsisVerticalIcon className="h-3 w-3" />
+                </span>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {menuContent}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Close tab"
+            className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onClose(tab.id);
+            }}
+          >
+            <XIcon className="h-4 w-4" />
+          </span>
+        </div>
       </TabsTrigger>
     </div>
   );
+}
+
+// -----------------------------------------------------------------------------
+// Tab Menu Components (for use with renderTabMenu)
+// -----------------------------------------------------------------------------
+
+interface TabStripMenuItemProps {
+  children: React.ReactNode;
+  onClick?: () => void;
+  variant?: 'default' | 'destructive';
+  className?: string;
+}
+
+/**
+ * A menu item for the tab's dropdown menu.
+ */
+function TabStripMenuItem({
+  children,
+  onClick,
+  variant = 'default',
+  className,
+}: TabStripMenuItemProps) {
+  return (
+    <DropdownMenuItem
+      onClick={(event) => {
+        event.stopPropagation();
+        onClick?.();
+      }}
+      className={cn(
+        variant === 'destructive' && 'text-destructive focus:text-destructive',
+        className,
+      )}
+    >
+      {children}
+    </DropdownMenuItem>
+  );
+}
+
+interface TabStripMenuSeparatorProps {
+  className?: string;
+}
+
+/**
+ * A separator for the tab's dropdown menu.
+ */
+function TabStripMenuSeparator({className}: TabStripMenuSeparatorProps) {
+  return <DropdownMenuSeparator className={className} />;
 }
 
 /**
@@ -201,6 +281,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
     editingTabId,
     scrollContainerRef,
     onReorder,
+    renderTabMenu,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
@@ -259,6 +340,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
               onInlineRename={handleInlineRename}
+              renderTabMenu={renderTabMenu}
             />
           ))}
         </div>
@@ -513,6 +595,8 @@ export interface TabStripProps {
   onDelete?: (tabId: string) => void;
   /** Called when tabs are reordered via drag-and-drop. Receives new order of open tab IDs. */
   onReorder?: (tabIds: string[]) => void;
+  /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
+  renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -550,6 +634,7 @@ function TabStripRoot({
   onRenameRequest,
   onDelete,
   onReorder,
+  renderTabMenu,
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -667,6 +752,7 @@ function TabStripRoot({
     onRenameRequest,
     onDelete,
     onReorder,
+    renderTabMenu,
     setSearch,
     handleStartEditing,
     handleStopEditing,
@@ -709,9 +795,13 @@ export const TabStrip = Object.assign(TabStripRoot, {
   Tabs: TabStripTabs,
   SearchDropdown: TabStripSearchDropdown,
   NewButton: TabStripNewButton,
+  MenuItem: TabStripMenuItem,
+  MenuSeparator: TabStripMenuSeparator,
 });
 
 export type {
+  TabStripMenuItemProps,
+  TabStripMenuSeparatorProps,
   TabStripNewButtonProps,
   TabStripSearchDropdownProps,
   TabStripTabsProps,
