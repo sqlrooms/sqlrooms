@@ -161,7 +161,10 @@ function SortableTab({
       <TabsTrigger
         value={tab.id}
         className={cn(
-          'data-[state=active]:bg-primary/20 data-[state=inactive]:hover:bg-primary/5 group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-1 overflow-hidden rounded-b-none py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
+          'data-[state=inactive]:hover:bg-primary/5',
+          'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
+          'items-center justify-between gap-1 overflow-hidden rounded-b-none',
+          'py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
         )}
       >
