@@ -20,7 +20,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
     (s) => s.sqlEditor.renameQueryTab,
   );
   const closeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.closeQueryTab);
-  const openQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.openQueryTab);
   const setSelectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.setSelectedQueryId,
   );
@@ -30,9 +29,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const deleteQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.deleteQueryTab,
   );
-  const reorderQueryTabs = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.reorderQueryTabs,
-  );
+  const setOpenTabIds = useStoreWithSqlEditor((s) => s.sqlEditor.setOpenTabIds);
 
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
   const [queryToRename, setQueryToRename] = useState<{
@@ -89,11 +86,10 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         openTabIds={openTabIds}
         selectedTabId={selectedQueryId}
         onClose={closeQueryTab}
-        onOpen={openQueryTab}
+        onOpenTabsChange={setOpenTabIds}
         onSelect={setSelectedQueryId}
         onCreate={createQueryTab}
         onRename={renameQueryTab}
-        onReorder={reorderQueryTabs}
         renderTabMenu={(tab) => (
           <>
             <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>

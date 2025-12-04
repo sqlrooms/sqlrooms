@@ -130,10 +130,10 @@ export type SqlEditorSliceState = {
     openQueryTab(queryId: string): void;
 
     /**
-     * Reorder query tabs.
-     * @param tabIds - The new order of open tab IDs.
+     * Set the list of open tab IDs. Used for reordering or opening tabs.
+     * @param tabIds - The new list of open tab IDs.
      */
-    reorderQueryTabs(tabIds: string[]): void;
+    setOpenTabIds(tabIds: string[]): void;
 
     /**
      * Update the SQL text for a query.
@@ -294,7 +294,7 @@ export function createSqlEditorSlice({
           );
         },
 
-        reorderQueryTabs: (tabIds) => {
+        setOpenTabIds: (tabIds) => {
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.openTabIds = tabIds;

@@ -76,13 +76,13 @@ interface TabStripContextValue {
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   selectedTabId?: string | null;
+  openTabIds: string[];
 
   // Callbacks
-  onOpen?: (tabId: string) => void;
+  onOpenTabsChange?: (tabIds: string[]) => void;
   onSelect?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
-  onReorder?: (tabIds: string[]) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
 
@@ -320,7 +320,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
     openTabs,
     editingTabId,
     scrollContainerRef,
-    onReorder,
+    onOpenTabsChange,
     renderTabMenu,
     handleStartEditing,
     handleStopEditing,
@@ -338,7 +338,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
 
   const handleDragEnd = (event: DragEndEvent) => {
     const {active, over} = event;
-    if (!over || active.id === over.id || !onReorder) return;
+    if (!over || active.id === over.id || !onOpenTabsChange) return;
 
     const oldIndex = openTabs.findIndex((tab) => tab.id === active.id);
     const newIndex = openTabs.findIndex((tab) => tab.id === over.id);
@@ -349,7 +349,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
         oldIndex,
         newIndex,
       );
-      onReorder(newOrder);
+      onOpenTabsChange(newOrder);
     }
   };
 
@@ -417,7 +417,8 @@ function TabStripSearchDropdown({
     closedTabs,
     filteredTabs,
     closedTabIds,
-    onOpen,
+    openTabIds,
+    onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
   } = useTabStripContext();
@@ -435,8 +436,11 @@ function TabStripSearchDropdown({
 
   const handleTabClick = (tabId: string) => {
     if (closedTabIds.has(tabId)) {
-      onOpen?.(tabId);
+      // Opening a closed tab: add to openTabIds and select it
+      onOpenTabsChange?.([...openTabIds, tabId]);
+      onSelect?.(tabId);
     } else {
+      // Already open: just select it
       onSelect?.(tabId);
     }
     setIsOpen(false);
@@ -622,16 +626,14 @@ export interface TabStripProps {
   selectedTabId?: string | null;
   /** Called when a tab is closed (hidden, can be reopened). */
   onClose?: (tabId: string) => void;
-  /** Called when a closed tab is opened (shown). */
-  onOpen?: (tabId: string) => void;
-  /** Called when a tab is selected (clicked in dropdown). */
+  /** Called when the list of open tabs changes (open from dropdown or reorder). */
+  onOpenTabsChange?: (tabIds: string[]) => void;
+  /** Called when a tab is selected. */
   onSelect?: (tabId: string) => void;
   /** Called when a new tab should be created. */
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
   onRename?: (tabId: string, newName: string) => void;
-  /** Called when tabs are reordered via drag-and-drop. Receives new order of open tab IDs. */
-  onReorder?: (tabIds: string[]) => void;
   /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
@@ -667,11 +669,10 @@ function TabStripRoot({
   openTabIds,
   selectedTabId,
   onClose,
-  onOpen,
+  onOpenTabsChange,
   onSelect,
   onCreate,
   onRename,
-  onReorder,
   renderTabMenu,
   renderSearchItemActions,
 }: TabStripProps) {
@@ -784,11 +785,11 @@ function TabStripRoot({
     search,
     scrollContainerRef,
     selectedTabId,
-    onOpen,
+    openTabIds,
+    onOpenTabsChange,
     onSelect,
     onCreate,
     onRename,
-    onReorder,
     renderTabMenu,
     renderSearchItemActions,
     setSearch,

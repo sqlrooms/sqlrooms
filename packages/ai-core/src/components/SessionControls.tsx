@@ -69,16 +69,6 @@ export const SessionControls: React.FC<{
     [openTabIds, currentSessionId, switchSession],
   );
 
-  const handleOpen = useCallback(
-    (sessionId: string) => {
-      if (!openTabIds.includes(sessionId)) {
-        setOpenTabIds((prev) => [...prev, sessionId]);
-      }
-      switchSession(sessionId);
-    },
-    [openTabIds, switchSession],
-  );
-
   const handleDelete = useCallback(
     (sessionId: string) => {
       const session = sessions.find((s) => s.id === sessionId);
@@ -117,7 +107,7 @@ export const SessionControls: React.FC<{
             openTabIds={openTabIds}
             selectedTabId={currentSessionId}
             onClose={handleClose}
-            onOpen={handleOpen}
+            onOpenTabsChange={setOpenTabIds}
             onSelect={switchSession}
             onCreate={() => createSession()}
             onRename={renameSession}
