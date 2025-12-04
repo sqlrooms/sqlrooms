@@ -8,7 +8,6 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
-  type QueryTab = (typeof queries)[number];
   const openTabIds = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.openTabIds,
   );
