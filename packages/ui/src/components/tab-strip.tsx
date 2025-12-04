@@ -365,7 +365,7 @@ function TabStripNewButton({className}: TabStripNewButtonProps) {
       size="icon"
       variant="ghost"
       aria-label="Create new tab"
-      onClick={onCreate}
+      onClick={() => onCreate()}
       className={cn('hover:bg-primary/10 h-full flex-shrink-0', className)}
     >
       <PlusIcon className="h-4 w-4" />
