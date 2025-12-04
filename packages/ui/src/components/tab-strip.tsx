@@ -68,9 +68,9 @@ interface TabStripContextValue {
   editingTabId: string | null;
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  selectedTabId?: string | null;
 
   // Callbacks
-  onClose?: (tabId: string) => void;
   onOpen?: (tabId: string) => void;
   onSelect?: (tabId: string) => void;
   onCreate?: () => void;
@@ -84,6 +84,7 @@ interface TabStripContextValue {
   handleStartEditing: (tabId: string) => void;
   handleStopEditing: () => void;
   handleInlineRename: (tabId: string, newName: string) => void;
+  handleClose: (tabId: string) => void;
 }
 
 const TabStripContext = createContext<TabStripContextValue | null>(null);
@@ -107,7 +108,7 @@ interface TabStripTabsProps {
 interface SortableTabProps {
   tab: TabDescriptor;
   editingTabId: string | null;
-  onClose?: (tabId: string) => void;
+  onClose: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
@@ -169,25 +170,23 @@ function SortableTab({
           )}
         </div>
 
-        {onClose && (
-          <span
-            role="button"
-            tabIndex={-1}
-            aria-label="Close tab"
-            className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
-            onMouseDown={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-              onClose(tab.id);
-            }}
-          >
-            <XIcon className="h-4 w-4" />
-          </span>
-        )}
+        <span
+          role="button"
+          tabIndex={-1}
+          aria-label="Close tab"
+          className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
+          onMouseDown={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+          }}
+          onClick={(event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            onClose(tab.id);
+          }}
+        >
+          <XIcon className="h-4 w-4" />
+        </span>
       </TabsTrigger>
     </div>
   );
@@ -201,11 +200,11 @@ function TabStripTabs({className}: TabStripTabsProps) {
     openTabs,
     editingTabId,
     scrollContainerRef,
-    onClose,
     onReorder,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
+    handleClose,
   } = useTabStripContext();
 
   const sensors = useSensors(
@@ -256,7 +255,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
               key={tab.id}
               tab={tab}
               editingTabId={editingTabId}
-              onClose={onClose}
+              onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
               onInlineRename={handleInlineRename}
@@ -638,6 +637,20 @@ function TabStripRoot({
     setEditingTabId(null);
   };
 
+  const handleClose = (tabId: string) => {
+    // If closing the selected tab, select the one to the left (or right if leftmost)
+    if (selectedTabId === tabId && openTabs.length > 1) {
+      const closingIndex = openTabs.findIndex((t) => t.id === tabId);
+      // If closing the leftmost, select the next; otherwise select the previous
+      const newIndex = closingIndex === 0 ? 1 : closingIndex - 1;
+      const newSelectedId = openTabs[newIndex]?.id;
+      if (newSelectedId) {
+        onSelect?.(newSelectedId);
+      }
+    }
+    onClose?.(tabId);
+  };
+
   const contextValue: TabStripContextValue = {
     openTabs,
     closedTabs,
@@ -646,7 +659,7 @@ function TabStripRoot({
     editingTabId,
     search,
     scrollContainerRef,
-    onClose,
+    selectedTabId,
     onOpen,
     onSelect,
     onCreate,
@@ -658,6 +671,7 @@ function TabStripRoot({
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
+    handleClose,
   };
 
   const handleValueChange = (value: string) => {
