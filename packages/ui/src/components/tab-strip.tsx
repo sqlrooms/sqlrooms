@@ -322,7 +322,7 @@ function TabStripSearchDropdown({
           variant="ghost"
           aria-label="Browse closed tabs"
           className={cn(
-            'hover:bg-primary/10 ml-2 h-full flex-shrink-0',
+            'hover:bg-primary/10 h-full flex-shrink-0',
             triggerClassName,
           )}
         >
@@ -687,7 +687,7 @@ function TabStripRoot({
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex min-w-0 justify-start gap-2 bg-transparent p-0 pt-1.5',
+            'flex min-w-0 justify-start gap-2 bg-transparent p-0',
             className,
           )}
         >
