@@ -2,7 +2,7 @@ import {cn, TabStrip} from '@sqlrooms/ui';
 import {HistoryIcon, PencilIcon, TrashIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {DeleteSessionDialog} from './session';
+import {DeleteSessionDialog, RenameSessionDialog} from './session';
 
 /**
  * Main component for managing AI sessions.
@@ -21,13 +21,16 @@ export const SessionControls: React.FC<{
 }> = ({className, children}) => {
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
   const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const switchSession = useStoreWithAi((s) => s.ai.switchSession);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
+  const [sessionToRename, setSessionToRename] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [openTabs, setOpenTabs] = useState<string[]>(() =>
     currentSessionId ? [currentSessionId] : [],
   );
@@ -93,6 +96,26 @@ export const SessionControls: React.FC<{
     setSessionToDelete(null);
   }, []);
 
+  const handleRenameRequest = useCallback(
+    (sessionId: string) => {
+      const session = sessions.find((s) => s.id === sessionId);
+      if (session) {
+        setSessionToRename({id: sessionId, name: session.name});
+      }
+    },
+    [sessions],
+  );
+
+  const handleFinishRename = useCallback(
+    (newName: string) => {
+      if (sessionToRename) {
+        renameSession(sessionToRename.id, newName);
+      }
+      setSessionToRename(null);
+    },
+    [sessionToRename, renameSession],
+  );
+
   return (
     <>
       <div
@@ -113,14 +136,7 @@ export const SessionControls: React.FC<{
             onRename={renameSession}
             renderTabMenu={(tab) => (
               <>
-                <TabStrip.MenuItem
-                  onClick={() =>
-                    renameSession(
-                      tab.id,
-                      prompt('New name:', tab.name) || tab.name,
-                    )
-                  }
-                >
+                <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>
                   <PencilIcon className="mr-2 h-4 w-4" />
                   Rename
                 </TabStrip.MenuItem>
@@ -140,6 +156,11 @@ export const SessionControls: React.FC<{
             )}
             renderSearchItemActions={(tab) => (
               <>
+                <TabStrip.SearchItemAction
+                  icon={<PencilIcon className="h-3 w-3" />}
+                  aria-label={`Rename ${tab.name}`}
+                  onClick={() => handleRenameRequest(tab.id)}
+                />
                 {sessions.length > 1 && (
                   <TabStrip.SearchItemAction
                     icon={<TrashIcon className="h-3 w-3" />}
@@ -157,11 +178,6 @@ export const SessionControls: React.FC<{
             <TabStrip.Tabs />
             <TabStrip.NewButton tooltip="New session" />
           </TabStrip>
-          {currentSession && (
-            <div className="text-muted-foreground whitespace-nowrap text-xs">
-              {currentSession.model}
-            </div>
-          )}
         </div>
 
         {children}
@@ -171,6 +187,12 @@ export const SessionControls: React.FC<{
         isOpen={sessionToDelete !== null}
         onClose={handleCloseDeleteDialog}
         onDelete={handleConfirmDelete}
+      />
+      <RenameSessionDialog
+        isOpen={sessionToRename !== null}
+        onClose={() => setSessionToRename(null)}
+        initialName={sessionToRename?.name ?? ''}
+        onRename={handleFinishRename}
       />
     </>
   );
