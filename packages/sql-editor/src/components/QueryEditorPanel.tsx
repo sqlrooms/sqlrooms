@@ -16,11 +16,9 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   const selectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const openTabIds = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.config.openTabIds,
-  );
+  const openTabs = useStoreWithSqlEditor((s) => s.sqlEditor.config.openTabs);
 
-  const isSelectedOpen = openTabIds.includes(selectedQueryId);
+  const isSelectedOpen = openTabs.includes(selectedQueryId);
 
   return (
     <div

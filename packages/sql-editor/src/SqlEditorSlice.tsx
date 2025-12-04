@@ -133,7 +133,7 @@ export type SqlEditorSliceState = {
      * Set the list of open tab IDs. Used for reordering or opening tabs.
      * @param tabIds - The new list of open tab IDs.
      */
-    setOpenTabIds(tabIds: string[]): void;
+    setOpenTabs(tabIds: string[]): void;
 
     /**
      * Update the SQL text for a query.
@@ -213,7 +213,7 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.queries.push(newQuery);
-              draft.sqlEditor.config.openTabIds.push(newQuery.id);
+              draft.sqlEditor.config.openTabs.push(newQuery.id);
               draft.sqlEditor.config.selectedQueryId = newQuery.id;
             }),
           );
@@ -239,10 +239,8 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.queries = filteredQueries;
-              draft.sqlEditor.config.openTabIds =
-                draft.sqlEditor.config.openTabIds.filter(
-                  (id) => id !== queryId,
-                );
+              draft.sqlEditor.config.openTabs =
+                draft.sqlEditor.config.openTabs.filter((id) => id !== queryId);
 
               // If we're deleting the selected tab, select the previous one or the first one
               if (isSelected && filteredQueries.length > 0) {
@@ -275,10 +273,8 @@ export function createSqlEditorSlice({
         closeQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.openTabIds =
-                draft.sqlEditor.config.openTabIds.filter(
-                  (id) => id !== queryId,
-                );
+              draft.sqlEditor.config.openTabs =
+                draft.sqlEditor.config.openTabs.filter((id) => id !== queryId);
             }),
           );
         },
@@ -286,18 +282,18 @@ export function createSqlEditorSlice({
         openQueryTab: (queryId) => {
           set((state) =>
             produce(state, (draft) => {
-              if (!draft.sqlEditor.config.openTabIds.includes(queryId)) {
-                draft.sqlEditor.config.openTabIds.push(queryId);
+              if (!draft.sqlEditor.config.openTabs.includes(queryId)) {
+                draft.sqlEditor.config.openTabs.push(queryId);
               }
               draft.sqlEditor.config.selectedQueryId = queryId;
             }),
           );
         },
 
-        setOpenTabIds: (tabIds) => {
+        setOpenTabs: (tabIds) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.sqlEditor.config.openTabIds = tabIds;
+              draft.sqlEditor.config.openTabs = tabIds;
             }),
           );
         },

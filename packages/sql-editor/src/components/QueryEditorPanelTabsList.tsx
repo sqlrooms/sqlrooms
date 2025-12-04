@@ -9,9 +9,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   className,
 }) => {
   const queries = useStoreWithSqlEditor((s) => s.sqlEditor.config.queries);
-  const openTabIds = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.config.openTabIds,
-  );
+  const openTabs = useStoreWithSqlEditor((s) => s.sqlEditor.config.openTabs);
   const selectedQueryId = useStoreWithSqlEditor(
     (s) => s.sqlEditor.config.selectedQueryId,
   );
@@ -29,7 +27,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const deleteQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.deleteQueryTab,
   );
-  const setOpenTabIds = useStoreWithSqlEditor((s) => s.sqlEditor.setOpenTabIds);
+  const setOpenTabs = useStoreWithSqlEditor((s) => s.sqlEditor.setOpenTabs);
 
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
   const [queryToRename, setQueryToRename] = useState<{
@@ -83,10 +81,10 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
       <TabStrip
         className={className}
         tabs={queries}
-        openTabIds={openTabIds}
+        openTabs={openTabs}
         selectedTabId={selectedQueryId}
         onClose={closeQueryTab}
-        onOpenTabsChange={setOpenTabIds}
+        onOpenTabsChange={setOpenTabs}
         onSelect={setSelectedQueryId}
         onCreate={createQueryTab}
         onRename={renameQueryTab}

@@ -68,7 +68,7 @@ export interface TabDescriptor {
 
 interface TabStripContextValue {
   // Data
-  openTabs: TabDescriptor[];
+  openTabItems: TabDescriptor[];
   closedTabs: TabDescriptor[];
   closedTabIds: Set<string>;
   filteredTabs: TabDescriptor[];
@@ -76,7 +76,7 @@ interface TabStripContextValue {
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
   selectedTabId?: string | null;
-  openTabIds: string[];
+  openTabs: string[];
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
@@ -317,7 +317,7 @@ function TabStripSearchItemAction({
  */
 function TabStripTabs({className}: TabStripTabsProps) {
   const {
-    openTabs,
+    openTabItems,
     editingTabId,
     scrollContainerRef,
     onOpenTabsChange,
@@ -340,12 +340,12 @@ function TabStripTabs({className}: TabStripTabsProps) {
     const {active, over} = event;
     if (!over || active.id === over.id || !onOpenTabsChange) return;
 
-    const oldIndex = openTabs.findIndex((tab) => tab.id === active.id);
-    const newIndex = openTabs.findIndex((tab) => tab.id === over.id);
+    const oldIndex = openTabItems.findIndex((tab) => tab.id === active.id);
+    const newIndex = openTabItems.findIndex((tab) => tab.id === over.id);
 
     if (oldIndex !== -1 && newIndex !== -1) {
       const newOrder = arrayMove(
-        openTabs.map((t) => t.id),
+        openTabItems.map((t) => t.id),
         oldIndex,
         newIndex,
       );
@@ -353,7 +353,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
     }
   };
 
-  const tabIds = useMemo(() => openTabs.map((t) => t.id), [openTabs]);
+  const tabIds = useMemo(() => openTabItems.map((t) => t.id), [openTabItems]);
 
   return (
     <DndContext
@@ -371,7 +371,7 @@ function TabStripTabs({className}: TabStripTabsProps) {
             className,
           )}
         >
-          {openTabs.map((tab) => (
+          {openTabItems.map((tab) => (
             <SortableTab
               key={tab.id}
               tab={tab}
@@ -417,7 +417,7 @@ function TabStripSearchDropdown({
     closedTabs,
     filteredTabs,
     closedTabIds,
-    openTabIds,
+    openTabs,
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
@@ -436,8 +436,8 @@ function TabStripSearchDropdown({
 
   const handleTabClick = (tabId: string) => {
     if (closedTabIds.has(tabId)) {
-      // Opening a closed tab: add to openTabIds and select it
-      onOpenTabsChange?.([...openTabIds, tabId]);
+      // Opening a closed tab: add to openTabs and select it
+      onOpenTabsChange?.([...openTabs, tabId]);
       onSelect?.(tabId);
     } else {
       // Already open: just select it
@@ -621,7 +621,7 @@ export interface TabStripProps {
   /** All available tabs. */
   tabs: TabDescriptor[];
   /** IDs of tabs that are currently open. */
-  openTabIds: string[];
+  openTabs: string[];
   /** ID of the currently selected tab. */
   selectedTabId?: string | null;
   /** Called when a tab is closed (hidden, can be reopened). */
@@ -647,7 +647,7 @@ export interface TabStripProps {
  * // Default layout
  * <TabStrip
  *   tabs={tabs}
- *   openTabIds={openTabIds}
+ *   openTabs={openTabs}
  *   onClose={closeTab}
  *   onOpen={openTab}
  *   onCreate={createTab}
@@ -655,7 +655,7 @@ export interface TabStripProps {
  *
  * @example
  * // Custom layout with subcomponents
- * <TabStrip tabs={tabs} openTabIds={openTabIds} onClose={closeTab}>
+ * <TabStrip tabs={tabs} openTabs={openTabs} onClose={closeTab}>
  *   <TabStrip.Tabs className="flex-1" />
  *   <TabStrip.SearchDropdown />
  *   <TabStrip.NewButton />
@@ -666,7 +666,7 @@ function TabStripRoot({
   tabsListClassName,
   children,
   tabs,
-  openTabIds,
+  openTabs,
   selectedTabId,
   onClose,
   onOpenTabsChange,
@@ -681,19 +681,19 @@ function TabStripRoot({
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const prevSelectedIdRef = useRef<string | null>(null);
 
-  const openTabIdsSet = useMemo(() => new Set(openTabIds), [openTabIds]);
+  const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
 
-  // Build openTabs in the order of openTabIds (for drag-to-reorder)
-  const openTabs = useMemo(() => {
+  // Build openTabItems in the order of openTabs (for drag-to-reorder)
+  const openTabItems = useMemo(() => {
     const tabsById = new Map(tabs.map((tab) => [tab.id, tab]));
-    return openTabIds
+    return openTabs
       .map((id) => tabsById.get(id))
       .filter((tab): tab is TabDescriptor => tab !== undefined);
-  }, [tabs, openTabIds]);
+  }, [tabs, openTabs]);
 
   const closedTabs = useMemo(
-    () => tabs.filter((tab) => !openTabIdsSet.has(tab.id)),
-    [tabs, openTabIdsSet],
+    () => tabs.filter((tab) => !openTabsSet.has(tab.id)),
+    [tabs, openTabsSet],
   );
 
   const closedTabIds = useMemo(
@@ -720,7 +720,7 @@ function TabStripRoot({
     const container = scrollContainerRef.current;
     if (!container) return;
 
-    const isOpen = openTabs.some((tab) => tab.id === selectedTabId);
+    const isOpen = openTabItems.some((tab) => tab.id === selectedTabId);
     if (!isOpen) return;
 
     const frameId = requestAnimationFrame(() => {
@@ -739,7 +739,7 @@ function TabStripRoot({
     return () => {
       cancelAnimationFrame(frameId);
     };
-  }, [selectedTabId, openTabs]);
+  }, [selectedTabId, openTabItems]);
 
   const handleInlineRename = (tabId: string, newName: string) => {
     if (!onRename) return;
@@ -764,11 +764,11 @@ function TabStripRoot({
 
   const handleClose = (tabId: string) => {
     // If closing the selected tab, select the one to the left (or right if leftmost)
-    if (selectedTabId === tabId && openTabs.length > 1) {
-      const closingIndex = openTabs.findIndex((t) => t.id === tabId);
+    if (selectedTabId === tabId && openTabItems.length > 1) {
+      const closingIndex = openTabItems.findIndex((t) => t.id === tabId);
       // If closing the leftmost, select the next; otherwise select the previous
       const newIndex = closingIndex === 0 ? 1 : closingIndex - 1;
-      const newSelectedId = openTabs[newIndex]?.id;
+      const newSelectedId = openTabItems[newIndex]?.id;
       if (newSelectedId) {
         onSelect?.(newSelectedId);
       }
@@ -777,7 +777,7 @@ function TabStripRoot({
   };
 
   const contextValue: TabStripContextValue = {
-    openTabs,
+    openTabItems,
     closedTabs,
     closedTabIds,
     filteredTabs,
@@ -785,7 +785,7 @@ function TabStripRoot({
     search,
     scrollContainerRef,
     selectedTabId,
-    openTabIds,
+    openTabs,
     onOpenTabsChange,
     onSelect,
     onCreate,

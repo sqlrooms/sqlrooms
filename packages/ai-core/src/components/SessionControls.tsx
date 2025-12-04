@@ -28,21 +28,21 @@ export const SessionControls: React.FC<{
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
-  const [openTabIds, setOpenTabIds] = useState<string[]>(() =>
+  const [openTabs, setOpenTabs] = useState<string[]>(() =>
     currentSessionId ? [currentSessionId] : [],
   );
 
   // Ensure current session is always in open tabs
   useEffect(() => {
-    if (currentSessionId && !openTabIds.includes(currentSessionId)) {
-      setOpenTabIds((prev) => [...prev, currentSessionId]);
+    if (currentSessionId && !openTabs.includes(currentSessionId)) {
+      setOpenTabs((prev) => [...prev, currentSessionId]);
     }
-  }, [currentSessionId, openTabIds]);
+  }, [currentSessionId, openTabs]);
 
   // Remove deleted sessions from open tabs
   useEffect(() => {
     const sessionIds = new Set(sessions.map((s) => s.id));
-    setOpenTabIds((prev) => prev.filter((id) => sessionIds.has(id)));
+    setOpenTabs((prev) => prev.filter((id) => sessionIds.has(id)));
   }, [sessions]);
 
   // Convert sessions to TabDescriptor format
@@ -54,19 +54,19 @@ export const SessionControls: React.FC<{
   const handleClose = useCallback(
     (sessionId: string) => {
       // Don't close if it's the only open tab
-      if (openTabIds.length <= 1) return;
+      if (openTabs.length <= 1) return;
 
-      setOpenTabIds((prev) => prev.filter((id) => id !== sessionId));
+      setOpenTabs((prev) => prev.filter((id) => id !== sessionId));
 
       // If closing the current session, switch to another open one
       if (sessionId === currentSessionId) {
-        const remaining = openTabIds.filter((id) => id !== sessionId);
+        const remaining = openTabs.filter((id) => id !== sessionId);
         if (remaining.length > 0) {
           switchSession(remaining[0]!);
         }
       }
     },
-    [openTabIds, currentSessionId, switchSession],
+    [openTabs, currentSessionId, switchSession],
   );
 
   const handleDelete = useCallback(
@@ -104,10 +104,10 @@ export const SessionControls: React.FC<{
         <div className="flex w-full min-w-0 items-center gap-3">
           <TabStrip
             tabs={tabs}
-            openTabIds={openTabIds}
+            openTabs={openTabs}
             selectedTabId={currentSessionId}
             onClose={handleClose}
-            onOpenTabsChange={setOpenTabIds}
+            onOpenTabsChange={setOpenTabs}
             onSelect={switchSession}
             onCreate={() => createSession()}
             onRename={renameSession}
