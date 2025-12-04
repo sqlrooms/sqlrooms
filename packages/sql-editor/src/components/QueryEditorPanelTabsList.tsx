@@ -99,14 +99,12 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         tabs={queries}
         openTabIds={openTabIds}
         selectedTabId={selectedQueryId}
-        onCloseTab={(tab: QueryTab) => closeQueryTab(tab.id)}
-        onOpenTab={(tab: QueryTab) => openQueryTab(tab.id)}
+        onCloseTab={(tab) => closeQueryTab(tab.id)}
+        onOpenTab={(tab) => openQueryTab(tab.id)}
         onCreateTab={handleNewQuery}
-        onRenameTab={(tab: QueryTab, newName: string) =>
-          handleRename(tab.id, newName)
-        }
-        onRequestRename={(tab: QueryTab) => handleStartRename(tab.id, tab.name)}
-        onDeleteTab={(tab: QueryTab) => handleDeleteQuery(tab.id)}
+        onRenameTab={(tab, newName) => handleRename(tab.id, newName)}
+        onRequestRename={(tab) => handleStartRename(tab.id, tab.name)}
+        onDeleteTab={(tab) => handleDeleteQuery(tab.id)}
       />
 
       <DeleteSqlQueryModal
