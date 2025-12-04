@@ -44,8 +44,8 @@ interface TabStripContextValue {
   // Data
   openedTabs: TabDescriptor[];
   closedTabs: TabDescriptor[];
-  filteredOpenedTabs: TabDescriptor[];
-  filteredClosedTabs: TabDescriptor[];
+  closedTabIds: Set<string>;
+  filteredTabs: TabDescriptor[];
   editingTabId: string | null;
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
@@ -163,7 +163,8 @@ interface TabStripSearchDropdownProps {
 }
 
 /**
- * Renders the dropdown with search for browsing all tabs.
+ * Renders the dropdown with search for browsing tabs.
+ * By default shows only closed tabs. When searching, shows all matching tabs.
  */
 function TabStripSearchDropdown({
   className,
@@ -172,8 +173,9 @@ function TabStripSearchDropdown({
   const {
     search,
     setSearch,
-    filteredOpenedTabs,
-    filteredClosedTabs,
+    closedTabs,
+    filteredTabs,
+    closedTabIds,
     onOpen,
     onSelect,
     onRenameRequest,
@@ -182,8 +184,10 @@ function TabStripSearchDropdown({
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const handleTabClick = (tabId: string, isClosed: boolean) => {
-    if (isClosed) {
+  const isSearching = search.trim().length > 0;
+
+  const handleTabClick = (tabId: string) => {
+    if (closedTabIds.has(tabId)) {
       onOpen?.(tabId);
     } else {
       onSelect?.(tabId);
@@ -196,7 +200,7 @@ function TabStripSearchDropdown({
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          aria-label="Browse all tabs"
+          aria-label="Browse closed tabs"
           className={cn(
             'hover:bg-primary/10 ml-2 h-full flex-shrink-0',
             triggerClassName,
@@ -219,36 +223,29 @@ function TabStripSearchDropdown({
             onKeyDown={(event) => event.stopPropagation()}
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
-            placeholder="Search..."
+            placeholder="Search tabs..."
             aria-label="Search tabs"
           />
         </div>
         <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-            Closed
-          </DropdownMenuLabel>
+
+        {isSearching ? (
           <DropdownTabItems
-            tabs={filteredClosedTabs}
+            tabs={filteredTabs}
+            emptyMessage="No matching tabs"
+            onTabClick={handleTabClick}
+            onRenameRequest={onRenameRequest}
+            onDelete={onDelete}
+          />
+        ) : (
+          <DropdownTabItems
+            tabs={closedTabs}
             emptyMessage="No closed tabs"
-            onTabClick={(tabId) => handleTabClick(tabId, true)}
+            onTabClick={handleTabClick}
             onRenameRequest={onRenameRequest}
             onDelete={onDelete}
           />
-        </DropdownMenuGroup>
-        <DropdownMenuSeparator />
-        <DropdownMenuGroup>
-          <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
-            Opened
-          </DropdownMenuLabel>
-          <DropdownTabItems
-            tabs={filteredOpenedTabs}
-            emptyMessage="No opened tabs"
-            onTabClick={(tabId) => handleTabClick(tabId, false)}
-            onRenameRequest={onRenameRequest}
-            onDelete={onDelete}
-          />
-        </DropdownMenuGroup>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );
@@ -256,7 +253,7 @@ function TabStripSearchDropdown({
 
 interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
-  emptyMessage: string;
+  emptyMessage?: string;
   onTabClick?: (tabId: string) => void;
   onRenameRequest?: (tabId: string) => void;
   onDelete?: (tabId: string) => void;
@@ -270,13 +267,11 @@ function DropdownTabItems({
   onDelete,
 }: DropdownTabItemsProps) {
   if (tabs.length === 0) {
+    if (!emptyMessage) return null;
     return (
-      <DropdownMenuItem
-        className="items-center justify-center text-xs"
-        disabled
-      >
+      <DropdownMenuLabel className="items-center justify-center text-xs">
         {emptyMessage}
-      </DropdownMenuItem>
+      </DropdownMenuLabel>
     );
   }
 
@@ -433,26 +428,19 @@ function TabStripRoot({
     [tabs, openTabIdsSet],
   );
 
-  const trimmedSearch = search.trim().toLowerCase();
-
-  const filteredOpenedTabs = useMemo(
-    () =>
-      trimmedSearch
-        ? openedTabs.filter((tab) =>
-            tab.name.toLowerCase().includes(trimmedSearch),
-          )
-        : openedTabs,
-    [openedTabs, trimmedSearch],
+  const closedTabIds = useMemo(
+    () => new Set(closedTabs.map((tab) => tab.id)),
+    [closedTabs],
   );
 
-  const filteredClosedTabs = useMemo(
+  const trimmedSearch = search.trim().toLowerCase();
+
+  const filteredTabs = useMemo(
     () =>
       trimmedSearch
-        ? closedTabs.filter((tab) =>
-            tab.name.toLowerCase().includes(trimmedSearch),
-          )
-        : closedTabs,
-    [closedTabs, trimmedSearch],
+        ? tabs.filter((tab) => tab.name.toLowerCase().includes(trimmedSearch))
+        : [],
+    [tabs, trimmedSearch],
   );
 
   // Auto-scroll to selected tab
@@ -529,8 +517,8 @@ function TabStripRoot({
   const contextValue: TabStripContextValue = {
     openedTabs,
     closedTabs,
-    filteredOpenedTabs,
-    filteredClosedTabs,
+    closedTabIds,
+    filteredTabs,
     editingTabId,
     search,
     scrollContainerRef,
