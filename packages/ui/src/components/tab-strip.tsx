@@ -160,6 +160,8 @@ function TabStripTabs({className}: TabStripTabsProps) {
 interface TabStripSearchDropdownProps {
   className?: string;
   triggerClassName?: string;
+  /** Whether to auto-focus the search input when dropdown opens. Defaults to true. */
+  autoFocus?: boolean;
 }
 
 /**
@@ -169,6 +171,7 @@ interface TabStripSearchDropdownProps {
 function TabStripSearchDropdown({
   className,
   triggerClassName,
+  autoFocus = true,
 }: TabStripSearchDropdownProps) {
   const {
     search,
@@ -232,6 +235,7 @@ function TabStripSearchDropdown({
             className="border-none text-xs shadow-none focus-visible:ring-0"
             placeholder="Search tabs..."
             aria-label="Search tabs"
+            autoFocus={autoFocus}
           />
         </div>
         <DropdownMenuSeparator />
