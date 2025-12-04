@@ -487,31 +487,11 @@ function TabStripRoot({
       );
       if (!activeTab) return;
 
-      const visibleLeft = container.scrollLeft;
-      const visibleRight = visibleLeft + container.clientWidth;
-
-      const tabLeft = activeTab.offsetLeft;
-      const tabRight = tabLeft + activeTab.offsetWidth;
-
-      if (tabLeft >= visibleLeft && tabRight <= visibleRight) return;
-
-      let newScrollLeft = visibleLeft;
-
-      if (tabLeft < visibleLeft) {
-        newScrollLeft = Math.max(0, tabLeft - 10);
-      } else if (tabRight > visibleRight) {
-        newScrollLeft = Math.min(
-          container.scrollWidth - container.clientWidth,
-          tabRight - container.clientWidth + 10,
-        );
-      }
-
-      if (newScrollLeft !== visibleLeft) {
-        container.scrollTo({
-          left: newScrollLeft,
-          behavior: 'smooth',
-        });
-      }
+      activeTab.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
     });
 
     return () => {
