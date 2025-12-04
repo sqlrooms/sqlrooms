@@ -40,19 +40,20 @@ export interface TabDescriptor {
 // Context
 // -----------------------------------------------------------------------------
 
-interface TabStripContextValue<TTab extends TabDescriptor = TabDescriptor> {
+interface TabStripContextValue {
   // Data
-  openedTabs: TTab[];
-  closedTabs: TTab[];
-  filteredOpenedTabs: TTab[];
-  filteredClosedTabs: TTab[];
+  openedTabs: TabDescriptor[];
+  closedTabs: TabDescriptor[];
+  filteredOpenedTabs: TabDescriptor[];
+  filteredClosedTabs: TabDescriptor[];
   editingTabId: string | null;
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement | null>;
 
-  // Callbacks (using tabId)
+  // Callbacks
   onClose?: (tabId: string) => void;
   onOpen?: (tabId: string) => void;
+  onSelect?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
   onRenameRequest?: (tabId: string) => void;
@@ -67,12 +68,12 @@ interface TabStripContextValue<TTab extends TabDescriptor = TabDescriptor> {
 
 const TabStripContext = createContext<TabStripContextValue | null>(null);
 
-function useTabStripContext<TTab extends TabDescriptor = TabDescriptor>() {
+function useTabStripContext() {
   const context = useContext(TabStripContext);
   if (!context) {
     throw new Error('TabStrip subcomponents must be used within a TabStrip');
   }
-  return context as unknown as TabStripContextValue<TTab>;
+  return context;
 }
 
 // -----------------------------------------------------------------------------
@@ -174,18 +175,30 @@ function TabStripSearchDropdown({
     filteredOpenedTabs,
     filteredClosedTabs,
     onOpen,
+    onSelect,
     onRenameRequest,
     onDelete,
   } = useTabStripContext();
 
+  const [isOpen, setIsOpen] = useState(false);
+
+  const handleTabClick = (tabId: string, isClosed: boolean) => {
+    if (isClosed) {
+      onOpen?.(tabId);
+    } else {
+      onSelect?.(tabId);
+    }
+    setIsOpen(false);
+  };
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size="icon"
+          aria-label="Browse all tabs"
           className={cn(
-            'hover:bg-primary/10 h-full flex-shrink-0',
+            'hover:bg-primary/10 ml-2 h-full flex-shrink-0',
             triggerClassName,
           )}
         >
@@ -207,6 +220,7 @@ function TabStripSearchDropdown({
             onKeyUp={(event) => event.stopPropagation()}
             className="border-none text-xs shadow-none focus-visible:ring-0"
             placeholder="Search..."
+            aria-label="Search tabs"
           />
         </div>
         <DropdownMenuSeparator />
@@ -217,7 +231,7 @@ function TabStripSearchDropdown({
           <DropdownTabItems
             tabs={filteredClosedTabs}
             emptyMessage="No closed tabs"
-            onOpen={onOpen}
+            onTabClick={(tabId) => handleTabClick(tabId, true)}
             onRenameRequest={onRenameRequest}
             onDelete={onDelete}
           />
@@ -230,7 +244,7 @@ function TabStripSearchDropdown({
           <DropdownTabItems
             tabs={filteredOpenedTabs}
             emptyMessage="No opened tabs"
-            onOpen={onOpen}
+            onTabClick={(tabId) => handleTabClick(tabId, false)}
             onRenameRequest={onRenameRequest}
             onDelete={onDelete}
           />
@@ -240,21 +254,21 @@ function TabStripSearchDropdown({
   );
 }
 
-interface DropdownTabItemsProps<TTab extends TabDescriptor = TabDescriptor> {
-  tabs: TTab[];
+interface DropdownTabItemsProps {
+  tabs: TabDescriptor[];
   emptyMessage: string;
-  onOpen?: (tabId: string) => void;
+  onTabClick?: (tabId: string) => void;
   onRenameRequest?: (tabId: string) => void;
   onDelete?: (tabId: string) => void;
 }
 
-function DropdownTabItems<TTab extends TabDescriptor = TabDescriptor>({
+function DropdownTabItems({
   tabs,
   emptyMessage,
-  onOpen,
+  onTabClick,
   onRenameRequest,
   onDelete,
-}: DropdownTabItemsProps<TTab>) {
+}: DropdownTabItemsProps) {
   if (tabs.length === 0) {
     return (
       <DropdownMenuItem
@@ -271,7 +285,7 @@ function DropdownTabItems<TTab extends TabDescriptor = TabDescriptor>({
       {tabs.map((tab) => (
         <DropdownMenuItem
           key={tab.id}
-          onClick={() => onOpen?.(tab.id)}
+          onClick={() => onTabClick?.(tab.id)}
           className="flex h-7 cursor-pointer items-center justify-between truncate"
         >
           <span className="xs truncate pl-1">{tab.name}</span>
@@ -280,6 +294,7 @@ function DropdownTabItems<TTab extends TabDescriptor = TabDescriptor>({
               <Button
                 size="xs"
                 variant="ghost"
+                aria-label={`Rename ${tab.name}`}
                 className="text-muted-foreground h-3 w-3"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -293,6 +308,7 @@ function DropdownTabItems<TTab extends TabDescriptor = TabDescriptor>({
               <Button
                 size="xs"
                 variant="ghost"
+                aria-label={`Delete ${tab.name}`}
                 className="text-muted-foreground h-3 w-3"
                 onClick={(event) => {
                   event.stopPropagation();
@@ -327,6 +343,7 @@ function TabStripNewButton({className}: TabStripNewButtonProps) {
     <Button
       size="icon"
       variant="ghost"
+      aria-label="Create new tab"
       onClick={onCreate}
       className={cn('hover:bg-primary/10 h-full flex-shrink-0', className)}
     >
@@ -346,11 +363,14 @@ export interface TabStripProps {
   tabs: TabDescriptor[];
   /** IDs of tabs that are currently open. */
   openTabIds: string[];
+  /** ID of the currently selected tab. */
   selectedTabId?: string | null;
   /** Called when a tab is closed (hidden, can be reopened). */
   onClose?: (tabId: string) => void;
   /** Called when a closed tab is opened (shown). */
   onOpen?: (tabId: string) => void;
+  /** Called when a tab is selected (clicked in dropdown). */
+  onSelect?: (tabId: string) => void;
   /** Called when a new tab should be created. */
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
@@ -390,6 +410,7 @@ function TabStripRoot({
   selectedTabId,
   onClose,
   onOpen,
+  onSelect,
   onCreate,
   onRename,
   onRenameRequest,
@@ -515,6 +536,7 @@ function TabStripRoot({
     scrollContainerRef,
     onClose,
     onOpen,
+    onSelect,
     onCreate,
     onRename,
     onRenameRequest,
@@ -529,7 +551,7 @@ function TabStripRoot({
     <TabStripContext.Provider value={contextValue}>
       <TabsList
         className={cn(
-          'flex min-w-0 justify-start gap-1 gap-2 bg-transparent p-0 pt-1.5',
+          'flex min-w-0 justify-start gap-2 bg-transparent p-0 pt-1.5',
           className,
         )}
       >

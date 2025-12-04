@@ -20,6 +20,9 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   );
   const closeQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.closeQueryTab);
   const openQueryTab = useStoreWithSqlEditor((s) => s.sqlEditor.openQueryTab);
+  const setSelectedQueryId = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.setSelectedQueryId,
+  );
   const createQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.createQueryTab,
   );
@@ -83,6 +86,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         selectedTabId={selectedQueryId}
         onClose={closeQueryTab}
         onOpen={openQueryTab}
+        onSelect={setSelectedQueryId}
         onCreate={createQueryTab}
         onRename={renameQueryTab}
         onRenameRequest={handleRenameRequest}
