@@ -134,10 +134,11 @@ function TabStripTabs({className}: TabStripTabsProps) {
           </div>
 
           {onClose && (
-            <Button
-              size="xs"
-              variant="ghost"
-              className="hover:bg-primary/10 h-5 w-5 p-1"
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-label="Close tab"
+              className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
               onMouseDown={(event) => {
                 event.stopPropagation();
                 event.preventDefault();
@@ -148,8 +149,8 @@ function TabStripTabs({className}: TabStripTabsProps) {
                 onClose(tab.id);
               }}
             >
-              <XIcon className="h-5 w-5" />
-            </Button>
+              <XIcon className="h-4 w-4" />
+            </span>
           )}
         </TabsTrigger>
       ))}
