@@ -32,6 +32,7 @@ export * from './components/progress-modal';
 export * from './components/progress';
 export * from './components/radio-group';
 export * from './components/resizable';
+export * from './components/tab-strip';
 export * from './components/select';
 export * from './components/scroll-area';
 export * from './components/separator';
