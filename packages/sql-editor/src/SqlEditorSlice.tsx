@@ -122,11 +122,18 @@ export type SqlEditorSliceState = {
      * @param queryId - The ID of the query to close.
      */
     closeQueryTab(queryId: string): void;
+
     /**
      * Open a closed tab id.
-     * @param queryId - The ID of the query to remove.
+     * @param queryId - The ID of the query to open.
      */
     openQueryTab(queryId: string): void;
+
+    /**
+     * Reorder query tabs.
+     * @param tabIds - The new order of open tab IDs.
+     */
+    reorderQueryTabs(tabIds: string[]): void;
 
     /**
      * Update the SQL text for a query.
@@ -292,6 +299,14 @@ export function createSqlEditorSlice({
                 draft.sqlEditor.config.openTabIds.push(queryId);
               }
               draft.sqlEditor.config.selectedQueryId = queryId;
+            }),
+          );
+        },
+
+        reorderQueryTabs: (tabIds) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.sqlEditor.config.openTabIds = tabIds;
             }),
           );
         },

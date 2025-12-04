@@ -29,6 +29,9 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
   const deleteQueryTab = useStoreWithSqlEditor(
     (s) => s.sqlEditor.deleteQueryTab,
   );
+  const reorderQueryTabs = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.reorderQueryTabs,
+  );
 
   const [queryToDelete, setQueryToDelete] = useState<string | null>(null);
   const [queryToRename, setQueryToRename] = useState<{
@@ -91,6 +94,7 @@ export const QueryEditorPanelTabsList: React.FC<{className?: string}> = ({
         onRename={renameQueryTab}
         onRenameRequest={handleRenameRequest}
         onDelete={handleDelete}
+        onReorder={reorderQueryTabs}
       />
 
       <DeleteSqlQueryModal

@@ -7,6 +7,26 @@ import React, {
   useState,
 } from 'react';
 import {
+  DndContext,
+  DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  restrictToHorizontalAxis,
+  restrictToParentElement,
+} from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  arrayMove,
+  horizontalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+
+const DRAG_MODIFIERS = [restrictToHorizontalAxis, restrictToParentElement];
+import {
   ListCollapseIcon,
   PencilIcon,
   PlusIcon,
@@ -58,6 +78,7 @@ interface TabStripContextValue {
   onRename?: (tabId: string, newName: string) => void;
   onRenameRequest?: (tabId: string) => void;
   onDelete?: (tabId: string) => void;
+  onReorder?: (tabIds: string[]) => void;
 
   // Internal handlers
   setSearch: (value: string) => void;
@@ -84,8 +105,97 @@ interface TabStripTabsProps {
   className?: string;
 }
 
+interface SortableTabProps {
+  tab: TabDescriptor;
+  editingTabId: string | null;
+  onClose?: (tabId: string) => void;
+  onStartEditing: (tabId: string) => void;
+  onStopEditing: () => void;
+  onInlineRename: (tabId: string, newName: string) => void;
+}
+
 /**
- * Renders the scrollable row of open tabs.
+ * A single sortable tab item.
+ */
+function SortableTab({
+  tab,
+  editingTabId,
+  onClose,
+  onStartEditing,
+  onStopEditing,
+  onInlineRename,
+}: SortableTabProps) {
+  const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
+    useSortable({id: tab.id});
+
+  const style: React.CSSProperties = {
+    // Use Translate instead of Transform to avoid scale changes that squeeze the tab
+    transform: transform
+      ? `translate3d(${transform.x}px, ${transform.y}px, 0)`
+      : undefined,
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      className="h-full flex-shrink-0"
+      style={style}
+      {...attributes}
+      {...listeners}
+    >
+      <TabsTrigger
+        value={tab.id}
+        className="data-[state=inactive]:hover:bg-primary/5 flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab items-center justify-between gap-2 overflow-hidden rounded-b-none py-0 pl-4 pr-2 font-normal data-[state=active]:shadow-none"
+      >
+        <div
+          className="flex min-w-0 items-center"
+          onDoubleClick={() => onStartEditing(tab.id)}
+        >
+          {editingTabId !== tab.id ? (
+            <div className="truncate text-sm">{tab.name}</div>
+          ) : (
+            <EditableText
+              value={tab.name}
+              onChange={(newName) => onInlineRename(tab.id, newName)}
+              className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
+              isEditing
+              onEditingChange={(isEditing) => {
+                if (!isEditing) {
+                  onStopEditing();
+                }
+              }}
+            />
+          )}
+        </div>
+
+        {onClose && (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Close tab"
+            className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onClose(tab.id);
+            }}
+          >
+            <XIcon className="h-4 w-4" />
+          </span>
+        )}
+      </TabsTrigger>
+    </div>
+  );
+}
+
+/**
+ * Renders the scrollable row of open tabs with drag-to-reorder support.
  */
 function TabStripTabs({className}: TabStripTabsProps) {
   const {
@@ -93,68 +203,69 @@ function TabStripTabs({className}: TabStripTabsProps) {
     editingTabId,
     scrollContainerRef,
     onClose,
+    onReorder,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
   } = useTabStripContext();
 
-  return (
-    <div
-      ref={scrollContainerRef}
-      className={cn(
-        'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 [&::-webkit-scrollbar]:hidden',
-        className,
-      )}
-    >
-      {openTabs.map((tab) => (
-        <TabsTrigger
-          key={tab.id}
-          value={tab.id}
-          className="data-[state=inactive]:hover:bg-primary/5 flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 items-center justify-between gap-2 overflow-hidden rounded-b-none py-0 pl-4 pr-2 font-normal data-[state=active]:shadow-none"
-        >
-          <div
-            className="flex min-w-0 items-center"
-            onDoubleClick={() => handleStartEditing(tab.id)}
-          >
-            {editingTabId !== tab.id ? (
-              <div className="truncate text-sm">{tab.name}</div>
-            ) : (
-              <EditableText
-                value={tab.name}
-                onChange={(newName) => handleInlineRename(tab.id, newName)}
-                className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
-                isEditing
-                onEditingChange={(isEditing) => {
-                  if (!isEditing) {
-                    handleStopEditing();
-                  }
-                }}
-              />
-            )}
-          </div>
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 5, // 5px movement before drag starts (allows clicks)
+      },
+    }),
+  );
 
-          {onClose && (
-            <span
-              role="button"
-              tabIndex={-1}
-              aria-label="Close tab"
-              className="hover:bg-primary/10 flex h-5 w-5 flex-shrink-0 cursor-pointer items-center justify-center rounded p-1"
-              onMouseDown={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-                onClose(tab.id);
-              }}
-            >
-              <XIcon className="h-4 w-4" />
-            </span>
+  const handleDragEnd = (event: DragEndEvent) => {
+    const {active, over} = event;
+    if (!over || active.id === over.id || !onReorder) return;
+
+    const oldIndex = openTabs.findIndex((tab) => tab.id === active.id);
+    const newIndex = openTabs.findIndex((tab) => tab.id === over.id);
+
+    if (oldIndex !== -1 && newIndex !== -1) {
+      const newOrder = arrayMove(
+        openTabs.map((t) => t.id),
+        oldIndex,
+        newIndex,
+      );
+      onReorder(newOrder);
+    }
+  };
+
+  const tabIds = useMemo(() => openTabs.map((t) => t.id), [openTabs]);
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      modifiers={DRAG_MODIFIERS}
+      autoScroll={true}
+      onDragEnd={handleDragEnd}
+    >
+      <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
+        <div
+          ref={scrollContainerRef}
+          className={cn(
+            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 [&::-webkit-scrollbar]:hidden',
+            className,
           )}
-        </TabsTrigger>
-      ))}
-    </div>
+        >
+          {openTabs.map((tab) => (
+            <SortableTab
+              key={tab.id}
+              tab={tab}
+              editingTabId={editingTabId}
+              onClose={onClose}
+              onStartEditing={handleStartEditing}
+              onStopEditing={handleStopEditing}
+              onInlineRename={handleInlineRename}
+            />
+          ))}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
 
@@ -400,6 +511,8 @@ export interface TabStripProps {
   onRenameRequest?: (tabId: string) => void;
   /** Called when a tab is permanently deleted. */
   onDelete?: (tabId: string) => void;
+  /** Called when tabs are reordered via drag-and-drop. Receives new order of open tab IDs. */
+  onReorder?: (tabIds: string[]) => void;
 }
 
 /**
@@ -436,6 +549,7 @@ function TabStripRoot({
   onRename,
   onRenameRequest,
   onDelete,
+  onReorder,
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -444,10 +558,13 @@ function TabStripRoot({
 
   const openTabIdsSet = useMemo(() => new Set(openTabIds), [openTabIds]);
 
-  const openTabs = useMemo(
-    () => tabs.filter((tab) => openTabIdsSet.has(tab.id)),
-    [tabs, openTabIdsSet],
-  );
+  // Build openTabs in the order of openTabIds (for drag-to-reorder)
+  const openTabs = useMemo(() => {
+    const tabsById = new Map(tabs.map((tab) => [tab.id, tab]));
+    return openTabIds
+      .map((id) => tabsById.get(id))
+      .filter((tab): tab is TabDescriptor => tab !== undefined);
+  }, [tabs, openTabIds]);
 
   const closedTabs = useMemo(
     () => tabs.filter((tab) => !openTabIdsSet.has(tab.id)),
@@ -535,6 +652,7 @@ function TabStripRoot({
     onRename,
     onRenameRequest,
     onDelete,
+    onReorder,
     setSearch,
     handleStartEditing,
     handleStopEditing,
