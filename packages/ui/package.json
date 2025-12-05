@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/ui",
-  "version": "0.26.1-rc.6",
+  "version": "0.26.1-rc.7",
   "type": "module",
   "sideEffects": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
