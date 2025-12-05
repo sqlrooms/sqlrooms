@@ -1,39 +1,28 @@
 import {
+  CosmosSliceState,
+  createCosmosSlice,
+  createDefaultCosmosConfig,
+} from '@sqlrooms/cosmos';
+import {
   createRoomShellSlice,
   createRoomStore,
-  RoomShellSliceState,
-  BaseRoomConfig,
   LayoutTypes,
   MAIN_VIEW,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
   createDefaultSqlEditorConfig,
   createSqlEditorSlice,
-  SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
-import {
-  CosmosSliceConfig,
-  createCosmosSlice,
-  CosmosSliceState,
-  createDefaultCosmosConfig,
-} from '@sqlrooms/cosmos';
 
 export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
-
-/**
- * Room config for saving
- */
-export const RoomConfig =
-  BaseRoomConfig.merge(SqlEditorSliceConfig).merge(CosmosSliceConfig);
-
-export type RoomConfig = z.infer<typeof RoomConfig>;
 
 /**
  * Room state
