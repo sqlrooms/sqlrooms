@@ -3,11 +3,7 @@ import {
   DuckDbConnector,
   createBaseDuckDbConnector,
 } from '@sqlrooms/duckdb-core';
-import {
-  load,
-  loadObjects,
-  loadSpatial,
-} from '@sqlrooms/duckdb-core/src/load/load';
+import {load, loadObjects, loadSpatial} from '@sqlrooms/duckdb-core';
 import {
   LoadFileOptions,
   StandardLoadOptions,
