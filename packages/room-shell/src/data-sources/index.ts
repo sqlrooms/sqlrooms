@@ -1,4 +1,5 @@
-export * from './FileDataSourceCard';
-export * from './FileDataSourcesPanel';
-export * from './TableCard';
-export * from './TablesListPanel';
+export {FileDataSourceCard} from './FileDataSourceCard';
+export {FileDataSourcesPanel} from './FileDataSourcesPanel';
+export {TableCard} from './TableCard';
+export type {TableAction} from './TableCard';
+export {TablesListPanel} from './TablesListPanel';

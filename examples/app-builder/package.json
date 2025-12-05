@@ -17,6 +17,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
+    "@sqlrooms/s3-browser": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@openassistant/utils": "1.0.0-alpha.0",
     "@webcontainer/api": "^1.6.1",

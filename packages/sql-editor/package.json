@@ -17,6 +17,7 @@
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
+  "sideEffects": false,
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
