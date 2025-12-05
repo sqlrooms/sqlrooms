@@ -28,7 +28,11 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
-import {MainView} from './components/MainView';
+import {lazy} from 'react';
+
+const MainView = lazy(() =>
+  import('./components/MainView').then((m) => ({default: m.MainView})),
+);
 import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
 

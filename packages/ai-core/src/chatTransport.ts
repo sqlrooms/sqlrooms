@@ -10,9 +10,9 @@ import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
-import type {AiSliceState} from './AiSlice';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
-import {AddToolResult} from './hooks/useAiChat';
+import {AddToolResult} from './types';
+import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
 
@@ -108,7 +108,7 @@ export type ToolCall = {
 };
 
 export type ChatTransportConfig = {
-  store: StoreApi<AiSliceState>;
+  store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
   apiKey: string;
@@ -127,7 +127,9 @@ export type ChatTransportConfig = {
 /**
  * Creates a handler for tool completion that updates the tool additional data in the store
  */
-function createOnToolCompletedHandler(store: StoreApi<AiSliceState>) {
+function createOnToolCompletedHandler(
+  store: StoreApi<AiSliceStateForTransport>,
+) {
   return (toolCallId: string, additionalData: unknown) => {
     const sessionId = store.getState().ai.config.currentSessionId;
     if (!sessionId) return;
@@ -231,7 +233,7 @@ export function createLocalChatTransportFactory({
 }
 
 export function createRemoteChatTransportFactory(params: {
-  store: StoreApi<AiSliceState>;
+  store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
 }) {
@@ -279,7 +281,11 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
-export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
+export function createChatHandlers({
+  store,
+}: {
+  store: StoreApi<AiSliceStateForTransport>;
+}) {
   return {
     onChatToolCall: async ({
       toolCall,
@@ -424,8 +430,8 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
             .ai.setSessionUiMessages(currentSessionId, completedMessages);
 
           // Ensure an analysis result exists and is marked as cancelled
-          store.setState((state: AiSliceState) =>
-            produce(state, (draft: AiSliceState) => {
+          store.setState((state: AiSliceStateForTransport) =>
+            produce(state, (draft: AiSliceStateForTransport) => {
               draft.ai.isRunningAnalysis = false;
               draft.ai.analysisAbortController = undefined;
 
@@ -482,8 +488,8 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
           .ai.setSessionUiMessages(currentSessionId, completedMessages);
 
         // Create or update analysis result with the user message ID for proper correlation
-        store.setState((state: AiSliceState) =>
-          produce(state, (draft: AiSliceState) => {
+        store.setState((state: AiSliceStateForTransport) =>
+          produce(state, (draft: AiSliceStateForTransport) => {
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
             );
@@ -565,8 +571,8 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
-          store.setState((state: AiSliceState) =>
-            produce(state, (draft: AiSliceState) => {
+          store.setState((state: AiSliceStateForTransport) =>
+            produce(state, (draft: AiSliceStateForTransport) => {
               draft.ai.isRunningAnalysis = false;
               draft.ai.analysisPrompt = '';
               draft.ai.analysisAbortController = undefined;
@@ -585,8 +591,8 @@ export function createChatHandlers({store}: {store: StoreApi<AiSliceState>}) {
           errMsg = 'Unknown error';
         }
         const currentSessionId = store.getState().ai.config.currentSessionId;
-        store.setState((state: AiSliceState) =>
-          produce(state, (draft: AiSliceState) => {
+        store.setState((state: AiSliceStateForTransport) =>
+          produce(state, (draft: AiSliceStateForTransport) => {
             if (!currentSessionId) return;
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
