@@ -1,0 +1,37 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "ignore": ["python/**", "docs/**"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"],
+      "ignoreDependencies": [
+        "typedoc-*",
+        "@types/*",
+        "@lerna-lite/*",
+        "glob",
+        "remove",
+        "vitepress-plugin-llms"
+      ]
+    },
+    "packages/*": {
+      "entry": ["src/index.{ts,tsx}"],
+      "ignoreDependencies": ["@sqlrooms/preset-*"]
+    },
+    "packages/preset-jest": {
+      "entry": ["*.js"],
+      "ignoreDependencies": [
+        "@testing-library/*",
+        "identity-obj-proxy",
+        "jest-environment-jsdom"
+      ]
+    },
+    "examples/*": {
+      "entry": ["src/main.tsx", "src/index.tsx", "app/**/*.{ts,tsx}"],
+      "ignoreDependencies": ["@sqlrooms/preset-*"]
+    }
+  }
+}

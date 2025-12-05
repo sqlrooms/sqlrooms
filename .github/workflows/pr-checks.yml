@@ -69,6 +69,9 @@ jobs:
       - name: Check circular dependencies
         run: pnpm check-circular-deps
 
+      - name: Check for unlisted dependencies in packages
+        run: pnpm knip --config knip.ci.json --include unlisted
+
       - name: Lint
         run: pnpm lint
 
