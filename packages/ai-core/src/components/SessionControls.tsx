@@ -126,7 +126,9 @@ export const SessionControls: React.FC<{
       >
         <div className="flex w-full min-w-0 items-center gap-3">
           <TabStrip
+            className="bg-background"
             tabs={tabs}
+            preventCloseLastTab
             openTabs={openTabs}
             selectedTabId={currentSessionId}
             onClose={handleClose}
