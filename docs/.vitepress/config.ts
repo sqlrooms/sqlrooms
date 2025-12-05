@@ -103,6 +103,14 @@ export default defineConfig({
             text: 'Modular Architecture',
             link: '/modular-architecture',
           },
+          {
+            text: "What's New",
+            link: '/whats-new',
+          },
+          {
+            text: 'Upgrade Guide',
+            link: '/upgrade-guide',
+          },
         ],
       },
       {
@@ -131,10 +139,6 @@ export default defineConfig({
           {
             text: 'Offline Use',
             link: '/offline-use',
-          },
-          {
-            text: 'Upgrade Guide',
-            link: '/upgrade-guide',
           },
         ],
       },

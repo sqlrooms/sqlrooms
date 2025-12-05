@@ -1,10 +1,10 @@
-### [AI-Powered Analytics](https://sqlrooms-ai.netlify.app/)
+### [AI-Powered Analytics](https://ai.sqlrooms.org/)
 
-[Try live](https://sqlrooms-ai.netlify.app/)
+[Try live](https://ai.sqlrooms.org/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/ai)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/ai?embed=1&file=components/app-shell.tsx)
 
-<a href="https://sqlrooms-ai.netlify.app/" target="_blank">
+<a href="https://ai.sqlrooms.org/" target="_blank">
   <video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" controls loop muted></video>
 </a>
 
