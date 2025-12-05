@@ -227,33 +227,46 @@ export function createSqlEditorSlice({
         deleteQueryTab: (queryId) => {
           const sqlEditorConfig = get().sqlEditor.config;
           const queries = sqlEditorConfig.queries;
+          const openTabs = sqlEditorConfig.openTabs;
 
           if (queries.length <= 1) {
             // Don't delete the last query
             return;
           }
 
-          const index = queries.findIndex((q) => q.id === queryId);
-          if (index === -1) return;
-
-          const isSelected = sqlEditorConfig.selectedQueryId === queryId;
+          const wasSelected = sqlEditorConfig.selectedQueryId === queryId;
+          const deletingOpenIndex = openTabs.indexOf(queryId);
           const filteredQueries = queries.filter((q) => q.id !== queryId);
 
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.queries = filteredQueries;
-              draft.sqlEditor.config.openTabs =
-                draft.sqlEditor.config.openTabs.filter((id) => id !== queryId);
+              draft.sqlEditor.config.openTabs = openTabs.filter(
+                (id) => id !== queryId,
+              );
 
-              // If we're deleting the selected tab, select the previous one or the first one
-              if (isSelected && filteredQueries.length > 0) {
-                const newSelectedIndex = Math.max(0, index - 1);
-                // Safely access the ID with fallback to the first query if needed
-                const newSelectedId =
-                  filteredQueries[newSelectedIndex]?.id ??
-                  filteredQueries[0]?.id;
-                if (newSelectedId) {
-                  draft.sqlEditor.config.selectedQueryId = newSelectedId;
+              // If we deleted the selected query, select another one
+              if (wasSelected) {
+                const newOpenTabs = draft.sqlEditor.config.openTabs;
+                const remainingQueries = draft.sqlEditor.config.queries;
+
+                if (newOpenTabs.length > 0) {
+                  // Select from remaining open tabs
+                  const newIndex =
+                    deletingOpenIndex === 0
+                      ? 0
+                      : Math.min(deletingOpenIndex - 1, newOpenTabs.length - 1);
+                  const newSelectedId = newOpenTabs[newIndex];
+                  if (newSelectedId) {
+                    draft.sqlEditor.config.selectedQueryId = newSelectedId;
+                  }
+                } else if (remainingQueries.length > 0) {
+                  // No open tabs left, open a closed query
+                  const queryToOpen = remainingQueries[0];
+                  if (queryToOpen) {
+                    draft.sqlEditor.config.openTabs.push(queryToOpen.id);
+                    draft.sqlEditor.config.selectedQueryId = queryToOpen.id;
+                  }
                 }
               }
             }),

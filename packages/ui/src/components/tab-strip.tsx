@@ -72,9 +72,10 @@ interface TabStripContextValue {
   filteredTabs: TabDescriptor[];
   editingTabId: string | null;
   search: string;
-  scrollContainerRef: React.RefObject<HTMLDivElement | null>;
+  scrollContainerRef: React.RefObject<HTMLDivElement>;
   selectedTabId?: string | null;
   openTabs: string[];
+  preventCloseLastTab: boolean;
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
@@ -116,6 +117,7 @@ interface SortableTabProps {
   tab: TabDescriptor;
   tabClassName?: string;
   editingTabId: string | null;
+  hideCloseButton?: boolean;
   onClose: (tabId: string) => void;
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
@@ -130,6 +132,7 @@ function SortableTab({
   tab,
   tabClassName,
   editingTabId,
+  hideCloseButton,
   onClose,
   onStartEditing,
   onStopEditing,
@@ -215,23 +218,25 @@ function SortableTab({
             </DropdownMenu>
           )}
 
-          <span
-            role="button"
-            tabIndex={-1}
-            aria-label="Close tab"
-            className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1"
-            onMouseDown={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-              onClose(tab.id);
-            }}
-          >
-            <XIcon className="h-4 w-4" />
-          </span>
+          {!hideCloseButton && (
+            <span
+              role="button"
+              tabIndex={-1}
+              aria-label="Close tab"
+              className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                onClose(tab.id);
+              }}
+            >
+              <XIcon className="h-4 w-4" />
+            </span>
+          )}
         </div>
       </TabsTrigger>
     </div>
@@ -247,6 +252,7 @@ interface TabStripMenuItemProps {
   onClick?: () => void;
   variant?: 'default' | 'destructive';
   className?: string;
+  disabled?: boolean;
 }
 
 /**
@@ -257,9 +263,11 @@ function TabStripMenuItem({
   onClick,
   variant = 'default',
   className,
+  disabled,
 }: TabStripMenuItemProps) {
   return (
     <DropdownMenuItem
+      disabled={disabled}
       onClick={(event) => {
         event.stopPropagation();
         onClick?.();
@@ -330,6 +338,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     scrollContainerRef,
     onOpenTabsChange,
     renderTabMenu,
+    preventCloseLastTab,
     handleStartEditing,
     handleStopEditing,
     handleInlineRename,
@@ -385,6 +394,9 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               tab={tab}
               tabClassName={tabClassName}
               editingTabId={editingTabId}
+              hideCloseButton={
+                preventCloseLastTab && openTabItems.length === 1
+              }
               onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
@@ -633,6 +645,8 @@ export interface TabStripProps {
   openTabs: string[];
   /** ID of the currently selected tab. */
   selectedTabId?: string | null;
+  /** If true, hides the close button when only one tab remains open. */
+  preventCloseLastTab?: boolean;
   /** Called when a tab is closed (hidden, can be reopened). */
   onClose?: (tabId: string) => void;
   /** Called when the list of open tabs changes (open from dropdown or reorder). */
@@ -677,6 +691,7 @@ function TabStripRoot({
   tabs,
   openTabs,
   selectedTabId,
+  preventCloseLastTab = false,
   onClose,
   onOpenTabsChange,
   onSelect,
@@ -687,7 +702,7 @@ function TabStripRoot({
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
-  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null!);
   const prevSelectedIdRef = useRef<string | null>(null);
 
   const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
@@ -795,6 +810,7 @@ function TabStripRoot({
     scrollContainerRef,
     selectedTabId,
     openTabs,
+    preventCloseLastTab,
     onOpenTabsChange,
     onSelect,
     onCreate,
@@ -816,7 +832,7 @@ function TabStripRoot({
     <Tabs
       value={selectedTabId ?? undefined}
       onValueChange={handleValueChange}
-      className={cn('w-full min-w-0', className)}
+      className={cn('bg-muted w-full min-w-0', className)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList
