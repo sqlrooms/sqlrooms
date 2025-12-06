@@ -1,12 +1,12 @@
 ---
-outline: 2
+outline: deep
 ---
 
 # What's New
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
-## 0.26.1-rc.7
+## 0.26.1-rc.7 (2025-12-05)
 
 ### Replaced barrel exports across all modules
 
@@ -34,7 +34,7 @@ New `@sqlrooms/ai-rag` module for Retrieval Augmented Generation. Query your doc
 
 Check the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/examples/ai-rag)
 
-## 0.26.0
+## 0.26.0 (2025-11-17)
 
 ### AI SDK v5
 
