@@ -4,6 +4,8 @@
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9e7cb117-0355-406d-88f8-54bf6d9050a0/deploy-status)](https://app.netlify.com/projects/sqlrooms-cosmos/deploys)
+
 <a href="http://sqlrooms-cosmos.netlify.app/" target="_blank">
   <img src="/media/examples/cosmos-graph.webp" alt="SQLRooms Graph example showing network visualization" width=450>
 </a>

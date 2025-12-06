@@ -6,7 +6,13 @@ outline: 2
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
-## 0.26.1-rc.4
+## 0.26.1-rc.7
+
+### New TabStrip component in `@sqlrooms/ui`
+
+A composable tab strip with drag-to-reorder, inline renaming, and a search dropdown for reopening closed tabs. Supports custom tab menus and flexible layouts via subcomponents (`TabStrip.Tabs`, `TabStrip.SearchDropdown`, `TabStrip.NewButton`).
+
+<video src="/media/whats-new/tab-strip-component.mp4" alt="SQLRooms TabStrip component" width="450" loop muted controls autoplay></video>
 
 ### Kepler integration
 

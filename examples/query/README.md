@@ -4,6 +4,8 @@
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/query)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/query?embed=1)
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/779ab00f-9f8f-4c12-92d2-a75426ac0315/deploy-status)](https://app.netlify.com/projects/sqlrooms-query/deploys)
+
 <a href="https://query.sqlrooms.org/" target="_blank">
 <img src="/media/examples/sqlrooms-query.webp" alt="SQLRooms SQL Query workbench example" width=450>
 </a>
