@@ -8,7 +8,11 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 ## 0.26.1-rc.7
 
-### New TabStrip component in `@sqlrooms/ui`
+### Replaced barrel exports across all modules
+
+Barrel exports (i.e., `export * from ...`) were replaced across all modules to improve tree-shaking, reduce bundle size, and avoid import path ambiguities. Direct/explicit exports now ensure only the required symbols are included in consumers' builds, making dependencies clearer and preventing accidental re-exports or circular dependencies.
+
+### TabStrip component in `@sqlrooms/ui`
 
 A composable tab strip with drag-to-reorder, inline renaming, and a search dropdown for reopening closed tabs. Supports custom tab menus and flexible layouts via subcomponents (`TabStrip.Tabs`, `TabStrip.SearchDropdown`, `TabStrip.NewButton`).
 
