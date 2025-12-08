@@ -68,7 +68,10 @@ export const EditableText: FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(value);
   const internalValueRef = useRef(internalValue);
-  internalValueRef.current = internalValue;
+
+  useEffect(() => {
+    internalValueRef.current = internalValue;
+  }, [internalValue]);
 
   const handleSetValue = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
