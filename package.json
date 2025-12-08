@@ -59,7 +59,7 @@
     "@types/glob": "^9.0.0",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
-    "@types/node": "^20.19.25",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "concurrently": "^9.2.1",
