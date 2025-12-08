@@ -39,7 +39,7 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     needs: check-pr-title
-    if: always()
+    if: github.event_name != 'pull_request' || github.event.action != 'edited'
 
     steps:
       - name: Checkout
@@ -60,12 +60,6 @@ jobs:
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
 
-      - name: Build packages
-        run: pnpm build
-
-      - name: Build examples
-        run: pnpm build:examples
-
       - name: Check circular dependencies
         run: pnpm check-circular-deps
 
@@ -74,6 +68,12 @@ jobs:
 
       - name: Lint
         run: pnpm lint
+
+      - name: Build packages
+        run: pnpm build
+
+      - name: Build examples
+        run: pnpm build:examples
 
       - name: Test
         run: pnpm test
