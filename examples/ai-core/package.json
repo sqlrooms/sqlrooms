@@ -16,7 +16,6 @@
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "ai": "^5.0.44",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

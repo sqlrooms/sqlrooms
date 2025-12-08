@@ -18,6 +18,7 @@
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "lucide-react": "0.544.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",

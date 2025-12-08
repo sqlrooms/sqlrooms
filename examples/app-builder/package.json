@@ -20,7 +20,6 @@
     "@sqlrooms/ui": "workspace:*",
     "@openassistant/utils": "1.0.0-alpha.0",
     "@webcontainer/api": "^1.6.1",
-    "ai": "^5.0.52",
     "immer": "^11.0.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",

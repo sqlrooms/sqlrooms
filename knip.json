@@ -4,7 +4,7 @@
     "interface": true,
     "type": true
   },
-  "ignore": ["python/**", "docs/**"],
+  "ignore": ["python/**", "docs/**", "examples/app-builder/app-scaffolds/**"],
   "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
     ".": {
@@ -38,22 +38,16 @@
     "packages/preset-typescript": {
       "entry": ["*.json"]
     },
+    "examples/*nextjs*": {
+      "entry": ["app/page.tsx", "app/api/**/*.ts", "postcss.config.mjs"]
+    },
+    "examples/canvas": {
+      "entry": ["src/main.tsx"],
+      "ignoreDependencies": []
+    },
     "examples/*": {
-      "entry": ["src/main.{ts,tsx}", "src/index.{ts,tsx}"],
-      "ignoreDependencies": [
-        "@types/*",
-        "@vitejs/plugin-react",
-        "autoprefixer",
-        "eslint",
-        "eslint-plugin-react-hooks",
-        "eslint-plugin-react-refresh",
-        "globals",
-        "postcss",
-        "tailwindcss",
-        "typescript",
-        "typescript-eslint",
-        "vite"
-      ]
+      "entry": ["src/main.{ts,tsx}"],
+      "ignoreDependencies": []
     }
   }
 }
