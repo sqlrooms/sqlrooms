@@ -39,7 +39,7 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     needs: check-pr-title
-    if: github.event_name != 'pull_request' || github.event.action != 'edited'
+    if: github.event_name != 'pull_request' || github.event.action != 'edited' || github.actor == 'renovate[bot]'
 
     steps:
       - name: Checkout
