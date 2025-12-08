@@ -203,7 +203,7 @@ importers:
     dependencies:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.22
-        version: 1.0.27(zod@4.1.8)
+        version: 1.0.28(zod@4.1.8)
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../../packages/ai-config
@@ -355,7 +355,7 @@ importers:
     dependencies:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
-        version: 1.0.27(zod@4.1.8)
+        version: 1.0.28(zod@4.1.8)
       '@openassistant/utils':
         specifier: 1.0.0-alpha.0
         version: 1.0.0-alpha.0
@@ -1680,7 +1680,7 @@ importers:
     dependencies:
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
-        version: 1.0.27(zod@4.1.8)
+        version: 1.0.28(zod@4.1.8)
       '@ai-sdk/react':
         specifier: ^2.0.44
         version: 2.0.109(react@19.2.1)(zod@4.1.8)
@@ -2791,8 +2791,8 @@ packages:
     peerDependencies:
       zod: 4.1.8
 
-  '@ai-sdk/openai-compatible@1.0.27':
-    resolution: {integrity: sha512-bpYruxVLhrTbVH6CCq48zMJNeHu6FmHtEedl9FXckEgcIEAi036idFhJlcRwC1jNCwlacbzb8dPD7OAH1EKJaQ==}
+  '@ai-sdk/openai-compatible@1.0.28':
+    resolution: {integrity: sha512-yKubDxLYtXyGUzkr9lNStf/lE/I+Okc8tmotvyABhsQHHieLKk6oV5fJeRJxhr67Ejhg+FRnwUOxAmjRoFM4dA==}
     engines: {node: '>=18'}
     peerDependencies:
       zod: 4.1.8
@@ -14242,10 +14242,10 @@ snapshots:
       '@vercel/oidc': 3.0.5
       zod: 4.1.8
 
-  '@ai-sdk/openai-compatible@1.0.27(zod@4.1.8)':
+  '@ai-sdk/openai-compatible@1.0.28(zod@4.1.8)':
     dependencies:
       '@ai-sdk/provider': 2.0.0
-      '@ai-sdk/provider-utils': 3.0.17(zod@4.1.8)
+      '@ai-sdk/provider-utils': 3.0.18(zod@4.1.8)
       zod: 4.1.8
 
   '@ai-sdk/openai@2.0.65(zod@4.1.8)':
