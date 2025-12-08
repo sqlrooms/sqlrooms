@@ -17,6 +17,7 @@
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
     "build:examples": "turbo build --filter=./examples/*",
+    "build:examples:ci": "turbo build --filter=./examples/* --concurrency=1",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
@@ -92,7 +93,9 @@
       "@types/react": "19.2.7",
       "@types/react-dom": "19.2.3",
       "@duckdb/duckdb-wasm": "1.31.0",
-      "zod": "4.1.13"
+      "zod": "4.1.13",
+      "d3-sankey": "0.12.3",
+      "monaco-editor": "0.55.1"
     },
     "onlyBuiltDependencies": [
       "@danmarshall/deckgl-typings",

@@ -1,9 +1,10 @@
 import {theme} from '@kepler.gl/styles';
+import {DefaultTheme} from 'styled-components';
 
 // SQL Room dark theme exported from sqlRoom preset, maybe there is a better way to do this
 // but this is the only way I could find to make it work with tailwind
 
-export const darkTheme = {
+export const darkTheme: DefaultTheme = {
   ...theme,
   sidePanelBg: 'hsl(var(--background))',
   bottomWidgetBgd: 'hsl(var(--background))',
