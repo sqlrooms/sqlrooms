@@ -24,7 +24,7 @@
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/table-core": "^8.21.3",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {
