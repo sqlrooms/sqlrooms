@@ -192,7 +192,6 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
             components={{
-              // @ts-expect-error - Custom HTML element not in react-markdown types
               'think-block': thinkBlockComponent,
               ...customMarkdownComponents,
             }}

@@ -174,18 +174,10 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
   const {onShowAddMapStyleModal, onMapStyleChange, onRemoveCustomMapStyle} =
     useCustomMapActions(keplerActions);
 
-  if (!keplerState || !keplerActions) {
-    return null;
-  }
-
-  const {mapStyle} = keplerState;
-  const currentStyle = mapStyle.mapStyles[mapStyle.styleType] || {};
-  const editableLayers = (currentStyle as any).layerGroups || [];
-
   // Custom map styles actions (for delete functionality)
   const customMapStylesActions = useMemo(() => {
     const actionsPerCustomStyle: any = {};
-    Object.values(mapStyle.mapStyles)
+    Object.values(keplerState?.mapStyle.mapStyles || {})
       .filter((style: any) => Boolean(style.custom))
       .forEach((style: any) => {
         actionsPerCustomStyle[style.id] = [
@@ -198,7 +190,14 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
         ];
       });
     return actionsPerCustomStyle;
-  }, [mapStyle.mapStyles, onRemoveCustomMapStyle]);
+  }, [keplerState?.mapStyle.mapStyles, onRemoveCustomMapStyle]);
+  if (!keplerState || !keplerActions) {
+    return null;
+  }
+
+  const {mapStyle} = keplerState;
+  const currentStyle = mapStyle.mapStyles[mapStyle.styleType] || {};
+  const editableLayers = (currentStyle as any).layerGroups || [];
 
   return (
     <CustomMapManagerContainer>
