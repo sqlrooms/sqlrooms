@@ -4,7 +4,7 @@
     "interface": true,
     "type": true
   },
-  "ignore": ["python/**", "docs/**", "examples/**"],
+  "ignore": ["python/**", "docs/**"],
   "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
     ".": {
@@ -37,6 +37,23 @@
     },
     "packages/preset-typescript": {
       "entry": ["*.json"]
+    },
+    "examples/*": {
+      "entry": ["src/main.{ts,tsx}", "src/index.{ts,tsx}"],
+      "ignoreDependencies": [
+        "@types/*",
+        "@vitejs/plugin-react",
+        "autoprefixer",
+        "eslint",
+        "eslint-plugin-react-hooks",
+        "eslint-plugin-react-refresh",
+        "globals",
+        "postcss",
+        "tailwindcss",
+        "typescript",
+        "typescript-eslint",
+        "vite"
+      ]
     }
   }
 }
