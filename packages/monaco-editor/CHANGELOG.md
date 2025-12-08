@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](https://github.com/sqlrooms/sqlrooms/commit/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
 ## 0.26.1-rc.6 (2025-12-05)
 
 ### Bug Fixes
