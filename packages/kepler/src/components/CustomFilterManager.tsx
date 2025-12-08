@@ -164,13 +164,19 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
 
   const {onClickAddFilter} = useCustomFilterActions(keplerActions);
 
-  const {filters, datasets, layers} = keplerState?.visState || {};
+  const visState = keplerState?.visState;
+  const filters = useMemo(() => visState?.filters ?? [], [visState?.filters]);
+  const datasets = useMemo(
+    () => (visState?.datasets ?? []) as Datasets,
+    [visState?.datasets],
+  );
+  const layers = useMemo(() => visState?.layers ?? [], [visState?.layers]);
   const filtersByIndex = useMemo(
     () =>
       filters?.map((f, idx) => ({
         filter: f,
         idx,
-      })),
+      })) ?? [],
     [filters],
   );
 
@@ -178,7 +184,7 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
     return null;
   }
 
-  const isAnyFilterAnimating = Object.values(filters || {}).some(
+  const isAnyFilterAnimating = Object.values(filters).some(
     (f) => f.isAnimating,
   );
 

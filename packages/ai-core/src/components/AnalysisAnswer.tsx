@@ -191,10 +191,12 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
-            components={{
-              'think-block': thinkBlockComponent,
-              ...customMarkdownComponents,
-            }}
+            components={
+              {
+                'think-block': thinkBlockComponent,
+                ...customMarkdownComponents,
+              } as Partial<Components>
+            }
           >
             {processedContent}
           </Markdown>
