@@ -26,7 +26,8 @@
       "ignoreDependencies": [
         "@testing-library/*",
         "identity-obj-proxy",
-        "jest-environment-jsdom"
+        "jest-environment-jsdom",
+        "ts-jest"
       ]
     },
     "examples/*": {
