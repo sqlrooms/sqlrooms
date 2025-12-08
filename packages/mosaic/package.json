@@ -21,8 +21,7 @@
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
     "@uwdata/mosaic-core": "^0.16.2",
-    "@uwdata/mosaic-spec": "^0.16.2",
-    "@uwdata/vgplot": "^0.16.2"
+    "@uwdata/mosaic-spec": "^0.16.2"
   },
   "peerDependencies": {
     "react": ">=18",

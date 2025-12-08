@@ -191,11 +191,12 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
-            components={{
-              // @ts-expect-error - Custom HTML element not in react-markdown types
-              'think-block': thinkBlockComponent,
-              ...customMarkdownComponents,
-            }}
+            components={
+              {
+                'think-block': thinkBlockComponent,
+                ...customMarkdownComponents,
+              } as Partial<Components>
+            }
           >
             {processedContent}
           </Markdown>

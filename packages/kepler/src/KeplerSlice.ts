@@ -290,7 +290,7 @@ export function createKeplerSlice({
                 getState: () => get().kepler.map || {},
                 subscribe: () => () => {},
                 replaceReducer: () => {},
-                // @ts-ignore
+                // @ts-expect-error - Symbol.observable is not defined in the Redux type definitions
                 [Symbol.observable]: () => {},
               },
             },
@@ -419,7 +419,9 @@ export function createKeplerSlice({
                 if (newOpenTabs.length > 0) {
                   // Select from remaining open tabs
                   const newIndex =
-                    deletingIndex === 0 ? 0 : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
+                    deletingIndex === 0
+                      ? 0
+                      : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
                   const newSelectedId = newOpenTabs[newIndex];
                   if (newSelectedId) {
                     draft.kepler.config.currentMapId = newSelectedId;
@@ -466,7 +468,9 @@ export function createKeplerSlice({
               if (openTabs.length <= 1) return;
 
               // Just remove from openTabs - TabStrip handles selection via onSelect before calling onClose
-              draft.kepler.config.openTabs = openTabs.filter((id) => id !== mapId);
+              draft.kepler.config.openTabs = openTabs.filter(
+                (id) => id !== mapId,
+              );
             }),
           );
         },

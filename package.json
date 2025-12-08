@@ -40,7 +40,8 @@
     "publish-prerelease": "turbo run publish && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
     "update-readme": "node scripts/update-readme.mjs",
     "update-deps": "pnpm --filter '*' update --interactive",
-    "check-circular-deps": "npx madge --circular packages/*/src/index.ts"
+    "check-circular-deps": "npx madge --circular packages/*/src/index.ts",
+    "knip": "knip"
   },
   "engines": {
     "node": ">=22"
@@ -57,6 +58,7 @@
     "@types/glob": "^9.0.0",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
+    "@types/node": "^20.19.25",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "concurrently": "^9.2.1",
@@ -65,6 +67,7 @@
     "glob": "^11.0.3",
     "husky": "^9.1.7",
     "jest": "^30.1.3",
+    "knip": "^5.71.0",
     "lint-staged": "^16.2.0",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
@@ -77,24 +80,26 @@
     "typedoc-plugin-markdown": "4.4.2",
     "typedoc-plugin-zod": "1.4.1",
     "typedoc-vitepress-theme": "1.1.2",
-    "typescript": "5.9.2",
+    "typescript": "5.8.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-llms": "^1.8.0"
   },
   "pnpm": {
     "overrides": {
       "typescript": "5.8.3",
-      "react": "19.2.0",
-      "react-dom": "19.2.0",
+      "react": "19.2.1",
+      "react-dom": "19.2.1",
       "@types/react": "19.1.13",
       "@types/react-dom": "19.1.9",
       "@duckdb/duckdb-wasm": "1.31.0",
       "zod": "4.1.8"
     },
     "onlyBuiltDependencies": [
+      "@danmarshall/deckgl-typings",
       "@swc/core",
       "esbuild",
-      "msw"
+      "msw",
+      "unrs-resolver"
     ],
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",

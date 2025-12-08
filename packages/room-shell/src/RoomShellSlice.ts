@@ -202,7 +202,6 @@ export function createRoomShellSlice(
       ...createLayoutSlice(createLayoutProps)(set, get, store),
       room: {
         ...roomSliceState.room,
-        // @ts-ignore TODO: fix this
         config: {
           ...createDefaultBaseRoomConfig(),
           ...configProps,

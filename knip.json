@@ -1,0 +1,53 @@
+{
+  "$schema": "https://unpkg.com/knip@5/schema.json",
+  "ignoreExportsUsedInFile": {
+    "interface": true,
+    "type": true
+  },
+  "ignore": ["python/**", "docs/**", "examples/app-builder/app-scaffolds/**"],
+  "exclude": ["exports", "types", "duplicates"],
+  "workspaces": {
+    ".": {
+      "entry": ["scripts/*.mjs"],
+      "ignoreDependencies": [
+        "@types/*",
+        "@lerna-lite/*",
+        "glob",
+        "remove",
+        "vitepress-plugin-llms"
+      ],
+      "ignoreBinaries": ["madge"]
+    },
+    "packages/*": {
+      "entry": ["src/index.{ts,tsx}"]
+    },
+    "packages/preset-jest": {
+      "entry": ["*.js"],
+      "ignoreDependencies": [
+        "@testing-library/*",
+        "identity-obj-proxy",
+        "jest-environment-jsdom"
+      ]
+    },
+    "packages/preset-eslint": {
+      "entry": ["*.js"]
+    },
+    "packages/preset-typedoc": {
+      "entry": ["*.js"]
+    },
+    "packages/preset-typescript": {
+      "entry": ["*.json"]
+    },
+    "examples/*nextjs*": {
+      "entry": ["app/page.tsx", "app/api/**/*.ts", "postcss.config.mjs"]
+    },
+    "examples/canvas": {
+      "entry": ["src/main.tsx"],
+      "ignoreDependencies": []
+    },
+    "examples/*": {
+      "entry": ["src/main.{ts,tsx}"],
+      "ignoreDependencies": []
+    }
+  }
+}

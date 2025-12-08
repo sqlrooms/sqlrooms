@@ -48,8 +48,6 @@ const TooltipPanel: React.FC<{
   handleCoordinateToggle,
   setColumnDisplayFormat,
 }) => {
-  if (!tooltipConfig) return null;
-
   const handleTooltipConfigChange = useCallback(
     (newConfig: any) => {
       handleConfigChange('tooltip', {config: newConfig});
@@ -57,6 +55,7 @@ const TooltipPanel: React.FC<{
     [handleConfigChange],
   );
 
+  if (!tooltipConfig) return null;
   return (
     <div>
       <SimpleInteractionPanel

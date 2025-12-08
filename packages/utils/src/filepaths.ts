@@ -181,7 +181,7 @@ export function convertToUniqueS3ObjectName(
 ): string {
   let rv = str
     .trim() // Remove leading and trailing white spaces
-    .replace(/[^\w\s-\.]/g, '_') // Replace special characters with underscores
+    .replace(/[^\w\s-.]/g, '_') // Replace special characters with underscores
     .replace(/\s+/g, '_') // Replace consecutive spaces with a single underscore
     // .replace(/_+/g, '_') // Remove consecutive underscores
     // .replace(/^_/, '') // Remove leading underscores

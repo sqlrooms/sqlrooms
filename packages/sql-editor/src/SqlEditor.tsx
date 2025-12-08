@@ -116,5 +116,6 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
     </div>
   );
 });
+SqlEditor.displayName = 'SqlEditor';
 
 export default SqlEditor;
