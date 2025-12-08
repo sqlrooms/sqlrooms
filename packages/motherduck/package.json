@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@motherduck/wasm-client": "^0.6.6",
+    "@motherduck/wasm-client": "^0.8.0",
     "@sqlrooms/duckdb": "workspace:*",
     "apache-arrow": "^17.0.0"
   },

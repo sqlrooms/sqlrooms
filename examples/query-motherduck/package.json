@@ -10,7 +10,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@motherduck/wasm-client": "^1.0.0",
+    "@motherduck/wasm-client": "^0.8.0",
     "@sqlrooms/motherduck": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
@@ -35,9 +35,5 @@
     "typescript-eslint": "^8.44.1",
     "vite": "^7.1.9",
     "vite-plugin-pwa": "^1.0.3"
-  },
-  "overrides": {
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
   }
 }
