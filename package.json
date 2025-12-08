@@ -108,6 +108,9 @@
       "@tailwindcss/oxide",
       "@vaadin/vaadin-usage-statistics",
       "sharp"
-    ]
+    ],
+    "patchedDependencies": {
+      "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
+    }
   }
 }
