@@ -17,6 +17,7 @@
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
     "build:examples": "turbo build --filter=./examples/*",
+    "build:examples:ci": "turbo build --filter=./examples/* --concurrency=1",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
