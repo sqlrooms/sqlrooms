@@ -19,11 +19,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmograph/cosmos": "2.0.0-beta.22",
+    "@cosmograph/cosmos": "2.0.0-beta.26",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },

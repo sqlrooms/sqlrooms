@@ -41,13 +41,13 @@
     "@sqlrooms/ui": "workspace:*",
     "apache-arrow": "17.0.0",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "react-intl": "^6.3.0",
     "react-palm": "^3.3.8",
     "react-redux": "^8.0.5",
     "redux": "^4.2.1",
     "redux-logger": "^3.0.6",
-    "styled-components": "6.1.8"
+    "styled-components": "6.1.19"
   },
   "peerDependencies": {
     "react": ">=18",

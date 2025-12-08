@@ -31,7 +31,7 @@
     "@sqlrooms/vega": "workspace:*",
     "@xyflow/react": "^12.8.5",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

@@ -41,8 +41,8 @@
     "d3-dsv": "^3.0.1",
     "file-saver": "^2.0.5",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
-    "monaco-editor": "^0.52.2",
+    "lucide-react": "^0.556.0",
+    "monaco-editor": "^0.55.0",
     "react-hook-form": "^7.63.0",
     "zod": "^4.1.8"
   },
