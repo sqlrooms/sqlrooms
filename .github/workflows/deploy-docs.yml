@@ -88,7 +88,7 @@ jobs:
         run: echo "sqlrooms.org" > docs/.vitepress/dist/CNAME
 
       - name: Upload artifact to GitHub Pages
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v4
         with:
           path: docs/.vitepress/dist
 
