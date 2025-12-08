@@ -191,19 +191,19 @@ importers:
         version: 19.1.9(@types/react@19.1.13)
       '@vitejs/plugin-react':
         specifier: ^5.0.3
-        version: 5.1.1(vite@7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
+        version: 5.1.1(vite@7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
-        version: 9.39.1(jiti@1.21.7)
+        version: 9.39.1(jiti@2.6.1)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@1.21.7))
+        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
       eslint-plugin-react-refresh:
         specifier: ^0.4.21
-        version: 0.4.24(eslint@9.39.1(jiti@1.21.7))
+        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -218,10 +218,10 @@ importers:
         version: 5.8.3
       typescript-eslint:
         specifier: ^8.44.1
-        version: 8.46.4(eslint@9.39.1(jiti@1.21.7))(typescript@5.8.3)
+        version: 8.46.4(eslint@9.39.1(jiti@2.6.1))(typescript@5.8.3)
       vite:
         specifier: ^7.1.9
-        version: 7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
+        version: 7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
 
   examples/ai-agent:
     dependencies:
@@ -273,19 +273,19 @@ importers:
         version: 19.1.9(@types/react@19.1.13)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
-        version: 4.7.0(vite@7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
+        version: 4.7.0(vite@7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
-        version: 9.39.1(jiti@2.6.1)
+        version: 9.39.1(jiti@1.21.7)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
+        version: 5.2.0(eslint@9.39.1(jiti@1.21.7))
       eslint-plugin-react-refresh:
         specifier: ^0.4.20
-        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
+        version: 0.4.24(eslint@9.39.1(jiti@1.21.7))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -300,10 +300,10 @@ importers:
         version: 5.8.3
       typescript-eslint:
         specifier: ^8.34.0
-        version: 8.46.4(eslint@9.39.1(jiti@2.6.1))(typescript@5.8.3)
+        version: 8.46.4(eslint@9.39.1(jiti@1.21.7))(typescript@5.8.3)
       vite:
         specifier: ^7.1.9
-        version: 7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
+        version: 7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
 
   examples/ai-core:
     dependencies:
@@ -1846,18 +1846,9 @@ importers:
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
-      '@sqlrooms/utils':
-        specifier: workspace:*
-        version: link:../utils
-      ai:
-        specifier: ^5.0.44
-        version: 5.0.52(zod@4.1.8)
       apache-arrow:
         specifier: 17.0.0
         version: 17.0.0
-      immer:
-        specifier: ^11.0.1
-        version: 11.0.1
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.0)
@@ -1867,18 +1858,6 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.1.13)(react@19.2.0)
-      recharts:
-        specifier: ^2.12.7
-        version: 2.15.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      rehype-raw:
-        specifier: ^7.0.0
-        version: 7.0.0
-      remark-gfm:
-        specifier: ^4.0.0
-        version: 4.0.1
       zod:
         specifier: 4.1.8
         version: 4.1.8
@@ -1894,9 +1873,6 @@ importers:
 
   packages/ai-core:
     dependencies:
-      '@ai-sdk/openai':
-        specifier: ^2.0.32
-        version: 2.0.65(zod@4.1.8)
       '@ai-sdk/openai-compatible':
         specifier: ^1.0.18
         version: 1.0.27(zod@4.1.8)
@@ -1915,9 +1891,6 @@ importers:
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -1990,9 +1963,6 @@ importers:
 
   packages/ai-settings:
     dependencies:
-      '@ai-sdk/provider':
-        specifier: ^1.1.3
-        version: 1.1.3
       '@sqlrooms/ai-config':
         specifier: workspace:*
         version: link:../ai-config
@@ -2002,21 +1972,12 @@ importers:
       '@sqlrooms/recharts':
         specifier: workspace:*
         version: link:../recharts
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
-      '@sqlrooms/utils':
-        specifier: workspace:*
-        version: link:../utils
-      ai:
-        specifier: ^5.0.44
-        version: 5.0.52(zod@4.1.8)
       immer:
         specifier: ^11.0.1
         version: 11.0.1
@@ -2029,21 +1990,9 @@ importers:
       react-dom:
         specifier: 19.2.0
         version: 19.2.0(react@19.2.0)
-      react-markdown:
-        specifier: ^10.1.0
-        version: 10.1.0(@types/react@19.1.13)(react@19.2.0)
       recharts:
         specifier: ^2.12.7
         version: 2.15.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      rehype-raw:
-        specifier: ^7.0.0
-        version: 7.0.0
-      remark-gfm:
-        specifier: ^4.0.0
-        version: 4.0.1
-      zod:
-        specifier: 4.1.8
-        version: 4.1.8
 
   packages/canvas:
     dependencies:
@@ -2095,9 +2044,6 @@ importers:
       '@cosmograph/cosmos':
         specifier: 2.0.0-beta.22
         version: 2.0.0-beta.22
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../room-shell
@@ -2359,12 +2305,6 @@ importers:
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.0)
-      mapbox-gl:
-        specifier: ^1.13.1
-        version: 1.13.3
-      maplibre-gl:
-        specifier: ^3.6.2
-        version: 3.6.2
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -2389,12 +2329,6 @@ importers:
       styled-components:
         specifier: 6.1.8
         version: 6.1.8(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      zod:
-        specifier: 4.1.8
-        version: 4.1.8
-      zustand:
-        specifier: ^5.0.3
-        version: 5.0.8(@types/react@19.1.13)(immer@11.0.1)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
       '@types/redux-logger':
         specifier: ^3.0.13
@@ -2411,9 +2345,6 @@ importers:
       '@sqlrooms/layout-config':
         specifier: workspace:*
         version: link:../layout-config
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@sqlrooms/room-store':
         specifier: workspace:*
         version: link:../room-store
@@ -2474,9 +2405,6 @@ importers:
       '@uwdata/mosaic-spec':
         specifier: ^0.16.2
         version: 0.16.2
-      '@uwdata/vgplot':
-        specifier: ^0.16.2
-        version: 0.16.2
       react:
         specifier: 19.2.0
         version: 19.2.0
@@ -2513,9 +2441,6 @@ importers:
       eslint-config-prettier:
         specifier: ^10.1.8
         version: 10.1.8(eslint@9.39.1(jiti@2.6.1))
-      eslint-plugin-only-warn:
-        specifier: ^1.1.0
-        version: 1.1.0
       eslint-plugin-react:
         specifier: ^7.37.5
         version: 7.37.5(eslint@9.39.1(jiti@2.6.1))
@@ -2617,9 +2542,6 @@ importers:
       '@sqlrooms/layout':
         specifier: workspace:*
         version: link:../layout
-      '@sqlrooms/layout-config':
-        specifier: workspace:*
-        version: link:../layout-config
       '@sqlrooms/room-config':
         specifier: workspace:*
         version: link:../room-config
@@ -2650,9 +2572,6 @@ importers:
       react-mosaic-component:
         specifier: ^6.1.1
         version: 6.1.1(@types/hoist-non-react-statics@3.3.7(@types/react@19.1.13))(@types/node@22.19.1)(@types/react@19.1.13)(dnd-core@16.0.1)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      zod:
-        specifier: 4.1.8
-        version: 4.1.8
       zustand:
         specifier: ^5.0.8
         version: 5.0.8(@types/react@19.1.13)(immer@11.0.1)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
@@ -2777,15 +2696,9 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
-      '@sqlrooms/layout':
-        specifier: workspace:*
-        version: link:../layout
       '@sqlrooms/monaco-editor':
         specifier: workspace:*
         version: link:../monaco-editor
-      '@sqlrooms/room-config':
-        specifier: workspace:*
-        version: link:../room-config
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../room-shell
@@ -2834,9 +2747,6 @@ importers:
       zod:
         specifier: 4.1.8
         version: 4.1.8
-      zustand:
-        specifier: ^5.0.8
-        version: 5.0.8(@types/react@19.1.13)(immer@11.0.1)(react@19.2.0)(use-sync-external-store@1.6.0(react@19.2.0))
     devDependencies:
       '@types/d3-dsv':
         specifier: ^3.0.7
@@ -2868,9 +2778,6 @@ importers:
       '@dnd-kit/sortable':
         specifier: ^10.0.0
         version: 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.0(react@19.2.0))(react@19.2.0))(react@19.2.0)
-      '@hookform/resolvers':
-        specifier: ^3.10.0
-        version: 3.10.0(react-hook-form@7.66.0(react@19.2.0))
       '@radix-ui/react-accordion':
         specifier: ^1.2.12
         version: 1.2.12(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
@@ -2985,9 +2892,6 @@ importers:
       vaul:
         specifier: ^1.1.2
         version: 1.1.2(@types/react-dom@19.1.9(@types/react@19.1.13))(@types/react@19.1.13)(react-dom@19.2.0(react@19.2.0))(react@19.2.0)
-      zod:
-        specifier: 4.1.8
-        version: 4.1.8
 
   packages/utils:
     dependencies:
@@ -3022,9 +2926,6 @@ importers:
       ts-jest:
         specifier: ^29.4.4
         version: 29.4.5(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@20.19.25))(typescript@5.8.3)
-      usehooks-ts:
-        specifier: ^3.1.1
-        version: 3.1.1(react@19.2.0)
 
   packages/vega:
     dependencies:
@@ -9577,10 +9478,6 @@ packages:
     hasBin: true
     peerDependencies:
       eslint: '>=7.0.0'
-
-  eslint-plugin-only-warn@1.1.0:
-    resolution: {integrity: sha512-2tktqUAT+Q3hCAU0iSf4xAN1k9zOpjK5WO8104mB0rT/dGhOa09582HN5HlbxNbPRZ0THV7nLGvzugcNOSjzfA==}
-    engines: {node: '>=6'}
 
   eslint-plugin-react-hooks@5.2.0:
     resolution: {integrity: sha512-+f15FfK64YQwZdJNELETdn5ibXEUQmW1DZL6KXhNnc2heoy/sg9VJJeT7n8TlMWouzWqSWavFkIhHyIbIAEapg==}
@@ -22373,6 +22270,18 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.12.0
 
+  '@vitejs/plugin-react@4.7.0(vite@7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))':
+    dependencies:
+      '@babel/core': 7.28.5
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
+      '@rolldown/pluginutils': 1.0.0-beta.27
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.17.0
+      vite: 7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
+    transitivePeerDependencies:
+      - supports-color
+
   '@vitejs/plugin-react@4.7.0(vite@7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))':
     dependencies:
       '@babel/core': 7.28.5
@@ -22382,18 +22291,6 @@ snapshots:
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
       vite: 7.2.2(@types/node@22.19.1)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@vitejs/plugin-react@5.1.1(vite@7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1))':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
-      '@rolldown/pluginutils': 1.0.0-beta.47
-      '@types/babel__core': 7.20.5
-      react-refresh: 0.18.0
-      vite: 7.2.2(@types/node@22.19.1)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.1)
     transitivePeerDependencies:
       - supports-color
 
@@ -24212,8 +24109,6 @@ snapshots:
   eslint-config-prettier@10.1.8(eslint@9.39.1(jiti@2.6.1)):
     dependencies:
       eslint: 9.39.1(jiti@2.6.1)
-
-  eslint-plugin-only-warn@1.1.0: {}
 
   eslint-plugin-react-hooks@5.2.0(eslint@9.39.1(jiti@1.21.7)):
     dependencies:

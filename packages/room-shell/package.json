@@ -29,7 +29,6 @@
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",
-    "@sqlrooms/layout-config": "workspace:*",
     "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
@@ -38,7 +37,6 @@
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "react-mosaic-component": "^6.1.1",
-    "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },
   "peerDependencies": {

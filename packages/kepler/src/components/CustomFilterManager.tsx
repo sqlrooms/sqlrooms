@@ -210,5 +210,3 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
     </CustomFilterManagerContainer>
   );
 };
-
-export default CustomFilterManager;

@@ -249,5 +249,3 @@ export const CustomMapManager: React.FC<CustomMapManagerProps> = ({mapId}) => {
     </CustomMapManagerContainer>
   );
 };
-
-export default CustomMapManager;

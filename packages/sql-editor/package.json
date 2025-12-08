@@ -31,9 +31,7 @@
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/layout": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/sql-editor-config": "workspace:*",
@@ -46,8 +44,7 @@
     "lucide-react": "^0.555.0",
     "monaco-editor": "^0.52.2",
     "react-hook-form": "^7.63.0",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
+    "zod": "^4.1.8"
   },
   "peerDependencies": {
     "apache-arrow": ">=17",

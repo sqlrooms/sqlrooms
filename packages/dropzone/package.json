@@ -22,8 +22,7 @@
     ".": {
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
-    },
-    "./src/*": "./src/components/*.tsx"
+    }
   },
   "scripts": {
     "dev": "tsc -w",
