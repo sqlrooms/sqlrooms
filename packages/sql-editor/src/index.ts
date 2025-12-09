@@ -3,9 +3,12 @@
  * @packageDocumentation
  */
 export {default as CreateTableModal} from './components/CreateTableModal';
-export type {CreateTableModalProps} from './components/CreateTableModal';
+export type {
+  CreateTableModalProps,
+  CreateTableFormInitialValues,
+} from './components/CreateTableModal';
 export {default as SqlEditor} from './SqlEditor';
-export type {SqlEditorProps as Props} from './SqlEditor';
+export type {SqlEditorProps} from './SqlEditor';
 export {default as SqlEditorModal} from './SqlEditorModal';
 export {createSqlEditorSlice} from './SqlEditorSlice';
 export type {QueryResult, SqlEditorSliceState} from './SqlEditorSlice';
