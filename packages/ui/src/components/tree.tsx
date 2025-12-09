@@ -46,9 +46,6 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   const {treeData, renderNode} = props;
   const {children} = treeData;
   const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
-  useEffect(() => {
-    setIsOpen(Boolean(treeData.isInitialOpen));
-  }, [treeData.isInitialOpen]);
   if (!children) {
     return <>{renderNode(treeData, isOpen)}</>;
   }
