@@ -38,7 +38,8 @@ export const SqlEditorSliceConfig = z.preprocess((data) => {
     return {...rest, openTabs};
   }
 
-  return data;
+  // Fallback to empty openTabs if no openTabs or closedTabIds are present
+  return {...data, openTabs: []};
 }, SqlEditorSliceConfigSchema);
 
 export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfigSchema>;
