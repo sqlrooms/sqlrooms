@@ -115,6 +115,7 @@ export function useAiChat(): UseAiChatResult {
     return completeIncompleteToolCalls(
       (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion (messagesRevision)
   }, [sessionId, messagesRevision]);
 
   const {messages, sendMessage, addToolResult, stop, status} = useChat({

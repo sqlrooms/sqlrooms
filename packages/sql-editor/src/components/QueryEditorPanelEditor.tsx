@@ -59,7 +59,7 @@ export const QueryEditorPanelEditor: React.FC<{
         }
       });
     },
-    [runQuery],
+    [queryId, runQuery],
   );
 
   return (

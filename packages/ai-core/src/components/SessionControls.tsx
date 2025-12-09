@@ -35,18 +35,25 @@ export const SessionControls: React.FC<{
     currentSessionId ? [currentSessionId] : [],
   );
 
-  // Ensure current session is always in open tabs
+  // Keep openTabs consistent with existing sessions and currentSessionId
+  // These effects intentionally update state based on store-driven changes
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
-    if (currentSessionId && !openTabs.includes(currentSessionId)) {
-      setOpenTabs((prev) => [...prev, currentSessionId]);
-    }
-  }, [currentSessionId, openTabs]);
-
-  // Remove deleted sessions from open tabs
-  useEffect(() => {
-    const sessionIds = new Set(sessions.map((s) => s.id));
-    setOpenTabs((prev) => prev.filter((id) => sessionIds.has(id)));
+    // Remove tabs for sessions that no longer exist
+    const sessionIdSet = new Set(sessions.map((s) => s.id));
+    setOpenTabs((prev) => prev.filter((id) => sessionIdSet.has(id)));
   }, [sessions]);
+
+  useEffect(() => {
+    // Ensure current session is always present in openTabs
+    if (!currentSessionId) {
+      return;
+    }
+    setOpenTabs((prev) =>
+      prev.includes(currentSessionId) ? prev : [...prev, currentSessionId],
+    );
+  }, [currentSessionId]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Convert sessions to TabDescriptor format
   const tabs = useMemo(

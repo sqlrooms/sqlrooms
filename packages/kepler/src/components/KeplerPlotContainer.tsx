@@ -42,8 +42,8 @@ export const KeplerPlotContainer: FC<{
 
   const plotContainerFields = useMemo(
     () => (mergedKeplerProps ? plotContainerSelector(mergedKeplerProps) : null),
-    // include filters in deps to trigger refresh when filters change from bottom time widget
-    [mergedKeplerProps, keplerState?.visState?.filters],
+    // mergedKeplerProps already changes when filters change via keplerState
+    [mergedKeplerProps],
   );
 
   return isExportingImage && plotContainerFields ? (
