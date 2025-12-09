@@ -26,7 +26,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@hookform/resolvers": "^3.10.0",
+    "@hookform/resolvers": "^5.0.0",
     "@monaco-editor/react": "^4.7.0",
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
