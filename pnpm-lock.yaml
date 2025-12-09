@@ -2263,8 +2263,8 @@ importers:
         specifier: ^2.5.6
         version: 2.6.3(eslint@9.39.1(jiti@2.6.1))(turbo@2.6.3)
       globals:
-        specifier: ^15.15.0
-        version: 15.15.0
+        specifier: ^16.0.0
+        version: 16.5.0
       typescript:
         specifier: 5.9.3
         version: 5.9.3
