@@ -54,7 +54,8 @@ export default defineConfig({
   },
   ignoreDeadLinks: true,
   title: 'SQLRooms',
-  description: 'Build powerful analytics apps with DuckDB',
+  description:
+    'An open source React toolkit for human + agent collaborative analytics apps',
   base: '/',
   head: [
     ['link', {rel: 'icon', href: '/logo.png'}],
@@ -181,6 +182,39 @@ export default defineConfig({
       {icon: 'slack', link: '/join-slack'},
       {icon: 'github', link: 'https://github.com/sqlrooms/sqlrooms'},
     ],
+  },
+  transformHead({page, siteData}: any) {
+    const url = `https://sqlrooms.org/${page.relativePath || ''}`
+      .replace(/index\.md$/, '')
+      .replace(/\.md$/, '.html');
+
+    const frontmatter = page.frontmatter || {};
+    const isHome =
+      frontmatter.layout === 'home' || page.relativePath === 'index.md';
+
+    const hero = (frontmatter.hero as any) || {};
+
+    const title = isHome
+      ? `${hero.name || siteData.title} – ${hero.text || ''}`.trim()
+      : page.title || siteData.title;
+
+    const description = isHome
+      ? hero.tagline || siteData.description
+      : frontmatter.description || siteData.description;
+
+    const image = 'https://sqlrooms.org/sqlrooms-og.webp';
+
+    return [
+      ['meta', {property: 'og:type', content: 'website'}],
+      ['meta', {property: 'og:title', content: title}],
+      ['meta', {property: 'og:description', content: description}],
+      ['meta', {property: 'og:image', content: image}],
+      ['meta', {property: 'og:url', content: url}],
+      ['meta', {name: 'twitter:card', content: 'summary_large_image'}],
+      ['meta', {name: 'twitter:title', content: title}],
+      ['meta', {name: 'twitter:description', content: description}],
+      ['meta', {name: 'twitter:image', content: image}],
+    ];
   },
   transformPageData(pageData) {
     const canonicalUrl = `https://sqlrooms.org/${pageData.relativePath}`
