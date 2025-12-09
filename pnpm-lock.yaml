@@ -76,8 +76,8 @@ importers:
         specifier: ^6.3.0
         version: 6.3.0
       glob:
-        specifier: ^11.0.3
-        version: 11.1.0
+        specifier: ^13.0.0
+        version: 13.0.0
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -10795,10 +10795,6 @@ packages:
   lru-cache@10.4.3:
     resolution: {integrity: sha512-JNAzZcXrCt42VGLuYz0zfAzDfAvJWW6AfYlDBQyDV5DClI2m5sAmK+OIO7s59XfsRsWHp02jAJrRadPRGTt6SQ==}
 
-  lru-cache@11.2.2:
-    resolution: {integrity: sha512-F9ODfyqML2coTIsQpSkRHnLSZMtkU8Q+mSfcaIyKwy58u+8k5nvAYeiNhsyMARvzNcXJ9QfWVrcPsC9e9rAxtg==}
-    engines: {node: 20 || >=22}
-
   lru-cache@11.2.4:
     resolution: {integrity: sha512-B5Y16Jr9LB9dHVkh6ZevG+vAbOsNOYCX+sXvFWFu7B3Iz5mijW3zdbMyhsh8ANd2mSWBYdJgnqi+mL7/LrOPYg==}
     engines: {node: 20 || >=22}
@@ -21434,7 +21430,7 @@ snapshots:
 
   '@types/glob@9.0.0':
     dependencies:
-      glob: 11.1.0
+      glob: 13.0.0
 
   '@types/google.maps@3.58.1': {}
 
@@ -25702,8 +25698,6 @@ snapshots:
 
   lru-cache@10.4.3: {}
 
-  lru-cache@11.2.2: {}
-
   lru-cache@11.2.4: {}
 
   lru-cache@5.1.1:
@@ -26873,7 +26867,7 @@ snapshots:
 
   path-scurry@2.0.1:
     dependencies:
-      lru-cache: 11.2.2
+      lru-cache: 11.2.4
       minipass: 7.1.2
 
   path-to-regexp@8.3.0: {}
