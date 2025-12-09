@@ -68,7 +68,37 @@ export const EditableText: FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(value);
   const internalValueRef = useRef(internalValue);
-  internalValueRef.current = internalValue;
+
+  useEffect(() => {
+    internalValueRef.current = internalValue;
+  }, [internalValue]);
+
+  // Keep internalValue in sync with value prop
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (value !== internalValueRef.current) {
+      setInternalValue(value);
+    }
+  }, [value]);
+
+  // Keep internal editing state in sync with controlled isEditing prop
+  // and focus the input when editing is enabled
+  useEffect(() => {
+    if (isEditing !== undefined && isEditing !== isInternalEditing) {
+      setInternalIsEditing(Boolean(isEditing));
+      if (isEditing) {
+        // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
+        // so we need to wait a bit before making sure the input is focused and selected
+        const timeoutId = setTimeout(() => {
+          inputRef.current?.select();
+          inputRef.current?.focus();
+        }, 200);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+    return undefined;
+  }, [isEditing, isInternalEditing]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -101,25 +131,6 @@ export const EditableText: FC<{
       handleSetEditing(true);
     }
   }, [isInternalEditing, handleSetEditing]);
-
-  useEffect(() => {
-    if (value !== internalValueRef.current) {
-      setInternalValue(value);
-    }
-  }, [value]);
-  useEffect(() => {
-    if (isEditing !== undefined && isEditing !== isInternalEditing) {
-      setInternalIsEditing(Boolean(isEditing));
-      if (isEditing) {
-        setTimeout(() => {
-          // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
-          // so we need to wait a bit before making sure the input is focused and selected
-          inputRef.current?.select();
-          inputRef.current?.focus();
-        }, 200);
-      }
-    }
-  }, [isInternalEditing, handleSetEditing, isEditing]);
 
   // Add keydown event listener to handle enter key
   useEffect(() => {

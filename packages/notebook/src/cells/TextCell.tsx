@@ -19,10 +19,14 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
   );
 
   useEffect(() => {
-    if (currentCellId !== id && isEditing) {
+    if (currentCellId === id || !isEditing) {
+      return;
+    }
+    const timeoutId = setTimeout(() => {
       setIsEditing(false);
       update(id, (c) => ({...c, text: draftText}));
-    }
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [currentCellId, id, isEditing, draftText, update]);
 
   const isCurrent = currentCellId === id;

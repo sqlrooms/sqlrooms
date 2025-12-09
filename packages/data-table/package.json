@@ -1,10 +1,11 @@
 {
   "name": "@sqlrooms/data-table",
-  "version": "0.26.1-rc.4",
+  "version": "0.26.1-rc.7",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
+  "sideEffects": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {
@@ -23,7 +24,7 @@
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",
     "@tanstack/table-core": "^8.21.3",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "react-virtual": "2.10.4"
   },
   "peerDependencies": {

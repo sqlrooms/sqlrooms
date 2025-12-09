@@ -86,21 +86,21 @@ const VegaLiteSqlChart: React.FC<{
     height,
     aspectRatio,
   });
-
+  const {width: adjustedWidth, height: adjustedHeight} = dimensions;
   const refinedSpec = useMemo(() => {
     const parsed = typeof spec === 'string' ? safeJsonParse(spec) : spec;
     if (!parsed) return null;
     return {
       ...parsed,
       data: {name: dataName},
-      width: dimensions.width,
-      height: dimensions.height,
+      width: adjustedWidth,
+      height: adjustedHeight,
       autosize: {
         type: 'fit',
         contains: 'padding',
       },
     } as VisualizationSpec;
-  }, [spec, dimensions]);
+  }, [spec, dataName, adjustedWidth, adjustedHeight]);
 
   const result = useSql({query: sqlQuery, version: lastRunTime});
   const arrowTable = result.data?.arrowTable;
@@ -177,7 +177,7 @@ export const ArrowChart: React.FC<{
         contains: 'padding',
       },
     } as VisualizationSpec;
-  }, [spec, dimensions]);
+  }, [spec, dataName, dimensions]);
 
   const data = useMemo(() => {
     if (!arrowTable) return null;

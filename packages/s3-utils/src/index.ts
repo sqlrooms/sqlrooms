@@ -2,4 +2,4 @@
  * {@include ../README.md}
  * @packageDocumentation
  */
-export * from './s3';
+export {listFilesAndDirectoriesWithPrefix, deleteS3Files} from './s3';

@@ -3,4 +3,4 @@
  * @packageDocumentation
  */
 
-export * from './file-dropzone';
+export {FileDropzone} from './file-dropzone';

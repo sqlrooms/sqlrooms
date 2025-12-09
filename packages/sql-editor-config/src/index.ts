@@ -3,4 +3,8 @@
  * @packageDocumentation
  */
 
-export * from './SqlEditorSliceConfig';
+// Values also export their corresponding types automatically (Zod pattern)
+export {
+  SqlEditorSliceConfig,
+  createDefaultSqlEditorConfig,
+} from './SqlEditorSliceConfig';

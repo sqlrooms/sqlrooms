@@ -12,7 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     steps:
-      - uses: amannn/action-semantic-pull-request@v5
+      - uses: amannn/action-semantic-pull-request@v6
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -39,11 +39,11 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     needs: check-pr-title
-    if: always()
+    if: github.event_name != 'pull_request' || github.event.action != 'edited' || github.event.pull_request.user.login == 'renovate[bot]'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - uses: pnpm/action-setup@v4
         name: Install pnpm
@@ -51,23 +51,29 @@ jobs:
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 22
+          node-version: 24
           cache: 'pnpm'
 
       - name: Install dependencies
         # See https://github.com/pnpm/pnpm/issues/8840
         run: pnpm install --shamefully-hoist
 
+      - name: Check circular dependencies
+        run: pnpm check-circular-deps
+
+      - name: Check for unused dependencies and exports
+        run: pnpm knip
+
+      - name: Lint
+        run: pnpm lint
+
       - name: Build packages
         run: pnpm build
 
       - name: Build examples
-        run: pnpm build:examples
-
-      - name: Lint
-        run: pnpm lint
+        run: pnpm build:examples:ci
 
       - name: Test
         run: pnpm test

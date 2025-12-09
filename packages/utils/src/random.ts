@@ -1,14 +1,13 @@
 /**
- * Generates a random string of specified length with optional seed
+ * Generates a random string of specified length
  * @param length - The length of the random string to generate
- * @param seed - Seed will be ignored.
  * @returns Random string containing uppercase letters, lowercase letters, and numbers
  * @example
  * ```ts
  * const random = genRandomStr(10); // e.g., "aB3kF9mN2x"
  * ```
  */
-export function genRandomStr(length: number, seed?: string) {
+export function genRandomStr(length: number) {
   return Array.from(
     (function* () {
       for (let i = 0; i < length; i++) {

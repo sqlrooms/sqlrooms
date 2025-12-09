@@ -1,11 +1,12 @@
 {
   "name": "@sqlrooms/s3-utils",
-  "version": "0.26.1-rc.4",
+  "version": "0.26.1-rc.7",
   "private": true,
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
+  "sideEffects": false,
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "license": "MIT",
   "repository": {

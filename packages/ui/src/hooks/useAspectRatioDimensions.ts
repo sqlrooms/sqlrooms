@@ -79,5 +79,5 @@ export function useAspectRatioDimensions({
     const finalWidth = containerWidth;
     const finalHeight = finalWidth / aspectRatio;
     return {width: finalWidth, height: finalHeight};
-  }, [containerWidth, aspectRatio, width, height]);
+  }, [containerWidth, containerHeight, aspectRatio, width, height]);
 }

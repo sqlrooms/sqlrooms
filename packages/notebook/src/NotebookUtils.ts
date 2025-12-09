@@ -1,4 +1,4 @@
-import {useState, useEffect} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 
@@ -64,34 +64,24 @@ export const initializeInput = (
 
 dayjs.extend(relativeTime);
 
+const computeRelativeTime = (timestamp: number | null) => {
+  if (!timestamp) return '';
+
+  const now = dayjs();
+  const past = dayjs(timestamp);
+  const diffInDays = now.diff(past, 'day');
+
+  return diffInDays >= 7 ? past.format('YYYY-MM-DD') : past.fromNow();
+};
+
 export function useRelativeTimeDisplay(pastDate: number | null): string {
-  const [relativeTimeStr, setRelativeTimeStr] = useState('');
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
-    if (!pastDate) {
-      setRelativeTimeStr('');
-      return;
-    }
-
-    const updateRelativeTime = () => {
-      const now = dayjs();
-      const past = dayjs(pastDate);
-
-      const diffInDays = now.diff(past, 'day');
-
-      if (diffInDays >= 7) {
-        // Show full date for older than a week
-        setRelativeTimeStr(past.format('YYYY-MM-DD'));
-      } else {
-        setRelativeTimeStr(past.fromNow());
-      }
-    };
-
-    updateRelativeTime();
-    const interval = setInterval(updateRelativeTime, 60000); // Update every minute
-
+    if (!pastDate) return;
+    const interval = setInterval(() => setTick((value) => value + 1), 60000);
     return () => clearInterval(interval);
   }, [pastDate]);
 
-  return relativeTimeStr;
+  return useMemo(() => computeRelativeTime(pastDate), [pastDate, tick]);
 }

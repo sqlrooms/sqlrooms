@@ -146,7 +146,7 @@ function migrateFromV0_26_0(data: unknown) {
   // Remove deprecated streamMessage field from analysisResults
   const cleanedAnalysisResults = analysisResults.map((result) => {
     if (!isObject(result)) return result;
-    // eslint-disable-line @typescript-eslint/no-unused-vars
+
     const {streamMessage, ...rest} = result as UnknownRecord & {
       streamMessage?: unknown;
     };

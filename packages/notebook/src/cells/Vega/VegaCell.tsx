@@ -61,10 +61,14 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
   };
 
   useEffect(() => {
-    if (currentCellId !== id && isEditing) {
+    if (currentCellId === id || !isEditing) {
+      return;
+    }
+    const timeoutId = setTimeout(() => {
       setIsEditing(false);
       update(id, (c) => ({...c, vegaSpec: draftSpec}));
-    }
+    }, 0);
+    return () => clearTimeout(timeoutId);
   }, [currentCellId, id, isEditing, draftSpec, update]);
 
   if (!cell || cell.type !== 'vega') return null;

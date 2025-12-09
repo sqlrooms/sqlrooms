@@ -93,7 +93,6 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
   const tools = useStoreWithAi((s) => s.ai.tools);
-  const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
 
   // Check if it's a tool part (including dynamic-tool)
   const isTool =
@@ -122,7 +121,9 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
       state === 'input-available' ||
       state === 'output-available')
   ) {
-    const ToolComponent = findToolComponent(toolName);
+    // Access tool component directly from tools registry to avoid lint error
+    // about creating components during render
+    const ToolComponent = tools[toolName]?.component as React.ComponentType;
     const props = {
       ...(input as Record<string, unknown>),
       ...({toolCallId, toolName, isCompleted} as Record<string, unknown>),

@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "Ilya Boyandin <ilya@boyandin.me>",
   "private": true,
-  "packageManager": "pnpm@10.24.0",
+  "packageManager": "pnpm@10.25.0",
   "workspaces": [
     "packages/*",
     "examples/*"
@@ -17,17 +17,18 @@
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
     "build:examples": "turbo build --filter=./examples/*",
+    "build:examples:ci": "turbo build --filter=./examples/* --concurrency=1",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",
     "lint": "turbo lint --filter=@sqlrooms/* --",
-    "typedoc": "turbo typedoc",
     "typecheck": "turbo typecheck",
-    "typedoc:watch": "turbo typedoc --concurrency=20 -- -watch",
+    "typedoc:watch": "turbo typedoc --concurrency=100 -- -watch",
     "graph": "turbo run build --filter=@sqlrooms/* --graph | sed 's/\\[root\\] @sqlrooms\\///g' | sed 's/#build//g' | grep -v '___ROOT___'",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "docs:dev": "concurrently \"pnpm run typedoc:watch\" \"vitepress dev docs --port 6173 --host --open\"",
-    "docs:build": "pnpm run docs:clean && pnpm run typedoc && vitepress build docs",
+    "docs:dev": "concurrently \"pnpm typedoc:watch\" \"pnpm docs:vitepress\"",
+    "docs:vitepress": "vitepress dev docs --port 6173 --host --open",
+    "docs:build": "pnpm run docs:clean && pnpm --filter \"@sqlrooms/*\" typedoc && vitepress build docs",
     "docs:preview": "pnpm run typedoc && vitepress preview docs --port 7173 --open",
     "docs:deploy": "pnpm run docs:build && gh-pages -d docs/.vitepress/dist -r git@github.com:sqlrooms/sqlrooms.github.io.git -b main -f",
     "version-auto": "lerna version --conventional-commits --yes --sync-workspace-lock",
@@ -39,7 +40,9 @@
     "publish-release": "turbo run publish && lerna publish from-package --yes",
     "publish-prerelease": "turbo run publish && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
     "update-readme": "node scripts/update-readme.mjs",
-    "update-deps": "pnpm --filter '*' update --interactive"
+    "update-deps": "pnpm --filter '*' update --interactive",
+    "check-circular-deps": "npx madge --circular packages/*/src/index.ts",
+    "knip": "knip"
   },
   "engines": {
     "node": ">=22"
@@ -56,49 +59,58 @@
     "@types/glob": "^9.0.0",
     "@types/jest": "^30.0.0",
     "@types/mocha": "^10.0.10",
+    "@types/node": "^24.0.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "concurrently": "^9.2.1",
     "eslint": "^9.36.0",
     "gh-pages": "^6.3.0",
-    "glob": "^11.0.3",
+    "glob": "^13.0.0",
     "husky": "^9.1.7",
     "jest": "^30.1.3",
+    "knip": "^5.71.0",
     "lint-staged": "^16.2.0",
     "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.6.14",
+    "prettier-plugin-tailwindcss": "^0.7.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "remove": "^0.1.5",
     "shx": "^0.4.0",
     "turbo": "^2.5.8",
-    "typedoc": "0.27.9",
-    "typedoc-plugin-markdown": "4.4.2",
-    "typedoc-plugin-zod": "1.4.1",
+    "typedoc": "0.28.15",
+    "typedoc-plugin-markdown": "4.9.0",
+    "typedoc-plugin-zod": "1.4.3",
     "typedoc-vitepress-theme": "1.1.2",
-    "typescript": "5.9.2",
+    "typescript": "5.9.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-llms": "^1.8.0"
   },
   "pnpm": {
     "overrides": {
-      "typescript": "5.8.3",
-      "react": "19.2.0",
-      "react-dom": "19.2.0",
-      "@types/react": "19.1.13",
-      "@types/react-dom": "19.1.9",
+      "typescript": "5.9.3",
+      "react": "19.2.1",
+      "react-dom": "19.2.1",
+      "@types/react": "19.2.7",
+      "@types/react-dom": "19.2.3",
       "@duckdb/duckdb-wasm": "1.31.0",
-      "zod": "4.1.8"
+      "zod": "4.1.13",
+      "d3-sankey": "0.12.3",
+      "monaco-editor": "0.55.1"
     },
     "onlyBuiltDependencies": [
+      "@danmarshall/deckgl-typings",
       "@swc/core",
       "esbuild",
-      "msw"
+      "msw",
+      "unrs-resolver"
     ],
     "ignoredBuiltDependencies": [
       "@tailwindcss/oxide",
       "@vaadin/vaadin-usage-statistics",
       "sharp"
-    ]
+    ],
+    "patchedDependencies": {
+      "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
+    }
   }
 }

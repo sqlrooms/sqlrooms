@@ -4,6 +4,8 @@
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl-discuss)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl-discuss?embed=1&file=src/app.tsx)
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9c32bdac-f2b1-4cf3-b48b-fa197e0986e3/deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl-discuss/deploys)
+
 <a href="https://sqlrooms-deckgl-discuss.netlify.app/" target="_blank">
   <img src="/media/examples/deckgl-discuss.webp" alt="SQLRooms Deck.gl with commenting and annotation example" width=450>
 </a>
