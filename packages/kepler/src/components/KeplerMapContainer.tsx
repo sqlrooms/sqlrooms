@@ -1,4 +1,4 @@
-import {FC, useMemo, useRef, useEffect} from 'react';
+import {FC, useMemo, useRef, useEffect, useState} from 'react';
 
 import {
   MapContainerFactory,
@@ -52,6 +52,7 @@ const KeplerGl: FC<{
 }> = ({mapId}) => {
   const bottomWidgetRef = useRef(null);
   const [containerRef, size] = useDimensions<HTMLDivElement>();
+  const [containerNode, setContainerNode] = useState<HTMLElement | null>(null);
   const theme = useTheme();
   const basicKeplerProps = useStoreWithKepler(
     (state) => state.kepler.basicKeplerProps,
@@ -59,6 +60,11 @@ const KeplerGl: FC<{
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
+
+  // Capture the current container DOM node outside of render logic
+  useEffect(() => {
+    setContainerNode(containerRef.current);
+  }, [containerRef]);
 
   // Update export image settings when size changes
   useEffect(() => {
@@ -95,7 +101,7 @@ const KeplerGl: FC<{
     : null;
 
   const modalContainerFields = keplerState?.visState
-    ? modalContainerSelector(mergedKeplerProps, containerRef.current)
+    ? modalContainerSelector(mergedKeplerProps, containerNode)
     : null;
 
   const mapboxApiAccessToken =

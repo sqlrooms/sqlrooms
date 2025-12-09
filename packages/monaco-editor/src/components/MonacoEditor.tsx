@@ -1,6 +1,12 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
-import React, {useEffect, useMemo, useRef} from 'react';
+import React, {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from 'react';
 import {
   getCssColor,
   getJsonEditorTheme,
@@ -72,18 +78,33 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   ...props
 }) => {
   const {theme: appTheme} = useTheme();
-  const [renderKey, setRenderKey] = React.useState(0);
 
-  // Determine editor theme based on app theme
-  // Use typeof window check to avoid SSR errors in Next.js when accessing window.matchMedia
-  const theme =
-    explicitTheme ||
-    (appTheme === 'dark' ||
-    (appTheme === 'system' &&
-      typeof window !== 'undefined' &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
-      ? 'vs-dark'
-      : 'light');
+  // Track system dark preference without setState-in-effect
+  const systemPrefersDark = useSyncExternalStore(
+    (onStoreChange) => {
+      if (appTheme !== 'system' || typeof window === 'undefined') {
+        return () => {};
+      }
+      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+      mediaQuery.addEventListener('change', onStoreChange);
+      return () => mediaQuery.removeEventListener('change', onStoreChange);
+    },
+    () => {
+      if (appTheme !== 'system' || typeof window === 'undefined') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    },
+    () => false,
+  );
+
+  const isDark =
+    explicitTheme === 'vs-dark'
+      ? true
+      : explicitTheme === 'light'
+        ? false
+        : appTheme === 'dark' || (appTheme === 'system' && systemPrefersDark);
+
+  // Determine editor theme name passed to the Editor component
+  const theme = isDark ? 'vs-dark' : 'light';
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
@@ -159,18 +180,22 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
 
     // Apply the custom theme based on content type
-    const isDark =
-      appTheme === 'dark' ||
-      (appTheme === 'system' &&
-        window.matchMedia('(prefers-color-scheme: dark)').matches);
+    const isDarkMount =
+      explicitTheme === 'vs-dark'
+        ? true
+        : explicitTheme === 'light'
+          ? false
+          : appTheme === 'dark' ||
+            (appTheme === 'system' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
 
     // Use JSON-specific theme for JSON files
     if (language === 'json') {
       monaco.editor.setTheme(
-        isDark ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
+        isDarkMount ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
       );
     } else {
-      monaco.editor.setTheme(isDark ? 'sqlrooms-dark' : 'sqlrooms-light');
+      monaco.editor.setTheme(isDarkMount ? 'sqlrooms-dark' : 'sqlrooms-light');
     }
 
     if (onMount) {
@@ -187,27 +212,26 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   // Update the editor theme when app theme changes
   useEffect(() => {
-    if (editorRef.current && monacoRef.current && !explicitTheme) {
-      const isDark =
-        appTheme === 'dark' ||
-        (appTheme === 'system' &&
-          window.matchMedia('(prefers-color-scheme: dark)').matches);
+    if (editorRef.current && monacoRef.current) {
+      const targetDark =
+        explicitTheme === 'vs-dark'
+          ? true
+          : explicitTheme === 'light'
+            ? false
+            : isDark;
 
       // Use JSON-specific theme for JSON files
       if (language === 'json') {
         monacoRef.current.editor.setTheme(
-          isDark ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
+          targetDark ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
         );
       } else {
         monacoRef.current.editor.setTheme(
-          isDark ? 'sqlrooms-dark' : 'sqlrooms-light',
+          targetDark ? 'sqlrooms-dark' : 'sqlrooms-light',
         );
       }
-
-      // Force re-render to apply the new theme
-      setRenderKey((key) => key + 1);
     }
-  }, [appTheme, explicitTheme, language]);
+  }, [appTheme, explicitTheme, isDark, language]);
 
   // Listen for system theme changes if using system theme
   useEffect(() => {
@@ -225,8 +249,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
               mediaQuery.matches ? 'sqlrooms-dark' : 'sqlrooms-light',
             );
           }
-          // Force re-render to apply the new theme
-          setRenderKey((key) => key + 1);
         }
       };
 
@@ -253,6 +275,11 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     [options, fontFamily, readOnly],
   );
 
+  // Force remount when theme or language changes so Monaco applies the scheme.
+  const [renderKey, setRenderKey] = useState(`${theme}-${language}`);
+  useEffect(() => {
+    setRenderKey(`${theme}-${language}`);
+  }, [theme, language]);
   return (
     <div className={cn('h-[300px] w-full', className)}>
       <Editor

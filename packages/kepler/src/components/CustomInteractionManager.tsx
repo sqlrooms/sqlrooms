@@ -11,13 +11,13 @@ const SimpleInteractionPanel: React.FC<{
   configId: string;
   config: any;
   label: string;
-  handleConfigChange: (configId: string, newConfig: any) => void;
-}> = ({configId, config, label, handleConfigChange}) => {
+  onConfigChange: (configId: string, newConfig: any) => void;
+}> = ({configId, config, label, onConfigChange}) => {
   const toggleEnableConfig = useCallback(() => {
-    handleConfigChange(configId, {
+    onConfigChange(configId, {
       enabled: !config.enabled,
     });
-  }, [configId, config.enabled]);
+  }, [configId, config.enabled, onConfigChange]);
 
   return (
     <div className="flex items-center justify-between p-2">
@@ -62,7 +62,7 @@ const TooltipPanel: React.FC<{
         configId="tooltip"
         config={tooltipConfig}
         label="Tooltip"
-        handleConfigChange={handleConfigChange}
+        onConfigChange={handleConfigChange}
       />
       {tooltipConfig.enabled && (
         <div className="pl-4 pr-2">
@@ -149,7 +149,7 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
             configId="geocoder"
             config={interactionConfig.geocoder}
             label="Location search"
-            handleConfigChange={handleConfigChange}
+            onConfigChange={handleConfigChange}
           />
         )}
         {interactionConfig.brush && (
@@ -157,7 +157,7 @@ export const CustomInteractionManager: React.FC<{mapId: string}> = ({
             configId="brush"
             config={interactionConfig.brush}
             label="Brush filter"
-            handleConfigChange={handleConfigChange}
+            onConfigChange={handleConfigChange}
           />
         )}
       </div>
