@@ -1,4 +1,4 @@
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 export const CellView: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);

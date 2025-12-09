@@ -4,7 +4,7 @@ import remarkGfm from 'remark-gfm';
 import {Button, cn} from '@sqlrooms/ui';
 
 import {CellContainer} from './CellContainer';
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {getCellTypeLabel} from '../NotebookUtils';
 
 export const TextCell: React.FC<{id: string}> = ({id}) => {

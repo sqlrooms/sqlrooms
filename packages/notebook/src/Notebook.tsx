@@ -2,7 +2,7 @@ import {Button, EditableText} from '@sqlrooms/ui';
 import React, {useEffect} from 'react';
 import {PlusIcon} from 'lucide-react';
 
-import {useStoreWithNotebook} from './NotebookSlice';
+import {useStoreWithNotebook} from './useStoreWithNotebook';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {NotebookCellTypes} from './cellSchemas';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';

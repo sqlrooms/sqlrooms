@@ -12,7 +12,7 @@ import {Trash2Icon} from 'lucide-react';
 import {FC, useState} from 'react';
 
 import {NotebookCell} from '../cellSchemas';
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 type Props = {
   cell: NotebookCell;

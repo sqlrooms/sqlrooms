@@ -2,7 +2,7 @@ import {Toggle} from '@sqlrooms/ui';
 import {FC} from 'react';
 
 import {InputItem} from './Input/InputCell';
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 export const ShowInputBarToggle = () => {
   const toggleShowInputBar = useStoreWithNotebook(

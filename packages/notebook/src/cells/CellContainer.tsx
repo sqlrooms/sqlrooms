@@ -1,7 +1,7 @@
 import React from 'react';
 import {cn, EditableText} from '@sqlrooms/ui';
 
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
 import {MoveCellButtons} from '../cellOperations/MoveCellButtons';
 

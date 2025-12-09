@@ -11,7 +11,7 @@ import {
 } from '@sqlrooms/ui';
 
 import {CellContainer} from '../CellContainer';
-import {useStoreWithNotebook} from '../../NotebookSlice';
+import {useStoreWithNotebook} from '../../useStoreWithNotebook';
 import {InputConfigPanel} from './InputConfigPanel/InputConfigPanel';
 import {
   InputUnion,

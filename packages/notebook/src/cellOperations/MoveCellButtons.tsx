@@ -2,7 +2,7 @@ import React, {FC} from 'react';
 import {Button} from '@sqlrooms/ui';
 import {ArrowDownIcon, ArrowUpIcon} from 'lucide-react';
 
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 type Props = {
   id: string;

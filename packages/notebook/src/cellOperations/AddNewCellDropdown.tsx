@@ -9,7 +9,7 @@ import {
 } from '@sqlrooms/ui';
 import {FC, useEffect, useState} from 'react';
 
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {NotebookCellTypes} from '../cellSchemas';
 import {TriggerButton} from './AddNewCellTrigger';
 import {getCellTypeLabel} from '../NotebookUtils';

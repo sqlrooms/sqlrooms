@@ -5,7 +5,7 @@ import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {BotIcon} from 'lucide-react';
 
 import {CellContainer} from './CellContainer';
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {AddSqlCellResultToNewTable} from '../cellOperations/AddSqlCellResultToNewTable';
 import {IconWithTooltip} from '../cellOperations/IconWithTooltip';
 import {useRelativeTimeDisplay} from '../NotebookUtils';

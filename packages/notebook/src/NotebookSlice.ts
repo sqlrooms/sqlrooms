@@ -4,11 +4,7 @@ import {
   escapeId,
   makeQualifiedTableName,
 } from '@sqlrooms/duckdb';
-import {
-  BaseRoomStoreState,
-  createSlice,
-  useBaseRoomStore,
-} from '@sqlrooms/room-shell';
+import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-shell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import React from 'react';
@@ -600,15 +596,4 @@ function findDependenciesCommon(
     }
   }
   return Array.from(new Set(deps));
-}
-
-export type DuckDbSliceStateWithNotebook = DuckDbSliceState &
-  NotebookSliceState;
-
-export function useStoreWithNotebook<T>(
-  selector: (state: DuckDbSliceStateWithNotebook) => T,
-): T {
-  return useBaseRoomStore<BaseRoomStoreState, T>((state) =>
-    selector(state as unknown as DuckDbSliceStateWithNotebook),
-  );
 }

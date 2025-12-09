@@ -11,7 +11,7 @@ import {
 import {VegaLiteChart} from '@sqlrooms/vega';
 
 import {CellContainer} from '../CellContainer';
-import {useStoreWithNotebook} from '../../NotebookSlice';
+import {useStoreWithNotebook} from '../../useStoreWithNotebook';
 import {getCellTypeLabel} from '../../NotebookUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
 import {VegaCell as VegaCellType} from '../../cellSchemas';

@@ -1,7 +1,7 @@
 import {Separator, Button} from '@sqlrooms/ui';
 import {FC} from 'react';
 
-import {useStoreWithNotebook} from '../NotebookSlice';
+import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {NotebookCellTypes} from '../cellSchemas';
 import {getCellTypeLabel} from '../NotebookUtils';
 import {PlusIcon} from 'lucide-react';
