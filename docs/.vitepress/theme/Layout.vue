@@ -9,6 +9,7 @@ const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
+const currentYear = new Date().getFullYear();
 
 onMounted(() => {
   if (localStorage.getItem(`sqlrooms-banner-${BANNER_ID}`) === 'true') {
@@ -109,6 +110,9 @@ function dismiss() {
             </a>
           </div>
         </div>
+        <div class="copyright-row">
+          Copyright © {{ currentYear }} SQLRooms contributors
+        </div>
       </template>
     </DefaultTheme.Layout>
   </div>
@@ -185,6 +189,14 @@ html:not(.dark) .video.dark {
   flex-direction: row;
   gap: 0.5rem;
   align-items: center;
+}
+
+.copyright-row {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--vp-c-text-2);
+  margin-top: 1rem;
+  padding-bottom: 2rem;
 }
 
 .sponsors-footer a {
