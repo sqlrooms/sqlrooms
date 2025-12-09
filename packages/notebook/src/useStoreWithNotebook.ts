@@ -1,7 +1,7 @@
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, useBaseRoomStore} from '@sqlrooms/room-shell';
 
-import type {NotebookSliceState} from './NotebookSlice';
+import type {NotebookSliceState} from './NotebookStateTypes';
 
 type NotebookStoreState = BaseRoomStoreState &
   DuckDbSliceState &

@@ -1,12 +1,15 @@
 export {
   createDefaultNotebookConfig,
   createNotebookSlice,
-  type CellRegistry,
-  type NotebookCellRegistryItem,
-  type NotebookSliceState,
 } from './NotebookSlice';
 
 export {Notebook, TabsBar} from './Notebook';
+
+export {
+  type CellRegistry,
+  type NotebookCellRegistryItem,
+  type NotebookSliceState,
+} from './NotebookStateTypes';
 
 export {
   InputCellSchema,
