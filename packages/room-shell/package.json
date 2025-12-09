@@ -33,7 +33,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "apache-arrow": "17.0.0",
+    "apache-arrow": "21.1.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.556.0",
     "react-mosaic-component": "^6.1.1",

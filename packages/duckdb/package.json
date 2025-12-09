@@ -36,7 +36,7 @@
     "ts-jest": "^29.4.4"
   },
   "peerDependencies": {
-    "apache-arrow": "17.0.0"
+    "apache-arrow": "21.1.0"
   },
   "scripts": {
     "dev": "tsc -w",
