@@ -1,21 +1,26 @@
 import {
   addDataToMap,
+  addLayer as addLayerAction,
   deleteEntry,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
   requestMapStyles,
   wrapTo,
-  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
+// Note: Import DuckDB helpers from internal table utils instead of the package root.
+// The root `@kepler.gl/duckdb` entry also re‑exports React components that pull in the
+// AMD build of `monaco-editor` and expect a global AMD loader (`define`), which doesn’t
+// exist in our Vite/ESM setup and would also clash with the ESM monaco configuration we
+// use via `@sqlrooms/monaco-editor`. Using the table submodules keeps us clear of that.
+import {restoreGeoarrowMetadata} from '@kepler.gl/duckdb/dist/table/duckdb-table';
 import {
   castDuckDBTypesForKepler,
   getDuckDBColumnTypes,
   getDuckDBColumnTypesMap,
-  restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
-} from '@kepler.gl/duckdb';
+} from '@kepler.gl/duckdb/dist/table/duckdb-table-utils';
 import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
@@ -44,7 +49,6 @@ import {
 } from '@sqlrooms/room-shell';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
-setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
   Action,
@@ -54,6 +58,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
 
