@@ -62,11 +62,6 @@ If a query fails, please don't try to run it again with the same syntax.`,
       const abortSignal = options?.abortSignal;
 
       try {
-        // Check if aborted before starting
-        if (abortSignal?.aborted) {
-          throw new Error('Query execution was aborted');
-        }
-
         const connector = await store.getState().db.getConnector();
         const parsedQuery = await store.getState().db.sqlSelectToJson(sqlQuery);
 
@@ -92,24 +87,11 @@ If a query fails, please don't try to run it again with the same syntax.`,
           }
         }
 
-        // Check if aborted before running query
-        if (abortSignal?.aborted) {
-          throw new Error('Query execution was aborted');
-        }
-
-        const result = await connector.query(sqlQuery);
-
-        // Check if aborted after query execution
-        if (abortSignal?.aborted) {
-          throw new Error('Query execution was aborted');
-        }
+        const result = await connector.query(sqlQuery, {signal: abortSignal});
 
         const summaryData = await (async () => {
           if (!autoSummary) return null;
           if (parsedQuery.error) return null;
-
-          // Check if aborted before generating summary
-          if (abortSignal?.aborted) return null;
 
           const lastNode =
             parsedQuery.statements[parsedQuery.statements.length - 1]?.node;
@@ -124,7 +106,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
           const statements = splitSqlStatements(sqlQuery);
           const lastStatement = statements[statements.length - 1];
           if (!lastStatement) return null;
-          return await getQuerySummary(connector, lastStatement);
+          return await getQuerySummary(connector, lastStatement, abortSignal);
         })();
 
         // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
@@ -171,6 +153,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
 export async function getQuerySummary(
   connector: DuckDbConnector,
   sqlQuery: string,
+  abortSignal?: AbortSignal,
 ) {
   if (!sqlQuery.toLowerCase().trim().startsWith('select')) {
     return null;
@@ -179,7 +162,7 @@ export async function getQuerySummary(
   try {
     const summaryResult = await connector.query(`SUMMARIZE (
       ${sqlQuery}
-    )`);
+    )`, {signal: abortSignal});
     return arrowTableToJson(summaryResult);
   } catch (error) {
     console.warn('Failed to get summary for query. Error:', error);
