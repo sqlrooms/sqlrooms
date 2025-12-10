@@ -10,14 +10,14 @@ on:
       version:
         description: 'Version'
         required: true
-        default: 'auto'
+        default: 'prerelease'
         type: choice
         options:
-          - auto
+          - prerelease
           - patch
           - minor
           - major
-          - prerelease
+          - auto
       preid:
         description: 'Prerelease identifier'
         required: false
