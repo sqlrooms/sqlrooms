@@ -202,5 +202,3 @@ export const CustomLayerManager: React.FC<CustomLayerManagerProps> = ({
     </CustomLayerManagerContainer>
   );
 };
-
-export default CustomLayerManager;

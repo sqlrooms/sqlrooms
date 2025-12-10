@@ -5,19 +5,22 @@ on:
   #   branches:
   #     - main
 
+permissions:
+  contents: write
+
   workflow_dispatch:
     inputs:
       version:
         description: 'Version'
         required: true
-        default: 'auto'
+        default: 'prerelease'
         type: choice
         options:
-          - auto
+          - prerelease
           - patch
           - minor
           - major
-          - prerelease
+          - auto
       preid:
         description: 'Prerelease identifier'
         required: false
@@ -39,9 +42,10 @@ jobs:
     # only run publish if run manually or if commit starts with one of "feat|fix"
     if: ${{ github.event_name == 'workflow_dispatch' || startsWith(github.event.head_commit.message, 'feat:') || startsWith(github.event.head_commit.message, 'fix:')}}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
 
       - name: Setup git user
         run: |
@@ -54,9 +58,9 @@ jobs:
           run_install: false
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '22'
+          node-version: '24'
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
           scope: '@sqlrooms'
@@ -78,7 +82,16 @@ jobs:
 
       - name: Bump prerelease version
         if: ${{ github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease' }}
-        run: pnpm run version-prerelease
+        run: |
+          bump=${{ inputs.prerelease_bump != '' && inputs.prerelease_bump || 'patch' }}
+          if [ "$bump" = "minor" ]; then
+            cmd="preminor"
+          elif [ "$bump" = "major" ]; then
+            cmd="premajor"
+          else
+            cmd="prerelease"
+          fi
+          pnpm exec lerna version "$cmd" --conventional-commits --yes --sync-workspace-lock --preid=${{ inputs.preid != '' && inputs.preid || 'rc' }} --no-push
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
           PREID: ${{ inputs.preid != '' && inputs.preid || 'rc' }}
@@ -86,7 +99,13 @@ jobs:
 
       - name: Bump version
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
-        run: pnpm run version-${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
+        run: |
+          version_input=${{ github.event_name == 'workflow_dispatch' && inputs.version || 'auto' }}
+          if [ "$version_input" = "auto" ]; then
+            pnpm exec lerna version --conventional-commits --yes --sync-workspace-lock --no-push
+          else
+            pnpm exec lerna version "$version_input" --yes --sync-workspace-lock --no-push
+          fi
         env:
           GH_TOKEN: ${{ secrets.GH_PAT }}
 
@@ -97,3 +116,25 @@ jobs:
       - name: Publish
         if: ${{ !(github.event_name == 'workflow_dispatch' && inputs.version == 'prerelease') }}
         run: pnpm publish-release
+
+      - name: Push version commit and tags
+        if: ${{ success() }}
+        run: |
+          git push origin HEAD:${{ github.ref_name }}
+          git push origin --tags
+
+      - name: Create GitHub release
+        if: ${{ success() }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_PAT }}
+        run: |
+          tag=$(git describe --abbrev=0 --tags)
+          if gh release view "$tag" >/dev/null 2>&1; then
+            echo "Release $tag already exists, skipping"
+            exit 0
+          fi
+          prerelease_flag=""
+          if [[ "$tag" == *"-"* ]]; then
+            prerelease_flag="--prerelease"
+          fi
+          gh release create "$tag" --title "$tag" --notes "Automated release from npm publish workflow." ${prerelease_flag}

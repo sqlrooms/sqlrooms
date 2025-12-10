@@ -8,17 +8,9 @@ import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import type {ToolCall} from '../chatTransport';
 import {completeIncompleteToolCalls} from '../chatTransport';
+import type {AddToolResult} from '../types';
 
-export type AddToolResult = (
-  options:
-    | {tool: string; toolCallId: string; output: unknown}
-    | {
-        tool: string;
-        toolCallId: string;
-        state: 'output-error';
-        errorText: string;
-      },
-) => void;
+export type {AddToolResult} from '../types';
 
 /**
  * Return type for the useAiChat hook.
@@ -123,6 +115,7 @@ export function useAiChat(): UseAiChatResult {
     return completeIncompleteToolCalls(
       (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion (messagesRevision)
   }, [sessionId, messagesRevision]);
 
   const {messages, sendMessage, addToolResult, stop, status} = useChat({

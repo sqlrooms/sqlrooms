@@ -31,6 +31,7 @@ export {
   completeIncompleteToolCalls,
   createOnToolCompletedHandler,
 } from './chatTransport';
+export type {AddToolResult} from './types';
 
 export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
 export type {

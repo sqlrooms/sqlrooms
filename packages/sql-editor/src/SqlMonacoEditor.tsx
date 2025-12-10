@@ -61,6 +61,13 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   const monacoRef = useRef<any>(null);
   const disposableRef = useRef<any>(null);
 
+  // Store getLatestSchemas in a ref to avoid re-registering completion provider
+  // when the callback reference changes (e.g., non-memoized inline functions)
+  const getLatestSchemasRef = useRef(getLatestSchemas);
+  useEffect(() => {
+    getLatestSchemasRef.current = getLatestSchemas;
+  }, [getLatestSchemas]);
+
   // Function to register the completion provider
   const registerCompletionProvider = useCallback(() => {
     if (!editorRef.current || !monacoRef.current) return;
@@ -80,8 +87,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
 
-          if (getLatestSchemas) {
-            const latest = getLatestSchemas();
+          if (getLatestSchemasRef.current) {
+            const latest = getLatestSchemasRef.current();
             currentSchemas = latest.tableSchemas;
           }
 
@@ -242,7 +249,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
     // Store the disposable to clean up later
     disposableRef.current = disposable;
-  }, [customKeywords, customFunctions, tableSchemas, getLatestSchemas]);
+  }, [connector, customKeywords, customFunctions, tableSchemas]);
 
   // Re-register completion provider when tableSchemas change
   useEffect(() => {

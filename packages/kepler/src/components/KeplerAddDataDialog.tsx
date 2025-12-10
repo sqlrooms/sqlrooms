@@ -17,7 +17,7 @@ import {FileDropInput} from './FileDropInput';
 import {KeplerInjector} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {KeplerS3Browser} from './KeplerS3Browser';
-import type {KeplerS3BrowserProps} from '../index';
+import type {KeplerS3BrowserProps} from './KeplerS3Browser';
 import {useIntl} from 'react-intl';
 
 const DEFAULT_ACCEPTED_FORMATS = [

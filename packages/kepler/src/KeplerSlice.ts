@@ -1,21 +1,26 @@
 import {
   addDataToMap,
+  addLayer as addLayerAction,
   deleteEntry,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
   requestMapStyles,
   wrapTo,
-  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
+// Note: Import DuckDB helpers from internal table utils instead of the package root.
+// The root `@kepler.gl/duckdb` entry also re‑exports React components that pull in the
+// AMD build of `monaco-editor` and expect a global AMD loader (`define`), which doesn’t
+// exist in our Vite/ESM setup and would also clash with the ESM monaco configuration we
+// use via `@sqlrooms/monaco-editor`. Using the table submodules keeps us clear of that.
+import {restoreGeoarrowMetadata} from '@kepler.gl/duckdb/dist/table/duckdb-table';
 import {
   castDuckDBTypesForKepler,
   getDuckDBColumnTypes,
   getDuckDBColumnTypesMap,
-  restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
-} from '@kepler.gl/duckdb';
+} from '@kepler.gl/duckdb/dist/table/duckdb-table-utils';
 import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
@@ -44,7 +49,6 @@ import {
 } from '@sqlrooms/room-shell';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
-setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
   Action,
@@ -54,6 +58,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
 
@@ -96,6 +101,7 @@ export function createDefaultKeplerConfig(
       },
     ],
     currentMapId: mapId,
+    openTabs: [mapId],
     ...props,
   };
 }
@@ -163,6 +169,8 @@ export type KeplerSliceState = {
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
+    closeMap: (mapId: string) => void;
+    setOpenTabs: (tabIds: string[]) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
     registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
@@ -287,7 +295,7 @@ export function createKeplerSlice({
                 getState: () => get().kepler.map || {},
                 subscribe: () => () => {},
                 replaceReducer: () => {},
-                // @ts-ignore
+                // @ts-expect-error - Symbol.observable is not defined in the Redux type definitions
                 [Symbol.observable]: () => {},
               },
             },
@@ -360,6 +368,7 @@ export function createKeplerSlice({
                 id: mapId,
                 name: name ?? 'Untitled Map',
               });
+              draft.kepler.config.openTabs.push(mapId);
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
                 registerEntry({id: mapId}),
@@ -404,9 +413,42 @@ export function createKeplerSlice({
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.kepler.config.maps = draft.kepler.config.maps.filter(
-                (map) => map.id !== mapId,
+              const openTabs = draft.kepler.config.openTabs;
+              const maps = draft.kepler.config.maps;
+              const wasCurrentMap = draft.kepler.config.currentMapId === mapId;
+              const deletingIndex = openTabs.indexOf(mapId);
+
+              // Remove from maps and openTabs
+              draft.kepler.config.maps = maps.filter((map) => map.id !== mapId);
+              draft.kepler.config.openTabs = openTabs.filter(
+                (id) => id !== mapId,
               );
+
+              // If we deleted the current map, select another one
+              if (wasCurrentMap) {
+                const newOpenTabs = draft.kepler.config.openTabs;
+                const remainingMaps = draft.kepler.config.maps;
+
+                if (newOpenTabs.length > 0) {
+                  // Select from remaining open tabs
+                  const newIndex =
+                    deletingIndex === 0
+                      ? 0
+                      : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
+                  const newSelectedId = newOpenTabs[newIndex];
+                  if (newSelectedId) {
+                    draft.kepler.config.currentMapId = newSelectedId;
+                  }
+                } else if (remainingMaps.length > 0) {
+                  // No open tabs left, open a closed map
+                  const mapToOpen = remainingMaps[0];
+                  if (mapToOpen) {
+                    draft.kepler.config.openTabs.push(mapToOpen.id);
+                    draft.kepler.config.currentMapId = mapToOpen.id;
+                  }
+                }
+              }
+
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
                 deleteEntry(mapId),
@@ -426,6 +468,30 @@ export function createKeplerSlice({
               if (map) {
                 map.name = name;
               }
+            }),
+          );
+        },
+
+        closeMap: (mapId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const openTabs = draft.kepler.config.openTabs;
+
+              // Don't close if it's the last open tab (defensive check, TabStrip also prevents this)
+              if (openTabs.length <= 1) return;
+
+              // Just remove from openTabs - TabStrip handles selection via onSelect before calling onClose
+              draft.kepler.config.openTabs = openTabs.filter(
+                (id) => id !== mapId,
+              );
+            }),
+          );
+        },
+
+        setOpenTabs: (tabIds) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.kepler.config.openTabs = tabIds;
             }),
           );
         },

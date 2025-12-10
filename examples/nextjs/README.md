@@ -4,6 +4,8 @@
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/nextjs)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/nextjs?embed=1)
 
+[![Netlify Status](https://api.netlify.com/api/v1/badges/3b7e32f9-b8f0-4da1-8ae7-6fa7c0fd9589/deploy-status)](https://app.netlify.com/projects/sqlrooms-nextjs/deploys)
+
 <a href="http://sqlrooms-nextjs.netlify.app/" target="_blank">
   <img src="/media/examples/nextjs.webp" alt="SQLRooms Next.js example" width=450>
 </a>

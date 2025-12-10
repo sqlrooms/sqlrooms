@@ -30,7 +30,7 @@ import {
 } from './chatTransport';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
-import {AddToolResult} from './hooks/useAiChat';
+import {AddToolResult} from './types';
 import {cleanupPendingAnalysisResults} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
@@ -388,8 +388,7 @@ export function createAiSlice(
                   modelProvider ||
                   currentSession?.modelProvider ||
                   defaultProvider,
-                model:
-                  model || currentSession?.model || defaultModel,
+                model: model || currentSession?.model || defaultModel,
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],

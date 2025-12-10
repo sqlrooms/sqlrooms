@@ -1,8 +1,8 @@
 {
   "name": "@sqlrooms/preset-jest",
-  "version": "0.26.1-rc.4",
+  "version": "0.26.1-rc.11",
   "private": true,
-  "main": "index.js",
+  "main": "base.js",
   "type": "module",
   "files": [
     "base.js",

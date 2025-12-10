@@ -28,7 +28,7 @@ Key features include:
 
 <!-- [<img src=/media/case-studies/flowmap-city.webp width=400>](https://www.flowmap.city/) -->
 
-<video src="/media/case-studies/flowmap-city.mp4" alt="Flowmap City: Mobility data visualization" width="450" loop muted controls>
+<video src="/media/case-studies/flowmap-city.mp4" alt="Flowmap City: Mobility data visualization" width="450" loop muted controls autoplay>
   <img src="/media/case-studies/flowmap-city.webp" alt="Flowmap City: Mobility data visualization" width="450" />
 </video>
 
@@ -47,7 +47,7 @@ Key features include:
 
 [Cosmograph](https://cosmograph.app/) is a powerful web-based application for visualizing and analyzing large graph datasets and machine learning embeddings. The application runs entirely in the browser, leveraging your GPU for all computations while keeping your data private and secure. The upcoming version of Cosmograph is being built using SQLRooms to enhance its data processing capabilities and analytical features.
 
-<video src="/media/case-studies/cosmograph-2.0-967px.mp4" alt="Cosmograph: Graph and Embedding Visualization" width="450" loop muted controls>
+<video src="/media/case-studies/cosmograph-2.0-967px.mp4" alt="Cosmograph: Graph and Embedding Visualization" width="450" loop muted controls autoplay>
   <img src="/media/case-studies/cosmograph.webp" alt="Cosmograph: Graph and Embedding Visualization" width="450" />
 </video>
 
@@ -64,7 +64,7 @@ Key features include:
 
 [Transcality](https://www.transcality.com/) is a Swiss company building transport modeling software using SQLRooms. Their platform creates digital twins of transportation systems, enabling planners and engineers to simulate infrastructure changes—like adding or closing a road—and immediately see the effects on traffic flow.
 
-<video src="/media/case-studies/transcality.mp4"  alt="Transcality: Transport modeling and simulation" width="450"  loop muted controls>
+<video src="/media/case-studies/transcality.mp4"  alt="Transcality: Transport modeling and simulation" width="450"  loop muted controls autoplay>
   <img src="/media/case-studies/transcality.webp" alt="Transcality: Transport modeling and simulation" width="450" />
 </video>
 

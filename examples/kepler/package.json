@@ -17,14 +17,10 @@
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
-    "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "superjson": "^2.2.2",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.3"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
