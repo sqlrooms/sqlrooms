@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](/github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](github.com/sqlrooms/sqlrooms/commits/f21318636d8151b942db6a15480731e86c00f5d4))
+
 ## 0.26.1-rc.7 (2025-12-05)
 
 ### Bug Fixes
