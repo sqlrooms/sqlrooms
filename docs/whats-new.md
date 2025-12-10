@@ -12,6 +12,8 @@ New features, improvements, and notable changes in each SQLRooms release. For mi
 
 Barrel exports (i.e., `export * from ...`) were replaced across all modules to improve tree-shaking, reduce bundle size, and avoid import path ambiguities. Direct/explicit exports now ensure only the required symbols are included in consumers' builds, making dependencies clearer and preventing accidental re-exports or circular dependencies.
 
+Additionally, `"sideEffects": false` was added to all packages. This signals to bundlers that the modules are free of side effects, enabling better tree-shaking and further reducing the final bundle size.
+
 ### TabStrip component in `@sqlrooms/ui`
 
 A composable tab strip with drag-to-reorder, inline renaming, and a search dropdown for reopening closed tabs. Supports custom tab menus and flexible layouts via subcomponents (`TabStrip.Tabs`, `TabStrip.SearchDropdown`, `TabStrip.NewButton`).
@@ -24,7 +26,7 @@ Added [Kepler.gl](https://kepler.gl/) integration module for geospatial data vis
 
 <img src="/media/examples/kepler.webp" alt="SQLRooms Kepler.gl geospatial visualization example" width=450>
 
-Check the [Kepler example](https://github.com/sqlrooms/examples/tree/main/examples/kepler)
+Check the [Kepler example](https://github.com/sqlrooms/examples/tree/main/kepler)
 
 ### AI RAG module
 
