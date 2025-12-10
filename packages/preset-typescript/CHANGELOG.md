@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/preset-typescript
+
 ## 0.26.1-rc.10 (2025-12-10)
 
 **Note:** Version bump only for package @sqlrooms/preset-typescript
