@@ -69,17 +69,17 @@ jobs:
               NETLIFY_FILE="$dir/netlify.toml"
               if [ ! -f "$NETLIFY_FILE" ]; then
                 cat <<'EOF' > "$NETLIFY_FILE"
-[build]
-  command = "npm run build"
-  publish = "dist"
+          [build]
+            command = "npm run build"
+            publish = "dist"
 
-[build.environment]
-  NODE_VERSION = "24.11.1"
-  NODE_OPTIONS = "--max_old_space_size=4096"
-  NPM_FLAGS = "--force"  # Override dependency constraints
-  CI = "false"  # This will prevent treating warnings as errors
+          [build.environment]
+            NODE_VERSION = "24.11.1"
+            NODE_OPTIONS = "--max_old_space_size=4096"
+            NPM_FLAGS = "--force"  # Override dependency constraints
+            CI = "false"  # This will prevent treating warnings as errors
 
-EOF
+          EOF
               fi
             fi
           done
