@@ -63,6 +63,27 @@ jobs:
           sed -i.bak '1{/---/{:a N;/\n---/!ba};d}' target/README.md
           rm target/README.md.bak
 
+          # Ensure each example has a default netlify.toml
+          for dir in target/*; do
+            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+              NETLIFY_FILE="$dir/netlify.toml"
+              if [ ! -f "$NETLIFY_FILE" ]; then
+                cat <<'EOF' > "$NETLIFY_FILE"
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "24.11.1"
+  NODE_OPTIONS = "--max_old_space_size=4096"
+  NPM_FLAGS = "--force"  # Override dependency constraints
+  CI = "false"  # This will prevent treating warnings as errors
+
+EOF
+              fi
+            fi
+          done
+
           # Get version from lerna.json
           VERSION=$(jq -r '.version' source/lerna.json)
 
