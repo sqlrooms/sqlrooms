@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+### Bug Fixes
+
+* **deps:** update dependency @paralleldrive/cuid2 to v3 ([#250](https://github.com/sqlrooms/sqlrooms/issues/250)) ([ad0c539](https://github.com/sqlrooms/sqlrooms/commit/ad0c539a7664b2cee60184674c4c27c67c90514e))
+
 ## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
 
 **Note:** Version bump only for package @sqlrooms/discuss
