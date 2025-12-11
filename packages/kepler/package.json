@@ -33,7 +33,7 @@
     "@kepler.gl/table": "3.2.4",
     "@kepler.gl/types": "3.2.4",
     "@kepler.gl/utils": "3.2.4",
-    "@paralleldrive/cuid2": "^2.2.2",
+    "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/kepler-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
