@@ -3,6 +3,7 @@
   publish = "dist"
 
 [build.environment]
+  NODE_VERSION = "24.11.1"
   NPM_FLAGS = "--force"  # Override dependency constraints
   CI = "false"  # This will prevent treating warnings as errors
 

@@ -3,6 +3,7 @@
   publish = "dist"
 
 [build.environment]
+  NODE_VERSION = "24.11.1"
   NODE_OPTIONS = "--max-old-space-size=4096"
   NPM_FLAGS = "--force"
   CI = "false"
