@@ -9,12 +9,12 @@ export const ShowInputBarToggle = () => {
     (s) => s.notebook.toggleShowInputBar,
   );
   const currentTabId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentTabId,
+    (s) => s.notebook.config.currentDagId,
   );
-  const showInputBar = useStoreWithNotebook(
-    (s) =>
-      s.notebook.config.tabs.find((t) => t.id === currentTabId)?.showInputBar,
-  );
+  const showInputBar = useStoreWithNotebook((s) => {
+    const dag = currentTabId ? s.notebook.config.dags[currentTabId] : undefined;
+    return dag?.meta.showInputBar;
+  });
 
   if (!currentTabId) return null;
   return (

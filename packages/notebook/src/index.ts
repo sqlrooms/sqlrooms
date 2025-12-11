@@ -5,10 +5,10 @@ export {
 
 export {Notebook, TabsBar} from './Notebook';
 
-export {
-  type CellRegistry,
-  type NotebookCellRegistryItem,
-  type NotebookSliceState,
+export type {
+  CellRegistry,
+  NotebookCellRegistryItem,
+  NotebookSliceState,
 } from './NotebookStateTypes';
 
 export {
@@ -17,18 +17,23 @@ export {
   InputUnion,
   NotebookCellSchema,
   NotebookCellTypes,
-  NotebookSliceConfig,
+  NotebookSliceConfigSchema,
   NotebookTabSchema,
   SqlCellSchema,
   TextCellSchema,
   VegaCellSchema,
-  type InputCell,
-  type InputDropdown,
-  type InputSlider,
-  type InputText,
-  type NotebookCell,
-  type NotebookTab,
-  type SqlCell,
-  type TextCell,
-  type VegaCell,
+} from './cellSchemas';
+export type {
+  NotebookSliceConfig,
+  InputCell,
+  InputDropdown,
+  InputSlider,
+  InputText,
+  NotebookCell,
+  NotebookTab,
+  NotebookDag,
+  NotebookDagMeta,
+  SqlCell,
+  TextCell,
+  VegaCell,
 } from './cellSchemas';

@@ -1,6 +1,6 @@
 import {
   Canvas,
-  CanvasSliceConfig,
+  CanvasSliceConfigSchema,
   CanvasSliceState,
   createCanvasSlice,
 } from '@sqlrooms/canvas';
@@ -40,7 +40,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
-        canvas: CanvasSliceConfig,
+        canvas: CanvasSliceConfigSchema,
         app: AppConfig,
       },
     },

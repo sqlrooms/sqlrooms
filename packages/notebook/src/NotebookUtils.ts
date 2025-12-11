@@ -14,11 +14,22 @@ export const findTab = (
   notebook: NotebookSliceConfig,
   tabId: string,
 ): NotebookTab => {
-  const tab = notebook.tabs.find((t) => t.id === tabId);
-  if (!tab) {
+  const dag = notebook.dags[tabId];
+  if (!dag) {
     throw new Error(`Tab with id ${tabId} not found`);
   }
-  return tab;
+  return {id: dag.id, ...dag.meta};
+};
+
+export const findCellInNotebook = (
+  notebook: NotebookSliceConfig,
+  cellId: string,
+) => {
+  for (const [dagId, dag] of Object.entries(notebook.dags)) {
+    const cell = dag?.cells[cellId];
+    if (cell) return {cell, dagId};
+  }
+  return undefined;
 };
 
 export const getCellTypeLabel = (type: NotebookCellTypes) => {

@@ -12,25 +12,30 @@ import {VegaLiteChart} from '@sqlrooms/vega';
 
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../useStoreWithNotebook';
-import {getCellTypeLabel} from '../../NotebookUtils';
+import {findCellInNotebook, getCellTypeLabel} from '../../NotebookUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
 import {VegaCell as VegaCellType} from '../../cellSchemas';
 import {IconWithTooltip} from '../../cellOperations/IconWithTooltip';
 
 export const VegaCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook(
-    (s) => s.notebook.config.cells[id],
-  ) as VegaCellType;
+  const {cell, dagCells} = useStoreWithNotebook((s) => {
+    const info = findCellInNotebook(s.notebook.config, id);
+    const dag = info ? s.notebook.config.dags[info.dagId] : undefined;
+    return {
+      cell: info?.cell as VegaCellType | undefined,
+      dagCells: dag?.cells,
+    };
+  });
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
-  const availableSqlCells = Object.values(
-    useStoreWithNotebook((s) => s.notebook.config.cells),
-  ).filter((c) => c.type === 'sql');
+  const availableSqlCells = Object.values(dagCells || {}).filter(
+    (c) => c.type === 'sql',
+  );
 
-  const selectedSqlStatus = useStoreWithNotebook(
-    (s) => s.notebook.cellStatus[cell.sqlId],
+  const selectedSqlStatus = useStoreWithNotebook((s) =>
+    cell ? s.notebook.cellStatus[cell.sqlId] : undefined,
   );
 
   const lastRunTime =
@@ -39,11 +44,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       : undefined;
 
   const [draftSpec, setDraftSpec] = useState(
-    cell.vegaSpec ?? {
+    (cell?.vegaSpec ?? {
       data: {name: 'queryResult'},
       mark: 'bar',
       padding: 20,
-    },
+    }) as VegaCellType['vegaSpec'],
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -55,7 +60,8 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
   const isCurrent = currentCellId === id;
 
   const handleValueChange = (value: string) => {
-    update(id, (c) => ({...c, sqlId: value}) as typeof cell);
+    if (!cell) return;
+    update(id, (c) => ({...c, sqlId: value}) as VegaCellType);
     // Auto open the chart config panel if not opened yet
     if (!isEditing) setIsEditing(true);
   };

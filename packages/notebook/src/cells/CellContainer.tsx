@@ -4,6 +4,7 @@ import {cn, EditableText} from '@sqlrooms/ui';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {DeleteCellDialog} from '../cellOperations/DeleteCellDialog';
 import {MoveCellButtons} from '../cellOperations/MoveCellButtons';
+import {findCellInNotebook} from '../NotebookUtils';
 
 export const CellContainer: React.FC<{
   id: string;
@@ -13,7 +14,9 @@ export const CellContainer: React.FC<{
   children?: React.ReactNode;
   className?: string;
 }> = ({id, typeLabel, rightControls, leftControls, children, className}) => {
-  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
+  const cell = useStoreWithNotebook(
+    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+  );
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
   const currentCellId = useStoreWithNotebook(

@@ -1,5 +1,5 @@
 import {Button, EditableText} from '@sqlrooms/ui';
-import React, {useEffect} from 'react';
+import React, {useEffect, useMemo} from 'react';
 import {PlusIcon} from 'lucide-react';
 
 import {useStoreWithNotebook} from './useStoreWithNotebook';
@@ -10,9 +10,19 @@ import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {CellView} from './cells/CellView';
 
 export const TabsBar: React.FC = () => {
-  const tabs = useStoreWithNotebook((s) => s.notebook.config.tabs);
+  const dagOrder = useStoreWithNotebook((s) => s.notebook.config.dagOrder);
+  const dags = useStoreWithNotebook((s) => s.notebook.config.dags);
+  const tabs = useMemo(
+    () =>
+      dagOrder
+        .map((id) => dags[id])
+        .filter(Boolean)
+        .map((dag) => ({id: dag!.id, ...dag!.meta})),
+    [dagOrder, dags],
+  );
+
   const currentTabId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentTabId,
+    (s) => s.notebook.config.currentDagId,
   );
   const setCurrent = useStoreWithNotebook((s) => s.notebook.setCurrentTab);
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);
@@ -44,14 +54,15 @@ export const TabsBar: React.FC = () => {
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentTabId,
+    (s) => s.notebook.config.currentDagId,
   );
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
-  const tab = useStoreWithNotebook((s) =>
-    s.notebook.config.tabs.find((t) => t.id === currentTabId),
+  const tabDag = useStoreWithNotebook((s) =>
+    currentTabId ? s.notebook.config.dags[currentTabId] : undefined,
   );
+  const tab = tabDag ? {id: tabDag.id, ...tabDag.meta} : undefined;
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
   const runAllCellsCascade = useStoreWithNotebook(
     (s) => s.notebook.runAllCellsCascade,
@@ -99,7 +110,7 @@ export const Notebook: React.FC = () => {
       />
 
       <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
-        {tab.cellOrder.map((id, index) => (
+        {tab.cellOrder.map((id: string, index: number) => (
           <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />
             <CellView id={id} />

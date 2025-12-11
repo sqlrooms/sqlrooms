@@ -82,20 +82,29 @@ export const NotebookCellSchema = z.discriminatedUnion('type', [
 export type NotebookCell = z.infer<typeof NotebookCellSchema>;
 
 /** Notebook Tab */
-export const NotebookTabSchema = z.object({
-  id: z.string(),
+export const NotebookDagMetaSchema = z.object({
   title: z.string().default('Notebook'),
   cellOrder: z.array(z.string()).default([]),
   inputBarOrder: z.array(z.string()).default([]),
   showInputBar: z.boolean().default(true),
 });
+export type NotebookDagMeta = z.infer<typeof NotebookDagMetaSchema>;
+
+export const NotebookDagSchema = z.object({
+  id: z.string(),
+  cells: z.record(z.string(), NotebookCellSchema).default({}),
+  meta: NotebookDagMetaSchema,
+});
+export type NotebookDag = z.infer<typeof NotebookDagSchema>;
+
+export const NotebookTabSchema = NotebookDagMetaSchema.extend({id: z.string()});
 export type NotebookTab = z.infer<typeof NotebookTabSchema>;
 
 /** Notebook Slice */
-export const NotebookSliceConfig = z.object({
-  tabs: z.array(NotebookTabSchema).default([]),
-  currentTabId: z.string().optional(),
-  cells: z.record(z.string(), NotebookCellSchema).default({}),
+export const NotebookSliceConfigSchema = z.object({
+  dags: z.record(z.string(), NotebookDagSchema).default({}),
+  dagOrder: z.array(z.string()).default([]),
+  currentDagId: z.string().optional(),
   currentCellId: z.string().optional(),
 });
-export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfig>;
+export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfigSchema>;

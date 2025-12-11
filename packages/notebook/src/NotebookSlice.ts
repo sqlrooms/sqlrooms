@@ -1,4 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
+import {DagSliceState, createDagSlice} from '@sqlrooms/dag';
 import {
   DuckDbSliceState,
   escapeId,
@@ -17,8 +18,9 @@ import {
   NotebookCell,
   NotebookCellTypes,
   NotebookSliceConfig,
+  NotebookDagMeta,
 } from './cellSchemas';
-import {findTab, getCellTypeLabel} from './NotebookUtils';
+import {getCellTypeLabel} from './NotebookUtils';
 import type {
   CellRegistry,
   NotebookCellRegistryItem,
@@ -32,20 +34,42 @@ export function createDefaultNotebookConfig(
   props: Partial<NotebookSliceConfig> = {},
 ): NotebookSliceConfig {
   const defaultTabId = createId();
-  return {
-    tabs: [
-      {
+  const base: NotebookSliceConfig = {
+    dags: {
+      [defaultTabId]: {
         id: defaultTabId,
-        title: 'Notebook 1',
-        cellOrder: [],
-        inputBarOrder: [],
-        showInputBar: true,
+        cells: {},
+        meta: {
+          title: 'Notebook 1',
+          cellOrder: [],
+          inputBarOrder: [],
+          showInputBar: true,
+        },
       },
-    ],
-    currentTabId: defaultTabId,
-    cells: {},
-    ...props,
+    },
+    dagOrder: [defaultTabId],
+    currentDagId: defaultTabId,
+    currentCellId: undefined,
   };
+
+  // If already a DAG config, merge over the base
+  return {...base, ...props};
+}
+
+function getDag(config: NotebookSliceConfig, dagId: string) {
+  return config.dags[dagId];
+}
+
+function findDagIdByCellId(
+  config: NotebookSliceConfig,
+  cellId: string,
+): string | undefined {
+  for (const [dagId, dag] of Object.entries(config.dags)) {
+    if (dag?.cells[cellId]) {
+      return dagId;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -55,454 +79,486 @@ export function createDefaultNotebookConfig(
 export function createNotebookSlice(props?: {
   config?: Partial<NotebookSliceConfig>;
 }) {
-  return createSlice<
-    NotebookSliceState,
-    BaseRoomStoreState & DuckDbSliceState & NotebookSliceState
-  >((set, get) => {
-    return {
-      notebook: {
-        schemaName: 'notebook',
+  type NotebookRootState = BaseRoomStoreState &
+    DuckDbSliceState &
+    NotebookSliceState &
+    DagSliceState;
 
-        config: createDefaultNotebookConfig(props?.config ?? {}),
-
-        setSchemaName: (name) =>
-          set((state) =>
-            produce(state, (draft) => {
-              draft.notebook.schemaName = name;
-            }),
-          ),
-
-        cellStatus: {},
-        activeAbortControllers: {},
-
-        addTab: () => {
-          const id = createId();
-          set((state) =>
-            produce(state, (draft) => {
-              draft.notebook.config.tabs.push({
-                id,
-                title: `Notebook ${draft.notebook.config.tabs.length + 1}`,
-                cellOrder: [],
-                inputBarOrder: [],
-                showInputBar: true,
-              });
-              draft.notebook.config.currentTabId = id;
-            }),
-          );
-          return id;
-        },
-
-        renameTab: (id, title) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const tab = findTab(draft.notebook.config, id);
-              if (tab) tab.title = title;
-            }),
+  return createSlice<NotebookSliceState & DagSliceState, NotebookRootState>(
+    (set, get, store) => {
+      const dagSlice = createDagSlice<
+        NotebookRootState,
+        NotebookCell,
+        NotebookDagMeta
+      >({
+        getDagConfig: (state) => state.notebook.config,
+        findDependencies: ({cell, cells, getState}) => {
+          const reg =
+            getState().notebook.cellRegistry[(cell as NotebookCell).type];
+          if (!reg?.findDependencies) return [];
+          return reg.findDependencies(
+            cell as NotebookCell,
+            cells,
+            getState().notebook.cellStatus,
           );
         },
-
-        setCurrentTab: (id) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.notebook.config.currentTabId = id;
-            }),
-          );
+        runCell: async ({cellId, cascade, getState}) => {
+          await getState().notebook.runCell(cellId, {cascade});
         },
+      })(set as any, get as any, store);
 
-        removeTab: (id) => {
-          const tab = get().notebook.config.tabs.find((t) => t.id === id);
-          if (tab) {
-            for (const cellId of tab.cellOrder) {
-              const abortController =
-                get().notebook.activeAbortControllers[cellId];
-              if (abortController) {
-                abortController.abort();
-              }
-            }
-          }
+      return {
+        ...dagSlice,
+        notebook: {
+          schemaName: 'notebook',
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.notebook.config.tabs = draft.notebook.config.tabs.filter(
-                (t) => t.id !== id,
-              );
-              if (draft.notebook.config.currentTabId === id) {
-                draft.notebook.config.currentTabId =
-                  draft.notebook.config.tabs[0]?.id;
-              }
-            }),
-          );
-        },
+          config: createDefaultNotebookConfig(props?.config ?? {}),
 
-        toggleShowInputBar: (id) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const tab = findTab(draft.notebook.config, id);
-              if (tab) tab.showInputBar = !tab.showInputBar;
-            }),
-          );
-        },
-
-        addCell: (tabId, type, index) => {
-          const id = createId();
-          set((state) =>
-            produce(state, (draft) => {
-              const tab = findTab(draft.notebook.config, tabId);
-              const reg = get().notebook.cellRegistry[type];
-              if (!reg) return;
-              const cell = reg.createCell(id) as NotebookCell;
-              // Assign a readable unique name using shared utility
-              const usedNames = Object.values(draft.notebook.config.cells).map(
-                (c) => c.name,
-              );
-              const baseLabel = getCellTypeLabel(cell.type);
-              if (baseLabel) {
-                (cell as any).name = generateUniqueName(baseLabel, usedNames);
-              }
-
-              if (type === 'input') {
-                const usedInputNames = Object.values(
-                  draft.notebook.config.cells,
-                )
-                  .filter((c) => c.type === 'input')
-                  .map((c) => c.input.varName);
-                (cell as InputCellType).input.varName = generateUniqueName(
-                  (cell as InputCellType).input.varName,
-                  usedInputNames,
-                );
-              }
-              draft.notebook.config.cells[id] = cell;
-
-              // cellOrder
-              const newIndex = index ?? tab.cellOrder.length;
-              tab.cellOrder = [
-                ...tab.cellOrder.slice(0, newIndex),
-                id,
-                ...tab.cellOrder.slice(newIndex),
-              ];
-
-              // inputBarOrder
-              if (type === 'input') {
-                tab.inputBarOrder = [
-                  ...tab.inputBarOrder.slice(0, newIndex),
-                  id,
-                  ...tab.inputBarOrder.slice(newIndex),
-                ];
-              }
-
-              // cellStatus
-              if (type === 'sql') {
-                draft.notebook.cellStatus[id] = {
-                  type: 'sql',
-                  status: 'idle',
-                  referencedTables: [],
-                };
-              } else {
-                draft.notebook.cellStatus[id] = {type: 'other'};
-              }
-
-              draft.notebook.config.currentCellId = id;
-            }),
-          );
-          return id;
-        },
-
-        moveCell: (tabId, cellId, direction) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const tab = findTab(draft.notebook.config, tabId);
-
-              const idx = tab.cellOrder.indexOf(cellId);
-              if (idx >= 0) {
-                const newIndex = direction === 'up' ? idx - 1 : idx + 1;
-                if (newIndex < 0 || newIndex >= tab.cellOrder.length) return;
-
-                tab.cellOrder.splice(idx, 1);
-                tab.cellOrder.splice(newIndex, 0, cellId);
-              }
-            }),
-          );
-        },
-
-        removeCell: (cellId) => {
-          const abortController = get().notebook.activeAbortControllers[cellId];
-          if (abortController) {
-            abortController.abort();
-          }
-
-          set((state) =>
-            produce(state, (draft) => {
-              delete draft.notebook.config.cells[cellId];
-              delete draft.notebook.cellStatus[cellId];
-              delete draft.notebook.activeAbortControllers[cellId];
-              for (const tab of draft.notebook.config.tabs) {
-                tab.cellOrder = tab.cellOrder.filter((id) => id !== cellId);
-                tab.inputBarOrder = tab.inputBarOrder.filter(
-                  (id) => id !== cellId,
-                );
-              }
-            }),
-          );
-        },
-
-        renameCell: (cellId, name) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const cell = draft.notebook.config.cells[cellId];
-              if (cell && 'name' in cell) cell.name = name;
-            }),
-          );
-        },
-
-        updateCell: (cellId, updater) => {
-          set((state) =>
-            produce(state, (draft) => {
-              const cell = draft.notebook.config.cells[cellId];
-              if (!cell) return;
-              draft.notebook.config.cells[cellId] = updater(cell);
-            }),
-          );
-          const next = get().notebook.config.cells[cellId];
-          if (!next) return;
-          void cascadeFrom(cellId);
-        },
-
-        setCurrentCell: (id) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.notebook.config.currentCellId = id;
-            }),
-          );
-        },
-
-        cancelRunCell: (cellId) => {
-          const abortController = get().notebook.activeAbortControllers[cellId];
-          if (abortController) {
-            abortController.abort();
+          setSchemaName: (name) =>
             set((state) =>
               produce(state, (draft) => {
-                delete draft.notebook.activeAbortControllers[cellId];
-                const cellStatus = draft.notebook.cellStatus[cellId];
-                if (cellStatus?.type === 'sql') {
-                  cellStatus.status = 'cancel';
-                  cellStatus.lastError = 'Query cancelled by user';
+                draft.notebook.schemaName = name;
+              }),
+            ),
+
+          cellStatus: {},
+          activeAbortControllers: {},
+
+          addTab: () => {
+            const id = createId();
+            set((state) =>
+              produce(state, (draft) => {
+                draft.notebook.config.dags[id] = {
+                  id,
+                  cells: {},
+                  meta: {
+                    title: `Notebook ${draft.notebook.config.dagOrder.length + 1}`,
+                    cellOrder: [],
+                    inputBarOrder: [],
+                    showInputBar: true,
+                  },
+                };
+                draft.notebook.config.dagOrder.push(id);
+                draft.notebook.config.currentDagId = id;
+              }),
+            );
+            return id;
+          },
+
+          renameTab: (id, title) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const dag = getDag(draft.notebook.config, id);
+                if (dag) dag.meta.title = title;
+              }),
+            );
+          },
+
+          setCurrentTab: (id) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.notebook.config.currentDagId = id;
+              }),
+            );
+          },
+
+          removeTab: (id) => {
+            const dag = getDag(get().notebook.config, id);
+            if (dag) {
+              for (const cellId of dag.meta.cellOrder) {
+                const abortController =
+                  get().notebook.activeAbortControllers[cellId];
+                if (abortController) {
+                  abortController.abort();
+                }
+              }
+            }
+
+            set((state) =>
+              produce(state, (draft) => {
+                const toDelete = draft.notebook.config.dags[id];
+                if (!toDelete) return;
+                for (const cellId of Object.keys(toDelete.cells)) {
+                  delete toDelete.cells[cellId];
+                  delete draft.notebook.cellStatus[cellId];
+                  delete draft.notebook.activeAbortControllers[cellId];
+                }
+                delete draft.notebook.config.dags[id];
+                draft.notebook.config.dagOrder =
+                  draft.notebook.config.dagOrder.filter(
+                    (dagId) => dagId !== id,
+                  );
+                if (draft.notebook.config.currentDagId === id) {
+                  draft.notebook.config.currentDagId =
+                    draft.notebook.config.dagOrder[0];
                 }
               }),
             );
-          }
-        },
+          },
 
-        runAllCells: async (tabId) => {
-          const tab = findTab(get().notebook.config, tabId);
-          for (const cellId of tab.cellOrder) {
-            await get().notebook.runCell(cellId, {cascade: false});
-          }
-        },
+          toggleShowInputBar: (id) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const dag = getDag(draft.notebook.config, id);
+                if (dag) dag.meta.showInputBar = !dag.meta.showInputBar;
+              }),
+            );
+          },
 
-        runAllCellsCascade: async (tabId) => {
-          const tab = findTab(get().notebook.config, tabId);
-          const cellsMap = get().notebook.config.cells;
-          const statusMap = get().notebook.cellStatus;
-          const rootCells: string[] = tab.cellOrder.filter((cellId) => {
-            const cell = cellsMap[cellId];
-            if (!cell) return false;
-            const reg = get().notebook.cellRegistry[cell.type];
-            if (!reg) return true;
-            const deps = reg.findDependencies(cell, cellsMap, statusMap);
-            return deps.length === 0;
-          });
-          for (const cellId of rootCells) {
-            await get().notebook.runCell(cellId, {cascade: true});
-          }
-        },
-
-        runCell: async (cellId, opts) => {
-          const cell = get().notebook.config.cells[cellId];
-          if (!cell) return;
-          const {runCell} = get().notebook.cellRegistry[cell.type] || {};
-          if (runCell) {
-            await runCell({id: cellId, opts: opts || {}});
-          }
-        },
-
-        cellRegistry: {
-          sql: {
-            title: 'SQL',
-            createCell: (id) =>
-              ({
-                id,
-                type: 'sql',
-                name: 'SQL',
-                sql: '',
-              }) as NotebookCell,
-            renderComponent: (id: string) => React.createElement(SqlCell, {id}),
-            findDependencies: findDependenciesCommon,
-            runCell: async ({id, opts}) => {
-              const cell = get().notebook.config.cells[id];
-              if (!cell || cell.type !== 'sql') return;
-              const rawSql = cell.sql || '';
-
-              const abortController = new AbortController();
-              set((state) =>
-                produce(state, (draft) => {
-                  draft.notebook.activeAbortControllers[id] = abortController;
-                  draft.notebook.cellStatus[id] = {
-                    type: 'sql',
-                    status: 'running',
-                    resultView:
-                      draft.notebook.cellStatus[id]?.type === 'sql'
-                        ? draft.notebook.cellStatus[id].resultView
-                        : undefined,
-                    lastError: undefined,
-                  };
-                }),
-              );
-
-              try {
-                const inputs: any[] = [];
-                const cellsMap2 = get().notebook.config.cells;
-                for (const key in cellsMap2) {
-                  const c = cellsMap2[key];
-                  if (c?.type === 'input') inputs.push(c);
+          addCell: (tabId, type, index) => {
+            const id = createId();
+            set((state) =>
+              produce(state, (draft) => {
+                const dag = getDag(draft.notebook.config, tabId);
+                if (!dag) return;
+                const reg = get().notebook.cellRegistry[type];
+                if (!reg) return;
+                const cell = reg.createCell(id) as NotebookCell;
+                // Assign a readable unique name using shared utility
+                const usedNames = Object.values(dag.cells).map((c) => c.name);
+                const baseLabel = getCellTypeLabel(cell.type);
+                if (baseLabel) {
+                  (cell as any).name = generateUniqueName(baseLabel, usedNames);
                 }
-                const varMap: Record<string, string | number> = {};
-                for (const iv of inputs) {
-                  varMap[iv.input.varName] = iv.input.value;
-                }
-                const renderedSql = rawSql.replace(
-                  /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g,
-                  (_m: string, v: string) => {
-                    const val = varMap[v];
-                    return typeof val === 'number'
-                      ? String(val)
-                      : `'${String(val ?? '')?.replace(/'/g, "''")}'`;
-                  },
-                );
 
-                const connector = await get().db.getConnector();
-                const schemaName: string =
-                  get().notebook.schemaName || 'notebook';
-                await connector.query(
-                  `CREATE SCHEMA IF NOT EXISTS ${schemaName}`,
-                  {signal: abortController.signal},
-                );
-
-                const parsed = await get().db.sqlSelectToJson(renderedSql);
-                if (parsed.error) {
-                  throw new Error(
-                    parsed.error_message || 'Not a valid SELECT statement',
+                if (type === 'input') {
+                  const usedInputNames = Object.values(dag.cells)
+                    .filter((c) => c.type === 'input')
+                    .map((c) => c.input.varName);
+                  (cell as InputCellType).input.varName = generateUniqueName(
+                    (cell as InputCellType).input.varName,
+                    usedInputNames,
                   );
                 }
+                dag.cells[id] = cell;
 
-                const referenced: string[] = [];
-                const stmts = (parsed.statements || []) as any[];
-                for (const s of stmts) {
-                  const from = s?.node?.from_table;
-                  if (from?.table_name) {
-                    const schema = from.schema_name || 'main';
-                    const ref = `${schema}.${from.table_name}`;
-                    if (referenced.indexOf(ref) < 0) referenced.push(ref);
+                // cellOrder
+                const newIndex = index ?? dag.meta.cellOrder.length;
+                dag.meta.cellOrder = [
+                  ...dag.meta.cellOrder.slice(0, newIndex),
+                  id,
+                  ...dag.meta.cellOrder.slice(newIndex),
+                ];
+
+                // inputBarOrder
+                if (type === 'input') {
+                  dag.meta.inputBarOrder = [
+                    ...dag.meta.inputBarOrder.slice(0, newIndex),
+                    id,
+                    ...dag.meta.inputBarOrder.slice(newIndex),
+                  ];
+                }
+
+                // cellStatus
+                if (type === 'sql') {
+                  draft.notebook.cellStatus[id] = {
+                    type: 'sql',
+                    status: 'idle',
+                    referencedTables: [],
+                  };
+                } else {
+                  draft.notebook.cellStatus[id] = {type: 'other'};
+                }
+
+                draft.notebook.config.currentCellId = id;
+              }),
+            );
+            return id;
+          },
+
+          moveCell: (tabId, cellId, direction) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const dag = getDag(draft.notebook.config, tabId);
+                if (!dag) return;
+
+                const idx = dag.meta.cellOrder.indexOf(cellId);
+                if (idx >= 0) {
+                  const newIndex = direction === 'up' ? idx - 1 : idx + 1;
+                  if (newIndex < 0 || newIndex >= dag.meta.cellOrder.length)
+                    return;
+
+                  dag.meta.cellOrder.splice(idx, 1);
+                  dag.meta.cellOrder.splice(newIndex, 0, cellId);
+                }
+              }),
+            );
+          },
+
+          removeCell: (cellId) => {
+            const abortController =
+              get().notebook.activeAbortControllers[cellId];
+            if (abortController) {
+              abortController.abort();
+            }
+
+            set((state) =>
+              produce(state, (draft) => {
+                const dagId = findDagIdByCellId(draft.notebook.config, cellId);
+                if (!dagId) return;
+                const dag = getDag(draft.notebook.config, dagId);
+                if (!dag) return;
+
+                delete dag.cells[cellId];
+                delete draft.notebook.cellStatus[cellId];
+                delete draft.notebook.activeAbortControllers[cellId];
+
+                dag.meta.cellOrder = dag.meta.cellOrder.filter(
+                  (id) => id !== cellId,
+                );
+                dag.meta.inputBarOrder = dag.meta.inputBarOrder.filter(
+                  (id) => id !== cellId,
+                );
+              }),
+            );
+          },
+
+          renameCell: (cellId, name) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const dagId = findDagIdByCellId(draft.notebook.config, cellId);
+                if (!dagId) return;
+                const dag = getDag(draft.notebook.config, dagId);
+                if (!dag) return;
+                const cell = dag.cells[cellId];
+                if (cell && 'name' in cell) (cell as any).name = name;
+              }),
+            );
+          },
+
+          updateCell: (cellId, updater) => {
+            set((state) =>
+              produce(state, (draft) => {
+                const dagId = findDagIdByCellId(draft.notebook.config, cellId);
+                if (!dagId) return;
+                const dag = getDag(draft.notebook.config, dagId);
+                if (!dag) return;
+                const cell = dag.cells[cellId];
+                if (!cell) return;
+                dag.cells[cellId] = updater(cell);
+              }),
+            );
+            const dagId = findDagIdByCellId(get().notebook.config, cellId);
+            if (!dagId) return;
+            const nextDag = getDag(get().notebook.config, dagId);
+            if (!nextDag?.cells[cellId]) return;
+            void get().dag.runDownstreamCascade(dagId, cellId);
+          },
+
+          setCurrentCell: (id) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.notebook.config.currentCellId = id;
+              }),
+            );
+          },
+
+          cancelRunCell: (cellId) => {
+            const abortController =
+              get().notebook.activeAbortControllers[cellId];
+            if (abortController) {
+              abortController.abort();
+              set((state) =>
+                produce(state, (draft) => {
+                  delete draft.notebook.activeAbortControllers[cellId];
+                  const cellStatus = draft.notebook.cellStatus[cellId];
+                  if (cellStatus?.type === 'sql') {
+                    cellStatus.status = 'cancel';
+                    cellStatus.lastError = 'Query cancelled by user';
                   }
-                }
+                }),
+              );
+            }
+          },
 
-                const tableName = `${schemaName}.${escapeId(cell.name)}`;
-                await connector.query(
-                  `CREATE OR REPLACE VIEW ${tableName} AS ${renderedSql}`,
-                  {signal: abortController.signal},
-                );
+          runAllCells: async (tabId) => {
+            const dag = getDag(get().notebook.config, tabId);
+            if (!dag) return;
+            for (const cellId of dag.meta.cellOrder) {
+              await get().notebook.runCell(cellId, {cascade: false});
+            }
+          },
 
+          runAllCellsCascade: async (tabId) => {
+            await get().dag.runAllCellsCascade(tabId);
+          },
+
+          runCell: async (cellId, opts) => {
+            const dagId = findDagIdByCellId(get().notebook.config, cellId);
+            if (!dagId) return;
+            const dag = getDag(get().notebook.config, dagId);
+            const cell = dag?.cells[cellId];
+            if (!cell) return;
+            const {runCell} = get().notebook.cellRegistry[cell.type] || {};
+            if (runCell) {
+              await runCell({id: cellId, opts: opts || {}});
+            }
+          },
+
+          cellRegistry: {
+            sql: {
+              title: 'SQL',
+              createCell: (id) =>
+                ({
+                  id,
+                  type: 'sql',
+                  name: 'SQL',
+                  sql: '',
+                }) as NotebookCell,
+              renderComponent: (id: string) =>
+                React.createElement(SqlCell, {id}),
+              findDependencies: findDependenciesCommon,
+              runCell: async ({id, opts}) => {
+                const dagId = findDagIdByCellId(get().notebook.config, id);
+                if (!dagId) return;
+                const dag = getDag(get().notebook.config, dagId);
+                const cell = dag?.cells[id];
+                if (!cell || cell.type !== 'sql') return;
+                const rawSql = cell.sql || '';
+
+                const abortController = new AbortController();
                 set((state) =>
                   produce(state, (draft) => {
-                    const r = draft.notebook.cellStatus[id];
-                    if (r?.type === 'sql') {
-                      r.status = 'success';
-                      r.referencedTables = referenced.slice();
-                      r.resultView = makeQualifiedTableName({
-                        table: cell.name,
-                        schema: get().notebook.schemaName,
-                        database: get().db.currentDatabase,
-                      }).toString();
-                      r.lastRunTime = Date.now();
+                    draft.notebook.activeAbortControllers[id] = abortController;
+                    draft.notebook.cellStatus[id] = {
+                      type: 'sql',
+                      status: 'running',
+                      resultView:
+                        draft.notebook.cellStatus[id]?.type === 'sql'
+                          ? draft.notebook.cellStatus[id].resultView
+                          : undefined,
+                      lastError: undefined,
+                    };
+                  }),
+                );
+
+                try {
+                  const inputs: any[] = [];
+                  const cellsMap2 = dag?.cells ?? {};
+                  for (const key in cellsMap2) {
+                    const c = cellsMap2[key];
+                    if (c?.type === 'input') inputs.push(c);
+                  }
+                  const varMap: Record<string, string | number> = {};
+                  for (const iv of inputs) {
+                    varMap[iv.input.varName] = iv.input.value;
+                  }
+                  const renderedSql = rawSql.replace(
+                    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g,
+                    (_m: string, v: string) => {
+                      const val = varMap[v];
+                      return typeof val === 'number'
+                        ? String(val)
+                        : `'${String(val ?? '')?.replace(/'/g, "''")}'`;
+                    },
+                  );
+
+                  const connector = await get().db.getConnector();
+                  const schemaName: string =
+                    get().notebook.schemaName || 'notebook';
+                  await connector.query(
+                    `CREATE SCHEMA IF NOT EXISTS ${schemaName}`,
+                    {signal: abortController.signal},
+                  );
+
+                  const parsed = await get().db.sqlSelectToJson(renderedSql);
+                  if (parsed.error) {
+                    throw new Error(
+                      parsed.error_message || 'Not a valid SELECT statement',
+                    );
+                  }
+
+                  const referenced: string[] = [];
+                  const stmts = (parsed.statements || []) as any[];
+                  for (const s of stmts) {
+                    const from = s?.node?.from_table;
+                    if (from?.table_name) {
+                      const schema = from.schema_name || 'main';
+                      const ref = `${schema}.${from.table_name}`;
+                      if (referenced.indexOf(ref) < 0) referenced.push(ref);
                     }
-                  }),
-                );
+                  }
 
-                if (opts?.cascade !== false) {
-                  await cascadeFrom(id);
+                  const tableName = `${schemaName}.${escapeId(cell.name)}`;
+                  await connector.query(
+                    `CREATE OR REPLACE VIEW ${tableName} AS ${renderedSql}`,
+                    {signal: abortController.signal},
+                  );
+
+                  set((state) =>
+                    produce(state, (draft) => {
+                      const r = draft.notebook.cellStatus[id];
+                      if (r?.type === 'sql') {
+                        r.status = 'success';
+                        r.referencedTables = referenced.slice();
+                        r.resultView = makeQualifiedTableName({
+                          table: cell.name,
+                          schema: get().notebook.schemaName,
+                          database: get().db.currentDatabase,
+                        }).toString();
+                        r.lastRunTime = Date.now();
+                      }
+                    }),
+                  );
+
+                  if (opts?.cascade !== false) {
+                    await get().dag.runDownstreamCascade(dagId, id);
+                  }
+                } catch (e) {
+                  const message = e instanceof Error ? e.message : String(e);
+                  set((state) =>
+                    produce(state, (draft) => {
+                      const r = draft.notebook.cellStatus[id];
+                      if (r?.type === 'sql') {
+                        r.status = 'error';
+                        r.lastError = message;
+                      }
+                    }),
+                  );
+                } finally {
+                  // Clean up the abort controller
+                  set((state) =>
+                    produce(state, (draft) => {
+                      delete draft.notebook.activeAbortControllers[id];
+                    }),
+                  );
                 }
-              } catch (e) {
-                const message = e instanceof Error ? e.message : String(e);
-                set((state) =>
-                  produce(state, (draft) => {
-                    const r = draft.notebook.cellStatus[id];
-                    if (r?.type === 'sql') {
-                      r.status = 'error';
-                      r.lastError = message;
-                    }
-                  }),
-                );
-              } finally {
-                // Clean up the abort controller
-                set((state) =>
-                  produce(state, (draft) => {
-                    delete draft.notebook.activeAbortControllers[id];
-                  }),
-                );
-              }
+              },
+            },
+            text: {
+              title: 'Text',
+              createCell: (id) =>
+                ({id, type: 'text', name: 'Text', text: ''}) as NotebookCell,
+              renderComponent: (id: string) =>
+                React.createElement(TextCell, {id}),
+              findDependencies: () => [],
+            },
+            vega: {
+              title: 'Vega',
+              createCell: (id) =>
+                ({id, type: 'vega', name: 'Chart', sqlId: ''}) as NotebookCell,
+              renderComponent: (id: string) =>
+                React.createElement(VegaCell, {id}),
+              findDependencies: findDependenciesCommon,
+            },
+            input: {
+              title: 'Input',
+              createCell: (id) =>
+                ({
+                  id,
+                  type: 'input',
+                  name: 'Input',
+                  input: {kind: 'text', varName: 'input_1', value: ''},
+                }) as NotebookCell,
+              renderComponent: (id: string) =>
+                React.createElement(InputCell, {id}),
+              findDependencies: () => [],
             },
           },
-          text: {
-            title: 'Text',
-            createCell: (id) =>
-              ({id, type: 'text', name: 'Text', text: ''}) as NotebookCell,
-            renderComponent: (id: string) =>
-              React.createElement(TextCell, {id}),
-            findDependencies: () => [],
-          },
-          vega: {
-            title: 'Vega',
-            createCell: (id) =>
-              ({id, type: 'vega', name: 'Chart', sqlId: ''}) as NotebookCell,
-            renderComponent: (id: string) =>
-              React.createElement(VegaCell, {id}),
-            findDependencies: findDependenciesCommon,
-          },
-          input: {
-            title: 'Input',
-            createCell: (id) =>
-              ({
-                id,
-                type: 'input',
-                name: 'Input',
-                input: {kind: 'text', varName: 'input_1', value: ''},
-              }) as NotebookCell,
-            renderComponent: (id: string) =>
-              React.createElement(InputCell, {id}),
-            findDependencies: () => [],
-          },
         },
-      },
-    };
-
-    /**
-     * Cascade execution to cells that depend on the given source cell id.
-     */
-    async function cascadeFrom(sourceCellId: string) {
-      const cellsMap = get().notebook.config.cells;
-      const statusMap = get().notebook.cellStatus;
-      for (const candidateId in cellsMap) {
-        if (candidateId === sourceCellId) continue;
-        const candidate = cellsMap[candidateId];
-        if (!candidate) continue;
-        const reg2 = get().notebook.cellRegistry[candidate.type];
-        if (!reg2 || !reg2.findDependencies) continue;
-        const deps = reg2.findDependencies(candidate, cellsMap, statusMap);
-        if (deps.indexOf(sourceCellId) >= 0) {
-          await get().notebook.runCell(candidateId, {cascade: true});
-        }
-      }
-    }
-  });
+      };
+    },
+  );
 }
 
 /**

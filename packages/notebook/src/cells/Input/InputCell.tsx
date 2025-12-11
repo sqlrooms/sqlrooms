@@ -18,6 +18,7 @@ import {
   InputCell as InputCellType,
   NotebookCell,
 } from '../../cellSchemas';
+import {findCellInNotebook} from '../../NotebookUtils';
 
 const RenderInput: React.FC<{
   input: InputUnion;
@@ -71,7 +72,9 @@ const RenderInput: React.FC<{
 };
 
 export const InputItem: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
+  const cell = useStoreWithNotebook(
+    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+  );
   const remove = useStoreWithNotebook((s) => s.notebook.removeCell);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   if (!cell || cell.type !== 'input') return null;

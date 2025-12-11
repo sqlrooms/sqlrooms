@@ -10,7 +10,7 @@ import {
 import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {PlusIcon, SparklesIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
-import {useStoreWithCanvas} from '../CanvasSlice';
+import {CanvasNodeSchema, useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
 
 const PROMPT_PLACEHOLDER = {
@@ -34,7 +34,19 @@ export const CanvasNodeContainer: FC<
 > = ({id, className, headerRight, children}) => {
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
   const node = useStoreWithCanvas((s) =>
-    s.canvas.config.nodes.find((n) => n.id === id),
+    (() => {
+      const dagId = s.canvas.config.currentDagId ?? s.canvas.config.dagOrder[0];
+      const dag = dagId ? s.canvas.config.dags[dagId] : undefined;
+      const nodes: CanvasNodeSchema[] = dag
+        ? dag.meta.nodeOrder.length
+          ? dag.meta.nodeOrder
+              .map((nid: string) => dag.cells[nid])
+              .filter(Boolean)
+              .map((n: CanvasNodeSchema | undefined) => n as CanvasNodeSchema)
+          : Object.values(dag.cells)
+        : [];
+      return nodes.find((n: CanvasNodeSchema) => n.id === id);
+    })(),
   );
   const title = node?.data.title;
   const onTitleChange = useCallback(
@@ -74,7 +86,11 @@ export const CanvasNodeContainer: FC<
           </PopoverTrigger>
           <PopoverContent className="max-h-[50vh] w-[400px] overflow-auto">
             <QueryControls
-              placeholder={`✨ ${PROMPT_PLACEHOLDER[node?.type ?? 'default']}`}
+              placeholder={`✨ ${
+                PROMPT_PLACEHOLDER[
+                  (node?.type ?? 'default') as keyof typeof PROMPT_PLACEHOLDER
+                ]
+              }`}
               onRun={() => {
                 setAssistantOpen(true);
               }}

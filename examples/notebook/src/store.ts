@@ -1,8 +1,7 @@
 import {
-  createDefaultNotebookConfig,
   createNotebookSlice,
   Notebook,
-  NotebookSliceConfig,
+  NotebookSliceConfigSchema,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
@@ -33,8 +32,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          ...createDefaultNotebookConfig(),
-          // NotebookSliceConfig.parse(exampleNotebook).notebook,
           layout: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
@@ -89,7 +86,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
-        notebook: NotebookSliceConfig,
+        notebook: NotebookSliceConfigSchema,
       }),
     },
   ) as StateCreator<RoomState>,

@@ -77,8 +77,11 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
             className="absolute inset-0 p-1"
             value={sql}
             options={editorOptions}
-            onChange={(v) =>
-              updateNode(id, (d) => ({...(d as SqlData), sql: v || ''}))
+            onChange={(v?: string) =>
+              updateNode(id, (d: CanvasNodeData) => ({
+                ...(d as SqlData),
+                sql: v || '',
+              }))
             }
             tableSchemas={tables}
             // onMount={handleEditorMount}

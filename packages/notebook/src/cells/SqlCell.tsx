@@ -8,7 +8,7 @@ import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {AddSqlCellResultToNewTable} from '../cellOperations/AddSqlCellResultToNewTable';
 import {IconWithTooltip} from '../cellOperations/IconWithTooltip';
-import {useRelativeTimeDisplay} from '../NotebookUtils';
+import {findCellInNotebook, useRelativeTimeDisplay} from '../NotebookUtils';
 
 const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
   minimap: {enabled: false},
@@ -19,7 +19,9 @@ const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
 };
 
 export const SqlCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
+  const cell = useStoreWithNotebook(
+    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+  );
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
   const cancel = useStoreWithNotebook((s) => s.notebook.cancelRunCell);

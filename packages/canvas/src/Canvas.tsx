@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
-import React from 'react';
+import React, {useMemo} from 'react';
 import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
 import type {CanvasNodeData} from './CanvasSlice';
 import {useStoreWithCanvas} from './CanvasSlice';
@@ -24,14 +24,24 @@ const nodeTypes = {
 };
 
 export const Canvas: React.FC = () => {
-  const nodes = useStoreWithCanvas(
-    (s) => s.canvas.config.nodes,
-  ) as unknown as Node<CanvasNodeData>[];
-  const edges = useStoreWithCanvas((s) => s.canvas.config.edges) as Edge[];
+  const dag = useStoreWithCanvas((s) => {
+    const dagId = s.canvas.config.currentDagId ?? s.canvas.config.dagOrder[0];
+    return dagId ? s.canvas.config.dags[dagId] : undefined;
+  });
+
+  const nodes = useMemo(() => {
+    if (!dag) return [] as Node<CanvasNodeData>[];
+    const list = dag.meta.nodeOrder.length
+      ? dag.meta.nodeOrder.map((id: string) => dag.cells[id]).filter(Boolean)
+      : Object.values(dag.cells);
+    return list as unknown as Node<CanvasNodeData>[];
+  }, [dag]);
+
+  const edges = useMemo(() => (dag?.meta.edges ?? []) as Edge[], [dag]);
+  const viewport = dag?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
   const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
-  const viewport = useStoreWithCanvas((s) => s.canvas.config.viewport);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
 

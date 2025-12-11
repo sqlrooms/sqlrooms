@@ -5,10 +5,12 @@ import {Button, cn} from '@sqlrooms/ui';
 
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
-import {getCellTypeLabel} from '../NotebookUtils';
+import {findCellInNotebook, getCellTypeLabel} from '../NotebookUtils';
 
 export const TextCell: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook((s) => s.notebook.config.cells[id]);
+  const cell = useStoreWithNotebook(
+    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+  );
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
