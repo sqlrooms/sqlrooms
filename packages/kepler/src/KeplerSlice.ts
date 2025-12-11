@@ -9,18 +9,13 @@ import {
   wrapTo,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
-// Note: Import DuckDB helpers from internal table utils instead of the package root.
-// The root `@kepler.gl/duckdb` entry also re‑exports React components that pull in the
-// AMD build of `monaco-editor` and expect a global AMD loader (`define`), which doesn’t
-// exist in our Vite/ESM setup and would also clash with the ESM monaco configuration we
-// use via `@sqlrooms/monaco-editor`. Using the table submodules keeps us clear of that.
-import {restoreGeoarrowMetadata} from '@kepler.gl/duckdb/dist/table/duckdb-table';
 import {
   castDuckDBTypesForKepler,
   getDuckDBColumnTypes,
   getDuckDBColumnTypesMap,
+  restoreGeoarrowMetadata,
   setGeoArrowWKBExtension,
-} from '@kepler.gl/duckdb/dist/table/duckdb-table-utils';
+} from '@kepler.gl/duckdb';
 import {Layer} from '@kepler.gl/layers';
 import {arrowSchemaToFields} from '@kepler.gl/processors';
 import {
