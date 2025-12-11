@@ -19,7 +19,7 @@
     "access": "public"
   },
   "dependencies": {
-    "@paralleldrive/cuid2": "^2.2.2",
+    "@paralleldrive/cuid2": "^3.0.0",
     "zod": "^4.1.8"
   },
   "scripts": {
