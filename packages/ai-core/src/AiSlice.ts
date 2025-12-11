@@ -826,7 +826,7 @@ export function createAiSlice(
          *
          * @returns Array of analysis results for the current session
          */
-        getAnalysisResults: (): AnalysisResultSchema[] | undefined => {
+        getAnalysisResults: () => {
           const currentSession = get().ai.getCurrentSession();
           if (!currentSession) return undefined;
 
