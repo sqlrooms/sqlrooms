@@ -8,38 +8,31 @@ import {
   requestMapStyles,
   wrapTo,
 } from '@kepler.gl/actions';
-import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
-// Note: Import DuckDB helpers from internal table utils instead of the package root.
-// The root `@kepler.gl/duckdb` entry also re‑exports React components that pull in the
-// AMD build of `monaco-editor` and expect a global AMD loader (`define`), which doesn’t
-// exist in our Vite/ESM setup and would also clash with the ESM monaco configuration we
-// use via `@sqlrooms/monaco-editor`. Using the table submodules keeps us clear of that.
-import {restoreGeoarrowMetadata} from '@kepler.gl/duckdb/dist/table/duckdb-table';
+import { ALL_FIELD_TYPES, VectorTileDatasetMetadata } from '@kepler.gl/constants';
 import {
   castDuckDBTypesForKepler,
   getDuckDBColumnTypes,
-  getDuckDBColumnTypesMap,
-  setGeoArrowWKBExtension,
-} from '@kepler.gl/duckdb/dist/table/duckdb-table-utils';
-import {Layer} from '@kepler.gl/layers';
-import {arrowSchemaToFields} from '@kepler.gl/processors';
+  getDuckDBColumnTypesMap, restoreGeoarrowMetadata, setGeoArrowWKBExtension
+} from '@kepler.gl/duckdb';
+import { Layer } from '@kepler.gl/layers';
+import { arrowSchemaToFields } from '@kepler.gl/processors';
 import {
   INITIAL_UI_STATE,
   keplerGlReducer,
   KeplerGlState,
   MapStyle,
 } from '@kepler.gl/reducers';
-import {KeplerGLSchemaClass} from '@kepler.gl/schemas';
-import {KeplerTable} from '@kepler.gl/table';
-import {AddDataToMapPayload} from '@kepler.gl/types';
+import { KeplerGLSchemaClass } from '@kepler.gl/schemas';
+import { KeplerTable } from '@kepler.gl/table';
+import { AddDataToMapPayload } from '@kepler.gl/types';
 import {
   DatabaseConnection,
   initApplicationConfig,
   KeplerApplicationConfig,
 } from '@kepler.gl/utils';
-import {createId} from '@paralleldrive/cuid2';
-import {DuckDbSliceState} from '@sqlrooms/duckdb';
-import {KeplerMapSchema, KeplerSliceConfig} from '@sqlrooms/kepler-config';
+import { createId } from '@paralleldrive/cuid2';
+import { DuckDbSliceState } from '@sqlrooms/duckdb';
+import { KeplerMapSchema, KeplerSliceConfig } from '@sqlrooms/kepler-config';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -48,16 +41,16 @@ import {
   type StateCreator,
 } from '@sqlrooms/room-shell';
 import * as arrow from 'apache-arrow';
-import {produce, setAutoFreeze} from 'immer';
-import {taskMiddleware} from 'react-palm/tasks';
+import { produce, setAutoFreeze } from 'immer';
+import { taskMiddleware } from 'react-palm/tasks';
 import type {
   Action,
   AnyAction,
   MiddlewareAPI,
   Store as ReduxStore,
 } from 'redux';
-import {compose, Dispatch, Middleware} from 'redux';
-import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+import { compose, Dispatch, Middleware } from 'redux';
+import { createLogger, ReduxLoggerOptions } from 'redux-logger';
 setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
