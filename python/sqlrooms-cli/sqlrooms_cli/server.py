@@ -18,6 +18,8 @@ from diskcache import Cache
 from pkg import db_async
 from pkg.server import server as duckdb_ws_server
 
+from .state_store import DuckDBStateStore
+
 logger = logging.getLogger(__name__)
 
 
@@ -52,6 +54,7 @@ class SqlroomsHttpServer:
         self.upload_dir = self.db_path.parent / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
+        self.state_store = DuckDBStateStore(self.db_path)
         self._duckdb_thread: threading.Thread | None = None
 
     async def start(self) -> None:
@@ -121,6 +124,23 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
+
+        @app.get("/api/state")
+        async def get_state():
+            return self.state_store.load_state()
+
+        @app.post("/api/state")
+        async def save_state(payload: Dict[str, Any]):
+            state = payload.get("state") or payload.get("value") or payload
+            if not isinstance(state, dict):
+                raise HTTPException(status_code=400, detail="Invalid state payload")
+            self.state_store.save_state(state)
+            return {"ok": True}
+
+        @app.delete("/api/state")
+        async def clear_state():
+            self.state_store.clear()
+            return {"ok": True}
 
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):
