@@ -394,9 +394,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               tab={tab}
               tabClassName={tabClassName}
               editingTabId={editingTabId}
-              hideCloseButton={
-                preventCloseLastTab && openTabItems.length === 1
-              }
+              hideCloseButton={preventCloseLastTab && openTabItems.length === 1}
               onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
