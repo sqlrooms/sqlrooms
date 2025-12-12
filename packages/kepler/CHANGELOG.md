@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* downgrade styled-components to 6.1.8 ([#264](https://github.com/sqlrooms/sqlrooms/issues/264)) ([f8b1ce1](https://github.com/sqlrooms/sqlrooms/commit/f8b1ce1df617ea6a14b43c91c8b6eb3ea77d8025))
+
 ## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
 
 ### Bug Fixes

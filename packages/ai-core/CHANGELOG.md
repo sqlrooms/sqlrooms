@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* Prevent infinite rerender in AI AnalysisResultsContainer ([#262](https://github.com/sqlrooms/sqlrooms/issues/262)) ([1e46230](https://github.com/sqlrooms/sqlrooms/commit/1e46230bdab9b073b4e142b5c04850f802e10e8e))
+
 ## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
 
 ### Bug Fixes
