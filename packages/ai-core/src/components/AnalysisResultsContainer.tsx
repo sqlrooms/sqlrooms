@@ -23,7 +23,7 @@ export const AnalysisResultsContainer: React.FC<{
     s.ai.getAnalysisResults(),
   );
   const uiMessages = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.uiMessages || [],
+    (s) => s.ai.getCurrentSession()?.uiMessages,
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -48,7 +48,7 @@ export const AnalysisResultsContainer: React.FC<{
         className="flex w-full flex-grow flex-col gap-5"
       >
         {/* Render analysis results */}
-        {currentAnalysisResults.map((analysisResult) => (
+        {currentAnalysisResults?.map((analysisResult) => (
           <AnalysisResult
             key={analysisResult.id}
             analysisResult={analysisResult}

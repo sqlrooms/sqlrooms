@@ -102,7 +102,7 @@ export type AiSliceState = {
       toolCallId: string,
       additionalData: unknown,
     ) => void;
-    getAnalysisResults: () => AnalysisResultSchema[];
+    getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
@@ -838,9 +838,9 @@ export function createAiSlice(
          *
          * @returns Array of analysis results for the current session
          */
-        getAnalysisResults: (): AnalysisResultSchema[] => {
+        getAnalysisResults: () => {
           const currentSession = get().ai.getCurrentSession();
-          if (!currentSession) return [];
+          if (!currentSession) return undefined;
 
           return currentSession.analysisResults;
         },

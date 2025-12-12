@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/kepler",
-  "version": "0.26.1-rc.12",
+  "version": "0.26.1-rc.13",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -47,7 +47,7 @@
     "react-redux": "^8.0.5",
     "redux": "^4.2.1",
     "redux-logger": "^3.0.6",
-    "styled-components": "6.1.19"
+    "styled-components": "6.1.8"
   },
   "peerDependencies": {
     "react": ">=18",
