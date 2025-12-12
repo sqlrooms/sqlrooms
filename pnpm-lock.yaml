@@ -177,19 +177,19 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       '@vitejs/plugin-react':
         specifier: ^5.0.3
-        version: 5.1.1(vite@7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
+        version: 5.1.1(vite@7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
-        version: 9.39.1(jiti@1.21.7)
+        version: 9.39.1(jiti@2.6.1)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@1.21.7))
+        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
       eslint-plugin-react-refresh:
         specifier: ^0.4.21
-        version: 0.4.24(eslint@9.39.1(jiti@1.21.7))
+        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -204,10 +204,10 @@ importers:
         version: 5.9.3
       typescript-eslint:
         specifier: ^8.44.1
-        version: 8.49.0(eslint@9.39.1(jiti@1.21.7))(typescript@5.9.3)
+        version: 8.49.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
       vite:
         specifier: ^7.1.9
-        version: 7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
+        version: 7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   examples/ai-agent:
     dependencies:
@@ -256,19 +256,19 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       '@vitejs/plugin-react':
         specifier: ^4.5.2
-        version: 4.7.0(vite@7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
+        version: 4.7.0(vite@7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       autoprefixer:
         specifier: ^10.4.21
         version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
-        version: 9.39.1(jiti@2.6.1)
+        version: 9.39.1(jiti@1.21.7)
       eslint-plugin-react-hooks:
         specifier: ^5.2.0
-        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
+        version: 5.2.0(eslint@9.39.1(jiti@1.21.7))
       eslint-plugin-react-refresh:
         specifier: ^0.4.20
-        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
+        version: 0.4.24(eslint@9.39.1(jiti@1.21.7))
       globals:
         specifier: ^15.15.0
         version: 15.15.0
@@ -283,10 +283,10 @@ importers:
         version: 5.9.3
       typescript-eslint:
         specifier: ^8.34.0
-        version: 8.49.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
+        version: 8.49.0(eslint@9.39.1(jiti@1.21.7))(typescript@5.9.3)
       vite:
         specifier: ^7.1.9
-        version: 7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
+        version: 7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   examples/ai-core:
     dependencies:
@@ -2777,6 +2777,82 @@ importers:
       zod:
         specifier: 4.1.13
         version: 4.1.13
+
+  python/sqlrooms-cli/app:
+    dependencies:
+      '@sqlrooms/ai':
+        specifier: workspace:*
+        version: link:../../../packages/ai
+      '@sqlrooms/dropzone':
+        specifier: workspace:*
+        version: link:../../../packages/dropzone
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../../packages/duckdb
+      '@sqlrooms/room-shell':
+        specifier: workspace:*
+        version: link:../../../packages/room-shell
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../../../packages/sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../../../packages/ui
+      '@sqlrooms/utils':
+        specifier: workspace:*
+        version: link:../../../packages/utils
+      '@sqlrooms/vega':
+        specifier: workspace:*
+        version: link:../../../packages/vega
+      lucide-react:
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
+      zod:
+        specifier: 4.1.13
+        version: 4.1.13
+    devDependencies:
+      '@eslint/js':
+        specifier: ^9.36.0
+        version: 9.39.1
+      '@types/react':
+        specifier: 19.2.7
+        version: 19.2.7
+      '@types/react-dom':
+        specifier: 19.2.3
+        version: 19.2.3(@types/react@19.2.7)
+      '@vitejs/plugin-react':
+        specifier: ^5.0.3
+        version: 5.1.1(vite@7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
+      autoprefixer:
+        specifier: ^10.4.21
+        version: 10.4.22(postcss@8.5.6)
+      eslint:
+        specifier: ^9.36.0
+        version: 9.39.1(jiti@2.6.1)
+      eslint-plugin-react-hooks:
+        specifier: ^5.2.0
+        version: 5.2.0(eslint@9.39.1(jiti@2.6.1))
+      eslint-plugin-react-refresh:
+        specifier: ^0.4.21
+        version: 0.4.24(eslint@9.39.1(jiti@2.6.1))
+      globals:
+        specifier: ^15.15.0
+        version: 15.15.0
+      postcss:
+        specifier: ^8.5.6
+        version: 8.5.6
+      tailwindcss:
+        specifier: ^3.4.17
+        version: 3.4.18(yaml@2.8.2)
+      typescript:
+        specifier: 5.9.3
+        version: 5.9.3
+      typescript-eslint:
+        specifier: ^8.44.1
+        version: 8.49.0(eslint@9.39.1(jiti@2.6.1))(typescript@5.9.3)
+      vite:
+        specifier: ^7.1.9
+        version: 7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
 packages:
 
@@ -22000,6 +22076,18 @@ snapshots:
     optionalDependencies:
       maplibre-gl: 5.12.0
 
+  '@vitejs/plugin-react@4.7.0(vite@7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
+    dependencies:
+      '@babel/core': 7.28.5
+      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
+      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
+      '@rolldown/pluginutils': 1.0.0-beta.27
+      '@types/babel__core': 7.20.5
+      react-refresh: 0.17.0
+      vite: 7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
+    transitivePeerDependencies:
+      - supports-color
+
   '@vitejs/plugin-react@4.7.0(vite@7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
     dependencies:
       '@babel/core': 7.28.5
@@ -22009,18 +22097,6 @@ snapshots:
       '@types/babel__core': 7.20.5
       react-refresh: 0.17.0
       vite: 7.2.2(@types/node@24.10.2)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
-    transitivePeerDependencies:
-      - supports-color
-
-  '@vitejs/plugin-react@5.1.1(vite@7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
-      '@rolldown/pluginutils': 1.0.0-beta.47
-      '@types/babel__core': 7.20.5
-      react-refresh: 0.18.0
-      vite: 7.2.2(@types/node@24.10.2)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
     transitivePeerDependencies:
       - supports-color
 
