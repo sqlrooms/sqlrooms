@@ -11,8 +11,10 @@ import {
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import {getFunctionSuggestions} from './constants/functionSuggestions';
-export interface SqlMonacoEditorProps
-  extends Omit<MonacoEditorProps, 'language'> {
+export interface SqlMonacoEditorProps extends Omit<
+  MonacoEditorProps,
+  'language'
+> {
   connector?: DuckDbConnector;
   /**
    * Custom SQL keywords to add to the completion provider

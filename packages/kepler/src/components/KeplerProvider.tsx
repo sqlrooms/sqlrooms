@@ -34,7 +34,7 @@ export const KeplerProvider: React.FC<KeplerProviderProps> = ({
   return (
     <IntlProvider locale="en" messages={messages['en']}>
       <Provider store={reduxProviderStore}>
-        <StyleSheetManager shouldForwardProp={shouldForwardProp as any}>
+        <StyleSheetManager shouldForwardProp={shouldForwardProp}>
           <ThemeProvider theme={darkTheme}>
             <KeplerGlContext.Provider value={keplerContext}>
               <>{children}</>

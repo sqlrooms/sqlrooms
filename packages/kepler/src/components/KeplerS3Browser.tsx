@@ -74,13 +74,13 @@ export const KeplerS3Browser = ({
 
   // Load files on mount if there's a saved S3 config (restore previous session)
   // Intentional mount-only effect; state updates are async after data fetch
-  /* eslint-disable react-hooks/exhaustive-deps */
+  /* eslint-disable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
   useEffect(() => {
     if (currentS3Config) {
       listFiles(currentS3Config, '');
     }
   }, []);
-  /* eslint-enable react-hooks/exhaustive-deps */
+  /* eslint-enable react-hooks/set-state-in-effect, react-hooks/exhaustive-deps */
 
   const onSelectDirectory = useCallback(
     (directory: string) => {

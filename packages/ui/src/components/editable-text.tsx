@@ -73,6 +73,8 @@ export const EditableText: FC<{
     internalValueRef.current = internalValue;
   }, [internalValue]);
 
+  // Keep internalValue in sync with value prop
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (value !== internalValueRef.current) {
       setInternalValue(value);
@@ -96,6 +98,7 @@ export const EditableText: FC<{
     }
     return undefined;
   }, [isEditing, isInternalEditing]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {

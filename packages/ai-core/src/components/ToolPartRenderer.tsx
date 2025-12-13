@@ -23,9 +23,6 @@ const AgentProgressRenderer: React.FC<{
 
   return (
     <div className="mt-2 px-5 text-[0.9em]">
-      <div className="mb-2 font-bold text-gray-600">
-        Agent Tool Execution Progress:
-      </div>
       <div className="ml-3">
         {agentToolCalls.map((toolCall, index) => {
           const ToolComponent = findToolComponent(toolCall.toolName);
@@ -59,27 +56,11 @@ const AgentProgressRenderer: React.FC<{
                 </div>
               </div>
 
-              {/* Render ToolComponent if available and successful */}
               {isSuccess && hasComponent && hasObjectOutput ? (
                 <div className="ml-6 mt-1">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />
-                </div>
-              ) : null}
-
-              {/* Fallback: render output as text if no ToolComponent */}
-              {isSuccess && !hasComponent && toolCall.output !== undefined ? (
-                <div className="ml-6 mt-1 text-[0.9em] text-gray-600">
-                  {(() => {
-                    try {
-                      return typeof toolCall.output === 'object'
-                        ? JSON.stringify(toolCall.output)
-                        : String(toolCall.output);
-                    } catch {
-                      return '[Output unavailable]';
-                    }
-                  })()}
                 </div>
               ) : null}
             </div>
@@ -88,7 +69,6 @@ const AgentProgressRenderer: React.FC<{
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
-          <div className="mb-1 font-bold text-gray-600">Final Result:</div>
           <div className="text-gray-600">{finalOutput}</div>
         </div>
       )}

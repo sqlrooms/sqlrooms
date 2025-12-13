@@ -375,7 +375,9 @@ export function createDuckDbSlice({
               precedingStatements,
               createStatement,
             );
-            const result = await connector.query(fullQuery, {signal: abortSignal});
+            const result = await connector.query(fullQuery, {
+              signal: abortSignal,
+            });
             // Views don't have a row count, only tables do
             const rowCount = view ? undefined : getColValAsNumber(result);
             return {tableName, rowCount};
@@ -465,9 +467,9 @@ export function createDuckDbSlice({
             ${
               schema || database || table
                 ? `WHERE ${[
-                    schema ? `schema = ${escapeVal(schema)}` : '',
-                    database ? `database = ${escapeVal(database)}` : '',
-                    table ? `name = ${escapeVal(table)}` : '',
+                    schema ? `schema = '${escapeId(schema)}'` : '',
+                    database ? `database = '${escapeId(database)}'` : '',
+                    table ? `name = '${escapeId(table)}'` : '',
                   ]
                     .filter(Boolean)
                     .join(' AND ')}`
@@ -545,49 +547,25 @@ export function createDuckDbSlice({
               : makeQualifiedTableName({table: tableName});
 
             const {db} = get();
-            const usedArrowLoad = data instanceof arrow.Table;
-          if (usedArrowLoad) {
-            // TODO: make sure the table is replaced
-            await db.connector.loadArrow(data as arrow.Table, qualifiedName.toString());
-          } else {
-            await db.connector.loadObjects(
-              data as Record<string, unknown>[],
-              qualifiedName.toString(),
-              {
+            if (data instanceof arrow.Table) {
+              // TODO: make sure the table is replaced
+              await db.connector.loadArrow(data, qualifiedName.toString());
+            } else {
+              await db.connector.loadObjects(data, qualifiedName.toString(), {
                 replace: true,
-              },
-            );
-          }
-          let newTable = (await db.loadTableSchemas(qualifiedName))[0];
-          if (!newTable && usedArrowLoad) {
-            // The backend may finish ingestion slightly before schema introspection sees it.
-            // Retry a few times with small delays and occasional refreshes.
-            for (let attempt = 0; attempt < 10 && !newTable; attempt++) {
-              if (attempt > 0) await new Promise((r) => setTimeout(r, 100));
-              const described = (await db.loadTableSchemas(qualifiedName))[0];
-              if (described) {
-                newTable = described;
-                break;
-              }
-              // Try to refresh cached schemas and then find by name
-              await db.refreshTableSchemas();
-              const found = db.findTableByName(qualifiedName);
-              if (found) {
-                newTable = found;
-                break;
-              }
+              });
             }
-          }
-          if (!newTable) {
-            throw new Error('Failed to add table');
-          }
-          set((state) =>
-            produce(state, (draft) => {
-              draft.db.tables.push(newTable);
-            }),
-          );
-          await get().db.refreshTableSchemas();
-          return newTable;
+            const newTable = (await db.loadTableSchemas(qualifiedName))[0];
+            if (!newTable) {
+              throw new Error('Failed to add table');
+            }
+            set((state) =>
+              produce(state, (draft) => {
+                draft.db.tables.push(newTable);
+              }),
+            );
+            await get().db.refreshTableSchemas();
+            return newTable;
           },
 
           async setTableRowCount(tableName, rowCount) {
