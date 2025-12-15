@@ -13,6 +13,7 @@ type WebSocketLike = {
 };
 
 const WS_OPEN = 1;
+const WS_CONNECTING = 0;
 
 const toBase64 = (bytes: Uint8Array) => {
   const buf = (globalThis as any).Buffer as
@@ -67,6 +68,7 @@ export function createWebSocketSyncConnector(
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let joined = false;
+  let connecting = false;
   const pending: Uint8Array[] = [];
 
   const maxRetries = options.maxRetries ?? Infinity;
@@ -112,6 +114,8 @@ export function createWebSocketSyncConnector(
 
   const scheduleReconnect = (doc: LoroDoc) => {
     if (stopped) return;
+    if (reconnectTimer) return;
+    if (connecting) return;
     if (attempt >= maxRetries) {
       sendStatus('closed');
       return;
@@ -119,17 +123,37 @@ export function createWebSocketSyncConnector(
     const delay = Math.min(maxDelay, initialDelay * 2 ** attempt);
     attempt += 1;
     reconnectTimer = setTimeout(() => {
+      reconnectTimer = undefined;
       void connect(doc);
     }, delay);
   };
 
   const connect = async (doc: LoroDoc) => {
     if (stopped) return;
+    if (connecting) return;
+    if (
+      socket &&
+      (socket.readyState === WS_OPEN || socket.readyState === WS_CONNECTING)
+    ) {
+      return;
+    }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = undefined;
+    }
+    connecting = true;
     sendStatus('connecting');
     const wsCreator =
       options.createSocket ??
       ((url, protocols) => new WebSocket(url, protocols));
-    socket = wsCreator(buildUrl(), options.protocols);
+    try {
+      socket = wsCreator(buildUrl(), options.protocols);
+    } catch (error) {
+      connecting = false;
+      sendStatus('error');
+      scheduleReconnect(doc);
+      return;
+    }
     // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
     if ('binaryType' in socket) {
       try {
@@ -192,6 +216,7 @@ export function createWebSocketSyncConnector(
     const handleOpen = () => {
       attempt = 0;
       joined = false;
+      connecting = false;
       sendStatus('open');
       sendJoin();
       if (options.sendSnapshotOnConnect) {
@@ -208,6 +233,7 @@ export function createWebSocketSyncConnector(
     };
 
     const handleClose = () => {
+      connecting = false;
       sendStatus('closed');
       unsubscribeLocal?.();
       unsubscribeLocal = undefined;
@@ -217,6 +243,7 @@ export function createWebSocketSyncConnector(
     };
 
     const handleError = () => {
+      connecting = false;
       sendStatus('error');
       joined = false;
       scheduleReconnect(doc);
