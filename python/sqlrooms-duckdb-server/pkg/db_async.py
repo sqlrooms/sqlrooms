@@ -199,3 +199,53 @@ def shutdown_executor(wait: bool = False) -> None:
         EXECUTOR.shutdown(wait=wait)
     except Exception:
         pass
+
+
+# ---------- CRDT persistence helpers ----------
+
+def attach_crdt_db(path: str) -> None:
+    """Attach a separate DuckDB file for CRDT snapshots under the 'crdt' schema."""
+    if GLOBAL_CON is None:
+        raise RuntimeError("Global DuckDB connection not initialized")
+    GLOBAL_CON.execute(f"ATTACH '{path}' AS crdt;")
+    GLOBAL_CON.execute(
+        """
+        CREATE TABLE IF NOT EXISTS crdt.crdt_rooms (
+            room_id TEXT PRIMARY KEY,
+            snapshot BLOB,
+            updated_at TIMESTAMPTZ DEFAULT now()
+        );
+        """
+    )
+
+
+async def load_crdt_snapshot(room_id: str) -> Optional[bytes]:
+    """Load a CRDT snapshot blob for a room from the attached crdt schema."""
+    if GLOBAL_CON is None:
+        raise RuntimeError("Global DuckDB connection not initialized")
+
+    def _load(cur):
+        res = cur.execute(
+            "SELECT snapshot FROM crdt.crdt_rooms WHERE room_id = ?", [room_id]
+        ).fetchone()
+        return None if res is None else res[0]
+
+    return await run_db_task(_load)
+
+
+async def save_crdt_snapshot(room_id: str, snapshot: bytes) -> None:
+    """Persist a CRDT snapshot blob for a room into the attached crdt schema."""
+    if GLOBAL_CON is None:
+        raise RuntimeError("Global DuckDB connection not initialized")
+
+    def _save(cur):
+        cur.execute(
+            """
+            INSERT INTO crdt.crdt_rooms(room_id, snapshot, updated_at)
+            VALUES (?, ?, now())
+            ON CONFLICT(room_id) DO UPDATE SET snapshot = excluded.snapshot, updated_at = excluded.updated_at
+            """,
+            [room_id, snapshot],
+        )
+
+    await run_db_task(_save)

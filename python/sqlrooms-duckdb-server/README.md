@@ -41,6 +41,7 @@ Alternatively, you can install the server with `pip install sqlrooms-duckdb-serv
   - `h3@community`
 
 - `--auth-token` (optional): If provided, enables bearer authentication. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
+- `--crdt-db` (optional): Path to a dedicated DuckDB file to enable the optional CRDT sync module. When provided, the server maintains per-room Loro CRDT docs, persists snapshots to this file, and exposes CRDT WebSocket messages alongside the existing query protocol.
 
 Examples:
 
@@ -135,6 +136,23 @@ Supported messages:
     - Broadcast to subscribers via `app.publish`
     - Immediate echo to the sender: `{ "type":"notify","channel":"table:orders","payload":{"op":"update"} }`
     - Ack: `{ "type":"notifyAck","channel":"table:orders" }`
+
+### Optional CRDT sync (requires `--crdt-db`)
+
+- Join a room and receive server snapshot:
+
+  ```json
+  {"type": "crdt-join", "roomId": "room-1"}
+  ```
+
+  - Responses: `{ "type":"crdt-joined","roomId":"room-1" }` and `{ "type":"crdt-snapshot","roomId":"room-1","data":"<base64>" }`
+
+- Send binary Loro updates after joining. The server imports them into its LoroDoc, exports a normalized update, broadcasts to the room, and persists a snapshot to the attached CRDT DB file. Ack: `{ "type":"crdt-update-ack","roomId":"room-1" }`
+
+Notes:
+
+- CRDT sync is off by default; enabled only when `--crdt-db` is provided.
+- CRDT storage uses a separate DuckDB file (attached as `crdt` schema) to keep user data isolated.
 
 ## Concurrency & Cancellation
 

@@ -4,6 +4,7 @@ import time
 import asyncio
 import json
 import concurrent.futures
+import base64
 
 import ujson
 from socketify import App, CompressOptions, OpCode
@@ -80,7 +81,7 @@ def on_error(error, res, req):
         res.end(f"Error {error}")
 
 
-def server(cache, port=4000, auth_token: str | None = None):
+def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | None = None):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
     app = App()
@@ -91,10 +92,108 @@ def server(cache, port=4000, auth_token: str | None = None):
     # Auth helper
     auth = AuthManager(auth_token)
 
+    crdt_enabled = crdt_db_path is not None
+    ws_rooms: dict[object, str] = {}
+    ws_rooms_by_id: dict[int, str] = {}
+    ws_rooms_by_peer: dict[object, str] = {}
+
+    def _ws_key(ws):
+        try:
+            addr = ws.get_remote_address()  # type: ignore[attr-defined]
+            if addr:
+                return addr
+        except Exception:
+            pass
+        return id(ws)
+    if crdt_enabled:
+        try:
+            from pkg import crdt as crdt_mod
+
+            db_async.attach_crdt_db(crdt_db_path)
+            crdt_state = crdt_mod.CrdtState()
+        except Exception:
+            logger.exception("Failed to initialize CRDT module")
+            raise
+
+    async def _crdt_join(ws, room_id: str):
+        if not crdt_enabled:
+            ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
+            return
+        peer_key = _ws_key(ws)
+        print(f"joining room {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        room = await crdt_state.ensure_loaded(room_id)
+        ws._room_id = room_id  # type: ignore[attr-defined]
+        ws.subscribe(room_id)
+        ws.send({"type": "crdt-joined", "roomId": room_id}, OpCode.TEXT)
+        snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
+        print(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
+        ws.send(
+            {
+                "type": "crdt-snapshot",
+                "roomId": room_id,
+                "data": base64.b64encode(snapshot).decode("ascii"),
+            },
+            OpCode.TEXT,
+        )
+
+    async def _crdt_update(ws, payload: bytes):
+        peer_key = _ws_key(ws)
+        print(
+            f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, peer: {peer_key})"
+        )
+        if not crdt_enabled:
+            ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
+            return
+        room_id = getattr(ws, "_room_id", None)
+        if room_id is None:
+            room_id = (
+                ws_rooms.get(ws)
+                or ws_rooms_by_id.get(id(ws))
+                or ws_rooms_by_peer.get(peer_key)
+            )
+        print(f"resolved room_id: {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        if not room_id:
+            print(f"no room_id found")
+            # If we somehow missed join, ignore this update to avoid noisy errors
+            return
+        room = await crdt_state.ensure_loaded(room_id)
+        async with room.lock:
+            try:
+                room.doc.import_(payload)
+                # Broadcast the exact update we received so other peers can apply it
+                update = payload
+                await crdt_state.save_snapshot(room_id, room.doc)
+                saved_snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
+                print(f"saved snapshot for {room_id}: {len(saved_snapshot)} bytes")
+            except Exception as exc:
+                logger.exception("Failed to handle CRDT update")
+                ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
+                return
+        print(f"publishing update to room {room_id}")
+        print(f"update len: {len(update)} bytes")
+        app.publish(room_id, update, OpCode.BINARY)
+        print(f"published update to room {room_id}")
+        _ws_send(ws, {"type": "crdt-update-ack", "roomId": room_id}, OpCode.TEXT)
+
     def ws_open(ws):
         auth.on_open(ws)
+        ws._room_id = None  # type: ignore[attr-defined]
 
-    def _process_message(ws, query):
+    async def _process_message(ws, query):
+        # CRDT join: { type: 'crdt-join', roomId }
+        if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-join":
+            room_id = str(query.get("roomId") or "").strip()
+            if not room_id:
+                ws.send({"type": "error", "error": "missing roomId"}, OpCode.TEXT)
+                return
+            peer_key = _ws_key(ws)
+            ws._room_id = room_id  # type: ignore[attr-defined]
+            ws_rooms[ws] = room_id
+            ws_rooms_by_id[id(ws)] = room_id
+            ws_rooms_by_peer[peer_key] = room_id
+            await _crdt_join(ws, room_id)
+            return
+
         # Cancellation message: { type: 'cancel', queryId }
         if isinstance(query, dict) and query.get("type") == "cancel":
             qid = query.get("queryId")
@@ -105,6 +204,33 @@ def server(cache, port=4000, auth_token: str | None = None):
                 {"type": "cancelAck", "queryId": qid, "cancelled": bool(cancelled)},
                 OpCode.TEXT,
             )
+            return
+
+        # Full snapshot message from client: { type: 'crdt-snapshot', roomId, data }
+        if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-snapshot":
+            room_id = str(query.get("roomId") or "").strip()
+            data_b64 = query.get("data")
+            if not room_id or not isinstance(data_b64, str):
+                ws.send({"type": "error", "error": "missing roomId or data"}, OpCode.TEXT)
+                return
+            try:
+                payload = base64.b64decode(data_b64.encode("ascii"), validate=True)
+            except Exception as exc:
+                ws.send({"type": "error", "error": f"invalid snapshot: {exc}"}, OpCode.TEXT)
+                return
+            room = await crdt_state.ensure_loaded(room_id)
+            async with room.lock:
+                try:
+                    room.doc.import_(payload)
+                    # Broadcast the same payload (snapshot) so peers can import it too
+                    update = payload
+                    await crdt_state.save_snapshot(room_id, room.doc)
+                except Exception as exc:
+                    logger.exception("Failed to handle CRDT snapshot message")
+                    ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
+                    return
+            app.publish(room_id, update, OpCode.BINARY)
+            ws.send({"type": "crdt-snapshot-ack", "roomId": room_id}, OpCode.TEXT)
             return
 
         # Subscribe to a channel/topic: { type: 'subscribe', channel }
@@ -148,13 +274,52 @@ def server(cache, port=4000, auth_token: str | None = None):
 
         ws.send({"type": "error", "error": "invalid message"}, OpCode.TEXT)
 
-    def ws_message(ws, message, opcode):
-        try:
-            # Ensure text for JSON parse
-            if isinstance(message, (bytes, bytearray, memoryview)):
-                msg_str = bytes(message).decode("utf-8", "ignore")
+    async def ws_message(ws, message, opcode):
+        print(f"opcode: {opcode}")
+        print(f"opcode == OpCode.BINARY: {opcode == OpCode.BINARY}")
+        print(f"isinstance(message, str): {isinstance(message, str)}")
+        print(f"isinstance(message, memoryview): {isinstance(message, memoryview)}")
+        print(f"isinstance(message, (bytes, bytearray, memoryview)): {isinstance(message, (bytes, bytearray, memoryview))}")
+        print(f"crdt_enabled: {crdt_enabled}")
+
+        # Handle binary upfront with its own error handling so we never emit "invalid json"
+        if opcode == OpCode.BINARY:
+            if isinstance(message, str):
+                message_bytes = message.encode("latin-1", "ignore")
+            elif isinstance(message, memoryview):
+                message_bytes = message.tobytes()
             else:
-                msg_str = message
+                message_bytes = bytes(message)
+            if crdt_enabled:
+                try:
+                    print(f"calling _crdt_update with message_bytes len: {len(message_bytes)} bytes")
+                    await _crdt_update(ws, message_bytes)
+                except Exception as exc:
+                    print(f"error calling _crdt_update: {exc}")
+                    logger.exception("Failed to process CRDT binary message")
+                    ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
+                return
+            ws.send({"type": "error", "error": "binary not supported"}, OpCode.TEXT)
+            return
+
+        if isinstance(message, (bytes, bytearray, memoryview)):
+            if crdt_enabled:
+                print(f"message len: {len(message)} bytes")
+                print(f"message.tobytes() len: {len(message.tobytes())} bytes")
+                print(f"bytes(message) len: {len(bytes(message))} bytes")
+                try:
+                    await _crdt_update(
+                        ws, message.tobytes() if isinstance(message, memoryview) else bytes(message)
+                    )
+                except Exception as exc:
+                    logger.exception("Failed to process CRDT binary payload (bytes-like)")
+                    ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
+                return
+            msg_str = bytes(message).decode("utf-8", "ignore")
+        else:
+            msg_str = message
+
+        try:
             query = ujson.loads(msg_str)
         except Exception:
             ws.send({"type": "error", "error": "invalid json"}, OpCode.TEXT)
@@ -164,7 +329,7 @@ def server(cache, port=4000, auth_token: str | None = None):
         if auth.handle_ws_message(ws, query):
             return
 
-        _process_message(ws, query)
+        await _process_message(ws, query)
 
     # Minimal HTTP endpoints for health and version only
     def _healthz(res, req):
@@ -220,7 +385,12 @@ def server(cache, port=4000, auth_token: str | None = None):
             "drain": lambda ws: logger.warning(
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
-            "close": lambda ws, code, message: auth.on_close(ws),
+            "close": lambda ws, code, message: (
+                ws_rooms_by_peer.pop(_ws_key(ws), None),
+                ws_rooms.pop(ws, None),
+                ws_rooms_by_id.pop(id(ws), None),
+                auth.on_close(ws),
+            ),
         },
     )
 

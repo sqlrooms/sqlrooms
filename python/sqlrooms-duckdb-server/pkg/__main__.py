@@ -23,12 +23,15 @@ def serve(
     port=4000,
     extensions: list[str] | None = None,
     auth_token: str | None = None,
+    crdt_db: str | None = None,
 ):
     global _def_initialized
     if not db_path:
         db_path = ":memory:"
     logger.info(f"Using DuckDB from {db_path}")
     logger.info(f"Using port {port}")
+    if crdt_db:
+        logger.info(f"CRDT sync enabled; using CRDT DB at {crdt_db}")
     if auth_token:
         logger.info("Bearer authentication is ENABLED")
 
@@ -94,7 +97,7 @@ def serve(
     signal.signal(signal.SIGINT, _graceful_shutdown)
     signal.signal(signal.SIGTERM, _graceful_shutdown)
 
-    server(cache, port, auth_token=auth_token)
+    server(cache, port, auth_token=auth_token, crdt_db_path=crdt_db)
 
 
 if __name__ == "__main__":
@@ -115,10 +118,15 @@ if __name__ == "__main__":
         type=str,
         help="If provided, require this bearer token for HTTP and WS clients",
     )
+    parser.add_argument(
+        "--crdt-db",
+        type=str,
+        help="Path to a dedicated DuckDB file for CRDT sync. If provided, CRDT sync is enabled.",
+    )
     args = parser.parse_args()
     exts = None
     if args.extensions:
         exts = [s.strip() for s in args.extensions.split(",") if s.strip()]
     # Allow env var fallback if CLI flag not provided
     token = args.auth_token
-    serve(args.db_path, args.port, extensions=exts, auth_token=token)
+    serve(args.db_path, args.port, extensions=exts, auth_token=token, crdt_db=args.crdt_db)
