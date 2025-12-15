@@ -377,23 +377,15 @@ export function createKeplerSlice({
         },
 
         async syncKeplerDatasets() {
-          const currentDatabase = get().db.currentDatabase;
-
           for (const mapId of Object.keys(get().kepler.map)) {
             const keplerDatasets = get().kepler.map[mapId]?.visState.datasets;
             for (const {table} of get().db.tables) {
-              const schemaName = table.schema;
-              const databaseName = table.database;
-
-              // Only include tables from 'main' schema and the current local database
-              // This excludes tables from attached databases (MotherDuck, Iceberg, etc.)
-              const isMainSchema = !schemaName || schemaName === 'main';
-              const isLocalDatabase =
-                !databaseName || databaseName === currentDatabase;
-
+              // TODO: remove this once getDuckDBColumnTypesMap can handle qualified table names
+              // const qualifiedTable = table.toString();
               if (
-                isMainSchema &&
-                isLocalDatabase &&
+                // !table.schema?.startsWith('__') && // skip internal schemas
+                // !keplerDatasets?.[qualifiedTable]
+                table.schema === 'main' &&
                 !keplerDatasets?.[table.table]
               ) {
                 await get().kepler.addTableToMap(mapId, table.table, {

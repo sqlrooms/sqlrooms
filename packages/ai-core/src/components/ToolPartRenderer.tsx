@@ -92,7 +92,7 @@ type ToolPartRendererProps = {
  * @param props.part - The UI message part to render
  * @returns A React component displaying the tool part, or null if not a tool part
  */
-export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
+export const ToolPartRenderer = ({part}: {part: any}) => {
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
@@ -107,14 +107,14 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
   const toolCallId = (part as ToolUIPart).toolCallId;
   const toolName =
     part.type === 'dynamic-tool'
-      ? (part as any).toolName || 'unknown'
+      ? part.toolName || 'unknown'
       : part.type.replace(/^tool-/, '') || 'unknown';
-  const state = (part as any).state;
-  const input = (part as any).input;
+  const state = part.state;
+  const input = part.input;
   const output =
-    state === 'output-available' ? (part as any).output : undefined;
+    state === 'output-available' ? part.output : undefined;
   const errorText =
-    state === 'output-error' ? (part as any).errorText : undefined;
+    state === 'output-error' ? part.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
   const additionalData = toolAdditionalData[toolCallId];
 

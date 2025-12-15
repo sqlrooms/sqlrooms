@@ -78,12 +78,7 @@ export function useToolGrouping(
             type: 'tool-group',
             parts: [part],
             startIndex: i,
-            title: generateToolGroupTitle(
-              [part],
-              false,
-              containerWidth,
-              toolAdditionalData,
-            ),
+            title: generateToolGroupTitle([part], false, containerWidth),
             defaultExpanded: true, // Excluded tools are expanded by default
           });
           i++;
@@ -156,7 +151,6 @@ export function useToolGrouping(
           toolParts,
           hasMoreToolsAfter,
           containerWidth,
-          toolAdditionalData,
         );
 
         groups.push({
@@ -172,7 +166,7 @@ export function useToolGrouping(
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth, exclude, toolAdditionalData]);
+  }, [uiMessageParts, containerWidth, exclude]);
 }
 
 /**
@@ -206,15 +200,13 @@ function getToolIcon(toolName: string): React.ReactNode | null {
 /**
  * Generate a dynamic title for a tool group based on completion status and reasoning
  * @param toolParts - The tool parts in this group
- * @param hasMoreToolsAfter - Whether there are more tool calls after this group (in the same chain)
+ * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
- * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  */
 function generateToolGroupTitle(
   toolParts: UIMessagePart[],
   hasMoreToolsAfter: boolean,
   containerWidth: number,
-  toolAdditionalData: Record<string, unknown> = {},
 ): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
