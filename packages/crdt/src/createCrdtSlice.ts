@@ -64,6 +64,7 @@ export function createCrdtSlice<
     let mirror: Mirror<TSchema> | undefined;
     let unsubStore: (() => void) | undefined;
     let unsubMirror: (() => void) | undefined;
+    let unsubDocLocal: (() => void) | undefined;
     let suppressStoreToMirror = false;
     let lastOutbound: Partial<InferredState<TSchema>> | undefined;
 
@@ -95,6 +96,12 @@ export function createCrdtSlice<
       ) {
         return;
       }
+      // Debug visibility for outbound updates to the CRDT mirror/doc.
+      // Helps detect when local state changes are not producing CRDT traffic.
+      console.debug(
+        '[crdt] pushFromStore outbound keys:',
+        options.bindings.map((b) => b.key),
+      );
       lastOutbound = next;
 
       mirror.setState(
@@ -144,6 +151,10 @@ export function createCrdtSlice<
           initialState: options.initialState,
           ...(options.mirrorOptions ?? {}),
         });
+        // Debug local doc updates to verify mirror.setState is producing CRDT ops.
+        unsubDocLocal = doc.subscribeLocalUpdates?.((update: Uint8Array) => {
+          console.debug('[crdt] doc local update', update.byteLength, 'bytes');
+        });
 
         // Subscribe mirror->store first so snapshot/imported state wins.
         unsubMirror = mirror.subscribe((state, meta) => {
@@ -158,7 +169,9 @@ export function createCrdtSlice<
         });
 
         if (options.sync) {
+          console.info('[crdt] initializing sync connector');
           await options.sync.connect(doc);
+          console.info('[crdt] sync connector connected');
         }
 
         set((state: any) => ({
@@ -189,6 +202,7 @@ export function createCrdtSlice<
     const destroy = async () => {
       unsubStore?.();
       unsubMirror?.();
+      unsubDocLocal?.();
       if (options.sync?.disconnect) {
         await options.sync.disconnect();
       }

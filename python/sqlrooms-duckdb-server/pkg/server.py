@@ -171,6 +171,12 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
                 return
         print(f"publishing update to room {room_id}")
         print(f"update len: {len(update)} bytes")
+        # Send to all peers in the room except the originating websocket to avoid
+        # echoing the update back and causing client-side loops.
+        # for peer, peer_room in list(ws_rooms.items()):
+        #     if peer_room != room_id or peer is ws:
+        #         continue
+        #     _ws_send(peer, update, OpCode.BINARY)
         app.publish(room_id, update, OpCode.BINARY)
         print(f"published update to room {room_id}")
         _ws_send(ws, {"type": "crdt-update-ack", "roomId": room_id}, OpCode.TEXT)
@@ -210,6 +216,8 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-snapshot":
             room_id = str(query.get("roomId") or "").strip()
             data_b64 = query.get("data")
+            if isinstance(data_b64, str):
+                print(f"crdt-snapshot data length (b64 chars): {len(data_b64)}")
             if not room_id or not isinstance(data_b64, str):
                 ws.send({"type": "error", "error": "missing roomId or data"}, OpCode.TEXT)
                 return
@@ -318,6 +326,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
             msg_str = bytes(message).decode("utf-8", "ignore")
         else:
             msg_str = message
+            print(f"text message len: {len(msg_str)} chars")
 
         try:
             query = ujson.loads(msg_str)
@@ -379,13 +388,23 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
     app.ws(
         "/*",
         {
-            "compression": CompressOptions.SHARED_COMPRESSOR,
+            # Disable compression to avoid inflate errors and accept larger payloads.
+            "compression": CompressOptions.DISABLED,
+            # Raise payload limits/backpressure so large CRDT payloads (snapshot or updates)
+            # don't trip the uWebSockets max size guard. Include both camelCase and
+            # snake_case to satisfy socketify option parsing.
+            "max_payload_length": 128 * 1024 * 1024,
+            "max_backpressure": 64 * 1024 * 1024,
+            "close_on_backpressure_limit": False,
             "open": ws_open,
             "message": ws_message,
             "drain": lambda ws: logger.warning(
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
             "close": lambda ws, code, message: (
+                print(
+                    f"ws closed code={code} reason={message} room={getattr(ws, '_room_id', None)} id={id(ws)}"
+                ),
                 ws_rooms_by_peer.pop(_ws_key(ws), None),
                 ws_rooms.pop(ws, None),
                 ws_rooms_by_id.pop(id(ws), None),

@@ -85,134 +85,129 @@ const ROOM_ID =
   (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room';
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs(
-    {
-      name: 'canvas-sync-example-app-state-storage',
-      sliceConfigSchemas: {
-        room: BaseRoomConfig,
-        layout: LayoutConfig,
-        canvas: CanvasSliceConfig,
-        app: AppConfig,
-      },
-    },
-    (set, get, store) => {
-      const connector = createWebSocketSyncConnector({
-        url: SERVER_URL,
-        roomId: ROOM_ID,
-        sendSnapshotOnConnect: true,
-        onStatus: (status) => set({connection: status}),
-      });
+  // persistSliceConfigs(
+  //   {
+  //     name: 'canvas-sync-example-app-state-storage',
+  //     sliceConfigSchemas: {
+  //       room: BaseRoomConfig,
+  //       layout: LayoutConfig,
+  //       canvas: CanvasSliceConfig,
+  //       app: AppConfig,
+  //     },
+  //   },
+  (set, get, store) => {
+    const connector = createWebSocketSyncConnector({
+      url: SERVER_URL,
+      roomId: ROOM_ID,
+      sendSnapshotOnConnect: true,
+      onStatus: (status) => set({connection: status}),
+    });
 
-      const crdtSlice = createCrdtSlice<
-        Record<string, unknown>,
-        typeof canvasMirrorSchema
-      >({
-        schema: canvasMirrorSchema,
-        bindings: [
-          {
-            key: 'canvas',
-            select: (state) =>
-              ({
-                config: {
-                  nodes: (state as RoomState).canvas.config.nodes,
-                  edges: (state as RoomState).canvas.config.edges,
-                },
-              }) as any,
-            apply: (value) => {
-              if (!value?.config) return;
-              set((state) => ({
-                ...state,
-                canvas: {
-                  ...state.canvas,
-                  config: CanvasSliceConfig.parse({
-                    ...state.canvas.config,
-                    ...value.config,
-                    // Keep local viewport unsynced
-                    viewport: state.canvas.config.viewport,
-                  }),
-                },
-              }));
-            },
-          },
-        ],
-        initialState: {
-          canvas: {
-            config: {
-              nodes: [],
-              edges: [],
-            },
-          },
-        },
-        storage: createLocalStorageDocStorage('canvas-sync-example'),
-        sync: connector,
-      })(set, get, store);
-
-      return {
-        connection: 'idle' as RoomConnectionStatus,
-        setConnection: (status) => set({connection: status}),
-        ...createRoomShellSlice({
-          connector: createWebSocketDuckDbConnector({
-            wsUrl: SERVER_URL,
-          }),
-          // config: {
-          //   dataSources: [
-          //     {
-          //       tableName: 'earthquakes',
-          //       type: 'url',
-          //       url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
-          //     },
-          //   ],
-          // },
-          layout: {
-            config: {
-              type: LayoutTypes.enum.mosaic,
-              nodes: {
-                direction: 'row',
-                splitPercentage: 20,
-                first: 'data',
-                second: 'main',
+    const crdtSlice = createCrdtSlice<
+      Record<string, unknown>,
+      typeof canvasMirrorSchema
+    >({
+      schema: canvasMirrorSchema,
+      bindings: [
+        {
+          key: 'canvas',
+          select: (state) =>
+            ({
+              config: {
+                nodes: (state as RoomState).canvas.config.nodes,
+                edges: (state as RoomState).canvas.config.edges,
               },
-            },
-            panels: {
-              main: {
-                title: 'Canvas',
-                icon: () => null,
-                component: Canvas,
-                placement: 'main',
-              },
-              data: {
-                title: 'Data',
-                icon: DatabaseIcon,
-                component: DataSourcesPanel,
-                placement: 'sidebar',
-              },
-            },
-          },
-        })(set, get, store),
-
-        ...createCanvasSlice({
-          ai: {
-            getApiKey: () => get().app.config.apiKey,
-            defaultModel: 'gpt-4.1-mini',
-          },
-        })(set, get, store),
-
-        ...crdtSlice,
-
-        // App slice with config
-        app: {
-          config: AppConfig.parse({}),
-          setApiKey: (apiKey) =>
+            }) as any,
+          apply: (value) => {
+            if (!value?.config) return;
             set((state) => ({
-              app: {
-                ...state.app,
-                config: {...state.app.config, apiKey},
+              ...state,
+              canvas: {
+                ...state.canvas,
+                config: CanvasSliceConfig.parse({
+                  ...state.canvas.config,
+                  ...value.config,
+                  // Keep local viewport unsynced
+                  viewport: state.canvas.config.viewport,
+                }),
               },
-            })),
+            }));
+          },
         },
-      };
-    },
-  ),
+      ],
+      initialState: {
+        canvas: {
+          config: {
+            nodes: [],
+            edges: [],
+          },
+        },
+      },
+      storage: createLocalStorageDocStorage('canvas-sync-example'),
+      sync: connector,
+    })(set, get, store);
+
+    return {
+      connection: 'idle' as RoomConnectionStatus,
+      setConnection: (status) => set({connection: status}),
+      ...createRoomShellSlice({
+        connector: createWebSocketDuckDbConnector({
+          wsUrl: SERVER_URL,
+        }),
+        // config: {
+        //   dataSources: [
+        //     {
+        //       tableName: 'earthquakes',
+        //       type: 'url',
+        //       url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+        //     },
+        //   ],
+        // },
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: 'main',
+          },
+          panels: {
+            main: {
+              title: 'Canvas',
+              icon: () => null,
+              component: Canvas,
+              placement: 'main',
+            },
+            data: {
+              title: 'Data',
+              icon: DatabaseIcon,
+              component: DataSourcesPanel,
+              placement: 'sidebar',
+            },
+          },
+        },
+      })(set, get, store),
+
+      ...createCanvasSlice({
+        ai: {
+          getApiKey: () => get().app.config.apiKey,
+          defaultModel: 'gpt-4.1-mini',
+        },
+      })(set, get, store),
+
+      ...crdtSlice,
+
+      // App slice with config
+      app: {
+        config: AppConfig.parse({}),
+        setApiKey: (apiKey) =>
+          set((state) => ({
+            app: {
+              ...state.app,
+              config: {...state.app.config, apiKey},
+            },
+          })),
+      },
+    };
+  },
+  // ),
 );
 
 /**

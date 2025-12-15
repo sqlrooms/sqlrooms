@@ -70,10 +70,56 @@ export function createWebSocketSyncConnector(
   let joined = false;
   let connecting = false;
   const pending: Uint8Array[] = [];
+  let localSubscribed = false;
 
   const maxRetries = options.maxRetries ?? Infinity;
   const initialDelay = options.initialDelayMs ?? 500;
   const maxDelay = options.maxDelayMs ?? 5000;
+
+  const maybeSendUpdate = (update: Uint8Array) => {
+    console.debug('[crdt] local update observed', update.byteLength, 'bytes', {
+      joined,
+      readyState: socket?.readyState,
+    });
+    if (!socket || socket.readyState !== WS_OPEN) {
+      console.debug('[crdt] skip send: socket not open, buffering');
+      pending.push(update);
+      return;
+    }
+    if (!joined) {
+      console.debug(
+        '[crdt] buffering local update before join',
+        update.byteLength,
+        'bytes',
+      );
+      pending.push(update);
+      return;
+    }
+    console.debug('[crdt] sending local update', update.byteLength, 'bytes');
+    socket.send(update);
+  };
+
+  const attachLocalSubscription = (doc: LoroDoc) => {
+    try {
+      const unsub = doc.subscribeLocalUpdates((update: Uint8Array) => {
+        // Pass through to shared handler so we keep centralized buffering/sending logic.
+        maybeSendUpdate(update);
+      });
+      unsubscribeLocal = () => {
+        try {
+          unsub();
+        } catch (error) {
+          console.warn('[crdt] failed to unsubscribe local updates', error);
+        }
+      };
+      localSubscribed = true;
+      console.debug('[crdt] attached local update subscription');
+    } catch (error) {
+      console.warn('[crdt] failed to attach local subscription', error);
+      localSubscribed = false;
+      unsubscribeLocal = undefined;
+    }
+  };
 
   const buildUrl = () => {
     const url = new URL(options.url);
@@ -88,12 +134,14 @@ export function createWebSocketSyncConnector(
   };
 
   const sendStatus = (status: 'connecting' | 'open' | 'closed' | 'error') => {
+    console.info('[crdt] ws status ->', status);
     options.onStatus?.(status);
   };
 
   const sendJoin = () => {
     if (!socket || socket.readyState !== WS_OPEN) return;
     const payload = JSON.stringify({type: 'crdt-join', roomId: options.roomId});
+    console.debug('[crdt] sending join', payload);
     socket.send(payload);
   };
 
@@ -101,6 +149,10 @@ export function createWebSocketSyncConnector(
     if (!socket || socket.readyState !== WS_OPEN) return;
     try {
       const snapshot = doc.export({mode: 'snapshot'});
+      console.info(
+        '[crdt] sending snapshot bytes',
+        snapshot?.byteLength ?? snapshot?.length ?? 0,
+      );
       const payload = JSON.stringify({
         type: 'crdt-snapshot',
         roomId: options.roomId,
@@ -131,10 +183,19 @@ export function createWebSocketSyncConnector(
   const connect = async (doc: LoroDoc) => {
     if (stopped) return;
     if (connecting) return;
+    // Always (re)attach; if an earlier attempt failed, retry now.
+    if (!localSubscribed) {
+      attachLocalSubscription(doc);
+    }
+    console.info('[crdt] connect start');
     if (
       socket &&
       (socket.readyState === WS_OPEN || socket.readyState === WS_CONNECTING)
     ) {
+      console.info(
+        '[crdt] reuse existing socket, readyState:',
+        socket.readyState,
+      );
       return;
     }
     if (reconnectTimer) {
@@ -146,8 +207,10 @@ export function createWebSocketSyncConnector(
     const wsCreator =
       options.createSocket ??
       ((url, protocols) => new WebSocket(url, protocols));
+    const url = buildUrl();
     try {
-      socket = wsCreator(buildUrl(), options.protocols);
+      socket = wsCreator(url, options.protocols);
+      console.info('[crdt] ws created', url);
     } catch (error) {
       connecting = false;
       sendStatus('error');
@@ -191,12 +254,24 @@ export function createWebSocketSyncConnector(
       if (typeof event.data === 'string') {
         try {
           const parsed = JSON.parse(event.data);
+          console.debug('[crdt] ws message', parsed?.type);
           if (parsed?.type === 'crdt-joined') {
             joined = true;
+            console.debug(
+              '[crdt] joined room, flushing',
+              pending.length,
+              'pending',
+            );
             // flush pending updates
             while (pending.length) {
               const update = pending.shift();
               if (update && socket && socket.readyState === WS_OPEN) {
+                // Debug visibility for diagnosing silent sync issues.
+                console.debug(
+                  '[crdt] sending pending update after join',
+                  update.byteLength,
+                  'bytes',
+                );
                 socket.send(update);
               }
             }
@@ -222,37 +297,62 @@ export function createWebSocketSyncConnector(
       if (options.sendSnapshotOnConnect) {
         sendSnapshot(doc);
       }
-      unsubscribeLocal = doc.subscribeLocalUpdates((update: Uint8Array) => {
-        if (!socket || socket.readyState !== WS_OPEN) return;
-        if (!joined) {
-          pending.push(update);
-          return;
-        }
-        socket.send(update);
-      });
+      attachLocalSubscription(doc);
     };
 
-    const handleClose = () => {
+    const handleClose = (event: CloseEvent) => {
+      console.warn('CRDT WS closed', {
+        code: event.code,
+        reason: event.reason,
+        pending: pending.length,
+        joined,
+      });
       connecting = false;
       sendStatus('closed');
       unsubscribeLocal?.();
       unsubscribeLocal = undefined;
+      localSubscribed = false;
       joined = false;
       pending.length = 0;
       scheduleReconnect(doc);
     };
 
-    const handleError = () => {
+    const handleError = (event: Event) => {
+      console.warn('CRDT WS error', event);
       connecting = false;
       sendStatus('error');
       joined = false;
+      unsubscribeLocal?.();
+      unsubscribeLocal = undefined;
+      localSubscribed = false;
       scheduleReconnect(doc);
     };
 
-    socket.addEventListener('message', handleMessage);
-    socket.addEventListener('open', handleOpen);
-    socket.addEventListener('close', handleClose);
-    socket.addEventListener('error', handleError);
+    // Some WebSocket implementations expose either addEventListener or on*
+    // handlers. Use one style only to avoid duplicate events.
+    if (typeof socket.addEventListener === 'function') {
+      socket.addEventListener('message', handleMessage);
+      socket.addEventListener('open', handleOpen);
+      socket.addEventListener('close', handleClose);
+      socket.addEventListener('error', handleError);
+    } else {
+      (socket as any).onmessage = handleMessage;
+      (socket as any).onopen = handleOpen;
+      (socket as any).onclose = handleClose;
+      (socket as any).onerror = handleError;
+    }
+
+    // If we stay in CONNECTING too long, force a reconnect to avoid being stuck.
+    setTimeout(() => {
+      if (socket && socket.readyState === WS_CONNECTING && !joined) {
+        console.warn('[crdt] ws still connecting after timeout; retrying');
+        try {
+          socket.close();
+        } catch (error) {
+          console.warn('[crdt] error closing stuck socket', error);
+        }
+      }
+    }, 3000);
   };
 
   const disconnect = async () => {
@@ -263,6 +363,7 @@ export function createWebSocketSyncConnector(
     }
     unsubscribeLocal?.();
     unsubscribeLocal = undefined;
+    localSubscribed = false;
     if (socket) {
       try {
         socket.close();
