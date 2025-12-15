@@ -1626,8 +1626,8 @@ importers:
         specifier: workspace:*
         version: link:../../packages/ui
       lucide-react:
-        specifier: 0.544.0
-        version: 0.544.0(react@19.2.1)
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
       monaco-editor:
         specifier: 0.55.1
         version: 0.55.1
@@ -1869,6 +1869,9 @@ importers:
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../ai
+      '@sqlrooms/cells':
+        specifier: workspace:*
+        version: link:../cells
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -1906,6 +1909,33 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
 
+  packages/cells:
+    dependencies:
+      '@paralleldrive/cuid2':
+        specifier: ^2.2.2
+        version: 2.3.1
+      '@sqlrooms/data-table':
+        specifier: workspace:*
+        version: link:../data-table
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../sql-editor
+      '@sqlrooms/ui':
+        specifier: workspace:*
+        version: link:../ui
+      lucide-react:
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
+      react:
+        specifier: 19.2.1
+        version: 19.2.1
+      react-dom:
+        specifier: 19.2.1
+        version: 19.2.1(react@19.2.1)
+
   packages/cosmos:
     dependencies:
       '@cosmograph/cosmos':
@@ -1935,6 +1965,12 @@ importers:
       zustand:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+
+  packages/dag:
+    dependencies:
+      '@sqlrooms/room-store':
+        specifier: workspace:*
+        version: link:../room-store
 
   packages/data-table:
     dependencies:
@@ -2296,6 +2332,9 @@ importers:
       '@paralleldrive/cuid2':
         specifier: ^2.2.2
         version: 2.3.1
+      '@sqlrooms/cells':
+        specifier: workspace:*
+        version: link:../cells
       '@sqlrooms/data-table':
         specifier: workspace:*
         version: link:../data-table
@@ -2317,15 +2356,12 @@ importers:
       '@sqlrooms/vega':
         specifier: workspace:*
         version: link:../vega
-      dayjs:
-        specifier: ^1.11.13
-        version: 1.11.19
       immer:
-        specifier: ^10.1.1
-        version: 10.2.0
+        specifier: ^11.0.1
+        version: 11.0.1
       lucide-react:
-        specifier: ^0.474.0
-        version: 0.474.0(react@19.2.1)
+        specifier: ^0.555.0
+        version: 0.555.0(react@19.2.1)
       react:
         specifier: 19.2.1
         version: 19.2.1
@@ -2333,7 +2369,7 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
       react-hook-form:
-        specifier: ^7.57.0
+        specifier: ^7.68.0
         version: 7.68.0(react@19.2.1)
       react-markdown:
         specifier: ^10.1.0
@@ -10083,9 +10119,6 @@ packages:
 
   immediate@3.0.6:
     resolution: {integrity: sha512-XXOFtyqDjNDAQxVfYxuF7g9Il/IbWmmlQg2MYKOH8ExIT1qg6xc4zyS3HaEEATgs1btfzxq15ciUiY7gjSXRGQ==}
-
-  immer@10.2.0:
-    resolution: {integrity: sha512-d/+XTN3zfODyjr89gM3mPq1WNX2B8pYsu7eORitdwyA2sBubnTl3laYlBk4sXY5FUa5qTZGBDPJICVbvqzjlbw==}
 
   immer@11.0.1:
     resolution: {integrity: sha512-naDCyggtcBWANtIrjQEajhhBEuL9b0Zg4zmlWK2CzS6xCWSE39/vvf4LqnMjUAWHBhot4m9MHCM/Z+mfWhUkiA==}
@@ -24883,8 +24916,6 @@ snapshots:
   image-size@0.7.5: {}
 
   immediate@3.0.6: {}
-
-  immer@10.2.0: {}
 
   immer@11.0.1: {}
 

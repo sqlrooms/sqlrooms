@@ -1,21 +1,12 @@
 import {QueryDataTable} from '@sqlrooms/data-table';
-import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Button, useToast} from '@sqlrooms/ui';
-import {FC, useMemo, useState} from 'react';
+import {FC, useMemo} from 'react';
+import {SqlCellBody, type SqlCellBodyStatus} from '@sqlrooms/cells';
 import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
 // import type * as Monaco from 'monaco-editor';
 // type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
 // type MonacoInstance = typeof Monaco;
-
-const EDITOR_OPTIONS: Parameters<typeof SqlMonacoEditor>[0]['options'] = {
-  minimap: {enabled: false},
-  lineNumbers: 'off',
-  scrollbar: {
-    handleMouseWheel: false,
-  },
-  fixedOverflowWidgets: false,
-};
 
 type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
 
@@ -27,37 +18,14 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
   const result = useStoreWithCanvas((s) => s.canvas.sqlResults[id]);
   const {toast} = useToast();
 
-  // const handleEditorMount = useCallback(
-  //   (editor: EditorInstance, monaco: MonacoInstance) => {
-  //     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-  //       if (editor.hasTextFocus()) {
-  //         execute(id);
-  //       }
-  //     });
-  //   },
-  //   [execute],
-  // );
-
-  // const reactFlowContainerRef = useRef<HTMLDivElement>(null);
-  // useEffect(() => {
-  //   reactFlowContainerRef.current = document.querySelector<HTMLDivElement>(
-  //     '.react-flow__renderer',
-  //   );
-  // }, []);
-  const [overflowWidgetsDomNode, setOverflowWidgetsDomNode] =
-    useState<HTMLDivElement | null>(null);
-
-  const editorOptions = useMemo(
-    (): typeof EDITOR_OPTIONS =>
-      overflowWidgetsDomNode
-        ? {
-            ...EDITOR_OPTIONS,
-            overflowWidgetsDomNode: overflowWidgetsDomNode ?? undefined,
-            fixedOverflowWidgets: false,
-          }
-        : EDITOR_OPTIONS,
-    [overflowWidgetsDomNode],
-  );
+  const status: SqlCellBodyStatus =
+    result?.status === 'success'
+      ? {state: 'success', resultName: result.tableName}
+      : result?.status === 'error'
+        ? {state: 'error', message: result.error}
+        : result?.status === 'loading'
+          ? {state: 'running'}
+          : {state: 'idle'};
 
   return (
     <CanvasNodeContainer
@@ -71,51 +39,36 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
         </>
       }
     >
-      <div className="flex h-full w-full flex-col">
-        <div className="relative flex-1">
-          <SqlMonacoEditor
-            className="absolute inset-0 p-1"
-            value={sql}
-            options={editorOptions}
-            onChange={(v?: string) =>
-              updateNode(id, (d: CanvasNodeData) => ({
-                ...(d as SqlData),
-                sql: v || '',
-              }))
-            }
-            tableSchemas={tables}
-            // onMount={handleEditorMount}
-          />
-        </div>
-        {result?.status === 'error' && (
-          <div className="flex-1 overflow-auto whitespace-pre-wrap border-t p-4 font-mono text-xs text-red-600">
-            {result.error}
-          </div>
-        )}
-        {result?.status === 'success' && (
-          <div className="flex-[2] overflow-hidden border-t">
-            <QueryDataTable
-              query={`SELECT * FROM ${result.tableName}`}
-              fontSize="text-xs"
-            />
-          </div>
-        )}
-      </div>
-      {/* {reactFlowContainerRef.current &&
-        createPortal(
-          <div
-            ref={(node) => {
-              if (node && !overflowWidgetsDomNode) {
-                setOverflowWidgetsDomNode(node);
-              }
-            }}
-            // CRITICAL: You must re-apply the monaco class here!
-            className="monaco-editor"
-            // CRITICAL: Styles to ensure overlays position correctly relative to window
-            style={{position: 'absolute', top: 0, left: 0}}
-          />,
-          reactFlowContainerRef.current,
-        )} */}
+      <SqlCellBody
+        sql={sql}
+        onSqlChange={(v) =>
+          updateNode(id, (d: CanvasNodeData) => ({
+            ...(d as SqlData),
+            sql: v || '',
+          }))
+        }
+        onRun={() =>
+          execute(id).catch((e) =>
+            toast({
+              title: 'Run failed',
+              description: e instanceof Error ? e.message : String(e),
+              variant: 'destructive',
+            }),
+          )
+        }
+        status={status}
+        resultName={result?.status === 'success' ? result.tableName : undefined}
+        renderResult={
+          result?.status === 'success' ? (
+            <div className="flex-[2] overflow-hidden border-t">
+              <QueryDataTable
+                query={`SELECT * FROM ${result.tableName}`}
+                fontSize="text-xs"
+              />
+            </div>
+          ) : undefined
+        }
+      />
     </CanvasNodeContainer>
   );
 };

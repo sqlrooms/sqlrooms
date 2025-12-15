@@ -56,6 +56,7 @@ export type NotebookSliceState = {
           lastError?: string;
           referencedTables?: string[];
           resultView?: string;
+          resultName?: string;
           lastRunTime?: number;
         }
       | {

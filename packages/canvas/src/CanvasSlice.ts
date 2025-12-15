@@ -5,7 +5,12 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {DagConfig, DagSliceState, createDagSlice} from '@sqlrooms/dag';
+import {
+  DagConfig,
+  DagSliceState,
+  createDagSlice,
+  ensureDag,
+} from '@sqlrooms/cells';
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
@@ -158,26 +163,12 @@ function ensureCurrentDagId(config: CanvasSliceConfig) {
   return config.currentDagId ?? config.dagOrder[0];
 }
 
-function ensureDagExists(config: CanvasSliceConfig): {
-  dag: {cells: Record<string, CanvasNodeSchema>; meta: CanvasDagMeta};
-  dagId: string;
-} {
-  let dagId = ensureCurrentDagId(config);
-  if (!dagId) {
-    dagId = createId();
-    config.dagOrder.push(dagId);
-  }
-  let dag = config.dags[dagId];
-  if (!dag) {
-    dag = {
-      id: dagId,
-      cells: {},
-      meta: {viewport: {x: 0, y: 0, zoom: 1}, edges: [], nodeOrder: []},
-    };
-    config.dags[dagId] = dag;
-  }
-  if (!config.currentDagId) config.currentDagId = dagId;
-  return {dag, dagId};
+function ensureDagExists(config: CanvasSliceConfig) {
+  return ensureDag(config, () => ({
+    viewport: {x: 0, y: 0, zoom: 1},
+    edges: [],
+    nodeOrder: [],
+  }));
 }
 
 function findDagIdByNodeId(config: CanvasSliceConfig, nodeId: string) {

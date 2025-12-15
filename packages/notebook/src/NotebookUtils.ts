@@ -1,13 +1,12 @@
 import {useEffect, useMemo, useState} from 'react';
-import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime';
 
+import {formatTimeRelative} from '@sqlrooms/utils';
 import {
   InputTypes,
+  InputUnion,
   NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
-  InputUnion,
 } from './cellSchemas';
 
 export const findTab = (
@@ -73,18 +72,6 @@ export const initializeInput = (
   }
 };
 
-dayjs.extend(relativeTime);
-
-const computeRelativeTime = (timestamp: number | null) => {
-  if (!timestamp) return '';
-
-  const now = dayjs();
-  const past = dayjs(timestamp);
-  const diffInDays = now.diff(past, 'day');
-
-  return diffInDays >= 7 ? past.format('YYYY-MM-DD') : past.fromNow();
-};
-
 export function useRelativeTimeDisplay(pastDate: number | null): string {
   const [tick, setTick] = useState(0);
 
@@ -94,5 +81,5 @@ export function useRelativeTimeDisplay(pastDate: number | null): string {
     return () => clearInterval(interval);
   }, [pastDate]);
 
-  return useMemo(() => computeRelativeTime(pastDate), [pastDate, tick]);
+  return useMemo(() => formatTimeRelative(pastDate), [pastDate, tick]);
 }

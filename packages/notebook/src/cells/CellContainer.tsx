@@ -59,7 +59,7 @@ export const CellContainer: React.FC<{
           {rightControls}
         </div>
       </div>
-      {children}
+      <div className="flex-1 overflow-auto">{children}</div>
     </div>
   );
 };

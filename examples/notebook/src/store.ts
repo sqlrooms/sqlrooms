@@ -1,6 +1,5 @@
 import {
   createNotebookSlice,
-  Notebook,
   NotebookSliceConfigSchema,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
@@ -18,6 +17,7 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
+import {NotebookPanel} from './NotebookPanel';
 
 export type RoomState = RoomShellSliceState &
   NotebookSliceState & {
@@ -54,7 +54,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             main: {
               title: 'Notebook',
               icon: () => null,
-              component: Notebook,
+              component: NotebookPanel,
               placement: 'main',
             },
             data: {

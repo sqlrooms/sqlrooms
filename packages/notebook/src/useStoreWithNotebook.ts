@@ -1,4 +1,4 @@
-import type {DagSliceState} from '@sqlrooms/dag';
+import type {DagSliceState} from '@sqlrooms/cells';
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, useBaseRoomStore} from '@sqlrooms/room-shell';
 

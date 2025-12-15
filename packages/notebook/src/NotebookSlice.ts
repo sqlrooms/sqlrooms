@@ -1,5 +1,10 @@
 import {createId} from '@paralleldrive/cuid2';
-import {DagSliceState, createDagSlice} from '@sqlrooms/dag';
+import {
+  DagSliceState,
+  createDagSlice,
+  findSqlDependencies,
+  renderSqlWithInputs,
+} from '@sqlrooms/cells';
 import {
   DuckDbSliceState,
   escapeId,
@@ -439,18 +444,12 @@ export function createNotebookSlice(props?: {
                     const c = cellsMap2[key];
                     if (c?.type === 'input') inputs.push(c);
                   }
-                  const varMap: Record<string, string | number> = {};
-                  for (const iv of inputs) {
-                    varMap[iv.input.varName] = iv.input.value;
-                  }
-                  const renderedSql = rawSql.replace(
-                    /\{\{\s*([a-zA-Z_][a-zA-Z0-9_]*)\s*\}\}/g,
-                    (_m: string, v: string) => {
-                      const val = varMap[v];
-                      return typeof val === 'number'
-                        ? String(val)
-                        : `'${String(val ?? '')?.replace(/'/g, "''")}'`;
-                    },
+                  const renderedSql = renderSqlWithInputs(
+                    rawSql,
+                    inputs.map((iv) => ({
+                      varName: iv.input.varName,
+                      value: iv.input.value,
+                    })),
                   );
 
                   const connector = await get().db.getConnector();
@@ -491,11 +490,13 @@ export function createNotebookSlice(props?: {
                       if (r?.type === 'sql') {
                         r.status = 'success';
                         r.referencedTables = referenced.slice();
-                        r.resultView = makeQualifiedTableName({
+                        const resultView = makeQualifiedTableName({
                           table: cell.name,
                           schema: get().notebook.schemaName,
                           database: get().db.currentDatabase,
                         }).toString();
+                        r.resultView = resultView;
+                        r.resultName = resultView;
                         r.lastRunTime = Date.now();
                       }
                     }),
@@ -570,28 +571,14 @@ function findDependenciesCommon(
   cells: Record<string, NotebookCell>,
   status: NotebookSliceState['notebook']['cellStatus'],
 ): string[] {
-  const deps: string[] = [];
-  const text = (cell as any).sql as string;
-  for (const otherId in cells) {
-    if (otherId === cell.id) continue;
-    const other = cells[otherId];
-    if (!other) continue;
-    if (other.type === 'input') {
-      const vn = other.input.varName;
-      if (
-        (text && text.indexOf(`{{${vn}}}`) >= 0) ||
-        (text && text.indexOf(`:${vn}`) >= 0)
-      )
-        deps.push(other.id);
-    } else if (other.type === 'sql') {
-      const st = status[other.id];
-      const otherView = st && st.type === 'sql' ? st.resultView : undefined;
-      if (
-        (text && text.indexOf(other.name) >= 0) ||
-        (otherView && text && text.indexOf(otherView) >= 0)
-      )
-        deps.push(other.id);
-    }
-  }
-  return Array.from(new Set(deps));
+  return findSqlDependencies({
+    targetCell: cell,
+    cells,
+    getSqlText: (c) => (c as any).sql,
+    getInputVarName: (c) => (c as any).input?.varName,
+    getSqlResultName: (cellId) => {
+      const st = status[cellId];
+      return st && st.type === 'sql' ? st.resultView : undefined;
+    },
+  });
 }

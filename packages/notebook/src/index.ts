@@ -4,6 +4,7 @@ export {
 } from './NotebookSlice';
 
 export {Notebook, TabsBar} from './Notebook';
+export {useStoreWithNotebook} from './useStoreWithNotebook';
 
 export type {
   CellRegistry,

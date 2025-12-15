@@ -1,5 +1,5 @@
 {
-  "name": "@sqlrooms/dag",
+  "name": "@sqlrooms/cells",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -24,6 +24,15 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
-    "@sqlrooms/room-store": "workspace:*"
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "lucide-react": "^0.555.0"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
   }
 }

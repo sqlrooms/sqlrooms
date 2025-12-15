@@ -1,0 +1,9 @@
+{
+  "extends": "@sqlrooms/preset-typescript/react-library.json",
+  "compilerOptions": {
+    "outDir": "dist"
+  },
+  "include": ["src"],
+  "exclude": ["node_modules", "dist"]
+}
+
