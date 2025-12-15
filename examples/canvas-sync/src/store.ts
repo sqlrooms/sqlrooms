@@ -154,15 +154,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           connector: createWebSocketDuckDbConnector({
             wsUrl: SERVER_URL,
           }),
-          config: {
-            dataSources: [
-              // {
-              //   tableName: 'earthquakes',
-              //   type: 'url',
-              //   url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
-              // },
-            ],
-          },
+          // config: {
+          //   dataSources: [
+          //     {
+          //       tableName: 'earthquakes',
+          //       type: 'url',
+          //       url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+          //     },
+          //   ],
+          // },
           layout: {
             config: {
               type: LayoutTypes.enum.mosaic,

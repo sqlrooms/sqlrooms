@@ -11,6 +11,7 @@
   "dependencies": {
     "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
