@@ -3,7 +3,6 @@ import {
   CanvasSliceConfig,
   CanvasSliceState,
   createCanvasSlice,
-  createDefaultCanvasConfig,
 } from '@sqlrooms/canvas';
 import {
   CrdtSliceState,
@@ -11,6 +10,7 @@ import {
   createLocalStorageDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
+import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -20,11 +20,11 @@ import {
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {DatabaseIcon} from 'lucide-react';
+import {setAutoFreeze} from 'immer';
 import {schema} from 'loro-mirror';
+import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './DataSourcesPanel';
-import {setAutoFreeze} from 'immer';
 
 // Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
@@ -79,6 +79,11 @@ const canvasMirrorSchema = schema({
   }),
 });
 
+const SERVER_URL =
+  (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000';
+const ROOM_ID =
+  (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room';
+
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
     {
@@ -92,10 +97,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     },
     (set, get, store) => {
       const connector = createWebSocketSyncConnector({
-        url:
-          (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000',
-        roomId:
-          (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room',
+        url: SERVER_URL,
+        roomId: ROOM_ID,
         sendSnapshotOnConnect: true,
         onStatus: (status) => set({connection: status}),
       });
@@ -140,7 +143,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           },
         },
-        // storage: createLocalStorageDocStorage('canvas-sync-example'),
+        storage: createLocalStorageDocStorage('canvas-sync-example'),
         sync: connector,
       })(set, get, store);
 
@@ -148,13 +151,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         connection: 'idle' as RoomConnectionStatus,
         setConnection: (status) => set({connection: status}),
         ...createRoomShellSlice({
+          connector: createWebSocketDuckDbConnector({
+            wsUrl: SERVER_URL,
+          }),
           config: {
             dataSources: [
-              {
-                tableName: 'earthquakes',
-                type: 'url',
-                url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
-              },
+              // {
+              //   tableName: 'earthquakes',
+              //   type: 'url',
+              //   url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
+              // },
             ],
           },
           layout: {
