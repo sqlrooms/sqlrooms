@@ -1,6 +1,10 @@
 import {InferInputType, InferType, Mirror, SchemaType} from 'loro-mirror';
 import {LoroDoc} from 'loro-crdt';
 import {StateCreator, StoreApi} from 'zustand';
+import {setAutoFreeze} from 'immer';
+
+// Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
+setAutoFreeze(false);
 
 type StoreSet<S> = Parameters<StateCreator<S>>[0];
 type StoreGet<S> = Parameters<StateCreator<S>>[1];
