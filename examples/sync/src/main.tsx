@@ -34,7 +34,7 @@ const useStore = create<AppState>()((set, get, storeApi) => {
     mirrors: {
       shared: {
         schema: sharedValueSchema,
-        select: (s) => ({counter: s.counter, title: s.title}),
+        select: (s) => ({counter: s.counter, title: s.title}) as any,
         apply: (value: any) =>
           set((state) => ({
             ...state,
@@ -43,7 +43,7 @@ const useStore = create<AppState>()((set, get, storeApi) => {
           })),
       },
     },
-    storage: createLocalStorageDocStorage('sqlrooms-sync-example'),
+    storage: createLocalStorageDocStorage({key: 'sqlrooms-sync-example'}),
     sync: connector,
   })(set as any, get as any, storeApi as any);
 
