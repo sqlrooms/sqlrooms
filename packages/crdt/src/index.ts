@@ -1,6 +1,6 @@
 export type {
-  CrdtBinding,
   CrdtDocStorage,
+  CrdtMirror,
   CrdtSliceState,
   CrdtSyncConnector,
   CreateCrdtSliceOptions,

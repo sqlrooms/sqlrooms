@@ -13,10 +13,8 @@ type AppState = CrdtSliceState & {
   setCounter: (value: number) => void;
 };
 
-const mirrorSchema = schema({
-  shared: schema.LoroMap({
-    counter: schema.Number(),
-  }),
+const sharedValueSchema = schema.LoroMap({
+  counter: schema.Number(),
 });
 
 describe('createCrdtSlice.initialize', () => {
@@ -32,15 +30,14 @@ describe('createCrdtSlice.initialize', () => {
         setCounter: (value) => set({counter: value}),
       };
 
-      const crdt = createCrdtSlice<{counter: number}, typeof mirrorSchema>({
-        schema: mirrorSchema,
-        bindings: [
-          {
-            key: 'shared',
-            select: (s) => ({counter: (s as any).counter}) as any,
+      const crdt = createCrdtSlice<AppState>({
+        mirrors: {
+          shared: {
+            schema: sharedValueSchema,
+            select: (s) => ({counter: s.counter}),
             apply: (value) => set({counter: (value as any).counter}),
           },
-        ],
+        },
         sync,
       })(set as any, get as any, api as any);
 
@@ -72,15 +69,14 @@ describe('createCrdtSlice.initialize', () => {
         setCounter: (value) => set({counter: value}),
       };
 
-      const crdt = createCrdtSlice<{counter: number}, typeof mirrorSchema>({
-        schema: mirrorSchema,
-        bindings: [
-          {
-            key: 'shared',
-            select: (s) => ({counter: (s as any).counter}) as any,
+      const crdt = createCrdtSlice<AppState>({
+        mirrors: {
+          shared: {
+            schema: sharedValueSchema,
+            select: (s) => ({counter: s.counter}),
             apply: (value) => set({counter: (value as any).counter}),
           },
-        ],
+        },
         sync,
       })(set as any, get as any, api as any);
 

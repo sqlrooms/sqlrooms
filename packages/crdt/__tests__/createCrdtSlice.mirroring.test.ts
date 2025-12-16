@@ -12,11 +12,9 @@ type AppState = CrdtSliceState & {
   setTitle: (value: string) => void;
 };
 
-const mirrorSchema = schema({
-  shared: schema.LoroMap({
-    counter: schema.Number(),
-    title: schema.String(),
-  }),
+const sharedValueSchema = schema.LoroMap({
+  counter: schema.Number(),
+  title: schema.String(),
 });
 
 describe('createCrdtSlice mirroring', () => {
@@ -33,24 +31,19 @@ describe('createCrdtSlice mirroring', () => {
           setCounter: (value: number) => set({counter: value}),
           setTitle: (value: string) => set({title: value}),
         },
-        createCrdtSlice<{counter: number; title: string}, typeof mirrorSchema>({
+        createCrdtSlice<AppState>({
           doc: docA,
-          schema: mirrorSchema,
-          bindings: [
-            {
-              key: 'shared',
-              select: (s) =>
-                ({
-                  counter: (s as any).counter,
-                  title: (s as any).title,
-                }) as any,
+          mirrors: {
+            shared: {
+              schema: sharedValueSchema,
+              select: (s) => ({counter: s.counter, title: s.title}),
               apply: (value) =>
                 set({
                   counter: (value as any).counter,
                   title: (value as any).title,
                 }),
             },
-          ],
+          },
         })(set as any, get as any, api as any),
       ),
     );
@@ -78,24 +71,19 @@ describe('createCrdtSlice mirroring', () => {
           setCounter: (value: number) => set({counter: value}),
           setTitle: (value: string) => set({title: value}),
         },
-        createCrdtSlice<{counter: number; title: string}, typeof mirrorSchema>({
+        createCrdtSlice<AppState>({
           doc: docB,
-          schema: mirrorSchema,
-          bindings: [
-            {
-              key: 'shared',
-              select: (s) =>
-                ({
-                  counter: (s as any).counter,
-                  title: (s as any).title,
-                }) as any,
+          mirrors: {
+            shared: {
+              schema: sharedValueSchema,
+              select: (s) => ({counter: s.counter, title: s.title}),
               apply: (value) =>
                 set({
                   counter: (value as any).counter,
                   title: (value as any).title,
                 }),
             },
-          ],
+          },
         })(set as any, get as any, api as any),
       ),
     );

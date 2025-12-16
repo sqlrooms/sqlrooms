@@ -88,7 +88,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           sendSnapshotOnConnect: true,
           onStatus: (status) => set({connection: status}),
         }),
-        mirrors: [createCanvasCrdtMirror<RoomState>()],
+        mirrors: {
+          canvas: createCanvasCrdtMirror<RoomState>(),
+        },
       })(set, get, store),
 
       // App slice with config

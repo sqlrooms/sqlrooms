@@ -1,6 +1,6 @@
 import {setAutoFreeze} from 'immer';
 import {LoroDoc} from 'loro-crdt';
-import {InferInputType, Mirror, SchemaType} from 'loro-mirror';
+import {InferInputType, Mirror, SchemaType, schema} from 'loro-mirror';
 import {StateCreator} from 'zustand';
 import {
   InferredState,
@@ -14,18 +14,15 @@ import {
 // Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
 
-export type CrdtBinding<S, M, K extends keyof M & string = keyof M & string> = {
-  key: K;
-  /**
-   * Select a value from the store to write into the CRDT mirror.
-   *
-   * `loro-mirror` injects internal `$cid` metadata into mirrored map objects.
-   * Store state typically doesn't have this, so we accept the same shape with
-   * `$cid` fields removed (recursively).
-   */
-  select?: (state: S) => StripCidDeep<M[K]>;
-  apply?: (value: M[K], set: StoreSet<S>, get: StoreGet<S>) => void;
-};
+export type CrdtMirrorValueSelector<S, TSchema extends SchemaType> = (
+  state: S,
+) => StripCidDeep<InferredState<TSchema>>;
+
+export type CrdtMirrorValueApplier<S, TSchema extends SchemaType> = (
+  value: InferredState<TSchema>,
+  set: StoreSet<S>,
+  get: StoreGet<S>,
+) => void;
 
 export type CrdtDocStorage = {
   load: () => Promise<Uint8Array | undefined>;
@@ -38,32 +35,41 @@ export type CrdtSyncConnector = {
 };
 
 export type CrdtMirror<S, TSchema extends SchemaType = SchemaType> = {
+  /**
+   * Schema for the value stored under this mirror's key in the Loro doc.
+   *
+   * Example: if the mirror key is `"canvas"`, this schema describes the value at
+   * `doc.root.canvas` (not an extra `{canvas: ...}` wrapper).
+   */
   schema: MirrorSchema<TSchema>;
   /**
-   * Bindings are intentionally `any`-typed because Mirror schemas can attach
-   * internal metadata (e.g. `$cid`) to mirrored objects that doesn't exist in
-   * the Zustand store state.
+   * Select the value to write under this mirror key.
    *
-   * Keeping this loose makes it easy to compose modules from multiple packages
-   * without fighting type-level details of `loro-mirror` inference.
+   * If omitted, the store field at the same key name will be mirrored.
    */
-  bindings: Array<CrdtBinding<S, any>>;
-  initialState?: any;
+  select?: CrdtMirrorValueSelector<S, TSchema>;
+  /**
+   * Apply an incoming CRDT value under this mirror key back into the store.
+   *
+   * If omitted, the store field at the same key name will be replaced.
+   */
+  apply?: CrdtMirrorValueApplier<S, TSchema>;
+  /**
+   * Initial value written under this mirror key when creating the Mirror.
+   */
+  initialState?: Partial<InferInputType<TSchema>>;
   mirrorOptions?: Record<string, unknown>;
 };
 
 export type CreateCrdtSliceOptions<S, TSchema extends SchemaType> = {
   /**
-   * Optional multi-mirror configuration: allows composing multiple mirror schemas
-   * (e.g. from multiple SQLRooms slices plus app-specific state) into a single
-   * CRDT doc connection by creating one Mirror per mirror on a shared Loro doc.
+   * CRDT mirrors keyed by their root key in the Loro document.
+   *
+   * Each entry becomes one `loro-mirror` `Mirror` instance on a shared `LoroDoc`.
    */
-  mirrors?: Array<CrdtMirror<S, any>>;
-  schema?: MirrorSchema<TSchema>;
-  bindings?: CrdtBinding<S, InferredState<TSchema>>[];
+  mirrors: Record<string, CrdtMirror<S, any>>;
   doc?: LoroDoc;
   createDoc?: () => LoroDoc;
-  initialState?: Partial<InferInputType<TSchema>>;
   storage?: CrdtDocStorage;
   sync?: CrdtSyncConnector;
   mirrorOptions?: Record<string, unknown>;
@@ -91,57 +97,13 @@ export function createCrdtSlice<
   return createSlice<CrdtSliceState, S & CrdtSliceState>((set, get, store) => {
     let doc: LoroDoc | undefined;
     let mirrors: Mirror<any>[] = [];
+    let mirrorKeys: string[] = [];
     let unsubStore: (() => void) | undefined;
     let unsubMirrors: Array<() => void> = [];
     let unsubDocLocal: (() => void) | undefined;
     let initializing: Promise<void> | undefined;
     let suppressStoreToMirror = false;
-    const lastOutboundByModule = new Map<number, Record<string, unknown>>();
-
-    const getMirrors = (): Array<CrdtMirror<S, any>> => {
-      if (options.mirrors) {
-        if (options.schema || options.bindings || options.initialState) {
-          throw new Error(
-            '[crdt] Provide either `mirrors` or (`schema` + `bindings`), not both.',
-          );
-        }
-        return options.mirrors;
-      }
-      if (options.mirrors) {
-        if (options.schema || options.bindings || options.initialState) {
-          throw new Error(
-            '[crdt] Provide either `mirrors` or (`schema` + `bindings`), not both.',
-          );
-        }
-        return options.mirrors;
-      }
-      if (!options.schema || !options.bindings) {
-        throw new Error('[crdt] Missing required `schema` and `bindings`.');
-      }
-      return [
-        {
-          schema: options.schema as any,
-          bindings: options.bindings as any,
-          initialState: options.initialState,
-          mirrorOptions: options.mirrorOptions,
-        },
-      ];
-    };
-
-    const validateBindings = (mirrorsCfg: Array<CrdtMirror<S, any>>) => {
-      const seen = new Set<string>();
-      for (const mirror of mirrorsCfg) {
-        for (const b of mirror.bindings as Array<CrdtBinding<S, any>>) {
-          const key = String(b.key);
-          if (seen.has(key)) {
-            throw new Error(
-              `[crdt] Duplicate binding key "${key}" across mirrors. Each bound key must be unique.`,
-            );
-          }
-          seen.add(key);
-        }
-      }
-    };
+    const lastOutboundByKey = new Map<string, unknown>();
 
     const persistDoc = async () => {
       if (!options.storage || !doc) return;
@@ -153,40 +115,26 @@ export function createCrdtSlice<
       }
     };
 
-    const pushFromStore = (state: S, mirrorsCfg: Array<CrdtMirror<S, any>>) => {
+    const pushFromStore = (state: S) => {
       if (mirrors.length === 0 || suppressStoreToMirror) return;
-      for (let i = 0; i < mirrorsCfg.length; i += 1) {
+      for (let i = 0; i < mirrors.length; i += 1) {
         const mirror = mirrors[i];
-        const cfg = mirrorsCfg[i];
-        if (!cfg || !mirror) continue;
+        const key = mirrorKeys[i];
+        if (!mirror || !key) continue;
+        const cfg = options.mirrors[key];
+        if (!cfg) continue;
 
-        const next: Record<string, unknown> = {};
-        for (const binding of cfg.bindings as Array<CrdtBinding<S, any>>) {
-          const value = binding.select
-            ? binding.select(state)
-            : (state as any)[binding.key];
-          (next as any)[binding.key] = value;
-        }
+        const value = cfg.select ? cfg.select(state) : (state as any)[key];
 
-        const lastOutbound = lastOutboundByModule.get(i);
-        if (
-          lastOutbound &&
-          (cfg.bindings as Array<CrdtBinding<S, any>>).every(
-            (b) => (lastOutbound as any)[b.key] === (next as any)[b.key],
-          )
-        ) {
-          continue;
-        }
+        const lastOutbound = lastOutboundByKey.get(key);
+        if (lastOutbound === value) continue;
 
-        console.debug(
-          `[crdt] pushFromStore outbound keys (mirror ${i}):`,
-          (cfg.bindings as Array<CrdtBinding<S, any>>).map((b) => b.key),
-        );
-        lastOutboundByModule.set(i, next);
+        console.debug(`[crdt] pushFromStore outbound key:`, key);
+        lastOutboundByKey.set(key, value);
 
         mirror.setState(
           (draft: any) => {
-            Object.assign(draft, next);
+            draft[key] = value;
           },
           {tags: ['from-store']},
         );
@@ -195,20 +143,19 @@ export function createCrdtSlice<
     };
 
     const applyMirrorToStore = (
-      moduleBindings: Array<CrdtBinding<S, any>>,
+      key: string,
+      cfg: CrdtMirror<S, any>,
       mirrorState: any,
       tags?: string[],
     ) => {
       if (tags?.includes('from-store')) return;
       suppressStoreToMirror = true;
       try {
-        for (const binding of moduleBindings) {
-          const value = mirrorState?.[binding.key];
-          if (binding.apply) {
-            binding.apply(value, set, get);
-          } else {
-            set({[binding.key]: value} as any);
-          }
+        const value = mirrorState?.[key];
+        if (cfg.apply) {
+          cfg.apply(value, set, get);
+        } else {
+          set({[key]: value} as any);
         }
       } finally {
         suppressStoreToMirror = false;
@@ -225,8 +172,10 @@ export function createCrdtSlice<
 
       initializing = (async () => {
         try {
-          const mirrorsCfg = getMirrors();
-          validateBindings(mirrorsCfg);
+          mirrorKeys = Object.keys(options.mirrors);
+          if (mirrorKeys.length === 0) {
+            throw new Error('[crdt] `mirrors` must have at least one entry.');
+          }
 
           doc = options.doc ?? options.createDoc?.() ?? new LoroDoc();
           if (!doc) throw new Error('[crdt] Failed to create Loro doc');
@@ -239,12 +188,22 @@ export function createCrdtSlice<
             }
           }
 
-          mirrors = mirrorsCfg.map((m) => {
+          mirrors = mirrorKeys.map((key) => {
+            const cfg = options.mirrors[key];
+            if (!cfg)
+              throw new Error(`[crdt] Missing mirror config for "${key}".`);
+
+            // Wrap per-mirror schema/value under its root key.
+            const rootSchema = schema({[key]: cfg.schema as any} as any);
+            const initialState = cfg.initialState
+              ? ({[key]: cfg.initialState} as any)
+              : undefined;
+
             return new Mirror<any>({
               doc: activeDoc,
-              schema: m.schema as any,
-              initialState: m.initialState,
-              ...(m.mirrorOptions ?? options.mirrorOptions ?? {}),
+              schema: rootSchema as any,
+              initialState,
+              ...(cfg.mirrorOptions ?? options.mirrorOptions ?? {}),
             });
           });
           // Debug local doc updates to verify mirror.setState is producing CRDT ops.
@@ -258,26 +217,28 @@ export function createCrdtSlice<
 
           // Subscribe mirror->store first so snapshot/imported state wins.
           unsubMirrors = mirrors.map((m, idx) => {
-            const cfg = mirrorsCfg[idx];
-            if (!cfg) {
-              return () => {};
-            }
-            return m.subscribe((state: any, meta: any) => {
-              applyMirrorToStore(cfg.bindings as any, state, meta?.tags);
-            });
+            const key = mirrorKeys[idx];
+            if (!key) return () => {};
+            const cfg = options.mirrors[key];
+            if (!cfg) return () => {};
+            return m.subscribe((state: any, meta: any) =>
+              applyMirrorToStore(key, cfg, state, meta?.tags),
+            );
           });
 
           // Wait a tick so mirrors can emit any imported state, then align store once.
           await Promise.resolve();
           for (let i = 0; i < mirrors.length; i += 1) {
             const m = mirrors[i];
-            const cfg = mirrorsCfg[i];
-            if (!m || !cfg) continue;
-            applyMirrorToStore(cfg.bindings as any, m.getState() as any, []);
+            const key = mirrorKeys[i];
+            if (!m || !key) continue;
+            const cfg = options.mirrors[key];
+            if (!cfg) continue;
+            applyMirrorToStore(key, cfg, m.getState() as any, []);
           }
           // Now subscribe store->mirror for local changes.
           unsubStore = store.subscribe((state) => {
-            pushFromStore(state, mirrorsCfg);
+            pushFromStore(state);
           });
 
           if (options.sync) {
@@ -325,6 +286,7 @@ export function createCrdtSlice<
       }
       doc = undefined;
       mirrors = [];
+      mirrorKeys = [];
       unsubMirrors = [];
       initializing = undefined;
       const prevCrdt = get().crdt;
