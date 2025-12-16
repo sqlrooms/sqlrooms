@@ -1,10 +1,3 @@
-import base from '@sqlrooms/preset-typedoc/typedoc-base-config.js';
+import config from '@sqlrooms/preset-typedoc';
 
-/** @type {import('typedoc').TypeDocOptions} */
-const config = {
-  ...base,
-  entryPoints: ['src/index.ts'],
-};
-
-export default config;
-
+export default config(import.meta.url);
