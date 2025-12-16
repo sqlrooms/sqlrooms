@@ -389,10 +389,9 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         "/*",
         {
             # Disable compression to avoid inflate errors and accept larger payloads.
-            "compression": CompressOptions.DISABLED,
+            "compression": CompressOptions.SHARED_COMPRESSOR,
             # Raise payload limits/backpressure so large CRDT payloads (snapshot or updates)
-            # don't trip the uWebSockets max size guard. Include both camelCase and
-            # snake_case to satisfy socketify option parsing.
+            # don't trip the uWebSockets max size guard.
             "max_payload_length": 128 * 1024 * 1024,
             "max_backpressure": 64 * 1024 * 1024,
             "close_on_backpressure_limit": False,

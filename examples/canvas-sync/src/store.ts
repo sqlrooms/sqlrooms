@@ -143,7 +143,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         },
       },
-      storage: createLocalStorageDocStorage('canvas-sync-example'),
+      //storage: createLocalStorageDocStorage('canvas-sync-example'),
       sync: connector,
     })(set, get, store);
 
