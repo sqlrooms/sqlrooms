@@ -15,7 +15,7 @@ export type RoomPanelInfo = {
   title?: string;
   icon?: React.ComponentType<{className?: string}>;
   component: React.ComponentType;
-  placement: 'sidebar' | 'sidebar-bottom' | 'main' | 'main-bottom';
+  placement: 'sidebar' | 'sidebar-bottom' | 'main' | string;
 };
 
 export const LayoutSliceConfig = LayoutConfig;
