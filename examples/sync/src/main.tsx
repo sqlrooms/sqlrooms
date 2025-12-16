@@ -26,6 +26,8 @@ const useStore = create<AppState>()((set, get, storeApi) => {
   const connector = createWebSocketSyncConnector({
     url: (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000',
     roomId: (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'demo-room',
+    // `sqlrooms-duckdb-server` sends a snapshot to clients on join already.
+    sendSnapshotOnConnect: false,
   });
 
   const crdtSlice = createCrdtSlice<AppState>({

@@ -79,8 +79,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createCrdtSlice({
-        storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
-        sync: createWebSocketSyncConnector({url: SERVER_URL, roomId: ROOM_ID}),
+        // storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
+        sync: createWebSocketSyncConnector({
+          url: SERVER_URL,
+          roomId: ROOM_ID,
+          // Server already sends a snapshot on join; only send incremental updates.
+          sendSnapshotOnConnect: false,
+        }),
         mirrors: {canvas: createCanvasCrdtMirror()},
       })(set, get, store),
 

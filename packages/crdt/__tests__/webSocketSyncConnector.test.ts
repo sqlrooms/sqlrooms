@@ -84,4 +84,75 @@ describe('createWebSocketSyncConnector', () => {
       expect.stringContaining('crdt-join'),
     );
   });
+
+  it('drops buffered pre-join updates when server reports it already has state', async () => {
+    const ws = new FakeWebSocket();
+
+    const connector = createWebSocketSyncConnector({
+      url: 'ws://example.test',
+      roomId: 'room-1',
+      sendSnapshotOnConnect: false,
+      createSocket: () => ws,
+    });
+
+    const doc = new LoroDoc();
+    await connector.connect(doc);
+
+    // Produce a local update before join; it should buffer (no sends yet).
+    doc.getMap('map').set('k1', 'v1');
+    doc.commit();
+    expect(ws.sent.length).toBe(0);
+
+    // Open socket: connector should send join.
+    ws.open();
+    expect(
+      ws.sent.some((m) => typeof m === 'string' && m.includes('crdt-join')),
+    ).toBe(true);
+
+    const sendsBeforeJoinAck = ws.sent.length;
+
+    // Server confirms join but indicates it already has state; buffered update should be dropped.
+    ws.message(
+      JSON.stringify({type: 'crdt-joined', roomId: 'room-1', hasState: true}),
+    );
+
+    expect(ws.sent.length).toBe(sendsBeforeJoinAck);
+    expect(ws.sent.some((m) => typeof m !== 'string')).toBe(false);
+  });
+
+  it('seeds an empty server with a snapshot after join (even when sendSnapshotOnConnect is false)', async () => {
+    const ws = new FakeWebSocket();
+
+    const connector = createWebSocketSyncConnector({
+      url: 'ws://example.test',
+      roomId: 'room-1',
+      sendSnapshotOnConnect: false,
+      sendSnapshotIfServerEmpty: true,
+      createSocket: () => ws,
+    });
+
+    const doc = new LoroDoc();
+    // Populate local state (this may produce local updates, but we seed via snapshot on join anyway).
+    doc.getMap('map').set('k1', 'v1');
+    doc.commit();
+
+    await connector.connect(doc);
+
+    ws.open();
+
+    const sentBeforeJoinAck = ws.sent.length;
+
+    ws.message(
+      JSON.stringify({type: 'crdt-joined', roomId: 'room-1', hasState: false}),
+    );
+
+    // Should send a snapshot JSON message right after join.
+    expect(ws.sent.length).toBeGreaterThan(sentBeforeJoinAck);
+    expect(
+      ws.sent.some(
+        (m) =>
+          typeof m === 'string' && (m as string).includes('"crdt-snapshot"'),
+      ),
+    ).toBe(true);
+  });
 });

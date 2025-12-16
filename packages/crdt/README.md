@@ -42,7 +42,12 @@ const {roomStore, useRoomStore} = createRoomStore(
         sync: createWebSocketSyncConnector({
           url: 'ws://localhost:4800',
           roomId: 'demo-room',
-          sendSnapshotOnConnect: true,
+          // If your server sends a snapshot on join (like sqlrooms-duckdb-server),
+          // prefer updates-only to avoid re-sending full snapshots on reconnects.
+          sendSnapshotOnConnect: false,
+          // Still seed an empty server once after join (important if you load initial
+          // state from local persistence without generating CRDT ops).
+          sendSnapshotIfServerEmpty: true,
         }),
       })(set, get, store),
       // add your other slices here

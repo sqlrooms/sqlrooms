@@ -124,7 +124,10 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         room = await crdt_state.ensure_loaded(room_id)
         ws._room_id = room_id  # type: ignore[attr-defined]
         ws.subscribe(room_id)
-        ws.send({"type": "crdt-joined", "roomId": room_id}, OpCode.TEXT)
+        ws.send(
+            {"type": "crdt-joined", "roomId": room_id, "hasState": bool(getattr(room, "has_state", False))},
+            OpCode.TEXT,
+        )
         snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
         logger.debug(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
         ws.send(
@@ -160,11 +163,11 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         async with room.lock:
             try:
                 room.doc.import_(payload)
+                room.has_state = True
                 # Broadcast the exact update we received so other peers can apply it
                 update = payload
-                await crdt_state.save_snapshot(room_id, room.doc)
-                saved_snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
-                logger.debug(f"saved snapshot for {room_id}: {len(saved_snapshot)} bytes")
+                # Debounce persistence so we don't export/write a full snapshot on every small update.
+                crdt_state.mark_dirty(room_id)
             except Exception as exc:
                 logger.exception("Failed to handle CRDT update")
                 ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
@@ -227,9 +230,11 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
             async with room.lock:
                 try:
                     room.doc.import_(payload)
+                    room.has_state = True
                     # Broadcast the same payload (snapshot) so peers can import it too
                     update = payload
-                    await crdt_state.save_snapshot(room_id, room.doc)
+                    # Persist debounced (snapshot messages can be large; no need to block WS handler).
+                    crdt_state.mark_dirty(room_id)
                 except Exception as exc:
                     logger.exception("Failed to handle CRDT snapshot message")
                     ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
