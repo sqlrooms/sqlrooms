@@ -129,7 +129,6 @@ export function createCrdtSlice<
         const lastOutbound = lastOutboundByKey.get(key);
         if (lastOutbound === value) continue;
 
-        console.debug(`[crdt] pushFromStore outbound key:`, key);
         lastOutboundByKey.set(key, value);
 
         mirror.setState(
@@ -207,13 +206,9 @@ export function createCrdtSlice<
             });
           });
           // Debug local doc updates to verify mirror.setState is producing CRDT ops.
-          unsubDocLocal = doc.subscribeLocalUpdates?.((update: Uint8Array) => {
-            console.debug(
-              '[crdt] doc local update',
-              update.byteLength,
-              'bytes',
-            );
-          });
+          unsubDocLocal = doc.subscribeLocalUpdates?.(
+            (update: Uint8Array) => {},
+          );
 
           // Subscribe mirror->store first so snapshot/imported state wins.
           unsubMirrors = mirrors.map((m, idx) => {
@@ -242,9 +237,7 @@ export function createCrdtSlice<
           });
 
           if (options.sync) {
-            console.info('[crdt] initializing sync connector');
             await options.sync.connect(doc);
-            console.info('[crdt] sync connector connected');
           }
 
           const prevCrdt = get().crdt;

@@ -80,25 +80,14 @@ export function createWebSocketSyncConnector(
   const maxDelay = options.maxDelayMs ?? 5000;
 
   const maybeSendUpdate = (update: Uint8Array) => {
-    console.debug('[crdt] local update observed', update.byteLength, 'bytes', {
-      joined,
-      readyState: socket?.readyState,
-    });
     if (!socket || socket.readyState !== WS_OPEN) {
-      console.debug('[crdt] skip send: socket not open, buffering');
       pending.push(update);
       return;
     }
     if (!joined) {
-      console.debug(
-        '[crdt] buffering local update before join',
-        update.byteLength,
-        'bytes',
-      );
       pending.push(update);
       return;
     }
-    console.debug('[crdt] sending local update', update.byteLength, 'bytes');
     socket.send(update);
   };
 
@@ -116,7 +105,6 @@ export function createWebSocketSyncConnector(
         }
       };
       localSubscribed = true;
-      console.debug('[crdt] attached local update subscription');
     } catch (error) {
       console.warn('[crdt] failed to attach local subscription', error);
       localSubscribed = false;
@@ -132,7 +120,6 @@ export function createWebSocketSyncConnector(
    */
   const ensureLocalSubscription = (doc: LoroDoc) => {
     if (subscribedDoc && subscribedDoc !== doc) {
-      console.info('[crdt] switching local update subscription to new doc');
       unsubscribeLocal?.();
       unsubscribeLocal = undefined;
       localSubscribed = false;
@@ -157,14 +144,12 @@ export function createWebSocketSyncConnector(
   };
 
   const sendStatus = (status: 'connecting' | 'open' | 'closed' | 'error') => {
-    console.info('[crdt] ws status ->', status);
     options.onStatus?.(status);
   };
 
   const sendJoin = () => {
     if (!socket || socket.readyState !== WS_OPEN) return;
     const payload = JSON.stringify({type: 'crdt-join', roomId: options.roomId});
-    console.debug('[crdt] sending join', payload);
     socket.send(payload);
   };
 
@@ -172,10 +157,6 @@ export function createWebSocketSyncConnector(
     if (!socket || socket.readyState !== WS_OPEN) return;
     try {
       const snapshot = doc.export({mode: 'snapshot'});
-      console.info(
-        '[crdt] sending snapshot bytes',
-        snapshot?.byteLength ?? snapshot?.length ?? 0,
-      );
       const payload = JSON.stringify({
         type: 'crdt-snapshot',
         roomId: options.roomId,
@@ -211,7 +192,6 @@ export function createWebSocketSyncConnector(
     if (connecting) return;
     // Always ensure we are subscribed to the *current* doc.
     ensureLocalSubscription(doc);
-    console.info('[crdt] connect start');
 
     const attachSocketListenersFor = (ws: WebSocketLike) => {
       // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
@@ -257,24 +237,13 @@ export function createWebSocketSyncConnector(
         if (typeof event.data === 'string') {
           try {
             const parsed = JSON.parse(event.data);
-            console.debug('[crdt] ws message', parsed?.type);
             if (parsed?.type === 'crdt-joined') {
               joined = true;
-              console.debug(
-                '[crdt] joined room, flushing',
-                pending.length,
-                'pending',
-              );
               // flush pending updates
               while (pending.length) {
                 const update = pending.shift();
                 if (update && ws && ws.readyState === WS_OPEN) {
                   // Debug visibility for diagnosing silent sync issues.
-                  console.debug(
-                    '[crdt] sending pending update after join',
-                    update.byteLength,
-                    'bytes',
-                  );
                   ws.send(update);
                 }
               }
@@ -394,10 +363,6 @@ export function createWebSocketSyncConnector(
       socket &&
       (socket.readyState === WS_OPEN || socket.readyState === WS_CONNECTING)
     ) {
-      console.info(
-        '[crdt] reuse existing socket, readyState:',
-        socket.readyState,
-      );
       if (listeningSocket !== socket) {
         console.warn('[crdt] existing socket had no listeners; attaching now');
         attachSocketListenersFor(socket);
@@ -425,7 +390,6 @@ export function createWebSocketSyncConnector(
     const url = buildUrl();
     try {
       socket = wsCreator(url, options.protocols);
-      console.info('[crdt] ws created', url);
     } catch (error) {
       connecting = false;
       sendStatus('error');
