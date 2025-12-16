@@ -19,6 +19,7 @@
     "access": "public"
   },
   "dependencies": {
+    "immer": "^11.0.1",
     "loro-crdt": "^1.10.3",
     "loro-mirror": "^1.1.2",
     "zustand": "^5.0.8"

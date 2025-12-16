@@ -16,6 +16,19 @@ type InferredState<TSchema extends SchemaType> =
     ? InferType<TSchema>
     : Record<string, never>;
 
+/**
+ * Local equivalent of `createSlice` from `@sqlrooms/room-store`.
+ *
+ * Kept inline so `@sqlrooms/crdt` stays dependency-light (no need to depend on
+ * `@sqlrooms/room-store` just for a typing helper).
+ */
+function createSlice<SliceState, StoreState extends SliceState = SliceState>(
+  sliceCreator: (...args: Parameters<StateCreator<StoreState>>) => SliceState,
+): StateCreator<SliceState> {
+  return (set, get, store) =>
+    sliceCreator(set, get as () => StoreState, store as StoreApi<StoreState>);
+}
+
 export type CrdtBinding<S, M, K extends keyof M & string = keyof M & string> = {
   key: K;
   select?: (state: S) => M[K];
@@ -53,11 +66,16 @@ export type CrdtSliceState = {
   };
 };
 
+/**
+ * Create a CRDT-backed slice that mirrors selected store fields into a Loro doc.
+ *
+ * The returned state creator is intended to be composed into a larger Zustand store.
+ */
 export function createCrdtSlice<
   S extends Record<string, any>,
   TSchema extends SchemaType,
 >(options: CreateCrdtSliceOptions<S, TSchema>): StateCreator<CrdtSliceState> {
-  return (set, get, store) => {
+  return createSlice<CrdtSliceState, S & CrdtSliceState>((set, get, store) => {
     let doc: LoroDoc | undefined;
     let mirror: Mirror<TSchema> | undefined;
     let unsubStore: (() => void) | undefined;
@@ -124,7 +142,7 @@ export function createCrdtSlice<
           if (binding.apply) {
             binding.apply(value, set, get);
           } else {
-            set((state: any) => ({...state, [binding.key]: value}));
+            set({[binding.key]: value} as any);
           }
         }
       } finally {
@@ -184,28 +202,28 @@ export function createCrdtSlice<
             console.info('[crdt] sync connector connected');
           }
 
-          set((state: any) => ({
-            ...state,
+          const prevCrdt = get().crdt;
+          set({
             crdt: {
-              ...(state.crdt ?? {}),
+              ...(prevCrdt ?? {}),
               status: 'ready',
               error: undefined,
-              initialize: state.crdt?.initialize ?? initialize,
-              destroy: state.crdt?.destroy ?? destroy,
+              initialize: prevCrdt?.initialize ?? initialize,
+              destroy: prevCrdt?.destroy ?? destroy,
             },
-          }));
+          } as Partial<S & CrdtSliceState>);
         } catch (error: any) {
           options.onError?.(error);
-          set((state: any) => ({
-            ...state,
+          const prevCrdt = get().crdt;
+          set({
             crdt: {
-              ...(state.crdt ?? {}),
+              ...(prevCrdt ?? {}),
               status: 'error',
               error: error?.message ?? 'Failed to initialize CRDT',
-              initialize: state.crdt?.initialize ?? initialize,
-              destroy: state.crdt?.destroy ?? destroy,
+              initialize: prevCrdt?.initialize ?? initialize,
+              destroy: prevCrdt?.destroy ?? destroy,
             },
-          }));
+          } as Partial<S & CrdtSliceState>);
         } finally {
           initializing = undefined;
         }
@@ -224,16 +242,16 @@ export function createCrdtSlice<
       doc = undefined;
       mirror = undefined;
       initializing = undefined;
-      set((state: any) => ({
-        ...state,
+      const prevCrdt = get().crdt;
+      set({
         crdt: {
-          ...(state.crdt ?? {}),
+          ...(prevCrdt ?? {}),
           status: 'idle',
           error: undefined,
-          initialize: state.crdt?.initialize ?? initialize,
-          destroy: state.crdt?.destroy ?? destroy,
+          initialize: prevCrdt?.initialize ?? initialize,
+          destroy: prevCrdt?.destroy ?? destroy,
         },
-      }));
+      } as Partial<S & CrdtSliceState>);
     };
 
     return {
@@ -242,6 +260,6 @@ export function createCrdtSlice<
         initialize,
         destroy,
       },
-    } as unknown as S & CrdtSliceState;
-  };
+    };
+  });
 }
