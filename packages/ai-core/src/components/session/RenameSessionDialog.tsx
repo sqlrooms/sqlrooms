@@ -31,6 +31,7 @@ export const RenameSessionDialog: React.FC<RenameSessionDialogProps> = ({
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Reset name and focus/select text when dialog opens
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (isOpen) {
       setName(initialName);
@@ -41,6 +42,7 @@ export const RenameSessionDialog: React.FC<RenameSessionDialogProps> = ({
       return () => clearTimeout(timeoutId);
     }
   }, [isOpen, initialName]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = useCallback(
     (e: React.FormEvent) => {

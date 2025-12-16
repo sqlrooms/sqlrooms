@@ -28,6 +28,7 @@ import {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
 } from './chatTransport';
+import {AI_DEFAULT_TEMPERATURE} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 import {AddToolResult} from './types';
@@ -640,7 +641,7 @@ export function createAiSlice(
           try {
             const response = await generateText({
               model,
-              temperature: 0.0,
+              temperature: AI_DEFAULT_TEMPERATURE,
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,

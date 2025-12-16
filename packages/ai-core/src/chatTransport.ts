@@ -15,6 +15,7 @@ import {AddToolResult} from './types';
 import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
+import {AI_DEFAULT_TEMPERATURE} from './constants';
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -227,7 +228,7 @@ export function createLocalChatTransportFactory({
         tools,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
-        temperature: 0.0,
+        temperature: AI_DEFAULT_TEMPERATURE,
       });
 
       return result.toUIMessageStreamResponse();
