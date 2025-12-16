@@ -210,13 +210,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   // ),
 );
 
-/**
- * Starts CRDT synchronization for the canvas store and logs failures.
- */
-async function startCanvasCrdtSync(): Promise<void> {
-  await roomStore.getState().crdt.initialize();
-}
-
-void startCanvasCrdtSync().catch((error) => {
-  console.error('Failed to start canvas CRDT sync', error);
-});
+// Note: `createRoomStore` auto-initializes the room (and thus all slices, including CRDT)
+// on the client. Avoid manually calling `crdt.initialize()` here to prevent double-init
+// issues (especially in dev / StrictMode).

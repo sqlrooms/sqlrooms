@@ -64,6 +64,7 @@ export function createWebSocketSyncConnector(
 ): CrdtSyncConnector {
   let socket: WebSocketLike | undefined;
   let unsubscribeLocal: (() => void) | undefined;
+  let subscribedDoc: LoroDoc | undefined;
   let attempt = 0;
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
@@ -71,6 +72,8 @@ export function createWebSocketSyncConnector(
   let connecting = false;
   const pending: Uint8Array[] = [];
   let localSubscribed = false;
+  let listeningSocket: WebSocketLike | undefined;
+  let detachSocketListeners: (() => void) | undefined;
 
   const maxRetries = options.maxRetries ?? Infinity;
   const initialDelay = options.initialDelayMs ?? 500;
@@ -118,6 +121,26 @@ export function createWebSocketSyncConnector(
       console.warn('[crdt] failed to attach local subscription', error);
       localSubscribed = false;
       unsubscribeLocal = undefined;
+    }
+  };
+
+  /**
+   * Ensures we are subscribed to local updates on the *current* doc.
+   *
+   * This matters because this connector can be reused across reconnects and
+   * `connect(doc)` calls; we must not keep a stale subscription to a prior doc.
+   */
+  const ensureLocalSubscription = (doc: LoroDoc) => {
+    if (subscribedDoc && subscribedDoc !== doc) {
+      console.info('[crdt] switching local update subscription to new doc');
+      unsubscribeLocal?.();
+      unsubscribeLocal = undefined;
+      localSubscribed = false;
+      subscribedDoc = undefined;
+    }
+    if (!localSubscribed || !unsubscribeLocal || subscribedDoc !== doc) {
+      attachLocalSubscription(doc);
+      subscribedDoc = doc;
     }
   };
 
@@ -183,11 +206,184 @@ export function createWebSocketSyncConnector(
   const connect = async (doc: LoroDoc) => {
     if (stopped) return;
     if (connecting) return;
-    // Always (re)attach; if an earlier attempt failed, retry now.
-    if (!localSubscribed) {
-      attachLocalSubscription(doc);
-    }
+    // Always ensure we are subscribed to the *current* doc.
+    ensureLocalSubscription(doc);
     console.info('[crdt] connect start');
+
+    const attachSocketListenersFor = (ws: WebSocketLike) => {
+      // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
+      if ('binaryType' in ws) {
+        try {
+          (ws as any).binaryType = 'arraybuffer';
+        } catch (error) {
+          console.warn('Failed to set binaryType on CRDT websocket', error);
+        }
+      }
+
+      const handleMessage = (event: any) => {
+        // Use the currently connected doc reference (not the doc that created the socket),
+        // so a later connect(doc) call can rebind without needing a new WebSocket.
+        const activeDoc = subscribedDoc ?? doc;
+        if (!activeDoc) return;
+        // Binary updates flow directly
+        if (
+          event.data instanceof ArrayBuffer ||
+          ArrayBuffer.isView(event.data)
+        ) {
+          const bytes =
+            event.data instanceof ArrayBuffer
+              ? new Uint8Array(event.data)
+              : new Uint8Array(
+                  event.data.buffer,
+                  event.data.byteOffset,
+                  event.data.byteLength,
+                );
+          activeDoc.import(bytes);
+          return;
+        }
+        if (typeof Blob !== 'undefined' && event.data instanceof Blob) {
+          void event.data
+            .arrayBuffer()
+            .then((buf: ArrayBuffer) => activeDoc.import(new Uint8Array(buf)))
+            .catch((error: unknown) =>
+              console.warn('Failed to decode CRDT binary message', error),
+            );
+          return;
+        }
+
+        if (typeof event.data === 'string') {
+          try {
+            const parsed = JSON.parse(event.data);
+            console.debug('[crdt] ws message', parsed?.type);
+            if (parsed?.type === 'crdt-joined') {
+              joined = true;
+              console.debug(
+                '[crdt] joined room, flushing',
+                pending.length,
+                'pending',
+              );
+              // flush pending updates
+              while (pending.length) {
+                const update = pending.shift();
+                if (update && ws && ws.readyState === WS_OPEN) {
+                  // Debug visibility for diagnosing silent sync issues.
+                  console.debug(
+                    '[crdt] sending pending update after join',
+                    update.byteLength,
+                    'bytes',
+                  );
+                  ws.send(update);
+                }
+              }
+              return;
+            }
+            if (parsed?.type === 'crdt-snapshot' && parsed.data) {
+              const bytes = fromBase64(parsed.data);
+              activeDoc.import(bytes);
+            }
+            // Ignore other messages (errors, acks) for now
+          } catch (error) {
+            console.warn('Failed to parse CRDT message', error);
+          }
+        }
+      };
+
+      const handleOpen = () => {
+        attempt = 0;
+        joined = false;
+        connecting = false;
+        sendStatus('open');
+        sendJoin();
+        if (options.sendSnapshotOnConnect) {
+          sendSnapshot(doc);
+        }
+        ensureLocalSubscription(doc);
+      };
+
+      const handleClose = (event: CloseEvent) => {
+        console.warn('CRDT WS closed', {
+          code: event.code,
+          reason: event.reason,
+          pending: pending.length,
+          joined,
+        });
+        connecting = false;
+        sendStatus('closed');
+        unsubscribeLocal?.();
+        unsubscribeLocal = undefined;
+        localSubscribed = false;
+        subscribedDoc = undefined;
+        joined = false;
+        pending.length = 0;
+        detachSocketListeners?.();
+        detachSocketListeners = undefined;
+        listeningSocket = undefined;
+        scheduleReconnect(doc);
+      };
+
+      const handleError = (event: Event) => {
+        console.warn('CRDT WS error', event);
+        connecting = false;
+        sendStatus('error');
+        joined = false;
+        unsubscribeLocal?.();
+        unsubscribeLocal = undefined;
+        localSubscribed = false;
+        subscribedDoc = undefined;
+        detachSocketListeners?.();
+        detachSocketListeners = undefined;
+        listeningSocket = undefined;
+        scheduleReconnect(doc);
+      };
+
+      // Some WebSocket implementations expose either addEventListener or on*
+      // handlers. Use one style only to avoid duplicate events.
+      if (typeof ws.addEventListener === 'function') {
+        ws.addEventListener('message', handleMessage);
+        ws.addEventListener('open', handleOpen);
+        ws.addEventListener('close', handleClose);
+        ws.addEventListener('error', handleError);
+        detachSocketListeners = () => {
+          try {
+            ws.removeEventListener('message', handleMessage);
+            ws.removeEventListener('open', handleOpen);
+            ws.removeEventListener('close', handleClose);
+            ws.removeEventListener('error', handleError);
+          } catch (error) {
+            console.warn('[crdt] failed to detach socket listeners', error);
+          }
+        };
+      } else {
+        (ws as any).onmessage = handleMessage;
+        (ws as any).onopen = handleOpen;
+        (ws as any).onclose = handleClose;
+        (ws as any).onerror = handleError;
+        detachSocketListeners = () => {
+          try {
+            (ws as any).onmessage = null;
+            (ws as any).onopen = null;
+            (ws as any).onclose = null;
+            (ws as any).onerror = null;
+          } catch (error) {
+            console.warn('[crdt] failed to clear socket handlers', error);
+          }
+        };
+      }
+      listeningSocket = ws;
+
+      // If we stay in CONNECTING too long, force a reconnect to avoid being stuck.
+      setTimeout(() => {
+        if (ws && ws.readyState === WS_CONNECTING && !joined) {
+          console.warn('[crdt] ws still connecting after timeout; retrying');
+          try {
+            ws.close();
+          } catch (error) {
+            console.warn('[crdt] error closing stuck socket', error);
+          }
+        }
+      }, 3000);
+    };
+
     if (
       socket &&
       (socket.readyState === WS_OPEN || socket.readyState === WS_CONNECTING)
@@ -196,6 +392,19 @@ export function createWebSocketSyncConnector(
         '[crdt] reuse existing socket, readyState:',
         socket.readyState,
       );
+      if (listeningSocket !== socket) {
+        console.warn('[crdt] existing socket had no listeners; attaching now');
+        attachSocketListenersFor(socket);
+        // If the socket is already open, we won't get an 'open' event, so act as if
+        // we just opened: (re)join and optionally send snapshot.
+        if (socket.readyState === WS_OPEN) {
+          attempt = 0;
+          joined = false;
+          sendStatus('open');
+          sendJoin();
+          if (options.sendSnapshotOnConnect) sendSnapshot(doc);
+        }
+      }
       return;
     }
     if (reconnectTimer) {
@@ -217,142 +426,7 @@ export function createWebSocketSyncConnector(
       scheduleReconnect(doc);
       return;
     }
-    // Ensure browser websockets deliver binary frames as ArrayBuffer (not Blob)
-    if ('binaryType' in socket) {
-      try {
-        (socket as any).binaryType = 'arraybuffer';
-      } catch (error) {
-        console.warn('Failed to set binaryType on CRDT websocket', error);
-      }
-    }
-
-    const handleMessage = (event: any) => {
-      if (!doc) return;
-      // Binary updates flow directly
-      if (event.data instanceof ArrayBuffer || ArrayBuffer.isView(event.data)) {
-        const bytes =
-          event.data instanceof ArrayBuffer
-            ? new Uint8Array(event.data)
-            : new Uint8Array(
-                event.data.buffer,
-                event.data.byteOffset,
-                event.data.byteLength,
-              );
-        doc.import(bytes);
-        return;
-      }
-      if (typeof Blob !== 'undefined' && event.data instanceof Blob) {
-        void event.data
-          .arrayBuffer()
-          .then((buf: ArrayBuffer) => doc.import(new Uint8Array(buf)))
-          .catch((error: unknown) =>
-            console.warn('Failed to decode CRDT binary message', error),
-          );
-        return;
-      }
-
-      if (typeof event.data === 'string') {
-        try {
-          const parsed = JSON.parse(event.data);
-          console.debug('[crdt] ws message', parsed?.type);
-          if (parsed?.type === 'crdt-joined') {
-            joined = true;
-            console.debug(
-              '[crdt] joined room, flushing',
-              pending.length,
-              'pending',
-            );
-            // flush pending updates
-            while (pending.length) {
-              const update = pending.shift();
-              if (update && socket && socket.readyState === WS_OPEN) {
-                // Debug visibility for diagnosing silent sync issues.
-                console.debug(
-                  '[crdt] sending pending update after join',
-                  update.byteLength,
-                  'bytes',
-                );
-                socket.send(update);
-              }
-            }
-            return;
-          }
-          if (parsed?.type === 'crdt-snapshot' && parsed.data) {
-            const bytes = fromBase64(parsed.data);
-            doc.import(bytes);
-          }
-          // Ignore other messages (errors, acks) for now
-        } catch (error) {
-          console.warn('Failed to parse CRDT message', error);
-        }
-      }
-    };
-
-    const handleOpen = () => {
-      attempt = 0;
-      joined = false;
-      connecting = false;
-      sendStatus('open');
-      sendJoin();
-      if (options.sendSnapshotOnConnect) {
-        sendSnapshot(doc);
-      }
-      attachLocalSubscription(doc);
-    };
-
-    const handleClose = (event: CloseEvent) => {
-      console.warn('CRDT WS closed', {
-        code: event.code,
-        reason: event.reason,
-        pending: pending.length,
-        joined,
-      });
-      connecting = false;
-      sendStatus('closed');
-      unsubscribeLocal?.();
-      unsubscribeLocal = undefined;
-      localSubscribed = false;
-      joined = false;
-      pending.length = 0;
-      scheduleReconnect(doc);
-    };
-
-    const handleError = (event: Event) => {
-      console.warn('CRDT WS error', event);
-      connecting = false;
-      sendStatus('error');
-      joined = false;
-      unsubscribeLocal?.();
-      unsubscribeLocal = undefined;
-      localSubscribed = false;
-      scheduleReconnect(doc);
-    };
-
-    // Some WebSocket implementations expose either addEventListener or on*
-    // handlers. Use one style only to avoid duplicate events.
-    if (typeof socket.addEventListener === 'function') {
-      socket.addEventListener('message', handleMessage);
-      socket.addEventListener('open', handleOpen);
-      socket.addEventListener('close', handleClose);
-      socket.addEventListener('error', handleError);
-    } else {
-      (socket as any).onmessage = handleMessage;
-      (socket as any).onopen = handleOpen;
-      (socket as any).onclose = handleClose;
-      (socket as any).onerror = handleError;
-    }
-
-    // If we stay in CONNECTING too long, force a reconnect to avoid being stuck.
-    setTimeout(() => {
-      if (socket && socket.readyState === WS_CONNECTING && !joined) {
-        console.warn('[crdt] ws still connecting after timeout; retrying');
-        try {
-          socket.close();
-        } catch (error) {
-          console.warn('[crdt] error closing stuck socket', error);
-        }
-      }
-    }, 3000);
+    attachSocketListenersFor(socket);
   };
 
   const disconnect = async () => {
@@ -364,6 +438,10 @@ export function createWebSocketSyncConnector(
     unsubscribeLocal?.();
     unsubscribeLocal = undefined;
     localSubscribed = false;
+    subscribedDoc = undefined;
+    detachSocketListeners?.();
+    detachSocketListeners = undefined;
+    listeningSocket = undefined;
     if (socket) {
       try {
         socket.close();

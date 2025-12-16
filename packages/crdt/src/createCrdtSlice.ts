@@ -65,6 +65,7 @@ export function createCrdtSlice<
     let unsubStore: (() => void) | undefined;
     let unsubMirror: (() => void) | undefined;
     let unsubDocLocal: (() => void) | undefined;
+    let initializing: Promise<void> | undefined;
     let suppressStoreToMirror = false;
     let lastOutbound: Partial<InferredState<TSchema>> | undefined;
 
@@ -135,68 +136,84 @@ export function createCrdtSlice<
     };
 
     const initialize = async () => {
-      try {
-        doc = options.doc ?? options.createDoc?.() ?? new LoroDoc();
+      // Idempotency: room stores (and React StrictMode in dev) can call initialize()
+      // more than once. A second initialization without a prior destroy() would leak
+      // subscriptions and can desync the sync connector from the active doc.
+      if (initializing) return initializing;
+      if (get().crdt?.status === 'ready' && doc && mirror) return;
 
-        if (options.storage) {
-          const snapshot = await options.storage.load();
-          if (snapshot) {
-            doc.import(snapshot);
+      initializing = (async () => {
+        try {
+          doc = options.doc ?? options.createDoc?.() ?? new LoroDoc();
+
+          if (options.storage) {
+            const snapshot = await options.storage.load();
+            if (snapshot) {
+              doc.import(snapshot);
+            }
           }
+
+          mirror = new Mirror<TSchema>({
+            doc,
+            schema: options.schema as any,
+            initialState: options.initialState,
+            ...(options.mirrorOptions ?? {}),
+          });
+          // Debug local doc updates to verify mirror.setState is producing CRDT ops.
+          unsubDocLocal = doc.subscribeLocalUpdates?.((update: Uint8Array) => {
+            console.debug(
+              '[crdt] doc local update',
+              update.byteLength,
+              'bytes',
+            );
+          });
+
+          // Subscribe mirror->store first so snapshot/imported state wins.
+          unsubMirror = mirror.subscribe((state, meta) => {
+            applyMirrorToStore(state as InferredState<TSchema>, meta?.tags);
+          });
+          // Wait a tick so mirror can emit any imported state, then align store once.
+          await Promise.resolve();
+          applyMirrorToStore(mirror.getState() as InferredState<TSchema>, []);
+          // Now subscribe store->mirror for local changes.
+          unsubStore = (store as StoreApi<S>).subscribe((state) => {
+            pushFromStore(state);
+          });
+
+          if (options.sync) {
+            console.info('[crdt] initializing sync connector');
+            await options.sync.connect(doc);
+            console.info('[crdt] sync connector connected');
+          }
+
+          set((state: any) => ({
+            ...state,
+            crdt: {
+              ...(state.crdt ?? {}),
+              status: 'ready',
+              error: undefined,
+              initialize: state.crdt?.initialize ?? initialize,
+              destroy: state.crdt?.destroy ?? destroy,
+            },
+          }));
+        } catch (error: any) {
+          options.onError?.(error);
+          set((state: any) => ({
+            ...state,
+            crdt: {
+              ...(state.crdt ?? {}),
+              status: 'error',
+              error: error?.message ?? 'Failed to initialize CRDT',
+              initialize: state.crdt?.initialize ?? initialize,
+              destroy: state.crdt?.destroy ?? destroy,
+            },
+          }));
+        } finally {
+          initializing = undefined;
         }
+      })();
 
-        mirror = new Mirror<TSchema>({
-          doc,
-          schema: options.schema as any,
-          initialState: options.initialState,
-          ...(options.mirrorOptions ?? {}),
-        });
-        // Debug local doc updates to verify mirror.setState is producing CRDT ops.
-        unsubDocLocal = doc.subscribeLocalUpdates?.((update: Uint8Array) => {
-          console.debug('[crdt] doc local update', update.byteLength, 'bytes');
-        });
-
-        // Subscribe mirror->store first so snapshot/imported state wins.
-        unsubMirror = mirror.subscribe((state, meta) => {
-          applyMirrorToStore(state as InferredState<TSchema>, meta?.tags);
-        });
-        // Wait a tick so mirror can emit any imported state, then align store once.
-        await Promise.resolve();
-        applyMirrorToStore(mirror.getState() as InferredState<TSchema>, []);
-        // Now subscribe store->mirror for local changes.
-        unsubStore = (store as StoreApi<S>).subscribe((state) => {
-          pushFromStore(state);
-        });
-
-        if (options.sync) {
-          console.info('[crdt] initializing sync connector');
-          await options.sync.connect(doc);
-          console.info('[crdt] sync connector connected');
-        }
-
-        set((state: any) => ({
-          ...state,
-          crdt: {
-            ...(state.crdt ?? {}),
-            status: 'ready',
-            error: undefined,
-            initialize: state.crdt?.initialize ?? initialize,
-            destroy: state.crdt?.destroy ?? destroy,
-          },
-        }));
-      } catch (error: any) {
-        options.onError?.(error);
-        set((state: any) => ({
-          ...state,
-          crdt: {
-            ...(state.crdt ?? {}),
-            status: 'error',
-            error: error?.message ?? 'Failed to initialize CRDT',
-            initialize: state.crdt?.initialize ?? initialize,
-            destroy: state.crdt?.destroy ?? destroy,
-          },
-        }));
-      }
+      return initializing;
     };
 
     const destroy = async () => {
@@ -206,6 +223,19 @@ export function createCrdtSlice<
       if (options.sync?.disconnect) {
         await options.sync.disconnect();
       }
+      doc = undefined;
+      mirror = undefined;
+      initializing = undefined;
+      set((state: any) => ({
+        ...state,
+        crdt: {
+          ...(state.crdt ?? {}),
+          status: 'idle',
+          error: undefined,
+          initialize: state.crdt?.initialize ?? initialize,
+          destroy: state.crdt?.destroy ?? destroy,
+        },
+      }));
     };
 
     return {
