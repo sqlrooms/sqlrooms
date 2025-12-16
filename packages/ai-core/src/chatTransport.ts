@@ -154,8 +154,10 @@ export function convertToAiSDKTools(
         ...tool,
         onToolCompleted: (toolCallId: string, additionalData: unknown) => {
           if (tool.onToolCompleted) {
+            // Call the onToolCompleted handler provided by the tool if it exists
             tool.onToolCompleted(toolCallId, additionalData);
           }
+          // Call the onToolCompleted handler provided by the caller if it exists
           onToolCompleted?.(toolCallId, additionalData);
         },
       });

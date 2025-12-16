@@ -24,8 +24,7 @@ export function formatTablesForLLM(
       // Only include tables from 'main' schema and the current local database
       // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
       const isMainSchema = !schemaName || schemaName === 'main';
-      const isLocalDatabase =
-        !databaseName || databaseName === currentDatabase;
+      const isLocalDatabase = !databaseName || databaseName === currentDatabase;
 
       return isMainSchema && isLocalDatabase;
     })
@@ -43,9 +42,7 @@ export function formatTablesForLLM(
         header.push(`[${table.rowCount.toLocaleString()} rows]`);
 
       // Format columns with proper indentation
-      const columns = table.columns
-        .map((col) => `  ${col.name}`)
-        .join('\n');
+      const columns = table.columns.map((col) => `  ${col.name}`).join('\n');
 
       // Add comment if available
       const comment = table.comment ? `  # ${table.comment}` : '';
@@ -86,6 +83,10 @@ Instructions for analysis:
 - Break down complex problems into smaller steps
 - Use "SUMMARIZE table_name"for quick overview of the table
 - Please don't modify data
+- IMPORTANT: When you receive an error response from a tool call (where success: false):
+  * Stop making any further tool calls immediately
+  * Return a final answer that includes the error message
+  * Explain what went wrong and suggest possible fixes if applicable
 
 When creating visualizations:
 - Follow VegaLite syntax
