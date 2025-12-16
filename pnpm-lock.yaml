@@ -670,6 +670,9 @@ importers:
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -1999,6 +2002,9 @@ importers:
 
   packages/crdt:
     dependencies:
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
       loro-crdt:
         specifier: ^1.10.3
         version: 1.10.3
