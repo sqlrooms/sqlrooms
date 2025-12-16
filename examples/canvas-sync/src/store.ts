@@ -1,13 +1,12 @@
+import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
 import {
-  Canvas,
-  CanvasSliceConfig,
-  CanvasSliceState,
-  createCanvasSlice,
-} from '@sqlrooms/canvas';
+  canvasMirrorInitialState,
+  canvasMirrorSchema,
+  createCanvasCrdtBindings,
+} from '@sqlrooms/canvas/crdt';
 import {
   CrdtSliceState,
   createCrdtSlice,
-  createLocalStorageDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
@@ -21,7 +20,6 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {setAutoFreeze} from 'immer';
-import {schema} from 'loro-mirror';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './DataSourcesPanel';
@@ -49,35 +47,6 @@ export type RoomState = RoomShellSliceState &
   };
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
-
-const canvasMirrorSchema = schema({
-  canvas: schema.LoroMap({
-    config: schema.LoroMap({
-      nodes: schema.LoroList(
-        schema.LoroMap({
-          id: schema.String(),
-          position: schema.LoroMap({
-            x: schema.Number(),
-            y: schema.Number(),
-          }),
-          type: schema.String(),
-          data: schema.Any(),
-          width: schema.Number(),
-          height: schema.Number(),
-        }),
-        (node) => node.id,
-      ),
-      edges: schema.LoroList(
-        schema.LoroMap({
-          id: schema.String(),
-          source: schema.String(),
-          target: schema.String(),
-        }),
-        (edge) => edge.id,
-      ),
-    }),
-  }),
-});
 
 const SERVER_URL =
   (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000';
@@ -122,7 +91,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createCrdtSlice<RoomState, typeof canvasMirrorSchema>({
-        //storage: createLocalStorageDocStorage('canvas-sync-example'),
         sync: createWebSocketSyncConnector({
           url: SERVER_URL,
           roomId: ROOM_ID,
@@ -130,41 +98,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           onStatus: (status) => set({connection: status}),
         }),
         schema: canvasMirrorSchema,
-        bindings: [
-          {
-            key: 'canvas',
-            select: (state) =>
-              ({
-                config: {
-                  nodes: state.canvas.config.nodes,
-                  edges: state.canvas.config.edges,
-                },
-              }) as any,
-            apply: (value) => {
-              if (!value?.config) return;
-              set((state) => ({
-                ...state,
-                canvas: {
-                  ...state.canvas,
-                  config: CanvasSliceConfig.parse({
-                    ...state.canvas.config,
-                    ...value.config,
-                    // Keep local viewport unsynced
-                    viewport: state.canvas.config.viewport,
-                  }),
-                },
-              }));
-            },
-          },
-        ],
-        initialState: {
-          canvas: {
-            config: {
-              nodes: [],
-              edges: [],
-            },
-          },
-        },
+        bindings: createCanvasCrdtBindings<RoomState>(),
+        initialState: canvasMirrorInitialState,
       })(set, get, store),
       // App slice with config
       app: {
