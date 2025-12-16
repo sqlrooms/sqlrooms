@@ -1,9 +1,5 @@
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
-import {
-  canvasMirrorInitialState,
-  canvasMirrorSchema,
-  createCanvasCrdtBindings,
-} from '@sqlrooms/canvas/crdt';
+import {createCanvasCrdtModule} from '@sqlrooms/canvas/crdt';
 import {
   CrdtSliceState,
   createCrdtSlice,
@@ -90,16 +86,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createCrdtSlice<RoomState, typeof canvasMirrorSchema>({
+      ...createCrdtSlice<RoomState, any>({
         sync: createWebSocketSyncConnector({
           url: SERVER_URL,
           roomId: ROOM_ID,
           sendSnapshotOnConnect: true,
           onStatus: (status) => set({connection: status}),
         }),
-        schema: canvasMirrorSchema,
-        bindings: createCanvasCrdtBindings<RoomState>(),
-        initialState: canvasMirrorInitialState,
+        modules: [createCanvasCrdtModule<RoomState>() as any],
       })(set, get, store),
       // App slice with config
       app: {

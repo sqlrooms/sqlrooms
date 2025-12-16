@@ -45,9 +45,30 @@ export type CrdtSyncConnector = {
   disconnect?: () => Promise<void>;
 };
 
-export type CreateCrdtSliceOptions<S, TSchema extends SchemaType> = {
+export type CrdtModule<S, TSchema extends SchemaType = SchemaType> = {
   schema: MirrorSchema<TSchema>;
-  bindings: CrdtBinding<S, InferredState<TSchema>>[];
+  /**
+   * Bindings are intentionally `any`-typed because Mirror schemas can attach
+   * internal metadata (e.g. `$cid`) to mirrored objects that doesn't exist in
+   * the Zustand store state.
+   *
+   * Keeping this loose makes it easy to compose modules from multiple packages
+   * without fighting type-level details of `loro-mirror` inference.
+   */
+  bindings: Array<CrdtBinding<S, any>>;
+  initialState?: any;
+  mirrorOptions?: Record<string, unknown>;
+};
+
+export type CreateCrdtSliceOptions<S, TSchema extends SchemaType> = {
+  /**
+   * Optional multi-module configuration: allows composing multiple mirror schemas
+   * (e.g. from multiple SQLRooms slices plus app-specific state) into a single
+   * CRDT doc connection by creating one Mirror per module on a shared Loro doc.
+   */
+  modules?: Array<CrdtModule<S, any>>;
+  schema?: MirrorSchema<TSchema>;
+  bindings?: CrdtBinding<S, InferredState<TSchema>>[];
   doc?: LoroDoc;
   createDoc?: () => LoroDoc;
   initialState?: Partial<InferInputType<TSchema>>;
@@ -77,13 +98,50 @@ export function createCrdtSlice<
 >(options: CreateCrdtSliceOptions<S, TSchema>): StateCreator<CrdtSliceState> {
   return createSlice<CrdtSliceState, S & CrdtSliceState>((set, get, store) => {
     let doc: LoroDoc | undefined;
-    let mirror: Mirror<TSchema> | undefined;
+    let mirrors: Mirror<any>[] = [];
     let unsubStore: (() => void) | undefined;
-    let unsubMirror: (() => void) | undefined;
+    let unsubMirrors: Array<() => void> = [];
     let unsubDocLocal: (() => void) | undefined;
     let initializing: Promise<void> | undefined;
     let suppressStoreToMirror = false;
-    let lastOutbound: Partial<InferredState<TSchema>> | undefined;
+    const lastOutboundByModule = new Map<number, Record<string, unknown>>();
+
+    const getModules = (): Array<CrdtModule<S, any>> => {
+      if (options.modules) {
+        if (options.schema || options.bindings || options.initialState) {
+          throw new Error(
+            '[crdt] Provide either `modules` or (`schema` + `bindings`), not both.',
+          );
+        }
+        return options.modules;
+      }
+      if (!options.schema || !options.bindings) {
+        throw new Error('[crdt] Missing required `schema` and `bindings`.');
+      }
+      return [
+        {
+          schema: options.schema as any,
+          bindings: options.bindings as any,
+          initialState: options.initialState,
+          mirrorOptions: options.mirrorOptions,
+        },
+      ];
+    };
+
+    const validateBindings = (modules: Array<CrdtModule<S, any>>) => {
+      const seen = new Set<string>();
+      for (const mod of modules) {
+        for (const b of mod.bindings as Array<CrdtBinding<S, any>>) {
+          const key = String(b.key);
+          if (seen.has(key)) {
+            throw new Error(
+              `[crdt] Duplicate binding key "${key}" across modules. Each bound key must be unique.`,
+            );
+          }
+          seen.add(key);
+        }
+      }
+    };
 
     const persistDoc = async () => {
       if (!options.storage || !doc) return;
@@ -95,50 +153,57 @@ export function createCrdtSlice<
       }
     };
 
-    const pushFromStore = (state: S) => {
-      if (!mirror || suppressStoreToMirror) return;
-      const next: Partial<InferredState<TSchema>> = {};
-      for (const binding of options.bindings) {
-        const value = binding.select
-          ? binding.select(state)
-          : (state as any)[binding.key];
-        (next as any)[binding.key] = value;
-      }
-      // Skip if outbound payload is identical by reference per key
-      if (
-        lastOutbound &&
-        options.bindings.every(
-          (b) => (lastOutbound as any)[b.key] === (next as any)[b.key],
-        )
-      ) {
-        return;
-      }
-      // Debug visibility for outbound updates to the CRDT mirror/doc.
-      // Helps detect when local state changes are not producing CRDT traffic.
-      console.debug(
-        '[crdt] pushFromStore outbound keys:',
-        options.bindings.map((b) => b.key),
-      );
-      lastOutbound = next;
+    const pushFromStore = (state: S, modules: Array<CrdtModule<S, any>>) => {
+      if (mirrors.length === 0 || suppressStoreToMirror) return;
+      for (let i = 0; i < modules.length; i += 1) {
+        const mirror = mirrors[i];
+        const mod = modules[i];
+        if (!mod || !mirror) continue;
 
-      mirror.setState(
-        (draft: any) => {
-          Object.assign(draft, next);
-        },
-        {tags: ['from-store']},
-      );
+        const next: Record<string, unknown> = {};
+        for (const binding of mod.bindings as Array<CrdtBinding<S, any>>) {
+          const value = binding.select
+            ? binding.select(state)
+            : (state as any)[binding.key];
+          (next as any)[binding.key] = value;
+        }
+
+        const lastOutbound = lastOutboundByModule.get(i);
+        if (
+          lastOutbound &&
+          (mod.bindings as Array<CrdtBinding<S, any>>).every(
+            (b) => (lastOutbound as any)[b.key] === (next as any)[b.key],
+          )
+        ) {
+          continue;
+        }
+
+        console.debug(
+          `[crdt] pushFromStore outbound keys (module ${i}):`,
+          (mod.bindings as Array<CrdtBinding<S, any>>).map((b) => b.key),
+        );
+        lastOutboundByModule.set(i, next);
+
+        mirror.setState(
+          (draft: any) => {
+            Object.assign(draft, next);
+          },
+          {tags: ['from-store']},
+        );
+      }
       void persistDoc();
     };
 
     const applyMirrorToStore = (
-      mirrorState: InferredState<TSchema>,
+      moduleBindings: Array<CrdtBinding<S, any>>,
+      mirrorState: any,
       tags?: string[],
     ) => {
       if (tags?.includes('from-store')) return;
       suppressStoreToMirror = true;
       try {
-        for (const binding of options.bindings) {
-          const value = (mirrorState as any)[binding.key];
+        for (const binding of moduleBindings) {
+          const value = mirrorState?.[binding.key];
           if (binding.apply) {
             binding.apply(value, set, get);
           } else {
@@ -156,24 +221,31 @@ export function createCrdtSlice<
       // more than once. A second initialization without a prior destroy() would leak
       // subscriptions and can desync the sync connector from the active doc.
       if (initializing) return initializing;
-      if (get().crdt?.status === 'ready' && doc && mirror) return;
+      if (get().crdt?.status === 'ready' && doc && mirrors.length > 0) return;
 
       initializing = (async () => {
         try {
+          const modules = getModules();
+          validateBindings(modules);
+
           doc = options.doc ?? options.createDoc?.() ?? new LoroDoc();
+          if (!doc) throw new Error('[crdt] Failed to create Loro doc');
+          const activeDoc = doc;
 
           if (options.storage) {
             const snapshot = await options.storage.load();
             if (snapshot) {
-              doc.import(snapshot);
+              activeDoc.import(snapshot);
             }
           }
 
-          mirror = new Mirror<TSchema>({
-            doc,
-            schema: options.schema as any,
-            initialState: options.initialState,
-            ...(options.mirrorOptions ?? {}),
+          mirrors = modules.map((m) => {
+            return new Mirror<any>({
+              doc: activeDoc,
+              schema: m.schema as any,
+              initialState: m.initialState,
+              ...(m.mirrorOptions ?? options.mirrorOptions ?? {}),
+            });
           });
           // Debug local doc updates to verify mirror.setState is producing CRDT ops.
           unsubDocLocal = doc.subscribeLocalUpdates?.((update: Uint8Array) => {
@@ -185,15 +257,27 @@ export function createCrdtSlice<
           });
 
           // Subscribe mirror->store first so snapshot/imported state wins.
-          unsubMirror = mirror.subscribe((state, meta) => {
-            applyMirrorToStore(state as InferredState<TSchema>, meta?.tags);
+          unsubMirrors = mirrors.map((m, idx) => {
+            const mod = modules[idx];
+            if (!mod) {
+              return () => {};
+            }
+            return m.subscribe((state: any, meta: any) => {
+              applyMirrorToStore(mod.bindings as any, state, meta?.tags);
+            });
           });
-          // Wait a tick so mirror can emit any imported state, then align store once.
+
+          // Wait a tick so mirrors can emit any imported state, then align store once.
           await Promise.resolve();
-          applyMirrorToStore(mirror.getState() as InferredState<TSchema>, []);
+          for (let i = 0; i < mirrors.length; i += 1) {
+            const m = mirrors[i];
+            const mod = modules[i];
+            if (!m || !mod) continue;
+            applyMirrorToStore(mod.bindings as any, m.getState() as any, []);
+          }
           // Now subscribe store->mirror for local changes.
           unsubStore = store.subscribe((state) => {
-            pushFromStore(state);
+            pushFromStore(state, modules);
           });
 
           if (options.sync) {
@@ -234,13 +318,14 @@ export function createCrdtSlice<
 
     const destroy = async () => {
       unsubStore?.();
-      unsubMirror?.();
+      for (const unsub of unsubMirrors) unsub?.();
       unsubDocLocal?.();
       if (options.sync?.disconnect) {
         await options.sync.disconnect();
       }
       doc = undefined;
-      mirror = undefined;
+      mirrors = [];
+      unsubMirrors = [];
       initializing = undefined;
       const prevCrdt = get().crdt;
       set({

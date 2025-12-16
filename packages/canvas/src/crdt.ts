@@ -99,3 +99,19 @@ export function createCanvasCrdtBindings<
     },
   ];
 }
+
+/**
+ * Creates a CRDT module bundle for the canvas slice.
+ *
+ * Use this with `@sqlrooms/crdt`'s `createCrdtSlice({ modules: [...] })` to
+ * compose multiple slice schemas/bindings on a single shared Loro document.
+ */
+export function createCanvasCrdtModule<
+  S extends CanvasSliceState = CanvasSliceState,
+>() {
+  return {
+    schema: canvasMirrorSchema,
+    bindings: createCanvasCrdtBindings<S>(),
+    initialState: canvasMirrorInitialState,
+  };
+}
