@@ -4,8 +4,8 @@ export type {
   CrdtSliceState,
   CrdtSyncConnector,
   CreateCrdtSliceOptions,
-  MirrorSchema,
 } from './createCrdtSlice';
+export type {MirrorSchema} from './type-helpers';
 export {createCrdtSlice} from './createCrdtSlice';
 export {createLocalStorageDocStorage} from './storages/localStorageStorage';
 export {createWebSocketSyncConnector} from './sync/webSocketSyncConnector';
