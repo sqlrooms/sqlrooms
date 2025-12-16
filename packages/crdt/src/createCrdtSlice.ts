@@ -56,9 +56,7 @@ export type CrdtSliceState = {
 export function createCrdtSlice<
   S extends Record<string, any>,
   TSchema extends SchemaType,
->(
-  options: CreateCrdtSliceOptions<S, TSchema>,
-): StateCreator<S & CrdtSliceState> {
+>(options: CreateCrdtSliceOptions<S, TSchema>): StateCreator<CrdtSliceState> {
   return (set, get, store) => {
     let doc: LoroDoc | undefined;
     let mirror: Mirror<TSchema> | undefined;
@@ -176,7 +174,7 @@ export function createCrdtSlice<
           await Promise.resolve();
           applyMirrorToStore(mirror.getState() as InferredState<TSchema>, []);
           // Now subscribe store->mirror for local changes.
-          unsubStore = (store as StoreApi<S>).subscribe((state) => {
+          unsubStore = store.subscribe((state) => {
             pushFromStore(state);
           });
 

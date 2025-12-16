@@ -85,84 +85,13 @@ const ROOM_ID =
   (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'canvas-sync-room';
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  // persistSliceConfigs(
-  //   {
-  //     name: 'canvas-sync-example-app-state-storage',
-  //     sliceConfigSchemas: {
-  //       room: BaseRoomConfig,
-  //       layout: LayoutConfig,
-  //       canvas: CanvasSliceConfig,
-  //       app: AppConfig,
-  //     },
-  //   },
   (set, get, store) => {
-    const connector = createWebSocketSyncConnector({
-      url: SERVER_URL,
-      roomId: ROOM_ID,
-      sendSnapshotOnConnect: true,
-      onStatus: (status) => set({connection: status}),
-    });
-
-    const crdtSlice = createCrdtSlice<
-      Record<string, unknown>,
-      typeof canvasMirrorSchema
-    >({
-      schema: canvasMirrorSchema,
-      bindings: [
-        {
-          key: 'canvas',
-          select: (state) =>
-            ({
-              config: {
-                nodes: (state as RoomState).canvas.config.nodes,
-                edges: (state as RoomState).canvas.config.edges,
-              },
-            }) as any,
-          apply: (value) => {
-            if (!value?.config) return;
-            set((state) => ({
-              ...state,
-              canvas: {
-                ...state.canvas,
-                config: CanvasSliceConfig.parse({
-                  ...state.canvas.config,
-                  ...value.config,
-                  // Keep local viewport unsynced
-                  viewport: state.canvas.config.viewport,
-                }),
-              },
-            }));
-          },
-        },
-      ],
-      initialState: {
-        canvas: {
-          config: {
-            nodes: [],
-            edges: [],
-          },
-        },
-      },
-      //storage: createLocalStorageDocStorage('canvas-sync-example'),
-      sync: connector,
-    })(set, get, store);
-
     return {
       connection: 'idle' as RoomConnectionStatus,
       setConnection: (status) => set({connection: status}),
+
       ...createRoomShellSlice({
-        connector: createWebSocketDuckDbConnector({
-          wsUrl: SERVER_URL,
-        }),
-        // config: {
-        //   dataSources: [
-        //     {
-        //       tableName: 'earthquakes',
-        //       type: 'url',
-        //       url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
-        //     },
-        //   ],
-        // },
+        connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
         layout: {
           config: {
             type: LayoutTypes.enum.mosaic,
@@ -192,8 +121,51 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...crdtSlice,
-
+      ...createCrdtSlice<RoomState, typeof canvasMirrorSchema>({
+        //storage: createLocalStorageDocStorage('canvas-sync-example'),
+        sync: createWebSocketSyncConnector({
+          url: SERVER_URL,
+          roomId: ROOM_ID,
+          sendSnapshotOnConnect: true,
+          onStatus: (status) => set({connection: status}),
+        }),
+        schema: canvasMirrorSchema,
+        bindings: [
+          {
+            key: 'canvas',
+            select: (state) =>
+              ({
+                config: {
+                  nodes: state.canvas.config.nodes,
+                  edges: state.canvas.config.edges,
+                },
+              }) as any,
+            apply: (value) => {
+              if (!value?.config) return;
+              set((state) => ({
+                ...state,
+                canvas: {
+                  ...state.canvas,
+                  config: CanvasSliceConfig.parse({
+                    ...state.canvas.config,
+                    ...value.config,
+                    // Keep local viewport unsynced
+                    viewport: state.canvas.config.viewport,
+                  }),
+                },
+              }));
+            },
+          },
+        ],
+        initialState: {
+          canvas: {
+            config: {
+              nodes: [],
+              edges: [],
+            },
+          },
+        },
+      })(set, get, store),
       // App slice with config
       app: {
         config: AppConfig.parse({}),
@@ -207,9 +179,4 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       },
     };
   },
-  // ),
 );
-
-// Note: `createRoomStore` auto-initializes the room (and thus all slices, including CRDT)
-// on the client. Avoid manually calling `crdt.initialize()` here to prevent double-init
-// issues (especially in dev / StrictMode).
