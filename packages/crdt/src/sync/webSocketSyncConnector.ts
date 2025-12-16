@@ -50,27 +50,7 @@ export type WebSocketSyncOptions = {
   protocols?: string | string[];
   onStatus?: (status: Exclude<CrdtConnectionStatus, 'idle'>) => void;
   createSocket?: (url: string, protocols?: string | string[]) => WebSocketLike;
-  /**
-   * Whether to send a **full Loro snapshot** as a JSON `crdt-snapshot` message on every
-   * websocket `open` (including reconnects).
-   *
-   * This is useful for seeding a server that doesn't already have state. If your server
-   * sends a snapshot to the client on join (like `sqlrooms-duckdb-server` does), you can
-   * typically set this to `false` and rely on incremental binary updates instead.
-   *
-   * @defaultValue false
-   */
   sendSnapshotOnConnect?: boolean;
-  /**
-   * Whether to send a **full Loro snapshot** once after join when the server reports the
-   * room is empty (`crdt-joined.hasState === false`).
-   *
-   * This matters when a client loads initial state from local persistence (e.g. IndexedDB)
-   * without producing CRDT ops: "updates-only" won't seed the server in that case.
-   *
-   * @defaultValue true
-   */
-  sendSnapshotIfServerEmpty?: boolean;
   maxRetries?: number;
   initialDelayMs?: number;
   maxDelayMs?: number;
@@ -82,8 +62,7 @@ export type WebSocketSyncOptions = {
 export function createWebSocketSyncConnector(
   options: WebSocketSyncOptions,
 ): CrdtSyncConnector {
-  const sendSnapshotOnConnect = options.sendSnapshotOnConnect ?? false;
-  const sendSnapshotIfServerEmpty = options.sendSnapshotIfServerEmpty ?? true;
+  const sendSnapshotOnConnect = options.sendSnapshotOnConnect ?? true;
   let socket: WebSocketLike | undefined;
   let unsubscribeLocal: (() => void) | undefined;
   let subscribedDoc: LoroDoc | undefined;
@@ -91,7 +70,6 @@ export function createWebSocketSyncConnector(
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let joined = false;
-  let serverHasState = false;
   let connecting = false;
   const pending: Uint8Array[] = [];
   let localSubscribed = false;
@@ -266,28 +244,12 @@ export function createWebSocketSyncConnector(
             const parsed = JSON.parse(event.data);
             if (parsed?.type === 'crdt-joined') {
               joined = true;
-              serverHasState = Boolean(parsed?.hasState);
-              // If the server has no state, seed it with a snapshot so peers can receive
-              // initial doc contents even when this client loaded from local persistence
-              // without generating any local CRDT updates.
-              if (!serverHasState && sendSnapshotIfServerEmpty) {
-                pending.length = 0;
-                sendSnapshot(activeDoc);
-                return;
-              }
               // flush pending updates
-              // If the server already has state, drop any buffered pre-join updates.
-              // This prevents a fresh client (e.g. incognito) from "seeding" an existing room
-              // with empty mirror initialState before the server snapshot arrives.
-              if (serverHasState) {
-                pending.length = 0;
-              } else {
-                while (pending.length) {
-                  const update = pending.shift();
-                  if (update && ws && ws.readyState === WS_OPEN) {
-                    // Debug visibility for diagnosing silent sync issues.
-                    ws.send(update);
-                  }
+              while (pending.length) {
+                const update = pending.shift();
+                if (update && ws && ws.readyState === WS_OPEN) {
+                  // Debug visibility for diagnosing silent sync issues.
+                  ws.send(update);
                 }
               }
               return;
@@ -306,7 +268,6 @@ export function createWebSocketSyncConnector(
       const handleOpen = () => {
         attempt = 0;
         joined = false;
-        serverHasState = false;
         connecting = false;
         sendStatus('open');
         sendJoin();
