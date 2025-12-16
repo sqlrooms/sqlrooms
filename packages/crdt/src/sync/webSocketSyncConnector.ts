@@ -201,6 +201,9 @@ export function createWebSocketSyncConnector(
       reconnectTimer = undefined;
       void connect(doc);
     }, delay);
+    // Avoid keeping the Node.js event loop alive in tests/SSR environments.
+    // No-op in browsers.
+    (reconnectTimer as any)?.unref?.();
   };
 
   const connect = async (doc: LoroDoc) => {
@@ -372,7 +375,7 @@ export function createWebSocketSyncConnector(
       listeningSocket = ws;
 
       // If we stay in CONNECTING too long, force a reconnect to avoid being stuck.
-      setTimeout(() => {
+      const connectingTimeout = setTimeout(() => {
         if (ws && ws.readyState === WS_CONNECTING && !joined) {
           console.warn('[crdt] ws still connecting after timeout; retrying');
           try {
@@ -382,6 +385,9 @@ export function createWebSocketSyncConnector(
           }
         }
       }, 3000);
+      // Avoid keeping the Node.js event loop alive in tests/SSR environments.
+      // No-op in browsers.
+      (connectingTimeout as any)?.unref?.();
     };
 
     if (

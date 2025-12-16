@@ -30,8 +30,8 @@
     "dev": "tsc -w",
     "build": "tsc",
     "lint": "eslint .",
+    "test": "NODE_OPTIONS=--experimental-vm-modules jest",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   }
 }
-
