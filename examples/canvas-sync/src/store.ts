@@ -3,6 +3,8 @@ import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
   CrdtSliceState,
   createCrdtSlice,
+  createIndexedDbDocStorage,
+  createLocalStorageDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
@@ -77,13 +79,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createCrdtSlice<RoomState>({
-        sync: createWebSocketSyncConnector({
-          url: SERVER_URL,
-          roomId: ROOM_ID,
-        }),
-        mirrors: {
-          canvas: createCanvasCrdtMirror<RoomState>(),
-        },
+        storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
+        sync: createWebSocketSyncConnector({url: SERVER_URL, roomId: ROOM_ID}),
+        mirrors: {canvas: createCanvasCrdtMirror<RoomState>()},
       })(set, get, store),
 
       // App slice with config

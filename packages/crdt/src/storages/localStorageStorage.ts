@@ -17,7 +17,13 @@ function fromBase64(encoded: string): Uint8Array {
   return bytes;
 }
 
-export function createLocalStorageDocStorage(key: string): CrdtDocStorage {
+type LocalStorageDocStorageOptions = {
+  key: string;
+};
+
+export function createLocalStorageDocStorage({
+  key,
+}: LocalStorageDocStorageOptions): CrdtDocStorage {
   return {
     async load() {
       if (typeof window === 'undefined') return undefined;

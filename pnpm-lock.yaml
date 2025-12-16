@@ -688,6 +688,9 @@ importers:
       '@xyflow/react':
         specifier: ^12.8.5
         version: 12.10.0(@types/react@19.2.7)(immer@11.0.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      immer:
+        specifier: ^11.0.1
+        version: 11.0.1
       loro-mirror:
         specifier: ^1.1.2
         version: 1.2.0(loro-crdt@1.10.3)
