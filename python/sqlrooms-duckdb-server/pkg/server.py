@@ -120,13 +120,13 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
         peer_key = _ws_key(ws)
-        print(f"joining room {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        logger.info(f"joining room {room_id} (ws id: {id(ws)}, peer: {peer_key})")
         room = await crdt_state.ensure_loaded(room_id)
         ws._room_id = room_id  # type: ignore[attr-defined]
         ws.subscribe(room_id)
         ws.send({"type": "crdt-joined", "roomId": room_id}, OpCode.TEXT)
         snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
-        print(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
+        logger.debug(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
         ws.send(
             {
                 "type": "crdt-snapshot",
@@ -138,7 +138,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
 
     async def _crdt_update(ws, payload: bytes):
         peer_key = _ws_key(ws)
-        print(
+        logger.debug(
             f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, peer: {peer_key})"
         )
         if not crdt_enabled:
@@ -151,9 +151,9 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
                 or ws_rooms_by_id.get(id(ws))
                 or ws_rooms_by_peer.get(peer_key)
             )
-        print(f"resolved room_id: {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        logger.debug(f"resolved room_id: {room_id} (ws id: {id(ws)}, peer: {peer_key})")
         if not room_id:
-            print(f"no room_id found")
+            logger.warning("no room_id found")
             # If we somehow missed join, ignore this update to avoid noisy errors
             return
         room = await crdt_state.ensure_loaded(room_id)
@@ -164,13 +164,12 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
                 update = payload
                 await crdt_state.save_snapshot(room_id, room.doc)
                 saved_snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
-                print(f"saved snapshot for {room_id}: {len(saved_snapshot)} bytes")
+                logger.debug(f"saved snapshot for {room_id}: {len(saved_snapshot)} bytes")
             except Exception as exc:
                 logger.exception("Failed to handle CRDT update")
                 ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
                 return
-        print(f"publishing update to room {room_id}")
-        print(f"update len: {len(update)} bytes")
+        logger.debug(f"publishing update to room {room_id}, len: {len(update)} bytes")
         # Send to all peers in the room except the originating websocket to avoid
         # echoing the update back and causing client-side loops.
         # for peer, peer_room in list(ws_rooms.items()):
@@ -178,7 +177,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         #         continue
         #     _ws_send(peer, update, OpCode.BINARY)
         app.publish(room_id, update, OpCode.BINARY)
-        print(f"published update to room {room_id}")
+        logger.debug(f"published update to room {room_id}")
         _ws_send(ws, {"type": "crdt-update-ack", "roomId": room_id}, OpCode.TEXT)
 
     def ws_open(ws):
@@ -216,8 +215,6 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-snapshot":
             room_id = str(query.get("roomId") or "").strip()
             data_b64 = query.get("data")
-            if isinstance(data_b64, str):
-                print(f"crdt-snapshot data length (b64 chars): {len(data_b64)}")
             if not room_id or not isinstance(data_b64, str):
                 ws.send({"type": "error", "error": "missing roomId or data"}, OpCode.TEXT)
                 return
@@ -283,13 +280,6 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         ws.send({"type": "error", "error": "invalid message"}, OpCode.TEXT)
 
     async def ws_message(ws, message, opcode):
-        print(f"opcode: {opcode}")
-        print(f"opcode == OpCode.BINARY: {opcode == OpCode.BINARY}")
-        print(f"isinstance(message, str): {isinstance(message, str)}")
-        print(f"isinstance(message, memoryview): {isinstance(message, memoryview)}")
-        print(f"isinstance(message, (bytes, bytearray, memoryview)): {isinstance(message, (bytes, bytearray, memoryview))}")
-        print(f"crdt_enabled: {crdt_enabled}")
-
         # Handle binary upfront with its own error handling so we never emit "invalid json"
         if opcode == OpCode.BINARY:
             if isinstance(message, str):
@@ -300,10 +290,8 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
                 message_bytes = bytes(message)
             if crdt_enabled:
                 try:
-                    print(f"calling _crdt_update with message_bytes len: {len(message_bytes)} bytes")
                     await _crdt_update(ws, message_bytes)
                 except Exception as exc:
-                    print(f"error calling _crdt_update: {exc}")
                     logger.exception("Failed to process CRDT binary message")
                     ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
                 return
@@ -312,9 +300,6 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
 
         if isinstance(message, (bytes, bytearray, memoryview)):
             if crdt_enabled:
-                print(f"message len: {len(message)} bytes")
-                print(f"message.tobytes() len: {len(message.tobytes())} bytes")
-                print(f"bytes(message) len: {len(bytes(message))} bytes")
                 try:
                     await _crdt_update(
                         ws, message.tobytes() if isinstance(message, memoryview) else bytes(message)
@@ -326,7 +311,6 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
             msg_str = bytes(message).decode("utf-8", "ignore")
         else:
             msg_str = message
-            print(f"text message len: {len(msg_str)} chars")
 
         try:
             query = ujson.loads(msg_str)
@@ -401,7 +385,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
             "close": lambda ws, code, message: (
-                print(
+                logger.info(
                     f"ws closed code={code} reason={message} room={getattr(ws, '_room_id', None)} id={id(ws)}"
                 ),
                 ws_rooms_by_peer.pop(_ws_key(ws), None),
