@@ -24,7 +24,7 @@ const CONNECTION_STATUS: Record<string, ConnectionStatusVisual> = {
 };
 
 function ConnectionStatusIndicator() {
-  const status = useRoomStore((s) => s.connection);
+  const status = useRoomStore((s) => s.crdt.connectionStatus);
   const visual = CONNECTION_STATUS[status] ?? CONNECTION_STATUS.idle;
   const Icon = status === 'open' ? Zap : ZapOff;
 

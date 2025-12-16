@@ -29,9 +29,25 @@ export type CrdtDocStorage = {
   save: (data: Uint8Array) => Promise<void>;
 };
 
+export type CrdtConnectionStatus =
+  | 'idle'
+  | 'connecting'
+  | 'open'
+  | 'closed'
+  | 'error';
+
 export type CrdtSyncConnector = {
   connect: (doc: LoroDoc) => Promise<void>;
   disconnect?: () => Promise<void>;
+  /**
+   * Optional hook for connectors to report connection status into the CRDT slice.
+   *
+   * `createCrdtSlice` will wire this automatically to `crdt.setConnectionStatus`,
+   * so consumer apps don't need to pass `onStatus` callbacks manually.
+   */
+  setStatusListener?: (
+    listener: (status: CrdtConnectionStatus) => void,
+  ) => void;
 };
 
 export type CrdtMirror<S, TSchema extends SchemaType = SchemaType> = {
@@ -80,6 +96,17 @@ export type CrdtSliceState = {
   crdt: {
     status: 'idle' | 'ready' | 'error';
     error?: string;
+    /**
+     * Optional sync connection status for UIs.
+     *
+     * This is intentionally generic and primarily used by websocket-based sync
+     * connectors via `onStatus`.
+     */
+    connectionStatus: CrdtConnectionStatus;
+    /**
+     * Update `connectionStatus` (typically wired to a sync connector `onStatus` callback).
+     */
+    setConnectionStatus: (status: CrdtConnectionStatus) => void;
     initialize: () => Promise<void>;
     destroy: () => Promise<void>;
   };
@@ -237,6 +264,9 @@ export function createCrdtSlice<
           });
 
           if (options.sync) {
+            options.sync.setStatusListener?.((status) => {
+              get().crdt.setConnectionStatus(status);
+            });
             await options.sync.connect(doc);
           }
 
@@ -288,6 +318,7 @@ export function createCrdtSlice<
           ...(prevCrdt ?? {}),
           status: 'idle',
           error: undefined,
+          connectionStatus: 'idle',
           initialize: prevCrdt?.initialize ?? initialize,
           destroy: prevCrdt?.destroy ?? destroy,
         },
@@ -297,6 +328,16 @@ export function createCrdtSlice<
     return {
       crdt: {
         status: 'idle',
+        connectionStatus: 'idle',
+        setConnectionStatus: (status) => {
+          const prev = get().crdt;
+          set({
+            crdt: {
+              ...(prev ?? {}),
+              connectionStatus: status,
+            },
+          } as Partial<S & CrdtSliceState>);
+        },
         initialize,
         destroy,
       },

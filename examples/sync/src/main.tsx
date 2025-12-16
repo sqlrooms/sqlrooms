@@ -13,36 +13,26 @@ import {
 type AppState = CrdtSliceState & {
   counter: number;
   title: string;
-  connection: 'idle' | 'connecting' | 'open' | 'closed' | 'error';
   setCounter: (value: number) => void;
   setTitle: (title: string) => void;
-  setConnection: (status: AppState['connection']) => void;
 };
 
-const mirrorSchema = schema({
-  shared: schema.LoroMap({
-    counter: schema.Number(),
-    title: schema.String(),
-  }),
+const sharedValueSchema = schema.LoroMap({
+  counter: schema.Number(),
+  title: schema.String(),
 });
 
 const useStore = create<AppState>()((set, get, storeApi) => {
   const connector = createWebSocketSyncConnector({
     url: (import.meta as any).env?.VITE_SYNC_WS_URL ?? 'ws://localhost:4000',
     roomId: (import.meta as any).env?.VITE_SYNC_ROOM_ID ?? 'demo-room',
-    sendSnapshotOnConnect: true,
-    onStatus: (status) => set({connection: status}),
   });
 
-  const crdtSlice = createCrdtSlice<
-    {counter: number; title: string},
-    typeof mirrorSchema
-  >({
-    schema: mirrorSchema,
-    bindings: [
-      {
-        key: 'shared',
-        select: (s) => ({counter: s.counter, title: s.title}) as any,
+  const crdtSlice = createCrdtSlice<AppState>({
+    mirrors: {
+      shared: {
+        schema: sharedValueSchema,
+        select: (s) => ({counter: s.counter, title: s.title}),
         apply: (value: any) =>
           set((state) => ({
             ...state,
@@ -50,7 +40,7 @@ const useStore = create<AppState>()((set, get, storeApi) => {
             title: value.title,
           })),
       },
-    ],
+    },
     storage: createLocalStorageDocStorage('sqlrooms-sync-example'),
     sync: connector,
   })(set as any, get as any, storeApi as any);
@@ -58,10 +48,8 @@ const useStore = create<AppState>()((set, get, storeApi) => {
   return {
     counter: 0,
     title: 'Hello CRDT',
-    connection: 'idle',
     setCounter: (value: number) => set({counter: value}),
     setTitle: (title: string) => set({title}),
-    setConnection: (status) => set({connection: status}),
     ...(crdtSlice as CrdtSliceState),
   };
 });
@@ -71,7 +59,6 @@ function App() {
   const title = useStore((s) => s.title);
   const setCounter = useStore((s) => s.setCounter);
   const setTitle = useStore((s) => s.setTitle);
-  const connection = useStore((s) => s.connection);
   const crdt = useStore((s) => s.crdt);
   const [initError, setInitError] = useState<string | null>(null);
 
@@ -108,7 +95,7 @@ function App() {
         }}
       >
         <div>
-          <strong>Connection:</strong> {connection}
+          <strong>Connection:</strong> {crdt.connectionStatus}
         </div>
         <div>
           <strong>CRDT status:</strong> {crdt.status}

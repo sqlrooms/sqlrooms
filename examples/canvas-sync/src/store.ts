@@ -29,8 +29,6 @@ export type AppConfig = z.infer<typeof AppConfig>;
 export type RoomState = RoomShellSliceState &
   CanvasSliceState &
   CrdtSliceState & {
-    connection: RoomConnectionStatus;
-    setConnection: (status: RoomConnectionStatus) => void;
     app: {
       config: AppConfig;
       setApiKey: (apiKey: string) => void;
@@ -47,9 +45,6 @@ const ROOM_ID =
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => {
     return {
-      connection: 'idle' as RoomConnectionStatus,
-      setConnection: (status) => set({connection: status}),
-
       ...createRoomShellSlice({
         connector: createWebSocketDuckDbConnector({wsUrl: SERVER_URL}),
         layout: {
@@ -85,8 +80,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         sync: createWebSocketSyncConnector({
           url: SERVER_URL,
           roomId: ROOM_ID,
-          sendSnapshotOnConnect: true,
-          onStatus: (status) => set({connection: status}),
         }),
         mirrors: {
           canvas: createCanvasCrdtMirror<RoomState>(),

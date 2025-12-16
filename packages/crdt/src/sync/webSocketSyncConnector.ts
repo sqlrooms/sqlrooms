@@ -1,5 +1,5 @@
 import {LoroDoc} from 'loro-crdt';
-import {CrdtSyncConnector} from '../createCrdtSlice';
+import {CrdtConnectionStatus, CrdtSyncConnector} from '../createCrdtSlice';
 
 type WebSocketLike = {
   readyState: number;
@@ -48,7 +48,7 @@ export type WebSocketSyncOptions = {
   token?: string;
   params?: Record<string, string>;
   protocols?: string | string[];
-  onStatus?: (status: 'connecting' | 'open' | 'closed' | 'error') => void;
+  onStatus?: (status: Exclude<CrdtConnectionStatus, 'idle'>) => void;
   createSocket?: (url: string, protocols?: string | string[]) => WebSocketLike;
   sendSnapshotOnConnect?: boolean;
   maxRetries?: number;
@@ -62,6 +62,7 @@ export type WebSocketSyncOptions = {
 export function createWebSocketSyncConnector(
   options: WebSocketSyncOptions,
 ): CrdtSyncConnector {
+  const sendSnapshotOnConnect = options.sendSnapshotOnConnect ?? true;
   let socket: WebSocketLike | undefined;
   let unsubscribeLocal: (() => void) | undefined;
   let subscribedDoc: LoroDoc | undefined;
@@ -74,6 +75,9 @@ export function createWebSocketSyncConnector(
   let localSubscribed = false;
   let listeningSocket: WebSocketLike | undefined;
   let detachSocketListeners: (() => void) | undefined;
+  let statusListener:
+    | ((status: Exclude<CrdtConnectionStatus, 'idle'>) => void)
+    | undefined;
 
   const maxRetries = options.maxRetries ?? Infinity;
   const initialDelay = options.initialDelayMs ?? 500;
@@ -143,8 +147,9 @@ export function createWebSocketSyncConnector(
     return url.toString();
   };
 
-  const sendStatus = (status: 'connecting' | 'open' | 'closed' | 'error') => {
+  const sendStatus = (status: Exclude<CrdtConnectionStatus, 'idle'>) => {
     options.onStatus?.(status);
+    statusListener?.(status);
   };
 
   const sendJoin = () => {
@@ -266,7 +271,7 @@ export function createWebSocketSyncConnector(
         connecting = false;
         sendStatus('open');
         sendJoin();
-        if (options.sendSnapshotOnConnect) {
+        if (sendSnapshotOnConnect) {
           sendSnapshot(doc);
         }
         ensureLocalSubscription(doc);
@@ -373,7 +378,7 @@ export function createWebSocketSyncConnector(
           joined = false;
           sendStatus('open');
           sendJoin();
-          if (options.sendSnapshotOnConnect) sendSnapshot(doc);
+          if (sendSnapshotOnConnect) sendSnapshot(doc);
         }
       }
       return;
@@ -423,5 +428,11 @@ export function createWebSocketSyncConnector(
     sendStatus('closed');
   };
 
-  return {connect, disconnect};
+  return {
+    connect,
+    disconnect,
+    setStatusListener: (listener) => {
+      statusListener = listener as any;
+    },
+  };
 }
