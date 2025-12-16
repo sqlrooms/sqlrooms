@@ -34,6 +34,7 @@
     "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

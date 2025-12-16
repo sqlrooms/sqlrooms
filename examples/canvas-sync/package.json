@@ -19,7 +19,6 @@
     "@sqlrooms/utils": "workspace:*",
     "@xyflow/react": "^12.8.5",
     "immer": "^11.0.1",
-    "loro-mirror": "^1.1.2",
     "lucide-react": "^0.555.0",
     "postcss": "^8.5.6",
     "react": "^19.2.0",
