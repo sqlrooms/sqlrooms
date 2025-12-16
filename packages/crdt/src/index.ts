@@ -8,4 +8,4 @@ export type {
 } from './createCrdtSlice';
 export {createCrdtSlice} from './createCrdtSlice';
 export {createLocalStorageDocStorage} from './storages/localStorageStorage';
-export {createWebSocketSyncConnector} from './sync/webSocketConnector';
+export {createWebSocketSyncConnector} from './sync/webSocketSyncConnector';
