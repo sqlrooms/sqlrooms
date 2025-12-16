@@ -203,14 +203,58 @@ def shutdown_executor(wait: bool = False) -> None:
 
 # ---------- CRDT persistence helpers ----------
 
+SYNC_NAMESPACE: Optional[str] = None
+
+
+def _quote_ident(ident: str) -> str:
+    """Quote a DuckDB identifier (schema/table/database alias)."""
+    return '"' + ident.replace('"', '""') + '"'
+
+
+def _quote_sql_string(value: str) -> str:
+    """Quote a SQL string literal for DuckDB."""
+    return "'" + value.replace("'", "''") + "'"
+
+
+def _sync_rooms_table_ref() -> str:
+    if SYNC_NAMESPACE is None:
+        raise RuntimeError("CRDT storage not initialized")
+    return f"{_quote_ident(SYNC_NAMESPACE)}.{_quote_ident('sync_rooms')}"
+
+
 def attach_crdt_db(path: str) -> None:
-    """Attach a separate DuckDB file for CRDT snapshots under the 'crdt' schema."""
+    """Attach a separate DuckDB file for CRDT snapshots under the legacy 'crdt' namespace."""
+    init_crdt_storage(namespace="crdt", attached_db_path=path)
+
+
+def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
+    """Initialize CRDT snapshot persistence.
+
+    - If attached_db_path is provided, attach that DuckDB file under the given namespace
+      (DuckDB ATTACH alias), and store snapshots in `<namespace>.sync_rooms`.
+    - If attached_db_path is not provided, create a schema within the main DB and store
+      snapshots in `<namespace>.sync_rooms`.
+    """
+    global SYNC_NAMESPACE
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
-    GLOBAL_CON.execute(f"ATTACH '{path}' AS crdt;")
+    if not namespace or not namespace.strip():
+        raise ValueError("CRDT namespace must be a non-empty string")
+
+    SYNC_NAMESPACE = namespace.strip()
+    ns_q = _quote_ident(SYNC_NAMESPACE)
+
+    if attached_db_path is not None:
+        # Note: In DuckDB, the ATTACH alias behaves like a namespace you can qualify with.
+        GLOBAL_CON.execute(f"ATTACH {_quote_sql_string(attached_db_path)} AS {ns_q};")
+    else:
+        # Use a schema within the main database.
+        GLOBAL_CON.execute(f"CREATE SCHEMA IF NOT EXISTS {ns_q};")
+
+    rooms_ref = _sync_rooms_table_ref()
     GLOBAL_CON.execute(
-        """
-        CREATE TABLE IF NOT EXISTS crdt.crdt_rooms (
+        f"""
+        CREATE TABLE IF NOT EXISTS {rooms_ref} (
             room_id TEXT PRIMARY KEY,
             snapshot BLOB,
             updated_at TIMESTAMPTZ DEFAULT now()
@@ -220,13 +264,14 @@ def attach_crdt_db(path: str) -> None:
 
 
 async def load_crdt_snapshot(room_id: str) -> Optional[bytes]:
-    """Load a CRDT snapshot blob for a room from the attached crdt schema."""
+    """Load a CRDT snapshot blob for a room from the configured CRDT namespace."""
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
+    rooms_ref = _sync_rooms_table_ref()
 
     def _load(cur):
         res = cur.execute(
-            "SELECT snapshot FROM crdt.crdt_rooms WHERE room_id = ?", [room_id]
+            f"SELECT snapshot FROM {rooms_ref} WHERE room_id = ?", [room_id]
         ).fetchone()
         return None if res is None else res[0]
 
@@ -234,14 +279,15 @@ async def load_crdt_snapshot(room_id: str) -> Optional[bytes]:
 
 
 async def save_crdt_snapshot(room_id: str, snapshot: bytes) -> None:
-    """Persist a CRDT snapshot blob for a room into the attached crdt schema."""
+    """Persist a CRDT snapshot blob for a room into the configured CRDT namespace."""
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
+    rooms_ref = _sync_rooms_table_ref()
 
     def _save(cur):
         cur.execute(
-            """
-            INSERT INTO crdt.crdt_rooms(room_id, snapshot, updated_at)
+            f"""
+            INSERT INTO {rooms_ref}(room_id, snapshot, updated_at)
             VALUES (?, ?, now())
             ON CONFLICT(room_id) DO UPDATE SET snapshot = excluded.snapshot, updated_at = excluded.updated_at
             """,

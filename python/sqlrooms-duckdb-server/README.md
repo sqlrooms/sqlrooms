@@ -20,6 +20,7 @@ A Python-based server that runs a local DuckDB instance and supports queries ove
 - One-time retry on transaction conflicts (e.g., concurrent UPDATE vs ALTER)
 - Graceful shutdown (SIGINT/SIGTERM): cancel queries, FORCE CHECKPOINT, close, stop executor
 - Optional bearer authentication for HTTP and WebSocket endpoints
+- Optional sync (CRDT) over WebSocket (Loro), with snapshots stored either in the main DB or an attached DuckDB file
 
 ## Installation and usage
 
@@ -41,7 +42,9 @@ Alternatively, you can install the server with `pip install sqlrooms-duckdb-serv
   - `h3@community`
 
 - `--auth-token` (optional): If provided, enables bearer authentication. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
-- `--crdt-db` (optional): Path to a dedicated DuckDB file to enable the optional CRDT sync module. When provided, the server maintains per-room Loro CRDT docs, persists snapshots to this file, and exposes CRDT WebSocket messages alongside the existing query protocol.
+- `--sync` (optional): Enables the optional sync (CRDT) module. When enabled, the server maintains per-room Loro CRDT docs, persists snapshots, and exposes CRDT WebSocket messages alongside the existing query protocol.
+- `--sync-schema` (default: `__sqlrooms`): Where sync snapshots are stored.
+- `--sync-db` (optional): If provided, attaches this DuckDB file under `--sync-schema` and stores snapshots there. If omitted, creates/uses the `--sync-schema` schema within the main DB.
 
 Examples:
 
@@ -51,6 +54,12 @@ uv run sqlrooms-duckdb-server
 
 # File-backed DB with multiple extensions
 uv run sqlrooms-duckdb-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
+
+# Enable sync using a schema within the main DB
+uv run sqlrooms-duckdb-server --db-path /tmp/my.db --sync
+
+# Enable sync and store snapshots in a dedicated attached DuckDB file
+uv run sqlrooms-duckdb-server --db-path /tmp/my.db --sync --sync-db /tmp/my-sync.db
 ```
 
 ## Developer Setup
@@ -137,7 +146,7 @@ Supported messages:
     - Immediate echo to the sender: `{ "type":"notify","channel":"table:orders","payload":{"op":"update"} }`
     - Ack: `{ "type":"notifyAck","channel":"table:orders" }`
 
-### Optional CRDT sync (requires `--crdt-db`)
+### Optional sync (CRDT) (requires `--sync`)
 
 - Join a room and receive server snapshot:
 
@@ -151,8 +160,9 @@ Supported messages:
 
 Notes:
 
-- CRDT sync is off by default; enabled only when `--crdt-db` is provided.
-- CRDT storage uses a separate DuckDB file (attached as `crdt` schema) to keep user data isolated.
+- Sync is off by default; enabled only when `--sync` is provided.
+- If `--sync-db` is provided, snapshots are stored in that attached DuckDB file (attached under `--sync-schema`).
+- If `--sync-db` is not provided, snapshots are stored in the main DuckDB under the `--sync-schema` schema.
 
 ## Concurrency & Cancellation
 

@@ -4,8 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg",
-    "dev:crdt": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg.__main__ --db-path ./main.db --crdt-db ./crdt.db",
-    "__dev:crdt": "uv run python -m pkg.__main__ --db-path ./main.db --crdt-db ./crdt.db",
+    "dev:sync": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m pkg.__main__ --sync",
     "check-fix": "uv run ruff check --fix",
     "format": "uv run ruff format",
     "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",

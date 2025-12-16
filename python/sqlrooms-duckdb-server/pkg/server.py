@@ -81,7 +81,15 @@ def on_error(error, res, req):
         res.end(f"Error {error}")
 
 
-def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | None = None):
+def server(
+    cache,
+    port=4000,
+    auth_token: str | None = None,
+    *,
+    sync_enabled: bool = False,
+    sync_db_path: str | None = None,
+    sync_schema: str = "__sqlrooms",
+):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
     app = App()
@@ -92,7 +100,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
     # Auth helper
     auth = AuthManager(auth_token)
 
-    crdt_enabled = crdt_db_path is not None
+    crdt_enabled = bool(sync_enabled)
     ws_rooms: dict[object, str] = {}
     ws_rooms_by_id: dict[int, str] = {}
     ws_rooms_by_peer: dict[object, str] = {}
@@ -105,11 +113,12 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         except Exception:
             pass
         return id(ws)
+    crdt_state = None
     if crdt_enabled:
         try:
             from pkg import crdt as crdt_mod
 
-            db_async.attach_crdt_db(crdt_db_path)
+            db_async.init_crdt_storage(namespace=sync_schema, attached_db_path=sync_db_path)
             crdt_state = crdt_mod.CrdtState()
         except Exception:
             logger.exception("Failed to initialize CRDT module")
@@ -119,6 +128,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         if not crdt_enabled:
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
+        assert crdt_state is not None
         peer_key = _ws_key(ws)
         logger.info(f"joining room {room_id} (ws id: {id(ws)}, peer: {peer_key})")
         room = await crdt_state.ensure_loaded(room_id)
@@ -144,6 +154,7 @@ def server(cache, port=4000, auth_token: str | None = None, crdt_db_path: str | 
         if not crdt_enabled:
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
+        assert crdt_state is not None
         room_id = getattr(ws, "_room_id", None)
         if room_id is None:
             room_id = (
