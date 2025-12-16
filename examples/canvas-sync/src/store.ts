@@ -1,5 +1,5 @@
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
-import {createCanvasCrdtModule} from '@sqlrooms/canvas/crdt';
+import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
   CrdtSliceState,
   createCrdtSlice,
@@ -93,7 +93,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           sendSnapshotOnConnect: true,
           onStatus: (status) => set({connection: status}),
         }),
-        modules: [createCanvasCrdtModule<RoomState>() as any],
+        mirrors: [createCanvasCrdtMirror<RoomState>() as any],
       })(set, get, store),
       // App slice with config
       app: {
