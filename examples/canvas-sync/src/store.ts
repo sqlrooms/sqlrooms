@@ -7,12 +7,9 @@ import {
 } from '@sqlrooms/crdt';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
 import {
-  BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
-  LayoutConfig,
   LayoutTypes,
-  persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {setAutoFreeze} from 'immer';
@@ -20,15 +17,13 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './DataSourcesPanel';
 
-// Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
+// Loro Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
 
 type RoomConnectionStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
 
 // App config schema
-export const AppConfig = z.object({
-  apiKey: z.string().default(''),
-});
+export const AppConfig = z.object({apiKey: z.string().default('')});
 export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
@@ -86,15 +81,16 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createCrdtSlice<RoomState, any>({
+      ...createCrdtSlice<RoomState>({
         sync: createWebSocketSyncConnector({
           url: SERVER_URL,
           roomId: ROOM_ID,
           sendSnapshotOnConnect: true,
           onStatus: (status) => set({connection: status}),
         }),
-        mirrors: [createCanvasCrdtMirror<RoomState>() as any],
+        mirrors: [createCanvasCrdtMirror<RoomState>()],
       })(set, get, store),
+
       // App slice with config
       app: {
         config: AppConfig.parse({}),

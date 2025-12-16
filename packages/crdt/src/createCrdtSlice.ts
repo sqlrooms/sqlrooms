@@ -1,37 +1,29 @@
-import {InferInputType, InferType, Mirror, SchemaType} from 'loro-mirror';
-import {LoroDoc} from 'loro-crdt';
-import {StateCreator, StoreApi} from 'zustand';
 import {setAutoFreeze} from 'immer';
+import {LoroDoc} from 'loro-crdt';
+import {InferInputType, Mirror, SchemaType} from 'loro-mirror';
+import {StateCreator} from 'zustand';
+import {
+  InferredState,
+  MirrorSchema,
+  StoreGet,
+  StoreSet,
+  StripCidDeep,
+  createSlice,
+} from './type-helpers';
 
 // Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
 
-type StoreSet<S> = Parameters<StateCreator<S>>[0];
-type StoreGet<S> = Parameters<StateCreator<S>>[1];
-
-export type MirrorSchema<T extends SchemaType = SchemaType> = T;
-
-type InferredState<TSchema extends SchemaType> =
-  InferType<TSchema> extends Record<string, any>
-    ? InferType<TSchema>
-    : Record<string, never>;
-
-/**
- * Local equivalent of `createSlice` from `@sqlrooms/room-store`.
- *
- * Kept inline so `@sqlrooms/crdt` stays dependency-light (no need to depend on
- * `@sqlrooms/room-store` just for a typing helper).
- */
-function createSlice<SliceState, StoreState extends SliceState = SliceState>(
-  sliceCreator: (...args: Parameters<StateCreator<StoreState>>) => SliceState,
-): StateCreator<SliceState> {
-  return (set, get, store) =>
-    sliceCreator(set, get as () => StoreState, store as StoreApi<StoreState>);
-}
-
 export type CrdtBinding<S, M, K extends keyof M & string = keyof M & string> = {
   key: K;
-  select?: (state: S) => M[K];
+  /**
+   * Select a value from the store to write into the CRDT mirror.
+   *
+   * `loro-mirror` injects internal `$cid` metadata into mirrored map objects.
+   * Store state typically doesn't have this, so we accept the same shape with
+   * `$cid` fields removed (recursively).
+   */
+  select?: (state: S) => StripCidDeep<M[K]>;
   apply?: (value: M[K], set: StoreSet<S>, get: StoreGet<S>) => void;
 };
 
@@ -67,10 +59,6 @@ export type CreateCrdtSliceOptions<S, TSchema extends SchemaType> = {
    * CRDT doc connection by creating one Mirror per mirror on a shared Loro doc.
    */
   mirrors?: Array<CrdtMirror<S, any>>;
-  /**
-   * @deprecated Use `mirrors` instead.
-   */
-  modules?: Array<CrdtMirror<S, any>>;
   schema?: MirrorSchema<TSchema>;
   bindings?: CrdtBinding<S, InferredState<TSchema>>[];
   doc?: LoroDoc;
@@ -98,7 +86,7 @@ export type CrdtSliceState = {
  */
 export function createCrdtSlice<
   S extends Record<string, any>,
-  TSchema extends SchemaType,
+  TSchema extends SchemaType = SchemaType,
 >(options: CreateCrdtSliceOptions<S, TSchema>): StateCreator<CrdtSliceState> {
   return createSlice<CrdtSliceState, S & CrdtSliceState>((set, get, store) => {
     let doc: LoroDoc | undefined;
@@ -111,11 +99,6 @@ export function createCrdtSlice<
     const lastOutboundByModule = new Map<number, Record<string, unknown>>();
 
     const getMirrors = (): Array<CrdtMirror<S, any>> => {
-      if (options.mirrors && options.modules) {
-        throw new Error(
-          '[crdt] Provide either `mirrors` or `modules`, not both.',
-        );
-      }
       if (options.mirrors) {
         if (options.schema || options.bindings || options.initialState) {
           throw new Error(
@@ -124,13 +107,13 @@ export function createCrdtSlice<
         }
         return options.mirrors;
       }
-      if (options.modules) {
+      if (options.mirrors) {
         if (options.schema || options.bindings || options.initialState) {
           throw new Error(
-            '[crdt] Provide either `modules` or (`schema` + `bindings`), not both.',
+            '[crdt] Provide either `mirrors` or (`schema` + `bindings`), not both.',
           );
         }
-        return options.modules;
+        return options.mirrors;
       }
       if (!options.schema || !options.bindings) {
         throw new Error('[crdt] Missing required `schema` and `bindings`.');
