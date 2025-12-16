@@ -204,6 +204,7 @@ export type DuckDbSliceState = {
         temp?: boolean;
         view?: boolean;
         allowMultipleStatements?: boolean;
+        abortSignal?: AbortSignal;
       },
     ) => Promise<{
       tableName: string | QualifiedTableName;
@@ -313,6 +314,7 @@ export function createDuckDbSlice({
               temp?: boolean;
               view?: boolean;
               allowMultipleStatements?: boolean;
+              abortSignal?: AbortSignal;
             },
           ) {
             const {
@@ -320,6 +322,7 @@ export function createDuckDbSlice({
               temp = false,
               view = false,
               allowMultipleStatements = false,
+              abortSignal,
             } = options || {};
 
             // For temp tables/views, DuckDB requires the "temp" database
@@ -372,7 +375,9 @@ export function createDuckDbSlice({
               precedingStatements,
               createStatement,
             );
-            const result = await connector.query(fullQuery);
+            const result = await connector.query(fullQuery, {
+              signal: abortSignal,
+            });
             // Views don't have a row count, only tables do
             const rowCount = view ? undefined : getColValAsNumber(result);
             return {tableName, rowCount};
