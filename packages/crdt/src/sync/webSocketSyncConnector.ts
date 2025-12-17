@@ -15,6 +15,28 @@ type WebSocketLike = {
 const WS_OPEN = 1;
 const WS_CONNECTING = 0;
 
+const getOrCreateClientId = (storageKey: string) => {
+  try {
+    const ss = (globalThis as any).sessionStorage as Storage | undefined;
+    if (ss) {
+      const existing = ss.getItem(storageKey);
+      if (existing) return existing;
+      const created = (globalThis as any).crypto?.randomUUID?.() as
+        | string
+        | undefined;
+      const id = created ?? `client-${Math.random().toString(16).slice(2)}`;
+      ss.setItem(storageKey, id);
+      return id;
+    }
+  } catch {
+    // ignore
+  }
+  const created = (globalThis as any).crypto?.randomUUID?.() as
+    | string
+    | undefined;
+  return created ?? `client-${Math.random().toString(16).slice(2)}`;
+};
+
 const toBase64 = (bytes: Uint8Array) => {
   const buf = (globalThis as any).Buffer as
     | {from: (input: Uint8Array) => {toString: (enc: string) => string}}
@@ -51,6 +73,17 @@ export type WebSocketSyncOptions = {
   onStatus?: (status: Exclude<CrdtConnectionStatus, 'idle'>) => void;
   createSocket?: (url: string, protocols?: string | string[]) => WebSocketLike;
   sendSnapshotOnConnect?: boolean;
+  /**
+   * Optional per-tab client identifier. If omitted, the connector generates one via
+   * `crypto.randomUUID()` and persists it in `sessionStorage` (per-tab) by default.
+   */
+  clientId?: string;
+  /**
+   * Storage key used for persisting the generated clientId in `sessionStorage`.
+   *
+   * @defaultValue `"sqlrooms-crdt-clientId"`
+   */
+  clientIdStorageKey?: string;
   maxRetries?: number;
   initialDelayMs?: number;
   maxDelayMs?: number;
@@ -63,6 +96,9 @@ export function createWebSocketSyncConnector(
   options: WebSocketSyncOptions,
 ): CrdtSyncConnector {
   const sendSnapshotOnConnect = options.sendSnapshotOnConnect ?? true;
+  const clientId =
+    options.clientId ??
+    getOrCreateClientId(options.clientIdStorageKey ?? 'sqlrooms-crdt-clientId');
   let socket: WebSocketLike | undefined;
   let unsubscribeLocal: (() => void) | undefined;
   let subscribedDoc: LoroDoc | undefined;
@@ -154,7 +190,11 @@ export function createWebSocketSyncConnector(
 
   const sendJoin = () => {
     if (!socket || socket.readyState !== WS_OPEN) return;
-    const payload = JSON.stringify({type: 'crdt-join', roomId: options.roomId});
+    const payload = JSON.stringify({
+      type: 'crdt-join',
+      roomId: options.roomId,
+      clientId,
+    });
     socket.send(payload);
   };
 
@@ -232,7 +272,10 @@ export function createWebSocketSyncConnector(
         if (typeof Blob !== 'undefined' && event.data instanceof Blob) {
           void event.data
             .arrayBuffer()
-            .then((buf: ArrayBuffer) => activeDoc.import(new Uint8Array(buf)))
+            .then((buf: ArrayBuffer) => {
+              const bytes = new Uint8Array(buf);
+              activeDoc.import(bytes);
+            })
             .catch((error: unknown) =>
               console.warn('Failed to decode CRDT binary message', error),
             );

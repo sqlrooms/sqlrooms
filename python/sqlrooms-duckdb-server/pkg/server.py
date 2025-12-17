@@ -15,7 +15,6 @@ from . import db_async
 
 logger = logging.getLogger(__name__)
 
-
 def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
     header_obj = {"type": "arrow", "queryId": query_id}
     header_bytes = json.dumps(header_obj).encode("utf-8")
@@ -89,6 +88,7 @@ def server(
     sync_enabled: bool = False,
     sync_db_path: str | None = None,
     sync_schema: str = "__sqlrooms",
+    allow_client_snapshots: bool = False,
 ):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
@@ -101,38 +101,73 @@ def server(
     auth = AuthManager(auth_token)
 
     crdt_enabled = bool(sync_enabled)
-    ws_rooms: dict[object, str] = {}
-    ws_rooms_by_id: dict[int, str] = {}
-    ws_rooms_by_peer: dict[object, str] = {}
-
-    def _ws_key(ws):
-        try:
-            addr = ws.get_remote_address()  # type: ignore[attr-defined]
-            if addr:
-                return addr
-        except Exception:
-            pass
-        return id(ws)
+    # NOTE: do not key routing on the Python `ws` object identity; socketify may wrap the
+    # same underlying socket with a new Python object per callback. Instead, store routing
+    # state in per-connection user_data (ws.get_user_data()).
+    _next_conn_id = 0
     crdt_state = None
+    empty_snapshot_len: int | None = None
     if crdt_enabled:
         try:
             from pkg import crdt as crdt_mod
 
             db_async.init_crdt_storage(namespace=sync_schema, attached_db_path=sync_db_path)
             crdt_state = crdt_mod.CrdtState()
+            try:
+                empty_snapshot_len = len(
+                    crdt_mod.LoroDoc().export(crdt_mod.ExportMode.Snapshot())
+                )
+            except Exception:
+                empty_snapshot_len = None
         except Exception:
             logger.exception("Failed to initialize CRDT module")
             raise
+
+    def ws_upgrade(res, req, socket_context):
+        """Attach per-connection user_data so message handlers have stable state."""
+        nonlocal _next_conn_id
+        try:
+            key = req.get_header("sec-websocket-key")
+            protocol = req.get_header("sec-websocket-protocol")
+            extensions = req.get_header("sec-websocket-extensions")
+        except Exception:
+            key = None
+            protocol = None
+            extensions = None
+
+        _next_conn_id += 1
+        user_data = {
+            "conn_id": _next_conn_id,
+            "room_id": None,
+            "client_id": None,
+        }
+        try:
+            res.upgrade(key, protocol, extensions, socket_context, user_data)
+        except Exception:
+            # Best-effort; if upgrade fails, socketify will close
+            try:
+                res.close()
+            except Exception:
+                pass
 
     async def _crdt_join(ws, room_id: str):
         if not crdt_enabled:
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
         assert crdt_state is not None
-        peer_key = _ws_key(ws)
-        logger.info(f"joining room {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        try:
+            ud = ws.get_user_data()  # type: ignore[attr-defined]
+        except Exception:
+            ud = None
+        conn_id = ud.get("conn_id") if isinstance(ud, dict) else None
+        client_id = ud.get("client_id") if isinstance(ud, dict) else None
+        logger.info(
+            f"joining room {room_id} (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {client_id})"
+        )
         room = await crdt_state.ensure_loaded(room_id)
-        ws._room_id = room_id  # type: ignore[attr-defined]
+        # Keep in user_data so it survives ws wrapper churn.
+        if isinstance(ud, dict):
+            ud["room_id"] = room_id
         ws.subscribe(room_id)
         ws.send({"type": "crdt-joined", "roomId": room_id}, OpCode.TEXT)
         snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
@@ -147,22 +182,21 @@ def server(
         )
 
     async def _crdt_update(ws, payload: bytes):
-        peer_key = _ws_key(ws)
+        try:
+            ud = ws.get_user_data()  # type: ignore[attr-defined]
+        except Exception:
+            ud = None
+        conn_id = ud.get("conn_id") if isinstance(ud, dict) else None
+        client_id = ud.get("client_id") if isinstance(ud, dict) else None
         logger.debug(
-            f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, peer: {peer_key})"
+            f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {client_id})"
         )
         if not crdt_enabled:
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
         assert crdt_state is not None
-        room_id = getattr(ws, "_room_id", None)
-        if room_id is None:
-            room_id = (
-                ws_rooms.get(ws)
-                or ws_rooms_by_id.get(id(ws))
-                or ws_rooms_by_peer.get(peer_key)
-            )
-        logger.debug(f"resolved room_id: {room_id} (ws id: {id(ws)}, peer: {peer_key})")
+        room_id = ud.get("room_id") if isinstance(ud, dict) else None
+        logger.debug(f"resolved room_id: {room_id} (ws id: {id(ws)}, conn_id: {conn_id})")
         if not room_id:
             logger.warning("no room_id found")
             # If we somehow missed join, ignore this update to avoid noisy errors
@@ -193,7 +227,13 @@ def server(
 
     def ws_open(ws):
         auth.on_open(ws)
-        ws._room_id = None  # type: ignore[attr-defined]
+        try:
+            ud = ws.get_user_data()  # type: ignore[attr-defined]
+            if isinstance(ud, dict):
+                ud.setdefault("room_id", None)
+                ud.setdefault("client_id", None)
+        except Exception:
+            pass
 
     async def _process_message(ws, query):
         # CRDT join: { type: 'crdt-join', roomId }
@@ -202,11 +242,13 @@ def server(
             if not room_id:
                 ws.send({"type": "error", "error": "missing roomId"}, OpCode.TEXT)
                 return
-            peer_key = _ws_key(ws)
-            ws._room_id = room_id  # type: ignore[attr-defined]
-            ws_rooms[ws] = room_id
-            ws_rooms_by_id[id(ws)] = room_id
-            ws_rooms_by_peer[peer_key] = room_id
+            try:
+                ud = ws.get_user_data()  # type: ignore[attr-defined]
+                if isinstance(ud, dict):
+                    ud["room_id"] = room_id
+                    ud["client_id"] = query.get("clientId") or ud.get("client_id")
+            except Exception:
+                pass
             await _crdt_join(ws, room_id)
             return
 
@@ -223,7 +265,17 @@ def server(
             return
 
         # Full snapshot message from client: { type: 'crdt-snapshot', roomId, data }
+        #
+        # IMPORTANT: Accepting arbitrary client snapshots can wipe shared room state.
+        # This can happen if a refreshing client sends an empty snapshot before it loads
+        # local persistence; the server would import it and broadcast the wipe to all peers.
         if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-snapshot":
+            if not allow_client_snapshots:
+                ws.send(
+                    {"type": "error", "error": "client snapshots disabled"},
+                    OpCode.TEXT,
+                )
+                return
             room_id = str(query.get("roomId") or "").strip()
             data_b64 = query.get("data")
             if not room_id or not isinstance(data_b64, str):
@@ -235,6 +287,24 @@ def server(
                 ws.send({"type": "error", "error": f"invalid snapshot: {exc}"}, OpCode.TEXT)
                 return
             room = await crdt_state.ensure_loaded(room_id)
+            # Guard: only allow seeding when the room is still empty.
+            try:
+                current = room.doc.export(crdt_mod.ExportMode.Snapshot())
+                if empty_snapshot_len is None:
+                    ws.send(
+                        {"type": "error", "error": "snapshot rejected"},
+                        OpCode.TEXT,
+                    )
+                    return
+                if len(current) > empty_snapshot_len + 64:
+                    ws.send(
+                        {"type": "error", "error": "room already has state; snapshot rejected"},
+                        OpCode.TEXT,
+                    )
+                    return
+            except Exception:
+                ws.send({"type": "error", "error": "snapshot rejected"}, OpCode.TEXT)
+                return
             async with room.lock:
                 try:
                     room.doc.import_(payload)
@@ -390,6 +460,7 @@ def server(
             "max_payload_length": 128 * 1024 * 1024,
             "max_backpressure": 64 * 1024 * 1024,
             "close_on_backpressure_limit": False,
+            "upgrade": ws_upgrade,
             "open": ws_open,
             "message": ws_message,
             "drain": lambda ws: logger.warning(
@@ -397,11 +468,8 @@ def server(
             ),
             "close": lambda ws, code, message: (
                 logger.info(
-                    f"ws closed code={code} reason={message} room={getattr(ws, '_room_id', None)} id={id(ws)}"
+                    f"ws closed code={code} reason={message} id={id(ws)}"
                 ),
-                ws_rooms_by_peer.pop(_ws_key(ws), None),
-                ws_rooms.pop(ws, None),
-                ws_rooms_by_id.pop(id(ws), None),
                 auth.on_close(ws),
             ),
         },
