@@ -46,7 +46,7 @@ class FakeWebSocket {
 }
 
 describe('createWebSocketSyncConnector', () => {
-  it('buffers local updates before join and flushes after crdt-joined', async () => {
+  it('buffers local updates before join and flushes after server snapshot arrives', async () => {
     const ws = new FakeWebSocket();
 
     const connector = createWebSocketSyncConnector({
@@ -70,8 +70,25 @@ describe('createWebSocketSyncConnector', () => {
       ws.sent.some((m) => typeof m === 'string' && m.includes('crdt-join')),
     ).toBe(true);
 
-    // Server confirms join; buffered update should flush as a binary payload.
+    // Server confirms join and then sends a snapshot; buffered update should flush after
+    // snapshot is applied (connector intentionally waits for the snapshot to avoid
+    // broadcasting "empty state" ops from a refreshing client).
     ws.message(JSON.stringify({type: 'crdt-joined', roomId: 'room-1'}));
+
+    const serverDoc = new LoroDoc();
+    serverDoc.getMap('map').set('server', 's1');
+    serverDoc.commit();
+    const serverSnapshotB64 = Buffer.from(
+      serverDoc.export({mode: 'snapshot'}),
+    ).toString('base64');
+    ws.message(
+      JSON.stringify({
+        type: 'crdt-snapshot',
+        roomId: 'room-1',
+        data: serverSnapshotB64,
+      }),
+    );
+
     expect(ws.sent.some((m) => typeof m !== 'string')).toBe(true);
 
     const sendsAfterJoin = ws.sent.length;

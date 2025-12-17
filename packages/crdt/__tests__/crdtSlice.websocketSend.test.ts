@@ -76,14 +76,14 @@ describe('CRDT slice + WebSocket sync', () => {
       Object.assign(
         {
           counter: 0,
-          setCounter: (value) => set({counter: value}),
+          setCounter: (value: number) => set({counter: value}),
         },
         createCrdtSlice<AppState>({
           doc,
           mirrors: {
             shared: {
               schema: sharedValueSchema,
-              select: (s) => ({counter: s.counter}),
+              select: (s) => ({counter: s.counter}) as any,
               apply: (value) => set({counter: (value as any).counter}),
             },
           },
@@ -97,6 +97,19 @@ describe('CRDT slice + WebSocket sync', () => {
     // Open + join.
     ws.open();
     ws.message(JSON.stringify({type: 'crdt-joined', roomId: 'room-1'}));
+    const serverDoc = new LoroDoc();
+    serverDoc.getMap('shared').set('seed', true);
+    serverDoc.commit();
+    const serverSnapshotB64 = Buffer.from(
+      serverDoc.export({mode: 'snapshot'}),
+    ).toString('base64');
+    ws.message(
+      JSON.stringify({
+        type: 'crdt-snapshot',
+        roomId: 'room-1',
+        data: serverSnapshotB64,
+      }),
+    );
 
     const sentBefore = ws.sent.length;
     store.getState().setCounter(123);
