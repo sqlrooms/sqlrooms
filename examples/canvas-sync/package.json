@@ -1,0 +1,39 @@
+{
+  "name": "sqlrooms-canvas-sync",
+  "private": true,
+  "version": "0.24.14",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@sqlrooms/canvas": "workspace:*",
+    "@sqlrooms/crdt": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "@xyflow/react": "^12.8.5",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.555.0",
+    "postcss": "^8.5.6",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "tailwindcss": "^3.4.17",
+    "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.21",
+    "typescript": "5.9.2",
+    "vite": "^7.1.9",
+    "vite-plugin-top-level-await": "^1.6.0",
+    "vite-plugin-wasm": "^3.5.0"
+  }
+}

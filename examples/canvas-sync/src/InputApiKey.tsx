@@ -1,0 +1,26 @@
+import {cn, Input} from '@sqlrooms/ui';
+import {KeyIcon} from 'lucide-react';
+import {useRoomStore} from './store';
+import {FC} from 'react';
+
+export const InputApiKey: FC<{className?: string}> = ({className}) => {
+  const apiKey = useRoomStore((s) => s.app.config.apiKey);
+  const setApiKey = useRoomStore((s) => s.app.setApiKey);
+  return (
+    <div
+      className={cn(
+        'relative flex items-center rounded-md bg-muted',
+        className,
+      )}
+    >
+      <KeyIcon className="absolute left-2 h-4 w-4" />
+      <Input
+        className="pl-8 text-xs placeholder:text-xs"
+        type="password"
+        placeholder={`Enter your OpenAI API key`}
+        value={apiKey}
+        onChange={(e) => setApiKey(e.target.value)}
+      />
+    </div>
+  );
+};

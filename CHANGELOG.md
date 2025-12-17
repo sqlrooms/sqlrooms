@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.13](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* downgrade styled-components to 6.1.8 ([#264](/github.com/sqlrooms/sqlrooms/issues/264)) ([f8b1ce1](github.com/sqlrooms/sqlrooms/commits/f8b1ce1df617ea6a14b43c91c8b6eb3ea77d8025))
+* Prevent infinite rerender in AI AnalysisResultsContainer ([#262](/github.com/sqlrooms/sqlrooms/issues/262)) ([1e46230](github.com/sqlrooms/sqlrooms/commits/1e46230bdab9b073b4e142b5c04850f802e10e8e))
+* Security alerts: Upgrade deps with vulnerabilities ([#260](/github.com/sqlrooms/sqlrooms/issues/260)) ([7022349](github.com/sqlrooms/sqlrooms/commits/70223493c82713073f14ae893833a809a876dab7))
+
 ## [0.26.1-rc.12](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
 
 ### Bug Fixes

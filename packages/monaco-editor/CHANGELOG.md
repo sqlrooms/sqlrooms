@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/monaco-editor
+
 ## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
 
 **Note:** Version bump only for package @sqlrooms/monaco-editor
