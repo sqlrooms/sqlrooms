@@ -201,7 +201,10 @@ def server(
                 "payload": query.get("payload"),
             }
             if channel:
-                app.publish(channel, ujson.dumps(payload))
+                # IMPORTANT: always publish JSON notifications as TEXT frames.
+                # If we omit the opcode here, some clients may observe it as a binary
+                # message and fail to parse it as JSON.
+                app.publish(channel, ujson.dumps(payload), OpCode.TEXT)
                 ws.send(payload, OpCode.TEXT)
                 ws.send({"type": "notifyAck", "channel": channel}, OpCode.TEXT)
             else:
@@ -230,7 +233,10 @@ def server(
                             payload = ujson.dumps(payload)
                         except Exception:
                             payload = json.dumps(payload)
-                        app.publish(channel, payload)
+                        # IMPORTANT: always publish JSON as TEXT frames.
+                        # Without an explicit opcode, the underlying publish may deliver
+                        # as binary, which breaks clients expecting JSON strings.
+                        app.publish(channel, payload, OpCode.TEXT)
                         return True
                     app.publish(channel, payload, opcode)
                     return True
