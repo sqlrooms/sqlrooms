@@ -5,7 +5,7 @@ import {create} from 'zustand';
 
 import {
   createCrdtSlice,
-  createLocalStorageDocStorage,
+  createIndexedDbDocStorage,
   createWebSocketSyncConnector,
   CrdtSliceState,
 } from '@sqlrooms/crdt';
@@ -41,7 +41,7 @@ const useStore = create<AppState>()((set, get, storeApi) => {
           })),
       },
     },
-    // storage: createLocalStorageDocStorage({key: 'sqlrooms-sync-example'}),
+    storage: createIndexedDbDocStorage({key: 'sqlrooms-sync-example'}),
     sync: connector,
   })(set as any, get as any, storeApi as any);
 

@@ -3,8 +3,7 @@ import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
   CrdtSliceState,
   createCrdtSlice,
-  createIndexedDbDocStorage,
-  createLocalStorageDocStorage,
+  // createIndexedDbDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
