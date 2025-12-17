@@ -17,7 +17,6 @@ import {produce} from 'immer';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
-  escapeId,
   escapeVal,
   getColValAsNumber,
   isQualifiedTableName,
@@ -436,8 +435,7 @@ export function createDuckDbSlice({
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
-            const describeResults = await connector.query(
-              `WITH tables_and_views AS (
+            const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
                 database_name AS database,
                 schema_name AS schema,
@@ -467,15 +465,17 @@ export function createDuckDbSlice({
             ${
               schema || database || table
                 ? `WHERE ${[
-                    schema ? `schema = '${escapeId(schema)}'` : '',
-                    database ? `database = '${escapeId(database)}'` : '',
-                    table ? `name = '${escapeId(table)}'` : '',
+                    // These columns are string values (not identifiers), so use escapeVal (which includes quotes).
+                    schema ? `schema = ${escapeVal(schema)}` : '',
+                    database ? `database = ${escapeVal(database)}` : '',
+                    table ? `name = ${escapeVal(table)}` : '',
                   ]
                     .filter(Boolean)
                     .join(' AND ')}`
                 : ''
-            }`,
-            );
+            }`;
+            console.log(sql);
+            const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];
             for (let i = 0; i < describeResults.numRows; i++) {
