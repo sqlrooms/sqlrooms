@@ -4,6 +4,7 @@ import argparse
 import os
 import signal
 import threading
+import faulthandler
 
 from diskcache import Cache
 
@@ -12,6 +13,7 @@ from . import db_async
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+faulthandler.enable()
 
 
 _def_initialized = False

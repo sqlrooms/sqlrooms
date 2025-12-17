@@ -23,13 +23,19 @@ def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
 
 
 def _ws_send(ws, payload, opcode):
+    """
+    Best-effort wrapper around ws.send for use inside socketify callbacks.
+
+    WARNING: Do not use this from background tasks after the websocket might close.
+    Prefer `app.publish` to a per-connection channel in those cases.
+    """
     ok = ws.send(payload, opcode)
     if not ok:
         logger.warning(f"WebSocket backpressure: {ws.get_buffered_amount()}")
     return ok
 
 
-async def handle_query_ws(ws, cache, query):
+async def handle_query_ws(send, cache, query):
     start = time.time()
     query_id = query.get("queryId") or db_async.generate_query_id()
     try:
@@ -39,36 +45,24 @@ async def handle_query_ws(ws, cache, query):
             data = result.get("data")
             if data is None:
                 # Some statements executed with type "arrow" may produce no result
-                _ws_send(ws, {"type": "ok", "queryId": query_id}, OpCode.TEXT)
+                send({"type": "ok", "queryId": query_id}, OpCode.TEXT)
             else:
                 payload = _build_arrow_frame(query_id, data)  # bytes
-                _ws_send(ws, payload, OpCode.BINARY)
+                send(payload, OpCode.BINARY)
         elif rtype == "json":
-            _ws_send(
-                ws,
-                {"type": "json", "queryId": query_id, "data": result["data"]},
-                OpCode.TEXT,
-            )
+            send({"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
         elif rtype == "ok":
-            _ws_send(ws, {"type": "ok", "queryId": query_id}, OpCode.TEXT)
+            send({"type": "ok", "queryId": query_id}, OpCode.TEXT)
         else:
-            _ws_send(
-                ws,
-                {
-                    "type": "error",
-                    "queryId": query_id,
-                    "error": "Unexpected result type",
-                },
+            send(
+                {"type": "error", "queryId": query_id, "error": "Unexpected result type"},
                 OpCode.TEXT,
             )
     except concurrent.futures.CancelledError:
-        ws.send(
-            {"type": "error", "queryId": query_id, "error": "Query was cancelled"},
-            OpCode.TEXT,
-        )
+        send({"type": "error", "queryId": query_id, "error": "Query was cancelled"}, OpCode.TEXT)
     except Exception as e:
         logger.exception("Error executing query")
-        ws.send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
+        send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
     total = round((time.time() - start) * 1_000)
     logger.info(f"DONE. Query took {total} ms.")
 
@@ -105,6 +99,7 @@ def server(
     # same underlying socket with a new Python object per callback. Instead, store routing
     # state in per-connection user_data (ws.get_user_data()).
     _next_conn_id = 0
+    _conn_state: dict[int, dict[str, str | None]] = {}
     crdt_state = None
     empty_snapshot_len: int | None = None
     if crdt_enabled:
@@ -136,13 +131,12 @@ def server(
             extensions = None
 
         _next_conn_id += 1
-        user_data = {
-            "conn_id": _next_conn_id,
-            "room_id": None,
-            "client_id": None,
-        }
+        conn_id = _next_conn_id
+        # Store only a small, immutable primitive in socketify user_data to reduce
+        # risk of native lifetime/GC issues. Keep mutable state in a Python dict.
+        _conn_state[conn_id] = {"room_id": None, "client_id": None}
         try:
-            res.upgrade(key, protocol, extensions, socket_context, user_data)
+            res.upgrade(key or "", protocol or "", extensions or "", socket_context, conn_id)
         except Exception:
             # Best-effort; if upgrade fails, socketify will close
             try:
@@ -156,21 +150,22 @@ def server(
             return
         assert crdt_state is not None
         try:
-            ud = ws.get_user_data()  # type: ignore[attr-defined]
+            conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
         except Exception:
-            ud = None
-        conn_id = ud.get("conn_id") if isinstance(ud, dict) else None
-        client_id = ud.get("client_id") if isinstance(ud, dict) else None
+            conn_id = None
+        state = _conn_state.get(conn_id, {}) if conn_id is not None else {}
+        client_id = state.get("client_id")
         logger.info(
             f"joining room {room_id} (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {client_id})"
         )
         room = await crdt_state.ensure_loaded(room_id)
-        # Keep in user_data so it survives ws wrapper churn.
-        if isinstance(ud, dict):
-            ud["room_id"] = room_id
+        if conn_id is not None and conn_id in _conn_state:
+            _conn_state[conn_id]["room_id"] = room_id
         ws.subscribe(room_id)
         ws.send({"type": "crdt-joined", "roomId": room_id}, OpCode.TEXT)
-        snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
+        # Export snapshot under lock; loro bindings may not be safe under concurrent access.
+        async with room.lock:
+            snapshot = room.doc.export(crdt_mod.ExportMode.Snapshot())
         logger.debug(f"sending snapshot to {room_id}: {len(snapshot)} bytes")
         ws.send(
             {
@@ -183,11 +178,11 @@ def server(
 
     async def _crdt_update(ws, payload: bytes):
         try:
-            ud = ws.get_user_data()  # type: ignore[attr-defined]
+            conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
         except Exception:
-            ud = None
-        conn_id = ud.get("conn_id") if isinstance(ud, dict) else None
-        client_id = ud.get("client_id") if isinstance(ud, dict) else None
+            conn_id = None
+        state = _conn_state.get(conn_id, {}) if conn_id is not None else {}
+        client_id = state.get("client_id")
         logger.debug(
             f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {client_id})"
         )
@@ -195,7 +190,7 @@ def server(
             ws.send({"type": "error", "error": "CRDT disabled"}, OpCode.TEXT)
             return
         assert crdt_state is not None
-        room_id = ud.get("room_id") if isinstance(ud, dict) else None
+        room_id = state.get("room_id")
         logger.debug(f"resolved room_id: {room_id} (ws id: {id(ws)}, conn_id: {conn_id})")
         if not room_id:
             logger.warning("no room_id found")
@@ -227,11 +222,12 @@ def server(
 
     def ws_open(ws):
         auth.on_open(ws)
+        # No-op: per-connection state is created during upgrade.
+        # Subscribe to a private per-connection channel so background tasks can deliver
+        # results via `app.publish` without calling `ws.send` after close.
         try:
-            ud = ws.get_user_data()  # type: ignore[attr-defined]
-            if isinstance(ud, dict):
-                ud.setdefault("room_id", None)
-                ud.setdefault("client_id", None)
+            conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
+            ws.subscribe(f"__conn:{conn_id}")
         except Exception:
             pass
 
@@ -243,10 +239,10 @@ def server(
                 ws.send({"type": "error", "error": "missing roomId"}, OpCode.TEXT)
                 return
             try:
-                ud = ws.get_user_data()  # type: ignore[attr-defined]
-                if isinstance(ud, dict):
-                    ud["room_id"] = room_id
-                    ud["client_id"] = query.get("clientId") or ud.get("client_id")
+                conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
+                if conn_id in _conn_state:
+                    _conn_state[conn_id]["room_id"] = room_id
+                    _conn_state[conn_id]["client_id"] = str(query.get("clientId") or "")
             except Exception:
                 pass
             await _crdt_join(ws, room_id)
@@ -356,7 +352,27 @@ def server(
             and isinstance(query.get("sql"), str)
         ):
             try:
-                asyncio.create_task(handle_query_ws(ws, cache, query))
+                try:
+                    conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
+                except Exception:
+                    conn_id = None
+
+                def _send_to_conn(payload, opcode):
+                    # Publish to the per-connection channel; socketify will drop delivery if closed.
+                    channel = f"__conn:{conn_id}" if conn_id is not None else None
+                    if channel is None:
+                        return False
+                    if opcode == OpCode.TEXT and not isinstance(payload, (str, bytes, bytearray)):
+                        try:
+                            payload = ujson.dumps(payload)
+                        except Exception:
+                            payload = json.dumps(payload)
+                        app.publish(channel, payload)
+                        return True
+                    app.publish(channel, payload, opcode)
+                    return True
+
+                asyncio.create_task(handle_query_ws(_send_to_conn, cache, query))
             except Exception as e:
                 logger.exception("Failed to schedule query task")
                 ws.send({"type": "error", "error": str(e)}, OpCode.TEXT)
@@ -473,6 +489,11 @@ def server(
             "close": lambda ws, code, message: (
                 logger.info(
                     f"ws closed code={code} reason={message} id={id(ws)}"
+                ),
+                (
+                    (lambda: _conn_state.pop(int(ws.get_user_data()), None))()
+                    if (hasattr(ws, "get_user_data"))
+                    else None
                 ),
                 auth.on_close(ws),
             ),
