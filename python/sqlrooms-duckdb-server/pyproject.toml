@@ -10,7 +10,8 @@ dependencies = [
   "pandas",
   "pyarrow",
   "socketify",
-  "ujson"
+  "ujson",
+  "loro>=1.10.0"
 ]
 
 [project.scripts]

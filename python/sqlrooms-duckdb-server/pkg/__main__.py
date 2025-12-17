@@ -4,6 +4,7 @@ import argparse
 import os
 import signal
 import threading
+import faulthandler
 
 from diskcache import Cache
 
@@ -12,6 +13,7 @@ from . import db_async
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
+faulthandler.enable()
 
 
 _def_initialized = False
@@ -19,16 +21,28 @@ _shutdown_started = False
 
 
 def serve(
-    db_path=None,
+    db_path=":memory:",
     port=4000,
     extensions: list[str] | None = None,
     auth_token: str | None = None,
+    sync_enabled: bool = False,
+    sync_db: str | None = None,
+    sync_schema: str = "__sqlrooms",
 ):
     global _def_initialized
     if not db_path:
         db_path = ":memory:"
     logger.info(f"Using DuckDB from {db_path}")
     logger.info(f"Using port {port}")
+    if sync_enabled:
+        if sync_db:
+            logger.info(
+                f"Sync enabled; attaching sync DB at {sync_db} under namespace {sync_schema}"
+            )
+        else:
+            logger.info(
+                f"Sync enabled; storing snapshots in schema {sync_schema} within the main DB"
+            )
     if auth_token:
         logger.info("Bearer authentication is ENABLED")
 
@@ -94,7 +108,18 @@ def serve(
     signal.signal(signal.SIGINT, _graceful_shutdown)
     signal.signal(signal.SIGTERM, _graceful_shutdown)
 
-    server(cache, port, auth_token=auth_token)
+    server(
+        cache,
+        port,
+        auth_token=auth_token,
+        sync_enabled=sync_enabled,
+        sync_db_path=sync_db,
+        sync_schema=sync_schema,
+        # In local dev, `:memory:` resets on restart (watchdog), so allow clients to
+        # seed empty rooms via `crdt-snapshot` (server still rejects snapshots once
+        # the room has state).
+        allow_client_snapshots=bool(sync_enabled and db_path == ":memory:"),
+    )
 
 
 if __name__ == "__main__":
@@ -102,6 +127,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "--db-path",
         type=str,
+        default=":memory:",
         help="Path to the DuckDB database file (default :memory:)",
     )
     parser.add_argument("--port", type=int, default=4000, help="Port to listen on")
@@ -115,10 +141,44 @@ if __name__ == "__main__":
         type=str,
         help="If provided, require this bearer token for HTTP and WS clients",
     )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        dest="sync",
+        help="Enable optional sync (CRDT) over WebSocket",
+    )
+    parser.add_argument(
+        "--sync-db",
+        type=str,
+        dest="sync_db",
+        help="Optional path to a dedicated DuckDB file for sync snapshots (requires --sync). If omitted, uses a schema within the main DB.",
+    )
+    parser.add_argument(
+        "--sync-schema",
+        type=str,
+        default="__sqlrooms",
+        dest="sync_schema",
+        help="Namespace/schema to store sync snapshots (default: __sqlrooms). Used as ATTACH alias when --sync-db is provided.",
+    )
     args = parser.parse_args()
     exts = None
     if args.extensions:
         exts = [s.strip() for s in args.extensions.split(",") if s.strip()]
     # Allow env var fallback if CLI flag not provided
     token = args.auth_token
-    serve(args.db_path, args.port, extensions=exts, auth_token=token)
+
+    sync_enabled = bool(args.sync)
+    # Back-compat: if someone passes --sync-db without --sync, enable sync (but warn).
+    if args.sync_db and not sync_enabled:
+        logger.warning("--sync-db provided without --sync; enabling sync")
+        sync_enabled = True
+
+    serve(
+        args.db_path,
+        args.port,
+        extensions=exts,
+        auth_token=token,
+        sync_enabled=sync_enabled,
+        sync_db=args.sync_db,
+        sync_schema=args.sync_schema,
+    )
