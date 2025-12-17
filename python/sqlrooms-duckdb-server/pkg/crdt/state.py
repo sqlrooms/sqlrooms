@@ -6,7 +6,7 @@ from typing import Dict, Optional
 
 from loro import ExportMode, LoroDoc  # type: ignore
 
-from . import db_async
+from .. import db_async
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +19,7 @@ class RoomDoc:
 
 
 class CrdtState:
-    """Manages per-room LoroDoc with lazy load/save to attached DuckDB."""
+    """Manages per-room LoroDoc with lazy load/save to DuckDB (via db_async helpers)."""
 
     def __init__(self):
         self._rooms: Dict[str, RoomDoc] = {}
