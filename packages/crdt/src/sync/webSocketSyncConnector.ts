@@ -98,7 +98,9 @@ export function createWebSocketSyncConnector(
   const sendSnapshotOnConnect = options.sendSnapshotOnConnect ?? true;
   const clientId =
     options.clientId ??
-    getOrCreateClientId(options.clientIdStorageKey ?? 'sqlrooms-crdt-clientId');
+    getOrCreateClientId(
+      options.clientIdStorageKey ?? `sqlrooms-crdt-clientId:${options.roomId}`,
+    );
   let socket: WebSocketLike | undefined;
   let unsubscribeLocal: (() => void) | undefined;
   let subscribedDoc: LoroDoc | undefined;
@@ -106,6 +108,9 @@ export function createWebSocketSyncConnector(
   let stopped = false;
   let reconnectTimer: ReturnType<typeof setTimeout> | undefined;
   let joined = false;
+  let snapshotApplied = false;
+  let snapshotWaitTimer: ReturnType<typeof setTimeout> | undefined;
+  let seededAfterEmptyServerSnapshot = false;
   let connecting = false;
   const pending: Uint8Array[] = [];
   let localSubscribed = false;
@@ -125,6 +130,13 @@ export function createWebSocketSyncConnector(
       return;
     }
     if (!joined) {
+      pending.push(update);
+      return;
+    }
+    // IMPORTANT: don't send local updates until we've applied the server snapshot.
+    // Otherwise, a refreshing client that starts with empty local state can emit delete ops
+    // that wipe the room before the snapshot arrives.
+    if (!snapshotApplied) {
       pending.push(update);
       return;
     }
@@ -232,6 +244,14 @@ export function createWebSocketSyncConnector(
     (reconnectTimer as any)?.unref?.();
   };
 
+  const getEmptySnapshotLen = () => {
+    try {
+      return new LoroDoc().export({mode: 'snapshot'}).byteLength;
+    } catch {
+      return 0;
+    }
+  };
+
   const connect = async (doc: LoroDoc) => {
     if (stopped) return;
     if (connecting) return;
@@ -287,19 +307,70 @@ export function createWebSocketSyncConnector(
             const parsed = JSON.parse(event.data);
             if (parsed?.type === 'crdt-joined') {
               joined = true;
-              // flush pending updates
-              while (pending.length) {
-                const update = pending.shift();
-                if (update && ws && ws.readyState === WS_OPEN) {
-                  // Debug visibility for diagnosing silent sync issues.
-                  ws.send(update);
+              snapshotApplied = false;
+              // IMPORTANT: do not flush buffered local updates yet.
+              // The server sends `crdt-joined` before `crdt-snapshot`; flushing here can
+              // broadcast "empty state" ops from a refreshing client and wipe the room.
+              if (snapshotWaitTimer) clearTimeout(snapshotWaitTimer);
+              snapshotWaitTimer = setTimeout(() => {
+                snapshotWaitTimer = undefined;
+                if (!ws || ws.readyState !== WS_OPEN) return;
+                // Fallback: if we never get a snapshot, avoid buffering forever.
+                snapshotApplied = true;
+                while (pending.length) {
+                  const update = pending.shift();
+                  if (update) ws.send(update);
                 }
-              }
+              }, 2000);
+              (snapshotWaitTimer as any)?.unref?.();
               return;
             }
             if (parsed?.type === 'crdt-snapshot' && parsed.data) {
               const bytes = fromBase64(parsed.data);
+              // If the server snapshot is empty, but we already have non-empty local state,
+              // don't import the empty snapshot (it would wipe local state). Instead, seed
+              // the server once with our snapshot.
+              try {
+                const emptyLen = getEmptySnapshotLen();
+                const serverLooksEmpty = bytes.byteLength <= emptyLen + 32;
+                const localSnapshotLen = activeDoc.export({
+                  mode: 'snapshot',
+                }).byteLength;
+                const localNonEmpty = localSnapshotLen > emptyLen + 32;
+                if (
+                  serverLooksEmpty &&
+                  localNonEmpty &&
+                  !seededAfterEmptyServerSnapshot &&
+                  ws &&
+                  ws.readyState === WS_OPEN
+                ) {
+                  seededAfterEmptyServerSnapshot = true;
+                  // Seed the server; server will accept snapshot only if the room is empty.
+                  sendSnapshot(activeDoc);
+                  snapshotApplied = true;
+                  if (snapshotWaitTimer) {
+                    clearTimeout(snapshotWaitTimer);
+                    snapshotWaitTimer = undefined;
+                  }
+                  return;
+                }
+              } catch {
+                // ignore
+              }
+
               activeDoc.import(bytes);
+              snapshotApplied = true;
+              if (snapshotWaitTimer) {
+                clearTimeout(snapshotWaitTimer);
+                snapshotWaitTimer = undefined;
+              }
+              // Now that we have base state, flush any local updates buffered during join.
+              while (pending.length) {
+                const update = pending.shift();
+                if (update && ws && ws.readyState === WS_OPEN) {
+                  ws.send(update);
+                }
+              }
             }
             // Ignore other messages (errors, acks) for now
           } catch (error) {
@@ -311,6 +382,12 @@ export function createWebSocketSyncConnector(
       const handleOpen = () => {
         attempt = 0;
         joined = false;
+        snapshotApplied = false;
+        seededAfterEmptyServerSnapshot = false;
+        if (snapshotWaitTimer) {
+          clearTimeout(snapshotWaitTimer);
+          snapshotWaitTimer = undefined;
+        }
         connecting = false;
         sendStatus('open');
         sendJoin();
@@ -329,6 +406,10 @@ export function createWebSocketSyncConnector(
         });
         connecting = false;
         sendStatus('closed');
+        if (snapshotWaitTimer) {
+          clearTimeout(snapshotWaitTimer);
+          snapshotWaitTimer = undefined;
+        }
         unsubscribeLocal?.();
         unsubscribeLocal = undefined;
         localSubscribed = false;
@@ -345,6 +426,10 @@ export function createWebSocketSyncConnector(
         console.warn('CRDT WS error', event);
         connecting = false;
         sendStatus('error');
+        if (snapshotWaitTimer) {
+          clearTimeout(snapshotWaitTimer);
+          snapshotWaitTimer = undefined;
+        }
         joined = false;
         unsubscribeLocal?.();
         unsubscribeLocal = undefined;

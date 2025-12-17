@@ -113,6 +113,10 @@ def serve(
         sync_enabled=sync_enabled,
         sync_db_path=sync_db,
         sync_schema=sync_schema,
+        # In local dev, `:memory:` resets on restart (watchdog), so allow clients to
+        # seed empty rooms via `crdt-snapshot` (server still rejects snapshots once
+        # the room has state).
+        allow_client_snapshots=bool(sync_enabled and db_path == ":memory:"),
     )
 
 
@@ -137,21 +141,18 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--sync",
-        "--crdt",
         action="store_true",
         dest="sync",
         help="Enable optional sync (CRDT) over WebSocket",
     )
     parser.add_argument(
         "--sync-db",
-        "--crdt-db",
         type=str,
         dest="sync_db",
         help="Optional path to a dedicated DuckDB file for sync snapshots (requires --sync). If omitted, uses a schema within the main DB.",
     )
     parser.add_argument(
         "--sync-schema",
-        "--crdt-schema",
         type=str,
         default="__sqlrooms",
         dest="sync_schema",
@@ -163,11 +164,6 @@ if __name__ == "__main__":
         exts = [s.strip() for s in args.extensions.split(",") if s.strip()]
     # Allow env var fallback if CLI flag not provided
     token = args.auth_token
-
-    if any(flag in sys.argv for flag in ("--crdt", "--crdt-db", "--crdt-schema")):
-        logger.warning(
-            "Deprecated flags detected (--crdt/--crdt-db/--crdt-schema). Please migrate to --sync/--sync-db/--sync-schema."
-        )
 
     sync_enabled = bool(args.sync)
     # Back-compat: if someone passes --sync-db without --sync, enable sync (but warn).

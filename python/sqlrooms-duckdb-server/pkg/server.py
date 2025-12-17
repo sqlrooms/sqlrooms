@@ -266,9 +266,13 @@ def server(
 
         # Full snapshot message from client: { type: 'crdt-snapshot', roomId, data }
         #
-        # IMPORTANT: Accepting arbitrary client snapshots can wipe shared room state.
-        # This can happen if a refreshing client sends an empty snapshot before it loads
-        # local persistence; the server would import it and broadcast the wipe to all peers.
+        # IMPORTANT: Client snapshots are disabled by default because accepting arbitrary
+        # snapshots can wipe shared room state (e.g. a refreshing client sends an empty
+        # snapshot before it loads local persistence).
+        #
+        # When enabled, we still only accept snapshots to *seed empty rooms* (see guard
+        # below). This is useful for local dev when the server uses `:memory:` and can
+        # restart/reset, requiring a client to re-seed state.
         if crdt_enabled and isinstance(query, dict) and query.get("type") == "crdt-snapshot":
             if not allow_client_snapshots:
                 ws.send(
