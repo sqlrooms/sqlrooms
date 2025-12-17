@@ -465,7 +465,6 @@ export function createDuckDbSlice({
             ${
               schema || database || table
                 ? `WHERE ${[
-                    // These columns are string values (not identifiers), so use escapeVal (which includes quotes).
                     schema ? `schema = ${escapeVal(schema)}` : '',
                     database ? `database = ${escapeVal(database)}` : '',
                     table ? `name = ${escapeVal(table)}` : '',
@@ -474,7 +473,6 @@ export function createDuckDbSlice({
                     .join(' AND ')}`
                 : ''
             }`;
-            console.log(sql);
             const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];

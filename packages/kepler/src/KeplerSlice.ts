@@ -177,7 +177,6 @@ export type KeplerSliceState = {
 const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.LAYER_HOVER,
   KeplerActionTypes.UPDATE_MAP,
-  // High-frequency interaction events that should not trigger persistence / autosave
   KeplerActionTypes.MOUSE_MOVE,
 ];
 
