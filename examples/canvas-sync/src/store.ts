@@ -21,8 +21,6 @@ import {DataSourcesPanel} from './DataSourcesPanel';
 // Loro Mirror can’t stamp $cid on frozen objects, so disable auto-freeze.
 setAutoFreeze(false);
 
-type RoomConnectionStatus = 'idle' | 'connecting' | 'open' | 'closed' | 'error';
-
 // App config schema
 export const AppConfig = z.object({apiKey: z.string().default('')});
 export type AppConfig = z.infer<typeof AppConfig>;
