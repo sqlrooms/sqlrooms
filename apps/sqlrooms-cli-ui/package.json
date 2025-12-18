@@ -20,13 +20,15 @@
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
     "lucide-react": "^0.555.0",
-    "zod": "^4.1.8"
+    "zod": "^4.1.8",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
-    "@types/react": "^19.1.13",
-    "@types/react-dom": "^19.1.9",
-    "@vitejs/plugin-react": "^5.0.3",
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
     "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
@@ -42,4 +44,3 @@
     "@duckdb/duckdb-wasm": "1.31.0"
   }
 }
-

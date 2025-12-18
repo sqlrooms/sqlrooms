@@ -27,7 +27,7 @@ import {
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {createElement, lazy, Suspense} from 'react';
+import {createElement, Suspense} from 'react';
 import {SpinnerPane} from '@sqlrooms/ui';
 
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';

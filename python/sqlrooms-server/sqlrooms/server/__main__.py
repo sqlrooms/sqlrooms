@@ -125,7 +125,7 @@ def main(argv: list[str] | None = None) -> int:
     """
     CLI entrypoint for the WS-only SQLRooms server.
 
-    This is used by the `sqlrooms-server` / `sqlrooms-duckdb-server` console scripts.
+    This is used by the `sqlrooms-server` console scripts.
     """
     parser = argparse.ArgumentParser(description="SQLRooms DuckDB websocket server")
     parser.add_argument(

@@ -6,8 +6,8 @@ const config = {
   content: [
     './index.html',
     './src/**/*.{ts,tsx}',
-    '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.js',
-    '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
+    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
+    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
   ],
 } satisfies Config;
 

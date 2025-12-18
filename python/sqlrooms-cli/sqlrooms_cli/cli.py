@@ -54,7 +54,7 @@ def main(
 ):
     """
     Start the SQLRooms local experience:
-    - Boots a DuckDB websocket server (sqlrooms-duckdb-server).
+    - Boots a DuckDB websocket server (sqlrooms-server).
     - Serves the AI example UI with persisted state stored in DuckDB.
     """
     server = SqlroomsHttpServer(
