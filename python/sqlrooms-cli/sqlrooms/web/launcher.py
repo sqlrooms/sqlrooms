@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import socket
 import tempfile
 import threading
 import webbrowser
@@ -29,6 +30,26 @@ def _sanitize_filename(name: str) -> str:
     safe = os.path.basename(name.strip().replace("\\", "/"))
     return safe or "upload.dat"
 
+def _pick_free_port(host: str) -> int:
+    """
+    Pick an available TCP port for a local background server.
+
+    This is best-effort: we bind to port 0 to have the OS select a free port,
+    read it back, then close the socket.
+    """
+    is_ipv6 = ":" in host and host != "0.0.0.0"
+    family = socket.AF_INET6 if is_ipv6 else socket.AF_INET
+    sock = socket.socket(family, socket.SOCK_STREAM)
+    try:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        if family == socket.AF_INET6:
+            sock.bind((host, 0, 0, 0))
+        else:
+            sock.bind((host, 0))
+        return int(sock.getsockname()[1])
+    finally:
+        sock.close()
+
 
 class SqlroomsHttpServer:
     def __init__(
@@ -36,7 +57,7 @@ class SqlroomsHttpServer:
         db_path: str | Path,
         host: str,
         port: int,
-        ws_port: int,
+        ws_port: int | None,
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
@@ -56,7 +77,12 @@ class SqlroomsHttpServer:
 
         self.host = host
         self.port = port
-        self.ws_port = ws_port
+        if ws_port is None:
+            # socketify listens on all interfaces; we pick a free local port for convenience
+            # to avoid collisions when multiple dev servers are running.
+            self.ws_port = _pick_free_port(self._public_host())
+        else:
+            self.ws_port = ws_port
         self.llm_provider = llm_provider
         self.llm_model = llm_model
         self.api_key = api_key

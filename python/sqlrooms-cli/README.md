@@ -27,7 +27,7 @@ What happens:
 - `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
 - `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
 - `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
-- `--ws-port`: WebSocket port for DuckDB queries (default `4000`).
+- `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.

@@ -35,8 +35,10 @@ def main(
     ),
     host: str = typer.Option("127.0.0.1", "--host", help="HTTP host for the UI."),
     port: int = typer.Option(4173, "--port", help="HTTP port for the UI."),
-    ws_port: int = typer.Option(
-        4000, "--ws-port", help="WebSocket port for DuckDB queries."
+    ws_port: int | None = typer.Option(
+        None,
+        "--ws-port",
+        help="WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.",
     ),
     llm_provider: str = typer.Option(
         "openai", "--llm-provider", help="Default LLM provider (e.g. openai, ollama)."
