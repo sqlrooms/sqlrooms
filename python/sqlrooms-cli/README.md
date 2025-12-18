@@ -7,7 +7,7 @@ Launch the SQLRooms AI example locally with a DuckDB websocket backend and persi
 ```bash
 # From the repo root
 uvx sqlrooms \
-  --db-path ./sqlrooms.db \
+  ./sqlrooms.db \
   --ws-port 4000 \
   --port 4173 \
   --llm-provider openai \
@@ -17,7 +17,7 @@ uvx sqlrooms \
 
 What happens:
 
-- Starts `sqlrooms-duckdb-server` on `ws://localhost:4000`.
+- Starts the DuckDB websocket backend (from `sqlrooms-server`) on `ws://localhost:4000`.
 - Serves the AI example UI on `http://localhost:4173` and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
 - UI state (layout, AI settings/sessions/messages, SQL editor and queries) is stored in the `__sqlrooms` schema of the selected DuckDB file.
@@ -25,10 +25,12 @@ What happens:
 ## CLI flags
 
 - `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
+- `DB_PATH` (positional): Optional positional alternative to `--db-path` (e.g. `sqlrooms ./my.db`).
 - `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
 - `--ws-port`: WebSocket port for DuckDB queries (default `4000`).
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
+- `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
 
 ## Data persistence
 
@@ -44,6 +46,16 @@ Tables created in the selected DuckDB file:
 
 State is read/written through `/api/state`; uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 
+## Server-only mode (no UI)
+
+If you only want the DuckDB websocket server (no HTTP UI server), install/run `sqlrooms-server`:
+
+```bash
+uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
+```
+
+`sqlrooms-duckdb-server` is also available as an alias console script.
+
 ## Developer setup
 
 Local dev loop for the CLI and UI:
@@ -53,7 +65,7 @@ Local dev loop for the CLI and UI:
 ```bash
 pnpm install
 pnpm --filter sqlrooms-cli-app build
-# build outputs directly to python/sqlrooms-cli/sqlrooms_cli/static
+# build outputs directly to python/sqlrooms-cli/sqlrooms/web/static
 ```
 
 2. Dev the Python CLI (from repo root or package dir):

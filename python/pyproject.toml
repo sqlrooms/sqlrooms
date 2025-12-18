@@ -1,0 +1,7 @@
+[tool.uv.workspace]
+members = [
+  "sqlrooms-cli",
+  "sqlrooms-server",
+]
+
+

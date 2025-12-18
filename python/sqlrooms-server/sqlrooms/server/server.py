@@ -9,7 +9,7 @@ import ujson
 from socketify import App, CompressOptions, OpCode
 from .auth import AuthManager
 
-from pkg.query import run_duckdb
+from .query import run_duckdb
 from . import db_async
 from .crdt.ws import CrdtWs
 
@@ -339,7 +339,7 @@ def server(
 
             body = ujson.dumps(
                 {
-                    "name": "sqlrooms-duckdb-server",
+                    "name": "sqlrooms-server",
                     "python": sys.version,
                     "duckdb": getattr(_duckdb, "__version__", "unknown"),
                 }

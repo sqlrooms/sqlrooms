@@ -8,7 +8,7 @@ import faulthandler
 
 from diskcache import Cache
 
-from pkg.server import server
+from .server import server
 from . import db_async
 
 logger = logging.getLogger(__name__)
@@ -121,9 +121,13 @@ def serve(
         allow_client_snapshots=bool(sync_enabled and db_path == ":memory:"),
     )
 
+def main(argv: list[str] | None = None) -> int:
+    """
+    CLI entrypoint for the WS-only SQLRooms server.
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="DuckDB Socketify Server")
+    This is used by the `sqlrooms-server` / `sqlrooms-duckdb-server` console scripts.
+    """
+    parser = argparse.ArgumentParser(description="SQLRooms DuckDB websocket server")
     parser.add_argument(
         "--db-path",
         type=str,
@@ -160,12 +164,11 @@ if __name__ == "__main__":
         dest="sync_schema",
         help="Namespace/schema to store sync snapshots (default: __sqlrooms). Used as ATTACH alias when --sync-db is provided.",
     )
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
+
     exts = None
     if args.extensions:
         exts = [s.strip() for s in args.extensions.split(",") if s.strip()]
-    # Allow env var fallback if CLI flag not provided
-    token = args.auth_token
 
     sync_enabled = bool(args.sync)
     # Back-compat: if someone passes --sync-db without --sync, enable sync (but warn).
@@ -177,8 +180,13 @@ if __name__ == "__main__":
         args.db_path,
         args.port,
         extensions=exts,
-        auth_token=token,
+        auth_token=args.auth_token,
         sync_enabled=sync_enabled,
         sync_db=args.sync_db,
         sync_schema=args.sync_schema,
     )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

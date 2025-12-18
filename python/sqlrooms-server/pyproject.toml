@@ -1,6 +1,6 @@
 [project]
-name = "sqlrooms-duckdb-server"
-description = "A DuckDB server for SQLRooms"
+name = "sqlrooms-server"
+description = "SQLRooms DuckDB websocket server runtime"
 dynamic = ["version"]
 readme = "README.md"
 requires-python = ">=3.10"
@@ -15,7 +15,8 @@ dependencies = [
 ]
 
 [project.scripts]
-sqlrooms-duckdb-server = "pkg.__main__:serve"
+sqlrooms-server = "sqlrooms.server.__main__:main"
+sqlrooms-duckdb-server = "sqlrooms.server.__main__:main"
 
 [project.urls]
 homepage = "https://github.com/sqlrooms/sqlrooms"
@@ -37,7 +38,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["pkg"]
+packages = ["sqlrooms"]
 
 [tool.hatch.version]
 path = "package.json"
@@ -45,7 +46,7 @@ pattern = "\"version\": \"(?P<version>.+?)\""
 
 # https://mypy.readthedocs.io/en/stable/config_file.html
 [tool.mypy]
-files = "pkg/**/*.py"
+files = "sqlrooms/server/**/*.py"
 strict = false
 ignore_missing_imports = true
 

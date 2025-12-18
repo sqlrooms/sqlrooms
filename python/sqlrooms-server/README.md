@@ -1,6 +1,6 @@
-# SQLRooms DuckDB Server
+# SQLRooms Server
 
-[![PyPi](https://img.shields.io/pypi/v/sqlrooms-duckdb-server.svg)](https://pypi.org/project/sqlrooms-duckdb-server/)
+[![PyPi](https://img.shields.io/pypi/v/sqlrooms-server.svg)](https://pypi.org/project/sqlrooms-server/)
 
 A Python-based server that runs a local DuckDB instance and supports queries over WebSockets, returning data in either [Apache Arrow](https://arrow.apache.org/) or JSON format. The server was originally developed for use with [SQLRooms](https://sqlrooms.org), but can be readily used as a generic DuckDB server in other contexts.
 
@@ -27,10 +27,14 @@ A Python-based server that runs a local DuckDB instance and supports queries ove
 We recommend running the server in an isolated environment with [uvx](https://docs.astral.sh/uv/). For example, to directly run the server, use:
 
 ```bash
-uvx sqlrooms-duckdb-server
+uvx sqlrooms-server
 ```
 
-Alternatively, you can install the server with `pip install sqlrooms-duckdb-server`. Then you can start the server with `sqlrooms-duckdb-server --db-path /absolute/path/to/my.db --port 4000`.
+Alternatively, you can install the server with `pip install sqlrooms-server`. Then you can start the server with `sqlrooms-server --db-path /absolute/path/to/my.db --port 4000`.
+
+Compatibility:
+
+- `sqlrooms-duckdb-server` is provided as an alias console script for backward compatibility.
 
 ### Command-line arguments
 
@@ -50,16 +54,16 @@ Examples:
 
 ```bash
 # In-memory DB with httpfs only (default)
-uv run sqlrooms-duckdb-server
+uv run sqlrooms-server
 
 # File-backed DB with multiple extensions
-uv run sqlrooms-duckdb-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
+uv run sqlrooms-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spatial,h3@community
 
 # Enable sync using a schema within the main DB
-uv run sqlrooms-duckdb-server --db-path /tmp/my.db --sync
+uv run sqlrooms-server --db-path /tmp/my.db --sync
 
 # Enable sync and store snapshots in a dedicated attached DuckDB file
-uv run sqlrooms-duckdb-server --db-path /tmp/my.db --sync --sync-db /tmp/my-sync.db
+uv run sqlrooms-server --db-path /tmp/my.db --sync --sync-db /tmp/my-sync.db
 ```
 
 ## Developer Setup
@@ -69,7 +73,7 @@ We use [uv](https://docs.astral.sh/uv/) to manage our development setup.
 Start the server with:
 
 ```bash
-uv run sqlrooms-duckdb-server --db-path /absolute/path/to/my.db
+uv run sqlrooms-server --db-path /absolute/path/to/my.db
 ```
 
 Run `uv run ruff check --fix` and `uv run ruff format` to lint the code.
