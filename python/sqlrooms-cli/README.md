@@ -24,7 +24,7 @@ What happens:
 
 ## CLI flags
 
-- `--db-path` (default `./sqlrooms.db`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
+- `--db-path` (default `:memory:`): DuckDB file to load/create. The `__sqlrooms` schema is created automatically.
 - `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
 - `--ws-port`: WebSocket port for DuckDB queries (default `4000`).
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
@@ -75,4 +75,3 @@ Tips:
 - Use `--no-open-browser` if you don’t want the static bundle auto-opened.
 - Rebuild the UI (`pnpm --filter sqlrooms-cli-app build`) when you want the Python server to serve new static assets.
 - `/api/config` reflects CLI flags (provider/model/api key, WS URL).
-

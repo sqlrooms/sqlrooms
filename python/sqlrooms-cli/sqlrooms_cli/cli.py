@@ -3,7 +3,6 @@ from __future__ import annotations
 import asyncio
 import logging
 import sys
-from pathlib import Path
 
 import typer
 
@@ -23,11 +22,11 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def main(
-    db_path: Path = typer.Option(
-        Path("./sqlrooms.db"),
+    db_path: str = typer.Option(
+        ":memory:",
         "--db-path",
         "-d",
-        help="DuckDB file to use; created if missing.",
+        help="DuckDB database to use. Pass a filepath to persist, or ':memory:' for an in-memory DB (no file).",
         show_default=True,
     ),
     host: str = typer.Option("127.0.0.1", "--host", help="HTTP host for the UI."),

@@ -22,12 +22,12 @@ class DuckDBStateStore:
     - sql_editor_queries stores saved/last queries.
     """
 
-    def __init__(self, db_path: Path):
-        self.db_path = Path(db_path)
+    def __init__(self, db_path: str | Path):
+        self.db_path = str(db_path)
         self._ensure_schema()
 
     def _connect(self):
-        return duckdb.connect(str(self.db_path), read_only=False)
+        return duckdb.connect(self.db_path, read_only=False)
 
     def _ensure_schema(self) -> None:
         with self._connect() as con:

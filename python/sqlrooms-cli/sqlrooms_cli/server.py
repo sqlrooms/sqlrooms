@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import os
+import tempfile
 import threading
 import webbrowser
 from pathlib import Path
@@ -31,7 +32,7 @@ def _sanitize_filename(name: str) -> str:
 class SqlroomsHttpServer:
     def __init__(
         self,
-        db_path: Path,
+        db_path: str | Path,
         host: str,
         port: int,
         ws_port: int,
@@ -40,7 +41,17 @@ class SqlroomsHttpServer:
         api_key: str | None = None,
         open_browser: bool = True,
     ):
-        self.db_path = Path(db_path).expanduser().resolve()
+        db_path_str = str(db_path)
+        self.is_in_memory = db_path_str == ":memory:"
+        if self.is_in_memory:
+            self.db_path: Path | None = None
+            self.duckdb_database = ":memory:"
+            base_dir = Path(tempfile.gettempdir()) / "sqlrooms-cli"
+        else:
+            self.db_path = Path(db_path).expanduser().resolve()
+            self.duckdb_database = str(self.db_path)
+            base_dir = self.db_path.parent
+
         self.host = host
         self.port = port
         self.ws_port = ws_port
@@ -51,10 +62,10 @@ class SqlroomsHttpServer:
 
         self.static_dir = Path(__file__).parent / "static"
         self.index_html = self.static_dir / "index.html"
-        self.upload_dir = self.db_path.parent / "sqlrooms_uploads"
+        self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
 
-        self.state_store = DuckDBStateStore(self.db_path)
+        self.state_store = DuckDBStateStore(self.duckdb_database)
         self._duckdb_thread: threading.Thread | None = None
 
     async def start(self) -> None:
@@ -104,7 +115,7 @@ class SqlroomsHttpServer:
             "llmProvider": self.llm_provider,
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
-            "dbPath": str(self.db_path),
+            "dbPath": self.duckdb_database,
         }
 
     def _build_app(self) -> FastAPI:
@@ -182,7 +193,7 @@ class SqlroomsHttpServer:
 
         signal.signal = _noop_signal  # type: ignore
         try:
-            db_async.init_global_connection(str(self.db_path), extensions=["httpfs"])
+            db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
             cache = Cache()
             duckdb_ws_server(cache, self.ws_port, auth_token=None)
         finally:
