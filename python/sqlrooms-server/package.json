@@ -1,6 +1,6 @@
 {
   "name": "sqlrooms-server",
-  "version": "0.2.2",
+  "version": "0.1.0",
   "private": true,
   "scripts": {
     "dev": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server",

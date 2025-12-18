@@ -58,6 +58,10 @@ class SqlroomsHttpServer:
         host: str,
         port: int,
         ws_port: int | None,
+        *,
+        sync_enabled: bool = False,
+        sync_db: str | None = None,
+        sync_schema: str = "__sqlrooms",
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
@@ -87,6 +91,9 @@ class SqlroomsHttpServer:
         self.llm_model = llm_model
         self.api_key = api_key
         self.open_browser = open_browser
+        self.sync_enabled = bool(sync_enabled)
+        self.sync_db = sync_db
+        self.sync_schema = sync_schema
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -101,6 +108,18 @@ class SqlroomsHttpServer:
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
+        if self.sync_enabled:
+            if self.sync_db:
+                logger.info(
+                    "CRDT sync is ENABLED (db=%s, schema=%s)",
+                    self.sync_db,
+                    self.sync_schema,
+                )
+            else:
+                logger.info(
+                    "CRDT sync is ENABLED (schema=%s within main DB)",
+                    self.sync_schema,
+                )
         self._start_duckdb_backend()
         app = self._build_app()
 
@@ -228,7 +247,17 @@ class SqlroomsHttpServer:
         try:
             db_async.init_global_connection(self.duckdb_database, extensions=["httpfs"])
             cache = Cache()
-            duckdb_ws_server(cache, self.ws_port, auth_token=None)
+            duckdb_ws_server(
+                cache,
+                self.ws_port,
+                auth_token=None,
+                sync_enabled=self.sync_enabled,
+                sync_db_path=self.sync_db,
+                sync_schema=self.sync_schema,
+                allow_client_snapshots=bool(
+                    self.sync_enabled and self.duckdb_database == ":memory:"
+                ),
+            )
         finally:
             signal.signal = original_signal  # type: ignore
 
