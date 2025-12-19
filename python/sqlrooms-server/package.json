@@ -4,8 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server",
-    "dev:sync": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server --sync --db-path /tmp/sqlrooms-my.db",
-    "sync": "uv run python -m sqlrooms.server --sync --db-path /tmp/sqlrooms-my.db",
+    "dev:sync": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server --sync",
+    "sync": "uv run python -m sqlrooms.server --sync",
     "check-fix": "uv run ruff check --fix",
     "format": "uv run ruff format",
     "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",
