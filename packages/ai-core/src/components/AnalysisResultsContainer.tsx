@@ -6,17 +6,20 @@ import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
 import {AiThinkingDots} from './AiThinkingDots';
+import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
   enableReasoningBox = false,
   customMarkdownComponents,
   userTools,
+  ErrorMessageComponent,
 }) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
@@ -55,6 +58,7 @@ export const AnalysisResultsContainer: React.FC<{
             enableReasoningBox={enableReasoningBox}
             customMarkdownComponents={customMarkdownComponents}
             userTools={userTools}
+            ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
         {isRunningAnalysis && (
