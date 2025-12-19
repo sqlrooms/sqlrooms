@@ -3,7 +3,18 @@ name = "sqlrooms-server"
 description = "SQLRooms DuckDB websocket server runtime"
 dynamic = ["version"]
 readme = "README.md"
+license = "MIT"
 requires-python = ">=3.10"
+authors = [
+  { name = "SQLRooms Contributors" }
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
 dependencies = [
   "diskcache",
   "duckdb>=1.4.0,<1.5.0",
@@ -19,7 +30,8 @@ sqlrooms-server = "sqlrooms.server.__main__:main"
 sqlrooms-duckdb-server = "sqlrooms.server.__main__:main"
 
 [project.urls]
-homepage = "https://github.com/sqlrooms/sqlrooms"
+homepage = "https://sqlrooms.com"
+repository = "https://github.com/sqlrooms/sqlrooms"
 
 [build-system]
 requires = ["hatchling"]
@@ -39,6 +51,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["sqlrooms"]
+
+[tool.hatch.build.targets.sdist]
+include = ["README.md", "LICENSE", "sqlrooms"]
 
 [tool.hatch.version]
 path = "package.json"

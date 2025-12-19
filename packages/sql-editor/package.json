@@ -1,7 +1,7 @@
 {
   "name": "@sqlrooms/sql-editor",
   "version": "0.26.1-rc.13",
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",

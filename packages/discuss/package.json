@@ -6,7 +6,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "files": [
     "dist"

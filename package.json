@@ -2,7 +2,7 @@
   "name": "sqlrooms",
   "version": "0.0.0",
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "private": true,
   "packageManager": "pnpm@10.25.0",
   "workspaces": [
