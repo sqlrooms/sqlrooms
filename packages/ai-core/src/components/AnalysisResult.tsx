@@ -3,7 +3,7 @@ import {Button, CopyButton} from '@sqlrooms/ui';
 import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
 import {useState, useRef, useEffect} from 'react';
 import {Components} from 'react-markdown';
-import {ErrorMessage} from './ErrorMessage';
+import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
 import {useStoreWithAi} from '../AiSlice';
@@ -24,10 +24,7 @@ type AnalysisResultProps = {
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
-  ErrorMessageComponent?: React.ComponentType<{
-    errorMessage: string;
-    analysisResult?: AnalysisResultSchema;
-  }>;
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
 /**

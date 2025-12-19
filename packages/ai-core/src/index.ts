@@ -22,6 +22,7 @@ export {SessionDropdown} from './components/session/SessionDropdown';
 export {SessionTitle} from './components/session/SessionTitle';
 export type {SessionType} from './components/session/SessionType';
 export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
+export type {ErrorMessageComponentProps} from './components/ErrorMessage';
 export {ToolCallInfo} from './components/ToolCallInfo';
 
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';

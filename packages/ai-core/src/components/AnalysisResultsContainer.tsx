@@ -6,15 +6,14 @@ import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
 import {AiThinkingDots} from './AiThinkingDots';
+import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
-  ErrorMessageComponent?: Parameters<
-    typeof AnalysisResult
-  >[0]['ErrorMessageComponent'];
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
   enableReasoningBox = false,
