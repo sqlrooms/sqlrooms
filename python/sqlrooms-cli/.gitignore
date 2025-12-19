@@ -1,3 +1,4 @@
 sqlrooms_uploads/
 sqlrooms.db
 sqlrooms.db.wal
+sqlrooms/web/static/

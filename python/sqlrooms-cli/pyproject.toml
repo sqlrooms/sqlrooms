@@ -36,6 +36,14 @@ sqlrooms = "sqlrooms.cli:app"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[dependency-groups]
+dev = [
+  "pytest",
+  "pytest-asyncio",
+  "httpx",
+  "ruff",
+]
+
 [tool.uv.sources]
 sqlrooms-server = { workspace = true }
 
