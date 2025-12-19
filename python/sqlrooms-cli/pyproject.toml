@@ -49,7 +49,9 @@ sqlrooms-server = { workspace = true }
 
 [tool.hatch.build.targets.wheel]
 packages = ["sqlrooms"]
-include = ["sqlrooms/web/static/**"]
+
+[tool.hatch.build]
+artifacts = ["sqlrooms/web/static/**"]
 
 [tool.hatch.build.targets.sdist]
 include = ["README.md", "LICENSE", "sqlrooms"]
