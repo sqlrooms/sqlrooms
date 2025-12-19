@@ -48,17 +48,16 @@ export type RoomState = RoomShellSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState;
 
-const runtimeConfigPromise = fetchRuntimeConfig();
+const runtimeConfig = await fetchRuntimeConfig();
 
 const connector = createWebSocketDuckDbConnector({
-  wsUrl: 'ws://localhost:4000',
+  wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
 });
 
 const baseLoadFile = connector.loadFile.bind(connector);
 connector.loadFile = async (file, desiredTableName, options) => {
-  const cfg = await runtimeConfigPromise;
   if (file instanceof File) {
-    const serverPath = await uploadFileToServer(file, cfg);
+    const serverPath = await uploadFileToServer(file, runtimeConfig);
     const renamedFile = new File([file], serverPath, {type: file.type});
     return baseLoadFile(renamedFile, desiredTableName, options);
   }
@@ -125,10 +124,10 @@ const store = createRoomStore<RoomState>(
 
       ...createAiSlice({
         config: AiSliceConfig.parse({sessions: []}),
-        defaultProvider: 'openai',
-        defaultModel: 'gpt-4o-mini',
-        getApiKey: () => '',
-        getBaseUrl: () => '',
+        defaultProvider: (runtimeConfig.llmProvider as any) || 'openai',
+        defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
+        getApiKey: () => runtimeConfig.apiKey || '',
+        getBaseUrl: () => runtimeConfig.apiBaseUrl || '',
         getInstructions: () => createDefaultAiInstructions(store),
         tools: {
           ...createDefaultAiTools(store, {query: {}}),

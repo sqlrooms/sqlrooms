@@ -8,10 +8,11 @@
     "dev": "concurrently -k -n server,ui -c blue,magenta \"pnpm run dev:server\" \"pnpm run dev:ui\"",
     "dev:sync": "concurrently -k -n server,ui -c blue,magenta \"pnpm run dev:server --sync\" \"pnpm run dev:ui\"",
     "build:ui": "pnpm --filter sqlrooms-cli-app build && node -e \"const fs=require('fs');const path=require('path');const src=path.resolve('..','..','apps','sqlrooms-cli-ui','dist');const dst=path.resolve('sqlrooms','web','static');fs.rmSync(dst,{recursive:true,force:true});fs.mkdirSync(dst,{recursive:true});fs.cpSync(src,dst,{recursive:true});console.log('Copied UI bundle to',dst);\"",
+    "build": "pnpm run build:ui && uv build",
     "check-fix": "uv run ruff check --fix",
     "format": "uv run ruff format",
     "prerelease": "pnpm run build:ui && uv run pytest && uv run ruff check && uv run ruff format --check",
-    "release": "pnpm run build:ui && uv build && uvx twine upload --skip-existing ./dist/sqlrooms_cli*",
+    "release": "pnpm run build && uvx twine upload --skip-existing ./dist/sqlrooms_cli*",
     "test": "uv run pytest -s --log-cli-level=DEBUG"
   }
 }
