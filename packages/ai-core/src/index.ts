@@ -8,6 +8,7 @@ export {createAiSlice, useStoreWithAi} from './AiSlice';
 export type {AiSliceState} from './AiSlice';
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
+export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useAiChat} from './hooks/useAiChat';
 

@@ -42,6 +42,7 @@ export type {
 // From @sqlrooms/ai-core - Components
 export {AnalysisResultsContainer} from '@sqlrooms/ai-core';
 export {AnalysisResult} from '@sqlrooms/ai-core';
+export {ErrorMessage} from '@sqlrooms/ai-core';
 export {PromptSuggestions} from '@sqlrooms/ai-core';
 export {ModelSelector} from '@sqlrooms/ai-core';
 export {SessionControls} from '@sqlrooms/ai-core';

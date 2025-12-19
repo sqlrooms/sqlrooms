@@ -12,11 +12,15 @@ export const AnalysisResultsContainer: React.FC<{
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
+  ErrorMessageComponent?: Parameters<
+    typeof AnalysisResult
+  >[0]['ErrorMessageComponent'];
 }> = ({
   className,
   enableReasoningBox = false,
   customMarkdownComponents,
   userTools,
+  ErrorMessageComponent,
 }) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
@@ -55,6 +59,7 @@ export const AnalysisResultsContainer: React.FC<{
             enableReasoningBox={enableReasoningBox}
             customMarkdownComponents={customMarkdownComponents}
             userTools={userTools}
+            ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
         {isRunningAnalysis && (

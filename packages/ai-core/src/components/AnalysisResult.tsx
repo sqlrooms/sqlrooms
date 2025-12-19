@@ -24,6 +24,10 @@ type AnalysisResultProps = {
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
   userTools?: string[];
+  ErrorMessageComponent?: React.ComponentType<{
+    errorMessage: string;
+    analysisResult?: AnalysisResultSchema;
+  }>;
 };
 
 /**
@@ -41,6 +45,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   enableReasoningBox = false,
   customMarkdownComponents,
   userTools,
+  ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
@@ -153,9 +158,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
             customMarkdownComponents={customMarkdownComponents}
           />
         )}
-        {analysisResult.errorMessage && (
-          <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
-        )}
+        {analysisResult.errorMessage &&
+          (ErrorMessageComponent ? (
+            <ErrorMessageComponent
+              errorMessage={analysisResult.errorMessage.error}
+            />
+          ) : (
+            <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
+          ))}
       </div>
     </div>
   );
