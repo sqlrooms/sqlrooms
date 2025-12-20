@@ -27,6 +27,14 @@ active_queries_lock = threading.Lock()
 # Shutdown state flag
 SHUTTING_DOWN: bool = False
 
+# Cleanup callbacks to run on shutdown (async functions)
+SHUTDOWN_CLEANUP_CALLBACKS: List[Callable[[], Any]] = []
+
+
+def register_shutdown_cleanup(callback: Callable[[], Any]) -> None:
+    """Register an async callback to be run during shutdown."""
+    SHUTDOWN_CLEANUP_CALLBACKS.append(callback)
+
 
 def generate_query_id() -> str:
     """Generate a unique query id string (UUID4)."""
@@ -114,6 +122,17 @@ def begin_shutdown() -> None:
     """Mark shutdown in progress to reject new work and start teardown."""
     global SHUTTING_DOWN
     SHUTTING_DOWN = True
+
+    # Run cleanup callbacks synchronously if any
+    if SHUTDOWN_CLEANUP_CALLBACKS:
+        try:
+            loop = asyncio.new_event_loop()
+            tasks = [callback() for callback in SHUTDOWN_CLEANUP_CALLBACKS]
+            if tasks:
+                loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+            loop.close()
+        except Exception as e:
+            logger.warning(f"Error during shutdown cleanup: {e}")
 
 
 def is_shutting_down() -> bool:

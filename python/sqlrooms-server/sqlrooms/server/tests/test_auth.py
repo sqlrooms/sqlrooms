@@ -21,7 +21,7 @@ def server_proc_auth():
         [
             sys.executable,
             "-m",
-            "pkg",
+            "sqlrooms.server",
             "--port",
             str(port),
             "--auth-token",
