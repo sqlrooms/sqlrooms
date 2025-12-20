@@ -6,7 +6,6 @@ type DuckDbLikeConnector = {
 };
 
 const UI_STATE_KEY = 'default';
-const LEGACY_STATE_KEY = 'persist';
 
 function sanitizeIdent(ident: string): string {
   // Minimal guardrail: we only allow typical DuckDB identifier characters.
