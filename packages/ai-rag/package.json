@@ -24,6 +24,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "ai": "^5.0.44",
+    "pdfjs-dist": "^4.10.38",
     "zod": "^4.1.8"
   },
   "peerDependencies": {
