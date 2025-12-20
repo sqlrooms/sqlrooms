@@ -1,3 +1,6 @@
+pnpm typecheck
+pnpm test
+
 # Git LFS pre-push hook
 command -v git-lfs >/dev/null 2>&1 || { echo >&2 "Git LFS not installed. Skipping Git LFS pre-push hook."; exit 0; }
 git lfs pre-push "$@"

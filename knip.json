@@ -4,7 +4,12 @@
     "interface": true,
     "type": true
   },
-  "ignore": ["python/**", "docs/**", "examples/app-builder/app-scaffolds/**"],
+  "ignore": [
+    "python/**",
+    "docs/**",
+    "examples/app-builder/app-scaffolds/**",
+    "submodules/**"
+  ],
   "exclude": ["exports", "types", "duplicates"],
   "workspaces": {
     ".": {
@@ -16,7 +21,7 @@
         "remove",
         "vitepress-plugin-llms"
       ],
-      "ignoreBinaries": ["madge"]
+      "ignoreBinaries": ["madge", "uv"]
     },
     "packages/*": {
       "entry": ["src/index.{ts,tsx}"]

@@ -64,7 +64,7 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
           return (
             <ReasoningBox
               key={`group-${groupIndex}`}
-              title={group.title ? String(group.title) : undefined}
+              title={group.title}
               defaultOpen={group.defaultExpanded}
             >
               {group.parts.map((part, partIndex) => (

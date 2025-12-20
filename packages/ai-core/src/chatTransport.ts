@@ -15,6 +15,7 @@ import {AddToolResult} from './types';
 import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
+import {AI_DEFAULT_TEMPERATURE} from './constants';
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -127,7 +128,7 @@ export type ChatTransportConfig = {
 /**
  * Creates a handler for tool completion that updates the tool additional data in the store
  */
-function createOnToolCompletedHandler(
+export function createOnToolCompletedHandler(
   store: StoreApi<AiSliceStateForTransport>,
 ) {
   return (toolCallId: string, additionalData: unknown) => {
@@ -151,7 +152,14 @@ export function convertToAiSDKTools(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
       acc[name] = convertToVercelAiToolV5({
         ...tool,
-        onToolCompleted,
+        onToolCompleted: (toolCallId: string, additionalData: unknown) => {
+          if (tool.onToolCompleted) {
+            // Call the onToolCompleted handler provided by the tool if it exists
+            tool.onToolCompleted(toolCallId, additionalData);
+          }
+          // Call the onToolCompleted handler provided by the caller if it exists
+          onToolCompleted?.(toolCallId, additionalData);
+        },
       });
       return acc;
     },
@@ -218,11 +226,11 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        // Ensure we always pass an array of messages
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
+        temperature: AI_DEFAULT_TEMPERATURE,
       });
 
       return result.toUIMessageStreamResponse();

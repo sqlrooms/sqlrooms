@@ -1,8 +1,7 @@
 import React from 'react';
-import {ToolUIPart} from 'ai';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
-import {isToolPart} from '../utils';
+import {isDynamicToolPart, isToolPart} from '../utils';
 import {ToolResult} from './tools/ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
 
@@ -19,64 +18,61 @@ const AgentProgressRenderer: React.FC<{
   }>;
   finalOutput?: string;
 }> = ({agentToolCalls, finalOutput}) => {
+  const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
+
   return (
     <div className="mt-2 px-5 text-[0.9em]">
-      <div className="mb-2 font-bold text-gray-600">
-        Agent Tool Execution Progress:
-      </div>
       <div className="ml-3">
-        {agentToolCalls.map((toolCall, index) => (
-          <div
-            key={toolCall.toolCallId}
-            className={`mb-1 flex items-start ${
-              toolCall.state === 'error' ? 'text-red-700' : 'text-gray-600'
-            }`}
-          >
-            <span className="mr-2 min-w-[16px]">
-              {toolCall.state === 'success' && '✓'}
-              {toolCall.state === 'error' && '✗'}
-              {toolCall.state === 'pending' && '○'}
-            </span>
-            <div className="flex-1">
-              <span className="font-medium">{toolCall.toolName}</span>
-              {toolCall.state === 'success' &&
-                toolCall.output !== undefined && (
-                  <span className="ml-2 text-[0.9em] text-gray-600">
-                    {(() => {
-                      try {
-                        return typeof toolCall.output === 'object'
-                          ? JSON.stringify(toolCall.output)
-                          : String(toolCall.output);
-                      } catch {
-                        return '[Output unavailable]';
-                      }
-                    })()}
-                  </span>
-                )}
-              {toolCall.state === 'error' && toolCall.errorText && (
-                <div className="mt-0.5 text-[0.9em] text-red-700">
-                  Error: {toolCall.errorText}
+        {agentToolCalls.map((toolCall) => {
+          const ToolComponent = findToolComponent(toolCall.toolName);
+          const isSuccess = toolCall.state === 'success';
+          const isError = toolCall.state === 'error';
+          const hasComponent =
+            ToolComponent && typeof ToolComponent === 'function';
+          const hasObjectOutput =
+            toolCall.output &&
+            typeof toolCall.output === 'object' &&
+            toolCall.output !== null;
+
+          return (
+            <div
+              key={toolCall.toolCallId}
+              className={`mb-2 ${isError ? 'text-red-700' : 'text-gray-600'}`}
+            >
+              <div className="mb-1 flex items-start">
+                <span className="mr-2 min-w-[16px]">
+                  {isSuccess && '✓'}
+                  {isError && '✗'}
+                  {toolCall.state === 'pending' && '○'}
+                </span>
+                <div className="flex-1">
+                  <span className="font-medium">{toolCall.toolName}</span>
+                  {isError && toolCall.errorText && (
+                    <div className="mt-0.5 text-[0.9em] text-red-700">
+                      Error: {toolCall.errorText}
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+
+              {isSuccess && hasComponent && hasObjectOutput ? (
+                <div className="ml-6 mt-1">
+                  <ToolComponent
+                    {...(toolCall.output as Record<string, unknown>)}
+                  />
+                </div>
+              ) : null}
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
-          <div className="mb-1 font-bold text-gray-600">Final Result:</div>
           <div className="text-gray-600">{finalOutput}</div>
         </div>
       )}
     </div>
   );
-};
-
-/**
- * Props for the ToolPartRenderer component
- */
-type ToolPartRendererProps = {
-  part: UIMessagePart;
 };
 
 /**
@@ -88,41 +84,31 @@ type ToolPartRendererProps = {
  * @param props.part - The UI message part to render
  * @returns A React component displaying the tool part, or null if not a tool part
  */
-export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
+export const ToolPartRenderer = ({part}: {part: UIMessagePart}) => {
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
   const tools = useStoreWithAi((s) => s.ai.tools);
 
-  // Check if it's a tool part (including dynamic-tool)
-  const isTool =
-    isToolPart(part) ||
-    (typeof part.type === 'string' && part.type === 'dynamic-tool');
-  if (!isTool) return null;
+  if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
-  const toolCallId = (part as ToolUIPart).toolCallId;
+  const {type, toolCallId, state, input} = part;
   const toolName =
-    part.type === 'dynamic-tool'
-      ? (part as any).toolName || 'unknown'
-      : part.type.replace(/^tool-/, '') || 'unknown';
-  const state = (part as any).state;
-  const input = (part as any).input;
-  const output =
-    state === 'output-available' ? (part as any).output : undefined;
-  const errorText =
-    state === 'output-error' ? (part as any).errorText : undefined;
+    type === 'dynamic-tool'
+      ? part.toolName || 'unknown'
+      : type.replace(/^tool-/, '') || 'unknown';
+
+  const output = state === 'output-available' ? part.output : undefined;
+  const errorText = state === 'output-error' ? part.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
   const additionalData = toolAdditionalData[toolCallId];
 
-  // Check if tool has no execute function, if no, render <ToolComponent> which will addToolResult
   if (
     !tools[toolName]?.execute &&
     (state === 'input-streaming' ||
       state === 'input-available' ||
       state === 'output-available')
   ) {
-    // Access tool component directly from tools registry to avoid lint error
-    // about creating components during render
     const ToolComponent = tools[toolName]?.component as React.ComponentType;
     const props = {
       ...(input as Record<string, unknown>),
@@ -139,7 +125,6 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
 
   // Otherwise, render <ToolResult>
   if (tools[toolName]?.execute) {
-    // Check if this is an agent tool (name starts with "agent-")
     const isAgentTool = toolName.startsWith('agent-');
     const agentData = additionalData as {
       agentToolCalls?: Array<{
@@ -166,13 +151,11 @@ export const ToolPartRenderer: React.FC<ToolPartRendererProps> = ({part}) => {
         />
         <div data-tool-call-id={toolCallId}>
           {hasAgentProgress ? (
-            // Render agent progress
             <AgentProgressRenderer
               agentToolCalls={agentData.agentToolCalls!}
               finalOutput={agentData.finalOutput}
             />
           ) : (
-            // Render regular tool result
             <ToolResult
               toolCallId={toolCallId}
               toolData={{

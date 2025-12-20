@@ -8,6 +8,7 @@ export {createAiSlice, useStoreWithAi} from './AiSlice';
 export type {AiSliceState} from './AiSlice';
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
+export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useAiChat} from './hooks/useAiChat';
 
@@ -21,14 +22,20 @@ export {SessionDropdown} from './components/session/SessionDropdown';
 export {SessionTitle} from './components/session/SessionTitle';
 export type {SessionType} from './components/session/SessionType';
 export {ToolErrorMessage} from './components/tools/ToolErrorMessage';
+export type {ErrorMessageComponentProps} from './components/ErrorMessage';
 export {ToolCallInfo} from './components/ToolCallInfo';
 
 export {AiSliceConfig, createDefaultAiConfig} from '@sqlrooms/ai-config';
 export {AiThinkingDots} from './components/AiThinkingDots';
-export {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
+export {
+  cleanupPendingAnalysisResults,
+  ToolAbortError,
+  extractModelsFromSettings,
+} from './utils';
 export {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
+  createOnToolCompletedHandler,
 } from './chatTransport';
 export type {AddToolResult} from './types';
 

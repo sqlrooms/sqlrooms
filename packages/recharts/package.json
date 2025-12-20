@@ -1,12 +1,12 @@
 {
   "name": "@sqlrooms/recharts",
-  "version": "0.26.1-rc.7",
+  "version": "0.26.1-rc.13",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "sideEffects": false,
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",

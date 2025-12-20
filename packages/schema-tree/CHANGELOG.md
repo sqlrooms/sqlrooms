@@ -3,6 +3,32 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/schema-tree
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+**Note:** Version bump only for package @sqlrooms/schema-tree
+
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/schema-tree
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/schema-tree
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/schema-tree
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](https://github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](https://github.com/sqlrooms/sqlrooms/commit/f21318636d8151b942db6a15480731e86c00f5d4))
+
 ## 0.26.1-rc.7 (2025-12-05)
 
 ### Bug Fixes

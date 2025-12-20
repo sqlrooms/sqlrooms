@@ -2,12 +2,13 @@
   "name": "sqlrooms",
   "version": "0.0.0",
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "private": true,
   "packageManager": "pnpm@10.25.0",
   "workspaces": [
     "packages/*",
-    "examples/*"
+    "examples/*",
+    "apps/*"
   ],
   "type": "module",
   "scripts": {
@@ -17,6 +18,7 @@
     "build": "turbo build --filter=@sqlrooms/*",
     "build:all": "pnpm clean && turbo build",
     "build:examples": "turbo build --filter=./examples/*",
+    "build:apps": "turbo build --filter=./apps/*",
     "build:examples:ci": "turbo build --filter=./examples/* --concurrency=1",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
@@ -36,9 +38,9 @@
     "version-minor": "lerna version minor --yes --sync-workspace-lock",
     "version-major": "lerna version major --yes --sync-workspace-lock",
     "version-prerelease": "node scripts/version-prerelease.mjs",
-    "publish-dry-run": "turbo run publish && lerna publish from-package --yes --dry-run",
-    "publish-release": "turbo run publish && lerna publish from-package --yes",
-    "publish-prerelease": "turbo run publish && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
+    "publish-dry-run": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dry-run",
+    "publish-release": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes",
+    "publish-prerelease": "turbo run publish --filter=@sqlrooms/* --concurrency=3 && lerna publish from-package --yes --dist-tag next --pre-dist-tag next",
     "update-readme": "node scripts/update-readme.mjs",
     "update-deps": "pnpm --filter '*' update --interactive",
     "check-circular-deps": "npx madge --circular packages/*/src/index.ts",
@@ -95,7 +97,10 @@
       "@duckdb/duckdb-wasm": "1.31.0",
       "zod": "4.1.13",
       "d3-sankey": "0.12.3",
-      "monaco-editor": "0.55.1"
+      "monaco-editor": "0.55.1",
+      "node-fetch": "3.3.2",
+      "d3-color": "3.1.0",
+      "hoek": "6.1.3"
     },
     "onlyBuiltDependencies": [
       "@danmarshall/deckgl-typings",

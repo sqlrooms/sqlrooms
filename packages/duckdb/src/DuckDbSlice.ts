@@ -17,7 +17,6 @@ import {produce} from 'immer';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
 import {
-  escapeId,
   escapeVal,
   getColValAsNumber,
   isQualifiedTableName,
@@ -207,6 +206,7 @@ export type DuckDbSliceState = {
         temp?: boolean;
         view?: boolean;
         allowMultipleStatements?: boolean;
+        abortSignal?: AbortSignal;
       },
     ) => Promise<{
       tableName: string | QualifiedTableName;
@@ -316,6 +316,7 @@ export function createDuckDbSlice({
               temp?: boolean;
               view?: boolean;
               allowMultipleStatements?: boolean;
+              abortSignal?: AbortSignal;
             },
           ) {
             const {
@@ -323,6 +324,7 @@ export function createDuckDbSlice({
               temp = false,
               view = false,
               allowMultipleStatements = false,
+              abortSignal,
             } = options || {};
 
             // For temp tables/views, DuckDB requires the "temp" database
@@ -375,7 +377,9 @@ export function createDuckDbSlice({
               precedingStatements,
               createStatement,
             );
-            const result = await connector.query(fullQuery);
+            const result = await connector.query(fullQuery, {
+              signal: abortSignal,
+            });
             // Views don't have a row count, only tables do
             const rowCount = view ? undefined : getColValAsNumber(result);
             return {tableName, rowCount};
@@ -434,8 +438,7 @@ export function createDuckDbSlice({
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
-            const describeResults = await connector.query(
-              `WITH tables_and_views AS (
+            const sql = `WITH tables_and_views AS (
               FROM duckdb_tables() SELECT
                 database_name AS database,
                 schema_name AS schema,
@@ -465,15 +468,15 @@ export function createDuckDbSlice({
             ${
               schema || database || table
                 ? `WHERE ${[
-                    schema ? `schema = '${escapeId(schema)}'` : '',
-                    database ? `database = '${escapeId(database)}'` : '',
-                    table ? `name = '${escapeId(table)}'` : '',
+                    schema ? `schema = ${escapeVal(schema)}` : '',
+                    database ? `database = ${escapeVal(database)}` : '',
+                    table ? `name = ${escapeVal(table)}` : '',
                   ]
                     .filter(Boolean)
                     .join(' AND ')}`
                 : ''
-            }`,
-            );
+            }`;
+            const describeResults = await connector.query(sql);
 
             const newTables: DataTable[] = [];
             for (let i = 0; i < describeResults.numRows; i++) {
