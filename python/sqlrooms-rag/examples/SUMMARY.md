@@ -7,7 +7,7 @@ This guide shows you how to download DuckDB documentation, prepare embeddings, a
 ### 1. Download and Prepare DuckDB Documentation
 
 ```bash
-cd python/rag
+cd python/sqlrooms-rag
 uv run python examples/prepare_duckdb_docs.py
 ```
 
@@ -65,7 +65,7 @@ console.log(results);
 After running the preparation script:
 
 ```
-python/rag/
+python/sqlrooms-rag/
 ├── downloaded-docs/
 │   └── duckdb/              # Downloaded DuckDB docs (~600 .md files)
 │       ├── archive/
@@ -139,12 +139,12 @@ chmod +x examples/prepare_duckdb_docs.sh
 
 ```bash
 # Run predefined test queries (interactive)
-uv run python examples/test_duckdb_docs_query.py
+uv run python examples/query_duckdb_docs.py
 
 # Or test with a specific question
-uv run python examples/test_duckdb_docs_query.py "What is a window function?"
-uv run python examples/test_duckdb_docs_query.py "How to connect to S3?"
-uv run python examples/test_duckdb_docs_query.py "JSON functions in DuckDB"
+uv run python examples/query_duckdb_docs.py "What is a window function?"
+uv run python examples/query_duckdb_docs.py "How to connect to S3?"
+uv run python examples/query_duckdb_docs.py "JSON functions in DuckDB"
 ```
 
 **Output:**
@@ -372,7 +372,7 @@ Install Node.js: https://nodejs.org/
 ### "ModuleNotFoundError: No module named 'sqlrooms_rag'"
 
 ```bash
-cd python/rag
+cd python/sqlrooms-rag
 uv sync
 ```
 

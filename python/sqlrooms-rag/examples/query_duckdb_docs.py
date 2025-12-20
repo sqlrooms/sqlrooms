@@ -6,8 +6,8 @@ This script demonstrates how to query the prepared DuckDB documentation
 embeddings and shows example results.
 
 Usage:
-    uv run python test_duckdb_docs_query.py
-    uv run python test_duckdb_docs_query.py "Your question here"
+    uv run python query_duckdb_docs.py
+    uv run python query_duckdb_docs.py "Your question here"
 """
 
 import sys
@@ -17,7 +17,7 @@ import duckdb
 from sentence_transformers import SentenceTransformer
 
 
-def test_query(
+def perform_query(
     query_text: str,
     db_path: str = "generated-embeddings/duckdb_docs.duckdb",
     model_name: str = "BAAI/bge-small-en-v1.5",
@@ -143,7 +143,7 @@ def run_predefined_tests():
         print(f"{'=' * 80}\n")
         
         try:
-            test_query(query, top_k=3)
+            perform_query(query, top_k=3)
         except Exception as e:
             print(f"❌ Error: {e}", file=sys.stderr)
             continue
@@ -205,7 +205,7 @@ Examples:
     try:
         if args.query:
             # Single query mode
-            test_query(
+            perform_query(
                 query_text=args.query,
                 db_path=args.db,
                 model_name=args.model,

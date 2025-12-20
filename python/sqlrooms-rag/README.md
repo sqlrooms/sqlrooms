@@ -45,7 +45,7 @@ This project uses [uv](https://github.com/astral-sh/uv) for development.
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install from source
-cd python/rag-embedding
+cd python/sqlrooms-rag
 uv sync
 ```
 
@@ -408,7 +408,7 @@ sqlrooms-rag/
 │   ├── prepare_duckdb_docs.py   # Download & prepare DuckDB docs
 │   ├── prepare_duckdb_docs.sh   # Bash version of above
 │   ├── prepare_with_openai.py   # Using OpenAI API for embeddings
-│   ├── test_duckdb_docs_query.py  # Test DuckDB docs queries
+│   ├── query_duckdb_docs.py     # Test DuckDB docs queries
 │   ├── example_query.py         # Query using llama-index
 │   ├── query_duckdb_direct.py   # Direct DuckDB queries (including hybrid)
 │   ├── hybrid_search_example.py # Hybrid search examples
@@ -431,7 +431,7 @@ The package includes a ready-to-use script for preparing DuckDB documentation em
 
 ```bash
 # Download DuckDB docs and create embeddings
-cd python/rag
+cd python/sqlrooms-rag
 uv run python examples/prepare_duckdb_docs.py
 ```
 
@@ -446,10 +446,10 @@ Test the embeddings:
 
 ```bash
 # Run interactive test queries
-uv run python examples/test_duckdb_docs_query.py
+uv run python examples/query_duckdb_docs.py
 
 # Or test a specific query
-uv run python examples/test_duckdb_docs_query.py "What is a window function?"
+uv run python examples/query_duckdb_docs.py "What is a window function?"
 ```
 
 Then use it in your SQLRooms app:

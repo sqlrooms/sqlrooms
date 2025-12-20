@@ -98,7 +98,7 @@ uv run python example_query.py
 - Retrieves top-3 most similar chunks
 - Easy to modify for custom queries
 
-### 4. `test_duckdb_docs_query.py` - Test DuckDB Docs Queries
+### 4. `query_duckdb_docs.py` - Test DuckDB Docs Queries
 
 Tests querying the prepared DuckDB documentation embeddings.
 
@@ -106,13 +106,13 @@ Tests querying the prepared DuckDB documentation embeddings.
 
 ```bash
 # Run predefined test queries
-uv run python test_duckdb_docs_query.py
+uv run python query_duckdb_docs.py
 
 # Query with a specific question
-uv run python test_duckdb_docs_query.py "What is a window function?"
+uv run python query_duckdb_docs.py "What is a window function?"
 
 # Get more results
-uv run python test_duckdb_docs_query.py --top-k 10 "How to use JSON?"
+uv run python query_duckdb_docs.py --top-k 10 "How to use JSON?"
 ```
 
 **What it does:**
@@ -195,10 +195,10 @@ This creates `generated-embeddings/duckdb_docs.duckdb` (~10-20MB).
 
 ```bash
 # Run interactive test queries
-uv run python test_duckdb_docs_query.py
+uv run python query_duckdb_docs.py
 
 # Or ask a specific question
-uv run python test_duckdb_docs_query.py "What is a window function?"
+uv run python query_duckdb_docs.py "What is a window function?"
 ```
 
 ### 3. Query the Documentation
@@ -206,7 +206,7 @@ uv run python test_duckdb_docs_query.py "What is a window function?"
 **Quick test (recommended first):**
 
 ```bash
-uv run python test_duckdb_docs_query.py "How do I use JSON functions?"
+uv run python query_duckdb_docs.py "How do I use JSON functions?"
 ```
 
 **Using llama-index:**
@@ -316,7 +316,7 @@ Install Node.js from https://nodejs.org/
 ### "sqlrooms-rag not installed"
 
 ```bash
-cd python/rag
+cd python/sqlrooms-rag
 uv sync
 ```
 

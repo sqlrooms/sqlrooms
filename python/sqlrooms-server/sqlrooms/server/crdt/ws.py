@@ -6,7 +6,7 @@ from typing import Any, Dict, Optional
 
 from socketify import OpCode
 
-from loro import ExportMode, LoroDoc  # type: ignore
+from loro import ExportMode  # type: ignore
 
 from .state import CrdtState
 

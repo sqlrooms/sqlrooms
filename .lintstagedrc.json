@@ -1,3 +1,4 @@
 {
-  "**/*.{ts,tsx}": ["turbo lint --filter=@sqlrooms/* --", "prettier --write"]
+  "**/*.{ts,tsx}": ["turbo lint --filter=@sqlrooms/* --", "prettier --write"],
+  "python/**/*.py": ["uv run --project python ruff check --fix"]
 }

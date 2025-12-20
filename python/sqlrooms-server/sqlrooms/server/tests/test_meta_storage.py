@@ -1,7 +1,6 @@
 import json
 import asyncio
 
-import pytest
 
 from .. import db_async
 

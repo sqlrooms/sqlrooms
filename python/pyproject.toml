@@ -2,6 +2,12 @@
 members = [
   "sqlrooms-cli",
   "sqlrooms-server",
+  "sqlrooms-rag",
+]
+
+[tool.uv]
+override-dependencies = [
+  "duckdb>=1.4.0,<1.5.0",
 ]
 
 
