@@ -2,6 +2,7 @@
 members = [
   "sqlrooms-cli",
   "sqlrooms-server",
+  "sqlrooms-rag",
 ]
 
 

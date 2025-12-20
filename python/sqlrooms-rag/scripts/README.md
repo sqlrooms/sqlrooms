@@ -7,7 +7,7 @@ Utility scripts for working with embedding databases.
 Install with visualization dependencies:
 
 ```bash
-cd python/rag
+cd python/sqlrooms-rag
 uv pip install -e ".[viz]"
 ```
 

@@ -316,7 +316,7 @@ Install Node.js from https://nodejs.org/
 ### "sqlrooms-rag not installed"
 
 ```bash
-cd python/rag
+cd python/sqlrooms-rag
 uv sync
 ```
 

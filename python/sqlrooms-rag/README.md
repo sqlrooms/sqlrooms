@@ -45,7 +45,7 @@ This project uses [uv](https://github.com/astral-sh/uv) for development.
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
 # Install from source
-cd python/rag-embedding
+cd python/sqlrooms-rag
 uv sync
 ```
 
@@ -431,7 +431,7 @@ The package includes a ready-to-use script for preparing DuckDB documentation em
 
 ```bash
 # Download DuckDB docs and create embeddings
-cd python/rag
+cd python/sqlrooms-rag
 uv run python examples/prepare_duckdb_docs.py
 ```
 

@@ -6,7 +6,7 @@ This guide shows you how to visualize your embeddings using UMAP for 2D projecti
 
 ```bash
 # 1. Install visualization dependencies
-cd python/rag
+cd python/sqlrooms-rag
 uv pip install -e ".[viz]"
 
 # 2. Generate UMAP visualization
