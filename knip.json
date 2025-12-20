@@ -21,7 +21,7 @@
         "remove",
         "vitepress-plugin-llms"
       ],
-      "ignoreBinaries": ["madge"]
+      "ignoreBinaries": ["madge", "uv"]
     },
     "packages/*": {
       "entry": ["src/index.{ts,tsx}"]
