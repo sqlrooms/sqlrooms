@@ -83,6 +83,7 @@ def server(
     meta_db_path: str | None = None,
     meta_namespace: str = "__sqlrooms",
     allow_client_snapshots: bool = False,
+    save_debounce_ms: int = 500,
 ):
     # SSL server
     # app = App(AppOptions(key_file_name="./localhost-key.pem", cert_file_name="./localhost.pem"))
@@ -107,6 +108,7 @@ def server(
             from loro import ExportMode, LoroDoc  # type: ignore
 
             crdt_state = CrdtState()
+            db_async.register_shutdown_cleanup(crdt_state.flush_all)
             try:
                 empty_snapshot_len = len(LoroDoc().export(ExportMode.Snapshot()))
             except Exception:
@@ -116,6 +118,7 @@ def server(
                 state=crdt_state,
                 allow_client_snapshots=allow_client_snapshots,
                 empty_snapshot_len=empty_snapshot_len,
+                save_debounce_ms=save_debounce_ms,
                 logger=logger,
             )
         except Exception:
@@ -356,6 +359,22 @@ def server(
             except Exception:
                 pass
 
+    def ws_close(ws, code, message):
+        logger.info(f"ws closed code={code} reason={message} id={id(ws)}")
+        try:
+            user_data = ws.get_user_data()  # type: ignore[attr-defined]
+            if user_data is not None:
+                conn_id = int(user_data)
+                if crdt_ws is not None:
+                    room_id = crdt_ws.get_room_id(conn_id)
+                    if room_id:
+                        # Flush room state before unregistering
+                        asyncio.create_task(crdt_state.flush_room(room_id))
+                    crdt_ws.unregister_conn(conn_id)
+        except Exception:
+            logger.exception("Error during ws_close cleanup")
+        auth.on_close(ws)
+
     app.ws(
         "/*",
         {
@@ -372,13 +391,7 @@ def server(
             "drain": lambda ws: logger.warning(
                 f"WebSocket backpressure: {ws.get_buffered_amount()}"
             ),
-            "close": lambda ws, code, message: (
-                logger.info(
-                    f"ws closed code={code} reason={message} id={id(ws)}"
-                ),
-                (crdt_ws.unregister_conn(int(ws.get_user_data())) if (crdt_ws is not None and hasattr(ws, "get_user_data")) else None),
-                auth.on_close(ws),
-            ),
+            "close": ws_close,
         },
     )
 

@@ -28,6 +28,7 @@ def serve(
     sync_enabled: bool = False,
     meta_db: str | None = None,
     meta_namespace: str = "__sqlrooms",
+    save_debounce_ms: int = 500,
 ):
     global _def_initialized
     if not db_path:
@@ -114,6 +115,7 @@ def serve(
         sync_enabled=sync_enabled,
         meta_db_path=meta_db,
         meta_namespace=meta_namespace,
+        save_debounce_ms=save_debounce_ms,
         # In local dev, `:memory:` resets on restart (watchdog), so allow clients to
         # seed empty rooms via `crdt-snapshot` (server still rejects snapshots once
         # the room has state).
@@ -163,6 +165,12 @@ def main(argv: list[str] | None = None) -> int:
         dest="meta_namespace",
         help="Namespace for SQLRooms meta tables (default: __sqlrooms). If --meta-db is provided, used as ATTACH alias; otherwise used as a schema in the main DB.",
     )
+    parser.add_argument(
+        "--save-debounce-ms",
+        type=int,
+        default=500,
+        help="CRDT snapshot save debounce delay in milliseconds (default: 500)",
+    )
     args = parser.parse_args(argv)
 
     exts = None
@@ -179,6 +187,7 @@ def main(argv: list[str] | None = None) -> int:
         sync_enabled=sync_enabled,
         meta_db=args.meta_db,
         meta_namespace=args.meta_namespace,
+        save_debounce_ms=args.save_debounce_ms,
     )
     return 0
 

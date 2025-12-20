@@ -16,7 +16,8 @@ class RoomDoc:
         self.doc = doc or LoroDoc()
         self.lock = asyncio.Lock()
         self.loaded = False
-
+        self.dirty = False
+        self.save_task: Optional[asyncio.Task] = None
 
 class CrdtState:
     """Manages per-room LoroDoc with lazy load/save to DuckDB (via db_async helpers)."""
@@ -45,6 +46,45 @@ class CrdtState:
     async def save_snapshot(self, room_id: str, doc: LoroDoc) -> None:
         snapshot = doc.export(ExportMode.Snapshot())
         await db_async.save_crdt_snapshot(room_id, snapshot)
+
+    async def schedule_save(self, room_id: str, delay_ms: int = 500) -> None:
+        """Schedule a debounced snapshot save."""
+        room = self._ensure(room_id)
+        room.dirty = True
+        if room.save_task and not room.save_task.done():
+            room.save_task.cancel()
+        room.save_task = asyncio.create_task(self._delayed_save(room_id, delay_ms))
+
+    async def _delayed_save(self, room_id: str, delay_ms: int) -> None:
+        try:
+            await asyncio.sleep(delay_ms / 1000)
+            await self.flush_room(room_id)
+        except asyncio.CancelledError:
+            # Task was cancelled by a newer update
+            pass
+        except Exception:
+            logger.exception("Failed to run delayed save for room %s", room_id)
+
+    async def flush_room(self, room_id: str) -> None:
+        """Immediately persist a room if dirty."""
+        room = self._rooms.get(room_id)
+        if room and room.dirty:
+            async with room.lock:
+                # Re-check dirty under lock
+                if room.dirty:
+                    await self.save_snapshot(room_id, room.doc)
+                    room.dirty = False
+
+    async def flush_all(self) -> None:
+        """Flush all dirty rooms (call on shutdown)."""
+        dirty_room_ids = [rid for rid, r in self._rooms.items() if r.dirty]
+        if not dirty_room_ids:
+            return
+
+        logger.info("Flushing %d dirty CRDT rooms", len(dirty_room_ids))
+        await asyncio.gather(
+            *(self.flush_room(rid) for rid in dirty_room_ids), return_exceptions=True
+        )
 
     def export_update(self, doc: LoroDoc, from_version=None) -> bytes:
         """

@@ -74,7 +74,7 @@ def server_proc():
     out = tempfile.NamedTemporaryFile(delete=False)
     err = tempfile.NamedTemporaryFile(delete=False)
     proc = subprocess.Popen(
-        [sys.executable, "-m", "pkg", "--port", str(port)], stdout=out, stderr=err
+        [sys.executable, "-m", "sqlrooms.server", "--port", str(port)], stdout=out, stderr=err
     )
     started = False
     deadline = time.time() + 12.0

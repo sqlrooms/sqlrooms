@@ -28,12 +28,14 @@ class CrdtWs:
         state: CrdtState,
         allow_client_snapshots: bool,
         empty_snapshot_len: Optional[int],
+        save_debounce_ms: int = 500,
         logger: Optional[logging.Logger] = None,
     ):
         self._app = app
         self._state = state
         self._allow_client_snapshots = allow_client_snapshots
         self._empty_snapshot_len = empty_snapshot_len
+        self._save_debounce_ms = save_debounce_ms
         self._log = logger or logging.getLogger(__name__)
         self._conn_state: Dict[int, Dict[str, Optional[str]]] = {}
 
@@ -95,9 +97,8 @@ class CrdtWs:
         async with room.lock:
             room.doc.import_(payload)
             update = payload
-            await self._state.save_snapshot(room_id, room.doc)
-            saved_snapshot = room.doc.export(ExportMode.Snapshot())
-        self._log.debug(f"saved snapshot for {room_id}: {len(saved_snapshot)} bytes")
+            await self._state.schedule_save(room_id, delay_ms=self._save_debounce_ms)
+        self._log.debug(f"scheduled snapshot save for {room_id}")
         self._log.debug(f"publishing update to room {room_id}, len: {len(update)} bytes")
         self._app.publish(room_id, update, OpCode.BINARY)
         self._log.debug(f"published update to room {room_id}")
@@ -129,7 +130,7 @@ class CrdtWs:
                 )
                 return
             room.doc.import_(payload)
-            await self._state.save_snapshot(room_id, room.doc)
+            await self._state.schedule_save(room_id, delay_ms=self._save_debounce_ms)
             update = payload
 
         self._app.publish(room_id, update, OpCode.BINARY)
