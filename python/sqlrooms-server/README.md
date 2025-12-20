@@ -47,8 +47,8 @@ Compatibility:
 
 - `--auth-token` (optional): If provided, enables bearer authentication. WebSocket clients must first send `{ "type": "auth", "token": "<TOKEN>" }`.
 - `--sync` (optional): Enables the optional sync (CRDT) module. When enabled, the server maintains per-room Loro CRDT docs, persists snapshots, and exposes CRDT WebSocket messages alongside the existing query protocol.
-- `--sync-schema` (default: `__sqlrooms`): Where sync snapshots are stored.
-- `--sync-db` (optional): If provided, attaches this DuckDB file under `--sync-schema` and stores snapshots there. If omitted, creates/uses the `--sync-schema` schema within the main DB.
+- `--meta-namespace` (default: `__sqlrooms`): Namespace where SQLRooms meta tables are stored (UI state + CRDT snapshots). If `--meta-db` is provided, this is the ATTACH alias; otherwise it is a schema in the main DB.
+- `--meta-db` (optional): If provided, attaches this DuckDB file under `--meta-namespace` and stores meta tables there. If omitted, creates/uses the `--meta-namespace` schema within the main DB.
 
 Examples:
 
@@ -62,8 +62,8 @@ uv run sqlrooms-server --db-path /tmp/my.db --port 4000 --extensions httpfs,spat
 # Enable sync using a schema within the main DB
 uv run sqlrooms-server --db-path /tmp/my.db --sync
 
-# Enable sync and store snapshots in a dedicated attached DuckDB file
-uv run sqlrooms-server --db-path /tmp/my.db --sync --sync-db /tmp/my-sync.db
+# Enable sync and store meta tables in a dedicated attached DuckDB file
+uv run sqlrooms-server --db-path /tmp/my.db --sync --meta-db /tmp/my-meta.db --meta-namespace meta
 ```
 
 ## Developer Setup
@@ -160,13 +160,13 @@ Supported messages:
 
   - Responses: `{ "type":"crdt-joined","roomId":"room-1" }` and `{ "type":"crdt-snapshot","roomId":"room-1","data":"<base64>" }`
 
-- Send binary Loro updates after joining. The server imports them into its LoroDoc, exports a normalized update, broadcasts to the room, and persists a snapshot to the attached CRDT DB file. Ack: `{ "type":"crdt-update-ack","roomId":"room-1" }`
+- Send binary Loro updates after joining. The server imports them into its LoroDoc, exports a normalized update, broadcasts to the room, and persists a snapshot to the meta storage. Ack: `{ "type":"crdt-update-ack","roomId":"room-1" }`
 
 Notes:
 
 - Sync is off by default; enabled only when `--sync` is provided.
-- If `--sync-db` is provided, snapshots are stored in that attached DuckDB file (attached under `--sync-schema`).
-- If `--sync-db` is not provided, snapshots are stored in the main DuckDB under the `--sync-schema` schema.
+- If `--meta-db` is provided, meta tables (including sync snapshots) are stored in that attached DuckDB file (attached under `--meta-namespace`).
+- If `--meta-db` is not provided, meta tables are stored in the main DuckDB under the `--meta-namespace` schema.
 
 ## Concurrency & Cancellation
 

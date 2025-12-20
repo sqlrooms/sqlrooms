@@ -75,7 +75,9 @@ const store = createRoomStore<RoomState>(
         aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
       },
-      storage: createDuckDbPersistStorage(connector),
+      storage: createDuckDbPersistStorage(connector, {
+        namespace: runtimeConfig.metaNamespace || '__sqlrooms',
+      }),
     },
     (set, get, store) => ({
       ...createRoomShellSlice({

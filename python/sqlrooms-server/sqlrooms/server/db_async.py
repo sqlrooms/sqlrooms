@@ -201,9 +201,9 @@ def shutdown_executor(wait: bool = False) -> None:
         pass
 
 
-# ---------- CRDT persistence helpers ----------
+# ---------- Meta persistence helpers (UI state + CRDT snapshots) ----------
 
-SYNC_NAMESPACE: Optional[str] = None
+META_NAMESPACE: Optional[str] = None
 
 
 def _quote_ident(ident: str) -> str:
@@ -216,33 +216,41 @@ def _quote_sql_string(value: str) -> str:
     return "'" + value.replace("'", "''") + "'"
 
 
+def _meta_table_ref(table_name: str) -> str:
+    if META_NAMESPACE is None:
+        raise RuntimeError("Meta storage not initialized")
+    return f"{_quote_ident(META_NAMESPACE)}.{_quote_ident(table_name)}"
+
+
 def _sync_rooms_table_ref() -> str:
-    if SYNC_NAMESPACE is None:
-        raise RuntimeError("CRDT storage not initialized")
-    return f"{_quote_ident(SYNC_NAMESPACE)}.{_quote_ident('sync_rooms')}"
+    return _meta_table_ref("sync_rooms")
+
+
+def _ui_state_table_ref() -> str:
+    return _meta_table_ref("ui_state")
 
 
 def attach_crdt_db(path: str) -> None:
     """Attach a separate DuckDB file for CRDT snapshots under the legacy 'crdt' namespace."""
-    init_crdt_storage(namespace="crdt", attached_db_path=path)
+    init_meta_storage(namespace="crdt", attached_db_path=path)
 
 
-def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
-    """Initialize CRDT snapshot persistence.
+def init_meta_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
+    """Initialize SQLRooms meta persistence (UI state + CRDT snapshots).
 
     - If attached_db_path is provided, attach that DuckDB file under the given namespace
-      (DuckDB ATTACH alias), and store snapshots in `<namespace>.sync_rooms`.
+      (DuckDB ATTACH alias), and store meta tables in `<namespace>.*`.
     - If attached_db_path is not provided, create a schema within the main DB and store
-      snapshots in `<namespace>.sync_rooms`.
+      meta tables in `<namespace>.*`.
     """
-    global SYNC_NAMESPACE
+    global META_NAMESPACE
     if GLOBAL_CON is None:
         raise RuntimeError("Global DuckDB connection not initialized")
     if not namespace or not namespace.strip():
-        raise ValueError("CRDT namespace must be a non-empty string")
+        raise ValueError("Meta namespace must be a non-empty string")
 
-    SYNC_NAMESPACE = namespace.strip()
-    ns_q = _quote_ident(SYNC_NAMESPACE)
+    META_NAMESPACE = namespace.strip()
+    ns_q = _quote_ident(META_NAMESPACE)
 
     if attached_db_path is not None:
         # Note: In DuckDB, the ATTACH alias behaves like a namespace you can qualify with.
@@ -251,6 +259,19 @@ def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) ->
         # Use a schema within the main database.
         GLOBAL_CON.execute(f"CREATE SCHEMA IF NOT EXISTS {ns_q};")
 
+    # UI state (single row today, key='default')
+    ui_ref = _ui_state_table_ref()
+    GLOBAL_CON.execute(
+        f"""
+        CREATE TABLE IF NOT EXISTS {ui_ref} (
+            key TEXT PRIMARY KEY,
+            payload_json JSON,
+            updated_at TIMESTAMPTZ DEFAULT now()
+        );
+        """
+    )
+
+    # CRDT snapshots
     rooms_ref = _sync_rooms_table_ref()
     GLOBAL_CON.execute(
         f"""
@@ -261,6 +282,11 @@ def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) ->
         );
         """
     )
+
+
+def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
+    """Deprecated: use init_meta_storage(). Kept for internal back-compat."""
+    init_meta_storage(namespace=namespace, attached_db_path=attached_db_path)
 
 
 async def load_crdt_snapshot(room_id: str) -> Optional[bytes]:

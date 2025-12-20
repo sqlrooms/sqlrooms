@@ -20,7 +20,7 @@ What happens:
 - Starts the DuckDB websocket backend (from `sqlrooms-server`) on `ws://localhost:4000`.
 - Serves the AI example UI on `http://localhost:4173` and opens your browser (disable with `--no-open-browser`).
 - Drag-and-drop CSV/Parquet/DuckDB files to load them into DuckDB; files are uploaded to a local `sqlrooms_uploads` folder and referenced by path.
-- UI state (layout, AI settings/sessions/messages, SQL editor and queries) is stored in the `__sqlrooms` schema of the selected DuckDB file.
+- UI state is stored in the SQLRooms meta namespace (default `__sqlrooms`) of the selected DuckDB file.
 
 ## CLI flags
 
@@ -29,25 +29,20 @@ What happens:
 - `--host` / `--port`: HTTP host/port for the UI (default `127.0.0.1:4173`).
 - `--ws-port`: WebSocket port for DuckDB queries. If omitted, a free port is chosen automatically.
 - `--sync`: Enable optional sync (CRDT) over WebSocket (Loro).
-- `--sync-db`: Optional path to a dedicated DuckDB file for sync snapshots (requires `--sync`). If omitted, uses a schema within the main DB.
-- `--sync-schema` (default `__sqlrooms`): Namespace/schema to store sync snapshots. Used as ATTACH alias when `--sync-db` is provided.
+- `--meta-db`: Optional path to a dedicated DuckDB file for SQLRooms meta tables (UI state + CRDT snapshots). If omitted, meta tables are stored in the main DB.
+- `--meta-namespace` (default `__sqlrooms`): Namespace for SQLRooms meta tables. If `--meta-db` is provided, used as ATTACH alias; otherwise used as a schema in the main DB.
 - `--llm-provider`, `--llm-model`, `--api-key`: Passed into the UI as defaults for the AI assistant (provider defaults to `openai`, model to `gpt-4o-mini`).
 - `--no-open-browser`: Skip automatically opening the browser tab.
 - `--ui`: Optional path to a custom UI bundle directory (a Vite `dist/`). If omitted, uses the bundled default UI.
 
 ## Data persistence
 
-Tables created in the selected DuckDB file:
+Tables created in the selected DuckDB file (or attached meta DB if `--meta-db` is provided):
 
-- `__sqlrooms.layout`
-- `__sqlrooms.ai_settings`
-- `__sqlrooms.ai`
-- `__sqlrooms.ai_sessions`
-- `__sqlrooms.ai_messages`
-- `__sqlrooms.sql_editor`
-- `__sqlrooms.sql_editor_queries`
+- `__sqlrooms.ui_state` (one row: `key='default'`)
+- `__sqlrooms.sync_rooms` (only used when `--sync` is enabled)
 
-State is read/written through `/api/state`; uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
+Uploads go to `/api/upload`. Runtime config for the UI is exposed at `/api/config` / `/config.json`.
 
 ## Server-only mode (no UI)
 

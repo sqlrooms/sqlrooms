@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev:server": "uv run sqlrooms --ws-port 4000 --port 4173 --no-open-browser",
+    "dev:server": "uv run sqlrooms --ws-port 4000 --port 4173 --no-open-browser --db-path /tmp/sqlrooms-cli.db",
     "dev:ui": "pnpm --filter sqlrooms-cli-app dev -- --host --port 4174",
     "dev": "concurrently -k -n server,ui -c blue,magenta \"pnpm run dev:server\" \"pnpm run dev:ui\"",
     "dev:sync": "concurrently -k -n server,ui -c blue,magenta \"pnpm run dev:server --sync\" \"pnpm run dev:ui\"",

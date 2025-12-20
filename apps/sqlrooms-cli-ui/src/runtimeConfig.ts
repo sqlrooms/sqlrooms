@@ -5,6 +5,7 @@ export type RuntimeConfig = {
   llmModel?: string;
   apiKey?: string;
   dbPath?: string;
+  metaNamespace?: string;
 };
 
 export async function fetchRuntimeConfig(): Promise<RuntimeConfig> {

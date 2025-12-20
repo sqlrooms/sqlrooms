@@ -67,15 +67,15 @@ def main(
         "--sync",
         help="Enable optional sync (CRDT) over WebSocket (Loro).",
     ),
-    sync_db: str | None = typer.Option(
+    meta_db: str | None = typer.Option(
         None,
-        "--sync-db",
-        help="Optional path to a dedicated DuckDB file for sync snapshots (requires --sync). If omitted, uses a schema within the main DB.",
+        "--meta-db",
+        help="Optional path to a dedicated DuckDB file for SQLRooms meta state (UI state + CRDT snapshots). If omitted, stores meta tables in the main DB.",
     ),
-    sync_schema: str = typer.Option(
+    meta_namespace: str = typer.Option(
         "__sqlrooms",
-        "--sync-schema",
-        help="Namespace/schema to store sync snapshots (default: __sqlrooms). Used as ATTACH alias when --sync-db is provided.",
+        "--meta-namespace",
+        help="Namespace used for SQLRooms meta tables. If --meta-db is provided, this is the ATTACH alias; otherwise it's a schema in the main DB.",
     ),
 ):
     """
@@ -90,8 +90,8 @@ def main(
         port=port,
         ws_port=ws_port,
         sync_enabled=sync,
-        sync_db=sync_db,
-        sync_schema=sync_schema,
+        meta_db=meta_db,
+        meta_namespace=meta_namespace,
         llm_provider=llm_provider,
         llm_model=llm_model,
         api_key=api_key,

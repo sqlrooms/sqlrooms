@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any, Dict
 
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, UploadFile
+from fastapi import FastAPI, File, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -19,7 +19,6 @@ from diskcache import Cache
 from sqlrooms.server import db_async
 from sqlrooms.server.server import server as duckdb_ws_server
 
-from .state_store import DuckDBStateStore
 from .ui import BuiltinUiProvider, DirectoryUiProvider, UiProvider
 
 logger = logging.getLogger(__name__)
@@ -59,8 +58,8 @@ class SqlroomsHttpServer:
         ws_port: int | None,
         *,
         sync_enabled: bool = False,
-        sync_db: str | None = None,
-        sync_schema: str = "__sqlrooms",
+        meta_db: str | None = None,
+        meta_namespace: str = "__sqlrooms",
         llm_provider: str | None = None,
         llm_model: str | None = None,
         api_key: str | None = None,
@@ -91,8 +90,8 @@ class SqlroomsHttpServer:
         self.api_key = api_key
         self.open_browser = open_browser
         self.sync_enabled = bool(sync_enabled)
-        self.sync_db = sync_db
-        self.sync_schema = sync_schema
+        self.meta_db = meta_db
+        self.meta_namespace = meta_namespace
 
         self.ui_provider: UiProvider = (
             DirectoryUiProvider(ui_dir) if ui_dir else BuiltinUiProvider()
@@ -101,24 +100,23 @@ class SqlroomsHttpServer:
         self.index_html = self.ui_provider.index_html()
         self.upload_dir = base_dir / "sqlrooms_uploads"
         self.upload_dir.mkdir(parents=True, exist_ok=True)
-
-        self.state_store = DuckDBStateStore(self.duckdb_database)
         self._duckdb_thread: threading.Thread | None = None
 
     async def start(self) -> None:
         logger.info("Starting sqlrooms CLI server")
+        if self.meta_db:
+            logger.info(
+                "Meta DB is ENABLED (db=%s, namespace=%s)",
+                self.meta_db,
+                self.meta_namespace,
+            )
+        else:
+            logger.info(
+                "Meta DB is DISABLED (using schema=%s within main DB)",
+                self.meta_namespace,
+            )
         if self.sync_enabled:
-            if self.sync_db:
-                logger.info(
-                    "CRDT sync is ENABLED (db=%s, schema=%s)",
-                    self.sync_db,
-                    self.sync_schema,
-                )
-            else:
-                logger.info(
-                    "CRDT sync is ENABLED (schema=%s within main DB)",
-                    self.sync_schema,
-                )
+            logger.info("CRDT sync is ENABLED")
         self._start_duckdb_backend()
         app = self._build_app()
 
@@ -165,6 +163,7 @@ class SqlroomsHttpServer:
             "llmModel": self.llm_model,
             "apiKey": self.api_key or "",
             "dbPath": self.duckdb_database,
+            "metaNamespace": self.meta_namespace,
         }
 
     def _build_app(self) -> FastAPI:
@@ -184,23 +183,6 @@ class SqlroomsHttpServer:
         @app.get("/config.json")
         async def get_config_json():
             return self._runtime_config()
-
-        @app.get("/api/state")
-        async def get_state():
-            return self.state_store.load_state()
-
-        @app.post("/api/state")
-        async def save_state(payload: Dict[str, Any]):
-            state = payload.get("state") or payload.get("value") or payload
-            if not isinstance(state, dict):
-                raise HTTPException(status_code=400, detail="Invalid state payload")
-            self.state_store.save_state(state)
-            return {"ok": True}
-
-        @app.delete("/api/state")
-        async def clear_state():
-            self.state_store.clear()
-            return {"ok": True}
 
         @app.post("/api/upload")
         async def upload_file(file: UploadFile = File(...)):
@@ -251,8 +233,8 @@ class SqlroomsHttpServer:
                 self.ws_port,
                 auth_token=None,
                 sync_enabled=self.sync_enabled,
-                sync_db_path=self.sync_db,
-                sync_schema=self.sync_schema,
+                meta_db_path=self.meta_db,
+                meta_namespace=self.meta_namespace,
                 allow_client_snapshots=bool(
                     self.sync_enabled and self.duckdb_database == ":memory:"
                 ),
