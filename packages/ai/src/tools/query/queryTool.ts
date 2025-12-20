@@ -160,9 +160,12 @@ export async function getQuerySummary(
   }
 
   try {
-    const summaryResult = await connector.query(`SUMMARIZE (
+    const summaryResult = await connector.query(
+      `SUMMARIZE (
       ${sqlQuery}
-    )`, {signal: abortSignal});
+    )`,
+      {signal: abortSignal},
+    );
     return arrowTableToJson(summaryResult);
   } catch (error) {
     console.warn('Failed to get summary for query. Error:', error);

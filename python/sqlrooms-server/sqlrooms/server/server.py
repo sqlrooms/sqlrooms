@@ -9,7 +9,7 @@ import ujson
 from socketify import App, CompressOptions, OpCode
 from .auth import AuthManager
 
-from pkg.query import run_duckdb
+from .query import run_duckdb
 from . import db_async
 from .crdt.ws import CrdtWs
 
@@ -80,8 +80,8 @@ def server(
     auth_token: str | None = None,
     *,
     sync_enabled: bool = False,
-    sync_db_path: str | None = None,
-    sync_schema: str = "__sqlrooms",
+    meta_db_path: str | None = None,
+    meta_namespace: str = "__sqlrooms",
     allow_client_snapshots: bool = False,
 ):
     # SSL server
@@ -94,6 +94,10 @@ def server(
     # Auth helper
     auth = AuthManager(auth_token)
 
+    # Initialize meta storage (UI state + CRDT snapshots) regardless of whether sync is enabled.
+    # This ensures the namespace exists for UI-side SQL persistence.
+    db_async.init_meta_storage(namespace=meta_namespace, attached_db_path=meta_db_path)
+
     crdt_enabled = bool(sync_enabled)
     crdt_ws: CrdtWs | None = None
     empty_snapshot_len: int | None = None
@@ -102,7 +106,6 @@ def server(
             from .crdt.state import CrdtState
             from loro import ExportMode, LoroDoc  # type: ignore
 
-            db_async.init_crdt_storage(namespace=sync_schema, attached_db_path=sync_db_path)
             crdt_state = CrdtState()
             try:
                 empty_snapshot_len = len(LoroDoc().export(ExportMode.Snapshot()))
@@ -339,7 +342,7 @@ def server(
 
             body = ujson.dumps(
                 {
-                    "name": "sqlrooms-duckdb-server",
+                    "name": "sqlrooms-server",
                     "python": sys.version,
                     "duckdb": getattr(_duckdb, "__version__", "unknown"),
                 }

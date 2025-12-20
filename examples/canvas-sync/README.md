@@ -5,4 +5,4 @@ A demonstrating `@sqlrooms/canvas` with ReactFlow that also shows CRDT sync inte
 Server start instructions:
 
 - From project root: `cd python/sqlrooms-duckdb-server`
-- Run: `pnpm run dev:crdt`
+- Run: `pnpm run sync`

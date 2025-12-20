@@ -17,7 +17,7 @@ specific emails that can be used to report and escalate issues.
 ### Project Spaces
 
 For reporting issues in spaces related to SQLRooms please use the email
-`ilya@boyandin.me`. SQLRooms handles CoC issues
+`ilya@sqlrooms.org`. SQLRooms handles CoC issues
 related to the spaces that it maintains. Projects maintainers commit to:
 
 - maintain the confidentiality with regard to the reporter of an incident

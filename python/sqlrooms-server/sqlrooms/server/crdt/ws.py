@@ -13,7 +13,7 @@ from .state import CrdtState
 
 class CrdtWs:
     """
-    CRDT WebSocket handlers for sqlrooms-duckdb-server.
+    CRDT WebSocket handlers for sqlrooms-server.
 
     Notes:
     - Do not depend on Python `ws` object identity being stable across callbacks.

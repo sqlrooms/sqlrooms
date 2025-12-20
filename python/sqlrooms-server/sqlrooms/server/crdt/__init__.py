@@ -1,5 +1,5 @@
 """
-CRDT support for sqlrooms-duckdb-server.
+CRDT support for sqlrooms-server.
 
 This package encapsulates:
 - Room doc state management and persistence (`CrdtState`)

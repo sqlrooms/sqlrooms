@@ -72,6 +72,9 @@ jobs:
       - name: Build packages
         run: pnpm build
 
+      - name: Build apps
+        run: pnpm build:apps
+
       - name: Build examples
         run: pnpm build:examples:ci
 

@@ -18,7 +18,7 @@
   "sideEffects": [
     "*.css"
   ],
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",

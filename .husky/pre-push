@@ -1,3 +1,4 @@
+pnpm typecheck
 pnpm test
 
 # Git LFS pre-push hook
