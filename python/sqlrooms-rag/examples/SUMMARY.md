@@ -139,12 +139,12 @@ chmod +x examples/prepare_duckdb_docs.sh
 
 ```bash
 # Run predefined test queries (interactive)
-uv run python examples/test_duckdb_docs_query.py
+uv run python examples/query_duckdb_docs.py
 
 # Or test with a specific question
-uv run python examples/test_duckdb_docs_query.py "What is a window function?"
-uv run python examples/test_duckdb_docs_query.py "How to connect to S3?"
-uv run python examples/test_duckdb_docs_query.py "JSON functions in DuckDB"
+uv run python examples/query_duckdb_docs.py "What is a window function?"
+uv run python examples/query_duckdb_docs.py "How to connect to S3?"
+uv run python examples/query_duckdb_docs.py "JSON functions in DuckDB"
 ```
 
 **Output:**
