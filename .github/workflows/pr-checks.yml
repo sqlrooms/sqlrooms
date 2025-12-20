@@ -3,8 +3,14 @@ name: PR Checks
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'python/**'
+      - 'docs/**'
   pull_request:
     types: [opened, edited, synchronize, reopened]
+    paths-ignore:
+      - 'python/**'
+      - 'docs/**'
 
 jobs:
   check-pr-title:
