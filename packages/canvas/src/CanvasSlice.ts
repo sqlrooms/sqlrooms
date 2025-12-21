@@ -11,7 +11,7 @@ import {
   type CellsSliceState,
   type DagSliceState,
 } from '@sqlrooms/cells';
-import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
@@ -21,8 +21,6 @@ import {generateUniqueName} from '@sqlrooms/utils';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
 import {
-  addEdge,
-  applyEdgeChanges,
   applyNodeChanges,
   Connection,
   type EdgeChange,
@@ -71,8 +69,6 @@ export const CanvasSliceConfigSchema = z.object({
       }),
     )
     .default({}),
-  sheetOrder: z.array(z.string()).default([]),
-  currentSheetId: z.string().optional(),
 });
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfigSchema>;
 
@@ -114,20 +110,8 @@ function getSheet(config: CanvasSliceConfig, sheetId: string) {
 export function createDefaultCanvasConfig(
   props?: Partial<CanvasSliceConfig>,
 ): CanvasSliceConfig {
-  const defaultSheetId = createId();
   const base: CanvasSliceConfig = {
-    sheets: {
-      [defaultSheetId]: {
-        id: defaultSheetId,
-        nodes: {},
-        meta: {
-          viewport: {x: 0, y: 0, zoom: 1},
-          nodeOrder: [],
-        },
-      },
-    },
-    sheetOrder: [defaultSheetId],
-    currentSheetId: defaultSheetId,
+    sheets: {},
   };
 
   return {...base, ...props};
@@ -176,8 +160,8 @@ export function createCanvasSlice(props: {
 
         async initialize() {
           const sheetId =
-            get().canvas.config.currentSheetId ||
-            get().canvas.config.sheetOrder[0];
+            get().cells.config.currentSheetId ||
+            get().cells.config.sheetOrder[0];
           if (!sheetId) return;
           await get().dag.runAllCellsCascade(sheetId);
           await get().db.refreshTableSchemas();
@@ -224,8 +208,19 @@ export function createCanvasSlice(props: {
           // 3. Update view-specific metadata
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              const sheet = getSheet(draft.canvas.config, sheetId);
-              if (!sheet) return;
+              let sheet = getSheet(draft.canvas.config, sheetId);
+              if (!sheet) {
+                // Initialize metadata for this sheet if it doesn't exist
+                sheet = {
+                  id: sheetId,
+                  nodes: {},
+                  meta: {
+                    viewport: {x: 0, y: 0, zoom: 1},
+                    nodeOrder: [],
+                  },
+                };
+                draft.canvas.config.sheets[sheetId] = sheet;
+              }
 
               const parentNode = parentId ? sheet.nodes[parentId] : undefined;
               const position: XYPosition = initialPosition
@@ -282,10 +277,38 @@ export function createCanvasSlice(props: {
         applyNodeChanges: (changes: NodeChange<CanvasNodeMeta>[]) => {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              const sheetId = draft.canvas.config.currentSheetId;
+              const sheetId = draft.cells.config.currentSheetId;
               if (!sheetId) return;
-              const sheet = getSheet(draft.canvas.config, sheetId);
-              if (!sheet) return;
+              let sheet = getSheet(draft.canvas.config, sheetId);
+              if (!sheet) {
+                // Initialize metadata for this sheet if it doesn't exist
+                sheet = {
+                  id: sheetId,
+                  nodes: {},
+                  meta: {
+                    viewport: {x: 0, y: 0, zoom: 1},
+                    nodeOrder: [],
+                  },
+                };
+                draft.canvas.config.sheets[sheetId] = sheet;
+              }
+
+              // Ensure all cells from CellsSlice have a node entry in CanvasSlice
+              const cellsSheet = draft.cells.config.sheets[sheetId];
+              if (cellsSheet) {
+                for (const cellId of cellsSheet.cellIds) {
+                  if (!sheet.nodes[cellId]) {
+                    sheet.nodes[cellId] = {
+                      id: cellId,
+                      position: {x: 100, y: 100},
+                      width: DEFAULT_NODE_WIDTH,
+                      height: DEFAULT_NODE_HEIGHT,
+                      data: {},
+                    };
+                    sheet.meta.nodeOrder.push(cellId);
+                  }
+                }
+              }
 
               const nodesArray = sheet.meta.nodeOrder
                 .map((id) => sheet.nodes[id])
@@ -304,7 +327,7 @@ export function createCanvasSlice(props: {
         },
 
         applyEdgeChanges: (changes: EdgeChange<any>[]) => {
-          const sheetId = get().canvas.config.currentSheetId;
+          const sheetId = get().cells.config.currentSheetId;
           if (!sheetId) return;
 
           for (const change of changes) {
@@ -315,7 +338,7 @@ export function createCanvasSlice(props: {
         },
 
         addEdge: (connection: Connection) => {
-          const sheetId = get().canvas.config.currentSheetId;
+          const sheetId = get().cells.config.currentSheetId;
           if (sheetId && connection.source && connection.target) {
             get().cells.addEdge(sheetId, {
               source: connection.source,
@@ -327,10 +350,21 @@ export function createCanvasSlice(props: {
         setViewport: (viewport: Viewport) => {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              const sheetId = draft.canvas.config.currentSheetId;
+              const sheetId = draft.cells.config.currentSheetId;
               if (!sheetId) return;
-              const sheet = getSheet(draft.canvas.config, sheetId);
-              if (sheet) {
+              let sheet = getSheet(draft.canvas.config, sheetId);
+              if (!sheet) {
+                // Initialize metadata if needed
+                sheet = {
+                  id: sheetId,
+                  nodes: {},
+                  meta: {
+                    viewport,
+                    nodeOrder: [],
+                  },
+                };
+                draft.canvas.config.sheets[sheetId] = sheet;
+              } else {
                 sheet.meta.viewport = viewport;
               }
             }),

@@ -29,8 +29,6 @@ export const canvasMirrorSchema = schema.LoroMap({
       }),
       (sheet) => sheet.id,
     ),
-    sheetOrder: schema.LoroList(schema.String()),
-    currentSheetId: schema.String(),
   }),
 });
 
@@ -42,8 +40,6 @@ export type CanvasMirrorSchema = typeof canvasMirrorSchema;
 export const canvasMirrorInitialState = {
   config: {
     sheets: [],
-    sheetOrder: [],
-    currentSheetId: '',
   },
 };
 
@@ -65,8 +61,6 @@ export function createCanvasCrdtMirror<
             nodeOrder: sheet.meta.nodeOrder,
           },
         })),
-        sheetOrder: state.canvas.config.sheetOrder,
-        currentSheetId: state.canvas.config.currentSheetId || '',
       },
     }),
     apply: (value, set, get) => {
@@ -99,7 +93,6 @@ export function createCanvasCrdtMirror<
           ...state.canvas,
           config: CanvasSliceConfigSchema.parse({
             ...currentConfig,
-            ...value.config,
             sheets: newSheets,
           }),
         },

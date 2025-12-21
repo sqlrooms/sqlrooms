@@ -3,7 +3,7 @@ export {
   createNotebookSlice,
 } from './NotebookSlice';
 
-export {Notebook, TabsBar} from './Notebook';
+export {Notebook} from './Notebook';
 export {useStoreWithNotebook} from './useStoreWithNotebook';
 
 export type {

@@ -5,7 +5,7 @@ import {Canvas} from '@sqlrooms/canvas';
 
 const NotebookListView: React.FC = () => {
   const currentSheetId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentSheetId,
+    (s) => s.cells.config.currentSheetId,
   );
   const sheet = useStoreWithNotebook((s) =>
     currentSheetId ? s.notebook.config.sheets[currentSheetId] : undefined,
@@ -49,18 +49,18 @@ export const NotebookPanel: React.FC = () => {
         </Button>
         <Button
           size="xs"
-          variant={view === 'list' ? 'secondary' : 'ghost'}
-          onClick={() => setView('list')}
-        >
-          List
-        </Button>
-        <Button
-          size="xs"
           variant={view === 'canvas' ? 'secondary' : 'ghost'}
           onClick={() => setView('canvas')}
         >
           Canvas
         </Button>
+        <Button
+          size="xs"
+          variant={view === 'list' ? 'secondary' : 'ghost'}
+          onClick={() => setView('list')}
+        >
+          List
+        </Button>{' '}
       </div>
       <div className="min-h-0 flex-1">
         {view === 'notebook' ? (

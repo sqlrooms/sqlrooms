@@ -16,7 +16,7 @@ export const AddNodePopover: FC<
 > = ({className, parentId, children}) => {
   const [open, setOpen] = useState(false);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
-  const sheetId = useStoreWithCanvas((s) => s.canvas.config.currentSheetId);
+  const sheetId = useStoreWithCanvas((s) => s.cells.config.currentSheetId);
   const onAddSql = () => {
     if (sheetId) {
       addNode({sheetId, parentId, nodeType: 'sql'});

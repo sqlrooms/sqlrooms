@@ -22,26 +22,13 @@ import {getCellTypeLabel} from './NotebookUtils';
 import type {NotebookSliceState} from './NotebookStateTypes';
 
 /**
- * Create default `notebook.config` structure with one tab and no cells.
+ * Create default `notebook.config` structure with no cells.
  */
 export function createDefaultNotebookConfig(
   props: Partial<NotebookSliceConfig> = {},
 ): NotebookSliceConfig {
-  const defaultTabId = createId();
   const base: NotebookSliceConfig = {
-    sheets: {
-      [defaultTabId]: {
-        id: defaultTabId,
-        meta: {
-          title: 'Notebook 1',
-          cellOrder: [],
-          inputBarOrder: [],
-          showInputBar: true,
-        },
-      },
-    },
-    sheetOrder: [defaultTabId],
-    currentSheetId: defaultTabId,
+    sheets: {},
     currentCellId: undefined,
   };
 
@@ -102,14 +89,12 @@ export function createNotebookSlice(props?: {
                   meta: {
                     title:
                       title ||
-                      `Notebook ${draft.notebook.config.sheetOrder.length + 1}`,
+                      `Notebook ${Object.keys(draft.notebook.config.sheets).length + 1}`,
                     cellOrder: [],
                     inputBarOrder: [],
                     showInputBar: true,
                   },
                 };
-                draft.notebook.config.sheetOrder.push(id);
-                draft.notebook.config.currentSheetId = id;
               }),
             );
             return id;
@@ -127,11 +112,6 @@ export function createNotebookSlice(props?: {
 
           setCurrentTab: (id) => {
             get().cells.setCurrentSheet(id);
-            set((state) =>
-              produce(state, (draft) => {
-                draft.notebook.config.currentSheetId = id;
-              }),
-            );
           },
 
           removeTab: (id) => {
@@ -139,14 +119,6 @@ export function createNotebookSlice(props?: {
             set((state) =>
               produce(state, (draft) => {
                 delete draft.notebook.config.sheets[id];
-                draft.notebook.config.sheetOrder =
-                  draft.notebook.config.sheetOrder.filter(
-                    (sheetId) => sheetId !== id,
-                  );
-                if (draft.notebook.config.currentSheetId === id) {
-                  draft.notebook.config.currentSheetId =
-                    draft.notebook.config.sheetOrder[0];
-                }
               }),
             );
           },
@@ -192,8 +164,20 @@ export function createNotebookSlice(props?: {
 
             set((state) =>
               produce(state, (draft) => {
-                const sheet = getSheet(draft.notebook.config, tabId);
-                if (!sheet) return;
+                let sheet = getSheet(draft.notebook.config, tabId);
+                if (!sheet) {
+                  // Initialize metadata if needed
+                  sheet = {
+                    id: tabId,
+                    meta: {
+                      title: 'Notebook',
+                      cellOrder: [],
+                      inputBarOrder: [],
+                      showInputBar: true,
+                    },
+                  };
+                  draft.notebook.config.sheets[tabId] = sheet;
+                }
 
                 // cellOrder
                 const newIndex = index ?? sheet.meta.cellOrder.length;

@@ -64,8 +64,6 @@ export type NotebookSheet = z.infer<typeof NotebookSheetSchema>;
 /** Notebook Slice Config (View only) */
 export const NotebookSliceConfigSchema = z.object({
   sheets: z.record(z.string(), NotebookSheetSchema).default({}),
-  sheetOrder: z.array(z.string()).default([]),
-  currentSheetId: z.string().optional(),
   currentCellId: z.string().optional(),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfigSchema>;
