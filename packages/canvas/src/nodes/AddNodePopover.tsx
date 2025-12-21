@@ -16,13 +16,18 @@ export const AddNodePopover: FC<
 > = ({className, parentId, children}) => {
   const [open, setOpen] = useState(false);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
+  const sheetId = useStoreWithCanvas((s) => s.canvas.config.currentSheetId);
   const onAddSql = () => {
-    addNode({parentId, nodeType: 'sql'});
-    setOpen(false);
+    if (sheetId) {
+      addNode({sheetId, parentId, nodeType: 'sql'});
+      setOpen(false);
+    }
   };
   const onAddVega = () => {
-    addNode({parentId, nodeType: 'vega'});
-    setOpen(false);
+    if (sheetId) {
+      addNode({sheetId, parentId, nodeType: 'vega'});
+      setOpen(false);
+    }
   };
   return (
     <div className={cn(className)}>

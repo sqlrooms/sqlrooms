@@ -23,18 +23,25 @@ const nodeTypes = {
 };
 
 export const Canvas: React.FC = () => {
-  const dag = useStoreWithCanvas((s) => {
-    const dagId = s.canvas.config.currentDagId ?? s.canvas.config.dagOrder[0];
-    return dagId ? s.canvas.config.dags[dagId] : undefined;
+  const canvasSheet = useStoreWithCanvas((s) => {
+    const sheetId =
+      s.canvas.config.currentSheetId ?? s.canvas.config.sheetOrder[0];
+    return sheetId ? s.canvas.config.sheets[sheetId] : undefined;
   });
 
-  const cellsData = useStoreWithCanvas((s) => s.cells.data);
+  const cellsSheet = useStoreWithCanvas((s) => {
+    const sheetId =
+      s.canvas.config.currentSheetId ?? s.canvas.config.sheetOrder[0];
+    return sheetId ? s.cells.config.sheets[sheetId] : undefined;
+  });
+
+  const cellsData = useStoreWithCanvas((s) => s.cells.config.data);
 
   const nodes = useMemo(() => {
-    if (!dag) return [] as Node[];
-    const list = dag.meta.nodeOrder
+    if (!canvasSheet) return [] as Node[];
+    const list = canvasSheet.meta.nodeOrder
       .map((id: string) => {
-        const node = dag.cells[id];
+        const node = canvasSheet.nodes[id];
         const cell = cellsData[id];
         if (!node || !cell) return null;
         return {
@@ -45,10 +52,13 @@ export const Canvas: React.FC = () => {
       })
       .filter(Boolean);
     return list as unknown as Node[];
-  }, [dag, cellsData]);
+  }, [canvasSheet, cellsData]);
 
-  const edges = useMemo(() => (dag?.meta.edges ?? []) as Edge[], [dag]);
-  const viewport = dag?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
+  const edges = useMemo(
+    () => (cellsSheet?.edges ?? []) as Edge[],
+    [cellsSheet],
+  );
+  const viewport = canvasSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
   const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);

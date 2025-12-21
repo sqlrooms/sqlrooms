@@ -8,7 +8,11 @@ import {
   CanvasSliceConfigSchema,
   CanvasSliceState,
 } from '@sqlrooms/canvas';
-import {createCellsSlice, CellsSliceState} from '@sqlrooms/cells';
+import {
+  createCellsSlice,
+  CellsSliceState,
+  CellsSliceConfigSchema,
+} from '@sqlrooms/cells';
 import {
   BaseRoomConfig,
   createPersistHelpers,
@@ -75,14 +79,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createCellsSlice()(set as any, get as any, store),
-      ...createNotebookSlice()(set as any, get as any, store),
+      ...createCellsSlice()(set, get, store),
+      ...createNotebookSlice()(set, get, store),
       ...createCanvasSlice({
         ai: {
           getApiKey: () => get().apiKey,
           defaultModel: 'gpt-4.1-mini',
         },
-      })(set as any, get as any, store),
+      })(set, get, store),
 
       apiKey: '',
       setApiKey: (apiKey: string) => set({apiKey}),
@@ -96,6 +100,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
+        cells: CellsSliceConfigSchema,
         notebook: NotebookSliceConfigSchema,
         canvas: CanvasSliceConfigSchema,
       }),

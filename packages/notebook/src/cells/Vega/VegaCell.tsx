@@ -16,24 +16,27 @@ import {findCellInNotebook, getCellTypeLabel} from '../../NotebookUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
 import {NotebookCell, VegaCell as VegaCellType} from '../../cellSchemas';
 import {IconWithTooltip} from '../../cellOperations/IconWithTooltip';
+import {produce} from 'immer';
 
 export const VegaCell: React.FC<{id: string}> = ({id}) => {
-  const {cell, dagCellIds} = useStoreWithNotebook((s) => {
+  const {cell, sheetCellIds} = useStoreWithNotebook((s) => {
     const info = findCellInNotebook(s as any, id);
-    const dag = info?.dagId ? s.notebook.config.dags[info.dagId] : undefined;
+    const sheet = info?.sheetId
+      ? s.notebook.config.sheets[info.sheetId]
+      : undefined;
     return {
       cell: info?.cell as VegaCellType | undefined,
-      dagCellIds: dag?.meta.cellOrder || [],
+      sheetCellIds: sheet?.meta.cellOrder || [],
     };
   });
 
-  const cellsData = useStoreWithNotebook((s) => s.cells.data);
+  const cellsData = useStoreWithNotebook((s) => s.cells.config.data);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
 
-  const availableSqlCells = dagCellIds
+  const availableSqlCells = sheetCellIds
     .map((id) => cellsData[id])
     .filter((c): c is NotebookCell & {type: 'sql'} => c?.type === 'sql');
 
@@ -66,7 +69,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
 
   const handleValueChange = (value: string) => {
     if (!cell) return;
-    update(id, (c: any) => ({...c, data: {...c.data, sqlId: value}}) as any);
+    update(id, (c) =>
+      produce(c, (draft) => {
+        if (draft.type === 'vega') draft.data.sqlId = value;
+      }),
+    );
     if (!isEditing) setIsEditing(true);
   };
 
@@ -76,9 +83,10 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     }
     const timeoutId = setTimeout(() => {
       setIsEditing(false);
-      update(
-        id,
-        (c: any) => ({...c, data: {...c.data, vegaSpec: draftSpec}}) as any,
+      update(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'vega') draft.data.vegaSpec = draftSpec;
+        }),
       );
     }, 0);
     return () => clearTimeout(timeoutId);
@@ -111,10 +119,10 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
             variant="secondary"
             className="h-6"
             onClick={() => {
-              update(
-                id,
-                (c: any) =>
-                  ({...c, data: {...c.data, vegaSpec: draftSpec}}) as any,
+              update(id, (c) =>
+                produce(c, (draft) => {
+                  if (draft.type === 'vega') draft.data.vegaSpec = draftSpec;
+                }),
               );
               setIsEditing(false);
             }}

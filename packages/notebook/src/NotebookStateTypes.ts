@@ -25,12 +25,15 @@ export type NotebookSliceState = {
     config: NotebookSliceConfig;
     schemaName: string;
     setSchemaName: (name: string) => void;
-    addTab: () => string;
+
+    // Sheet actions (delegate to cells for the sheet itself, keep view meta here)
+    addTab: (title?: string) => string;
     renameTab: (id: string, title: string) => void;
     setCurrentTab: (id: string) => void;
     removeTab: (id: string) => void;
     toggleShowInputBar: (id: string) => void;
 
+    // Cell actions (delegate to cells, keep display order here)
     addCell: (tabId: string, type: NotebookCellTypes, index?: number) => string;
     moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
     removeCell: (cellId: string) => void;
@@ -41,6 +44,7 @@ export type NotebookSliceState = {
     ) => void;
     setCurrentCell: (id: string) => void;
 
+    // Execution delegates to cells
     runCell: (cellId: string, opts?: {cascade?: boolean}) => Promise<void>;
     runAllCells: (tabId: string) => Promise<void>;
     runAllCellsCascade: (tabId: string) => Promise<void>;

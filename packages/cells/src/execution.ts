@@ -17,14 +17,14 @@ export async function executeSqlCell(
   options: ExecuteSqlCellOptions,
 ) {
   const state = getState();
-  const cell = state.cells.data[cellId];
+  const cell = state.cells.config.data[cellId];
   if (!cell || cell.type !== 'sql') return;
 
   const {schemaName, cascade = true, signal} = options;
   const sqlRaw = cell.data.sql || '';
 
   // 1. Gather inputs for SQL rendering
-  const inputs = Object.values(state.cells.data)
+  const inputs = Object.values(state.cells.config.data)
     .filter((c): c is Extract<Cell, {type: 'input'}> => c.type === 'input')
     .map((c) => ({
       varName: c.data.input.varName,
@@ -79,7 +79,7 @@ export async function executeSqlCell(
     // Find dependencies for referenced tables
     const referenced = findSqlDependencies({
       targetCell: cell,
-      cells: state.cells.data,
+      cells: state.cells.config.data,
       getSqlText: (c) => (c.type === 'sql' ? c.data.sql : undefined),
       getInputVarName: (c) =>
         c.type === 'input' ? c.data.input.varName : undefined,
@@ -105,7 +105,10 @@ export async function executeSqlCell(
 
     // 4. Cascade if needed
     if (cascade) {
-      await state.dag.runDownstreamCascade(state.dag.currentDagId!, cellId);
+      const currentDagId = state.dag.currentDagId;
+      if (currentDagId) {
+        await state.dag.runDownstreamCascade(currentDagId, cellId);
+      }
     }
   } catch (e) {
     const message = e instanceof Error ? e.message : String(e);

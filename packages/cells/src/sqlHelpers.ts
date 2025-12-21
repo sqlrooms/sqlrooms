@@ -1,9 +1,38 @@
 import type {
+  Cell,
+  Edge,
   SqlDependencyOptions,
   SqlRenderInput,
   SqlRunCallbacks,
   SqlRunResult,
 } from './types';
+
+export function deriveEdgesFromSql(
+  cellId: string,
+  sql: string,
+  allCells: Record<string, Cell>,
+): Edge[] {
+  const targetCell = allCells[cellId];
+  if (!targetCell) return [];
+
+  const deps = findSqlDependencies<Cell>({
+    targetCell,
+    cells: allCells,
+    getSqlText: () => sql,
+    getInputVarName: (cell) =>
+      cell.type === 'input' ? cell.data.input.varName : undefined,
+    getSqlResultName: (cid) => {
+      const cell = allCells[cid];
+      return cell?.type === 'sql' ? cell.data.title : undefined;
+    },
+  });
+
+  return deps.map((sourceId) => ({
+    id: `${sourceId}-${cellId}`,
+    source: sourceId,
+    target: cellId,
+  }));
+}
 
 export function renderSqlWithInputs(
   rawSql: string,
@@ -60,7 +89,7 @@ export function findSqlDependencies<
     } else if (sqlTypes.includes(other.type)) {
       const resultName = getSqlResultName(other.id);
       const nameMatch =
-        (other as any).name && sql.includes((other as any).name);
+        (other as any).data?.title && sql.includes((other as any).data.title);
       const resultMatch = resultName && sql.includes(resultName);
       if (nameMatch || resultMatch) deps.push(other.id);
     }

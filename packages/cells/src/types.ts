@@ -89,6 +89,22 @@ export const CellSchema = z
   .and(CellDataSchema);
 export type Cell = z.infer<typeof CellSchema>;
 
+/** Sheet and Edge types */
+export const EdgeSchema = z.object({
+  id: z.string(),
+  source: z.string(), // cellId
+  target: z.string(), // cellId
+});
+export type Edge = z.infer<typeof EdgeSchema>;
+
+export const SheetSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
+  edges: z.array(EdgeSchema).default([]), // Dependencies
+});
+export type Sheet = z.infer<typeof SheetSchema>;
+
 /** Cell Status */
 export const SqlCellStatusSchema = z.object({
   type: z.literal('sql'),
@@ -221,14 +237,37 @@ export type SqlCellRunButtonProps = Pick<
   'onRun' | 'onCancel' | 'status' | 'runLabel' | 'disabled'
 >;
 
+export const CellsSliceConfigSchema = z.object({
+  data: z.record(z.string(), CellSchema).default({}),
+  sheets: z.record(z.string(), SheetSchema).default({}),
+  sheetOrder: z.array(z.string()).default([]),
+  currentSheetId: z.string().optional(),
+});
+export type CellsSliceConfig = z.infer<typeof CellsSliceConfigSchema>;
+
 export type CellsSliceState = {
   cells: {
-    data: Record<string, Cell>;
+    config: CellsSliceConfig;
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;
-    addCell: (cell: Cell) => void;
+
+    // Cell CRUD
+    addCell: (sheetId: string, cell: Cell, index?: number) => void;
     removeCell: (id: string) => void;
     updateCell: (id: string, updater: (cell: Cell) => Cell) => void;
+
+    // Sheet CRUD
+    addSheet: (title?: string) => string;
+    removeSheet: (sheetId: string) => void;
+    renameSheet: (sheetId: string, title: string) => void;
+    setCurrentSheet: (sheetId: string) => void;
+
+    // Edge management
+    addEdge: (sheetId: string, edge: Omit<Edge, 'id'>) => void;
+    removeEdge: (sheetId: string, edgeId: string) => void;
+    updateEdgesFromSql: (sheetId: string, cellId: string) => void;
+
+    // Execution
     runCell: (
       id: string,
       opts?: {cascade?: boolean; schemaName?: string},

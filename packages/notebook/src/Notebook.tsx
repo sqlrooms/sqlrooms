@@ -10,19 +10,19 @@ import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {CellView} from './cells/CellView';
 
 export const TabsBar: React.FC = () => {
-  const dagOrder = useStoreWithNotebook((s) => s.notebook.config.dagOrder);
-  const dags = useStoreWithNotebook((s) => s.notebook.config.dags);
+  const sheetOrder = useStoreWithNotebook((s) => s.notebook.config.sheetOrder);
+  const sheets = useStoreWithNotebook((s) => s.notebook.config.sheets);
   const tabs = useMemo(
     () =>
-      dagOrder
-        .map((id) => dags[id])
+      sheetOrder
+        .map((id) => sheets[id])
         .filter(Boolean)
-        .map((dag) => ({id: dag!.id, ...dag!.meta})),
-    [dagOrder, dags],
+        .map((sheet) => ({id: sheet!.id, ...sheet!.meta})),
+    [sheetOrder, sheets],
   );
 
   const currentTabId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentDagId,
+    (s) => s.notebook.config.currentSheetId,
   );
   const setCurrent = useStoreWithNotebook((s) => s.notebook.setCurrentTab);
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);
@@ -54,17 +54,17 @@ export const TabsBar: React.FC = () => {
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentDagId,
+    (s) => s.notebook.config.currentSheetId,
   );
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
-  const tabDag = useStoreWithNotebook((s) =>
-    currentTabId ? s.notebook.config.dags[currentTabId] : undefined,
+  const sheet = useStoreWithNotebook((s) =>
+    currentTabId ? s.notebook.config.sheets[currentTabId] : undefined,
   );
   const tab = useMemo(
-    () => (tabDag ? {id: tabDag.id, ...tabDag.meta} : undefined),
-    [tabDag],
+    () => (sheet ? {id: sheet.id, ...sheet.meta} : undefined),
+    [sheet],
   );
 
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);

@@ -6,7 +6,7 @@ import {
   NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
-  NotebookDag,
+  NotebookSheet,
 } from './cellSchemas';
 import type {CellsRootState} from '@sqlrooms/cells';
 
@@ -14,26 +14,26 @@ export const findTab = (
   notebook: NotebookSliceConfig,
   tabId: string,
 ): NotebookTab => {
-  const dag = notebook.dags[tabId];
-  if (!dag) {
+  const sheet = notebook.sheets[tabId];
+  if (!sheet) {
     throw new Error(`Tab with id ${tabId} not found`);
   }
-  return {id: dag.id, ...dag.meta};
+  return {id: sheet.id, ...sheet.meta};
 };
 
 export const findCellInNotebook = (
   state: CellsRootState & {notebook: {config: NotebookSliceConfig}},
   cellId: string,
 ) => {
-  const cell = state.cells.data[cellId];
+  const cell = state.cells.config.data[cellId];
   if (!cell) return undefined;
 
-  for (const [dagId, dag] of Object.entries(state.notebook.config.dags)) {
-    if ((dag as NotebookDag).meta.cellOrder.includes(cellId)) {
-      return {cell, dagId};
+  for (const [sheetId, sheet] of Object.entries(state.notebook.config.sheets)) {
+    if ((sheet as NotebookSheet).meta.cellOrder.includes(cellId)) {
+      return {cell, sheetId};
     }
   }
-  return {cell, dagId: undefined};
+  return {cell, sheetId: undefined};
 };
 
 export const getCellTypeLabel = (type: NotebookCellTypes) => {

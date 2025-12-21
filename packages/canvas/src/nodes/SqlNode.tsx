@@ -8,6 +8,7 @@ import {
 } from '@sqlrooms/cells';
 import {useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
+import {produce} from 'immer';
 
 export const SqlNode: FC<{id: string; data: SqlCellData}> = ({id, data}) => {
   const sql = data.sql || '';
@@ -41,9 +42,10 @@ export const SqlNode: FC<{id: string; data: SqlCellData}> = ({id, data}) => {
       <SqlCellBody
         sql={sql}
         onSqlChange={(v) =>
-          updateNode(
-            id,
-            (c) => ({...c, data: {...c.data, sql: v || ''}}) as any,
+          updateNode(id, (c) =>
+            produce(c, (draft) => {
+              if (draft.type === 'sql') draft.data.sql = v || '';
+            }),
           )
         }
         onRun={() =>

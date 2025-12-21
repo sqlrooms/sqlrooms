@@ -1,19 +1,16 @@
 import {schema} from 'loro-mirror';
 import type {CrdtMirror} from '@sqlrooms/crdt';
-import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
+import {CanvasSliceConfigSchema, type CanvasSliceState} from './CanvasSlice';
 
 /**
  * Mirror schema for syncing the `@sqlrooms/canvas` slice via `@sqlrooms/crdt`.
- *
- * This is intentionally exported from a separate entrypoint (`@sqlrooms/canvas/crdt`)
- * so consumer apps only pull `loro-mirror` when they opt into CRDT sync.
  */
 export const canvasMirrorSchema = schema.LoroMap({
   config: schema.LoroMap({
-    dags: schema.LoroList(
+    sheets: schema.LoroList(
       schema.LoroMap({
         id: schema.String(),
-        cells: schema.LoroList(
+        nodes: schema.LoroList(
           schema.LoroMap({
             id: schema.String(),
             position: schema.LoroMap({
@@ -22,27 +19,18 @@ export const canvasMirrorSchema = schema.LoroMap({
             }),
             width: schema.Number(),
             height: schema.Number(),
-            data: schema.Any(),
           }),
-          (cell) => cell.id,
+          (node) => node.id,
         ),
         meta: schema.LoroMap({
-          edges: schema.LoroList(
-            schema.LoroMap({
-              id: schema.String(),
-              source: schema.String(),
-              target: schema.String(),
-            }),
-            (edge) => edge.id,
-          ),
           nodeOrder: schema.LoroList(schema.String()),
           // viewport is kept local (unsynced)
         }),
       }),
-      (dag) => dag.id,
+      (sheet) => sheet.id,
     ),
-    dagOrder: schema.LoroList(schema.String()),
-    currentDagId: schema.String(),
+    sheetOrder: schema.LoroList(schema.String()),
+    currentSheetId: schema.String(),
   }),
 });
 
@@ -53,17 +41,14 @@ export type CanvasMirrorSchema = typeof canvasMirrorSchema;
  */
 export const canvasMirrorInitialState = {
   config: {
-    dags: [],
-    dagOrder: [],
-    currentDagId: '',
+    sheets: [],
+    sheetOrder: [],
+    currentSheetId: '',
   },
 };
 
 /**
  * Creates a CRDT mirror bundle for the canvas slice.
- *
- * Use this with `@sqlrooms/crdt`'s `createCrdtSlice({ mirrors: { ... } })` to
- * compose multiple slice schemas/bindings on a single shared Loro document.
  */
 export function createCanvasCrdtMirror<
   S extends CanvasSliceState = CanvasSliceState,
@@ -73,38 +58,37 @@ export function createCanvasCrdtMirror<
     initialState: canvasMirrorInitialState,
     select: (state) => ({
       config: {
-        dags: Object.values(state.canvas.config.dags).map((dag) => ({
-          id: dag.id,
-          cells: Object.values(dag.cells),
+        sheets: Object.values(state.canvas.config.sheets).map((sheet) => ({
+          id: sheet.id,
+          nodes: Object.values(sheet.nodes),
           meta: {
-            edges: dag.meta.edges,
-            nodeOrder: dag.meta.nodeOrder,
+            nodeOrder: sheet.meta.nodeOrder,
           },
         })),
-        dagOrder: state.canvas.config.dagOrder,
-        currentDagId: state.canvas.config.currentDagId || '',
+        sheetOrder: state.canvas.config.sheetOrder,
+        currentSheetId: state.canvas.config.currentSheetId || '',
       },
     }),
     apply: (value, set, get) => {
       if (!value?.config) return;
       const currentConfig = get().canvas.config;
 
-      const newDags: Record<string, any> = {};
-      for (const dagValue of value.config.dags || []) {
-        const localDag = currentConfig.dags[dagValue.id];
-        newDags[dagValue.id] = {
-          id: dagValue.id,
-          cells: (dagValue.cells || []).reduce(
-            (acc: Record<string, any>, cell: any) => {
-              acc[cell.id] = cell;
+      const newSheets: Record<string, any> = {};
+      for (const sheetValue of value.config.sheets || []) {
+        const localSheet = currentConfig.sheets[sheetValue.id];
+        newSheets[sheetValue.id] = {
+          id: sheetValue.id,
+          nodes: (sheetValue.nodes || []).reduce(
+            (acc: Record<string, any>, node: any) => {
+              acc[node.id] = node;
               return acc;
             },
             {},
           ),
           meta: {
-            ...dagValue.meta,
+            ...sheetValue.meta,
             // Keep local viewport or use default
-            viewport: localDag?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
+            viewport: localSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
           },
         };
       }
@@ -113,10 +97,10 @@ export function createCanvasCrdtMirror<
         ...state,
         canvas: {
           ...state.canvas,
-          config: CanvasSliceConfig.parse({
+          config: CanvasSliceConfigSchema.parse({
             ...currentConfig,
             ...value.config,
-            dags: newDags,
+            sheets: newSheets,
           }),
         },
       }));

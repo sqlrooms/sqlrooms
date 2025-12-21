@@ -4,21 +4,21 @@ import {Notebook, useStoreWithNotebook} from '@sqlrooms/notebook';
 import {Canvas} from '@sqlrooms/canvas';
 
 const NotebookListView: React.FC = () => {
-  const currentDagId = useStoreWithNotebook(
-    (s) => s.notebook.config.currentDagId,
+  const currentSheetId = useStoreWithNotebook(
+    (s) => s.notebook.config.currentSheetId,
   );
-  const dag = useStoreWithNotebook((s) =>
-    currentDagId ? s.notebook.config.dags[currentDagId] : undefined,
+  const sheet = useStoreWithNotebook((s) =>
+    currentSheetId ? s.notebook.config.sheets[currentSheetId] : undefined,
   );
-  const cellsData = useStoreWithNotebook((s) => s.cells.data);
+  const cellsData = useStoreWithNotebook((s) => s.cells.config.data);
 
-  if (!dag) return <div className="p-4 text-sm">No notebook selected.</div>;
+  if (!sheet) return <div className="p-4 text-sm">No notebook selected.</div>;
   return (
     <div className="flex flex-col gap-2 p-4 text-sm">
       <div className="font-semibold">Cells</div>
-      {dag.meta.cellOrder.length === 0
+      {sheet.meta.cellOrder.length === 0
         ? 'No cells yet.'
-        : dag.meta.cellOrder.map((id) => {
+        : sheet.meta.cellOrder.map((id: string) => {
             const cell = cellsData[id];
             if (!cell) return null;
             return (

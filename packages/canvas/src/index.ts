@@ -4,14 +4,15 @@
  */
 
 export {createCanvasSlice, createDefaultCanvasConfig} from './CanvasSlice';
-export type {CanvasSliceConfig} from './CanvasSlice';
 export type {
+  CanvasSliceConfig,
   CanvasSliceState,
-  CanvasDagMeta,
-  CanvasNode as CanvasNodeSchema,
+  CanvasNodeMeta,
+  CanvasSheetMeta,
 } from './CanvasSlice';
 export {
-  CanvasSliceConfig as CanvasSliceConfigSchema,
-  CanvasEdge as CanvasEdgeSchema,
+  CanvasSliceConfigSchema,
+  CanvasNodeMeta as CanvasNodeMetaSchema,
+  CanvasSheetMeta as CanvasSheetMetaSchema,
 } from './CanvasSlice';
 export {Canvas} from './Canvas';

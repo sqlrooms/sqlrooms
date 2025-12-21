@@ -11,7 +11,7 @@ export const VegaNode: FC<{id: string; data: VegaCellData}> = ({id, data}) => {
   }) as VisualizationSpec;
 
   const {vegaSpec, sql, sqlId} = data;
-  const cellsData = useStoreWithCanvas((s) => s.cells.data);
+  const cellsData = useStoreWithCanvas((s) => s.cells.config.data);
   const cellsStatus = useStoreWithCanvas((s) => s.cells.status);
 
   const effectiveSql =
