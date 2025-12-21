@@ -15,6 +15,7 @@
     "resolveJsonModule": true,
     "skipLibCheck": true,
     "strict": true,
+    "types": [],
     "inlineSources": true,
     "target": "ES2022",
     "sourceMap": true,

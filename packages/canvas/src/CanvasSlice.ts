@@ -6,10 +6,12 @@ import {
   createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
-  DagConfig,
-  DagSliceState,
   createDagSlice,
   ensureDag,
+  type Cell,
+  type CellsRootState,
+  type DagConfig,
+  type DagSliceState,
 } from '@sqlrooms/cells';
 import {DuckDbSliceState, escapeId} from '@sqlrooms/duckdb';
 import {
@@ -17,6 +19,7 @@ import {
   createSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-shell';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
 import {
@@ -27,6 +30,7 @@ import {
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
+import {NotebookSliceState} from '@sqlrooms/notebook';
 import {produce} from 'immer';
 import {z} from 'zod';
 
@@ -37,49 +41,12 @@ const CANVAS_SCHEMA_NAME = 'canvas';
 export const CanvasNodeTypes = z.enum(['sql', 'vega']);
 export type CanvasNodeTypes = z.infer<typeof CanvasNodeTypes>;
 
-export const CanvasNodeData = z.discriminatedUnion('type', [
-  z.object({
-    title: z.string().default('Untitled'),
-    type: z.literal('sql'),
-    sql: z.string().optional(),
-  }),
-  z.object({
-    title: z.string().default('Untitled'),
-    type: z.literal('vega'),
-    sql: z.string().optional(),
-    vegaSpec: z.any().optional(),
-  }),
-]);
-export type CanvasNodeData = z.infer<typeof CanvasNodeData>;
-
-type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
-function isSqlData(data: CanvasNodeData): data is SqlData {
-  return data.type === 'sql';
-}
-
-function getUniqueSqlTitle(
-  nodes: CanvasNode[],
-  baseTitle: string,
-  excludeNodeId?: string,
-): string {
-  const existing = new Set(
-    nodes
-      .filter((n) => n.type === 'sql' && n.id !== (excludeNodeId || ''))
-      .map((n) => n.data.title || ''),
-  );
-  if (!existing.has(baseTitle)) return baseTitle;
-  let counter = 1;
-  while (existing.has(`${baseTitle} ${counter}`)) counter += 1;
-  return `${baseTitle} ${counter}`;
-}
-
 export const CanvasNode = z.object({
   id: z.string(),
   position: z.object({x: z.number(), y: z.number()}),
-  type: CanvasNodeTypes,
-  data: CanvasNodeData,
-  width: z.number(),
-  height: z.number(),
+  width: z.number().default(DEFAULT_NODE_WIDTH),
+  height: z.number().default(DEFAULT_NODE_HEIGHT),
+  data: z.record(z.string(), z.any()).default({}),
 });
 export type CanvasNode = z.infer<typeof CanvasNode>;
 
@@ -89,12 +56,6 @@ export const CanvasEdge = z.object({
   target: z.string(),
 });
 export type CanvasEdge = z.infer<typeof CanvasEdge>;
-
-export type SqlNodeQueryResult =
-  | {status: 'idle'}
-  | {status: 'loading'}
-  | {status: 'error'; error: string}
-  | {status: 'success'; tableName: string; lastQueryStatement: string};
 
 export const CanvasDagMeta = z.object({
   viewport: z.object({
@@ -128,7 +89,6 @@ export type CanvasSliceState = AiSliceState &
     canvas: {
       config: CanvasSliceConfig;
       isAssistantOpen: boolean;
-      sqlResults: Record<string, SqlNodeQueryResult>;
       initialize: () => Promise<void>;
       setConfig: (config: CanvasSliceConfig) => void;
       setViewport: (viewport: Viewport) => void;
@@ -140,10 +100,7 @@ export type CanvasSliceState = AiSliceState &
       }) => string;
       executeDownstreamFrom: (nodeId: string) => Promise<void>;
       renameNode: (nodeId: string, newTitle: string) => Promise<void>;
-      updateNode: (
-        nodeId: string,
-        updater: (data: CanvasNodeData) => CanvasNodeData,
-      ) => void;
+      updateNode: (nodeId: string, updater: (cell: Cell) => Cell) => void;
       deleteNode: (nodeId: string) => void;
       applyNodeChanges: (changes: NodeChange<CanvasNode>[]) => void;
       applyEdgeChanges: (changes: EdgeChange<CanvasEdge>[]) => void;
@@ -262,7 +219,9 @@ export function createCanvasSlice(props: {
   type CanvasRootState = BaseRoomStoreState &
     DuckDbSliceState &
     CanvasSliceState &
-    DagSliceState;
+    DagSliceState &
+    CellsRootState &
+    NotebookSliceState;
 
   return createSlice<CanvasSliceState & DagSliceState, CanvasRootState>(
     (set, get, store) => {
@@ -271,7 +230,9 @@ export function createCanvasSlice(props: {
         CanvasNode,
         CanvasDagMeta
       >({
-        getDagConfig: (state) => state.canvas.config,
+        getDagConfig: (state) => {
+          return state.canvas.config;
+        },
         findDependencies: ({dagId, cellId, getState}) => {
           const dag = getDag(getState().canvas.config, dagId);
           if (!dag) return [];
@@ -300,7 +261,6 @@ export function createCanvasSlice(props: {
         canvas: {
           config: createDefaultCanvasConfig(props.config),
           isAssistantOpen: false,
-          sqlResults: {},
           setConfig: (config: CanvasSliceConfig) => {
             set((state: CanvasRootState) =>
               produce(state, (draft: CanvasRootState) => {
@@ -349,6 +309,10 @@ export function createCanvasSlice(props: {
                 if (!dag) return;
 
                 const parent = parentId ? dag.cells[parentId] : undefined;
+                const parentCell = parentId
+                  ? draft.cells.data[parentId]
+                  : undefined;
+
                 const position: XYPosition = initialPosition
                   ? initialPosition
                   : parent
@@ -360,18 +324,19 @@ export function createCanvasSlice(props: {
                         x: dag.meta.viewport.x + 100,
                         y: dag.meta.viewport.y + 100,
                       };
+
                 const firstTable = draft.db.tables.find(
                   (t: any) => t.table.schema === 'main',
                 );
 
                 const getInitialSqlForNewSqlNode = () => {
-                  if (parent && isSqlData(parent.data)) {
-                    const parentResults = draft.canvas.sqlResults[parent.id];
-                    const parentTitle = parent.data.title || 'Query';
+                  if (parentCell && parentCell.type === 'sql') {
+                    const status = draft.cells.status[parentCell.id];
+                    const parentTitle = parentCell.data.title || 'Query';
                     const fallbackParentTable = `${CANVAS_SCHEMA_NAME}.${escapeId(parentTitle)}`;
                     const parentTableName =
-                      parentResults && parentResults.status === 'success'
-                        ? parentResults.tableName
+                      status?.type === 'sql' && status.status === 'success'
+                        ? status.resultName
                         : fallbackParentTable;
                     return `SELECT * FROM ${parentTableName}`;
                   }
@@ -380,26 +345,52 @@ export function createCanvasSlice(props: {
                     : `SELECT 1`;
                 };
 
-                const existingNodes = dagNodesArray(dag);
-                const newSqlTitle = getUniqueSqlTitle(existingNodes, 'Query');
+                const existingTitles = Object.values(draft.cells.data).map(
+                  (c) => (c.data as any).title,
+                );
+                const newSqlTitle = generateUniqueName('Query', existingTitles);
                 const initialSql = getInitialSqlForNewSqlNode();
+
+                const cell: Cell =
+                  nodeType === 'sql'
+                    ? {
+                        id: newId,
+                        type: 'sql',
+                        data: {title: newSqlTitle, sql: initialSql},
+                      }
+                    : {id: newId, type: 'vega', data: {title: 'Chart'}};
+
+                draft.cells.data[newId] = cell;
+                if (cell.type === 'sql') {
+                  draft.cells.status[newId] = {
+                    type: 'sql',
+                    status: 'idle',
+                    referencedTables: [],
+                  };
+                } else {
+                  draft.cells.status[newId] = {type: 'other'};
+                }
+
+                // NEW: Also add to notebook current tab if it exists
+                if (draft.notebook?.config?.currentDagId) {
+                  const nbDag =
+                    draft.notebook.config.dags[
+                      draft.notebook.config.currentDagId
+                    ];
+                  if (nbDag) {
+                    nbDag.meta.cellOrder.push(newId);
+                    if (cell.type === ('input' as any)) {
+                      nbDag.meta.inputBarOrder.push(newId);
+                    }
+                  }
+                }
 
                 dag.cells[newId] = {
                   id: newId,
                   position,
                   width: DEFAULT_NODE_WIDTH,
                   height: DEFAULT_NODE_HEIGHT,
-                  type: nodeType,
-                  data: (nodeType === 'sql'
-                    ? {
-                        title: newSqlTitle,
-                        type: 'sql',
-                        sql: initialSql,
-                      }
-                    : {
-                        title: 'Chart',
-                        type: 'vega',
-                      }) as CanvasNodeData,
+                  data: {},
                 };
                 dag.meta.nodeOrder.push(newId);
 
@@ -440,59 +431,40 @@ export function createCanvasSlice(props: {
             );
           },
 
-          updateNode: (
-            nodeId: string,
-            updater: (data: CanvasNodeData) => CanvasNodeData,
-          ) => {
-            set((state: CanvasRootState) =>
-              produce(state, (draft: CanvasRootState) => {
-                const dagId = findDagIdByNodeId(draft.canvas.config, nodeId);
-                if (!dagId) return;
-                const dag = getDag(draft.canvas.config, dagId);
-                if (!dag) return;
-                const node = dag.cells[nodeId];
-                if (node) {
-                  node.data = updater(node.data as CanvasNodeData);
-                }
-              }),
-            );
+          updateNode: (nodeId: string, updater: (cell: Cell) => Cell) => {
+            get().cells.updateCell(nodeId, updater);
           },
 
           renameNode: async (nodeId: string, newTitle: string) => {
-            const dagId = findDagIdByNodeId(get().canvas.config, nodeId);
-            if (!dagId) throw new Error('Node not found');
-            const dag = getDag(get().canvas.config, dagId);
-            const node = dag?.cells[nodeId];
-            if (!node) throw new Error('Node not found');
-            if (!isSqlData(node.data)) {
-              set((state: CanvasRootState) =>
-                produce(state, (draft: CanvasRootState) => {
-                  const d = getDag(draft.canvas.config, dagId);
-                  const dnode = d?.cells[nodeId];
-                  if (dnode) dnode.data.title = newTitle;
+            const cell = get().cells.data[nodeId];
+            if (!cell) throw new Error('Node not found');
+
+            if (cell.type !== 'sql') {
+              get().cells.updateCell(nodeId, (c) =>
+                produce(c, (draft) => {
+                  (draft.data as any).title = newTitle;
                 }),
               );
               return;
             }
 
-            const prevTitle = node.data.title || 'result';
+            const prevTitle = cell.data.title || 'result';
             if (prevTitle === newTitle) return;
 
-            const uniqueTitle = getUniqueSqlTitle(
-              dagNodesArray(dag),
-              newTitle,
-              nodeId,
+            const existingTitles = Object.values(get().cells.data).map(
+              (c) => (c.data as any).title,
             );
+            const uniqueTitle = generateUniqueName(newTitle, existingTitles);
 
             const connector = await get().db.getConnector();
             await connector.query(
               `CREATE SCHEMA IF NOT EXISTS ${CANVAS_SCHEMA_NAME}`,
             );
 
-            const result = get().canvas.sqlResults[nodeId];
+            const status = get().cells.status[nodeId];
             const oldTableName =
-              result && result.status === 'success'
-                ? result.tableName
+              status?.type === 'sql' && status.status === 'success'
+                ? status.resultName
                 : `${CANVAS_SCHEMA_NAME}.${escapeId(prevTitle)}`;
 
             await connector.query(
@@ -500,40 +472,48 @@ export function createCanvasSlice(props: {
             );
 
             const newQualified = `${CANVAS_SCHEMA_NAME}.${escapeId(uniqueTitle)}`;
-            set((state: CanvasRootState) =>
-              produce(state, (draft: CanvasRootState) => {
-                const d = getDag(draft.canvas.config, dagId);
-                const dnode = d?.cells[nodeId];
-                if (dnode && isSqlData(dnode.data))
-                  dnode.data.title = uniqueTitle;
-                const r = draft.canvas.sqlResults[nodeId];
-                if (r && r.status === 'success') r.tableName = newQualified;
+
+            get().cells.updateCell(nodeId, (c) =>
+              produce(c, (draft) => {
+                if (draft.type === 'sql') draft.data.title = uniqueTitle;
+              }),
+            );
+
+            set((s) =>
+              produce(s, (draft) => {
+                const st = draft.cells.status[nodeId];
+                if (st?.type === 'sql' && st.status === 'success') {
+                  st.resultName = newQualified;
+                  st.resultView = newQualified;
+                }
               }),
             );
 
             await get().db.refreshTableSchemas();
-
-            await get().dag.runDownstreamCascade(dagId, nodeId);
+            const dagId = findDagIdByNodeId(get().canvas.config, nodeId);
+            if (dagId) {
+              await get().dag.runDownstreamCascade(dagId, nodeId);
+            }
           },
 
           deleteNode: (nodeId: string) => {
             const current = get();
-            const dagId = findDagIdByNodeId(current.canvas.config, nodeId);
-            if (!dagId) return;
-            const dag = getDag(current.canvas.config, dagId);
-            const node = dag?.cells[nodeId];
+            const cell = current.cells.data[nodeId];
             let tableToDrop: string | undefined;
-            if (node && isSqlData(node.data)) {
-              const title = node.data.title || 'result';
-              const res = current.canvas.sqlResults[nodeId];
+            if (cell && cell.type === 'sql') {
+              const title = cell.data.title || 'result';
+              const status = current.cells.status[nodeId];
               tableToDrop =
-                res && res.status === 'success'
-                  ? res.tableName
+                status?.type === 'sql' && status.status === 'success'
+                  ? status.resultName
                   : `${CANVAS_SCHEMA_NAME}.${escapeId(title)}`;
             }
 
+            get().cells.removeCell(nodeId);
             set((state: CanvasRootState) =>
               produce(state, (draft: CanvasRootState) => {
+                const dagId = findDagIdByNodeId(draft.canvas.config, nodeId);
+                if (!dagId) return;
                 const d = getDag(draft.canvas.config, dagId);
                 if (!d) return;
                 delete d.cells[nodeId];
@@ -543,7 +523,6 @@ export function createCanvasSlice(props: {
                 d.meta.edges = d.meta.edges.filter(
                   (e) => e.source !== nodeId && e.target !== nodeId,
                 );
-                delete draft.canvas.sqlResults[nodeId];
                 if (Object.keys(d.cells).length === 0) {
                   d.meta.viewport.x = 0;
                   d.meta.viewport.y = 0;
@@ -558,12 +537,7 @@ export function createCanvasSlice(props: {
                   await connector.query(`DROP TABLE IF EXISTS ${tableToDrop}`);
                   await get().db.refreshTableSchemas();
                 } catch (e) {
-                  // eslint-disable-next-line no-console
-                  console.warn(
-                    '[canvas.deleteNode] Failed to drop table for node',
-                    nodeId,
-                    e,
-                  );
+                  console.warn('[canvas.deleteNode] Failed to drop table', e);
                 }
               })();
             }
@@ -616,62 +590,10 @@ export function createCanvasSlice(props: {
             nodeId: string,
             opts?: {cascade?: boolean},
           ) => {
-            const dagId = findDagIdByNodeId(get().canvas.config, nodeId);
-            if (!dagId) return;
-            const dag = getDag(get().canvas.config, dagId);
-            const node = dag?.cells[nodeId];
-            if (!node || !isSqlData(node.data)) return;
-            const sql = node.data.sql || '';
-            const title = node.data.title || 'result';
-
-            set((state: CanvasRootState) =>
-              produce(state, (draft: CanvasRootState) => {
-                draft.canvas.sqlResults[nodeId] = {status: 'loading'};
-              }),
-            );
-
-            try {
-              const parsed = await get().db.sqlSelectToJson(sql);
-              if (parsed.error) {
-                throw new Error(
-                  parsed.error_message || 'Not a valid SELECT statement',
-                );
-              }
-
-              const connector = await get().db.getConnector();
-              await connector.query(
-                `CREATE SCHEMA IF NOT EXISTS ${CANVAS_SCHEMA_NAME}`,
-              );
-
-              const tableName = `${CANVAS_SCHEMA_NAME}.${escapeId(title)}`;
-              await connector.query(
-                `CREATE OR REPLACE TABLE ${tableName} AS ${sql}`,
-              );
-
-              set((state: CanvasRootState) =>
-                produce(state, (draft: CanvasRootState) => {
-                  draft.canvas.sqlResults[nodeId] = {
-                    status: 'success',
-                    tableName,
-                    lastQueryStatement: sql,
-                  };
-                }),
-              );
-
-              if (opts?.cascade !== false) {
-                await get().dag.runDownstreamCascade(dagId, nodeId);
-              }
-            } catch (e) {
-              const message = e instanceof Error ? e.message : String(e);
-              set((state: CanvasRootState) =>
-                produce(state, (draft: CanvasRootState) => {
-                  draft.canvas.sqlResults[nodeId] = {
-                    status: 'error',
-                    error: message,
-                  };
-                }),
-              );
-            }
+            await get().cells.runCell(nodeId, {
+              ...opts,
+              schemaName: CANVAS_SCHEMA_NAME,
+            });
           },
         },
       };
@@ -681,7 +603,8 @@ export function createCanvasSlice(props: {
 
 export type DuckDbSliceStateWithCanvas = DuckDbSliceState &
   CanvasSliceState &
-  DagSliceState;
+  DagSliceState &
+  CellsRootState;
 
 export function useStoreWithCanvas<T>(
   selector: (state: DuckDbSliceStateWithCanvas) => T,

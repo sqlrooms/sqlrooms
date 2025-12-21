@@ -1,23 +1,20 @@
 import React from 'react';
-import {Button} from '@sqlrooms/ui';
 import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
-import {BotIcon} from 'lucide-react';
 import {SqlCellBody} from '@sqlrooms/cells';
 
 import {CellContainer} from './CellContainer';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {AddSqlCellResultToNewTable} from '../cellOperations/AddSqlCellResultToNewTable';
-import {IconWithTooltip} from '../cellOperations/IconWithTooltip';
 import {findCellInNotebook, useRelativeTimeDisplay} from '../NotebookUtils';
 
 export const SqlCell: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+    (s) => findCellInNotebook(s as any, id)?.cell,
   );
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
   const cancel = useStoreWithNotebook((s) => s.notebook.cancelRunCell);
-  const cellStatus = useStoreWithNotebook((s) => s.notebook.cellStatus[id]);
+  const cellStatus = useStoreWithNotebook((s) => s.cells.status[id]);
 
   const lastRunTime = useRelativeTimeDisplay(
     cellStatus && cellStatus.type === 'sql' && cellStatus.status === 'success'
@@ -56,7 +53,7 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
               <QueryDataTableActionsMenu
                 query={`SELECT * FROM ${cellStatus.resultView}`}
               />
-              <AddSqlCellResultToNewTable query={cell.sql} />
+              <AddSqlCellResultToNewTable query={cell.data.sql} />
             </>
           )}
         />
@@ -66,8 +63,10 @@ export const SqlCell: React.FC<{id: string}> = ({id}) => {
   return (
     <CellContainer id={id} typeLabel="SQL" rightControls={<></>}>
       <SqlCellBody
-        sql={cell.sql}
-        onSqlChange={(v) => update(id, (c) => ({...c, sql: v}) as typeof cell)}
+        sql={cell.data.sql}
+        onSqlChange={(v) =>
+          update(id, (c) => ({...c, data: {...c.data, sql: v}}) as any)
+        }
         onRun={() => run(id)}
         onCancel={() => cancel(id)}
         status={status}

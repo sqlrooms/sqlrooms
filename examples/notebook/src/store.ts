@@ -4,6 +4,12 @@ import {
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
+  createCanvasSlice,
+  CanvasSliceConfigSchema,
+  CanvasSliceState,
+} from '@sqlrooms/canvas';
+import {createCellsSlice, CellsSliceState} from '@sqlrooms/cells';
+import {
   BaseRoomConfig,
   createPersistHelpers,
   createRoomShellSlice,
@@ -20,7 +26,9 @@ import {DataSourcesPanel} from './DataSourcesPanel';
 import {NotebookPanel} from './NotebookPanel';
 
 export type RoomState = RoomShellSliceState &
-  NotebookSliceState & {
+  NotebookSliceState &
+  CanvasSliceState &
+  CellsSliceState & {
     apiKey: string;
     setApiKey: (apiKey: string) => void;
   };
@@ -67,12 +75,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createNotebookSlice()(set, get, store),
-      // {
-      // getApiKey: () => get().apiKey,
-      // numberOfRowsToShareWithLLM: 2,
-      // defaultModel: 'gpt-4.1-mini',
-      // }
+      ...createCellsSlice()(set as any, get as any, store),
+      ...createNotebookSlice()(set as any, get as any, store),
+      ...createCanvasSlice({
+        ai: {
+          getApiKey: () => get().apiKey,
+          defaultModel: 'gpt-4.1-mini',
+        },
+      })(set as any, get as any, store),
 
       apiKey: '',
       setApiKey: (apiKey: string) => set({apiKey}),
@@ -87,6 +97,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         notebook: NotebookSliceConfigSchema,
+        canvas: CanvasSliceConfigSchema,
       }),
     },
   ) as StateCreator<RoomState>,

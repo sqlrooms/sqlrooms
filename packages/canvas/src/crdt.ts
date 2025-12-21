@@ -1,10 +1,6 @@
 import {schema} from 'loro-mirror';
 import type {CrdtMirror} from '@sqlrooms/crdt';
-import {
-  CanvasSliceConfig,
-  type CanvasSliceState,
-  type CanvasNode,
-} from './CanvasSlice';
+import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
 
 /**
  * Mirror schema for syncing the `@sqlrooms/canvas` slice via `@sqlrooms/crdt`.
@@ -24,10 +20,9 @@ export const canvasMirrorSchema = schema.LoroMap({
               x: schema.Number(),
               y: schema.Number(),
             }),
-            type: schema.String(),
-            data: schema.Any(),
             width: schema.Number(),
             height: schema.Number(),
+            data: schema.Any(),
           }),
           (cell) => cell.id,
         ),

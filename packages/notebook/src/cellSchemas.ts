@@ -1,75 +1,40 @@
 import {z} from 'zod';
+import {
+  CellTypes,
+  InputTypes,
+  SqlCellDataSchema,
+  TextCellDataSchema,
+  VegaCellDataSchema,
+  InputCellDataSchema,
+} from '@sqlrooms/cells';
 
-/** Notebook input types in Input Cell */
-export const InputTypes = z.enum(['text', 'slider', 'dropdown']);
-export type InputTypes = z.infer<typeof InputTypes>;
-
-const InputText = z.object({
-  kind: z.literal(InputTypes.enum.text),
-  varName: z.string(),
-  value: z.string().default(''),
-});
-export type InputText = z.infer<typeof InputText>;
-
-const InputSlider = z.object({
-  kind: z.literal(InputTypes.enum.slider),
-  varName: z.string(),
-  min: z.number().default(0),
-  max: z.number().default(100),
-  step: z.number().default(1),
-  value: z.number().default(0),
-});
-export type InputSlider = z.infer<typeof InputSlider>;
-
-const InputDropdown = z.object({
-  kind: z.literal(InputTypes.enum.dropdown),
-  varName: z.string(),
-  options: z.array(z.string()).default([]),
-  value: z.string().default(''),
-});
-export type InputDropdown = z.infer<typeof InputDropdown>;
-
-export const InputUnion = z.discriminatedUnion('kind', [
-  InputText,
-  InputSlider,
-  InputDropdown,
-]);
-export type InputUnion = z.infer<typeof InputUnion>;
-
-/** Notebook Cell */
-export const NotebookCellTypes = z.enum(['sql', 'text', 'vega', 'input']);
-export type NotebookCellTypes = z.infer<typeof NotebookCellTypes>;
+export {CellTypes as NotebookCellTypes, InputTypes};
 
 export const SqlCellSchema = z.object({
   id: z.string(),
-  name: z.string().default('Untitled'),
-  type: z.literal(NotebookCellTypes.enum.sql),
-  sql: z.string().default(''),
+  type: z.literal('sql'),
+  data: SqlCellDataSchema,
 });
 export type SqlCell = z.infer<typeof SqlCellSchema>;
 
 export const TextCellSchema = z.object({
   id: z.string(),
-  name: z.string().default('Text'),
-  type: z.literal(NotebookCellTypes.enum.text),
-  text: z.string().default(''),
+  type: z.literal('text'),
+  data: TextCellDataSchema,
 });
 export type TextCell = z.infer<typeof TextCellSchema>;
 
 export const VegaCellSchema = z.object({
   id: z.string(),
-  name: z.string().default('Chart'),
-  type: z.literal(NotebookCellTypes.enum.vega),
-  sqlId: z.string().default(''),
-  vegaSpec: z.any().optional(),
+  type: z.literal('vega'),
+  data: VegaCellDataSchema,
 });
 export type VegaCell = z.infer<typeof VegaCellSchema>;
 
 export const InputCellSchema = z.object({
   id: z.string(),
-  name: z.string().default('Input'),
   type: z.literal('input'),
-  input: InputUnion,
+  data: InputCellDataSchema,
 });
 export type InputCell = z.infer<typeof InputCellSchema>;
 
@@ -81,7 +46,7 @@ export const NotebookCellSchema = z.discriminatedUnion('type', [
 ]);
 export type NotebookCell = z.infer<typeof NotebookCellSchema>;
 
-/** Notebook Tab */
+/** Notebook View Meta */
 export const NotebookDagMetaSchema = z.object({
   title: z.string().default('Notebook'),
   cellOrder: z.array(z.string()).default([]),
@@ -92,15 +57,11 @@ export type NotebookDagMeta = z.infer<typeof NotebookDagMetaSchema>;
 
 export const NotebookDagSchema = z.object({
   id: z.string(),
-  cells: z.record(z.string(), NotebookCellSchema).default({}),
   meta: NotebookDagMetaSchema,
 });
 export type NotebookDag = z.infer<typeof NotebookDagSchema>;
 
-export const NotebookTabSchema = NotebookDagMetaSchema.extend({id: z.string()});
-export type NotebookTab = z.infer<typeof NotebookTabSchema>;
-
-/** Notebook Slice */
+/** Notebook Slice Config (View only) */
 export const NotebookSliceConfigSchema = z.object({
   dags: z.record(z.string(), NotebookDagSchema).default({}),
   dagOrder: z.array(z.string()).default([]),
@@ -108,3 +69,10 @@ export const NotebookSliceConfigSchema = z.object({
   currentCellId: z.string().optional(),
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfigSchema>;
+
+export const NotebookTabSchema = NotebookDagMetaSchema.extend({id: z.string()});
+export type NotebookTab = z.infer<typeof NotebookTabSchema>;
+
+export type InputUnion = z.infer<
+  typeof import('@sqlrooms/cells').InputUnionSchema
+>;

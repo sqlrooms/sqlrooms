@@ -15,7 +15,7 @@ export const CellContainer: React.FC<{
   className?: string;
 }> = ({id, typeLabel, rightControls, leftControls, children, className}) => {
   const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+    (s) => findCellInNotebook(s as any, id)?.cell,
   );
   const onRename = useStoreWithNotebook((s) => s.notebook.renameCell);
   const setCurrentCell = useStoreWithNotebook((s) => s.notebook.setCurrentCell);
@@ -39,7 +39,7 @@ export const CellContainer: React.FC<{
       <div className="flex items-center justify-between border-b px-2">
         <div className="flex items-center gap-2">
           <EditableText
-            value={cell.name}
+            value={(cell.data as any).title}
             onChange={(v) => onRename(id, v)}
             className="shadow-none outline-none ring-0"
           />
@@ -53,7 +53,7 @@ export const CellContainer: React.FC<{
             })}
           >
             <span className="uppercase text-gray-500">{typeLabel}</span>
-            <DeleteCellDialog cell={cell} />
+            <DeleteCellDialog cell={cell as any} />
             <MoveCellButtons id={id} />
           </div>
           {rightControls}

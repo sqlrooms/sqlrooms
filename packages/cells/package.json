@@ -9,7 +9,7 @@
   "files": [
     "dist"
   ],
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -26,10 +26,14 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "lucide-react": "^0.555.0"
+    "immer": "^11.0.1",
+    "lucide-react": "^0.555.0",
+    "zod": "^3.25.73"
   },
   "peerDependencies": {
     "react": "^18 || ^19",

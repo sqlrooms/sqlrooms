@@ -37,7 +37,7 @@ export const DeleteCellDialog: FC<Props> = ({cell}) => {
         <DialogHeader>
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this {cell.name}?
+            Are you sure you want to delete this {(cell.data as any).title}?
             <br /> This operation can not be undone.
           </DialogDescription>
         </DialogHeader>

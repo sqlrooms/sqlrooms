@@ -1,31 +1,30 @@
 import {QueryDataTable} from '@sqlrooms/data-table';
 import {Button, useToast} from '@sqlrooms/ui';
-import {FC, useMemo} from 'react';
-import {SqlCellBody, type SqlCellBodyStatus} from '@sqlrooms/cells';
-import {CanvasNodeData, useStoreWithCanvas} from '../CanvasSlice';
+import {FC} from 'react';
+import {
+  SqlCellBody,
+  type SqlCellBodyStatus,
+  type SqlCellData,
+} from '@sqlrooms/cells';
+import {useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
-// import type * as Monaco from 'monaco-editor';
-// type EditorInstance = Monaco.editor.IStandaloneCodeEditor;
-// type MonacoInstance = typeof Monaco;
 
-type SqlData = Extract<CanvasNodeData, {type: 'sql'}>;
-
-export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
+export const SqlNode: FC<{id: string; data: SqlCellData}> = ({id, data}) => {
   const sql = data.sql || '';
   const updateNode = useStoreWithCanvas((s) => s.canvas.updateNode);
-  const tables = useStoreWithCanvas((s) => s.db.tables);
   const execute = useStoreWithCanvas((s) => s.canvas.executeSqlNodeQuery);
-  const result = useStoreWithCanvas((s) => s.canvas.sqlResults[id]);
+  const cellStatus = useStoreWithCanvas((s) => s.cells.status[id]);
+  const cancel = useStoreWithCanvas((s) => s.cells.cancelCell);
   const {toast} = useToast();
 
   const status: SqlCellBodyStatus =
-    result?.status === 'success'
-      ? {state: 'success', resultName: result.tableName}
-      : result?.status === 'error'
-        ? {state: 'error', message: result.error}
-        : result?.status === 'loading'
-          ? {state: 'running'}
-          : {state: 'idle'};
+    cellStatus?.type === 'sql'
+      ? {
+          state: cellStatus.status,
+          message: cellStatus.lastError,
+          resultName: cellStatus.resultName,
+        }
+      : undefined;
 
   return (
     <CanvasNodeContainer
@@ -42,10 +41,10 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
       <SqlCellBody
         sql={sql}
         onSqlChange={(v) =>
-          updateNode(id, (d: CanvasNodeData) => ({
-            ...(d as SqlData),
-            sql: v || '',
-          }))
+          updateNode(
+            id,
+            (c) => ({...c, data: {...c.data, sql: v || ''}}) as any,
+          )
         }
         onRun={() =>
           execute(id).catch((e) =>
@@ -56,13 +55,16 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
             }),
           )
         }
+        onCancel={() => cancel(id)}
         status={status}
-        resultName={result?.status === 'success' ? result.tableName : undefined}
+        resultName={
+          cellStatus?.type === 'sql' ? cellStatus.resultName : undefined
+        }
         renderResult={
-          result?.status === 'success' ? (
+          cellStatus?.type === 'sql' && cellStatus.resultName ? (
             <div className="flex-[2] overflow-hidden border-t">
               <QueryDataTable
-                query={`SELECT * FROM ${result.tableName}`}
+                query={`SELECT * FROM ${cellStatus.resultName}`}
                 fontSize="text-xs"
               />
             </div>

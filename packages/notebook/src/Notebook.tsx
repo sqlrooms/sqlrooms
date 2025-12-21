@@ -62,7 +62,11 @@ export const Notebook: React.FC = () => {
   const tabDag = useStoreWithNotebook((s) =>
     currentTabId ? s.notebook.config.dags[currentTabId] : undefined,
   );
-  const tab = tabDag ? {id: tabDag.id, ...tabDag.meta} : undefined;
+  const tab = useMemo(
+    () => (tabDag ? {id: tabDag.id, ...tabDag.meta} : undefined),
+    [tabDag],
+  );
+
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
   const runAllCellsCascade = useStoreWithNotebook(
     (s) => s.notebook.runAllCellsCascade,

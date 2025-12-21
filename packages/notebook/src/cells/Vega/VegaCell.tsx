@@ -14,28 +14,31 @@ import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../useStoreWithNotebook';
 import {findCellInNotebook, getCellTypeLabel} from '../../NotebookUtils';
 import {VegaConfigPanel} from './VegaConfigPanel';
-import {VegaCell as VegaCellType} from '../../cellSchemas';
+import {NotebookCell, VegaCell as VegaCellType} from '../../cellSchemas';
 import {IconWithTooltip} from '../../cellOperations/IconWithTooltip';
 
 export const VegaCell: React.FC<{id: string}> = ({id}) => {
-  const {cell, dagCells} = useStoreWithNotebook((s) => {
-    const info = findCellInNotebook(s.notebook.config, id);
-    const dag = info ? s.notebook.config.dags[info.dagId] : undefined;
+  const {cell, dagCellIds} = useStoreWithNotebook((s) => {
+    const info = findCellInNotebook(s as any, id);
+    const dag = info?.dagId ? s.notebook.config.dags[info.dagId] : undefined;
     return {
       cell: info?.cell as VegaCellType | undefined,
-      dagCells: dag?.cells,
+      dagCellIds: dag?.meta.cellOrder || [],
     };
   });
+
+  const cellsData = useStoreWithNotebook((s) => s.cells.data);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
     (s) => s.notebook.config.currentCellId,
   );
-  const availableSqlCells = Object.values(dagCells || {}).filter(
-    (c) => c.type === 'sql',
-  );
+
+  const availableSqlCells = dagCellIds
+    .map((id) => cellsData[id])
+    .filter((c): c is NotebookCell & {type: 'sql'} => c?.type === 'sql');
 
   const selectedSqlStatus = useStoreWithNotebook((s) =>
-    cell ? s.notebook.cellStatus[cell.sqlId] : undefined,
+    cell?.type === 'vega' ? s.cells.status[cell.data.sqlId || ''] : undefined,
   );
 
   const lastRunTime =
@@ -44,11 +47,13 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       : undefined;
 
   const [draftSpec, setDraftSpec] = useState(
-    (cell?.vegaSpec ?? {
-      data: {name: 'queryResult'},
-      mark: 'bar',
-      padding: 20,
-    }) as VegaCellType['vegaSpec'],
+    (cell?.type === 'vega'
+      ? (cell.data.vegaSpec ?? {
+          data: {name: 'queryResult'},
+          mark: 'bar',
+          padding: 20,
+        })
+      : {}) as VegaCellType['data']['vegaSpec'],
   );
   const [isEditing, setIsEditing] = useState(false);
 
@@ -61,8 +66,7 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
 
   const handleValueChange = (value: string) => {
     if (!cell) return;
-    update(id, (c) => ({...c, sqlId: value}) as VegaCellType);
-    // Auto open the chart config panel if not opened yet
+    update(id, (c: any) => ({...c, data: {...c.data, sqlId: value}}) as any);
     if (!isEditing) setIsEditing(true);
   };
 
@@ -72,7 +76,10 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
     }
     const timeoutId = setTimeout(() => {
       setIsEditing(false);
-      update(id, (c) => ({...c, vegaSpec: draftSpec}));
+      update(
+        id,
+        (c: any) => ({...c, data: {...c.data, vegaSpec: draftSpec}}) as any,
+      );
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [currentCellId, id, isEditing, draftSpec, update]);
@@ -84,14 +91,14 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
       id={id}
       typeLabel={getCellTypeLabel(cell.type)}
       leftControls={
-        <Select value={cell.sqlId} onValueChange={handleValueChange}>
+        <Select value={cell.data.sqlId} onValueChange={handleValueChange}>
           <SelectTrigger className="h-6 text-xs shadow-none">
             <SelectValue placeholder="Select a SQL cell" />
           </SelectTrigger>
           <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
             {availableSqlCells.map((sql) => (
               <SelectItem className="text-xs" key={sql.id} value={sql.id}>
-                {sql.name}
+                {(sql.data as any).title}
               </SelectItem>
             ))}
           </SelectContent>
@@ -104,7 +111,11 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
             variant="secondary"
             className="h-6"
             onClick={() => {
-              update(id, (c) => ({...c, vegaSpec: draftSpec}));
+              update(
+                id,
+                (c: any) =>
+                  ({...c, data: {...c.data, vegaSpec: draftSpec}}) as any,
+              );
               setIsEditing(false);
             }}
           >
@@ -112,14 +123,14 @@ export const VegaCell: React.FC<{id: string}> = ({id}) => {
           </Button>
         ) : (
           <IconWithTooltip
-            title={!cell.sqlId ? 'Select a SQL cell first' : ''}
+            title={!cell.data.sqlId ? 'Select a SQL cell first' : ''}
             icon={
               <Button
                 size="xs"
                 variant="secondary"
                 onClick={() => setIsEditing(true)}
                 className={cn({hidden: !isCurrent}, 'h-6 group-hover:flex')}
-                disabled={!cell.sqlId}
+                disabled={!cell.data.sqlId}
               >
                 Edit chart
               </Button>

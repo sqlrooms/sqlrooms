@@ -9,7 +9,7 @@ import {findCellInNotebook, getCellTypeLabel} from '../NotebookUtils';
 
 export const TextCell: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+    (s) => findCellInNotebook(s as any, id)?.cell,
   );
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   const currentCellId = useStoreWithNotebook(
@@ -17,7 +17,7 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
   );
   const [isEditing, setIsEditing] = useState(currentCellId === id);
   const [draftText, setDraftText] = useState(
-    cell?.type === 'text' ? cell.text : '',
+    cell?.type === 'text' ? cell.data.text : '',
   );
 
   useEffect(() => {
@@ -26,7 +26,7 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
     }
     const timeoutId = setTimeout(() => {
       setIsEditing(false);
-      update(id, (c) => ({...c, text: draftText}));
+      update(id, (c: any) => ({...c, data: {...c.data, text: draftText}}));
     }, 0);
     return () => clearTimeout(timeoutId);
   }, [currentCellId, id, isEditing, draftText, update]);
@@ -46,7 +46,10 @@ export const TextCell: React.FC<{id: string}> = ({id}) => {
             variant="secondary"
             className="h-6"
             onClick={() => {
-              update(id, (c) => ({...c, text: draftText}));
+              update(id, (c: any) => ({
+                ...c,
+                data: {...c.data, text: draftText},
+              }));
               setIsEditing(false);
             }}
           >

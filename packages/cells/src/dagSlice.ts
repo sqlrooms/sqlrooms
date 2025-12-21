@@ -111,6 +111,9 @@ export function createDagSlice<TRootState, TCell, TMeta>(
     _store?: unknown,
   ): DagSliceState => ({
     dag: {
+      get currentDagId() {
+        return options.getDagConfig(get())?.currentDagId;
+      },
       getRootCells: (dagId: string) => {
         const {dependencies} = buildDependencyGraph(dagId, get, options);
         const ids = Object.keys(dependencies);

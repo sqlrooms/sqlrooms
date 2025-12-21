@@ -13,11 +13,7 @@ import {
 import {CellContainer} from '../CellContainer';
 import {useStoreWithNotebook} from '../../useStoreWithNotebook';
 import {InputConfigPanel} from './InputConfigPanel/InputConfigPanel';
-import {
-  InputUnion,
-  InputCell as InputCellType,
-  NotebookCell,
-} from '../../cellSchemas';
+import {InputUnion, InputCell as InputCellType} from '../../cellSchemas';
 import {findCellInNotebook} from '../../NotebookUtils';
 
 const RenderInput: React.FC<{
@@ -40,7 +36,7 @@ const RenderInput: React.FC<{
             min={input.min}
             max={input.max}
             step={input.step}
-            value={[input.value]}
+            value={[input.value as number]}
             onValueChange={(value) => updateInput({value: Number(value)})}
           />
           <span className="min-w-[3ch] text-right text-sm font-medium">
@@ -51,7 +47,7 @@ const RenderInput: React.FC<{
     case 'dropdown':
       return (
         <Select
-          value={input.value}
+          value={input.value as string}
           onValueChange={(value) => updateInput({value})}
         >
           <SelectTrigger className="h-8 text-xs shadow-none">
@@ -73,20 +69,22 @@ const RenderInput: React.FC<{
 
 export const InputItem: React.FC<{id: string}> = ({id}) => {
   const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s.notebook.config, id)?.cell,
+    (s) => findCellInNotebook(s as any, id)?.cell,
   );
   const remove = useStoreWithNotebook((s) => s.notebook.removeCell);
   const update = useStoreWithNotebook((s) => s.notebook.updateCell);
   if (!cell || cell.type !== 'input') return null;
-  const input = cell.input;
+  const input = cell.data.input;
 
   const updateInput = (patch: Partial<InputUnion>) =>
-    update(id, (cell) => {
-      const typed = cell as InputCellType;
+    update(id, (c: any) => {
       return {
-        ...typed,
-        input: {...typed.input, ...patch},
-      } as NotebookCell;
+        ...c,
+        data: {
+          ...c.data,
+          input: {...c.data.input, ...patch},
+        },
+      } as any;
     });
 
   return (

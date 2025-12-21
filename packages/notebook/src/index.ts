@@ -13,23 +13,14 @@ export type {
 } from './NotebookStateTypes';
 
 export {
-  InputCellSchema,
   InputTypes,
-  InputUnion,
-  NotebookCellSchema,
   NotebookCellTypes,
   NotebookSliceConfigSchema,
   NotebookTabSchema,
-  SqlCellSchema,
-  TextCellSchema,
-  VegaCellSchema,
 } from './cellSchemas';
 export type {
   NotebookSliceConfig,
   InputCell,
-  InputDropdown,
-  InputSlider,
-  InputText,
   NotebookCell,
   NotebookTab,
   NotebookDag,

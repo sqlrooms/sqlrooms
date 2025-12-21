@@ -1,5 +1,4 @@
 import {useEffect, useMemo, useState} from 'react';
-
 import {formatTimeRelative} from '@sqlrooms/utils';
 import {
   InputTypes,
@@ -7,7 +6,9 @@ import {
   NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
+  NotebookDag,
 } from './cellSchemas';
+import type {CellsRootState} from '@sqlrooms/cells';
 
 export const findTab = (
   notebook: NotebookSliceConfig,
@@ -21,14 +22,18 @@ export const findTab = (
 };
 
 export const findCellInNotebook = (
-  notebook: NotebookSliceConfig,
+  state: CellsRootState & {notebook: {config: NotebookSliceConfig}},
   cellId: string,
 ) => {
-  for (const [dagId, dag] of Object.entries(notebook.dags)) {
-    const cell = dag?.cells[cellId];
-    if (cell) return {cell, dagId};
+  const cell = state.cells.data[cellId];
+  if (!cell) return undefined;
+
+  for (const [dagId, dag] of Object.entries(state.notebook.config.dags)) {
+    if ((dag as NotebookDag).meta.cellOrder.includes(cellId)) {
+      return {cell, dagId};
+    }
   }
-  return undefined;
+  return {cell, dagId: undefined};
 };
 
 export const getCellTypeLabel = (type: NotebookCellTypes) => {

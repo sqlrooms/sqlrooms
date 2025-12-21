@@ -1,6 +1,118 @@
 import type React from 'react';
+import {z} from 'zod';
 import type {StateCreator} from '@sqlrooms/room-store';
 
+/** Cell types */
+export const CellTypes = z.enum(['sql', 'text', 'vega', 'input']);
+export type CellTypes = z.infer<typeof CellTypes>;
+
+/** Input Cell types */
+export const InputTypes = z.enum(['text', 'slider', 'dropdown']);
+export type InputTypes = z.infer<typeof InputTypes>;
+
+export const InputTextSchema = z.object({
+  kind: z.literal(InputTypes.enum.text),
+  varName: z.string(),
+  value: z.string().default(''),
+});
+export type InputText = z.infer<typeof InputTextSchema>;
+
+export const InputSliderSchema = z.object({
+  kind: z.literal(InputTypes.enum.slider),
+  varName: z.string(),
+  min: z.number().default(0),
+  max: z.number().default(100),
+  step: z.number().default(1),
+  value: z.number().default(0),
+});
+export type InputSlider = z.infer<typeof InputSliderSchema>;
+
+export const InputDropdownSchema = z.object({
+  kind: z.literal(InputTypes.enum.dropdown),
+  varName: z.string(),
+  options: z.array(z.string()).default([]),
+  value: z.string().default(''),
+});
+export type InputDropdown = z.infer<typeof InputDropdownSchema>;
+
+export const InputUnionSchema = z.discriminatedUnion('kind', [
+  InputTextSchema,
+  InputSliderSchema,
+  InputDropdownSchema,
+]);
+export type InputUnion = z.infer<typeof InputUnionSchema>;
+
+/** SQL Cell */
+export const SqlCellDataSchema = z.object({
+  title: z.string().default('Untitled'),
+  sql: z.string().default(''),
+});
+export type SqlCellData = z.infer<typeof SqlCellDataSchema>;
+
+/** Text Cell */
+export const TextCellDataSchema = z.object({
+  title: z.string().default('Text'),
+  text: z.string().default(''),
+});
+export type TextCellData = z.infer<typeof TextCellDataSchema>;
+
+/** Vega Cell */
+export const VegaCellDataSchema = z.object({
+  title: z.string().default('Chart'),
+  sqlId: z.string().optional(), // In notebook, it links to another cell. In canvas, it might be the same.
+  sql: z.string().optional(), // In canvas, it often has its own SQL.
+  vegaSpec: z.any().optional(),
+});
+export type VegaCellData = z.infer<typeof VegaCellDataSchema>;
+
+/** Input Cell Data */
+export const InputCellDataSchema = z.object({
+  title: z.string().default('Input'),
+  input: InputUnionSchema,
+});
+export type InputCellData = z.infer<typeof InputCellDataSchema>;
+
+/** Unified Cell Data */
+export const CellDataSchema = z.discriminatedUnion('type', [
+  z.object({type: z.literal('sql'), data: SqlCellDataSchema}),
+  z.object({type: z.literal('text'), data: TextCellDataSchema}),
+  z.object({type: z.literal('vega'), data: VegaCellDataSchema}),
+  z.object({type: z.literal('input'), data: InputCellDataSchema}),
+]);
+export type CellData = z.infer<typeof CellDataSchema>;
+
+/** Canonical Cell */
+export const CellSchema = z
+  .object({
+    id: z.string(),
+  })
+  .and(CellDataSchema);
+export type Cell = z.infer<typeof CellSchema>;
+
+/** Cell Status */
+export const SqlCellStatusSchema = z.object({
+  type: z.literal('sql'),
+  status: z.enum(['idle', 'running', 'success', 'cancel', 'error']),
+  lastError: z.string().optional(),
+  referencedTables: z.array(z.string()).default([]),
+  resultName: z.string().optional(),
+  resultView: z.string().optional(),
+  lastRunTime: z.number().optional(),
+});
+export type SqlCellStatus = z.infer<typeof SqlCellStatusSchema>;
+
+export const OtherCellStatusSchema = z.object({
+  type: z.literal('other'),
+});
+export type OtherCellStatus = z.infer<typeof OtherCellStatusSchema>;
+
+export const CellStatusSchema = z.union([
+  SqlCellStatusSchema,
+  OtherCellStatusSchema,
+]);
+export type CellStatus = z.infer<typeof CellStatusSchema>;
+
+/** DAG Types */
 export type DagDefinition<TCell, TMeta = unknown> = {
   id: string;
   cells: Record<string, TCell>;
@@ -15,6 +127,7 @@ export type DagConfig<TCell, TMeta = unknown> = {
 
 export type DagSliceState = {
   dag: {
+    currentDagId?: string;
     getDownstream: (dagId: string, sourceCellId: string) => string[];
     getRootCells: (dagId: string) => string[];
     runAllCellsCascade: (dagId: string) => Promise<void>;
@@ -53,18 +166,6 @@ export type RegistryItem<TCell> = {
   ) => string[];
   runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
 };
-
-export type SqlCellStatus =
-  | {
-      type: 'sql';
-      status: 'idle' | 'running' | 'success' | 'cancel' | 'error';
-      lastError?: string;
-      referencedTables?: string[];
-      resultName?: string;
-      resultView?: string;
-      lastRunTime?: number;
-    }
-  | {type: 'other'};
 
 export type SqlRunResult = {
   resultName?: string;
@@ -119,5 +220,21 @@ export type SqlCellRunButtonProps = Pick<
   SqlCellBodyProps,
   'onRun' | 'onCancel' | 'status' | 'runLabel' | 'disabled'
 >;
+
+export type CellsSliceState = {
+  cells: {
+    data: Record<string, Cell>;
+    status: Record<string, CellStatus>;
+    activeAbortControllers: Record<string, AbortController>;
+    addCell: (cell: Cell) => void;
+    removeCell: (id: string) => void;
+    updateCell: (id: string, updater: (cell: Cell) => Cell) => void;
+    runCell: (
+      id: string,
+      opts?: {cascade?: boolean; schemaName?: string},
+    ) => Promise<void>;
+    cancelCell: (id: string) => void;
+  };
+};
 
 export type DagStateCreator<T> = StateCreator<T>;

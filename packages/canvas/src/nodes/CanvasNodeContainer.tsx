@@ -10,7 +10,7 @@ import {
 import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {PlusIcon, SparklesIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
-import {CanvasNode, useStoreWithCanvas} from '../CanvasSlice';
+import {useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
 
 const PROMPT_PLACEHOLDER = {
@@ -33,22 +33,9 @@ export const CanvasNodeContainer: FC<
   }>
 > = ({id, className, headerRight, children}) => {
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
-  const node = useStoreWithCanvas((s) =>
-    (() => {
-      const dagId = s.canvas.config.currentDagId ?? s.canvas.config.dagOrder[0];
-      const dag = dagId ? s.canvas.config.dags[dagId] : undefined;
-      const nodes: CanvasNode[] = dag
-        ? dag.meta.nodeOrder.length
-          ? dag.meta.nodeOrder
-              .map((nid: string) => dag.cells[nid])
-              .filter(Boolean)
-              .map((n: CanvasNode | undefined) => n as CanvasNode)
-          : Object.values(dag.cells)
-        : [];
-      return nodes.find((n: CanvasNode) => n.id === id);
-    })(),
-  );
-  const title = node?.data.title;
+  const cell = useStoreWithCanvas((s) => s.cells.data[id]);
+
+  const title = (cell?.data as any)?.title;
   const onTitleChange = useCallback(
     async (v: string) => {
       await renameNode(id, v);
@@ -88,7 +75,7 @@ export const CanvasNodeContainer: FC<
             <QueryControls
               placeholder={`✨ ${
                 PROMPT_PLACEHOLDER[
-                  (node?.type ?? 'default') as keyof typeof PROMPT_PLACEHOLDER
+                  (cell?.type ?? 'default') as keyof typeof PROMPT_PLACEHOLDER
                 ]
               }`}
               onRun={() => {

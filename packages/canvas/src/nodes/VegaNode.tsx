@@ -1,17 +1,26 @@
 import {VegaLiteChart, type VisualizationSpec} from '@sqlrooms/vega';
 import {FC} from 'react';
-import {CanvasNodeData} from '../CanvasSlice';
+import type {VegaCellData} from '@sqlrooms/cells';
+import {useStoreWithCanvas} from '../CanvasSlice';
 import {CanvasNodeContainer} from './CanvasNodeContainer';
 
-type VegaData = Extract<CanvasNodeData, {type: 'vega'}>;
-
-export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
+export const VegaNode: FC<{id: string; data: VegaCellData}> = ({id, data}) => {
   const spec = (data.vegaSpec || {
     mark: 'point',
     data: {values: []},
   }) as VisualizationSpec;
 
-  const {vegaSpec, sql} = data;
+  const {vegaSpec, sql, sqlId} = data;
+  const cellsData = useStoreWithCanvas((s) => s.cells.data);
+  const cellsStatus = useStoreWithCanvas((s) => s.cells.status);
+
+  const effectiveSql =
+    sql ||
+    (sqlId && cellsData[sqlId]?.type === 'sql'
+      ? (cellsData[sqlId] as any).data.sql
+      : undefined);
+  const status = sqlId ? cellsStatus[sqlId] : undefined;
+  const isLoading = status?.type === 'sql' && status.status === 'running';
 
   return (
     <CanvasNodeContainer
@@ -21,12 +30,13 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
       }
     >
       <div className="h-full flex-1 overflow-hidden p-2">
-        {sql && vegaSpec ? (
+        {effectiveSql && vegaSpec ? (
           <VegaLiteChart
             spec={vegaSpec}
-            sqlQuery={sql}
+            sqlQuery={effectiveSql}
             aspectRatio={3 / 2}
             className="h-full"
+            isLoading={isLoading}
           />
         ) : null}
       </div>

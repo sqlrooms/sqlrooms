@@ -1,5 +1,5 @@
 import type React from 'react';
-
+import type {CellStatus} from '@sqlrooms/cells';
 import type {
   NotebookCell,
   NotebookCellTypes,
@@ -13,7 +13,7 @@ export type NotebookCellRegistryItem = {
   findDependencies: (
     cell: NotebookCell,
     cells: Record<string, NotebookCell>,
-    status: NotebookSliceState['notebook']['cellStatus'],
+    status: Record<string, CellStatus>,
   ) => string[];
   runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
 };
@@ -47,23 +47,5 @@ export type NotebookSliceState = {
     cancelRunCell: (cellId: string) => void;
 
     cellRegistry: Record<string, NotebookCellRegistryItem>;
-
-    cellStatus: Record<
-      string,
-      | {
-          type: 'sql';
-          status: 'idle' | 'running' | 'success' | 'cancel' | 'error';
-          lastError?: string;
-          referencedTables?: string[];
-          resultView?: string;
-          resultName?: string;
-          lastRunTime?: number;
-        }
-      | {
-          type: 'other';
-        }
-    >;
-
-    activeAbortControllers: Record<string, AbortController>;
   };
 };

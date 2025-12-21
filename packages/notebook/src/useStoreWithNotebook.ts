@@ -1,4 +1,4 @@
-import type {DagSliceState} from '@sqlrooms/cells';
+import type {DagSliceState, CellsSliceState} from '@sqlrooms/cells';
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, useBaseRoomStore} from '@sqlrooms/room-shell';
 
@@ -7,7 +7,8 @@ import type {NotebookSliceState} from './NotebookStateTypes';
 type NotebookStoreState = BaseRoomStoreState &
   DuckDbSliceState &
   NotebookSliceState &
-  DagSliceState;
+  DagSliceState &
+  CellsSliceState;
 
 /**
  * Select from the room store while asserting that the notebook slice is loaded.

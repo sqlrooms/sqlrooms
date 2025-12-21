@@ -12,7 +12,6 @@ import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
-import type {CanvasNodeData} from './CanvasSlice';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {SqlNode} from './nodes/SqlNode';
@@ -29,13 +28,24 @@ export const Canvas: React.FC = () => {
     return dagId ? s.canvas.config.dags[dagId] : undefined;
   });
 
+  const cellsData = useStoreWithCanvas((s) => s.cells.data);
+
   const nodes = useMemo(() => {
-    if (!dag) return [] as Node<CanvasNodeData>[];
-    const list = dag.meta.nodeOrder.length
-      ? dag.meta.nodeOrder.map((id: string) => dag.cells[id]).filter(Boolean)
-      : Object.values(dag.cells);
-    return list as unknown as Node<CanvasNodeData>[];
-  }, [dag]);
+    if (!dag) return [] as Node[];
+    const list = dag.meta.nodeOrder
+      .map((id: string) => {
+        const node = dag.cells[id];
+        const cell = cellsData[id];
+        if (!node || !cell) return null;
+        return {
+          ...node,
+          type: cell.type,
+          data: cell.data,
+        };
+      })
+      .filter(Boolean);
+    return list as unknown as Node[];
+  }, [dag, cellsData]);
 
   const edges = useMemo(() => (dag?.meta.edges ?? []) as Edge[], [dag]);
   const viewport = dag?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
@@ -43,7 +53,6 @@ export const Canvas: React.FC = () => {
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
-  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
 
   const empty = nodes.length === 0;
   const {theme: colorMode} = useTheme();
