@@ -5,6 +5,17 @@ import {
   StateCreator,
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
+import {
+  chunkMarkdown,
+  chunkBySize,
+  validateAndSplitChunks,
+  initializeRagSchema,
+  insertDocument,
+  insertSourceDocument,
+  updateMetadataStats,
+  type ChunkResult,
+} from './prepare';
+import {extractTextFromPDF, isPdfFile} from './prepare/pdf';
 
 export type EmbeddingResult = {
   score: number;
@@ -30,8 +41,8 @@ export type EmbeddingResult = {
 export type EmbeddingProvider = (text: string) => Promise<number[]>;
 
 export type EmbeddingDatabase = {
-  /** Path or URL to the DuckDB embedding database file */
-  databaseFilePathOrUrl: string;
+  /** Path or URL to the DuckDB embedding database file. Optional for in-memory databases. */
+  databaseFilePathOrUrl?: string;
   /** Name to use when attaching the database */
   databaseName: string;
   /**
@@ -59,70 +70,54 @@ export type DatabaseMetadata = {
   chunkingStrategy: string;
 };
 
-/**
- * Reciprocal Rank Fusion (RRF) algorithm for combining multiple ranked lists.
- * RRF score = sum(1 / (k + rank)) for each list where the item appears.
- *
- * @param results - Array of ranked result lists, each with nodeId and score
- * @param k - Constant to prevent high rankings from dominating (default: 60)
- * @returns Combined results sorted by RRF score
- */
-function reciprocalRankFusion(
-  results: Array<
-    Array<{
-      nodeId: string;
-      score: number;
-      text: string;
-      metadata?: Record<string, unknown>;
-    }>
-  >,
-  k = 60,
-): EmbeddingResult[] {
-  const rrfScores = new Map<string, number>();
-  const resultMap = new Map<string, EmbeddingResult>();
-
-  // Calculate RRF scores
-  for (const resultList of results) {
-    resultList.forEach((result, rank) => {
-      const currentScore = rrfScores.get(result.nodeId) || 0;
-      rrfScores.set(result.nodeId, currentScore + 1 / (k + rank + 1));
-
-      // Store the result data (using the first occurrence)
-      if (!resultMap.has(result.nodeId)) {
-        resultMap.set(result.nodeId, {
-          nodeId: result.nodeId,
-          text: result.text,
-          score: 0, // Will be set to RRF score
-          metadata: result.metadata,
-        });
-      }
-    });
-  }
-
-  // Convert to array and sort by RRF score
-  const combined = Array.from(rrfScores.entries())
-    .map(([nodeId, rrfScore]) => ({
-      ...resultMap.get(nodeId)!,
-      score: rrfScore,
-    }))
-    .sort((a, b) => b.score - a.score);
-
-  return combined;
-}
-
 export type QueryOptions = {
   /** Number of results to return (default: 5) */
   topK?: number;
   /** Database to search (defaults to first database) */
   database?: string;
-  /**
-   * Enable hybrid search combining vector similarity with full-text search (BM25).
-   * - true: Use hybrid search with default settings (k=60)
-   * - false: Use pure vector search only
-   * - number: Use hybrid search with custom k value for RRF
-   * Default: true
-   */
-  hybrid?: boolean | number;
+};
+
+/**
+ * Input for adding a document to the RAG database.
+ */
+export type DocumentInput = {
+  /** Text content of the document */
+  text: string;
+  /** Optional metadata to store with the document */
+  metadata?: Record<string, unknown>;
+  /** Optional file name */
+  fileName?: string;
+  /** Optional file path */
+  filePath?: string;
+};
+
+/**
+ * Options for preparing/adding documents.
+ */
+export type PrepareOptions = {
+  /** Database to add to (defaults to first database) */
+  database?: string;
+  /** Chunk size in tokens (default: 512) */
+  chunkSize?: number;
+  /** Use markdown-aware chunking (default: true) */
+  useMarkdownChunking?: boolean;
+  /** Include headers in chunks for weighting (default: true) */
+  includeHeaders?: boolean;
+  /** Header repetition weight (default: 3) */
+  headerWeight?: number;
+  /** Store source document (default: true) */
+  storeSourceDocument?: boolean;
+};
+
+/**
+ * Source document from the database.
+ */
+export type SourceDocument = {
+  docId: string;
+  filePath: string;
+  fileName: string;
+  text: string;
+  metadata: Record<string, unknown>;
 };
 
 export type RagSliceState = {
@@ -168,6 +163,60 @@ export type RagSliceState = {
      * List all attached embedding databases
      */
     listDatabases: () => string[];
+
+    /**
+     * Initialize an empty RAG database with schema.
+     * Call this before adding documents to a new database.
+     * @param databaseName - Name of the database
+     * @param embeddingDimensions - Embedding dimensions for the database
+     */
+    initializeEmptyDatabase: (
+      databaseName: string,
+      embeddingDimensions: number,
+    ) => Promise<void>;
+
+    /**
+     * Add a single document to the RAG database.
+     * Document will be chunked, embedded, and stored.
+     * @param document - Document to add
+     * @param options - Preparation options
+     * @returns Array of node IDs for the created chunks
+     */
+    addDocument: (
+      document: DocumentInput,
+      options?: PrepareOptions,
+    ) => Promise<string[]>;
+
+    /**
+     * Add multiple documents in batch.
+     * @param documents - Documents to add
+     * @param options - Preparation options
+     * @returns Array of node IDs for all created chunks
+     */
+    addDocuments: (
+      documents: DocumentInput[],
+      options?: PrepareOptions,
+    ) => Promise<string[]>;
+
+    /**
+     * Add a PDF file to the RAG database.
+     * PDF will be parsed, chunked, embedded, and stored.
+     * @param file - PDF file to add
+     * @param options - Preparation options
+     * @returns Array of node IDs for the created chunks
+     */
+    addPdfDocument: (file: File, options?: PrepareOptions) => Promise<string[]>;
+
+    /**
+     * Get source documents by chunk IDs.
+     * @param chunkIds - Array of node IDs
+     * @param database - Database to query (defaults to first)
+     * @returns Array of source documents
+     */
+    getSourceDocuments: (
+      chunkIds: string[],
+      database?: string,
+    ) => Promise<SourceDocument[]>;
   };
 };
 
@@ -203,13 +252,33 @@ export function createRagSlice({
             embeddingDimensions,
           } of embeddingsDatabases) {
             try {
+              // Store the embedding provider for this database
+              databaseProviders.set(databaseName, embeddingProvider);
+
+              // If no file path, create an in-memory database with schema
+              if (!databaseFilePathOrUrl) {
+                // Create in-memory attached database
+                await connector.query(
+                  `ATTACH DATABASE ':memory:' AS ${databaseName}`,
+                );
+                // Initialize schema
+                if (embeddingDimensions) {
+                  await initializeRagSchema(
+                    connector,
+                    databaseName,
+                    embeddingDimensions,
+                  );
+                }
+                console.log(
+                  `✓ Created in-memory RAG database: ${databaseName}`,
+                );
+                continue;
+              }
+
               // ATTACH DATABASE 'path/to/file.duckdb' AS database_name (READ_ONLY)
               await connector.query(
                 `ATTACH DATABASE '${databaseFilePathOrUrl}' AS ${databaseName} (READ_ONLY)`,
               );
-
-              // Store the embedding provider for this database
-              databaseProviders.set(databaseName, embeddingProvider);
 
               // Fetch and validate metadata from the database
               try {
@@ -280,19 +349,16 @@ export function createRagSlice({
 
         queryEmbeddings: async (
           queryEmbedding: number[],
-          options = {},
+          options: QueryOptions = {},
         ): Promise<EmbeddingResult[]> => {
-          const {topK = 5, database, hybrid = true} = options;
+          const {topK = 5, database} = options;
           const connector = get().db.connector;
 
-          // Ensure RAG is initialized
           if (!initialized) {
             await get().rag.initialize();
           }
 
-          // Determine which database to search (default to first one)
           const dbName = database || Array.from(databaseProviders.keys())[0];
-
           if (!dbName || !databaseProviders.has(dbName)) {
             throw new Error(
               `Database "${dbName}" not found. Available: ${Array.from(databaseProviders.keys()).join(', ')}`,
@@ -302,77 +368,43 @@ export function createRagSlice({
           const embeddingDim = queryEmbedding.length;
           const embeddingLiteral = `[${queryEmbedding.join(', ')}]`;
 
-          // Validate dimensions
           const metadata = databaseMetadata.get(dbName);
           if (metadata && metadata.dimensions !== embeddingDim) {
             throw new Error(
-              `Dimension mismatch: query has ${embeddingDim} dimensions, ` +
-                `but database "${dbName}" expects ${metadata.dimensions} dimensions`,
+              `Dimension mismatch: query has ${embeddingDim}d, database expects ${metadata.dimensions}d`,
             );
           }
 
-          try {
-            // Vector similarity search
-            const vectorQuery = `
-              SELECT 
-                node_id,
-                text,
-                metadata_,
-                array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
-              FROM ${dbName}.documents
-              ORDER BY similarity DESC
-              LIMIT ${topK * 2}
-            `;
+          const query = `
+            SELECT node_id, text, metadata_,
+              array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
+            FROM ${dbName}.documents
+            ORDER BY similarity DESC
+            LIMIT ${topK}
+          `;
 
-            const vectorResult = await connector.query(vectorQuery);
-            const vectorRows = vectorResult.toArray();
-
-            const vectorResults: EmbeddingResult[] = vectorRows.map(
-              (row: any) => ({
-                nodeId: row.node_id as string,
-                text: row.text as string,
-                score: row.similarity as number,
-                metadata: row.metadata_
-                  ? (JSON.parse(row.metadata_ as string) as Record<
-                      string,
-                      unknown
-                    >)
-                  : undefined,
-              }),
-            );
-
-            // If hybrid search is disabled, return vector results only
-            if (hybrid === false) {
-              return vectorResults.slice(0, topK);
-            }
-
-            // Perform hybrid search: combine vector + FTS using RRF
-            // Note: FTS search doesn't use the embedding, so we can't pass it here
-            // We'll need to get the query text from somewhere else
-            // For now, return vector results only if we don't have query text
-            // The queryByText method will handle hybrid search properly
-            return vectorResults.slice(0, topK);
-          } catch (error) {
-            console.error('Error querying embeddings:', error);
-            throw error;
-          }
+          const result = await connector.query(query);
+          return result.toArray().map((row: any) => ({
+            nodeId: row.node_id as string,
+            text: row.text as string,
+            score: row.similarity as number,
+            metadata: row.metadata_
+              ? JSON.parse(row.metadata_ as string)
+              : undefined,
+          }));
         },
 
         queryByText: async (
           queryText: string,
-          options = {},
+          options: QueryOptions = {},
         ): Promise<EmbeddingResult[]> => {
-          const {database, topK = 5, hybrid = true} = options;
-          const connector = get().db.connector;
+          const {database, topK = 5} = options;
 
-          // Ensure RAG is initialized
           if (!initialized) {
             await get().rag.initialize();
           }
 
-          // Determine which database to search (default to first one)
           const dbName = database || Array.from(databaseProviders.keys())[0];
-
           if (!dbName || !databaseProviders.has(dbName)) {
             throw new Error(
               `Database "${dbName}" not found. Available: ${Array.from(databaseProviders.keys()).join(', ')}`,
@@ -380,123 +412,9 @@ export function createRagSlice({
           }
 
           const embeddingProvider = databaseProviders.get(dbName)!;
-
-          // Generate embedding from text using the database's provider
           const embedding = await embeddingProvider(queryText);
 
-          // If hybrid search is disabled, use pure vector search
-          if (hybrid === false) {
-            return get().rag.queryEmbeddings(embedding, {
-              ...options,
-              database: dbName,
-              hybrid: false,
-            });
-          }
-
-          // Perform hybrid search: vector + FTS with RRF
-          try {
-            const embeddingDim = embedding.length;
-            const embeddingLiteral = `[${embedding.join(', ')}]`;
-
-            // Validate dimensions
-            const metadata = databaseMetadata.get(dbName);
-            if (metadata && metadata.dimensions !== embeddingDim) {
-              throw new Error(
-                `Dimension mismatch: query has ${embeddingDim} dimensions, ` +
-                  `but database "${dbName}" expects ${metadata.dimensions} dimensions`,
-              );
-            }
-
-            // Get more results for RRF combination
-            const searchLimit = topK * 2;
-
-            // 1. Vector similarity search
-            const vectorQuery = `
-              SELECT 
-                node_id,
-                text,
-                metadata_,
-                array_cosine_similarity(embedding, ${embeddingLiteral}::FLOAT[${embeddingDim}]) as similarity
-              FROM ${dbName}.documents
-              ORDER BY similarity DESC
-              LIMIT ${searchLimit}
-            `;
-
-            const vectorResult = await connector.query(vectorQuery);
-            const vectorRows = vectorResult.toArray();
-
-            const vectorResults: EmbeddingResult[] = vectorRows.map(
-              (row: any) => ({
-                nodeId: row.node_id as string,
-                text: row.text as string,
-                score: row.similarity as number,
-                metadata: row.metadata_
-                  ? (JSON.parse(row.metadata_ as string) as Record<
-                      string,
-                      unknown
-                    >)
-                  : undefined,
-              }),
-            );
-
-            // 2. Full-text search using DuckDB FTS
-            // Load FTS extension if not already loaded
-            try {
-              await connector.query('INSTALL fts');
-              await connector.query('LOAD fts');
-            } catch {
-              // FTS may already be loaded
-            }
-
-            const ftsQuery = `
-              SELECT 
-                node_id,
-                text,
-                metadata_,
-                fts_main_${dbName}_documents.match_bm25(node_id, '${queryText.replace(/'/g, "''")}') as bm25_score
-              FROM ${dbName}.documents
-              WHERE bm25_score IS NOT NULL
-              ORDER BY bm25_score DESC
-              LIMIT ${searchLimit}
-            `;
-
-            let ftsResults: EmbeddingResult[] = [];
-            try {
-              const ftsResult = await connector.query(ftsQuery);
-              const ftsRows = ftsResult.toArray();
-
-              ftsResults = ftsRows.map((row: any) => ({
-                nodeId: row.node_id as string,
-                text: row.text as string,
-                score: row.bm25_score as number,
-                metadata: row.metadata_
-                  ? (JSON.parse(row.metadata_ as string) as Record<
-                      string,
-                      unknown
-                    >)
-                  : undefined,
-              }));
-            } catch (ftsError) {
-              console.warn(
-                'FTS search failed, falling back to vector-only search:',
-                ftsError,
-              );
-              // If FTS fails, return vector results only
-              return vectorResults.slice(0, topK);
-            }
-
-            // 3. Combine results using Reciprocal Rank Fusion
-            const k = typeof hybrid === 'number' ? hybrid : 60;
-            const combinedResults = reciprocalRankFusion(
-              [vectorResults, ftsResults],
-              k,
-            );
-
-            return combinedResults.slice(0, topK);
-          } catch (error) {
-            console.error('Error in hybrid search:', error);
-            throw error;
-          }
+          return get().rag.queryEmbeddings(embedding, {database: dbName, topK});
         },
 
         getMetadata: async (databaseName: string) => {
@@ -510,6 +428,198 @@ export function createRagSlice({
 
         listDatabases: () => {
           return Array.from(databaseProviders.keys());
+        },
+
+        initializeEmptyDatabase: async (
+          databaseName: string,
+          embeddingDimensions: number,
+        ) => {
+          const connector = get().db.connector;
+
+          // Check if this database is configured
+          const dbConfig = embeddingsDatabases.find(
+            (db) => db.databaseName === databaseName,
+          );
+
+          // Initialize the schema (database should already be attached from initialize())
+          await initializeRagSchema(
+            connector,
+            databaseName,
+            embeddingDimensions,
+          );
+
+          // Store the provider if configured
+          if (dbConfig && !databaseProviders.has(databaseName)) {
+            databaseProviders.set(databaseName, dbConfig.embeddingProvider);
+          }
+
+          console.log(`✓ Initialized empty RAG database: ${databaseName}`);
+        },
+
+        addDocument: async (
+          document: DocumentInput,
+          options: PrepareOptions = {},
+        ): Promise<string[]> => {
+          const {
+            database,
+            chunkSize = 512,
+            useMarkdownChunking = true,
+            includeHeaders = true,
+            headerWeight = 3,
+            storeSourceDocument = true,
+          } = options;
+
+          if (!initialized) {
+            await get().rag.initialize();
+          }
+
+          const dbName = database || Array.from(databaseProviders.keys())[0];
+          if (!dbName || !databaseProviders.has(dbName)) {
+            throw new Error(
+              `Database "${dbName}" not found. Available: ${Array.from(databaseProviders.keys()).join(', ')}`,
+            );
+          }
+
+          const connector = get().db.connector;
+          const embeddingProvider = databaseProviders.get(dbName)!;
+          const docId = `doc_${crypto.randomUUID()}`;
+
+          if (storeSourceDocument) {
+            await insertSourceDocument(connector, dbName, {
+              docId,
+              text: document.text,
+              filePath: document.filePath,
+              fileName: document.fileName,
+              metadata: document.metadata,
+            });
+          }
+
+          // Chunk document (~3 chars per token)
+          const chunkChars = chunkSize * 3;
+          let chunks: ChunkResult[] = useMarkdownChunking
+            ? chunkMarkdown(document.text, {
+                chunkSize: chunkChars,
+                includeHeaders,
+                headerWeight,
+              })
+            : chunkBySize(document.text, chunkChars);
+
+          // Split chunks exceeding token limits
+          chunks = validateAndSplitChunks(chunks, 5000);
+
+          const nodeIds: string[] = [];
+          for (const chunk of chunks) {
+            const nodeId = `node_${crypto.randomUUID()}`;
+            nodeIds.push(nodeId);
+
+            const embedding = await embeddingProvider(chunk.text);
+            await insertDocument(connector, dbName, {
+              nodeId,
+              text: chunk.text,
+              embedding,
+              metadata: {
+                ...document.metadata,
+                ...chunk.metadata,
+                file_path: document.filePath,
+                file_name: document.fileName,
+              },
+              docId,
+            });
+          }
+
+          try {
+            await updateMetadataStats(connector, dbName, chunks, [
+              {text: document.text},
+            ]);
+          } catch {
+            // Metadata table may not exist
+          }
+
+          console.log(
+            `✓ Added document with ${nodeIds.length} chunks to ${dbName}`,
+          );
+          return nodeIds;
+        },
+
+        addDocuments: async (
+          documents: DocumentInput[],
+          options: PrepareOptions = {},
+        ): Promise<string[]> => {
+          const allNodeIds: string[] = [];
+          for (const doc of documents) {
+            const nodeIds = await get().rag.addDocument(doc, options);
+            allNodeIds.push(...nodeIds);
+          }
+          return allNodeIds;
+        },
+
+        addPdfDocument: async (
+          file: File,
+          options: PrepareOptions = {},
+        ): Promise<string[]> => {
+          if (!isPdfFile(file)) {
+            throw new Error('File is not a PDF');
+          }
+
+          // Extract text from PDF
+          const text = await extractTextFromPDF(file);
+
+          // Add as document
+          return get().rag.addDocument(
+            {
+              text,
+              fileName: file.name,
+              metadata: {
+                source: 'pdf',
+                originalFileName: file.name,
+                fileSize: file.size,
+              },
+            },
+            options,
+          );
+        },
+
+        getSourceDocuments: async (
+          chunkIds: string[],
+          database?: string,
+        ): Promise<SourceDocument[]> => {
+          if (chunkIds.length === 0) return [];
+
+          const connector = get().db.connector;
+          const dbName = database || Array.from(databaseProviders.keys())[0];
+
+          const placeholders = chunkIds
+            .map((id) => `'${id.replace(/'/g, "''")}'`)
+            .join(', ');
+
+          // Get doc IDs from chunks
+          const docIdsResult = await connector.query(`
+            SELECT DISTINCT doc_id 
+            FROM ${dbName}.documents 
+            WHERE node_id IN (${placeholders}) AND doc_id IS NOT NULL
+          `);
+          const docIds = docIdsResult
+            .toArray()
+            .map((r: any) => r.doc_id as string);
+
+          if (docIds.length === 0) return [];
+
+          const docPlaceholders = docIds
+            .map((id: string) => `'${id.replace(/'/g, "''")}'`)
+            .join(', ');
+          const result = await connector.query(`
+            SELECT doc_id, file_path, file_name, text, metadata_
+            FROM ${dbName}.source_documents
+            WHERE doc_id IN (${docPlaceholders})
+          `);
+
+          return result.toArray().map((row: any) => ({
+            docId: row.doc_id as string,
+            filePath: row.file_path as string,
+            fileName: row.file_name as string,
+            text: row.text as string,
+            metadata: row.metadata_ ? JSON.parse(row.metadata_ as string) : {},
+          }));
         },
       },
     };

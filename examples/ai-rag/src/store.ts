@@ -108,14 +108,12 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
 
       // RAG slice - semantic search through documentation
+      // Uses in-memory database for document embeddings
       ...createRagSlice({
         embeddingsDatabases: [
+          // User-uploaded documents database (in-memory)
           {
-            databaseFilePathOrUrl:
-              window.location.origin + '/rag/duckdb_docs_openai.duckdb',
-            databaseName: 'duckdb_docs',
-            // Use OpenAI text-embedding-3-small (must match database preparation)
-            // Pass getApiKey to retrieve API key from user settings at runtime
+            databaseName: 'user_docs',
             embeddingProvider: createOpenAIEmbeddingProvider(
               'text-embedding-3-small',
               1536,
@@ -129,7 +127,19 @@ const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       // Ai slice
       ...createAiSlice({
         getInstructions: () => {
-          return createDefaultAiInstructions(store);
+          const baseInstructions = createDefaultAiInstructions(store);
+          return `${baseInstructions}
+
+## Document Search (RAG)
+
+You have access to a \`search_documentation\` tool that searches through uploaded documents using semantic search.
+
+When users ask about documents they've uploaded (PDFs, markdown, text files), USE the search_documentation tool to find relevant content. The tool searches the "user_docs" database containing all uploaded documents.
+
+Example: If a user asks "explain the paper" or "what does the document say about X", use:
+- search_documentation with a relevant query
+
+Always search first before saying you don't have access to documents.`;
         },
 
         // Add custom tools
