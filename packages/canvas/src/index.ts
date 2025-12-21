@@ -8,7 +8,10 @@ export type {CanvasSliceConfig} from './CanvasSlice';
 export type {
   CanvasSliceState,
   CanvasDagMeta,
-  CanvasNodeSchema,
+  CanvasNode as CanvasNodeSchema,
 } from './CanvasSlice';
-export {CanvasSliceConfigSchema, CanvasEdgeSchema} from './CanvasSlice';
+export {
+  CanvasSliceConfig as CanvasSliceConfigSchema,
+  CanvasEdge as CanvasEdgeSchema,
+} from './CanvasSlice';
 export {Canvas} from './Canvas';

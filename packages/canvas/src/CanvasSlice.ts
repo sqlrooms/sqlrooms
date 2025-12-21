@@ -58,7 +58,7 @@ function isSqlData(data: CanvasNodeData): data is SqlData {
 }
 
 function getUniqueSqlTitle(
-  nodes: CanvasNodeSchema[],
+  nodes: CanvasNode[],
   baseTitle: string,
   excludeNodeId?: string,
 ): string {
@@ -73,7 +73,7 @@ function getUniqueSqlTitle(
   return `${baseTitle} ${counter}`;
 }
 
-export const CanvasNodeSchema = z.object({
+export const CanvasNode = z.object({
   id: z.string(),
   position: z.object({x: z.number(), y: z.number()}),
   type: CanvasNodeTypes,
@@ -81,14 +81,14 @@ export const CanvasNodeSchema = z.object({
   width: z.number(),
   height: z.number(),
 });
-export type CanvasNodeSchema = z.infer<typeof CanvasNodeSchema>;
+export type CanvasNode = z.infer<typeof CanvasNode>;
 
-export const CanvasEdgeSchema = z.object({
+export const CanvasEdge = z.object({
   id: z.string(),
   source: z.string(),
   target: z.string(),
 });
-export type CanvasEdgeSchema = z.infer<typeof CanvasEdgeSchema>;
+export type CanvasEdge = z.infer<typeof CanvasEdge>;
 
 export type SqlNodeQueryResult =
   | {status: 'idle'}
@@ -96,32 +96,32 @@ export type SqlNodeQueryResult =
   | {status: 'error'; error: string}
   | {status: 'success'; tableName: string; lastQueryStatement: string};
 
-export const CanvasDagMetaSchema = z.object({
+export const CanvasDagMeta = z.object({
   viewport: z.object({
     x: z.number(),
     y: z.number(),
     zoom: z.number(),
   }),
-  edges: z.array(CanvasEdgeSchema).default([]),
+  edges: z.array(CanvasEdge).default([]),
   nodeOrder: z.array(z.string()).default([]),
 });
-export type CanvasDagMeta = z.infer<typeof CanvasDagMetaSchema>;
+export type CanvasDagMeta = z.infer<typeof CanvasDagMeta>;
 
-export const CanvasSliceConfigSchema = z.object({
+export const CanvasSliceConfig = z.object({
   dags: z
     .record(
       z.string(),
       z.object({
         id: z.string(),
-        cells: z.record(z.string(), CanvasNodeSchema).default({}),
-        meta: CanvasDagMetaSchema,
+        cells: z.record(z.string(), CanvasNode).default({}),
+        meta: CanvasDagMeta,
       }),
     )
     .default({}),
   dagOrder: z.array(z.string()).default([]),
   currentDagId: z.string().optional(),
-});
-export type CanvasSliceConfig = DagConfig<CanvasNodeSchema, CanvasDagMeta>;
+}) satisfies z.ZodType<DagConfig<CanvasNode, CanvasDagMeta>>;
+export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = AiSliceState &
   DagSliceState & {
@@ -145,8 +145,8 @@ export type CanvasSliceState = AiSliceState &
         updater: (data: CanvasNodeData) => CanvasNodeData,
       ) => void;
       deleteNode: (nodeId: string) => void;
-      applyNodeChanges: (changes: NodeChange<CanvasNodeSchema>[]) => void;
-      applyEdgeChanges: (changes: EdgeChange<CanvasEdgeSchema>[]) => void;
+      applyNodeChanges: (changes: NodeChange<CanvasNode>[]) => void;
+      applyEdgeChanges: (changes: EdgeChange<CanvasEdge>[]) => void;
       addEdge: (edge: Connection) => void;
       executeSqlNodeQuery: (
         nodeId: string,
@@ -179,22 +179,22 @@ function findDagIdByNodeId(config: CanvasSliceConfig, nodeId: string) {
 }
 
 function dagNodesArray(dag?: {
-  cells: Record<string, CanvasNodeSchema>;
+  cells: Record<string, CanvasNode>;
   meta: CanvasDagMeta;
 }) {
   if (!dag) return [];
   if (dag.meta.nodeOrder.length) {
     return dag.meta.nodeOrder
       .map((id) => dag.cells[id])
-      .filter((n): n is CanvasNodeSchema => Boolean(n));
+      .filter((n): n is CanvasNode => Boolean(n));
   }
   return Object.values(dag.cells);
 }
 
 function normalizeCanvasConfig(
   input: Partial<CanvasSliceConfig> & {
-    nodes?: CanvasNodeSchema[];
-    edges?: CanvasEdgeSchema[];
+    nodes?: CanvasNode[];
+    edges?: CanvasEdge[];
     viewport?: {x: number; y: number; zoom: number};
   },
   fallbackDagId?: string,
@@ -216,7 +216,7 @@ function normalizeCanvasConfig(
     dags: {
       [dagId]: {
         id: dagId,
-        cells: nodes.reduce<Record<string, CanvasNodeSchema>>((acc, n) => {
+        cells: nodes.reduce<Record<string, CanvasNode>>((acc, n) => {
           acc[n.id] = n;
           return acc;
         }, {}),
@@ -268,7 +268,7 @@ export function createCanvasSlice(props: {
     (set, get, store) => {
       const dagSlice = createDagSlice<
         CanvasRootState,
-        CanvasNodeSchema,
+        CanvasNode,
         CanvasDagMeta
       >({
         getDagConfig: (state) => state.canvas.config,
@@ -569,12 +569,12 @@ export function createCanvasSlice(props: {
             }
           },
 
-          applyNodeChanges: (changes: NodeChange<CanvasNodeSchema>[]) => {
+          applyNodeChanges: (changes: NodeChange<CanvasNode>[]) => {
             set((state: CanvasRootState) =>
               produce(state, (draft: CanvasRootState) => {
                 const {dag} = ensureDagExists(draft.canvas.config);
                 const updated = applyNodeChanges(changes, dagNodesArray(dag));
-                dag.cells = updated.reduce<Record<string, CanvasNodeSchema>>(
+                dag.cells = updated.reduce<Record<string, CanvasNode>>(
                   (acc, node) => {
                     acc[node.id] = node;
                     return acc;
@@ -586,7 +586,7 @@ export function createCanvasSlice(props: {
             );
           },
 
-          applyEdgeChanges: (changes: EdgeChange<CanvasEdgeSchema>[]) => {
+          applyEdgeChanges: (changes: EdgeChange<CanvasEdge>[]) => {
             set((state: CanvasRootState) =>
               produce(state, (draft: CanvasRootState) => {
                 const {dag} = ensureDagExists(draft.canvas.config);

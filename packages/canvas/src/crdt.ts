@@ -1,6 +1,10 @@
 import {schema} from 'loro-mirror';
 import type {CrdtMirror} from '@sqlrooms/crdt';
-import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
+import {
+  CanvasSliceConfig,
+  type CanvasSliceState,
+  type CanvasNode,
+} from './CanvasSlice';
 
 /**
  * Mirror schema for syncing the `@sqlrooms/canvas` slice via `@sqlrooms/crdt`.
@@ -10,28 +14,40 @@ import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
  */
 export const canvasMirrorSchema = schema.LoroMap({
   config: schema.LoroMap({
-    nodes: schema.LoroList(
+    dags: schema.LoroList(
       schema.LoroMap({
         id: schema.String(),
-        position: schema.LoroMap({
-          x: schema.Number(),
-          y: schema.Number(),
+        cells: schema.LoroList(
+          schema.LoroMap({
+            id: schema.String(),
+            position: schema.LoroMap({
+              x: schema.Number(),
+              y: schema.Number(),
+            }),
+            type: schema.String(),
+            data: schema.Any(),
+            width: schema.Number(),
+            height: schema.Number(),
+          }),
+          (cell) => cell.id,
+        ),
+        meta: schema.LoroMap({
+          edges: schema.LoroList(
+            schema.LoroMap({
+              id: schema.String(),
+              source: schema.String(),
+              target: schema.String(),
+            }),
+            (edge) => edge.id,
+          ),
+          nodeOrder: schema.LoroList(schema.String()),
+          // viewport is kept local (unsynced)
         }),
-        type: schema.String(),
-        data: schema.Any(),
-        width: schema.Number(),
-        height: schema.Number(),
       }),
-      (node) => node.id,
+      (dag) => dag.id,
     ),
-    edges: schema.LoroList(
-      schema.LoroMap({
-        id: schema.String(),
-        source: schema.String(),
-        target: schema.String(),
-      }),
-      (edge) => edge.id,
-    ),
+    dagOrder: schema.LoroList(schema.String()),
+    currentDagId: schema.String(),
   }),
 });
 
@@ -42,8 +58,9 @@ export type CanvasMirrorSchema = typeof canvasMirrorSchema;
  */
 export const canvasMirrorInitialState = {
   config: {
-    nodes: [],
-    edges: [],
+    dags: [],
+    dagOrder: [],
+    currentDagId: '',
   },
 };
 
@@ -61,21 +78,50 @@ export function createCanvasCrdtMirror<
     initialState: canvasMirrorInitialState,
     select: (state) => ({
       config: {
-        nodes: state.canvas.config.nodes,
-        edges: state.canvas.config.edges,
+        dags: Object.values(state.canvas.config.dags).map((dag) => ({
+          id: dag.id,
+          cells: Object.values(dag.cells),
+          meta: {
+            edges: dag.meta.edges,
+            nodeOrder: dag.meta.nodeOrder,
+          },
+        })),
+        dagOrder: state.canvas.config.dagOrder,
+        currentDagId: state.canvas.config.currentDagId || '',
       },
     }),
     apply: (value, set, get) => {
       if (!value?.config) return;
+      const currentConfig = get().canvas.config;
+
+      const newDags: Record<string, any> = {};
+      for (const dagValue of value.config.dags || []) {
+        const localDag = currentConfig.dags[dagValue.id];
+        newDags[dagValue.id] = {
+          id: dagValue.id,
+          cells: (dagValue.cells || []).reduce(
+            (acc: Record<string, any>, cell: any) => {
+              acc[cell.id] = cell;
+              return acc;
+            },
+            {},
+          ),
+          meta: {
+            ...dagValue.meta,
+            // Keep local viewport or use default
+            viewport: localDag?.meta.viewport ?? {x: 0, y: 0, zoom: 1},
+          },
+        };
+      }
+
       set((state: S) => ({
         ...state,
         canvas: {
           ...state.canvas,
           config: CanvasSliceConfig.parse({
-            ...get().canvas.config,
+            ...currentConfig,
             ...value.config,
-            // Keep local viewport unsynced
-            viewport: get().canvas.config.viewport,
+            dags: newDags,
           }),
         },
       }));

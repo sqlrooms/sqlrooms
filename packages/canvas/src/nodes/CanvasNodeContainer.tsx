@@ -10,7 +10,7 @@ import {
 import {Handle, NodeResizer, Position} from '@xyflow/react';
 import {PlusIcon, SparklesIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
-import {CanvasNodeSchema, useStoreWithCanvas} from '../CanvasSlice';
+import {CanvasNode, useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
 
 const PROMPT_PLACEHOLDER = {
@@ -37,15 +37,15 @@ export const CanvasNodeContainer: FC<
     (() => {
       const dagId = s.canvas.config.currentDagId ?? s.canvas.config.dagOrder[0];
       const dag = dagId ? s.canvas.config.dags[dagId] : undefined;
-      const nodes: CanvasNodeSchema[] = dag
+      const nodes: CanvasNode[] = dag
         ? dag.meta.nodeOrder.length
           ? dag.meta.nodeOrder
               .map((nid: string) => dag.cells[nid])
               .filter(Boolean)
-              .map((n: CanvasNodeSchema | undefined) => n as CanvasNodeSchema)
+              .map((n: CanvasNode | undefined) => n as CanvasNode)
           : Object.values(dag.cells)
         : [];
-      return nodes.find((n: CanvasNodeSchema) => n.id === id);
+      return nodes.find((n: CanvasNode) => n.id === id);
     })(),
   );
   const title = node?.data.title;
