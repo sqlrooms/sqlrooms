@@ -10,8 +10,10 @@ import {
 } from '@sqlrooms/canvas';
 import {
   createCellsSlice,
+  createDagSlice,
   CellsSliceState,
   CellsSliceConfigSchema,
+  createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {
   BaseRoomConfig,
@@ -79,7 +81,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       })(set, get, store),
 
-      ...createCellsSlice()(set, get, store),
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+      })(set, get, store),
+      ...createDagSlice()(set, get),
       ...createNotebookSlice()(set, get, store),
       ...createCanvasSlice({
         ai: {

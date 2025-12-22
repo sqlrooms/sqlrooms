@@ -1,13 +1,23 @@
+import React from 'react';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
-import {findCellInNotebook} from '../NotebookUtils';
+import {CellContainer} from './CellContainer';
 
 export const CellView: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s as any, id)?.cell,
+  const cell = useStoreWithNotebook((s) => s.cells.config.data[id]);
+  const cellType = cell?.type;
+  const registryItem = useStoreWithNotebook((s) =>
+    cellType ? s.cells.cellRegistry[cellType] : undefined,
   );
-  const render = useStoreWithNotebook(
-    (s) => s.notebook.cellRegistry[cell?.type || '']?.renderComponent,
-  );
-  if (!cell || !render) return null;
-  return render(id);
+
+  if (!cell || !registryItem) return null;
+
+  return registryItem.renderCell({
+    id,
+    cell,
+    renderContainer: ({header, content, footer}) => (
+      <CellContainer id={id} header={header} footer={footer}>
+        {content}
+      </CellContainer>
+    ),
+  });
 };

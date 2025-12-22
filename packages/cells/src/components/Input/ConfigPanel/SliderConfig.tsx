@@ -21,7 +21,7 @@ export const SliderConfig = () => {
             {...register('min', {
               valueAsNumber: true,
               validate: (v, formValues) =>
-                v <= formValues.max || 'Min should not exceed Max',
+                v <= (formValues as any).max || 'Min should not exceed Max',
             })}
           />
 
@@ -31,7 +31,8 @@ export const SliderConfig = () => {
             {...register('max', {
               valueAsNumber: true,
               validate: (v, formValues) =>
-                v >= formValues.min || 'Max should not be less than Min',
+                v >= (formValues as any).min ||
+                'Max should not be less than Min',
             })}
           />
         </div>

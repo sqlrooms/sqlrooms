@@ -1,6 +1,8 @@
 import type React from 'react';
 import {z} from 'zod';
 import type {StateCreator} from '@sqlrooms/room-store';
+import type {BaseRoomStoreState} from '@sqlrooms/room-shell';
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 
 /** Cell types */
 export const CellTypes = z.enum(['sql', 'text', 'vega', 'input']);
@@ -81,6 +83,11 @@ export const CellDataSchema = z.discriminatedUnion('type', [
 ]);
 export type CellData = z.infer<typeof CellDataSchema>;
 
+export type SqlCell = {id: string; type: 'sql'; data: SqlCellData};
+export type TextCell = {id: string; type: 'text'; data: TextCellData};
+export type VegaCell = {id: string; type: 'vega'; data: VegaCellData};
+export type InputCell = {id: string; type: 'input'; data: InputCellData};
+
 /** Canonical Cell */
 export const CellSchema = z
   .object({
@@ -88,6 +95,34 @@ export const CellSchema = z
   })
   .and(CellDataSchema);
 export type Cell = z.infer<typeof CellSchema>;
+
+/** Unified Cell Registry */
+export type CellContainerProps = {
+  header?: React.ReactNode;
+  content: React.ReactNode;
+  footer?: React.ReactNode;
+};
+
+export type CellRegistryItem<TCell extends Cell = Cell> = {
+  type: string;
+  title: string;
+  createCell: (id: string) => TCell;
+  renderCell: (props: {
+    id: string;
+    cell: TCell;
+    renderContainer: (props: CellContainerProps) => React.ReactElement;
+  }) => React.ReactElement;
+  /** Find dependencies for DAG - each cell type defines its own logic */
+  findDependencies: (args: {
+    cell: TCell;
+    cells: Record<string, Cell>;
+    sheetId: string;
+  }) => string[];
+  /** Optional: custom execution logic (defaults to SQL execution for sql type) */
+  runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
+};
+
+export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
 export const EdgeSchema = z.object({
@@ -171,18 +206,6 @@ export type DagSliceOptions<TRootState, TCell, TMeta> = {
   }) => Promise<void>;
 };
 
-export type RegistryItem<TCell> = {
-  title: string;
-  createCell: (id: string) => TCell;
-  renderComponent?: (id: string) => React.ReactElement;
-  findDependencies?: (
-    cell: TCell,
-    cells: Record<string, TCell>,
-    status: Record<string, unknown>,
-  ) => string[];
-  runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
-};
-
 export type SqlRunResult = {
   resultName?: string;
   referencedTables?: string[];
@@ -250,6 +273,7 @@ export type CellsSliceState = {
     config: CellsSliceConfig;
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;
+    cellRegistry: CellRegistry;
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => void;
@@ -275,5 +299,10 @@ export type CellsSliceState = {
     cancelCell: (id: string) => void;
   };
 };
+
+export type CellsRootState = BaseRoomStoreState &
+  DuckDbSliceState &
+  CellsSliceState &
+  DagSliceState;
 
 export type DagStateCreator<T> = StateCreator<T>;

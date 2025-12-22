@@ -17,18 +17,15 @@ export const AddNodePopover: FC<
   const [open, setOpen] = useState(false);
   const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
   const sheetId = useStoreWithCanvas((s) => s.cells.config.currentSheetId);
-  const onAddSql = () => {
+  const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
+
+  const onAdd = (type: string) => {
     if (sheetId) {
-      addNode({sheetId, parentId, nodeType: 'sql'});
+      addNode({sheetId, parentId, nodeType: type});
       setOpen(false);
     }
   };
-  const onAddVega = () => {
-    if (sheetId) {
-      addNode({sheetId, parentId, nodeType: 'vega'});
-      setOpen(false);
-    }
-  };
+
   return (
     <div className={cn(className)}>
       <Popover open={open} onOpenChange={setOpen}>
@@ -36,16 +33,13 @@ export const AddNodePopover: FC<
         <PopoverContent
           side="right"
           align="center"
-          className="max-w-[100px] border-none bg-transparent p-0 shadow-none"
+          className="flex w-auto flex-col gap-2 p-2"
         >
-          <div className="flex flex-col gap-2">
-            <Button size="xs" onClick={onAddSql}>
-              Query
+          {Object.entries(registry).map(([type, reg]) => (
+            <Button key={type} size="xs" onClick={() => onAdd(type)}>
+              {reg.title}
             </Button>
-            <Button size="xs" onClick={onAddVega}>
-              Visualize
-            </Button>
-          </div>
+          ))}
         </PopoverContent>
       </Popover>
     </div>

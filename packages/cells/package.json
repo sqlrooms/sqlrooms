@@ -33,6 +33,9 @@
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
+    "react-hook-form": "^7.68.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "zod": "^3.25.73"
   },
   "peerDependencies": {

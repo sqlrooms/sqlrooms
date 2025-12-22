@@ -34,9 +34,6 @@ const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
 const CANVAS_SCHEMA_NAME = 'canvas';
 
-export const CanvasNodeTypes = z.enum(['sql', 'vega']);
-export type CanvasNodeTypes = z.infer<typeof CanvasNodeTypes>;
-
 /** View metadata for a single node on the canvas */
 export const CanvasNodeMeta = z.object({
   id: z.string(),
@@ -83,7 +80,7 @@ export type CanvasSliceState = AiSliceState & {
 
     addNode: (params: {
       sheetId: string;
-      nodeType?: CanvasNodeTypes;
+      nodeType?: string;
       initialPosition?: XYPosition;
       parentId?: string;
     }) => string;
@@ -174,29 +171,25 @@ export function createCanvasSlice(props: {
           parentId,
         }: {
           sheetId: string;
-          nodeType?: CanvasNodeTypes;
+          nodeType?: string;
           initialPosition?: XYPosition;
           parentId?: string;
         }) => {
           const newId = createId();
+          const registry = get().cells.cellRegistry;
+          const reg = registry[nodeType];
+          if (!reg) return newId;
 
           // 1. Create the cell in CellsSlice
+          const cell = reg.createCell(newId) as Cell;
+
           const existingTitles = Object.values(get().cells.config.data).map(
             (c) => (c.data as any).title,
           );
-          const newTitle = generateUniqueName(
-            nodeType === 'sql' ? 'Query' : 'Chart',
+          (cell.data as any).title = generateUniqueName(
+            reg.title,
             existingTitles,
           );
-
-          const cell: Cell =
-            nodeType === 'sql'
-              ? {
-                  id: newId,
-                  type: 'sql',
-                  data: {title: newTitle, sql: 'SELECT 1'},
-                }
-              : {id: newId, type: 'vega', data: {title: newTitle}};
 
           get().cells.addCell(sheetId, cell);
 

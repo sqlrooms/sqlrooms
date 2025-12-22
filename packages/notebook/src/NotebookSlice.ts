@@ -8,16 +8,7 @@ import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-shell';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import React from 'react';
-import {InputCell} from './cells/Input/InputCell';
-import {SqlCell} from './cells/SqlCell';
-import {TextCell} from './cells/TextCell';
-import {VegaCell} from './cells/Vega/VegaCell';
-import {
-  NotebookCell,
-  NotebookCellTypes,
-  NotebookSliceConfig,
-} from './cellSchemas';
+import {NotebookCell, NotebookSliceConfig} from './cellSchemas';
 import {getCellTypeLabel} from './NotebookUtils';
 import type {NotebookSliceState} from './NotebookStateTypes';
 
@@ -87,9 +78,6 @@ export function createNotebookSlice(props?: {
                 draft.notebook.config.sheets[id] = {
                   id,
                   meta: {
-                    title:
-                      title ||
-                      `Notebook ${Object.keys(draft.notebook.config.sheets).length + 1}`,
                     cellOrder: [],
                     inputBarOrder: [],
                     showInputBar: true,
@@ -102,12 +90,6 @@ export function createNotebookSlice(props?: {
 
           renameTab: (id, title) => {
             get().cells.renameSheet(id, title);
-            set((state) =>
-              produce(state, (draft) => {
-                const sheet = getSheet(draft.notebook.config, id);
-                if (sheet) sheet.meta.title = title;
-              }),
-            );
           },
 
           setCurrentTab: (id) => {
@@ -134,7 +116,7 @@ export function createNotebookSlice(props?: {
 
           addCell: (tabId, type, index) => {
             const id = createId();
-            const reg = get().notebook.cellRegistry[type];
+            const reg = get().cells.cellRegistry[type];
             if (!reg) return id;
 
             const cell = reg.createCell(id) as Cell;
@@ -170,7 +152,6 @@ export function createNotebookSlice(props?: {
                   sheet = {
                     id: tabId,
                     meta: {
-                      title: 'Notebook',
                       cellOrder: [],
                       inputBarOrder: [],
                       showInputBar: true,
@@ -273,60 +254,6 @@ export function createNotebookSlice(props?: {
 
           runCell: async (cellId, opts) => {
             await get().cells.runCell(cellId, opts);
-          },
-
-          cellRegistry: {
-            sql: {
-              title: 'SQL',
-              createCell: (id) =>
-                ({
-                  id,
-                  type: 'sql',
-                  data: {title: 'SQL', sql: ''},
-                }) as NotebookCell,
-              renderComponent: (id: string) =>
-                React.createElement(SqlCell, {id}),
-              findDependencies: () => [], // Dependencies are now handled by edges in CellsSlice
-            },
-            text: {
-              title: 'Text',
-              createCell: (id) =>
-                ({
-                  id,
-                  type: 'text',
-                  data: {title: 'Text', text: ''},
-                }) as NotebookCell,
-              renderComponent: (id: string) =>
-                React.createElement(TextCell, {id}),
-              findDependencies: () => [],
-            },
-            vega: {
-              title: 'Vega',
-              createCell: (id) =>
-                ({
-                  id,
-                  type: 'vega',
-                  data: {title: 'Chart', sqlId: ''},
-                }) as NotebookCell,
-              renderComponent: (id: string) =>
-                React.createElement(VegaCell, {id}),
-              findDependencies: () => [],
-            },
-            input: {
-              title: 'Input',
-              createCell: (id) =>
-                ({
-                  id,
-                  type: 'input',
-                  data: {
-                    title: 'Input',
-                    input: {kind: 'text', varName: 'input_1', value: ''},
-                  },
-                }) as NotebookCell,
-              renderComponent: (id: string) =>
-                React.createElement(InputCell, {id}),
-              findDependencies: () => [],
-            },
           },
         },
       };

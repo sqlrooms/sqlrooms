@@ -48,7 +48,6 @@ export type NotebookCell = z.infer<typeof NotebookCellSchema>;
 
 /** Notebook View Meta */
 export const NotebookSheetMetaSchema = z.object({
-  title: z.string().default('Notebook'),
   cellOrder: z.array(z.string()).default([]),
   inputBarOrder: z.array(z.string()).default([]),
   showInputBar: z.boolean().default(true),
@@ -68,8 +67,12 @@ export const NotebookSliceConfigSchema = z.object({
 });
 export type NotebookSliceConfig = z.infer<typeof NotebookSliceConfigSchema>;
 
-export const NotebookTabSchema = NotebookSheetMetaSchema.extend({
+export const NotebookTabSchema = z.object({
   id: z.string(),
+  cellOrder: z.array(z.string()).default([]),
+  inputBarOrder: z.array(z.string()).default([]),
+  showInputBar: z.boolean().default(true),
+  name: z.string(), // Title from CellsSlice
 });
 export type NotebookTab = z.infer<typeof NotebookTabSchema>;
 

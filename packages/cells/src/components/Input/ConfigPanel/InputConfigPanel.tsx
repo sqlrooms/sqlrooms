@@ -19,8 +19,8 @@ import {SettingsIcon} from 'lucide-react';
 
 import {TextConfig} from './TextConfig';
 import {DropdownConfig} from './DropdownConfig';
-import {initializeInput} from '../../../NotebookUtils';
-import {InputTypes, InputUnion} from '../../../cellSchemas';
+import {initializeInput} from '../../../utils';
+import {InputTypes, InputUnion} from '../../../types';
 import {SliderConfig} from './SliderConfig';
 
 type Props = {

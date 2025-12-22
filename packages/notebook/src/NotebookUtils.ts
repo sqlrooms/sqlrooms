@@ -11,14 +11,15 @@ import {
 import type {CellsRootState} from '@sqlrooms/cells';
 
 export const findTab = (
-  notebook: NotebookSliceConfig,
+  state: CellsRootState & {notebook: {config: NotebookSliceConfig}},
   tabId: string,
 ): NotebookTab => {
-  const sheet = notebook.sheets[tabId];
-  if (!sheet) {
+  const sheet = state.notebook.config.sheets[tabId];
+  const cellsSheet = state.cells.config.sheets[tabId];
+  if (!sheet || !cellsSheet) {
     throw new Error(`Tab with id ${tabId} not found`);
   }
-  return {id: sheet.id, ...sheet.meta};
+  return {id: sheet.id, ...sheet.meta, name: cellsSheet.title};
 };
 
 export const findCellInNotebook = (

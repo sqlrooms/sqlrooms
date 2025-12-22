@@ -6,20 +6,6 @@ import type {
   NotebookSliceConfig,
 } from './cellSchemas';
 
-export type NotebookCellRegistryItem = {
-  title: string;
-  createCell: (id: string) => NotebookCell;
-  renderComponent: (id: string) => React.ReactElement;
-  findDependencies: (
-    cell: NotebookCell,
-    cells: Record<string, NotebookCell>,
-    status: Record<string, CellStatus>,
-  ) => string[];
-  runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
-};
-
-export type CellRegistry = Record<string, NotebookCellRegistryItem>;
-
 export type NotebookSliceState = {
   notebook: {
     config: NotebookSliceConfig;
@@ -34,7 +20,7 @@ export type NotebookSliceState = {
     toggleShowInputBar: (id: string) => void;
 
     // Cell actions (delegate to cells, keep display order here)
-    addCell: (tabId: string, type: NotebookCellTypes, index?: number) => string;
+    addCell: (tabId: string, type: string, index?: number) => string;
     moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
     removeCell: (cellId: string) => void;
     renameCell: (cellId: string, name: string) => void;
@@ -49,7 +35,5 @@ export type NotebookSliceState = {
     runAllCells: (tabId: string) => Promise<void>;
     runAllCellsCascade: (tabId: string) => Promise<void>;
     cancelRunCell: (cellId: string) => void;
-
-    cellRegistry: Record<string, NotebookCellRegistryItem>;
   };
 };

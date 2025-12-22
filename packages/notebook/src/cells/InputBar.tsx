@@ -1,8 +1,8 @@
 import {Toggle} from '@sqlrooms/ui';
 import {FC} from 'react';
 
-import {InputItem} from './Input/InputCell';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
+import {CellView} from './CellView';
 
 export const ShowInputBarToggle = () => {
   const toggleShowInputBar = useStoreWithNotebook(
@@ -43,7 +43,7 @@ export const InputBar: FC<{inputBarOrder: string[]; showInputBar: boolean}> = ({
       <div className="flex flex-wrap">
         {inputBarOrder.length > 0
           ? inputBarOrder.map((id) => (
-              <InputItem id={id} key={`cellOrder-${id}`} />
+              <CellView id={id} key={`cellOrder-${id}`} />
             ))
           : 'No inputs yet'}
       </div>

@@ -86,10 +86,10 @@ export const Notebook: React.FC = () => {
     return [...ordered, ...missing];
   }, [sheet, cellsSheet]);
 
-  const tab = useMemo(
-    () => (sheet ? {id: sheet.id, ...sheet.meta, cellOrder} : undefined),
-    [sheet, cellOrder],
-  );
+  const tab = useMemo(() => {
+    if (!sheet || !cellsSheet) return undefined;
+    return {id: sheet.id, ...sheet.meta, name: cellsSheet.title, cellOrder};
+  }, [sheet, cellsSheet, cellOrder]);
 
   const addCell = useStoreWithNotebook((s) => s.notebook.addCell);
   const addTab = useStoreWithNotebook((s) => s.notebook.addTab);

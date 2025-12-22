@@ -273,37 +273,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
 ## Files to Modify
 
-| File | Changes |
-
-|------|---------|
-
-| `packages/cells/src/types.ts` | Add Sheet, Edge types; expand CellsSliceState |
-
-| `packages/cells/src/cellsSlice.ts` | Add sheets, edges, DagSlice; sheet CRUD |
-
-| `packages/cells/src/sqlHelpers.ts` | Add deriveEdgesFromSql helper |
-
-| `packages/cells/src/index.ts` | Export new types |
-
-| `packages/notebook/src/NotebookSlice.ts` | Remove DagSlice, cell storage; keep viewMeta only |
-
-| `packages/notebook/src/cellSchemas.ts` | Simplify to reference CellsSlice types |
-
-| `packages/notebook/src/NotebookStateTypes.ts` | Update state types |
-
-| `packages/notebook/src/cells/*.tsx` | Update to read from cells.data/cells.status |
-
-| `packages/canvas/src/CanvasSlice.ts` | Remove DagSlice, cell storage; keep viewMeta only |
-
-| `packages/canvas/src/Canvas.tsx` | Read cells from cells.data |
-
-| `packages/canvas/src/nodes/*.tsx` | Read from cells.data/cells.status |
-
-| `examples/notebook/src/store.ts` | Update slice composition |
+| File | Changes ||------|---------|| `packages/cells/src/types.ts` | Add Sheet, Edge types; expand CellsSliceState || `packages/cells/src/cellsSlice.ts` | Add sheets, edges, DagSlice; sheet CRUD || `packages/cells/src/sqlHelpers.ts` | Add deriveEdgesFromSql helper || `packages/cells/src/index.ts` | Export new types || `packages/notebook/src/NotebookSlice.ts` | Remove DagSlice, cell storage; keep viewMeta only || `packages/notebook/src/cellSchemas.ts` | Simplify to reference CellsSlice types || `packages/notebook/src/NotebookStateTypes.ts` | Update state types || `packages/notebook/src/cells/*.tsx` | Update to read from cells.data/cells.status || `packages/canvas/src/CanvasSlice.ts` | Remove DagSlice, cell storage; keep viewMeta only || `packages/canvas/src/Canvas.tsx` | Read cells from cells.data || `packages/canvas/src/nodes/*.tsx` | Read from cells.data/cells.status || `examples/notebook/src/store.ts` | Update slice composition |
 
 ## Migration Notes
 
 - Rename "tabs" (Notebook) and "dags" (Canvas) to "sheets" uniformly
 - Edges become the single dependency mechanism for both views
 - Notebook auto-derives edges when SQL changes
-- Canvas allows manual edge manipulation

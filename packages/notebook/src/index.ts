@@ -6,11 +6,7 @@ export {
 export {Notebook} from './Notebook';
 export {useStoreWithNotebook} from './useStoreWithNotebook';
 
-export type {
-  CellRegistry,
-  NotebookCellRegistryItem,
-  NotebookSliceState,
-} from './NotebookStateTypes';
+export type {NotebookSliceState} from './NotebookStateTypes';
 
 export {
   InputTypes,

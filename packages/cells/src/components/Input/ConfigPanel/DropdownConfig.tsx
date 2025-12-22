@@ -21,8 +21,8 @@ export const DropdownConfig = () => {
     clearErrors,
     formState: {errors},
   } = useFormContext();
-  const options = watch('options') || [];
-  const dropdownValue = watch('value') || '';
+  const options = (watch('options') as string[]) || [];
+  const dropdownValue = (watch('value') as string) || '';
 
   const [option, setOption] = useState('');
 

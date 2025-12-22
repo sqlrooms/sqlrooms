@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useCallback} from 'react';
 import {
   EditableText,
   Input,
@@ -9,12 +9,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@sqlrooms/ui';
+import {useCellsStore, type CellsStoreState} from '../hooks';
+import type {CellContainerProps, InputCell, InputUnion, Cell} from '../types';
+import {InputConfigPanel} from './Input/ConfigPanel/InputConfigPanel';
+import {produce} from 'immer';
 
-import {CellContainer} from '../CellContainer';
-import {useStoreWithNotebook} from '../../useStoreWithNotebook';
-import {InputConfigPanel} from './InputConfigPanel/InputConfigPanel';
-import {InputUnion, InputCell as InputCellType} from '../../cellSchemas';
-import {findCellInNotebook} from '../../NotebookUtils';
+export type InputCellContentProps = {
+  id: string;
+  cell: InputCell;
+  renderContainer: (props: CellContainerProps) => React.ReactElement;
+};
 
 const RenderInput: React.FC<{
   input: InputUnion;
@@ -54,7 +58,7 @@ const RenderInput: React.FC<{
             <SelectValue />
           </SelectTrigger>
           <SelectContent onCloseAutoFocus={(e) => e.preventDefault()}>
-            {input.options.map((option) => (
+            {(input.options as string[]).map((option: string) => (
               <SelectItem className="text-xs" key={option} value={option}>
                 {option}
               </SelectItem>
@@ -67,51 +71,56 @@ const RenderInput: React.FC<{
   }
 };
 
-export const InputItem: React.FC<{id: string}> = ({id}) => {
-  const cell = useStoreWithNotebook(
-    (s) => findCellInNotebook(s as any, id)?.cell,
-  );
-  const remove = useStoreWithNotebook((s) => s.notebook.removeCell);
-  const update = useStoreWithNotebook((s) => s.notebook.updateCell);
-  if (!cell || cell.type !== 'input') return null;
+export const InputCellContent: React.FC<InputCellContentProps> = ({
+  id,
+  cell,
+  renderContainer,
+}) => {
+  const updateCell = useCellsStore((s: CellsStoreState) => s.cells.updateCell);
+  const removeCell = useCellsStore((s: CellsStoreState) => s.cells.removeCell);
   const input = cell.data.input;
 
-  const updateInput = (patch: Partial<InputUnion>) =>
-    update(id, (c: any) => {
-      return {
-        ...c,
-        data: {
-          ...c.data,
-          input: {...c.data.input, ...patch},
-        },
-      } as any;
-    });
+  const updateInput = useCallback(
+    (patch: Partial<InputUnion>) => {
+      updateCell(id, (c: Cell) =>
+        produce(c, (draft) => {
+          if (draft.type === 'input') {
+            draft.data.input = {...draft.data.input, ...patch} as any;
+          }
+        }),
+      );
+    },
+    [id, updateCell],
+  );
 
-  return (
-    <div className="mx-2 flex w-[200px] flex-col gap-1 py-1 text-sm">
-      <div className="flex items-center justify-between gap-2">
+  const header = (
+    <div className="flex items-center justify-between gap-2">
+      <div className="flex items-center gap-2">
         <EditableText
           value={input.varName}
           onChange={(varName) => updateInput({varName})}
           className="h-6 text-xs font-semibold shadow-none outline-none ring-0"
         />
-        <InputConfigPanel
-          input={input}
-          updateInput={updateInput}
-          onRemove={() => remove(id)}
-        />
+        <span className="text-[10px] font-bold uppercase text-gray-400">
+          Input
+        </span>
       </div>
+      <InputConfigPanel
+        input={input}
+        updateInput={updateInput}
+        onRemove={() => removeCell(id)}
+      />
+    </div>
+  );
+
+  const content = (
+    <div className="p-2">
       <RenderInput input={input} updateInput={updateInput} />
     </div>
   );
-};
 
-export const InputCell: React.FC<{id: string}> = ({id}) => {
-  return (
-    <CellContainer id={id} typeLabel="Input">
-      <div className="p-2">
-        <InputItem id={id} />
-      </div>
-    </CellContainer>
-  );
+  return renderContainer({
+    header,
+    content,
+  });
 };

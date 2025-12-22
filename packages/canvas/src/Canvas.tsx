@@ -14,13 +14,7 @@ import React, {useMemo} from 'react';
 import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
-import {SqlNode} from './nodes/SqlNode';
-import {VegaNode} from './nodes/VegaNode';
-
-const nodeTypes = {
-  sql: SqlNode,
-  vega: VegaNode,
-};
+import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
 
 export const SheetsTabBar: React.FC = () => {
   const sheetOrder = useStoreWithCanvas((s) => s.cells.config.sheetOrder);
@@ -76,6 +70,30 @@ export const SheetsTabBar: React.FC = () => {
 };
 
 export const Canvas: React.FC = () => {
+  const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
+  const cellData = useStoreWithCanvas((s) => s.cells.config.data);
+  const nodeTypes = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(registry).map(([type, reg]) => [
+        type,
+        ({id}: {id: string}) => {
+          const cell = cellData[id];
+          if (!cell) return null;
+          return reg.renderCell({
+            id,
+            cell,
+            renderContainer: ({header, content, footer}) => (
+              <CanvasNodeContainer id={id} headerRight={header}>
+                {content}
+                {footer}
+              </CanvasNodeContainer>
+            ),
+          });
+        },
+      ]),
+    );
+  }, [registry, cellData]);
+
   const currentSheetId = useStoreWithCanvas(
     (s) => s.cells.config.currentSheetId,
   );
