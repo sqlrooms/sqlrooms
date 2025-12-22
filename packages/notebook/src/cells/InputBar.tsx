@@ -15,7 +15,7 @@ export const ShowInputBarToggle = () => {
     const sheet = currentTabId
       ? s.notebook.config.sheets[currentTabId]
       : undefined;
-    return sheet?.meta.showInputBar;
+    return sheet?.meta.showInputBar ?? true;
   });
 
   if (!currentTabId) return null;

@@ -11,6 +11,7 @@ export {
 } from './cellsSlice';
 export {createDefaultCellRegistry} from './defaultCellRegistry';
 export {useCellsStore} from './hooks';
+export {SheetsTabBar} from './components/SheetsTabBar';
 export {
   findSqlDependencies,
   renderSqlWithInputs,

@@ -272,12 +272,18 @@ export const CellsSliceConfigSchema = z.object({
 });
 export type CellsSliceConfig = z.infer<typeof CellsSliceConfigSchema>;
 
+export type CellsSliceOptions = {
+  cellRegistry: CellRegistry;
+  supportedSheetTypes?: SheetType[];
+};
+
 export type CellsSliceState = {
   cells: {
     config: CellsSliceConfig;
     status: Record<string, CellStatus>;
     activeAbortControllers: Record<string, AbortController>;
     cellRegistry: CellRegistry;
+    supportedSheetTypes: SheetType[];
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => void;

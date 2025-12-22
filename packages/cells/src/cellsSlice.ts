@@ -6,6 +6,7 @@ import type {
   Cell,
   CellRegistry,
   CellsRootState,
+  CellsSliceOptions,
   CellsSliceState,
   Edge,
   SheetType,
@@ -47,11 +48,18 @@ export function getSheetsByType(
 
 // --- Slice Implementation ---
 
-export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
+export function createCellsSlice(props: CellsSliceOptions) {
+  const supportedSheetTypes = props.supportedSheetTypes ?? [
+    'notebook',
+    'canvas',
+    'cell',
+  ];
+
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     return {
       cells: {
         cellRegistry: props.cellRegistry,
+        supportedSheetTypes,
         config: {
           data: {},
           sheets: {},
@@ -184,18 +192,21 @@ export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
           const id = createId();
           set((state) =>
             produce(state, (draft) => {
+              const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
+              const existingOfType = Object.values(
+                draft.cells.config.sheets,
+              ).filter((s) => s.type === type).length;
+              const defaultTitle = `${typeLabel} ${existingOfType + 1}`;
+
               draft.cells.config.sheets[id] = {
                 id,
                 type,
-                title:
-                  title || `Sheet ${draft.cells.config.sheetOrder.length + 1}`,
+                title: title || defaultTitle,
                 cellIds: [],
                 edges: [],
               };
               draft.cells.config.sheetOrder.push(id);
-              if (!draft.cells.config.currentSheetId) {
-                draft.cells.config.currentSheetId = id;
-              }
+              draft.cells.config.currentSheetId = id;
             }),
           );
           return id;

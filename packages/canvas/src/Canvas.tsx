@@ -1,4 +1,4 @@
-import {Button, useTheme, TabStrip} from '@sqlrooms/ui';
+import {Button, useTheme} from '@sqlrooms/ui';
 import {
   Background,
   BackgroundVariant,
@@ -9,70 +9,12 @@ import {
   ReactFlow,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import {PencilIcon, PlusIcon, TrashIcon} from 'lucide-react';
+import {PlusIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
 import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
-
-export const SheetsTabBar: React.FC = () => {
-  const sheetOrder = useStoreWithCanvas((s) => s.cells.config.sheetOrder);
-  const sheets = useStoreWithCanvas((s) => s.cells.config.sheets);
-  const currentSheetId = useStoreWithCanvas(
-    (s) => s.cells.config.currentSheetId,
-  );
-
-  const canvasSheetOrder = useMemo(
-    () => sheetOrder.filter((id) => sheets[id]?.type === 'canvas'),
-    [sheetOrder, sheets],
-  );
-
-  const tabs = useMemo(
-    () =>
-      canvasSheetOrder.map((id) => {
-        const sheet = sheets[id];
-        return {
-          id,
-          name: sheet?.title || 'Sheet',
-        };
-      }),
-    [canvasSheetOrder, sheets],
-  );
-
-  const setCurrent = useStoreWithCanvas((s) => s.cells.setCurrentSheet);
-  const addSheet = useStoreWithCanvas((s) => s.cells.addSheet);
-  const renameSheet = useStoreWithCanvas((s) => s.cells.renameSheet);
-  const removeSheet = useStoreWithCanvas((s) => s.cells.removeSheet);
-
-  return (
-    <TabStrip
-      tabs={tabs}
-      openTabs={canvasSheetOrder}
-      selectedTabId={currentSheetId}
-      onSelect={setCurrent}
-      onCreate={() => addSheet('New Canvas', 'canvas')}
-      onRename={renameSheet}
-      onClose={removeSheet}
-      renderTabMenu={(tab) => (
-        <>
-          <TabStrip.MenuItem onClick={() => renameSheet(tab.id, tab.name)}>
-            <PencilIcon className="mr-2 h-4 w-4" />
-            Rename
-          </TabStrip.MenuItem>
-          <TabStrip.MenuSeparator />
-          <TabStrip.MenuItem
-            variant="destructive"
-            onClick={() => removeSheet(tab.id)}
-          >
-            <TrashIcon className="mr-2 h-4 w-4" />
-            Delete
-          </TabStrip.MenuItem>
-        </>
-      )}
-    />
-  );
-};
 
 export const Canvas: React.FC = () => {
   const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
@@ -153,18 +95,12 @@ export const Canvas: React.FC = () => {
   const empty = nodes.length === 0;
   const {theme: colorMode} = useTheme();
 
-  if (!currentSheetId) {
-    return (
-      <div className="flex h-full flex-col items-center justify-center gap-4">
-        <p className="text-muted-foreground">No sheets yet</p>
-        <Button onClick={() => addSheet()}>Create first sheet</Button>
-      </div>
-    );
+  if (!cellsSheet || cellsSheet.type !== 'canvas') {
+    return null;
   }
 
   return (
     <div className="flex h-full w-full flex-col">
-      <SheetsTabBar />
       <div className="relative flex-1 overflow-hidden">
         {empty && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">

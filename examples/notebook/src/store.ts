@@ -83,6 +83,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       ...createCellsSlice({
         cellRegistry: createDefaultCellRegistry(),
+        supportedSheetTypes: ['notebook', 'canvas'],
       })(set, get, store),
       ...createDagSlice()(set, get),
       ...createNotebookSlice()(set, get, store),
