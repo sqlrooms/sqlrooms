@@ -146,7 +146,7 @@ export function createOnToolCompletedHandler(
  */
 export function convertToAiSDKTools(
   tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
+  onToolCompleted?: OpenAssistantTool['onToolCompleted'],
 ): ToolSet {
   return Object.entries(tools || {}).reduce(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
@@ -224,6 +224,11 @@ export function createLocalChatTransportFactory({
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
 
+      const providerOptions = state.ai.getProviderOptions?.({
+        provider,
+        modelId,
+      });
+
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
@@ -231,6 +236,7 @@ export function createLocalChatTransportFactory({
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
         temperature: AI_DEFAULT_TEMPERATURE,
+        ...(providerOptions ? {providerOptions} : {}),
       });
 
       return result.toUIMessageStreamResponse();
