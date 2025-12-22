@@ -1,18 +1,18 @@
 import {
   createNotebookSlice,
-  NotebookSliceConfigSchema,
+  NotebookSliceConfig,
   NotebookSliceState,
 } from '@sqlrooms/notebook';
 import {
   createCanvasSlice,
-  CanvasSliceConfigSchema,
+  CanvasSliceConfig,
   CanvasSliceState,
 } from '@sqlrooms/canvas';
 import {
   createCellsSlice,
   createDagSlice,
   CellsSliceState,
-  CellsSliceConfigSchema,
+  CellsSliceConfig,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {
@@ -106,9 +106,9 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createPersistHelpers({
         room: BaseRoomConfig,
         layout: LayoutConfig,
-        cells: CellsSliceConfigSchema,
-        notebook: NotebookSliceConfigSchema,
-        canvas: CanvasSliceConfigSchema,
+        cells: CellsSliceConfig,
+        notebook: NotebookSliceConfig,
+        canvas: CanvasSliceConfig,
       }),
     },
   ) as StateCreator<RoomState>,

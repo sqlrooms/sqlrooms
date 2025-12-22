@@ -12,14 +12,14 @@ export type CellTypes = z.infer<typeof CellTypes>;
 export const InputTypes = z.enum(['text', 'slider', 'dropdown']);
 export type InputTypes = z.infer<typeof InputTypes>;
 
-export const InputTextSchema = z.object({
+export const InputText = z.object({
   kind: z.literal(InputTypes.enum.text),
   varName: z.string(),
   value: z.string().default(''),
 });
-export type InputText = z.infer<typeof InputTextSchema>;
+export type InputText = z.infer<typeof InputText>;
 
-export const InputSliderSchema = z.object({
+export const InputSlider = z.object({
   kind: z.literal(InputTypes.enum.slider),
   varName: z.string(),
   min: z.number().default(0),
@@ -27,61 +27,61 @@ export const InputSliderSchema = z.object({
   step: z.number().default(1),
   value: z.number().default(0),
 });
-export type InputSlider = z.infer<typeof InputSliderSchema>;
+export type InputSlider = z.infer<typeof InputSlider>;
 
-export const InputDropdownSchema = z.object({
+export const InputDropdown = z.object({
   kind: z.literal(InputTypes.enum.dropdown),
   varName: z.string(),
   options: z.array(z.string()).default([]),
   value: z.string().default(''),
 });
-export type InputDropdown = z.infer<typeof InputDropdownSchema>;
+export type InputDropdown = z.infer<typeof InputDropdown>;
 
-export const InputUnionSchema = z.discriminatedUnion('kind', [
-  InputTextSchema,
-  InputSliderSchema,
-  InputDropdownSchema,
+export const InputUnion = z.discriminatedUnion('kind', [
+  InputText,
+  InputSlider,
+  InputDropdown,
 ]);
-export type InputUnion = z.infer<typeof InputUnionSchema>;
+export type InputUnion = z.infer<typeof InputUnion>;
 
 /** SQL Cell */
-export const SqlCellDataSchema = z.object({
+export const SqlCellData = z.object({
   title: z.string().default('Untitled'),
   sql: z.string().default(''),
 });
-export type SqlCellData = z.infer<typeof SqlCellDataSchema>;
+export type SqlCellData = z.infer<typeof SqlCellData>;
 
 /** Text Cell */
-export const TextCellDataSchema = z.object({
+export const TextCellData = z.object({
   title: z.string().default('Text'),
   text: z.string().default(''),
 });
-export type TextCellData = z.infer<typeof TextCellDataSchema>;
+export type TextCellData = z.infer<typeof TextCellData>;
 
 /** Vega Cell */
-export const VegaCellDataSchema = z.object({
+export const VegaCellData = z.object({
   title: z.string().default('Chart'),
   sqlId: z.string().optional(), // In notebook, it links to another cell. In canvas, it might be the same.
   sql: z.string().optional(), // In canvas, it often has its own SQL.
   vegaSpec: z.any().optional(),
 });
-export type VegaCellData = z.infer<typeof VegaCellDataSchema>;
+export type VegaCellData = z.infer<typeof VegaCellData>;
 
 /** Input Cell Data */
-export const InputCellDataSchema = z.object({
+export const InputCellData = z.object({
   title: z.string().default('Input'),
-  input: InputUnionSchema,
+  input: InputUnion,
 });
-export type InputCellData = z.infer<typeof InputCellDataSchema>;
+export type InputCellData = z.infer<typeof InputCellData>;
 
 /** Unified Cell Data */
-export const CellDataSchema = z.discriminatedUnion('type', [
-  z.object({type: z.literal('sql'), data: SqlCellDataSchema}),
-  z.object({type: z.literal('text'), data: TextCellDataSchema}),
-  z.object({type: z.literal('vega'), data: VegaCellDataSchema}),
-  z.object({type: z.literal('input'), data: InputCellDataSchema}),
+export const CellData = z.discriminatedUnion('type', [
+  z.object({type: z.literal('sql'), data: SqlCellData}),
+  z.object({type: z.literal('text'), data: TextCellData}),
+  z.object({type: z.literal('vega'), data: VegaCellData}),
+  z.object({type: z.literal('input'), data: InputCellData}),
 ]);
-export type CellData = z.infer<typeof CellDataSchema>;
+export type CellData = z.infer<typeof CellData>;
 
 export type SqlCell = {id: string; type: 'sql'; data: SqlCellData};
 export type TextCell = {id: string; type: 'text'; data: TextCellData};
@@ -89,12 +89,12 @@ export type VegaCell = {id: string; type: 'vega'; data: VegaCellData};
 export type InputCell = {id: string; type: 'input'; data: InputCellData};
 
 /** Canonical Cell */
-export const CellSchema = z
+export const Cell = z
   .object({
     id: z.string(),
   })
-  .and(CellDataSchema);
-export type Cell = z.infer<typeof CellSchema>;
+  .and(CellData);
+export type Cell = z.infer<typeof Cell>;
 
 /** Unified Cell Registry */
 export type CellContainerProps = {
@@ -125,27 +125,27 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
-export const SheetTypeSchema = z.enum(['notebook', 'canvas', 'cell']);
-export type SheetType = z.infer<typeof SheetTypeSchema>;
+export const SheetType = z.enum(['notebook', 'canvas', 'cell']);
+export type SheetType = z.infer<typeof SheetType>;
 
-export const EdgeSchema = z.object({
+export const Edge = z.object({
   id: z.string(),
   source: z.string(), // cellId
   target: z.string(), // cellId
 });
-export type Edge = z.infer<typeof EdgeSchema>;
+export type Edge = z.infer<typeof Edge>;
 
-export const SheetSchema = z.object({
+export const Sheet = z.object({
   id: z.string(),
-  type: SheetTypeSchema,
+  type: SheetType,
   title: z.string(),
   cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
-  edges: z.array(EdgeSchema).default([]), // Dependencies
+  edges: z.array(Edge).default([]), // Dependencies
 });
-export type Sheet = z.infer<typeof SheetSchema>;
+export type Sheet = z.infer<typeof Sheet>;
 
 /** Cell Status */
-export const SqlCellStatusSchema = z.object({
+export const SqlCellStatus = z.object({
   type: z.literal('sql'),
   status: z.enum(['idle', 'running', 'success', 'cancel', 'error']),
   lastError: z.string().optional(),
@@ -154,18 +154,15 @@ export const SqlCellStatusSchema = z.object({
   resultView: z.string().optional(),
   lastRunTime: z.number().optional(),
 });
-export type SqlCellStatus = z.infer<typeof SqlCellStatusSchema>;
+export type SqlCellStatus = z.infer<typeof SqlCellStatus>;
 
-export const OtherCellStatusSchema = z.object({
+export const OtherCellStatus = z.object({
   type: z.literal('other'),
 });
-export type OtherCellStatus = z.infer<typeof OtherCellStatusSchema>;
+export type OtherCellStatus = z.infer<typeof OtherCellStatus>;
 
-export const CellStatusSchema = z.union([
-  SqlCellStatusSchema,
-  OtherCellStatusSchema,
-]);
-export type CellStatus = z.infer<typeof CellStatusSchema>;
+export const CellStatus = z.union([SqlCellStatus, OtherCellStatus]);
+export type CellStatus = z.infer<typeof CellStatus>;
 
 /** DAG Types */
 export type DagDefinition<TCell, TMeta = unknown> = {
@@ -264,13 +261,13 @@ export type SqlCellRunButtonProps = Pick<
   'onRun' | 'onCancel' | 'status' | 'runLabel' | 'disabled'
 >;
 
-export const CellsSliceConfigSchema = z.object({
-  data: z.record(z.string(), CellSchema).default({}),
-  sheets: z.record(z.string(), SheetSchema).default({}),
+export const CellsSliceConfig = z.object({
+  data: z.record(z.string(), Cell).default({}),
+  sheets: z.record(z.string(), Sheet).default({}),
   sheetOrder: z.array(z.string()).default([]),
   currentSheetId: z.string().optional(),
 });
-export type CellsSliceConfig = z.infer<typeof CellsSliceConfigSchema>;
+export type CellsSliceConfig = z.infer<typeof CellsSliceConfig>;
 
 export type CellsSliceOptions = {
   cellRegistry: CellRegistry;

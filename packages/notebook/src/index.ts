@@ -11,14 +11,10 @@ export type {NotebookSliceState} from './NotebookStateTypes';
 export {
   InputTypes,
   NotebookCellTypes,
-  NotebookSliceConfigSchema,
-  NotebookTabSchema,
-} from './cellSchemas';
-export type {
   NotebookSliceConfig,
+  NotebookTab,
   InputCell,
   NotebookCell,
-  NotebookTab,
   NotebookSheet,
   NotebookSheetMeta,
   SqlCell,
