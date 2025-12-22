@@ -17,6 +17,10 @@ import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
 
+export type CustomUIDataType = {
+  'tool-additional-output': {toolCallId: string; output: unknown};
+};
+
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
@@ -396,11 +400,7 @@ export function createChatHandlers({
         }
       }
     },
-    onChatData: (
-      dataPart: DataUIPart<{
-        'tool-additional-output': {toolCallId: string; output: unknown};
-      }>,
-    ) => {
+    onChatData: (dataPart: DataUIPart<CustomUIDataType>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&
