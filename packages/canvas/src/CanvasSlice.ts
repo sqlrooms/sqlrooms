@@ -10,6 +10,7 @@ import {
   type CellsRootState,
   type CellsSliceState,
   type DagSliceState,
+  getSheetsByType,
 } from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
@@ -77,6 +78,7 @@ export type CanvasSliceState = AiSliceState & {
     setConfig: (config: CanvasSliceConfig) => void;
     setViewport: (viewport: Viewport) => void;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
+    getCanvasSheets: () => Record<string, import('@sqlrooms/cells').Sheet>;
 
     addNode: (params: {
       sheetId: string;
@@ -154,6 +156,8 @@ export function createCanvasSlice(props: {
             }),
           );
         },
+
+        getCanvasSheets: () => getSheetsByType(get(), 'canvas'),
 
         async initialize() {
           const sheetId =

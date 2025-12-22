@@ -16,16 +16,21 @@ export const SheetsTabBar: React.FC = () => {
     (s) => s.cells.config.currentSheetId,
   );
 
+  const notebookSheetOrder = useMemo(
+    () => sheetOrder.filter((id) => sheets[id]?.type === 'notebook'),
+    [sheetOrder, sheets],
+  );
+
   const tabs = useMemo(
     () =>
-      sheetOrder.map((id) => {
+      notebookSheetOrder.map((id) => {
         const sheet = sheets[id];
         return {
           id,
           name: sheet?.title || 'Sheet',
         };
       }),
-    [sheetOrder, sheets],
+    [notebookSheetOrder, sheets],
   );
 
   const setCurrent = useStoreWithNotebook((s) => s.notebook.setCurrentTab);
@@ -36,7 +41,7 @@ export const SheetsTabBar: React.FC = () => {
   return (
     <TabStrip
       tabs={tabs}
-      openTabs={sheetOrder}
+      openTabs={notebookSheetOrder}
       selectedTabId={currentSheetId}
       onSelect={setCurrent}
       onCreate={() => addTab()}

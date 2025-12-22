@@ -125,6 +125,9 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
+export const SheetTypeSchema = z.enum(['notebook', 'canvas', 'cell']);
+export type SheetType = z.infer<typeof SheetTypeSchema>;
+
 export const EdgeSchema = z.object({
   id: z.string(),
   source: z.string(), // cellId
@@ -134,6 +137,7 @@ export type Edge = z.infer<typeof EdgeSchema>;
 
 export const SheetSchema = z.object({
   id: z.string(),
+  type: SheetTypeSchema,
   title: z.string(),
   cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
   edges: z.array(EdgeSchema).default([]), // Dependencies
@@ -281,7 +285,7 @@ export type CellsSliceState = {
     updateCell: (id: string, updater: (cell: Cell) => Cell) => void;
 
     // Sheet CRUD
-    addSheet: (title?: string) => string;
+    addSheet: (title?: string, type?: SheetType) => string;
     removeSheet: (sheetId: string) => void;
     renameSheet: (sheetId: string, title: string) => void;
     setCurrentSheet: (sheetId: string) => void;

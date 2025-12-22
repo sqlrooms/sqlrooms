@@ -8,10 +8,42 @@ import type {
   CellsRootState,
   CellsSliceState,
   Edge,
+  SheetType,
 } from './types';
 
 export {createDagSlice} from './dagSlice';
 export type {CellsRootState} from './types';
+
+/**
+ * Finds the sheet ID that contains the given cell ID.
+ */
+export function findSheetIdForCell(
+  state: CellsRootState,
+  cellId: string,
+): string | undefined {
+  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
+    if (sheet.cellIds.includes(cellId)) {
+      return id;
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Gets all sheets of a specific type.
+ */
+export function getSheetsByType(
+  state: CellsRootState,
+  type: SheetType,
+): Record<string, import('./types').Sheet> {
+  const sheets: Record<string, import('./types').Sheet> = {};
+  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
+    if (sheet.type === type) {
+      sheets[id] = sheet;
+    }
+  }
+  return sheets;
+}
 
 // --- Slice Implementation ---
 
@@ -47,6 +79,7 @@ export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
               if (!sheet) {
                 sheet = {
                   id: sheetId,
+                  type: 'notebook',
                   title: 'Sheet',
                   cellIds: [],
                   edges: [],
@@ -147,12 +180,13 @@ export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
           }
         },
 
-        addSheet: (title?: string) => {
+        addSheet: (title?: string, type: SheetType = 'notebook') => {
           const id = createId();
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.sheets[id] = {
                 id,
+                type,
                 title:
                   title || `Sheet ${draft.cells.config.sheetOrder.length + 1}`,
                 cellIds: [],
@@ -186,6 +220,8 @@ export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
             produce(state, (draft) => {
               const sheet = draft.cells.config.sheets[sheetId];
               if (sheet) {
+                // We could add validation here, but usually UI handles it.
+                // For now, we'll just allow it as the primary logic is in view slices.
                 sheet.title = title;
               }
             }),
@@ -207,6 +243,7 @@ export function createCellsSlice(props: {cellRegistry: CellRegistry}) {
               if (!sheet) {
                 sheet = {
                   id: sheetId,
+                  type: 'notebook',
                   title: 'Sheet',
                   cellIds: [],
                   edges: [],

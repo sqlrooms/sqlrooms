@@ -3,6 +3,7 @@ import {
   type CellsSliceState,
   type DagSliceState,
   type Cell,
+  getSheetsByType,
 } from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-shell';
@@ -71,8 +72,10 @@ export function createNotebookSlice(props?: {
               }),
             ),
 
+          getNotebookSheets: () => getSheetsByType(get(), 'notebook'),
+
           addTab: (title) => {
-            const id = get().cells.addSheet(title);
+            const id = get().cells.addSheet(title, 'notebook');
             set((state) =>
               produce(state, (draft) => {
                 draft.notebook.config.sheets[id] = {

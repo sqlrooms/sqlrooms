@@ -11,6 +11,7 @@ export type NotebookSliceState = {
     config: NotebookSliceConfig;
     schemaName: string;
     setSchemaName: (name: string) => void;
+    getNotebookSheets: () => Record<string, import('@sqlrooms/cells').Sheet>;
 
     // Sheet actions (delegate to cells for the sheet itself, keep view meta here)
     addTab: (title?: string) => string;

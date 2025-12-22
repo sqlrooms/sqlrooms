@@ -3,6 +3,7 @@ import {renderSqlWithInputs, findSqlDependencies} from './sqlHelpers';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {produce} from 'immer';
 import type {Cell, SqlCellStatus} from './types';
+import {findSheetIdForCell} from './cellsSlice';
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;
@@ -58,19 +59,23 @@ export async function executeSqlCell(
     if (signal?.aborted) throw new Error('Query cancelled');
 
     const connector = await db.getConnector();
+    const sheetId = findSheetIdForCell(state, cellId);
+    const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
+    const finalSchemaName = sheet?.title || schemaName;
+
     await connector.query(
-      `CREATE SCHEMA IF NOT EXISTS ${escapeId(schemaName)}`,
+      `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
     );
 
     const tableName = makeQualifiedTableName({
       table: cell.data.title,
-      schema: schemaName,
+      schema: finalSchemaName,
       database: db.currentDatabase,
     }).toString();
 
     if (signal?.aborted) throw new Error('Query cancelled');
 
-    await connector.query(`CREATE OR REPLACE TABLE ${tableName} AS ${sql}`, {
+    await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
       signal,
     });
 

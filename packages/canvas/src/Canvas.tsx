@@ -23,16 +23,21 @@ export const SheetsTabBar: React.FC = () => {
     (s) => s.cells.config.currentSheetId,
   );
 
+  const canvasSheetOrder = useMemo(
+    () => sheetOrder.filter((id) => sheets[id]?.type === 'canvas'),
+    [sheetOrder, sheets],
+  );
+
   const tabs = useMemo(
     () =>
-      sheetOrder.map((id) => {
+      canvasSheetOrder.map((id) => {
         const sheet = sheets[id];
         return {
           id,
           name: sheet?.title || 'Sheet',
         };
       }),
-    [sheetOrder, sheets],
+    [canvasSheetOrder, sheets],
   );
 
   const setCurrent = useStoreWithCanvas((s) => s.cells.setCurrentSheet);
@@ -43,10 +48,10 @@ export const SheetsTabBar: React.FC = () => {
   return (
     <TabStrip
       tabs={tabs}
-      openTabs={sheetOrder}
+      openTabs={canvasSheetOrder}
       selectedTabId={currentSheetId}
       onSelect={setCurrent}
-      onCreate={() => addSheet()}
+      onCreate={() => addSheet('New Canvas', 'canvas')}
       onRename={renameSheet}
       onClose={removeSheet}
       renderTabMenu={(tab) => (
