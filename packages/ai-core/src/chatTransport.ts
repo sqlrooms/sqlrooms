@@ -17,6 +17,10 @@ import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
 
+export type CustomUIDataType = {
+  'tool-additional-output': {toolCallId: string; output: unknown};
+};
+
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
  * This is important when canceling with AbortController, which may leave incomplete tool-calls.
@@ -146,7 +150,7 @@ export function createOnToolCompletedHandler(
  */
 export function convertToAiSDKTools(
   tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
+  onToolCompleted?: OpenAssistantTool['onToolCompleted'],
 ): ToolSet {
   return Object.entries(tools || {}).reduce(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
@@ -224,6 +228,11 @@ export function createLocalChatTransportFactory({
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
 
+      const providerOptions = state.ai.getProviderOptions?.({
+        provider,
+        modelId,
+      });
+
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
@@ -231,6 +240,7 @@ export function createLocalChatTransportFactory({
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
         temperature: AI_DEFAULT_TEMPERATURE,
+        ...(providerOptions ? {providerOptions} : {}),
       });
 
       return result.toUIMessageStreamResponse();
@@ -390,9 +400,7 @@ export function createChatHandlers({
         }
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend (defensive guards)
+    onChatData: (dataPart: DataUIPart<CustomUIDataType>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&

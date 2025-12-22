@@ -127,6 +127,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return createDefaultAiInstructions(store);
         },
 
+        // Add providerOptions here, e.g. to set reasoningEffort for GPT reasoning models GPT-5.1 GPT-5.2
+        // getProviderOptions: () => {
+        //   return {
+        //     openai: {
+        //       reasoningEffort: 'high',
+        //     },
+        //   };
+        // },
+
         // Add custom tools
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
