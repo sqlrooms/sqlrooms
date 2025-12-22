@@ -396,9 +396,11 @@ export function createChatHandlers({
         }
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend (defensive guards)
+    onChatData: (
+      dataPart: DataUIPart<{
+        'tool-additional-output': {toolCallId: string; output: unknown};
+      }>,
+    ) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&
