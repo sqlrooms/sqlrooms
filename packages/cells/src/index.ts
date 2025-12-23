@@ -4,7 +4,6 @@ import {SqlCellContent} from './components/SqlCellContent';
 
 export {
   createCellsSlice,
-  createDagSlice,
   findSheetIdForCell,
   getSheetsByType,
   type CellsRootState,

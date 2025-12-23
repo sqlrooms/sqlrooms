@@ -1,7 +1,13 @@
 import {createId} from '@paralleldrive/cuid2';
 import {createSlice} from '@sqlrooms/room-shell';
 import {produce} from 'immer';
+import {generateUniqueName} from '@sqlrooms/utils';
 import {executeSqlCell} from './execution';
+import {
+  buildDependencyGraph,
+  collectReachable,
+  topologicalOrder,
+} from './dagUtils';
 import type {
   Cell,
   CellRegistry,
@@ -12,7 +18,6 @@ import type {
   SheetType,
 } from './types';
 
-export {createDagSlice} from './dagSlice';
 export type {CellsRootState} from './types';
 
 /**
@@ -52,7 +57,6 @@ export function createCellsSlice(props: CellsSliceOptions) {
   const supportedSheetTypes = props.supportedSheetTypes ?? [
     'notebook',
     'canvas',
-    'cell',
   ];
 
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
@@ -72,7 +76,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
         addCell: (sheetId: string, cell: Cell, index?: number) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.cells.config.data[cell.id] = cell;
+              draft.cells.config.data[cell.id] = cell as any;
               if (cell.type === 'sql') {
                 draft.cells.status[cell.id] = {
                   type: 'sql',
@@ -106,7 +110,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
               // Auto-derive edges from dependencies
               const deps =
                 props.cellRegistry[cell.type]?.findDependencies({
-                  cell,
+                  cell: cell as any,
                   cells: draft.cells.config.data as Record<string, Cell>,
                   sheetId,
                 }) ?? [];
@@ -148,13 +152,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
             produce(state, (draft) => {
               const cell = draft.cells.config.data[id];
               if (cell) {
-                const updatedCell = updater(cell);
-                draft.cells.config.data[id] = updatedCell;
+                const updatedCell = updater(cell as any);
+                draft.cells.config.data[id] = updatedCell as any;
 
                 // Update edges in all sheets this cell belongs to
                 const newDeps =
                   props.cellRegistry[updatedCell.type]?.findDependencies({
-                    cell: updatedCell,
+                    cell: updatedCell as any,
                     cells: draft.cells.config.data as Record<string, Cell>,
                     sheetId: '', // sheetId not needed for dependency derivation usually
                   }) ?? [];
@@ -182,7 +186,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             for (const sheetId of get().cells.config.sheetOrder) {
               const sheet = get().cells.config.sheets[sheetId];
               if (sheet?.cellIds.includes(id)) {
-                void get().dag.runDownstreamCascade(sheetId, id);
+                void get().cells.runDownstreamCascade(sheetId, id);
               }
             }
           }
@@ -193,10 +197,14 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               const typeLabel = type.charAt(0).toUpperCase() + type.slice(1);
-              const existingOfType = Object.values(
+              const existingTitles = Object.values(
                 draft.cells.config.sheets,
-              ).filter((s) => s.type === type).length;
-              const defaultTitle = `${typeLabel} ${existingOfType + 1}`;
+              ).map((s) => s.title);
+              const defaultTitle = generateUniqueName(
+                `${typeLabel} 1`,
+                existingTitles,
+                ' ',
+              );
 
               draft.cells.config.sheets[id] = {
                 id,
@@ -292,7 +300,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
               if (cell && sheet) {
                 const deps =
                   props.cellRegistry[cell.type]?.findDependencies({
-                    cell,
+                    cell: cell as any,
                     cells: draft.cells.config.data as Record<string, Cell>,
                     sheetId,
                   }) ?? [];
@@ -348,7 +356,68 @@ export function createCellsSlice(props: CellsSliceOptions) {
             controller.abort();
           }
         },
+
+        // DAG methods
+        getRootCells: (sheetId: string) => {
+          const {dependencies} = buildDependencyGraph(sheetId, get());
+          const ids = Object.keys(dependencies);
+          return ids.filter((id) => (dependencies[id]?.length ?? 0) === 0);
+        },
+        getDownstream: (sheetId: string, sourceCellId: string) => {
+          const {dependencies, dependents} = buildDependencyGraph(
+            sheetId,
+            get(),
+          );
+          const reachable = collectReachable(sourceCellId, dependents);
+          if (!reachable.size) return [];
+          reachable.delete(sourceCellId);
+          const rootsWithinScope = Array.from(reachable).filter((id) => {
+            const deps = dependencies[id] || [];
+            return deps.filter((d) => reachable.has(d)).length === 0;
+          });
+          return topologicalOrder(
+            rootsWithinScope,
+            dependencies,
+            dependents,
+            reachable,
+          );
+        },
+        runAllCellsCascade: async (sheetId: string) => {
+          const {dependencies, dependents} = buildDependencyGraph(
+            sheetId,
+            get(),
+          );
+          const roots = Object.keys(dependencies).filter(
+            (id) => (dependencies[id]?.length ?? 0) === 0,
+          );
+          const order = topologicalOrder(roots, dependencies, dependents);
+          for (const cellId of order) {
+            await get().cells.runCell(cellId, {cascade: false});
+          }
+        },
+        runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
+          const {dependencies, dependents} = buildDependencyGraph(
+            sheetId,
+            get(),
+          );
+          const reachable = collectReachable(sourceCellId, dependents);
+          if (!reachable.size) return;
+          reachable.delete(sourceCellId);
+          const rootsWithinScope = Array.from(reachable).filter((id) => {
+            const deps = dependencies[id] || [];
+            return deps.filter((d) => reachable.has(d)).length === 0;
+          });
+          const order = topologicalOrder(
+            rootsWithinScope,
+            dependencies,
+            dependents,
+            reachable,
+          );
+          for (const cellId of order) {
+            await get().cells.runCell(cellId, {cascade: false});
+          }
+        },
       },
-    };
+    } as CellsSliceState;
   });
 }

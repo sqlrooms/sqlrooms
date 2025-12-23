@@ -9,7 +9,6 @@ import {
   type Cell,
   type CellsRootState,
   type CellsSliceState,
-  type DagSliceState,
   getSheetsByType,
 } from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
@@ -56,7 +55,7 @@ export const CanvasSheetMeta = z.object({
 });
 export type CanvasSheetMeta = z.infer<typeof CanvasSheetMeta>;
 
-export const CanvasSliceConfigSchema = z.object({
+export const CanvasSliceConfig = z.object({
   sheets: z
     .record(
       z.string(),
@@ -68,7 +67,7 @@ export const CanvasSliceConfigSchema = z.object({
     )
     .default({}),
 });
-export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfigSchema>;
+export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
 export type CanvasSliceState = AiSliceState & {
   canvas: {
@@ -164,7 +163,7 @@ export function createCanvasSlice(props: {
             get().cells.config.currentSheetId ||
             get().cells.config.sheetOrder[0];
           if (!sheetId) return;
-          await get().dag.runAllCellsCascade(sheetId);
+          await get().cells.runAllCellsCascade(sheetId);
           await get().db.refreshTableSchemas();
         },
 
@@ -191,8 +190,9 @@ export function createCanvasSlice(props: {
             (c) => (c.data as any).title,
           );
           (cell.data as any).title = generateUniqueName(
-            reg.title,
+            `${reg.title} 1`,
             existingTitles,
+            ' ',
           );
 
           get().cells.addCell(sheetId, cell);
@@ -384,7 +384,6 @@ export function createCanvasSlice(props: {
 
 export type DuckDbSliceStateWithCanvas = DuckDbSliceState &
   CanvasSliceState &
-  DagSliceState &
   CellsRootState;
 
 export function useStoreWithCanvas<T>(

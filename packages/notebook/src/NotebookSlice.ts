@@ -1,7 +1,6 @@
 import {createId} from '@paralleldrive/cuid2';
 import {
   type CellsSliceState,
-  type DagSliceState,
   type Cell,
   getSheetsByType,
 } from '@sqlrooms/cells';
@@ -54,7 +53,6 @@ export function createNotebookSlice(props?: {
   type NotebookRootState = BaseRoomStoreState &
     DuckDbSliceState &
     NotebookSliceState &
-    DagSliceState &
     CellsSliceState;
 
   return createSlice<NotebookSliceState, NotebookRootState>(
@@ -75,7 +73,12 @@ export function createNotebookSlice(props?: {
           getNotebookSheets: () => getSheetsByType(get(), 'notebook'),
 
           addTab: (title) => {
-            const id = get().cells.addSheet(title, 'notebook');
+            const existingTitles = Object.values(get().cells.config.sheets).map(
+              (s) => s.title,
+            );
+            const finalTitle =
+              title || generateUniqueName('Notebook 1', existingTitles, ' ');
+            const id = get().cells.addSheet(finalTitle, 'notebook');
             set((state) =>
               produce(state, (draft) => {
                 draft.notebook.config.sheets[id] = {
@@ -117,6 +120,23 @@ export function createNotebookSlice(props?: {
             );
           },
 
+          initializeSheet: (id) => {
+            set((state) =>
+              produce(state, (draft) => {
+                if (!draft.notebook.config.sheets[id]) {
+                  draft.notebook.config.sheets[id] = {
+                    id,
+                    meta: {
+                      cellOrder: [],
+                      inputBarOrder: [],
+                      showInputBar: true,
+                    },
+                  };
+                }
+              }),
+            );
+          },
+
           addCell: (tabId, type, index) => {
             const id = createId();
             const reg = get().cells.cellRegistry[type];
@@ -130,8 +150,9 @@ export function createNotebookSlice(props?: {
             const baseLabel = getCellTypeLabel(cell.type);
             if (baseLabel) {
               (cell.data as any).title = generateUniqueName(
-                baseLabel,
+                `${baseLabel} 1`,
                 usedNames,
+                ' ',
               );
             }
 
@@ -252,7 +273,7 @@ export function createNotebookSlice(props?: {
           },
 
           runAllCellsCascade: async (tabId) => {
-            await get().dag.runAllCellsCascade(tabId);
+            await get().cells.runAllCellsCascade(tabId);
           },
 
           runCell: async (cellId, opts) => {

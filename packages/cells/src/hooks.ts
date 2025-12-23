@@ -1,9 +1,8 @@
 import {useBaseRoomStore} from '@sqlrooms/room-shell';
-import type {CellsSliceState, DagSliceState} from './types';
+import type {CellsSliceState} from './types';
 
 export type CellsStoreState = {
   cells: CellsSliceState['cells'];
-  dag: DagSliceState['dag'];
 };
 
 /**

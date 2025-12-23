@@ -1,6 +1,6 @@
 import {z} from 'zod';
 import {
-  CellTypes,
+  CellType,
   InputTypes,
   SqlCellData,
   TextCellData,
@@ -8,7 +8,8 @@ import {
   InputCellData,
 } from '@sqlrooms/cells';
 
-export {CellTypes as NotebookCellTypes, InputTypes};
+export {InputTypes};
+export type NotebookCellType = CellType;
 
 export const SqlCell = z.object({
   id: z.string(),

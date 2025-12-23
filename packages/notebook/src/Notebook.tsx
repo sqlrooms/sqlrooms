@@ -3,7 +3,6 @@ import React, {useEffect, useMemo} from 'react';
 
 import {useStoreWithNotebook} from './useStoreWithNotebook';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
-import {NotebookCellTypes} from './cellSchemas';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
 import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {CellView} from './cells/CellView';
@@ -48,11 +47,20 @@ export const Notebook: React.FC = () => {
     (s) => s.notebook.runAllCellsCascade,
   );
   const run = useStoreWithNotebook((s) => s.notebook.runCell);
+  const initializeSheet = useStoreWithNotebook(
+    (s) => s.notebook.initializeSheet,
+  );
 
-  const handleAddCellAndScroll = (type: NotebookCellTypes) => {
+  const handleAddCellAndScroll = (type: string) => {
     if (!currentTabId) return;
     addCell(currentTabId, type);
   };
+
+  useEffect(() => {
+    if (currentTabId && cellsSheet?.type === 'notebook' && !sheet) {
+      initializeSheet(currentTabId);
+    }
+  }, [currentTabId, cellsSheet, sheet, initializeSheet]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {

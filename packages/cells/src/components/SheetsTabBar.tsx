@@ -11,7 +11,6 @@ import {
 import {
   FileText,
   LayoutDashboard,
-  Square,
   PlusIcon,
   PencilIcon,
   TrashIcon,
@@ -26,7 +25,6 @@ export type SheetsTabBarProps = {
 const TYPE_ICONS: Record<SheetType, React.ElementType> = {
   notebook: FileText,
   canvas: LayoutDashboard,
-  cell: Square,
 };
 
 export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {

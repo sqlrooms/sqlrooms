@@ -10,12 +10,11 @@ import {
 import {FC, useEffect, useState} from 'react';
 
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
-import {NotebookCellTypes} from '../cellSchemas';
 import {TriggerButton} from './AddNewCellTrigger';
 import {getCellTypeLabel} from '../NotebookUtils';
 
 type Props = {
-  onAdd: (type: NotebookCellTypes) => void;
+  onAdd: (type: string) => void;
   enableShortcut?: boolean;
   triggerComponent?: React.ReactNode;
 };
@@ -59,7 +58,7 @@ export const AddNewCellDropdown: FC<Props> = ({
 };
 
 type ContentProps = {
-  onAddCell: (type: NotebookCellTypes) => void;
+  onAddCell: (type: string) => void;
   currentTabId?: string | null;
   align?: 'center' | 'start' | 'end';
   setOpen?: (open: boolean) => void;
@@ -71,6 +70,9 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
   align = 'center',
   setOpen,
 }) => {
+  const cellRegistry = useStoreWithNotebook((s) => s.cells.cellRegistry);
+  const availableTypes = Object.keys(cellRegistry);
+
   return (
     <PopoverContent
       align={align}
@@ -80,7 +82,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
       <Command tabIndex={0} loop className="focus-visible:outline-none">
         <CommandList className="focus-visible:outline-none">
           <CommandGroup className="[&_[cmdk-group-heading]]:text-foreground p-1 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-semibold">
-            {NotebookCellTypes.options.map((type: NotebookCellTypes) => {
+            {availableTypes.map((type: string) => {
               return (
                 <CommandItem
                   key={type}
@@ -92,7 +94,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
                   className="cursor-pointer"
                 >
                   <span className="text-xs capitalize">
-                    {getCellTypeLabel(type)}
+                    {getCellTypeLabel(type, cellRegistry)}
                   </span>
                 </CommandItem>
               );

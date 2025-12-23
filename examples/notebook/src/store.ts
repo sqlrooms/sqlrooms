@@ -5,12 +5,11 @@ import {
 } from '@sqlrooms/notebook';
 import {
   createCanvasSlice,
-  CanvasSliceConfig,
   CanvasSliceState,
+  CanvasSliceConfig,
 } from '@sqlrooms/canvas';
 import {
   createCellsSlice,
-  createDagSlice,
   CellsSliceState,
   CellsSliceConfig,
   createDefaultCellRegistry,
@@ -85,7 +84,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cellRegistry: createDefaultCellRegistry(),
         supportedSheetTypes: ['notebook', 'canvas'],
       })(set, get, store),
-      ...createDagSlice()(set, get),
       ...createNotebookSlice()(set, get, store),
       ...createCanvasSlice({
         ai: {

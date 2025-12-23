@@ -22,14 +22,14 @@ export async function executeSqlCell(
   if (!cell || cell.type !== 'sql') return;
 
   const {schemaName, cascade = true, signal} = options;
-  const sqlRaw = cell.data.sql || '';
+  const sqlRaw = (cell.data as any).sql || '';
 
   // 1. Gather inputs for SQL rendering
   const inputs = Object.values(state.cells.config.data)
-    .filter((c): c is Extract<Cell, {type: 'input'}> => c.type === 'input')
+    .filter((c) => c.type === 'input')
     .map((c) => ({
-      varName: c.data.input.varName,
-      value: c.data.input.value,
+      varName: (c.data as any).input.varName as string,
+      value: (c.data as any).input.value as string | number,
     }));
 
   const sql = renderSqlWithInputs(sqlRaw, inputs);
@@ -68,7 +68,7 @@ export async function executeSqlCell(
     );
 
     const tableName = makeQualifiedTableName({
-      table: cell.data.title,
+      table: (cell.data as any).title as string,
       schema: finalSchemaName,
       database: db.currentDatabase,
     }).toString();
@@ -85,9 +85,9 @@ export async function executeSqlCell(
     const referenced = findSqlDependencies({
       targetCell: cell,
       cells: state.cells.config.data,
-      getSqlText: (c) => (c.type === 'sql' ? c.data.sql : undefined),
+      getSqlText: (c) => (c.type === 'sql' ? (c.data as any).sql : undefined),
       getInputVarName: (c) =>
-        c.type === 'input' ? c.data.input.varName : undefined,
+        c.type === 'input' ? (c.data as any).input.varName : undefined,
       getSqlResultName: (id) => {
         const s = getState().cells.status[id];
         return s?.type === 'sql' ? s.resultName : undefined;
@@ -110,9 +110,9 @@ export async function executeSqlCell(
 
     // 4. Cascade if needed
     if (cascade) {
-      const currentDagId = state.dag.currentDagId;
-      if (currentDagId) {
-        await state.dag.runDownstreamCascade(currentDagId, cellId);
+      const currentSheetId = state.cells.config.currentSheetId;
+      if (currentSheetId) {
+        await state.cells.runDownstreamCascade(currentSheetId, cellId);
       }
     }
   } catch (e) {

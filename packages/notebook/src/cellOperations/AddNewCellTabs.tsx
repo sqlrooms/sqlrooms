@@ -2,24 +2,25 @@ import {Separator, Button} from '@sqlrooms/ui';
 import {FC} from 'react';
 
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
-import {NotebookCellTypes} from '../cellSchemas';
 import {getCellTypeLabel} from '../NotebookUtils';
 import {PlusIcon} from 'lucide-react';
 
 type Props = {
-  onAdd: (type: NotebookCellTypes) => void;
+  onAdd: (type: string) => void;
 };
 
 export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
   const currentTabId = useStoreWithNotebook(
     (s) => s.cells.config.currentSheetId,
   );
+  const cellRegistry = useStoreWithNotebook((s) => s.cells.cellRegistry);
+  const cellTypes = Object.keys(cellRegistry);
 
   return (
     <div className="grid w-full grid-cols-[1fr_auto_1fr] items-center gap-2 opacity-0 transition-opacity hover:opacity-100">
       <Separator className="w-full bg-gray-500" />
       <div className="flex gap-1">
-        {NotebookCellTypes.options.map((type: NotebookCellTypes) => {
+        {cellTypes.map((type: string) => {
           return (
             <Button
               key={type}
@@ -30,7 +31,7 @@ export const AddNewCellTabs: FC<Props> = ({onAdd}) => {
               size="xs"
             >
               <PlusIcon size={12} strokeWidth={1.5} />
-              {getCellTypeLabel(type)}
+              {getCellTypeLabel(type, cellRegistry)}
             </Button>
           );
         })}

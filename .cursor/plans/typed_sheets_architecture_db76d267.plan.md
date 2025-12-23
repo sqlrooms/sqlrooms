@@ -172,5 +172,3 @@ await connector.query(`CREATE OR REPLACE VIEW ${schemaName}.${viewName} AS ${sql
 - Add migration in persistence layer to add `type` field to existing sheets
 
 ## Files to Modify
-
-| File | Changes ||------|---------|| `packages/cells/src/types.ts` | Add SheetType, update SheetSchema || `packages/cells/src/cellsSlice.ts` | Update addSheet, add helpers || `packages/cells/src/execution.ts` | Use sheet/cell titles for DuckDB naming || `packages/cells/src/validation.ts` | NEW: title validation helpers || `packages/notebook/src/NotebookSlice.ts` | Filter by type, pass type to addSheet || `packages/notebook/src/Notebook.tsx` | Filter tab bar by type |

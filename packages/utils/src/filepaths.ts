@@ -104,8 +104,13 @@ export function convertToUniqueColumnOrTableName(
  * @example
  * generateUniqueName("table", ["table"]) // returns "table_1"
  * generateUniqueName("table_1", ["table_1"]) // returns "table_2"
+ * generateUniqueName("Notebook", ["Notebook 1"], " ") // returns "Notebook 2"
  */
-export function generateUniqueName(name: string, usedNames?: string[]) {
+export function generateUniqueName(
+  name: string,
+  usedNames?: string[],
+  separator = '_',
+) {
   const usedNamesLower = usedNames?.map((n) => n.toLowerCase());
 
   // If tableName exists in the list
@@ -113,8 +118,10 @@ export function generateUniqueName(name: string, usedNames?: string[]) {
     let baseName: string | undefined = name;
     let i = 0;
 
-    // If tableName ends with `_${i}` pattern, update the baseTableName and i
-    const matched = name.match(/^(.+)_(\d+)$/);
+    // If tableName ends with `${separator}${i}` pattern, update the baseTableName and i
+    const escapedSeparator = separator.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`^(.+)${escapedSeparator}(\\d+)$`);
+    const matched = name.match(regex);
     if (matched) {
       baseName = matched[1];
       i = Number(matched[2]);
@@ -122,7 +129,7 @@ export function generateUniqueName(name: string, usedNames?: string[]) {
 
     do {
       i++;
-      name = `${baseName}_${i}`;
+      name = `${baseName}${separator}${i}`;
     } while (usedNamesLower.includes(name.toLowerCase()));
   }
 

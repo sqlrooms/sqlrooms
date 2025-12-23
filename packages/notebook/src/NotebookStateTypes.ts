@@ -1,10 +1,6 @@
 import type React from 'react';
 import type {CellStatus} from '@sqlrooms/cells';
-import type {
-  NotebookCell,
-  NotebookCellTypes,
-  NotebookSliceConfig,
-} from './cellSchemas';
+import type {NotebookCell, NotebookSliceConfig} from './cellSchemas';
 
 export type NotebookSliceState = {
   notebook: {
@@ -19,6 +15,7 @@ export type NotebookSliceState = {
     setCurrentTab: (id: string) => void;
     removeTab: (id: string) => void;
     toggleShowInputBar: (id: string) => void;
+    initializeSheet: (id: string) => void;
 
     // Cell actions (delegate to cells, keep display order here)
     addCell: (tabId: string, type: string, index?: number) => string;

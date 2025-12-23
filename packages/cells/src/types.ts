@@ -5,8 +5,9 @@ import type {BaseRoomStoreState} from '@sqlrooms/room-shell';
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 
 /** Cell types */
-export const CellTypes = z.enum(['sql', 'text', 'vega', 'input']);
-export type CellTypes = z.infer<typeof CellTypes>;
+export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input';
+export type CellType = BuiltInCellType | (string & {});
+export const CellType = z.string();
 
 /** Input Cell types */
 export const InputTypes = z.enum(['text', 'slider', 'dropdown']);
@@ -75,13 +76,14 @@ export const InputCellData = z.object({
 export type InputCellData = z.infer<typeof InputCellData>;
 
 /** Unified Cell Data */
-export const CellData = z.discriminatedUnion('type', [
-  z.object({type: z.literal('sql'), data: SqlCellData}),
-  z.object({type: z.literal('text'), data: TextCellData}),
-  z.object({type: z.literal('vega'), data: VegaCellData}),
-  z.object({type: z.literal('input'), data: InputCellData}),
-]);
-export type CellData = z.infer<typeof CellData>;
+export const CellData = z.object({
+  type: CellType,
+  data: z.record(z.string(), z.unknown()),
+});
+export type CellData = {
+  type: CellType;
+  data: Record<string, any>;
+};
 
 export type SqlCell = {id: string; type: 'sql'; data: SqlCellData};
 export type TextCell = {id: string; type: 'text'; data: TextCellData};
@@ -89,12 +91,16 @@ export type VegaCell = {id: string; type: 'vega'; data: VegaCellData};
 export type InputCell = {id: string; type: 'input'; data: InputCellData};
 
 /** Canonical Cell */
-export const Cell = z
-  .object({
-    id: z.string(),
-  })
-  .and(CellData);
-export type Cell = z.infer<typeof Cell>;
+export const Cell = z.object({
+  id: z.string(),
+  type: CellType,
+  data: z.record(z.string(), z.unknown()),
+});
+export type Cell = {
+  id: string;
+  type: CellType;
+  data: Record<string, any>;
+};
 
 /** Unified Cell Registry */
 export type CellContainerProps = {
@@ -125,7 +131,7 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
 export type CellRegistry = Record<string, CellRegistryItem<any>>;
 
 /** Sheet and Edge types */
-export const SheetType = z.enum(['notebook', 'canvas', 'cell']);
+export const SheetType = z.enum(['notebook', 'canvas']);
 export type SheetType = z.infer<typeof SheetType>;
 
 export const Edge = z.object({
@@ -164,49 +170,7 @@ export type OtherCellStatus = z.infer<typeof OtherCellStatus>;
 export const CellStatus = z.union([SqlCellStatus, OtherCellStatus]);
 export type CellStatus = z.infer<typeof CellStatus>;
 
-/** DAG Types */
-export type DagDefinition<TCell, TMeta = unknown> = {
-  id: string;
-  cells: Record<string, TCell>;
-  meta: TMeta;
-};
-
-export type DagConfig<TCell, TMeta = unknown> = {
-  dags: Record<string, DagDefinition<TCell, TMeta>>;
-  dagOrder: string[];
-  currentDagId?: string;
-};
-
-export type DagSliceState = {
-  dag: {
-    currentDagId?: string;
-    getDownstream: (dagId: string, sourceCellId: string) => string[];
-    getRootCells: (dagId: string) => string[];
-    runAllCellsCascade: (dagId: string) => Promise<void>;
-    runDownstreamCascade: (
-      dagId: string,
-      sourceCellId: string,
-    ) => Promise<void>;
-  };
-};
-
-export type DagSliceOptions<TRootState, TCell, TMeta> = {
-  getDagConfig: (state: TRootState) => DagConfig<TCell, TMeta> | undefined;
-  findDependencies: (args: {
-    dagId: string;
-    cellId: string;
-    cell: TCell;
-    cells: Record<string, TCell>;
-    getState: () => TRootState;
-  }) => string[];
-  runCell: (args: {
-    dagId: string;
-    cellId: string;
-    cascade?: boolean;
-    getState: () => TRootState;
-  }) => Promise<void>;
-};
-
+/** SQL execution results */
 export type SqlRunResult = {
   resultName?: string;
   referencedTables?: string[];
@@ -304,12 +268,18 @@ export type CellsSliceState = {
       opts?: {cascade?: boolean; schemaName?: string},
     ) => Promise<void>;
     cancelCell: (id: string) => void;
+
+    // DAG methods
+    getDownstream: (sheetId: string, sourceCellId: string) => string[];
+    getRootCells: (sheetId: string) => string[];
+    runAllCellsCascade: (sheetId: string) => Promise<void>;
+    runDownstreamCascade: (
+      sheetId: string,
+      sourceCellId: string,
+    ) => Promise<void>;
   };
 };
 
 export type CellsRootState = BaseRoomStoreState &
   DuckDbSliceState &
-  CellsSliceState &
-  DagSliceState;
-
-export type DagStateCreator<T> = StateCreator<T>;
+  CellsSliceState;

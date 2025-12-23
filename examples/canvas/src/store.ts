@@ -1,16 +1,14 @@
 import {
   Canvas,
-  CanvasSliceConfigSchema,
+  CanvasSliceConfig,
   CanvasSliceState,
   createCanvasSlice,
 } from '@sqlrooms/canvas';
 import {
   createCellsSlice,
-  createDagSlice,
   createDefaultCellRegistry,
   CellsSliceState,
-  DagSliceState,
-  CellsSliceConfigSchema,
+  CellsSliceConfig,
 } from '@sqlrooms/cells';
 import {
   BaseRoomConfig,
@@ -33,8 +31,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
   CanvasSliceState &
-  CellsSliceState &
-  DagSliceState & {
+  CellsSliceState & {
     app: {
       config: AppConfig;
       setApiKey: (apiKey: string) => void;
@@ -50,8 +47,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
-        canvas: CanvasSliceConfigSchema,
-        cells: CellsSliceConfigSchema,
+        canvas: CanvasSliceConfig,
+        cells: CellsSliceConfig,
         app: AppConfig,
       },
     },
@@ -96,8 +93,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       ...createCellsSlice({
         cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
-
-      ...createDagSlice()(set, get),
 
       ...createCanvasSlice({
         ai: {

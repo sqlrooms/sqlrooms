@@ -1,6 +1,6 @@
 import {schema} from 'loro-mirror';
 import type {CrdtMirror} from '@sqlrooms/crdt';
-import {CanvasSliceConfigSchema, type CanvasSliceState} from './CanvasSlice';
+import {CanvasSliceConfig, type CanvasSliceState} from './CanvasSlice';
 
 /**
  * Mirror schema for syncing the `@sqlrooms/canvas` slice via `@sqlrooms/crdt`.
@@ -91,7 +91,7 @@ export function createCanvasCrdtMirror<
         ...state,
         canvas: {
           ...state.canvas,
-          config: CanvasSliceConfigSchema.parse({
+          config: CanvasSliceConfig.parse({
             ...currentConfig,
             sheets: newSheets,
           }),

@@ -3,12 +3,11 @@ import {formatTimeRelative} from '@sqlrooms/utils';
 import {
   InputTypes,
   InputUnion,
-  NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
   NotebookSheet,
 } from './cellSchemas';
-import type {CellsRootState} from '@sqlrooms/cells';
+import type {CellsRootState, CellRegistry} from '@sqlrooms/cells';
 
 export const findTab = (
   state: CellsRootState & {notebook: {config: NotebookSliceConfig}},
@@ -37,14 +36,16 @@ export const findCellInNotebook = (
   return {cell, sheetId: undefined};
 };
 
-export const getCellTypeLabel = (type: NotebookCellTypes) => {
-  const typeToLabel: Record<NotebookCellTypes, string> = {
+export const getCellTypeLabel = (type: string, registry?: CellRegistry) => {
+  if (registry?.[type]) return registry[type].title;
+
+  const typeToLabel: Record<string, string> = {
     sql: 'SQL',
     vega: 'Chart',
     text: 'Text',
     input: 'Input',
   };
-  return typeToLabel[type];
+  return typeToLabel[type] || type.charAt(0).toUpperCase() + type.slice(1);
 };
 
 export const initializeInput = (

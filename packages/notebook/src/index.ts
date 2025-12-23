@@ -10,7 +10,6 @@ export type {NotebookSliceState} from './NotebookStateTypes';
 
 export {
   InputTypes,
-  NotebookCellTypes,
   NotebookSliceConfig,
   NotebookTab,
   InputCell,
