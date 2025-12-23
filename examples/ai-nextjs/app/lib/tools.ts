@@ -80,10 +80,18 @@ const onToolCompleted = async (toolCallId: string, additionalData: unknown) => {
 export function getServerAiSDKTools(): ToolSet {
   const aiSDKTools = allTools.reduce((acc, tool) => {
     tool.onToolCompleted = onToolCompleted;
-    acc[tool.name] = convertToVercelAiToolV5(tool);
+    const converted = convertToVercelAiToolV5(tool);
     // Only keep execute function for server tools
     if (!tools.serverTools.includes(tool)) {
-      acc[tool.name].execute = undefined;
+      // Avoid mutating a potentially non-writable `execute` property.
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const {execute: _execute, ...rest} = converted as unknown as Record<
+        string,
+        unknown
+      >;
+      acc[tool.name] = rest as unknown as ToolSet[string];
+    } else {
+      acc[tool.name] = converted;
     }
     return acc;
   }, {} as ToolSet);

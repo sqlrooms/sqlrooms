@@ -6,9 +6,11 @@ import {
   AiSettingsSliceConfig,
   AnalysisResultSchema,
   AnalysisSessionSchema,
-  UIMessagePart,
+  UIMessagePartSchema,
+  ToolUIPartSchema,
+  TextUIPartSchema,
+  DynamicToolUIPartSchema,
 } from '@sqlrooms/ai-config';
-import {DynamicToolUIPart, TextUIPart, ToolUIPart} from 'ai';
 
 /**
  * Custom error class for operation abort errors.
@@ -45,6 +47,35 @@ export class ToolAbortError extends Error {
       Error.captureStackTrace(this, ToolAbortError);
     }
   }
+}
+
+/**
+ * Type guard that checks whether a value is a non-null object.
+ *
+ * Note: This intentionally does not verify "plain object" vs arrays/functions;
+ * callers should add stricter checks when needed.
+ */
+export function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null;
+}
+
+export function getReasoningTextFromInput(part: UIMessagePartSchema) {
+  if (typeof part === 'object' && 'input' in part && isRecord(part.input)) {
+    return `${part.input.reasoning}` || undefined;
+  }
+  return undefined;
+}
+
+export function getToolName(part: UIMessagePartSchema): string {
+  if (typeof part.type === 'string' && part.type === 'dynamic-tool') {
+    return ((part as any).toolName || 'unknown') as string;
+  }
+  if (isToolPart(part)) {
+    return typeof part.type === 'string'
+      ? part.type.replace(/^tool-/, '') || 'unknown'
+      : 'unknown';
+  }
+  return 'unknown';
 }
 
 /**
@@ -93,7 +124,9 @@ export function extractModelsFromSettings(
  * @param part - The message part to check
  * @returns True if the part is a text part
  */
-export function isTextPart(part: UIMessagePart): part is TextUIPart {
+export function isTextPart(
+  part: UIMessagePartSchema,
+): part is TextUIPartSchema {
   return part.type === 'text';
 }
 
@@ -103,8 +136,8 @@ export function isTextPart(part: UIMessagePart): part is TextUIPart {
  * @returns True if the part is a reasoning part
  */
 export function isReasoningPart(
-  part: UIMessagePart,
-): part is Extract<UIMessagePart, {type: 'reasoning'; text: string}> {
+  part: UIMessagePartSchema,
+): part is Extract<UIMessagePartSchema, {type: 'reasoning'; text: string}> {
   return part.type === 'reasoning';
 }
 
@@ -113,13 +146,15 @@ export function isReasoningPart(
  * @param part - The message part to check
  * @returns True if the part is a tool part
  */
-export function isToolPart(part: UIMessagePart): part is ToolUIPart {
+export function isToolPart(
+  part: UIMessagePartSchema,
+): part is ToolUIPartSchema {
   return typeof part.type === 'string' && part.type.startsWith('tool-');
 }
 
 export function isDynamicToolPart(
-  part: UIMessagePart,
-): part is DynamicToolUIPart {
+  part: UIMessagePartSchema,
+): part is DynamicToolUIPartSchema {
   return part.type === 'dynamic-tool';
 }
 

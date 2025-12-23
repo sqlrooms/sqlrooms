@@ -1,7 +1,7 @@
 /**
  * Migration function to convert old AnalysisSession to new format
  *
- * Version: 0.26.x
+ * Version: 0.26.0
  *
  * Changes:
  * - add uiMessages (AI SDK v5) to AnalysisSession along with legacy analysisResults

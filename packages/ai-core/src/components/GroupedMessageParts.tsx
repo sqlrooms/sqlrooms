@@ -2,7 +2,7 @@ import React from 'react';
 import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ReasoningBox} from './ReasoningBox';
-import {ToolPartRenderer} from './ToolPartRenderer';
+import {ToolPartRenderer} from './tools/ToolPartRenderer';
 import {isTextPart, isReasoningPart} from '../utils';
 import type {ToolGroup} from '../hooks/useToolGrouping';
 

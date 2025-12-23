@@ -11,7 +11,7 @@ import {
   createSlice,
   useBaseRoomStore,
 } from '@sqlrooms/room-shell';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
 import {
   addEdge,
@@ -155,6 +155,9 @@ export function createCanvasSlice(props: {
     ...createAiSlice({
       getInstructions: () => {
         return createDefaultAiInstructions(store);
+      },
+      toolComponents: {
+        chart: VegaChartToolResult,
       },
       tools: {
         ...createDefaultAiTools(store),

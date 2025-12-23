@@ -7,6 +7,7 @@ import {
   createAiSlice,
   createDefaultAiInstructions,
   createDefaultAiTools,
+  QueryToolResult,
 } from '@sqlrooms/ai';
 import {
   BaseRoomConfig,
@@ -23,7 +24,7 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {createVegaChartTool} from '@sqlrooms/vega';
+import {createVegaChartTool, VegaChartToolResult} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
@@ -127,6 +128,12 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           return createDefaultAiInstructions(store);
         },
 
+        toolComponents: {
+          echo: EchoToolResult,
+          chart: VegaChartToolResult,
+          query: QueryToolResult,
+        },
+
         // Add custom tools
         tools: {
           ...createDefaultAiTools(store, {query: {}}),
@@ -138,7 +145,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           echo: {
             name: 'echo',
             description: 'A simple echo tool that returns the input text',
-            parameters: z.object({
+            inputSchema: z.object({
               text: z.string().describe('The text to echo back'),
             }),
             execute: async ({text}: {text: string}) => {
@@ -149,7 +156,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
                 },
               };
             },
-            component: EchoToolResult,
           },
         },
       })(set, get, store),

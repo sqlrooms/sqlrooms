@@ -1,21 +1,22 @@
 import React from 'react';
-import type {UIMessagePart} from '@sqlrooms/ai-config';
-import {useStoreWithAi} from '../AiSlice';
-import {isDynamicToolPart, isToolPart} from '../utils';
-import {ToolResult} from './tools/ToolResult';
+import {useStoreWithAi} from '../../AiSlice';
+import {
+  isDynamicToolPart,
+  isToolPart,
+  isRecord,
+  getToolName,
+} from '../../utils';
+import {ToolResult} from './ToolResult';
 import {ToolCallInfo} from './ToolCallInfo';
+import {AgentToolCall} from '../../agents/AgentUtils';
+import {UITool, UIToolInvocation} from 'ai';
+import type {UIMessagePartSchema} from '@sqlrooms/ai-config';
 
 /**
  * Component that renders agent tool execution progress
  */
 const AgentProgressRenderer: React.FC<{
-  agentToolCalls: Array<{
-    toolCallId: string;
-    toolName: string;
-    output?: unknown;
-    errorText?: string;
-    state: 'pending' | 'success' | 'error';
-  }>;
+  agentToolCalls: AgentToolCall[];
   finalOutput?: string;
 }> = ({agentToolCalls, finalOutput}) => {
   const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
@@ -27,12 +28,7 @@ const AgentProgressRenderer: React.FC<{
           const ToolComponent = findToolComponent(toolCall.toolName);
           const isSuccess = toolCall.state === 'success';
           const isError = toolCall.state === 'error';
-          const hasComponent =
-            ToolComponent && typeof ToolComponent === 'function';
-          const hasObjectOutput =
-            toolCall.output &&
-            typeof toolCall.output === 'object' &&
-            toolCall.output !== null;
+          const hasObjectOutput = isRecord(toolCall.output);
 
           return (
             <div
@@ -55,8 +51,8 @@ const AgentProgressRenderer: React.FC<{
                 </div>
               </div>
 
-              {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="ml-6 mt-1">
+              {isSuccess && !!ToolComponent && hasObjectOutput ? (
+                <div className="mt-1 ml-6">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />
@@ -84,71 +80,57 @@ const AgentProgressRenderer: React.FC<{
  * @param props.part - The UI message part to render
  * @returns A React component displaying the tool part, or null if not a tool part
  */
-export const ToolPartRenderer = ({part}: {part: UIMessagePart}) => {
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
-  );
+export const ToolPartRenderer = ({part}: {part: UIMessagePartSchema}) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
+  const toolComponents = useStoreWithAi((s) => s.ai.toolComponents);
+  const agentToolCallData = useStoreWithAi((s) => s.ai.agentToolCallData);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
-  const {type, toolCallId, state, input} = part;
-  const toolName =
-    type === 'dynamic-tool'
-      ? part.toolName || 'unknown'
-      : type.replace(/^tool-/, '') || 'unknown';
+  const {toolCallId, state, input} = part;
+  if (!isRecord(input)) return null;
+
+  const toolName = getToolName(part);
 
   const output = state === 'output-available' ? part.output : undefined;
   const errorText = state === 'output-error' ? part.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
-  const additionalData = toolAdditionalData[toolCallId];
 
+  // render ui tool
   if (
     !tools[toolName]?.execute &&
     (state === 'input-streaming' ||
       state === 'input-available' ||
       state === 'output-available')
   ) {
-    const ToolComponent = tools[toolName]?.component as React.ComponentType;
+    const ToolComponent = toolComponents[toolName];
     const props = {
-      ...(input as Record<string, unknown>),
+      ...input,
       ...({toolCallId, toolName, isCompleted} as Record<string, unknown>),
     };
-    return (
-      <div>
-        {ToolComponent && typeof ToolComponent === 'function' && (
-          <ToolComponent {...props} />
-        )}
-      </div>
-    );
+    return <div>{!!ToolComponent && <ToolComponent {...props} />}</div>;
   }
 
   // Otherwise, render <ToolResult>
   if (tools[toolName]?.execute) {
     const isAgentTool = toolName.startsWith('agent-');
-    const agentData = additionalData as {
-      agentToolCalls?: Array<{
-        toolCallId: string;
-        toolName: string;
-        output?: unknown;
-        errorText?: string;
-        state: 'pending' | 'success' | 'error';
-      }>;
-      finalOutput?: string;
-    };
+    const agentData = agentToolCallData[toolCallId];
     const hasAgentProgress =
       isAgentTool &&
       agentData?.agentToolCalls &&
       agentData.agentToolCalls.length > 0;
 
+    const toolData = {
+      toolCallId,
+      state: state,
+      input: input,
+      output: output,
+      errorText: errorText,
+    } as UIToolInvocation<UITool>;
+
     return (
       <div>
-        <ToolCallInfo
-          toolName={toolName}
-          input={input}
-          isCompleted={isCompleted}
-          state={state}
-        />
+        <ToolCallInfo toolName={toolName} input={input} state={state} />
         <div data-tool-call-id={toolCallId}>
           {hasAgentProgress ? (
             <AgentProgressRenderer
@@ -157,16 +139,8 @@ export const ToolPartRenderer = ({part}: {part: UIMessagePart}) => {
             />
           ) : (
             <ToolResult
-              toolCallId={toolCallId}
-              toolData={{
-                toolCallId,
-                name: toolName,
-                state: state,
-                args: input,
-                result: output,
-                errorText,
-              }}
-              additionalData={additionalData}
+              toolName={toolName}
+              toolData={toolData}
               isCompleted={isCompleted}
               errorMessage={state === 'output-error' ? errorText : undefined}
             />

@@ -15,28 +15,29 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
-  UITools,
   ChatOnDataCallback,
   UIDataTypes,
   generateText,
+  ToolSet,
 } from 'ai';
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
   createRemoteChatTransportFactory,
   ToolCall,
-  convertToAiSDKTools,
   completeIncompleteToolCalls,
 } from './chatTransport';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
-import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {GetProviderOptions} from './types';
 import {AddToolResult} from './types';
 import {cleanupPendingAnalysisResults} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
+import type {AgentToolCallData} from './agents/AgentUtils';
+import type {CustomUIDataType} from './chatTransport';
 
 // Custom type for onChatToolCall that includes addToolResult
-type ExtendedChatOnToolCallCallback = (args: {
+type ChatOnToolCallCallback = (args: {
   toolCall: ToolCall;
   addToolResult?: AddToolResult;
 }) => Promise<void> | void;
@@ -47,7 +48,15 @@ export type AiSliceState = {
     analysisPrompt: string;
     isRunningAnalysis: boolean;
     promptSuggestionsVisible: boolean;
-    tools: OpenAssistantToolSet;
+    tools: ToolSet;
+    toolComponents: Record<string, React.ComponentType<any>>;
+    agentToolCallData: Record<string, AgentToolCallData>;
+    getProviderOptions?: GetProviderOptions;
+    setAgentToolCallData: (
+      sessionId: string,
+      agentToolCallId: string,
+      agentToolCallData: AgentToolCallData,
+    ) => void;
     analysisAbortController?: AbortController;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
@@ -98,15 +107,12 @@ export type AiSliceState = {
     deleteSession: (sessionId: string) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-    setSessionToolAdditionalData: (
-      sessionId: string,
-      toolCallId: string,
-      additionalData: unknown,
-    ) => void;
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
-    findToolComponent: (toolName: string) => React.ComponentType | undefined;
+    findToolComponent: (
+      toolName: string,
+    ) => React.ComponentType<any> | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
@@ -120,8 +126,8 @@ export type AiSliceState = {
       endpoint: string,
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
-    onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage<unknown, UIDataTypes, UITools>>;
+    onChatToolCall: ChatOnToolCallCallback;
+    onChatData: ChatOnDataCallback<UIMessage<unknown, CustomUIDataType>>;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
@@ -139,7 +145,10 @@ export interface AiSliceOptions {
   /** Initial prompt to display in the analysis input */
   initialAnalysisPrompt?: string;
   /** Tools to add to the AI assistant */
-  tools: OpenAssistantToolSet;
+  tools: ToolSet;
+  toolComponents?: Record<string, React.ComponentType<any>>;
+  /** Optional provider-specific options passed to the underlying AI SDK call. */
+  getProviderOptions?: GetProviderOptions;
 
   /**
    * Function to get custom instructions for the AI assistant
@@ -165,6 +174,8 @@ export function createAiSlice(
   const {
     initialAnalysisPrompt = '',
     tools,
+    toolComponents = {},
+    getProviderOptions,
     getApiKey,
     getBaseUrl,
     maxSteps = 50,
@@ -220,6 +231,9 @@ export function createAiSlice(
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
+        toolComponents,
+        agentToolCallData: {},
+        getProviderOptions,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
             // Set up abort handler
@@ -332,7 +346,7 @@ export function createAiSlice(
         setAiModel: (modelProvider: string, model: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const currentSession = getCurrentSessionFromState(draft);
+              const currentSession = draft.ai.getCurrentSession();
               if (currentSession) {
                 currentSession.modelProvider = modelProvider;
                 currentSession.model = model;
@@ -393,7 +407,6 @@ export function createAiSlice(
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
-                toolAdditionalData: {},
                 messagesRevision: 0,
               });
               draft.ai.config.currentSessionId = newSessionId;
@@ -419,7 +432,7 @@ export function createAiSlice(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s) => s.id === sessionId,
               );
               if (session) {
                 session.name = name;
@@ -435,7 +448,7 @@ export function createAiSlice(
           set((state) =>
             produce(state, (draft) => {
               const sessionIndex = draft.ai.config.sessions.findIndex(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s) => s.id === sessionId,
               );
               if (sessionIndex !== -1) {
                 // Don't delete the last session
@@ -464,7 +477,7 @@ export function createAiSlice(
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s) => s.id === sessionId,
               );
               if (session) {
                 // store the latest UI messages from the chat hook
@@ -475,13 +488,25 @@ export function createAiSlice(
           );
         },
 
-        /**
-         * Save additional data for a session
-         */
-        setSessionToolAdditionalData: (
+        registerToolComponent: (
+          toolName: string,
+          component: React.ComponentType,
+        ) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.ai.toolComponents[toolName] = component;
+            }),
+          );
+        },
+
+        findToolComponent: (toolName: string) => {
+          return get().ai.toolComponents[toolName];
+        },
+
+        setAgentToolCallData: (
           sessionId: string,
-          toolCallId: string,
-          additionalData: unknown,
+          agentToolCallId: string,
+          agentToolCallData: AgentToolCallData,
         ) => {
           set((state) =>
             produce(state, (draft) => {
@@ -489,30 +514,29 @@ export function createAiSlice(
                 (s) => s.id === sessionId,
               );
               if (session) {
-                if (!session.toolAdditionalData) {
-                  session.toolAdditionalData = {};
+                if (!draft.ai.agentToolCallData[sessionId]) {
+                  draft.ai.agentToolCallData[sessionId] = {
+                    agentToolCalls: [],
+                    timestamp: new Date().toISOString(),
+                  };
                 }
-                session.toolAdditionalData[toolCallId] = additionalData;
+                draft.ai.agentToolCallData[agentToolCallId] = {
+                  ...agentToolCallData,
+                };
               }
             }),
           );
         },
 
-        findToolComponent: (toolName: string) => {
-          return get().ai.tools[toolName]?.component as React.ComponentType;
-        },
-
         getBaseUrlFromSettings: () => {
-          // First try the getBaseUrl function if provided
           const baseUrlFromFunction = getBaseUrl?.();
           if (baseUrlFromFunction) {
             return baseUrlFromFunction;
           }
 
-          // Fall back to settings
           const store = get();
           if (hasAiSettingsConfig(store)) {
-            const currentSession = getCurrentSessionFromState(store);
+            const currentSession = store.ai.getCurrentSession();
             if (currentSession) {
               if (currentSession.modelProvider === 'custom') {
                 const customModel = store.aiSettings.config.customModels.find(
@@ -531,9 +555,8 @@ export function createAiSlice(
 
         getApiKeyFromSettings: () => {
           const store = get();
-          const currentSession = getCurrentSessionFromState(store);
+          const currentSession = store.ai.getCurrentSession();
           if (currentSession) {
-            // First try the getApiKey function if provided
             const apiKeyFromFunction = getApiKey?.(
               currentSession.modelProvider || 'openai',
             );
@@ -541,7 +564,6 @@ export function createAiSlice(
               return apiKeyFromFunction;
             }
 
-            // Fall back to settings
             if (hasAiSettingsConfig(store)) {
               if (currentSession.modelProvider === 'custom') {
                 const customModel = store.aiSettings.config.customModels.find(
@@ -563,7 +585,6 @@ export function createAiSlice(
 
         getMaxStepsFromSettings: () => {
           const store = get();
-          // First try the maxSteps parameter if provided
           if (maxSteps && Number.isFinite(maxSteps) && maxSteps > 0) {
             return maxSteps;
           }
@@ -586,7 +607,6 @@ export function createAiSlice(
 
           // Fall back to settings
           if (hasAiSettingsConfig(store)) {
-            // get additional instructions from settings
             const {additionalInstruction} =
               store.aiSettings.config.modelParameters;
             if (additionalInstruction) {
@@ -645,9 +665,7 @@ export function createAiSlice(
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,
-              ...(useTools
-                ? {tools: convertToAiSDKTools(toolsWithoutExecute)}
-                : {}),
+              ...(useTools ? {tools: toolsWithoutExecute} : {}),
             });
             return response.text;
           } catch (error) {
@@ -681,7 +699,7 @@ export function createAiSlice(
 
               // Add incomplete analysis result to session immediately for instant UI rendering
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === currentSession.id,
+                (s) => s.id === currentSession.id,
               );
               if (session) {
                 // Remove any existing pending results (safety check for page refresh scenarios)
@@ -714,20 +732,11 @@ export function createAiSlice(
             // no-op
           }
 
-          // Call abort to signal cancellation
-          // Keep the abort controller in state so that async handlers (onChatToolCall, onChatFinish)
-          // can check if it was aborted. The onChatFinish handler will clean it up.
           abortController?.abort('Analysis cancelled');
 
           set((state) =>
             produce(state, (draft) => {
-              // Set isRunningAnalysis to false to update UI
               draft.ai.isRunningAnalysis = false;
-              // Keep analysisAbortController so handlers can check signal.aborted
-              // It will be cleared by onChatFinish
-
-              // Intentionally preserve any pending analysis result so the
-              // conversation row remains visible until onChatFinish runs.
             }),
           );
         },
@@ -765,13 +774,12 @@ export function createAiSlice(
         /**
          * Delete an analysis result from a session
          * - remove the corresponding prompt-response pair from uiMessages
-         * - remove the associated toolAdditionalData
          */
         deleteAnalysisResult: (sessionId: string, resultId: string) => {
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === sessionId,
+                (s) => s.id === sessionId,
               );
               if (session) {
                 session.analysisResults = session.analysisResults.filter(
@@ -817,16 +825,6 @@ export function createAiSlice(
                   // Increment messagesRevision to force useChat reset
                   session.messagesRevision =
                     (session.messagesRevision || 0) + 1;
-
-                  // Clean up toolAdditionalData for deleted messages
-                  if (session.toolAdditionalData) {
-                    // Remove data keyed by the toolCallId from the deleted messages
-                    toolCallIdsToDelete.forEach((toolCallId) => {
-                      if (session.toolAdditionalData![toolCallId]) {
-                        delete session.toolAdditionalData![toolCallId];
-                      }
-                    });
-                  }
                 }
               }
             }),
@@ -867,7 +865,7 @@ export function createAiSlice(
                   ?.join('') || '';
 
               draft.ai.config.sessions
-                .find((s: AnalysisSessionSchema) => s.id === currentSession?.id)
+                .find((s) => s.id === currentSession.id)
                 ?.analysisResults.push({
                   id: message.id,
                   prompt: textContent,
@@ -908,16 +906,6 @@ export function createAiSlice(
       },
     };
   });
-}
-
-/**
- * Helper function to get the current session from state
- */
-function getCurrentSessionFromState(
-  state: AiSliceState,
-): AnalysisSessionSchema | undefined {
-  const {currentSessionId, sessions} = state.ai.config;
-  return sessions.find((session) => session.id === currentSessionId);
 }
 
 export function useStoreWithAi<T>(selector: (state: AiSliceState) => T): T {

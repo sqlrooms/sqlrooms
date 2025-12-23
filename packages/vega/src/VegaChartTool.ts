@@ -1,8 +1,7 @@
 import {z} from 'zod';
-import {VegaChartToolResult} from './VegaChartToolResult';
-import type {OpenAssistantTool} from '@openassistant/utils';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
+import {tool} from 'ai';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -12,26 +11,12 @@ export const VegaChartToolParameters = z.object({
   vegaLiteSpec: z.string(),
   reasoning: z.string(),
 });
-
 export type VegaChartToolParameters = z.infer<typeof VegaChartToolParameters>;
-
-export type VegaChartToolArgs = z.ZodObject<{
-  sqlQuery: z.ZodString;
-  vegaLiteSpec: z.ZodString;
-  reasoning: z.ZodString;
-}>;
 
 export type VegaChartToolLlmResult = {
   success: boolean;
   details: string;
 };
-
-export type VegaChartToolAdditionalData = {
-  sqlQuery: string;
-  vegaLiteSpec: object;
-};
-
-export type VegaChartToolContext = unknown;
 
 /**
  * Default description for the VegaChart tool
@@ -60,22 +45,17 @@ export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
 }: {
   description?: string;
-} = {}): OpenAssistantTool<
-  typeof VegaChartToolParameters,
-  VegaChartToolLlmResult,
-  VegaChartToolAdditionalData,
-  VegaChartToolContext
-> {
-  return {
+} = {}) {
+  return tool<VegaChartToolParameters, VegaChartToolLlmResult>({
     name: 'chart',
     description,
-    parameters: VegaChartToolParameters,
+    inputSchema: VegaChartToolParameters,
     execute: async (
       params: VegaChartToolParameters,
       options?: {abortSignal?: AbortSignal},
     ) => {
       const abortSignal = options?.abortSignal;
-      const {sqlQuery, vegaLiteSpec} = params;
+      const {vegaLiteSpec} = params;
       try {
         // Check if aborted before starting
         if (abortSignal?.aborted) {
@@ -97,37 +77,26 @@ export function createVegaChartTool({
         } catch (e) {
           const message = e instanceof Error ? e.message : String(e);
           return {
-            llmResult: {
-              success: false,
-              details: `Invalid Vega-Lite spec: ${message}`,
-            },
+            success: false,
+            details: `Invalid Vega-Lite spec: ${message}`,
           };
         }
 
         // data object of the vegaLiteSpec and sqlQuery
         // it is not used yet, but we can use it to create a JSON editor for user to edit the vegaLiteSpec so that chart can be updated
         return {
-          llmResult: {
-            success: true,
-            details:
-              vegaWarnings.length > 0
-                ? `Chart created successfully with warnings:\n- ${vegaWarnings.join('\n- ')}`
-                : 'Chart created successfully.',
-          },
-          additionalData: {
-            sqlQuery,
-            vegaLiteSpec: parsedVegaLiteSpec,
-          },
+          success: true,
+          details:
+            vegaWarnings.length > 0
+              ? `Chart created successfully with warnings:\n- ${vegaWarnings.join('\n- ')}`
+              : 'Chart created successfully.',
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            details: `Not a valid JSON object: ${error}`,
-          },
+          success: false,
+          details: `Not a valid JSON object: ${error}`,
         };
       }
     },
-    component: VegaChartToolResult,
-  };
+  });
 }

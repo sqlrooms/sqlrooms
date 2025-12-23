@@ -1,8 +1,8 @@
 import React from 'react';
-import type {UIMessagePart} from '@sqlrooms/ai-config';
+import type {UIMessagePartSchema} from '@sqlrooms/ai-config';
 import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
-import {ToolPartRenderer} from './ToolPartRenderer';
+import {ToolPartRenderer} from './tools/ToolPartRenderer';
 import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 
 /**
@@ -10,7 +10,7 @@ import {isTextPart, isReasoningPart, isToolPart} from '../utils';
  */
 type MessagePartsListProps = {
   /** Array of UI message parts to render */
-  parts: UIMessagePart[];
+  parts: UIMessagePartSchema[];
   /** Optional custom components for markdown rendering */
   customMarkdownComponents?: Partial<Components>;
 };

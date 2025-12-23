@@ -13,7 +13,6 @@ import {cn} from '@sqlrooms/ui';
 type ToolCallInfoProps = {
   toolName: string;
   input: unknown;
-  isCompleted: boolean;
   state:
     | 'input-streaming'
     | 'input-available'
@@ -37,7 +36,6 @@ type ToolCallInfoProps = {
 export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
   toolName,
   input,
-  isCompleted,
   state,
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -72,7 +70,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
       {/* Expanded Arguments */}
       {isExpanded && (
         <div className="px-5 py-2">
-          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md p-2 font-mono text-xs">
+          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto rounded-md p-2 font-mono text-xs break-words whitespace-pre-wrap">
             {JSON.stringify(input, null, 2)}
           </pre>
         </div>

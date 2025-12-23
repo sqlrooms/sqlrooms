@@ -3,59 +3,34 @@ import {useStoreWithAi} from '../../AiSlice';
 import {MessageContainer} from '../MessageContainer';
 import {ToolCallErrorBoundary} from './ToolResultErrorBoundary';
 import {ToolErrorMessage} from './ToolErrorMessage';
+import {UITool, UIToolInvocation} from 'ai';
+import {isRecord} from '../../utils';
 
-// Tool invocation type that can handle both migrated and AI SDK formats
-type ToolData = {
-  toolCallId: string;
-  toolName?: string;
-  name?: string;
-  args?: any;
-  input?: any;
-  state?:
-    | 'call'
-    | 'result'
-    | 'partial-call'
-    | 'input-streaming'
-    | 'input-available'
-    | 'output-available'
-    | 'output-error';
-  result?: any;
-  output?: any;
-  errorText?: string;
-  [key: string]: any;
-};
+type ToolData = UIToolInvocation<UITool>;
 
-export const ToolResult: React.FC<ToolData> = ({
+export const ToolResult = ({
+  toolName,
   toolData,
-  additionalData,
   isCompleted,
   errorMessage,
+}: {
+  toolName: string;
+  toolData: ToolData;
+  isCompleted: boolean;
+  errorMessage: string | undefined;
 }) => {
-  const toolName = toolData.toolName || toolData.name || 'unknown';
-  const args = toolData.args || toolData.input || {};
-  const state = toolData.state || 'call';
-  const llmResult =
-    state === 'result' || state === 'output-available'
-      ? toolData.result || toolData.output
-      : null;
+  const toolComponents = useStoreWithAi((state) => state.ai.toolComponents);
 
-  // show reason text before tool call complete
-  const text = args.reasoning || '';
+  const args = toolData.input || {};
+  const llmResult = toolData.output;
 
-  // Access tool component directly from tools registry to avoid lint error
-  // about creating components during render
-  const tools = useStoreWithAi((state) => state.ai.tools);
-  const ToolComponent = tools[toolName]?.component as React.ComponentType;
+  if (!isRecord(args) || !isRecord(llmResult)) {
+    return null;
+  }
+  const ToolComponent = toolComponents[toolName];
 
-  // check if args has a property called 'reason'
-  const reason = args.reasoning as string;
-
-  // check if llmResult is an object and has a success property
-  const isSuccess =
-    typeof llmResult === 'object' &&
-    llmResult !== null &&
-    'success' in llmResult &&
-    llmResult.success === true;
+  const text = 'reasoning' in args ? `${args.reasoning}` : '';
+  const isSuccess = 'success' in llmResult && llmResult.success === true;
 
   return !isCompleted ? (
     <div className="text-sm text-gray-500">{text}</div>
@@ -67,12 +42,10 @@ export const ToolResult: React.FC<ToolData> = ({
         toolName,
         args,
         llmResult,
-        additionalData,
         isCompleted,
       }}
     >
       <div className="text-sm text-gray-500">
-        {reason && <span>{reason}</span>}
         {isCompleted && (errorMessage || !isSuccess) && (
           <ToolErrorMessage
             error={errorMessage ?? 'Tool call failed'}
@@ -86,10 +59,7 @@ export const ToolResult: React.FC<ToolData> = ({
       {ToolComponent && isSuccess && isCompleted && (
         <ToolCallErrorBoundary>
           {typeof ToolComponent === 'function' ? (
-            <ToolComponent
-              {...(llmResult as Record<string, unknown>)}
-              {...(additionalData as Record<string, unknown>)}
-            />
+            <ToolComponent {...llmResult} {...args} />
           ) : (
             ToolComponent
           )}

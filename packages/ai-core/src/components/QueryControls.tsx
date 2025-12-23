@@ -1,12 +1,6 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {
-  PropsWithChildren,
-  useCallback,
-  useRef,
-  useEffect,
-  ReactNode,
-} from 'react';
+import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {useAiChat} from '../hooks/useAiChat';
 

@@ -19,7 +19,6 @@
     "access": "public"
   },
   "dependencies": {
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",

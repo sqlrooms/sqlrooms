@@ -5,4 +5,11 @@ export {
   AnalysisResultSchema,
   ErrorMessageSchema,
 } from './schema/AnalysisSessionSchema';
-export type {ToolUIPart, UIMessagePart} from './schema/UIMessageSchema';
+export type {
+  UIMessagePartSchema,
+  UIMessageSchema,
+  DynamicToolUIPartSchema,
+  TextUIPartSchema,
+  ReasoningUIPartSchema,
+  ToolUIPartSchema,
+} from './schema/UIMessageSchema';

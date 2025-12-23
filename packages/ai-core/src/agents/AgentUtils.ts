@@ -1,48 +1,49 @@
 import {StoreApi} from '@sqlrooms/room-store';
 import {AiSliceState} from '../AiSlice';
+import type {UIMessageChunk} from 'ai';
+
+/**
+ * Represents a chunk from the UI message stream
+ */
+// export type UIMessageChunk = {
+//   type: string;
+//   toolCallId?: string;
+//   toolName?: string;
+//   output?: unknown;
+//   errorText?: string;
+//   delta?: string;
+//   id?: string;
+//   providerMetadata?: unknown;
+// };
 
 /**
  * Type definition for agent stream result (from ai package)
  * Represents the return value of Agent.stream()
  */
-export interface AgentStreamResult {
+export type AgentStreamResult = {
   toUIMessageStream(): AsyncIterable<UIMessageChunk>;
   text: Promise<string>;
-}
-
-/**
- * Represents a chunk from the UI message stream
- */
-export interface UIMessageChunk {
-  type: string;
-  toolCallId?: string;
-  toolName?: string;
-  output?: unknown;
-  errorText?: string;
-  delta?: string;
-  id?: string;
-  providerMetadata?: unknown;
-}
+};
 
 /**
  * Represents the state of a single tool call made by an agent
  */
-export interface AgentToolCall {
+export type AgentToolCall = {
   toolCallId: string;
   toolName: string;
   output?: unknown;
   errorText?: string;
   state: 'pending' | 'success' | 'error';
-}
+};
 
 /**
  * Additional data stored for an agent tool call to track progress
  */
-export interface AgentToolCallAdditionalData {
+export type AgentToolCallData = {
   agentToolCalls: AgentToolCall[];
   finalOutput?: string;
   timestamp: string;
-}
+};
 
 /**
  * Updates the additional data for an agent tool call in the current session
@@ -56,11 +57,11 @@ export function updateAgentToolCallData(
   const state = store.getState();
   const currentSessionId = state.ai.config.currentSessionId;
   if (currentSessionId) {
-    state.ai.setSessionToolAdditionalData(currentSessionId, parentToolCallId, {
+    state.ai.setAgentToolCallData(currentSessionId, parentToolCallId, {
       agentToolCalls: [...agentToolCalls],
       finalOutput,
       timestamp: new Date().toISOString(),
-    } as AgentToolCallAdditionalData);
+    });
   }
 }
 

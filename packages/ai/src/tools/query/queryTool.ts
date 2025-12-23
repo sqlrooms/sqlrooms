@@ -7,7 +7,6 @@ import {
 } from '@sqlrooms/duckdb';
 import type {StoreApi} from '@sqlrooms/room-shell';
 import {z} from 'zod';
-import {QueryToolResult} from './QueryToolResult';
 
 export const QueryToolParameters = z.object({
   type: z.literal('query'),
@@ -53,7 +52,7 @@ export function createQueryTool(
     description: `A tool for running SQL queries on the tables in the database.
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
-    parameters: QueryToolParameters,
+    inputSchema: QueryToolParameters,
     execute: async (
       params: QueryToolParameters,
       options?: {abortSignal?: AbortSignal},
@@ -116,31 +115,22 @@ If a query fails, please don't try to run it again with the same syntax.`,
             : [];
 
         return {
-          llmResult: {
-            success: true,
-            data: {
-              type,
-              summary: summaryData,
-              ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
-            },
-          },
-          additionalData: {
-            title: 'Query Result',
-            sqlQuery,
+          success: true,
+          data: {
+            type,
+            summary: summaryData,
+            ...(numberOfRowsToShareWithLLM > 0 ? {firstRows} : {}),
           },
         };
       } catch (error) {
         return {
-          llmResult: {
-            success: false,
-            details: 'Query execution failed.',
-            errorMessage:
-              error instanceof Error ? error.message : 'Unknown error',
-          },
+          success: false,
+          details: 'Query execution failed.',
+          errorMessage:
+            error instanceof Error ? error.message : 'Unknown error',
         };
       }
     },
-    component: QueryToolResult,
   };
 }
 

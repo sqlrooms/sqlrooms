@@ -9,7 +9,6 @@ import {MessagePartsList} from './MessagePartsList';
 import {useStoreWithAi} from '../AiSlice';
 import {useToolGrouping} from '../hooks/useToolGrouping';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
-import type {UIMessage} from 'ai';
 import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
@@ -47,10 +46,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const uiMessages = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
-  );
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
+    (s) => s.ai.getCurrentSession()?.uiMessages,
   );
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
@@ -87,12 +83,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   }, []);
 
   // Group consecutive tool parts together for rendering in ReasoningBox (only if enabled)
-  const groupedParts = useToolGrouping(
-    uiMessageParts,
-    divWidth,
-    userTools,
-    toolAdditionalData,
-  );
+  const groupedParts = useToolGrouping(uiMessageParts, divWidth, userTools);
 
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">

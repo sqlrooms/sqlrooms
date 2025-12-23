@@ -1,6 +1,5 @@
 import {useMemo} from 'react';
-import type {UIMessage} from 'ai';
-import type {UIMessagePart} from '@sqlrooms/ai-config';
+import type {UIMessagePartSchema, UIMessageSchema} from '@sqlrooms/ai-config';
 
 /**
  * Custom hook to extract assistant message parts for a given analysis result ID.
@@ -13,9 +12,9 @@ import type {UIMessagePart} from '@sqlrooms/ai-config';
  * @returns Array of message parts from the assistant's response, or empty array if not found
  */
 export function useAssistantMessageParts(
-  uiMessages: UIMessage[] | undefined,
+  uiMessages: UIMessageSchema[] | undefined,
   analysisResultId: string,
-): UIMessagePart[] {
+): UIMessagePartSchema[] {
   return useMemo(() => {
     if (!uiMessages) return [];
 

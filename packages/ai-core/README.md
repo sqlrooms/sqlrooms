@@ -135,8 +135,6 @@ ai: {
       uiMessages: UIMessage[],
       // Secondary storage: Error messages and legacy compatibility
       analysisResults: AnalysisResult[],
-      // Tool execution data
-      toolAdditionalData: Record<string, unknown>,
     },
   ],
   currentSessionId: string,
@@ -185,22 +183,6 @@ type AnalysisResult = {
   errorMessage?: ErrorMessageSchema; // Error if analysis failed
   isCompleted: boolean; // Whether AI finished responding
 };
-```
-
-#### `toolAdditionalData` - Rich Tool Outputs
-
-Each session also maintains a `toolAdditionalData` object that stores additional data from tool executions, keyed by `toolCallId`. This data is used for:
-
-- Rendering tool-specific UI components
-- Passing data between tool calls
-- Preserving rich data that doesn't go back to the LLM
-
-```ts
-type ToolAdditionalData = Record<string, unknown>;
-
-// Example: Storing tool additional data
-const setToolData = useRoomStore((state) => state.ai.setSessionToolAdditionalData);
-setToolData(sessionId, toolCallId, {chartData: [...]});
 ```
 
 ## Tools
@@ -257,7 +239,6 @@ const weatherTool: OpenAssistantTool = {
 2. AI processes and may call tools → creates assistant `UIMessage` with tool invocations
 3. Tools execute and return:
    - `llmResult`: Text summary sent back to the LLM
-   - `additionalData`: Rich data stored in `toolAdditionalData` for UI rendering
 4. AI responds with final answer → creates assistant `UIMessage` with text
 5. On completion: `uiMessages` updated, `analysisResult` created with user message ID
 
@@ -332,7 +313,6 @@ Backend (route.ts)
 Client receives stream
   │
   ├─> onData callback
-  │   └─> setSessionToolAdditionalData() ✅ Stores in toolAdditionalData
   │
   └─> messages array ✅ Automatically excludes transient data parts
 
@@ -347,20 +327,10 @@ Session Storage (clean) → AI SDK → UI Display
 
 1. **✅ Clean Conversation History**: Transient data parts never appear in message history
 2. **✅ Efficient Token Usage**: No unnecessary data sent to the LLM
-3. **✅ Proper Data Storage**: Tool data is stored separately in `toolAdditionalData`
-4. **✅ UI Flexibility**: Components can access tool data via `toolAdditionalData[toolCallId]`
-5. **✅ Simple & Native**: Uses built-in SDK feature, no custom utilities needed
-6. **✅ Maintainable**: Follows SDK conventions and patterns
-7. **✅ No Manual Filtering**: SDK handles exclusion automatically
+3. **✅ Simple & Native**: Uses built-in SDK feature, no custom utilities needed
+4. **✅ Maintainable**: Follows SDK conventions and patterns
+5. **✅ No Manual Filtering**: SDK handles exclusion automatically
 
-#### Usage in Components
-
-To access the additional tool data in your components:
-
-```tsx
-const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
-const toolData = currentSession?.toolAdditionalData?.[toolCallId];
-```
 
 #### Alternative Considered: Message Annotations
 

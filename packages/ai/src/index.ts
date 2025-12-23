@@ -27,16 +27,12 @@ export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {useAiChat} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
-export {
-  convertToAiSDKTools,
-  completeIncompleteToolCalls,
-} from '@sqlrooms/ai-core';
+export {completeIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {processAgentStream, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
-  UIMessageChunk,
   AgentToolCall,
-  AgentToolCallAdditionalData,
+  AgentToolCallData,
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components
@@ -66,7 +62,7 @@ export {
   AnalysisResultSchema,
   ErrorMessageSchema,
 } from '@sqlrooms/ai-config';
-export type {ToolUIPart, UIMessagePart} from '@sqlrooms/ai-config';
+export type {ToolUIPartSchema, UIMessagePartSchema} from '@sqlrooms/ai-config';
 
 // From @sqlrooms/ai-settings - State/Logic
 export {

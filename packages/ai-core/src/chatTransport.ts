@@ -5,9 +5,8 @@ import {
   streamText,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
 import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
@@ -16,6 +15,10 @@ import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
+
+export type CustomUIDataType = {
+  'tool-additional-output': {toolCallId: string; output: unknown};
+};
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -125,48 +128,6 @@ export type ChatTransportConfig = {
   getCustomModel?: () => LanguageModel | undefined;
 };
 
-/**
- * Creates a handler for tool completion that updates the tool additional data in the store
- */
-export function createOnToolCompletedHandler(
-  store: StoreApi<AiSliceStateForTransport>,
-) {
-  return (toolCallId: string, additionalData: unknown) => {
-    const sessionId = store.getState().ai.config.currentSessionId;
-    if (!sessionId) return;
-
-    store
-      .getState()
-      .ai.setSessionToolAdditionalData(sessionId, toolCallId, additionalData);
-  };
-}
-
-/**
- * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
- */
-export function convertToAiSDKTools(
-  tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
-): ToolSet {
-  return Object.entries(tools || {}).reduce(
-    (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
-      acc[name] = convertToVercelAiToolV5({
-        ...tool,
-        onToolCompleted: (toolCallId: string, additionalData: unknown) => {
-          if (tool.onToolCompleted) {
-            // Call the onToolCompleted handler provided by the tool if it exists
-            tool.onToolCompleted(toolCallId, additionalData);
-          }
-          // Call the onToolCompleted handler provided by the caller if it exists
-          onToolCompleted?.(toolCallId, additionalData);
-        },
-      });
-      return acc;
-    },
-    {},
-  );
-}
-
 export function createLocalChatTransportFactory({
   store,
   defaultProvider,
@@ -179,16 +140,13 @@ export function createLocalChatTransportFactory({
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
-      // Resolve provider/model and client at call time to pick up latest settings
       const state = store.getState();
       const currentSession = state.ai.getCurrentSession();
       const provider = currentSession?.modelProvider || defaultProvider;
       const modelId = currentSession?.model || defaultModel;
 
-      // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
 
-      // Fallback to OpenAI-compatible if no custom model provided
       if (!model) {
         const openai = createOpenAICompatible({
           apiKey,
@@ -212,22 +170,28 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(store);
-      const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
-      // Remove execute from tools for the model call so tool invocations are
-      // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
-      // to return fresh tool objects; if that ever changes, clone before mutate.
-      Object.values(tools).forEach((tool) => {
-        tool.execute = undefined;
-      });
+      // const onToolCompleted = createOnToolCompletedHandler(store);
+      const tools = state.ai.tools;
 
-      // get system instructions dynamically at request time to ensure fresh table schema
+      // Build a non-mutating toolset for the model call.
+      // Tool invocations are handled exclusively by onChatToolCall, so we omit `execute` here.
+      const toolsForModel = Object.fromEntries(
+        Object.entries(tools).map(([name, tool]) => {
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          const {execute: _execute, ...rest} = tool as unknown as Record<
+            string,
+            unknown
+          >;
+          return [name, rest];
+        }),
+      ) as typeof tools;
+
       const systemInstructions = getInstructions();
 
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
-        tools,
+        tools: toolsForModel,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
         temperature: AI_DEFAULT_TEMPERATURE,
@@ -320,16 +284,8 @@ export function createChatHandlers({
           return;
         }
 
-        const onToolCompleted = createOnToolCompletedHandler(store);
-        const tools = convertToAiSDKTools(
-          state.ai.tools || {},
-          onToolCompleted,
-        );
-
-        // find tool from tools using toolName
-        const tool = tools[toolName];
+        const tool = state.ai.tools[toolName];
         if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
-          // Always provide a defined messages array to the tool runtime
           const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
             []) as UIMessage[];
           const llmResult = await tool.execute(input, {
@@ -390,9 +346,8 @@ export function createChatHandlers({
         }
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend (defensive guards)
+    // when data-tool-additional-output data part is received from server side from server side from server side
+    onChatData: (dataPart: DataUIPart<CustomUIDataType>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&
@@ -402,18 +357,11 @@ export function createChatHandlers({
           toolCallId: string;
           output: unknown;
         };
-
-        // Store the additional data in the session
-        const currentSessionId = store.getState().ai.config.currentSessionId;
-        if (currentSessionId) {
-          store
-            .getState()
-            .ai.setSessionToolAdditionalData(
-              currentSessionId,
-              toolCallId,
-              output,
-            );
-        }
+        // NOTE: This used to persist per-tool-call additional output into session state.
+        // The current public session schema no longer exposes a dedicated field for it,
+        // so we keep the hook as a no-op (while preserving type-level wiring).
+        void toolCallId;
+        void output;
       }
     },
     onChatFinish: ({messages}: {messages: UIMessage[]}) => {
@@ -426,9 +374,8 @@ export function createChatHandlers({
           !!store.getState().ai.analysisAbortController?.signal.aborted;
         if (aborted) {
           // If messages are empty (possible when stopping immediately), fall back to existing session messages
-          const sessionMessages =
-            (store.getState().ai.getCurrentSession()
-              ?.uiMessages as UIMessage[]) || [];
+          const sessionMessages = (store.getState().ai.getCurrentSession()
+            ?.uiMessages ?? []) as UIMessage[];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
 
@@ -438,8 +385,8 @@ export function createChatHandlers({
             .ai.setSessionUiMessages(currentSessionId, completedMessages);
 
           // Ensure an analysis result exists and is marked as cancelled
-          store.setState((state: AiSliceStateForTransport) =>
-            produce(state, (draft: AiSliceStateForTransport) => {
+          store.setState((state) =>
+            produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
               draft.ai.analysisAbortController = undefined;
 
@@ -496,8 +443,8 @@ export function createChatHandlers({
           .ai.setSessionUiMessages(currentSessionId, completedMessages);
 
         // Create or update analysis result with the user message ID for proper correlation
-        store.setState((state: AiSliceStateForTransport) =>
-          produce(state, (draft: AiSliceStateForTransport) => {
+        store.setState((state) =>
+          produce(state, (draft) => {
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
             );
@@ -579,8 +526,8 @@ export function createChatHandlers({
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
-          store.setState((state: AiSliceStateForTransport) =>
-            produce(state, (draft: AiSliceStateForTransport) => {
+          store.setState((state) =>
+            produce(state, (draft) => {
               draft.ai.isRunningAnalysis = false;
               draft.ai.analysisPrompt = '';
               draft.ai.analysisAbortController = undefined;
@@ -599,8 +546,8 @@ export function createChatHandlers({
           errMsg = 'Unknown error';
         }
         const currentSessionId = store.getState().ai.config.currentSessionId;
-        store.setState((state: AiSliceStateForTransport) =>
-          produce(state, (draft: AiSliceStateForTransport) => {
+        store.setState((state) =>
+          produce(state, (draft) => {
             if (!currentSessionId) return;
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,

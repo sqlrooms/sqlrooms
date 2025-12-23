@@ -61,8 +61,6 @@ const ToolUIPartSchema = z.union([
   ToolUIPartOutputErrorSchema,
 ]);
 
-export type ToolUIPart = z.infer<typeof ToolUIPartSchema>;
-
 // dynamic-tool parts
 const DynamicToolUIPartBaseSchema = z.object({
   type: z.literal('dynamic-tool'),
@@ -160,5 +158,9 @@ export const UIMessageSchema = z.object({
   parts: z.array(UIMessagePartSchema),
 });
 
-// Export the type for UIMessagePart
-export type UIMessagePart = z.infer<typeof UIMessagePartSchema>;
+export type TextUIPartSchema = z.infer<typeof TextUIPartSchema>;
+export type ReasoningUIPartSchema = z.infer<typeof ReasoningUIPartSchema>;
+export type ToolUIPartSchema = z.infer<typeof ToolUIPartSchema>;
+export type DynamicToolUIPartSchema = z.infer<typeof DynamicToolUIPartSchema>;
+export type UIMessageSchema = z.infer<typeof UIMessageSchema>;
+export type UIMessagePartSchema = z.infer<typeof UIMessagePartSchema>;
