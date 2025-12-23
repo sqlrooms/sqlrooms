@@ -1,20 +1,20 @@
-import React, {useMemo} from 'react';
 import {
-  TabStrip,
   Button,
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  useTheme,
+  TabStrip,
+  TabDescriptor,
 } from '@sqlrooms/ui';
 import {
   FileText,
   LayoutDashboard,
-  PlusIcon,
   PencilIcon,
+  PlusIcon,
   TrashIcon,
 } from 'lucide-react';
+import React, {useMemo} from 'react';
 import {useCellsStore} from '../hooks';
 import {SheetType} from '../types';
 
@@ -59,7 +59,7 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
       onSelect={setCurrentSheet}
       onRename={renameSheet}
       onClose={removeSheet}
-      renderTabTitle={(tab: import('@sqlrooms/ui').TabDescriptor) => {
+      renderTabTitle={(tab: TabDescriptor) => {
         const Icon = TYPE_ICONS[tab.type as SheetType] || FileText;
         return (
           <div className="flex min-w-0 items-center gap-2">

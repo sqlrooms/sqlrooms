@@ -1,11 +1,10 @@
 import React from 'react';
 import {Notebook} from '@sqlrooms/notebook';
 import {Canvas} from '@sqlrooms/canvas';
-import {SheetsTabBar} from '@sqlrooms/cells';
-import {useRoomStore} from './store';
+import {SheetsTabBar, useCellsStore} from '@sqlrooms/cells';
 
-export const NotebookPanel: React.FC = () => {
-  const currentSheet = useRoomStore((s) => {
+export const SheetsPanel: React.FC = () => {
+  const currentSheet = useCellsStore((s) => {
     const id = s.cells.config.currentSheetId;
     return id ? s.cells.config.sheets[id] : undefined;
   });

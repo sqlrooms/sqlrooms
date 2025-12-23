@@ -146,4 +146,3 @@ export type CellsSliceState = {
 - `packages/cells/src/hooks.ts` - Remove DagSliceState
 - `packages/cells/src/components/SheetsTabBar.tsx` - Remove 'cell' from TYPE_ICONS
 - `packages/notebook/src/useStoreWithNotebook.ts` - Remove DagSliceState
-- `packages/notebook/src/cellSchemas.ts` - Update for flexible cell types

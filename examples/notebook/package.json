@@ -14,7 +14,6 @@
     "zod": "^3.25.73",
     "lucide-react": "0.501.0",
     "zustand": "5.0.5",
-    "@sqlrooms/canvas": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/notebook": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",

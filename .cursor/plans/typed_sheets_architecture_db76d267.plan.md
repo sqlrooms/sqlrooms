@@ -170,5 +170,3 @@ await connector.query(`CREATE OR REPLACE VIEW ${schemaName}.${viewName} AS ${sql
 - Existing persisted data without `type` field will need a migration
 - Default `type` to `'notebook'` for backwards compatibility
 - Add migration in persistence layer to add `type` field to existing sheets
-
-## Files to Modify

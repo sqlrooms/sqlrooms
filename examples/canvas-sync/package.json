@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sqlrooms/canvas": "workspace:*",
+    "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",

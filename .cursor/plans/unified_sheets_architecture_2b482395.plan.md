@@ -278,5 +278,3 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 ## Migration Notes
 
 - Rename "tabs" (Notebook) and "dags" (Canvas) to "sheets" uniformly
-- Edges become the single dependency mechanism for both views
-- Notebook auto-derives edges when SQL changes
