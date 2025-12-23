@@ -14,9 +14,10 @@ import {
   PlusIcon,
   TrashIcon,
 } from 'lucide-react';
-import React, {useMemo} from 'react';
+import React, {useCallback, useMemo, useState} from 'react';
 import {useCellsStore} from '../hooks';
 import {SheetType} from '../types';
+import {DeleteSheetModal} from './DeleteSheetModal';
 
 export type SheetsTabBarProps = {
   className?: string;
@@ -34,20 +35,41 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
   const supportedTypes = useCellsStore((s) => s.cells.supportedSheetTypes);
   const addSheet = useCellsStore((s) => s.cells.addSheet);
   const removeSheet = useCellsStore((s) => s.cells.removeSheet);
+  const closeSheet = useCellsStore((s) => s.cells.closeSheet);
+  const openSheet = useCellsStore((s) => s.cells.openSheet);
+  const setSheetOrder = useCellsStore((s) => s.cells.setSheetOrder);
   const renameSheet = useCellsStore((s) => s.cells.renameSheet);
   const setCurrentSheet = useCellsStore((s) => s.cells.setCurrentSheet);
 
+  const [sheetToDelete, setSheetToDelete] = useState<string | null>(null);
+
+  const handleDeleteRequest = useCallback(
+    (sheetId: string) => {
+      const sheet = sheets[sheetId];
+      if (sheet && sheet.cellIds.length === 0) {
+        removeSheet(sheetId);
+      } else {
+        setSheetToDelete(sheetId);
+      }
+    },
+    [sheets, removeSheet],
+  );
+
+  const handleConfirmDelete = useCallback(() => {
+    if (sheetToDelete) {
+      removeSheet(sheetToDelete);
+      setSheetToDelete(null);
+    }
+  }, [sheetToDelete, removeSheet]);
+
   const tabs = useMemo(
     () =>
-      sheetOrder.map((id) => {
-        const sheet = sheets[id];
-        return {
-          id,
-          name: sheet?.title || 'Untitled',
-          type: sheet?.type || 'notebook',
-        };
-      }),
-    [sheetOrder, sheets],
+      Object.values(sheets).map((sheet) => ({
+        id: sheet.id,
+        name: sheet.title || 'Untitled',
+        type: sheet.type || 'notebook',
+      })),
+    [sheets],
   );
 
   return (
@@ -58,7 +80,8 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
       selectedTabId={currentSheetId}
       onSelect={setCurrentSheet}
       onRename={renameSheet}
-      onClose={removeSheet}
+      onClose={closeSheet}
+      onOpenTabsChange={setSheetOrder}
       renderTabTitle={(tab: TabDescriptor) => {
         const Icon = TYPE_ICONS[tab.type as SheetType] || FileText;
         return (
@@ -77,43 +100,76 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
           <TabStrip.MenuSeparator />
           <TabStrip.MenuItem
             variant="destructive"
-            onClick={() => removeSheet(tab.id)}
+            onClick={() => handleDeleteRequest(tab.id)}
           >
             <TrashIcon className="mr-2 h-4 w-4" />
             Delete
           </TabStrip.MenuItem>
         </>
       )}
+      renderSearchItemActions={(tab) => (
+        <>
+          <TabStrip.SearchItemAction
+            icon={<PencilIcon className="h-3 w-3" />}
+            aria-label={`Rename ${tab.name}`}
+            onClick={() => renameSheet(tab.id, tab.name)}
+          />
+          <TabStrip.SearchItemAction
+            icon={<TrashIcon className="h-3 w-3" />}
+            aria-label={`Delete ${tab.name}`}
+            onClick={() => handleDeleteRequest(tab.id)}
+          />
+        </>
+      )}
     >
       <TabStrip.SearchDropdown />
       <TabStrip.Tabs tabClassName="pl-2" />
 
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="hover:bg-primary/10 h-full w-8 rounded-none"
-          >
-            <PlusIcon className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start">
-          {supportedTypes.map((type) => {
-            const Icon = TYPE_ICONS[type];
-            return (
-              <DropdownMenuItem
-                key={type}
-                onClick={() => addSheet(undefined, type)}
-                className="capitalize"
-              >
-                <Icon className="mr-2 h-4 w-4" />
-                New {type}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {supportedTypes.length === 1 ? (
+        <AddNewSheetButton
+          onClick={() => addSheet(undefined, supportedTypes[0])}
+        />
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <AddNewSheetButton />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            {supportedTypes.map((type) => {
+              const Icon = TYPE_ICONS[type];
+              return (
+                <DropdownMenuItem
+                  key={type}
+                  onClick={() => addSheet(undefined, type)}
+                  className="capitalize"
+                >
+                  <Icon className="mr-2 h-4 w-4" />
+                  New {type}
+                </DropdownMenuItem>
+              );
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+      <DeleteSheetModal
+        isOpen={sheetToDelete !== null}
+        onClose={() => setSheetToDelete(null)}
+        onConfirm={handleConfirmDelete}
+        sheetTitle={sheetToDelete ? sheets[sheetToDelete]?.title : undefined}
+      />
     </TabStrip>
+  );
+};
+
+const AddNewSheetButton: React.FC<{onClick?: () => void}> = ({onClick}) => {
+  return (
+    <Button
+      size="icon"
+      variant="ghost"
+      className="hover:bg-primary/10 h-full w-8 rounded-none"
+      onClick={onClick}
+    >
+      <PlusIcon className="h-4 w-4" />
+    </Button>
   );
 };

@@ -21,8 +21,7 @@ export const NotebookPanel: React.FC = () => {
             </p>
           </div>
         )}
-        {currentSheet?.type === 'notebook' && <Notebook />}
-        {currentSheet?.type === 'canvas' && <Canvas />}
+        <Notebook />
       </div>
     </div>
   );

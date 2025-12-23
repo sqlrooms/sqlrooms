@@ -234,6 +234,38 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
 
+        closeSheet: (sheetId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.config.sheetOrder =
+                draft.cells.config.sheetOrder.filter((id) => id !== sheetId);
+              if (draft.cells.config.currentSheetId === sheetId) {
+                draft.cells.config.currentSheetId =
+                  draft.cells.config.sheetOrder[0];
+              }
+            }),
+          );
+        },
+
+        openSheet: (sheetId: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (!draft.cells.config.sheetOrder.includes(sheetId)) {
+                draft.cells.config.sheetOrder.push(sheetId);
+              }
+              draft.cells.config.currentSheetId = sheetId;
+            }),
+          );
+        },
+
+        setSheetOrder: (sheetOrder: string[]) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.config.sheetOrder = sheetOrder;
+            }),
+          );
+        },
+
         renameSheet: (sheetId: string, title: string) => {
           set((state) =>
             produce(state, (draft) => {

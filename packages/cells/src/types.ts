@@ -254,6 +254,9 @@ export type CellsSliceState = {
     // Sheet CRUD
     addSheet: (title?: string, type?: SheetType) => string;
     removeSheet: (sheetId: string) => void;
+    closeSheet: (sheetId: string) => void;
+    openSheet: (sheetId: string) => void;
+    setSheetOrder: (sheetOrder: string[]) => void;
     renameSheet: (sheetId: string, title: string) => void;
     setCurrentSheet: (sheetId: string) => void;
 
