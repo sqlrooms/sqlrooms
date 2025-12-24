@@ -1,8 +1,17 @@
 import {Button, Spinner} from '@sqlrooms/ui';
 import {Play} from 'lucide-react';
+import {SqlCellRunStatus} from '../types';
 
-import type {SqlCellRunButtonProps} from '../types';
-
+/**
+ * Props for the standalone run/cancel control used by SQL cells.
+ */
+type SqlCellRunButtonProps = {
+  onRun: () => void;
+  onCancel?: () => void;
+  status?: SqlCellRunStatus;
+  runLabel?: string;
+  disabled?: boolean;
+};
 /**
  * Renders the run/cancel control for a SQL cell and shows error feedback.
  */
@@ -38,9 +47,6 @@ export function SqlCellRunButton({
           <Play className="h-3 w-3" />
           {runLabel}
         </Button>
-      )}
-      {status?.state === 'error' && (
-        <span className="text-xs text-red-600">{status.message}</span>
       )}
     </div>
   );

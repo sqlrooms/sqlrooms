@@ -194,36 +194,13 @@ export type SqlDependencyOptions = {
   sqlTypes?: string[];
 };
 
-export type SqlCellBodyStatus =
+export type SqlCellRunStatus =
   | {
       state: 'idle' | 'running' | 'success' | 'cancel' | 'error';
       message?: string;
       resultName?: string;
     }
   | undefined;
-
-/**
- * Props for rendering the editable SQL cell body and its results.
- */
-export type SqlCellBodyProps = {
-  sql: string;
-  onSqlChange: (sql: string) => void;
-  onRun: () => void;
-  onCancel?: () => void;
-  status?: SqlCellBodyStatus;
-  resultName?: string;
-  renderResult?: React.ReactNode;
-  runLabel?: string;
-  disabled?: boolean;
-};
-
-/**
- * Props for the standalone run/cancel control used by SQL cells.
- */
-export type SqlCellRunButtonProps = Pick<
-  SqlCellBodyProps,
-  'onRun' | 'onCancel' | 'status' | 'runLabel' | 'disabled'
->;
 
 export const CellsSliceConfig = z.object({
   data: z.record(z.string(), Cell).default({}),

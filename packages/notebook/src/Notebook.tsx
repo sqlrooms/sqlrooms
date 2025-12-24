@@ -91,6 +91,9 @@ export const Notebook: React.FC = () => {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="ml-auto mr-0 flex items-center gap-1 px-4 pt-2">
+        {tab.inputBarOrder.length > 0 ? (
+          <ShowInputBarToggle inputBarOrder={tab.inputBarOrder} />
+        ) : null}
         <AddNewCellDropdown onAdd={handleAddCellAndScroll} enableShortcut />
         <Button
           size="xs"
@@ -100,7 +103,6 @@ export const Notebook: React.FC = () => {
         >
           Run all
         </Button>
-        <ShowInputBarToggle />
       </div>
       <InputBar
         inputBarOrder={tab.inputBarOrder}

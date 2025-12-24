@@ -1,10 +1,11 @@
-import React, {useCallback} from 'react';
+import React, {useCallback, useEffect, useRef} from 'react';
 import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, SqlCell} from '../types';
 import {SqlCellRunButton} from './SqlCellRunButton';
 import {produce} from 'immer';
+import type * as Monaco from 'monaco-editor';
 
 export type SqlCellContentProps = {
   id: string;
@@ -22,7 +23,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
 
-  const onSqlChange = useCallback(
+  const handleSqlChange = useCallback(
     (v: string) => {
       updateCell(id, (c) =>
         produce(c, (draft) => {
@@ -35,11 +36,12 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     [id, updateCell],
   );
 
-  const onRun = useCallback(() => {
+  const handleRun = useCallback(() => {
+    console.log('running cell');
     runCell(id);
   }, [id, runCell]);
 
-  const onCancel = useCallback(() => {
+  const handleCancel = useCallback(() => {
     cancelCell(id);
   }, [id, cancelCell]);
 
@@ -54,43 +56,77 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
 
   const resultName = status?.resultName;
 
+  const handleRunRef = useRef(handleRun);
+  useEffect(() => {
+    handleRunRef.current = handleRun;
+  }, [handleRun]);
+
+  const handleSqlEditorMount = useCallback(
+    (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
+      // Add keyboard shortcut for running query
+      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        handleRunRef.current();
+      });
+    },
+    [],
+  );
+
   const content = (
-    <div className="relative flex min-h-[200px] flex-col">
-      <SqlMonacoEditor
-        className="min-h-[200px] w-full"
-        value={cell.data.sql}
-        onChange={(v) => onSqlChange(v || '')}
-        options={{minimap: {enabled: false}}}
-      />
+    <div className="flex flex-col">
+      <div className="h-full w-full py-1">
+        <div className="relative h-full min-h-[200px] w-full">
+          <SqlMonacoEditor
+            className="absolute inset-0 h-full w-full"
+            value={cell.data.sql}
+            onChange={(v) => handleSqlChange(v || '')}
+            onMount={handleSqlEditorMount}
+            options={{
+              minimap: {enabled: false},
+              scrollBeyondLastLine: false,
+              scrollbar: {
+                alwaysConsumeMouseWheel: false,
+              },
+            }}
+          />
+        </div>
+      </div>
+      {status?.state === 'error' ? (
+        <div className="relative max-h-[400px] overflow-auto p-4">
+          <span className="whitespace-pre-wrap font-mono text-xs text-red-600">
+            {status.message}
+          </span>
+        </div>
+      ) : resultName ? (
+        <div className="relative min-h-[200px] overflow-hidden">
+          <QueryDataTable
+            className="absolute inset-0 h-full w-full"
+            query={`SELECT * FROM ${resultName}`}
+            fontSize="text-xs"
+            pageSize={10}
+            isLoading={status?.state === 'running'}
+            renderActions={() => (
+              <QueryDataTableActionsMenu
+                query={`SELECT * FROM ${resultName}`}
+              />
+            )}
+          />
+        </div>
+      ) : null}
     </div>
   );
 
-  const footer = resultName ? (
-    <div className="overflow-hidden border-t">
-      <QueryDataTable
-        query={`SELECT * FROM ${resultName}`}
-        fontSize="text-xs"
-        pageSize={10}
-        isLoading={status?.state === 'running'}
-        renderActions={() => (
-          <QueryDataTableActionsMenu query={`SELECT * FROM ${resultName}`} />
-        )}
-      />
-    </div>
-  ) : null;
+  const footer = null;
 
   return renderContainer({
     header: (
-      <div className="flex items-center gap-2">
+      <div className="flex w-full items-center gap-2">
+        <div className="flex-1" />
         <SqlCellRunButton
-          onRun={onRun}
-          onCancel={onCancel}
+          onRun={handleRun}
+          onCancel={handleCancel}
           status={status}
           runLabel="Run"
         />
-        <span className="text-[10px] font-bold uppercase text-gray-400">
-          SQL
-        </span>
       </div>
     ),
     content,

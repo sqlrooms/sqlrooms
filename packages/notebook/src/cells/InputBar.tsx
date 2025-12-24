@@ -4,7 +4,9 @@ import {FC} from 'react';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 import {CellView} from './CellView';
 
-export const ShowInputBarToggle = () => {
+export const ShowInputBarToggle: FC<{inputBarOrder: string[]}> = ({
+  inputBarOrder,
+}) => {
   const toggleShowInputBar = useStoreWithNotebook(
     (s) => s.notebook.toggleShowInputBar,
   );
@@ -24,10 +26,11 @@ export const ShowInputBarToggle = () => {
       <Toggle
         id="input-bar-mode"
         pressed={showInputBar}
+        disabled={!(inputBarOrder.length > 0)}
         onPressedChange={() => toggleShowInputBar(currentTabId)}
         className="h-7 text-xs"
       >
-        Show input bar
+        Show inputs
       </Toggle>
     </div>
   );
@@ -37,15 +40,13 @@ export const InputBar: FC<{inputBarOrder: string[]; showInputBar: boolean}> = ({
   inputBarOrder,
   showInputBar,
 }) => {
-  if (!showInputBar) return null;
+  if (!showInputBar || !(inputBarOrder.length > 0)) return null;
   return (
     <div className="relative flex h-[85px] flex-wrap gap-2 overflow-auto border-b py-2 text-xs">
       <div className="flex flex-wrap">
-        {inputBarOrder.length > 0
-          ? inputBarOrder.map((id) => (
-              <CellView id={id} key={`cellOrder-${id}`} />
-            ))
-          : 'No inputs yet'}
+        {inputBarOrder.map((id) => (
+          <CellView id={id} key={`cellOrder-${id}`} />
+        ))}
       </div>
     </div>
   );

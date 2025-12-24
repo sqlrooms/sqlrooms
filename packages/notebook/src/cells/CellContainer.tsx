@@ -35,16 +35,16 @@ export const CellContainer: React.FC<{
       )}
       onClick={() => setCurrentCell(id)}
     >
-      <div className="flex min-h-[36px] items-center justify-between border-b px-2">
-        <div className="flex items-center gap-2">
+      <div className="flex min-h-[36px] items-center justify-between gap-2 border-b px-2">
+        <div className="flex h-6 flex-1 items-center gap-2">
           <EditableText
+            editTrigger="doubleClick"
             value={(cell.data as any).title}
             onChange={(v) => onRename(id, v)}
-            className="text-sm font-medium shadow-none outline-none ring-0"
+            className="h-full text-sm font-medium shadow-none outline-none ring-0"
           />
-          {header}
         </div>
-        <div className="flex items-center gap-2 text-xs">
+        <div className="flex items-center justify-end gap-2 text-xs">
           <div
             className={cn('flex items-center gap-2', {
               'group-hover:flex': !isCurrent,
@@ -54,6 +54,7 @@ export const CellContainer: React.FC<{
             <DeleteCellDialog cell={cell as any} />
             <MoveCellButtons id={id} />
           </div>
+          <div>{header}</div>
         </div>
       </div>
       <div className="flex-1 overflow-auto">{children}</div>
