@@ -11,7 +11,11 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@openassistant/core": "file:../../../openassistant-v2/packages/core",
+    "@openassistant/duckdb": "file:../../../openassistant-v2/packages/duckdb",
+    "@openassistant/overture": "file:../../../openassistant-v2/packages/overture",
     "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",

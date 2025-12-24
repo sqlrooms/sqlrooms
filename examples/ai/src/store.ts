@@ -19,6 +19,7 @@ import {
   persistSliceConfigs,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createSqlEditorSlice,
   SqlEditorSliceConfig,
@@ -34,6 +35,8 @@ import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
 import {createElement, lazy, Suspense} from 'react';
 import {SpinnerPane} from '@sqlrooms/ui';
+import {CityBoundaryTool} from '@openassistant/overture';
+import {createDuckdbContext} from '@openassistant/duckdb';
 
 // Lazy loading example to enable code splitting
 const LazyMainView = lazy(() =>
@@ -68,9 +71,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         sqlEditor: SqlEditorSliceConfig,
       },
     },
-    (set, get, store) => ({
-      // Base room slice
-      ...createRoomShellSlice({
+    (set, get, store) => {
+      // Build the room-shell slice first (this defines `db`), then create any tools
+      // that depend on the DuckDB connector. Accessing `store.getState().db` here
+      // is too early during store creation and can be undefined.
+      const roomShellSlice = createRoomShellSlice({
+        connector: createWasmDuckDbConnector({
+          initializationQuery: 'LOAD spatial; LOAD httpfs;',
+        }),
         config: {
           dataSources: [
             {
@@ -112,53 +120,74 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           },
         },
-      })(set, get, store),
+      })(set, get, store);
 
-      // Sql editor slice
-      ...createSqlEditorSlice()(set, get, store),
-
-      // Ai model config slice
-      ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
-
-      // Ai slice
-      ...createAiSlice({
-        config: AiSliceConfig.parse(exampleSessions),
-
-        getInstructions: () => {
-          return createDefaultAiInstructions(store);
-        },
-
-        toolComponents: {
-          echo: EchoToolResult,
-          chart: VegaChartToolResult,
-          query: QueryToolResult,
-        },
-
-        // Add custom tools
-        tools: {
-          ...createDefaultAiTools(store, {query: {}}),
-
-          // Add the VegaChart tool from the vega package with a custom description
-          chart: createVegaChartTool(),
-
-          // Example of adding a simple echo tool
-          echo: {
-            name: 'echo',
-            description: 'A simple echo tool that returns the input text',
-            inputSchema: z.object({
-              text: z.string().describe('The text to echo back'),
-            }),
-            execute: async ({text}: {text: string}) => {
-              return {
-                llmResult: {
-                  success: true,
-                  details: `Echo: ${text}`,
-                },
-              };
-            },
+      // OpenAssistant tools expect a connector that can optionally refresh schemas.
+      // SQLRooms exposes schema refresh on the `db` slice, so we provide a tiny wrapper
+      // without depending on `store.getState()` during initialization.
+      const cityTool = new CityBoundaryTool(
+        {
+          dbConnector: roomShellSlice.db.connector,
+          refreshTableSchemas: async () => {
+            await roomShellSlice.db.refreshTableSchemas();
           },
         },
-      })(set, get, store),
-    }),
+        {refreshTableSchemas: true},
+      ).toAISDKv5();
+
+      return {
+        // Base room slice
+        ...roomShellSlice,
+
+        // Sql editor slice
+        ...createSqlEditorSlice()(set, get, store),
+
+        // Ai model config slice
+        ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
+
+        // Ai slice
+        ...createAiSlice({
+          config: AiSliceConfig.parse(exampleSessions),
+
+          getInstructions: () => {
+            return createDefaultAiInstructions(store);
+          },
+
+          toolComponents: {
+            echo: EchoToolResult,
+            chart: VegaChartToolResult,
+            query: QueryToolResult,
+          },
+
+          // Add custom tools
+          tools: {
+            ...createDefaultAiTools(store, {query: {}}),
+
+            // Add the VegaChart tool from the vega package with a custom description
+            chart: createVegaChartTool(),
+
+            // Example of adding a simple echo tool
+            echo: {
+              name: 'echo',
+              description: 'A simple echo tool that returns the input text',
+              inputSchema: z.object({
+                text: z.string().describe('The text to echo back'),
+              }),
+              execute: async ({text}: {text: string}) => {
+                return {
+                  llmResult: {
+                    success: true,
+                    details: `Echo: ${text}`,
+                  },
+                };
+              },
+            },
+
+            // openassistant tool
+            cityBoundaryTool: cityTool,
+          },
+        })(set, get, store),
+      };
+    },
   ),
 );

@@ -11,6 +11,12 @@ overrides:
   '@types/react': 19.2.7
   '@types/react-dom': 19.2.3
   '@duckdb/duckdb-wasm': 1.31.0
+  '@openassistant/core': file:../openassistant-v2/packages/core
+  '@openassistant/duckdb': file:../openassistant-v2/packages/duckdb
+  '@openassistant/overture': file:../openassistant-v2/packages/overture
+  '@openassistant/core>@openassistant/duckdb': file:../openassistant-v2/packages/duckdb
+  '@openassistant/overture>@openassistant/core': file:../openassistant-v2/packages/core
+  '@openassistant/overture>@openassistant/duckdb': file:../openassistant-v2/packages/duckdb
   zod: 4.1.13
   d3-sankey: 0.12.3
   monaco-editor: 0.55.1
@@ -208,12 +214,24 @@ importers:
 
   examples/ai:
     dependencies:
+      '@openassistant/core':
+        specifier: file:../../../openassistant-v2/packages/core
+        version: file:../openassistant-v2/packages/core(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      '@openassistant/duckdb':
+        specifier: file:../../../openassistant-v2/packages/duckdb
+        version: file:../openassistant-v2/packages/duckdb(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      '@openassistant/overture':
+        specifier: file:../../../openassistant-v2/packages/overture
+        version: file:../openassistant-v2/packages/overture(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
       '@sqlrooms/ai':
         specifier: workspace:*
         version: link:../../packages/ai
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
+      '@sqlrooms/duckdb':
+        specifier: workspace:*
+        version: link:../../packages/duckdb
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -5771,6 +5789,33 @@ packages:
   '@open-wc/dedupe-mixin@1.4.0':
     resolution: {integrity: sha512-Sj7gKl1TLcDbF7B6KUhtvr+1UCxdhMbNY5KxdU5IfMFWqL8oy1ZeAcCANjoB1TL0AJTcPmcCFsCbHf8X2jGDUA==}
 
+  '@openassistant/core@file:../openassistant-v2/packages/core':
+    resolution: {directory: ../openassistant-v2/packages/core, type: directory}
+    peerDependencies:
+      ai: '>=5.0.0'
+      zod: 4.1.13
+    peerDependenciesMeta:
+      ai:
+        optional: true
+
+  '@openassistant/duckdb@file:../openassistant-v2/packages/duckdb':
+    resolution: {directory: ../openassistant-v2/packages/duckdb, type: directory}
+    peerDependencies:
+      ai: '>=5.0.0'
+      zod: 4.1.13
+    peerDependenciesMeta:
+      ai:
+        optional: true
+
+  '@openassistant/overture@file:../openassistant-v2/packages/overture':
+    resolution: {directory: ../openassistant-v2/packages/overture, type: directory}
+    peerDependencies:
+      ai: '>=5.0.0'
+      zod: 4.1.13
+    peerDependenciesMeta:
+      ai:
+        optional: true
+
   '@openassistant/utils@1.0.0-alpha.0':
     resolution: {integrity: sha512-/IGGeTkCoOPLOXR953VrKmopYahqwaJGP9M1XwOQCE1G1tHcBLvjzGt9jgz6w/XUq5RDaK16AzeQha9irZZxFQ==}
 
@@ -7016,11 +7061,47 @@ packages:
   '@sqlrooms/dropzone@0.16.4':
     resolution: {integrity: sha512-O2Tc+bVYSk0wHZODzo1CDcmUN76GXqKIIicnPnwDWf+u+brTc0QTUAI+EKamkbIRT14FGaKBYe4/EK08F2vByQ==}
 
+  '@sqlrooms/duckdb-core@0.26.1-rc.13':
+    resolution: {integrity: sha512-djsLfD7tIYb6rcv7JOmzpy+30feWzeJ81foiSeRrdDWzTYL4DmbGFw+VA8UH+IaWJ0Nm+bDXJI31SqH/l9XX1g==}
+    peerDependencies:
+      apache-arrow: 17.0.0
+
+  '@sqlrooms/duckdb-node@0.26.1-rc.13':
+    resolution: {integrity: sha512-l+SXa3jg++4FPGplf/DsyNIZ1g4XyPF76qTh83GahhX294VfuEuYF2tKxhVwUocNdl9aeteNc7qssyXi2001Pg==}
+    peerDependencies:
+      '@sqlrooms/room-config': 0.26.1-rc.13
+      apache-arrow: 17.0.0
+
+  '@sqlrooms/duckdb@0.26.1-rc.13':
+    resolution: {integrity: sha512-k6Wk2n1bsHYebdQ4XP6ZmRVRiTjSrzeNxbGOW8TiT9sdYBYHhVwnsVcmIjQf4UXJnKo+BUc6oXiSZ7yXZUO3ZA==}
+    peerDependencies:
+      apache-arrow: 17.0.0
+
+  '@sqlrooms/layout-config@0.26.1-rc.13':
+    resolution: {integrity: sha512-Yuw6PeIbcHC+7wH5zXDfdMsxBnrV6/JVDl6OCpENkFtsUzHVrPFL3sHuyT/SqRqAw+quPwOXf9Iv/+Il3kFQqA==}
+
+  '@sqlrooms/room-config@0.26.1-rc.13':
+    resolution: {integrity: sha512-x2eo59HsIPBNNNeQavOIYQxsfvbpN+X0/G9H0ikJcCbYvUtB2UFtvgphErsKMlNWWykRNsM8+vHDsmYdvTN0QA==}
+    peerDependencies:
+      react: 19.2.1
+      react-dom: 19.2.1
+
+  '@sqlrooms/room-store@0.26.1-rc.13':
+    resolution: {integrity: sha512-satJkNXF/FlWfdoNAuAyTJMn7J/ufQjpxXtwtFQC9OJMru7rSddU+e5/Sk34lJWerRh3ggK9z+bkqq9xyRHurQ==}
+    peerDependencies:
+      react: 19.2.1
+
   '@sqlrooms/ui@0.16.4':
     resolution: {integrity: sha512-pzG/qXS7eLrWSS/tNiHljHsZQgT3Xijbc2NQgMAxmssjc34K/65ZvB7JFJLFrTkTnHla1xSvr58zT6V4aZ8bdA==}
     peerDependencies:
       autoprefixer: ^10.4.20
       tailwindcss: ^3.4.17
+
+  '@sqlrooms/utils@0.26.1-rc.13':
+    resolution: {integrity: sha512-38twJKxLMit154lcnz1oW2opQpi53iRbcln5HQObqRILOZ8FhUKsR2dSbOX3z8hBO6q42kxalNUKB0mPB6TLHA==}
+    peerDependencies:
+      react: 19.2.1
+      react-dom: 19.2.1
 
   '@standard-schema/spec@1.0.0':
     resolution: {integrity: sha512-m2bOd0f2RT9k8QJx1JN85cZYyH1RqFBdlwtkSlf4tBDYLCiiZnv1fIIwacK6cqwXavOydf0NPToMQgpKq+dVlA==}
@@ -7251,6 +7332,9 @@ packages:
     peerDependencies:
       react: 19.2.1
       react-dom: 19.2.1
+
+  '@toon-format/toon@2.1.0':
+    resolution: {integrity: sha512-JwWptdF5eOA0HaQxbKAzkpQtR4wSWTEfDlEy/y3/4okmOAX1qwnpLZMmtEWr+ncAhTTY1raCKH0kteHhSXnQqg==}
 
   '@tufjs/canonical-json@2.0.0':
     resolution: {integrity: sha512-yVtV8zsdo8qFHe+/3kw81dSLyF7D576A5cCFCi4X7B39tWT7SekaEFUnvnWJHz+9qO7qJTah1JbrDjWKqFtdWA==}
@@ -19706,6 +19790,50 @@ snapshots:
 
   '@open-wc/dedupe-mixin@1.4.0': {}
 
+  '@openassistant/core@file:../openassistant-v2/packages/core(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)':
+    dependencies:
+      '@openassistant/duckdb': file:../openassistant-v2/packages/duckdb(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      zod: 4.1.13
+    optionalDependencies:
+      ai: 5.0.108(zod@4.1.13)
+    transitivePeerDependencies:
+      - '@sqlrooms/room-config'
+      - '@types/react'
+      - react
+      - react-dom
+      - use-sync-external-store
+
+  '@openassistant/duckdb@file:../openassistant-v2/packages/duckdb(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)':
+    dependencies:
+      '@openassistant/core': file:../openassistant-v2/packages/core(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      '@sqlrooms/duckdb': 0.26.1-rc.13(@types/react@19.2.7)(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+      '@sqlrooms/duckdb-node': 0.26.1-rc.13(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@toon-format/toon': 2.1.0
+      apache-arrow: 17.0.0
+      zod: 4.1.13
+    optionalDependencies:
+      ai: 5.0.108(zod@4.1.13)
+    transitivePeerDependencies:
+      - '@sqlrooms/room-config'
+      - '@types/react'
+      - react
+      - react-dom
+      - use-sync-external-store
+
+  '@openassistant/overture@file:../openassistant-v2/packages/overture(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)':
+    dependencies:
+      '@openassistant/core': file:../openassistant-v2/packages/core(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      '@openassistant/duckdb': file:../openassistant-v2/packages/duckdb(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(@types/react@19.2.7)(ai@5.0.108(zod@4.1.13))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))(zod@4.1.13)
+      zod: 4.1.13
+    optionalDependencies:
+      ai: 5.0.108(zod@4.1.13)
+    transitivePeerDependencies:
+      - '@sqlrooms/room-config'
+      - '@types/react'
+      - react
+      - react-dom
+      - use-sync-external-store
+
   '@openassistant/utils@1.0.0-alpha.0':
     dependencies:
       zod: 4.1.13
@@ -21044,6 +21172,65 @@ snapshots:
       - react-dom
       - tailwindcss
 
+  '@sqlrooms/duckdb-core@0.26.1-rc.13(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@sqlrooms/room-config': 0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      apache-arrow: 17.0.0
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@sqlrooms/duckdb-node@0.26.1-rc.13(@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1))(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@duckdb/node-api': 1.4.2-r.1
+      '@sqlrooms/duckdb-core': 0.26.1-rc.13(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@sqlrooms/room-config': 0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      apache-arrow: 17.0.0
+    transitivePeerDependencies:
+      - react
+      - react-dom
+
+  '@sqlrooms/duckdb@0.26.1-rc.13(@types/react@19.2.7)(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))':
+    dependencies:
+      '@duckdb/duckdb-wasm': 1.31.0
+      '@sqlrooms/duckdb-core': 0.26.1-rc.13(apache-arrow@17.0.0)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@sqlrooms/room-config': 0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      '@sqlrooms/room-store': 0.26.1-rc.13(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+      '@sqlrooms/utils': 0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      apache-arrow: 17.0.0
+      fast-deep-equal: 3.1.3
+      immer: 11.0.1
+      zod: 4.1.13
+      zustand: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+    transitivePeerDependencies:
+      - '@types/react'
+      - react
+      - react-dom
+      - use-sync-external-store
+
+  '@sqlrooms/layout-config@0.26.1-rc.13':
+    dependencies:
+      zod: 4.1.13
+
+  '@sqlrooms/room-config@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      '@sqlrooms/layout-config': 0.26.1-rc.13
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
+      zod: 4.1.13
+
+  '@sqlrooms/room-store@0.26.1-rc.13(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))':
+    dependencies:
+      '@sqlrooms/room-config': 0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
+      immer: 11.0.1
+      react: 19.2.1
+      zod: 4.1.13
+      zustand: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
+    transitivePeerDependencies:
+      - '@types/react'
+      - react-dom
+      - use-sync-external-store
+
   '@sqlrooms/ui@0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.68.0(react@19.2.1))
@@ -21090,6 +21277,15 @@ snapshots:
       - '@types/react-dom'
       - react
       - react-dom
+
+  '@sqlrooms/utils@0.26.1-rc.13(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
+    dependencies:
+      d3-color: 3.1.0
+      d3-format: 3.1.0
+      d3-time-format: 4.1.0
+      dayjs: 1.11.19
+      react: 19.2.1
+      react-dom: 19.2.1(react@19.2.1)
 
   '@standard-schema/spec@1.0.0': {}
 
@@ -21286,6 +21482,8 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
       tippy.js: 6.3.7
+
+  '@toon-format/toon@2.1.0': {}
 
   '@tufjs/canonical-json@2.0.0': {}
 

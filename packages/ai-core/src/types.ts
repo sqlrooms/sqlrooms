@@ -1,5 +1,6 @@
 import type {ToolSet, UIMessage} from 'ai';
 import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
+import type {ToolComponent} from './AiSlice';
 
 export type ProviderOptions = NonNullable<
   Parameters<typeof import('ai').streamText>[0]['providerOptions']
@@ -40,7 +41,7 @@ export interface AiStateForTransport {
   analysisPrompt: string;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
   setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
-  findToolComponent: (toolName: string) => React.ComponentType | undefined;
+  findToolComponent: (toolName: string) => ToolComponent | undefined;
   waitForToolResult: (
     toolCallId: string,
     abortSignal?: AbortSignal,

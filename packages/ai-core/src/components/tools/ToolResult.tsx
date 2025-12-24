@@ -58,11 +58,7 @@ export const ToolResult = ({
       </div>
       {ToolComponent && isSuccess && isCompleted && (
         <ToolCallErrorBoundary>
-          {typeof ToolComponent === 'function' ? (
-            <ToolComponent {...llmResult} {...args} />
-          ) : (
-            ToolComponent
-          )}
+          <ToolComponent {...llmResult} {...args} />
         </ToolCallErrorBoundary>
       )}
     </MessageContainer>

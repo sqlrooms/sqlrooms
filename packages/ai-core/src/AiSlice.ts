@@ -42,6 +42,12 @@ type ChatOnToolCallCallback = (args: {
   addToolResult?: AddToolResult;
 }) => Promise<void> | void;
 
+// Tool result components receive dynamic props derived from tool input/output.
+// We intentionally allow arbitrary props here because tool-specific components
+// can require different prop shapes.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ToolComponent = React.ComponentType<any>;
+
 export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
@@ -49,7 +55,7 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     promptSuggestionsVisible: boolean;
     tools: ToolSet;
-    toolComponents: Record<string, React.ComponentType<any>>;
+    toolComponents: Record<string, ToolComponent>;
     agentToolCallData: Record<string, AgentToolCallData>;
     getProviderOptions?: GetProviderOptions;
     setAgentToolCallData: (
@@ -110,9 +116,7 @@ export type AiSliceState = {
     getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
-    findToolComponent: (
-      toolName: string,
-    ) => React.ComponentType<any> | undefined;
+    findToolComponent: (toolName: string) => ToolComponent | undefined;
     getApiKeyFromSettings: () => string;
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
@@ -146,7 +150,7 @@ export interface AiSliceOptions {
   initialAnalysisPrompt?: string;
   /** Tools to add to the AI assistant */
   tools: ToolSet;
-  toolComponents?: Record<string, React.ComponentType<any>>;
+  toolComponents?: Record<string, ToolComponent>;
   /** Optional provider-specific options passed to the underlying AI SDK call. */
   getProviderOptions?: GetProviderOptions;
 
@@ -346,10 +350,11 @@ export function createAiSlice(
         setAiModel: (modelProvider: string, model: string) => {
           set((state) =>
             produce(state, (draft) => {
-              const currentSession = draft.ai.getCurrentSession();
-              if (currentSession) {
-                currentSession.modelProvider = modelProvider;
-                currentSession.model = model;
+              const {currentSessionId, sessions} = draft.ai.config;
+              const session = sessions.find((s) => s.id === currentSessionId);
+              if (session) {
+                session.modelProvider = modelProvider;
+                session.model = model;
               }
             }),
           );
@@ -488,10 +493,7 @@ export function createAiSlice(
           );
         },
 
-        registerToolComponent: (
-          toolName: string,
-          component: React.ComponentType,
-        ) => {
+        registerToolComponent: (toolName: string, component: ToolComponent) => {
           set((state) =>
             produce(state, (draft) => {
               draft.ai.toolComponents[toolName] = component;
