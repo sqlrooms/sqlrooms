@@ -12,7 +12,7 @@ import {
   RootContext,
   ModalContainerFactory,
 } from '@kepler.gl/components';
-import {useDimensions} from '@kepler.gl/utils';
+import {useDimensions, getAnimatableVisibleLayers} from '@kepler.gl/utils';
 import styled, {useTheme} from 'styled-components';
 
 import {KeplerInjector} from './KeplerInjector';
@@ -42,6 +42,12 @@ const CustomWidgetcontainer = styled.div`
 
   .map-popover {
     z-index: 50;
+  }
+
+  /* Remove top margin from Trip layer timeline */
+  .kepler-gl .bottom-widget--container .animation-control-container,
+  .bottom-widget--container .animation-control-container {
+    margin-top: 0 !important;
   }
 `;
 
@@ -96,9 +102,17 @@ const KeplerGl: FC<{
     [keplerState, mergedKeplerProps],
   );
 
-  const bottomWidgetFields = keplerState?.visState.filters?.length
-    ? bottomWidgetSelector(mergedKeplerProps, theme)
-    : null;
+  // Check if there are filters or animatable layers (e.g., Trip layers)
+  const hasFilters = Boolean(keplerState?.visState.filters?.length);
+  const hasAnimatableLayers = useMemo(() => {
+    const layers = keplerState?.visState?.layers || [];
+    return getAnimatableVisibleLayers(layers).length > 0;
+  }, [keplerState?.visState?.layers]);
+
+  const bottomWidgetFields =
+    hasFilters || hasAnimatableLayers
+      ? bottomWidgetSelector(mergedKeplerProps, theme)
+      : null;
 
   const modalContainerFields = keplerState?.visState
     ? modalContainerSelector(mergedKeplerProps, containerNode)
