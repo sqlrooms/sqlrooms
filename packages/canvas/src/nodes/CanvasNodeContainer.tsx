@@ -33,10 +33,9 @@ export const CanvasNodeContainer: FC<
   }>
 > = ({id, className, headerRight, children}) => {
   const renameNode = useStoreWithCanvas((s) => s.canvas.renameNode);
-  const node = useStoreWithCanvas((s) =>
-    s.canvas.config.nodes.find((n) => n.id === id),
-  );
-  const title = node?.data.title;
+  const cell = useStoreWithCanvas((s) => s.cells.config.data[id]);
+
+  const title = (cell?.data as any)?.title;
   const onTitleChange = useCallback(
     async (v: string) => {
       await renameNode(id, v);
@@ -74,7 +73,11 @@ export const CanvasNodeContainer: FC<
           </PopoverTrigger>
           <PopoverContent className="max-h-[50vh] w-[400px] overflow-auto">
             <QueryControls
-              placeholder={`✨ ${PROMPT_PLACEHOLDER[node?.type ?? 'default']}`}
+              placeholder={`✨ ${
+                PROMPT_PLACEHOLDER[
+                  (cell?.type ?? 'default') as keyof typeof PROMPT_PLACEHOLDER
+                ]
+              }`}
               onRun={() => {
                 setAssistantOpen(true);
               }}

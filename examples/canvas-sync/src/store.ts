@@ -1,6 +1,11 @@
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
 import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
+  createCellsSlice,
+  createDefaultCellRegistry,
+  CellsSliceState,
+} from '@sqlrooms/cells';
+import {
   CrdtSliceState,
   createCrdtSlice,
   // createIndexedDbDocStorage,
@@ -27,6 +32,7 @@ export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
   CanvasSliceState &
+  CellsSliceState &
   CrdtSliceState & {
     app: {
       config: AppConfig;
@@ -66,6 +72,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             },
           },
         },
+      })(set, get, store),
+
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
 
       ...createCanvasSlice({

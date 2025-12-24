@@ -41,6 +41,10 @@ const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
   formatOnPaste: true,
   formatOnType: true,
   wordWrap: 'on',
+  scrollBeyondLastLine: false,
+  scrollbar: {
+    alwaysConsumeMouseWheel: false,
+  },
 };
 
 /**

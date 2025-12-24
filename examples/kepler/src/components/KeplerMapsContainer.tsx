@@ -110,7 +110,7 @@ export const KeplerMapsContainer: FC<{
     <>
       <div className="flex h-full w-full flex-col">
         <TabStrip
-          className="bg-muted items-center pt-1"
+          className="items-center bg-muted pt-1"
           tabs={maps}
           preventCloseLastTab
           openTabs={openTabs}

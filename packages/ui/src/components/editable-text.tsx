@@ -39,6 +39,7 @@ import {cn} from '../lib/utils';
 export const EditableText: FC<{
   className?: string;
   isReadOnly?: boolean;
+  editTrigger?: 'click' | 'doubleClick';
   value: string;
   placeholder?: string;
   onChange: (text: string) => void;
@@ -58,6 +59,7 @@ export const EditableText: FC<{
   className,
   isReadOnly = false,
   defaultEditing = false,
+  editTrigger = 'click',
   isEditing,
   placeholder,
   value,
@@ -126,11 +128,15 @@ export const EditableText: FC<{
     onChange(internalValueRef.current?.trim());
   }, [handleSetEditing, onChange]);
 
-  const handleClick = useCallback(() => {
-    if (!isInternalEditing) {
-      handleSetEditing(true);
-    }
-  }, [isInternalEditing, handleSetEditing]);
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLInputElement>) => {
+      if (!isInternalEditing) {
+        inputRef.current?.select();
+        handleSetEditing(true);
+      }
+    },
+    [isInternalEditing, handleSetEditing],
+  );
 
   // Add keydown event listener to handle enter key
   useEffect(() => {
@@ -162,8 +168,10 @@ export const EditableText: FC<{
     <Input
       ref={inputRef}
       className={cn(
-        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
+        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0',
+        'focus:outline-none disabled:cursor-text',
         {
+          'focus:border-blue-500 focus:ring-blue-500': isInternalEditing,
           'select-none bg-transparent': !isInternalEditing,
           truncate: !isInternalEditing,
         },
@@ -176,7 +184,8 @@ export const EditableText: FC<{
       onChange={handleSetValue}
       onBlur={handleBlur}
       disabled={isReadOnly}
-      onClick={handleClick}
+      onClick={editTrigger === 'click' ? handleClick : undefined}
+      onDoubleClick={editTrigger === 'doubleClick' ? handleClick : undefined}
       placeholder={
         !isInternalEditing ? (placeholder ?? 'Click to edit') : undefined
       }
