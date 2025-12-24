@@ -37,7 +37,6 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   );
 
   const handleRun = useCallback(() => {
-    console.log('running cell');
     runCell(id);
   }, [id, runCell]);
 
