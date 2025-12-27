@@ -6,9 +6,7 @@
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/031f0d4f-c2a3-44f8-adf1-6429164bb0c7/deploy-status)](https://app.netlify.com/projects/sqlrooms-ai/deploys)
 
-<a href="https://ai.sqlrooms.org/" target="_blank">
-  <video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" controls loop muted></video>
-</a>
+<video src="/media/examples/ai-example-light.mp4" alt="SQLRooms AI example app" width="450" controls loop muted></video>
 
 An advanced example showing how to build an AI-powered analytics application with SQLRooms. Features include:
 

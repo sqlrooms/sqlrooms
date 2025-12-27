@@ -40,6 +40,8 @@ npx degit sqlrooms/examples/get-started my-new-app/
 
 <!--@include: ../examples/deckgl/README.md-->
 
+<!--@include: ../examples/deckgl-mosaic/README.md-->
+
 <!--@include: ../examples/deckgl-discuss/README.md-->
 
 <!--@include: ../examples/kepler/README.md-->
