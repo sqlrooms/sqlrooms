@@ -9,7 +9,7 @@ import {
   SpinnerPane,
 } from '@sqlrooms/ui';
 import {useMemo} from 'react';
-import {roomStore, useRoomStore} from '../../store';
+import {useRoomStore} from '../../store';
 import {createDepthPlot, createMagPlot, createTimePlot} from './filterPlots';
 
 export default function FiltersPanel({className}: {className?: string}) {
@@ -27,13 +27,7 @@ export default function FiltersPanel({className}: {className?: string}) {
 }
 
 const FiltersPanelContent = ({className}: {className?: string}) => {
-  // Get the brush selection from the store
-  const brush = useMemo(() => {
-    const state = roomStore.getState();
-    // Type assertion needed until package is rebuilt
-    return (state.mosaic as any).getSelection('brush');
-  }, []);
-
+  const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
   const magPlot = useMemo(() => createMagPlot(brush), [brush]);
   const depthPlot = useMemo(() => createDepthPlot(brush), [brush]);
   const timePlot = useMemo(() => createTimePlot(brush), [brush]);

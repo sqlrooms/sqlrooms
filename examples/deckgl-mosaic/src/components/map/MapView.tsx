@@ -1,15 +1,15 @@
 import DeckGL from '@deck.gl/react';
 import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
 import {Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
+import {cn} from '@sqlrooms/ui';
 import {Table} from 'apache-arrow';
 import {Loader2} from 'lucide-react';
 import {useMemo, useRef, useState} from 'react';
 import Map, {ViewState} from 'react-map-gl/maplibre';
-import {roomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
 import {buildGeoArrowPointTable} from './utils';
-import {cn} from '@sqlrooms/ui';
+import {useRoomStore} from '../../store';
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -34,21 +34,33 @@ function getZoomFactor({
 
 export default function MapView({className}: {className?: string}) {
   const deckRef = useRef<any>(null);
-  const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
+  const brush = useRoomStore((state) => state.mosaic.getSelection('brush'));
 
-  const [enableBrushing, setEnableBrushing] = useState(false);
-  const [syncCharts, setSyncCharts] = useState(true);
-  const [brushRadius, setBrushRadius] = useState(50000);
+  // Map view state - kept local as it's component-specific
+  const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [showInfo, setShowInfo] = useState(false);
 
-  const lastUpdateRef = useRef<number>(0);
+  // Map settings from store
+  const enableBrushing = useRoomStore(
+    (state) => state.mapSettings.config.enableBrushing,
+  );
+  const syncCharts = useRoomStore(
+    (state) => state.mapSettings.config.syncCharts,
+  );
+  const brushRadius = useRoomStore(
+    (state) => state.mapSettings.config.brushRadius,
+  );
+  const setEnableBrushing = useRoomStore(
+    (state) => state.mapSettings.setEnableBrushing,
+  );
+  const setSyncCharts = useRoomStore(
+    (state) => state.mapSettings.setSyncCharts,
+  );
+  const setBrushRadius = useRoomStore(
+    (state) => state.mapSettings.setBrushRadius,
+  );
 
-  // Get the brush selection from the store
-  const brush = useMemo(() => {
-    const state = roomStore.getState();
-    // Type assertion needed until package is rebuilt
-    return (state.mosaic as any).getSelection('brush');
-  }, []);
+  const lastUpdateRef = useRef<number>(0);
 
   // Use the mosaic client hook
   const {

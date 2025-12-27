@@ -19,10 +19,16 @@ import {
 import {DatabaseIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import DataSourcesPanel from './components/data-sources/DataSourcesPanel';
+import {
+  createMapSettingsSlice,
+  MapSettingsConfig,
+  MapSettingsSliceState,
+} from './MapSettingsSlice';
 
 export type RoomState = RoomShellSliceState &
   SqlEditorSliceState &
-  MosaicSliceState;
+  MosaicSliceState &
+  MapSettingsSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
@@ -32,6 +38,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         room: BaseRoomConfig,
         layout: LayoutConfig,
         sqlEditor: SqlEditorSliceConfig,
+        mapSettings: MapSettingsConfig,
       },
     },
     (set, get, store) => ({
@@ -76,6 +83,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createMosaicSlice()(set, get, store),
+
+      ...createMapSettingsSlice()(set, get, store),
     }),
   ),
 );
