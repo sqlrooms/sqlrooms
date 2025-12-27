@@ -35,7 +35,7 @@ export function createMapSettingsSlice(props?: {
   return createSlice<
     MapSettingsSliceState,
     BaseRoomStoreState & MapSettingsSliceState
-  >((set, get, store) => ({
+  >((set, _get, _store) => ({
     mapSettings: {
       config: createDefaultMapSettingsConfig(props?.config),
       setEnableBrushing: (enabled: boolean) => {
