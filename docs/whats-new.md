@@ -6,6 +6,23 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
+## 0.27.0-rc.0
+
+### Introducing MosaicSlice
+
+A new centralized state management system for Mosaic integration. The `MosaicSlice` provides a unified way to manage Mosaic connections, coordinate cross-filtering between visualizations, and create reactive data queries that automatically update based on user selections.
+
+<video src="/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
+
+Key features:
+
+- Automatic connection management with DuckDB
+- Named selections for cross-filtering between multiple visualizations
+- `useMosaicClient` hook for custom visualization clients
+- Support for custom visualizations that respond to Mosaic selections
+
+See the [Mosaic API documentation](/api/mosaic/) for details and check out the [DeckGL + Mosaic example](examples#deck-gl-mosaic) for a complete implementation.
+
 ## 0.26.1-rc.7 (2025-12-05)
 
 ### Replaced barrel exports across all modules

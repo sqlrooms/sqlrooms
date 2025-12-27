@@ -12,7 +12,7 @@ import {useMemo} from 'react';
 import {roomStore, useRoomStore} from '../../store';
 import {createDepthPlot, createMagPlot, createTimePlot} from './filterPlots';
 
-export default function FiltersPanel() {
+export default function FiltersPanel({className}: {className?: string}) {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find((t) => t.tableName === 'earthquakes'),
@@ -23,10 +23,10 @@ export default function FiltersPanel() {
   if (!isTableReady || mosaicConn.status !== 'ready') {
     return null;
   }
-  return <FiltersPanelContent />;
+  return <FiltersPanelContent className={className} />;
 }
 
-const FiltersPanelContent = () => {
+const FiltersPanelContent = ({className}: {className?: string}) => {
   // Get the brush selection from the store
   const brush = useMemo(() => {
     const state = roomStore.getState();
@@ -39,7 +39,7 @@ const FiltersPanelContent = () => {
   const timePlot = useMemo(() => createTimePlot(brush), [brush]);
 
   return (
-    <RoomPanel type="filters">
+    <RoomPanel type="filters" showHeader={false} className={className}>
       <div className="flex h-full flex-col">
         <ScrollArea className="flex-1">
           <div className="p-2">

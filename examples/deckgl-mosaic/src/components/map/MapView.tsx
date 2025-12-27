@@ -9,6 +9,7 @@ import {roomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
 import {buildGeoArrowPointTable} from './utils';
+import {cn} from '@sqlrooms/ui';
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -31,7 +32,7 @@ function getZoomFactor({
   return Math.pow(2, Math.max(14 - zoom + zoomOffset, 0));
 }
 
-export default function MapView() {
+export default function MapView({className}: {className?: string}) {
   const deckRef = useRef<any>(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
 
@@ -152,16 +153,15 @@ export default function MapView() {
       radiusMaxPixels: 20,
       pickable: !enableBrushing,
       stroked: true,
-      getLineColor: [140, 140, 140, 90],
+      getLineColor: [160, 160, 140, 90],
       lineWidthMinPixels: 1,
     });
   }, [data, enableBrushing, viewState.zoom]);
 
   return (
-    <div className="flex h-full w-full">
+    <div className={cn('flex h-full w-full', className)}>
       <div className="relative flex-1">
         <DeckGL
-          useDevicePixels={false}
           ref={deckRef}
           viewState={viewState}
           onViewStateChange={({viewState: next}) =>

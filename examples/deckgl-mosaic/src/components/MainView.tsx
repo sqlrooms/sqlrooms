@@ -1,6 +1,7 @@
 import {SpinnerPane} from '@sqlrooms/ui';
 import {useRoomStore} from '../store';
 import MapView from './map/MapView';
+import FiltersPanel from './filters/FiltersPanel';
 
 export const MainView = () => {
   const mosaicConn = useRoomStore((state) => state.mosaic.connection);
@@ -30,5 +31,10 @@ export const MainView = () => {
     );
   }
 
-  return <MapView />;
+  return (
+    <div className="flex h-full w-full flex-row">
+      <MapView className="w-[70%] flex-grow" />
+      <FiltersPanel className="w-[30%] max-w-[400px]" />
+    </div>
+  );
 };

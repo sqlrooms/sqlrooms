@@ -24,7 +24,6 @@ export const VgPlotChart: FC<VgPlotChartProps> = (props) => {
   const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     (async () => {
-      console.log(props);
       if (containerRef.current) {
         let element: HTMLElement | SVGSVGElement;
         if (isPlotProps(props)) {

@@ -1,4 +1,6 @@
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -14,12 +16,9 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
-import {DatabaseIcon, FilterIcon} from 'lucide-react';
+import {DatabaseIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import DataSourcesPanel from './components/data-sources/DataSourcesPanel';
-import FiltersPanel from './components/filters/FiltersPanel';
-import {createMosaicSlice} from '@sqlrooms/mosaic';
-import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 
 export type RoomState = RoomShellSliceState &
   SqlEditorSliceState &
@@ -64,12 +63,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               title: 'Data',
               icon: DatabaseIcon,
               component: DataSourcesPanel,
-              placement: 'sidebar',
-            },
-            filters: {
-              title: 'Filters',
-              icon: FilterIcon,
-              component: FiltersPanel,
               placement: 'sidebar',
             },
             main: {
