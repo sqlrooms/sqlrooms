@@ -149,5 +149,3 @@ This ensures the selection is tracked centrally and can be accessed/cleared from
 | File | Changes ||------|---------|| [`packages/mosaic/src/MosaicSlice.ts`](packages/mosaic/src/MosaicSlice.ts) | Add clients/selections maps and management functions || `packages/mosaic/src/useMosaicClient.ts` | New file - React hook for client lifecycle || [`packages/mosaic/src/index.ts`](packages/mosaic/src/index.ts) | Export new hook and types || [`examples/deckgl-mosaic/src/components/map/MapView.tsx`](examples/deckgl-mosaic/src/components/map/MapView.tsx) | Refactor to use useMosaicClient || [`examples/deckgl-mosaic/src/components/filters/filterPlots.ts`](examples/deckgl-mosaic/src/components/filters/filterPlots.ts) | Remove module-level brush, use slice selection |
 
 ## Benefits
-
-1. **Centralized tracking** - All clients visible in store for debugging/cleanup

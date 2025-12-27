@@ -1,8 +1,6 @@
 import DeckGL from '@deck.gl/react';
 import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
-import {Query, sql} from '@sqlrooms/mosaic';
-// TODO: Once package is built, change to: import {useMosaicClient} from '@sqlrooms/mosaic';
-import {useMosaicClient} from '../../../../../packages/mosaic/src/useMosaicClient';
+import {Query, sql, useMosaicClient} from '@sqlrooms/mosaic';
 import {Table} from 'apache-arrow';
 import {Loader2} from 'lucide-react';
 import {useMemo, useRef, useState} from 'react';
