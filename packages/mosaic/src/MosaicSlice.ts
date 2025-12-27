@@ -1,9 +1,4 @@
-import {createId} from '@paralleldrive/cuid2';
-import {
-  DuckDbSliceState,
-  escapeId,
-  isWasmDuckDbConnector,
-} from '@sqlrooms/duckdb';
+import {DuckDbSliceState, isWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
