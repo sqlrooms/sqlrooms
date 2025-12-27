@@ -1,22 +1,24 @@
-'use client';
+import {coordinator, Selection} from '@uwdata/mosaic-core';
 
-import {useEffect, useState, useRef, useMemo} from 'react';
-import {initMosaic, brush} from '@/lib/mosaic';
-import {makeClient} from '@uwdata/mosaic-core';
-import {Query, sql} from '@uwdata/mosaic-sql';
-import * as vg from '@uwdata/vgplot';
 import DeckGL from '@deck.gl/react';
 import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
-import Map from 'react-map-gl/mapbox';
-import {Loader2} from 'lucide-react';
+import {makeClient} from '@uwdata/mosaic-core';
+import {Query, sql} from '@uwdata/mosaic-sql';
 import {Table} from 'apache-arrow';
+import {Loader2} from 'lucide-react';
+import {useEffect, useMemo, useRef, useState} from 'react';
+import Map, {ViewState} from 'react-map-gl/maplibre';
+import {buildGeoArrowPointTable} from './utils';
 
-import EarthquakeCharts from '@/components/charts/EarthquakeCharts';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
 
 import 'mapbox-gl/dist/mapbox-gl.css';
-import {buildGeoArrowPointTable} from '@/app/utils';
+
+export const brush = Selection.crossfilter();
+
+const MAP_STYLE =
+  'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
 
 const INITIAL_VIEW_STATE = {
   longitude: -119.5,
@@ -25,8 +27,6 @@ const INITIAL_VIEW_STATE = {
   pitch: 0,
   bearing: 0,
 };
-
-const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN || '';
 
 function getZoomFactor({
   zoom,
@@ -38,7 +38,7 @@ function getZoomFactor({
   return Math.pow(2, Math.max(14 - zoom + zoomOffset, 0));
 }
 
-export default function EarthquakeMap() {
+export default function MapView() {
   const deckRef = useRef<any>(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
   const [data, setData] = useState<Table | null>(null);
@@ -56,9 +56,7 @@ export default function EarthquakeMap() {
     let activeClient: any = null;
 
     async function init() {
-      await initMosaic();
-
-      const mainCoordinator = vg.coordinator();
+      const mainCoordinator = coordinator();
       try {
         await mainCoordinator.exec('INSTALL spatial; LOAD spatial;');
       } catch {}
@@ -71,7 +69,8 @@ export default function EarthquakeMap() {
             .select('Latitude', 'Longitude', 'Magnitude', 'Depth', 'DateTime')
             .where(filter);
         },
-        queryResult: (result) => {
+        queryResult: (_result: unknown) => {
+          const result = _result as Table;
           const table = buildGeoArrowPointTable(
             result.getChild('Latitude'),
             result.getChild('Longitude'),
@@ -79,7 +78,6 @@ export default function EarthquakeMap() {
             result.getChild('Depth'),
             result.getChild('DateTime'),
           );
-
           setData(table);
         },
       });
@@ -92,7 +90,7 @@ export default function EarthquakeMap() {
 
     return () => {
       if (activeClient) {
-        vg.coordinator().disconnect(activeClient);
+        coordinator().disconnect(activeClient);
       }
     };
   }, []);
@@ -151,10 +149,10 @@ export default function EarthquakeMap() {
     return new GeoArrowScatterplotLayer({
       id: 'earthquakes',
       data,
-      getPosition: data.getChild('geom'),
+      getPosition: data.getChild('geom')!,
       getFillColor: ({index, data}) => {
         const batch = data.data;
-        const mag = batch.getChild('Magnitude').get(index);
+        const mag = batch.getChild('Magnitude')?.get(index) ?? 0;
         if (mag >= 6.0) return [199, 91, 74, 200];
         if (mag >= 5.0) return [220, 110, 88, 190];
         if (mag >= 4.0) return [235, 145, 105, 180];
@@ -164,7 +162,7 @@ export default function EarthquakeMap() {
       },
       getRadius: ({index, data}) => {
         const batch = data.data;
-        const mag = batch.getChild('Magnitude').get(index);
+        const mag = batch.getChild('Magnitude')?.get(index) ?? 0;
         return mag * mag;
       },
       radiusScale: getZoomFactor({zoom: viewState.zoom}),
@@ -178,13 +176,15 @@ export default function EarthquakeMap() {
   }, [data, enableBrushing, viewState.zoom]);
 
   return (
-    <div className="flex h-screen w-screen overflow-hidden bg-[#1b1a18]">
+    <div className="flex h-full w-full">
       <div className="relative flex-1">
         <DeckGL
           useDevicePixels={false}
           ref={deckRef}
           viewState={viewState}
-          onViewStateChange={({viewState: next}) => setViewState(next)}
+          onViewStateChange={({viewState: next}) =>
+            setViewState(next as ViewState)
+          }
           controller={true}
           layers={[scatterLayer]}
           onHover={onHover}
@@ -199,11 +199,7 @@ export default function EarthquakeMap() {
             }
           }
         >
-          <Map
-            mapboxAccessToken={MAPBOX_TOKEN}
-            mapStyle="mapbox://styles/mapbox/dark-v11"
-            projection="mercator"
-          />
+          <Map mapStyle={MAP_STYLE} projection="mercator" />
         </DeckGL>
 
         <MapControls
@@ -224,15 +220,6 @@ export default function EarthquakeMap() {
           <div className="absolute left-0 top-0 z-40 flex h-full w-full items-center justify-center bg-black/40 text-white backdrop-blur-sm">
             <Loader2 className="mr-2 h-8 w-8 animate-spin" />
             <span>Loading earthquakes...</span>
-          </div>
-        )}
-      </div>
-
-      <div className="flex h-full w-[420px] flex-col border-[#2a2825] bg-[#f3efe7] text-slate-100">
-        {dbReady && <EarthquakeCharts />}
-        {!dbReady && (
-          <div className="flex flex-1 items-center justify-center p-4">
-            <Loader2 className="mr-2 h-8 w-8 animate-spin text-slate-800" />
           </div>
         )}
       </div>

@@ -1,7 +1,5 @@
-'use client';
-
 import {Flashlight, MousePointer2, Info} from 'lucide-react';
-import {Skeleton} from '@/components/charts/EarthquakeCharts';
+import {Skeleton} from '@sqlrooms/ui';
 
 interface MapControlsProps {
   dbReady: boolean;
@@ -29,8 +27,8 @@ export function MapControls({
       <div className="flex items-center gap-2">
         {!dbReady && (
           <>
-            <Skeleton h={35} />
-            <Skeleton h={35} />
+            <Skeleton />
+            <Skeleton />
           </>
         )}
 

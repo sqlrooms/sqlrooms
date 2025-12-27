@@ -1,40 +1,28 @@
-Example application built with DuckDB-WASM, Mosaic and GeoArrow to query a Parquet file directly in the browser without a backend.
+### [Deck.gl + Mosaic](https://sqlrooms-deckgl-mosaic.netlify.app/)
 
-The architecture uses Mosaic’s global Coordinator to manage state between linked views using SQL predicates. Because DuckDB-WASM returns standard Arrow tables, the WKB output is converted to GeoArrow point vectors before being passed to the GeoArrowScatterplotLayer for rendering.
+[Try live](https://sqlrooms-deckgl-mosaic.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/deckgl-mosaic?embed=1&file=src/app.tsx)
 
-- DuckDB-WASM: https://duckdb.org/docs/stable/clients/wasm/overview
-- Mosaic: https://github.com/uwdata/mosaic
-- Deck.gl: https://deck.gl/
-- @geoarrow/deck.gl-layers: https://www.npmjs.com/package/@geoarrow/deck.gl-layers
+[![Netlify Status](https://api.netlify.com/api/v1/badges/.../deploy-status)](https://app.netlify.com/projects/sqlrooms-deckgl-mosaic/deploys)
 
-## Getting Started
+This example is based on the [original demo app](https://github.com/dzole0311/deckgl-duckdb-geoarrow) by [Gjore Milevski](https://github.com/dzole0311).
 
-Create `.env` file and add a Mapbox token:
+<video src="/media/examples/sqlrooms-deckgl-mosaic-1500px.mp4" alt="SQLRooms Deck.gl+Mosaic example app" width="450" controls loop muted></video>
+
+An example showcasing integration with [deck.gl](https://deck.gl/) and [@geoarrow/deck.gl-layers](https://www.npmjs.com/package/@geoarrow/deck.gl-layers) libraries for geospatial data visualization combined with the [UWData Mosaic](https://github.com/uwdata/mosaic) package for performant cross-filtering.
+
+The architecture uses Mosaic’s global Coordinator to manage state between linked views using SQL predicates. Because DuckDB-WASM returns standard Arrow tables, the WKB output is [converted to GeoArrow point vectors](./src/components/map/utils.ts#L26) before being passed to the GeoArrowScatterplotLayer for rendering. Ideally, this function can be replaced with a proper GeoArrow Table constructor in the future once [this feature request](https://github.com/geoarrow/geoarrow-js/issues/42) is implemented.
+
+To create a new project from the deckgl-mosaic example run this:
 
 ```bash
-NEXT_PUBLIC_MAPBOX_ACCESS_TOKEN=your-mapbox-token
+npx degit sqlrooms/examples/deckgl-mosaic my-new-app/
 ```
 
-Install the dependencies:
+#### Running locally
 
-```bash
+```sh
 npm install
-```
-
-Then run the development server:
-
-```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

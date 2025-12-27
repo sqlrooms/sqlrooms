@@ -1,5 +1,5 @@
 import * as vg from '@uwdata/vgplot';
-import {brush} from '@/lib/mosaic';
+import {brush} from '../map/MapView';
 
 const backgroundColor = '#f5d9a6';
 const foregroundColor = '#e67f5f';
