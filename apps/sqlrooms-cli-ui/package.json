@@ -19,7 +19,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@sqlrooms/vega": "workspace:*",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.562.0",
     "zod": "^4.1.8",
     "zustand": "^5.0.8",
     "react": "^19.2.0",
@@ -37,6 +37,6 @@
     "vite": "^7.1.9"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0"
+    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }
