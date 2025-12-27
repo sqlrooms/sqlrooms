@@ -1,12 +1,13 @@
 import DeckGL from '@deck.gl/react';
 import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
-import {makeClient, Query, sql} from '@sqlrooms/mosaic';
+import {Query, sql} from '@sqlrooms/mosaic';
+// TODO: Once package is built, change to: import {useMosaicClient} from '@sqlrooms/mosaic';
+import {useMosaicClient} from '../../../../../packages/mosaic/src/useMosaicClient';
 import {Table} from 'apache-arrow';
 import {Loader2} from 'lucide-react';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useMemo, useRef, useState} from 'react';
 import Map, {ViewState} from 'react-map-gl/maplibre';
-import {useRoomStore} from '../../store';
-import {brush} from '../filters/filterPlots';
+import {roomStore} from '../../store';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
 import {buildGeoArrowPointTable} from './utils';
@@ -35,8 +36,6 @@ function getZoomFactor({
 export default function MapView() {
   const deckRef = useRef<any>(null);
   const [viewState, setViewState] = useState(INITIAL_VIEW_STATE);
-  const [data, setData] = useState<Table | null>(null);
-  const [dbReady, setDbReady] = useState(false);
 
   const [enableBrushing, setEnableBrushing] = useState(false);
   const [syncCharts, setSyncCharts] = useState(true);
@@ -44,53 +43,44 @@ export default function MapView() {
   const [showInfo, setShowInfo] = useState(false);
 
   const lastUpdateRef = useRef<number>(0);
-  const clientRef = useRef<any>(null);
 
-  const mosaicConn = useRoomStore((state) => state.mosaic.connection);
-
-  useEffect(() => {
-    let activeClient: any = null;
-    if (mosaicConn.status !== 'ready') return;
-
-    async function init() {
-      if (mosaicConn.status !== 'ready') return;
-
-      activeClient = makeClient({
-        coordinator: mosaicConn.coordinator,
-        selection: brush,
-        query: (filter) => {
-          return Query.from('earthquakes')
-            .select('Latitude', 'Longitude', 'Magnitude', 'Depth', 'DateTime')
-            .where(filter);
-        },
-        queryResult: (_result: unknown) => {
-          const result = _result as Table;
-          const table = buildGeoArrowPointTable(
-            result.getChild('Latitude'),
-            result.getChild('Longitude'),
-            result.getChild('Magnitude'),
-            result.getChild('Depth'),
-            result.getChild('DateTime'),
-          );
-          setData(table);
-        },
-      });
-
-      clientRef.current = activeClient;
-      setDbReady(true);
-    }
-
-    init();
-
-    return () => {
-      if (activeClient) {
-        mosaicConn.coordinator.disconnect(activeClient);
-      }
-    };
+  // Get the brush selection from the store
+  const brush = useMemo(() => {
+    const state = roomStore.getState();
+    // Type assertion needed until package is rebuilt
+    return (state.mosaic as any).getSelection('brush');
   }, []);
 
+  // Use the mosaic client hook
+  const {
+    data: rawData,
+    isLoading,
+    client,
+  } = useMosaicClient<Table>({
+    selectionName: 'brush',
+    query: (filter: any) => {
+      return Query.from('earthquakes')
+        .select('Latitude', 'Longitude', 'Magnitude', 'Depth', 'DateTime')
+        .where(filter);
+    },
+  });
+
+  // Transform raw Arrow table to GeoArrow format
+  const data = useMemo(() => {
+    if (!rawData) return null;
+    return buildGeoArrowPointTable(
+      rawData.getChild('Latitude'),
+      rawData.getChild('Longitude'),
+      rawData.getChild('Magnitude'),
+      rawData.getChild('Depth'),
+      rawData.getChild('DateTime'),
+    );
+  }, [rawData]);
+
+  const dbReady = !isLoading && data !== null;
+
   const onHover = (info: any) => {
-    if (!info.coordinate || !enableBrushing || !clientRef.current) return;
+    if (!info.coordinate || !enableBrushing || !client) return;
     if (!syncCharts) return;
 
     const now = Date.now();
@@ -107,7 +97,7 @@ export default function MapView() {
     ) < ${radiusSq}`;
 
     brush.update({
-      source: clientRef.current,
+      source: client,
       value: [lon, lat, brushRadius],
       predicate,
     });
@@ -117,9 +107,9 @@ export default function MapView() {
 
   const clearBrush = () => {
     setEnableBrushing(false);
-    if (clientRef.current) {
+    if (client) {
       brush.update({
-        source: clientRef.current,
+        source: client,
         value: null,
         predicate: null as any,
       });
@@ -129,9 +119,9 @@ export default function MapView() {
   const toggleSyncCharts = () => {
     const next = !syncCharts;
     setSyncCharts(next);
-    if (!next && clientRef.current) {
+    if (!next && client) {
       brush.update({
-        source: clientRef.current,
+        source: client,
         value: null,
         predicate: null as any,
       });

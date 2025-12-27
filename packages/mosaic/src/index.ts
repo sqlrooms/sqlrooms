@@ -16,5 +16,8 @@ export {
   createDefaultMosaicConfig,
   createMosaicSlice,
   MosaicSliceConfig,
+  type MosaicClientOptions,
+  type TrackedClient,
 } from './MosaicSlice';
+export {useMosaicClient, type UseMosaicClientOptions} from './useMosaicClient';
 export {VgPlotChart} from './VgPlotChart';

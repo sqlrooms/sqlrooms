@@ -1,11 +1,9 @@
 import {vg, Selection} from '@sqlrooms/mosaic';
 
-export const brush = Selection.crossfilter();
-
 const backgroundColor = '#f5d9a6';
 const foregroundColor = '#e67f5f';
 
-export const createMagPlot = () =>
+export const createMagPlot = (brush: Selection) =>
   vg.plot(
     vg.rectY(vg.from('earthquakes'), {
       x: vg.bin('Magnitude', {maxbins: 25}),
@@ -28,7 +26,7 @@ export const createMagPlot = () =>
     vg.margins({left: 0, right: 10, top: 10, bottom: 30}),
   );
 
-export const createDepthPlot = () =>
+export const createDepthPlot = (brush: Selection) =>
   vg.plot(
     vg.raster(vg.from('earthquakes', {filterBy: brush}), {
       x: 'Magnitude',
@@ -48,7 +46,7 @@ export const createDepthPlot = () =>
     vg.margins({left: 24, right: 10, top: 15, bottom: 30}),
   );
 
-export const createTimePlot = () =>
+export const createTimePlot = (brush: Selection) =>
   vg.plot(
     vg.rectY(vg.from('earthquakes'), {
       x: vg.bin('DateTime', {maxbins: 40}),
