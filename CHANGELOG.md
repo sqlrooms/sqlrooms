@@ -3,6 +3,21 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](/github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](github.com/sqlrooms/sqlrooms/commits/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+* using escapeVal for value-comparison in addTable ([#268](/github.com/sqlrooms/sqlrooms/issues/268)) ([cd90e62](github.com/sqlrooms/sqlrooms/commits/cd90e62c8917c2467abbc0b895c7d68717470f3f))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](/github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](github.com/sqlrooms/sqlrooms/commits/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* Crdt package for realtime collaboration ([#266](/github.com/sqlrooms/sqlrooms/issues/266)) ([ab128ba](github.com/sqlrooms/sqlrooms/commits/ab128ba4452072f1a8593582c3060819e9916134))
+* Introducing MosaicSlice ([#277](/github.com/sqlrooms/sqlrooms/issues/277)) ([55b37de](github.com/sqlrooms/sqlrooms/commits/55b37defa5894a57b96b0eaf3f238aa30e3bd05a))
+* SQLRooms CLI ([#263](/github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](github.com/sqlrooms/sqlrooms/commits/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+* Sync save debounce ([#273](/github.com/sqlrooms/sqlrooms/issues/273)) ([499dea1](github.com/sqlrooms/sqlrooms/commits/499dea1296ccf9705f3c4c892eb041acdd81eb9e))
+
 ## [0.26.1-rc.13](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
 
 ### Bug Fixes

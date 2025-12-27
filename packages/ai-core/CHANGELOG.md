@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](https://github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](https://github.com/sqlrooms/sqlrooms/commit/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](https://github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](https://github.com/sqlrooms/sqlrooms/commit/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
 ## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
 
 ### Bug Fixes
