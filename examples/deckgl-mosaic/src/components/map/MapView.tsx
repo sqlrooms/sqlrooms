@@ -1,21 +1,15 @@
-import {coordinator, Selection} from '@uwdata/mosaic-core';
-
 import DeckGL from '@deck.gl/react';
 import {GeoArrowScatterplotLayer} from '@geoarrow/deck.gl-layers';
-import {makeClient} from '@uwdata/mosaic-core';
-import {Query, sql} from '@uwdata/mosaic-sql';
+import {makeClient, Query, sql} from '@sqlrooms/mosaic';
 import {Table} from 'apache-arrow';
 import {Loader2} from 'lucide-react';
 import {useEffect, useMemo, useRef, useState} from 'react';
 import Map, {ViewState} from 'react-map-gl/maplibre';
-import {buildGeoArrowPointTable} from './utils';
-
+import {useRoomStore} from '../../store';
+import {brush} from '../filters/filterPlots';
 import {MapControls} from './MapControls';
 import {MapInfoModal} from './MapInfoModal';
-
-import 'mapbox-gl/dist/mapbox-gl.css';
-
-export const brush = Selection.crossfilter();
+import {buildGeoArrowPointTable} from './utils';
 
 const MAP_STYLE =
   'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
@@ -52,17 +46,17 @@ export default function MapView() {
   const lastUpdateRef = useRef<number>(0);
   const clientRef = useRef<any>(null);
 
+  const mosaicConn = useRoomStore((state) => state.mosaic.connection);
+
   useEffect(() => {
     let activeClient: any = null;
+    if (mosaicConn.status !== 'ready') return;
 
     async function init() {
-      const mainCoordinator = coordinator();
-      try {
-        await mainCoordinator.exec('INSTALL spatial; LOAD spatial;');
-      } catch {}
+      if (mosaicConn.status !== 'ready') return;
 
       activeClient = makeClient({
-        coordinator: mainCoordinator,
+        coordinator: mosaicConn.coordinator,
         selection: brush,
         query: (filter) => {
           return Query.from('earthquakes')
@@ -90,7 +84,7 @@ export default function MapView() {
 
     return () => {
       if (activeClient) {
-        coordinator().disconnect(activeClient);
+        mosaicConn.coordinator.disconnect(activeClient);
       }
     };
   }, []);

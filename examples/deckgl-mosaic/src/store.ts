@@ -18,8 +18,12 @@ import {DatabaseIcon, FilterIcon} from 'lucide-react';
 import {MainView} from './components/MainView';
 import DataSourcesPanel from './components/data-sources/DataSourcesPanel';
 import FiltersPanel from './components/filters/FiltersPanel';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 
-export type RoomState = RoomShellSliceState & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState &
+  SqlEditorSliceState &
+  MosaicSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   persistSliceConfigs(
@@ -77,6 +81,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           },
         },
       })(set, get, store),
+
+      ...createMosaicSlice()(set, get, store),
     }),
   ),
 );

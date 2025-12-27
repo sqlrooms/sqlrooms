@@ -1,4 +1,4 @@
-import {useMosaic, VgPlotChart} from '@sqlrooms/mosaic';
+import {VgPlotChart} from '@sqlrooms/mosaic';
 import {RoomPanel} from '@sqlrooms/room-shell';
 import {
   Accordion,
@@ -13,14 +13,14 @@ import {useRoomStore} from '../../store';
 import {createDepthPlot, createMagPlot, createTimePlot} from './filterPlots';
 
 export default function FiltersPanel() {
-  const {isMosaicLoading} = useMosaic();
+  const mosaicConn = useRoomStore((state) => state.mosaic.connection);
   const isTableReady = useRoomStore((state) =>
     state.db.tables.find((t) => t.tableName === 'earthquakes'),
   );
-  if (isMosaicLoading) {
+  if (mosaicConn.status === 'loading') {
     return <SpinnerPane className="h-full w-full" />;
   }
-  if (!isTableReady) {
+  if (!isTableReady || mosaicConn.status !== 'ready') {
     return null;
   }
   return <FiltersPanelContent />;

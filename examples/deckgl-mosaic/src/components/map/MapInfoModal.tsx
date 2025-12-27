@@ -1,5 +1,3 @@
-'use client';
-
 interface MapInfoModalProps {
   onClose: () => void;
 }

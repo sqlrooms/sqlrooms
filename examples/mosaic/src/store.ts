@@ -15,6 +15,8 @@ import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
 import RoomDetailsPanel from './components/RoomDetailsPanel';
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -29,7 +31,9 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState &
+  MosaicSliceState &
+  SqlEditorSliceState;
 
 /**
  * Create a customized room store
@@ -81,6 +85,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       },
     })(set, get, store),
+
+    ...createMosaicSlice()(set, get, store),
 
     // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),

@@ -1,5 +1,6 @@
-import * as vg from '@uwdata/vgplot';
-import {brush} from '../map/MapView';
+import {vg, Selection} from '@sqlrooms/mosaic';
+
+export const brush = Selection.crossfilter();
 
 const backgroundColor = '#f5d9a6';
 const foregroundColor = '#e67f5f';

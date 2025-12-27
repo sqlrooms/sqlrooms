@@ -10,21 +10,17 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/mapbox": "^9.2.2",
-    "@sqlrooms/discuss": "workspace:*",
+    "apache-arrow": "17.0.0",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
     "@geoarrow/deck.gl-layers": "^0.3.1",
-    "@geoarrow/geoparquet-wasm": "^0.2.0-beta.5",
-    "deck.gl": "^9.2.2",
+    "@deck.gl/react": "^9.2.5",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.12.0",
-    "react-map-gl": "^8.1.0",
-    "zod": "^4.1.8"
+    "react-map-gl": "^8.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

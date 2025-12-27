@@ -36,25 +36,6 @@ function MyChart() {
 }
 ```
 
-### useMosaic Hook
-
-The `useMosaic` hook provides access to the Mosaic connector for DuckDB:
-
-```tsx
-import {useMosaic} from '@sqlrooms/mosaic';
-
-function MyComponent() {
-  const {isMosaicLoading, mosaicConnector} = useMosaic();
-
-  if (isMosaicLoading) {
-    return <div>Loading...</div>;
-  }
-
-  // Use mosaicConnector to interact with DuckDB through Mosaic
-  return <div>Mosaic is ready!</div>;
-}
-```
-
 ## Resources
 
 - [Mosaic Documentation](https://idl.uw.edu/mosaic/)
