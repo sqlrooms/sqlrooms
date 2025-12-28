@@ -25,12 +25,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       config: {
         layout: {
           type: LayoutTypes.enum.mosaic,
-          nodes: {
-            direction: 'row',
-            first: 'data',
-            second: 'main',
-            splitPercentage: 30,
-          },
+          nodes: 'main',
         },
         dataSources: [
           {
