@@ -10,20 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@deck.gl/mapbox": "^9.1.14",
+    "@deck.gl/mapbox": "^9.2.2",
     "@sqlrooms/discuss": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "deck.gl": "^9.1.14",
-    "immer": "^10.1.3",
-    "lucide-react": "^0.544.0",
-    "maplibre-gl": "^5.7.3",
-    "react-map-gl": "^8.0.4",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
+    "@sqlrooms/utils": "workspace:*",
+    "deck.gl": "^9.2.2",
+    "lucide-react": "^0.555.0",
+    "maplibre-gl": "^5.12.0",
+    "react-map-gl": "^8.1.0",
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -40,10 +38,5 @@
     "typescript": "5.9.2",
     "typescript-eslint": "^8.44.1",
     "vite": "^7.1.9"
-  },
-  "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
   }
 }

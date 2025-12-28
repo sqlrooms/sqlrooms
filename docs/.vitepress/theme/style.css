@@ -10,8 +10,16 @@
 
 .dark {
   /* --vp-c-bg: hsl(223, 64%, 6%); */
-  --vp-c-bg: hsl(225, 27%, 11%);
-  --vp-sidebar-bg-color: hsl(225, 27%, 11%);
+  --vp-c-bg: hsl(224, 68%, 7%);
+  --vp-sidebar-bg-color: hsl(224, 68%, 9%);
+  --vp-c-bg-soft: hsl(224, 48%, 11%);
+  --vp-code-block-bg: hsl(224, 48%, 11%);
+  --vp-button-alt-bg: hsl(224, 48%, 25%);
+  --vp-button-alt-hover-bg: hsl(224, 48%, 35%);
+  --vp-button-brand-bg: hsl(224, 68%, 35%);
+  --vp-button-brand-hover-bg: hsl(224, 68%, 45%);
+  --vp-home-hero-name-color: hsl(224, 68%, 50%);
+  --vp-c-bg-alt: hsl(224, 48%, 11%);
 }
 
 /* Add your custom styles here */

@@ -43,57 +43,47 @@ The room-shell package uses Zustand for state management. You can create a custo
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomState,
-  BaseRoomConfig,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {z} from 'zod';
-
-// Define your custom config schema (optional)
-const MyRoomConfig = BaseRoomConfig.extend({
-  myCustomSetting: z.string().default('default value'),
-});
-type MyRoomConfig = z.infer<typeof MyRoomConfig>;
 
 // Define your custom app state
-type MyRoomState = RoomState<MyRoomConfig> & {
+type MyRoomState = RoomShellSliceState & {
   myFeatureData: any[];
   addItem: (item: any) => void;
   removeItem: (id: string) => void;
 };
 
 // Create a room store with custom state
-export const {roomStore, useRoomStore} = createRoomStore<
-  MyRoomConfig,
-  MyRoomState
->((set, get, store) => ({
-  // Base room slice with initial configuration
-  ...createRoomShellSlice<MyRoomConfig>({
-    config: {
-      title: 'My Room',
+export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+  (set, get, store) => ({
+    // Base room slice with initial configuration
+    ...createRoomShellSlice({
+      config: {
+        title: 'My Room',
+        dataSources: [],
+      },
       layout: {
-        /* layout configuration */
+        config: {
+          /* layout configuration */
+        },
+        panels: {
+          /* panel definitions */
+        },
       },
-      dataSources: [],
-      myCustomSetting: 'custom value',
-    },
-    room: {
-      panels: {
-        /* panel definitions */
-      },
-    },
-  })(set, get, store),
+    })(set, get, store),
 
-  // Custom state and actions
-  myFeatureData: [],
-  addItem: (item) =>
-    set((state) => ({
-      myFeatureData: [...state.myFeatureData, item],
-    })),
-  removeItem: (id) =>
-    set((state) => ({
-      myFeatureData: state.myFeatureData.filter((item) => item.id !== id),
-    })),
-}));
+    // Custom state and actions
+    myFeatureData: [],
+    addItem: (item) =>
+      set((state) => ({
+        myFeatureData: [...state.myFeatureData, item],
+      })),
+    removeItem: (id) =>
+      set((state) => ({
+        myFeatureData: state.myFeatureData.filter((item) => item.id !== id),
+      })),
+  }),
+);
 
 // Use the store in a component with selector for better performance
 function MyComponent() {
@@ -115,48 +105,45 @@ function MyComponent() {
 
 ### Persisting Room Configuration
 
-The room configuration is designed to be persisted between sessions. You can use Zustand's persist middleware to save the configuration to localStorage or any other storage:
+The room configuration is designed to be persisted between sessions. You can use the `persistSliceConfigs` helper to save the configuration to localStorage or any other storage:
 
 ```tsx
-import {persist} from 'zustand/middleware';
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomState,
+  RoomShellSliceState,
   BaseRoomConfig,
+  LayoutConfig,
+  persistSliceConfigs,
 } from '@sqlrooms/room-shell';
-import {z} from 'zod';
-
-// Define your custom config schema
-const MyRoomConfig = BaseRoomConfig.extend({
-  myCustomSetting: z.string().default('default value'),
-});
-type MyRoomConfig = z.infer<typeof MyRoomConfig>;
 
 // Define your custom app state
-type MyRoomState = RoomState<MyRoomConfig> & {
+type MyRoomState = RoomShellSliceState & {
   myFeatureData: any[];
   addItem: (item: any) => void;
 };
 
 // Create a store with persistence
-export const {roomStore, useRoomStore} = createRoomStore<
-  MyRoomConfig,
-  MyRoomState
->(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+  persistSliceConfigs(
+    {
+      name: 'my-room-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<MyRoomConfig>({
+      ...createRoomShellSlice({
         config: {
           title: 'My Room',
-          layout: {
+          dataSources: [],
+        },
+        layout: {
+          config: {
             /* layout configuration */
           },
-          dataSources: [],
-          myCustomSetting: 'custom value',
-        },
-        room: {
           panels: {
             /* panel definitions */
           },
@@ -170,13 +157,6 @@ export const {roomStore, useRoomStore} = createRoomStore<
           myFeatureData: [...state.myFeatureData, item],
         })),
     }),
-    {
-      name: 'my-room-storage',
-      partialize: (state) => ({
-        // Persist only the config part of the state
-        config: state.config,
-      }),
-    },
   ),
 );
 ```
@@ -189,7 +169,7 @@ For larger applications, you can organize your state into feature slices:
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomState,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {createMyFeatureSlice, MyFeatureState} from './myFeatureSlice';
 import {
@@ -198,32 +178,34 @@ import {
 } from './anotherFeatureSlice';
 
 // Combined app state type
-type RoomState = RoomState<MyRoomConfig> & MyFeatureState & AnotherFeatureState;
+type MyRoomState = RoomShellSliceState & MyFeatureState & AnotherFeatureState;
 
 // Create a store with multiple slices
-export const {roomStore, useRoomStore} = createRoomStore<
-  MyRoomConfig,
-  RoomState
->((set, get, store) => ({
-  // Base room slice
-  ...createRoomShellSlice<MyRoomConfig>({
-    config: {
-      /* initial config */
-    },
-    room: {
-      panels: {
-        /* panel definitions */
+export const {roomStore, useRoomStore} = createRoomStore<MyRoomState>(
+  (set, get, store) => ({
+    // Base room slice
+    ...createRoomShellSlice({
+      config: {
+        /* initial config */
       },
-    },
-  })(set, get, store),
+      layout: {
+        config: {
+          /* layout configuration */
+        },
+        panels: {
+          /* panel definitions */
+        },
+      },
+    })(set, get, store),
 
-  // Feature slices
-  ...createMyFeatureSlice()(set, get, store),
-  ...createAnotherFeatureSlice({
-    // Feature-specific options
-    customOption: 'value',
-  })(set, get, store),
-}));
+    // Feature slices
+    ...createMyFeatureSlice()(set, get, store),
+    ...createAnotherFeatureSlice({
+      // Feature-specific options
+      customOption: 'value',
+    })(set, get, store),
+  }),
+);
 ```
 
 ### Managing Data Sources
@@ -295,12 +277,12 @@ The RoomStore is the core of the room-shell package. It provides a comprehensive
 
 ### State Properties
 
-#### `config`
+#### `room.config`
 
 The room configuration, which can be persisted between sessions.
 
 ```tsx
-const config = useRoomStore((state) => state.config);
+const config = useRoomStore((state) => state.room.config);
 console.log(config.title); // Access room title
 ```
 

@@ -1,12 +1,12 @@
 name: Sync Examples
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'examples/**'
-      - 'docs/media/examples/**'
-      - '.github/workflows/sync-examples.yml'
+  # push:
+  #   branches: [main]
+  #   paths:
+  #     - 'examples/**'
+  #     - 'docs/media/examples/**'
+  #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
 
 jobs:
@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           path: source
           lfs: true # Enable LFS for the checkout
@@ -37,9 +37,9 @@ jobs:
           git checkout -b main
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: '20'
+          node-version: '24'
 
       - name: Install jq
         run: sudo apt-get install -y jq
@@ -63,6 +63,27 @@ jobs:
           sed -i.bak '1{/---/{:a N;/\n---/!ba};d}' target/README.md
           rm target/README.md.bak
 
+          # Ensure each example has a default netlify.toml
+          for dir in target/*; do
+            if [ -d "$dir" ] && [ -f "$dir/package.json" ]; then
+              NETLIFY_FILE="$dir/netlify.toml"
+              if [ ! -f "$NETLIFY_FILE" ]; then
+                cat <<'EOF' > "$NETLIFY_FILE"
+          [build]
+            command = "npm run build"
+            publish = "dist"
+
+          [build.environment]
+            NODE_VERSION = "24.11.1"
+            NODE_OPTIONS = "--max_old_space_size=4096"
+            NPM_FLAGS = "--force"  # Override dependency constraints
+            CI = "false"  # This will prevent treating warnings as errors
+
+          EOF
+              fi
+            fi
+          done
+
           # Get version from lerna.json
           VERSION=$(jq -r '.version' source/lerna.json)
 
@@ -78,6 +99,18 @@ jobs:
               )) as $deps
               | .dependencies = $deps' "$file" > temp.json
             mv temp.json "$file"
+          done
+
+          # Generate lockfiles for each example
+          find target -name "package.json" -type f | while read -r file; do
+            dir=$(dirname "$file")
+            # Skip if it's a nested node_modules
+            if [[ ! "$dir" =~ node_modules ]]; then
+              echo "Generating lockfile for $dir"
+              cd "$dir"
+              npm install --package-lock-only --legacy-peer-deps
+              cd - > /dev/null
+            fi
           done
 
           # Setup git config and commit changes

@@ -10,13 +10,13 @@
   },
   "dependencies": {
     "@sqlrooms/canvas": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
     "@xyflow/react": "^12.8.5",
-    "lucide-react": "^0.544.0",
+    "lucide-react": "^0.555.0",
     "postcss": "^8.5.6",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
@@ -27,6 +27,7 @@
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.21",
     "typescript": "5.9.2",
     "vite": "^7.1.9"
   }

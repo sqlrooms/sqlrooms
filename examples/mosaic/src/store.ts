@@ -1,17 +1,13 @@
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   createRoomShellSlice,
   createRoomStore,
-  RoomShellSliceState,
-  BaseRoomConfig,
   LayoutTypes,
   MAIN_VIEW,
+  RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceConfig,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
@@ -29,26 +25,31 @@ export const RoomPanelTypes = z.enum([
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
-export type RoomState = RoomShellSliceState<RoomConfig> & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState &
+  MosaicSliceState &
+  SqlEditorSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
     // Base room slice
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         title: 'Demo App Room',
-        layout: {
+        dataSources: [
+          {
+            type: 'url',
+            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
+            tableName: 'latency',
+          },
+        ],
+      },
+      layout: {
+        config: {
           type: LayoutTypes.enum.mosaic,
           nodes: {
             direction: 'row',
@@ -57,16 +58,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             splitPercentage: 30,
           },
         },
-        dataSources: [
-          {
-            type: 'url',
-            url: 'https://idl.uw.edu/mosaic-datasets/data/observable-latency.parquet',
-            tableName: 'latency',
-          },
-        ],
-        ...createDefaultSqlEditorConfig(),
-      },
-      room: {
         panels: {
           [RoomPanelTypes.enum['room-details']]: {
             title: 'Room Details',
@@ -89,6 +80,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       },
     })(set, get, store),
+
+    ...createMosaicSlice()(set, get, store),
 
     // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),

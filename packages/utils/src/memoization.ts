@@ -33,14 +33,18 @@ export function memoizeOnce<TArgs extends readonly unknown[], TReturn>(
   let lastResult: TReturn;
   let hasResult = false;
 
-  return function (this: any, ...args: TArgs): TReturn {
+  return function (this: unknown, ...args: TArgs): TReturn {
     // Check if we have a cached result and arguments haven't changed
     if (hasResult && lastArgs && argsEqual(lastArgs, args)) {
       return lastResult;
     }
 
     // Call the function with the correct context and cache the result
-    lastResult = fn.apply(this, args as unknown as any[]);
+    lastResult = fn.apply(
+      this,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      args as unknown as any[],
+    );
     lastArgs = args;
     hasResult = true;
 

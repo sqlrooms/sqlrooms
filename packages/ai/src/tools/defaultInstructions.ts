@@ -1,6 +1,56 @@
 import {AiSliceState} from '@sqlrooms/ai-core';
-import {DuckDbSliceState} from '@sqlrooms/duckdb';
+import {DuckDbSliceState, DataTable} from '@sqlrooms/duckdb';
 import {StoreApi} from '@sqlrooms/room-shell';
+
+/**
+ * Formats table schema information in a clean, LLM-friendly format
+ * @param tables Array of DataTable objects from the DuckDB state
+ * @param currentDatabase The current local database name to filter by
+ * @returns Formatted string representation of table schemas
+ */
+export function formatTablesForLLM(
+  tables: DataTable[],
+  currentDatabase?: string,
+): string {
+  if (!tables || tables.length === 0) {
+    return 'No tables available in the database.';
+  }
+
+  return tables
+    .filter((table) => {
+      const schemaName = table.table?.schema || table.schema;
+      const databaseName = table.table?.database || table.database;
+
+      // Only include tables from 'main' schema and the current local database
+      // This excludes tables from attached databases (MotherDuck, Iceberg, knowledge base, etc.)
+      const isMainSchema = !schemaName || schemaName === 'main';
+      const isLocalDatabase = !databaseName || databaseName === currentDatabase;
+
+      return isMainSchema && isLocalDatabase;
+    })
+    .map((table) => {
+      const tableName = table.table?.table || table.tableName;
+      const schemaName = table.table?.schema || table.schema;
+      const fullTableName =
+        schemaName && schemaName !== 'main'
+          ? `${schemaName}.${tableName}`
+          : tableName;
+
+      // Build table header with metadata
+      const header = [fullTableName];
+      if (table.rowCount !== undefined)
+        header.push(`[${table.rowCount.toLocaleString()} rows]`);
+
+      // Format columns with proper indentation
+      const columns = table.columns.map((col) => `  ${col.name}`).join('\n');
+
+      // Add comment if available
+      const comment = table.comment ? `  # ${table.comment}` : '';
+
+      return `${header.join(' ')}\n${columns}${comment ? '\n' + comment : ''}`;
+    })
+    .join('\n\n');
+}
 
 /**
  * System prompt template for the AI assistant that provides instructions for:
@@ -56,7 +106,8 @@ For your final answer:
   * If no sample rows provided: Never fabricate data. Direct users to the table component for actual results.
   * If sample rows provided: Use them to enhance your analysis, but always direct users to the table component for complete results.
 
-Please use the following schema for the tables:
+Available tables in the local databases (format: tableName [rowCount] followed by indented columns):
+
 `;
 
 /**
@@ -65,6 +116,8 @@ Please use the following schema for the tables:
 export function createDefaultAiInstructions(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
 ): string {
-  const tables = store.getState().db.tables;
-  return `${DEFAULT_INSTRUCTIONS}\n${JSON.stringify(tables)}`;
+  const dbState = store.getState().db;
+  const tables = dbState.tables;
+  const currentDatabase = dbState.currentDatabase;
+  return `${DEFAULT_INSTRUCTIONS}\n${formatTablesForLLM(tables, currentDatabase)}`;
 }

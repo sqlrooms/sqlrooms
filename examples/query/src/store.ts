@@ -2,19 +2,18 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
 
@@ -22,16 +21,10 @@ export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
 
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   SqlEditorSliceState & {
     // Add your own state here
   };
@@ -39,13 +32,21 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'sql-editor-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
-        config: {
-          layout: {
+      ...createRoomShellSlice({
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               first: RoomPanelTypes.enum['data'],
@@ -54,9 +55,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               splitPercentage: 30,
             },
           },
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['main']]: {
               component: MainView,
@@ -75,15 +73,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sql-editor-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

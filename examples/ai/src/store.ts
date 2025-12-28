@@ -12,13 +12,13 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
   MAIN_VIEW,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
@@ -26,12 +26,18 @@ import {
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
-import {MainView} from './components/MainView';
+
 import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
+import {createElement, lazy, Suspense} from 'react';
+import {SpinnerPane} from '@sqlrooms/ui';
+
+// Lazy loading example to enable code splitting
+const LazyMainView = lazy(() =>
+  import('./components/MainView').then((m) => ({default: m.MainView})),
+);
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -41,13 +47,7 @@ export const RoomPanelTypes = z.enum([
 ] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-/**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-export type RoomState = RoomShellSliceState<RoomConfig> &
+export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState;
@@ -55,13 +55,32 @@ export type RoomState = RoomShellSliceState<RoomConfig> &
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'ai-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         config: {
-          layout: {
+          dataSources: [
+            {
+              tableName: 'earthquakes',
+              type: 'url',
+              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            },
+          ],
+        },
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
@@ -70,16 +89,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               splitPercentage: 30,
             },
           },
-          dataSources: [
-            {
-              tableName: 'earthquakes',
-              type: 'url',
-              url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
-            },
-          ],
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['data-sources']]: {
               title: 'Data Sources',
@@ -90,7 +99,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             main: {
               title: 'Main view',
               icon: () => null,
-              component: MainView,
+              // Wrap in function to prevent immer from freezing the lazy component (which causes errors)
+              component: () =>
+                createElement(Suspense, {
+                  fallback: createElement(SpinnerPane, {
+                    className: 'h-full w-full',
+                  }),
+                  children: createElement(LazyMainView),
+                }),
               placement: 'main',
             },
           },
@@ -138,30 +154,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'ai-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        config: RoomConfig.parse(persistedState.config),
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

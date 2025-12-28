@@ -1,22 +1,26 @@
-import {useEffect, useMemo} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {UIMessage} from 'ai';
+import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
+import type {ToolCall} from '../chatTransport';
+import {completeIncompleteToolCalls} from '../chatTransport';
+import type {AddToolResult} from '../types';
 
-export type AddToolResult = (
-  options:
-    | {tool: string; toolCallId: string; output: unknown}
-    | {
-        tool: string;
-        toolCallId: string;
-        state: 'output-error';
-        errorText: string;
-      },
-) => void;
+export type {AddToolResult} from '../types';
+
+/**
+ * Return type for the useAiChat hook.
+ */
+export type UseAiChatResult = {
+  messages: UIMessage[];
+  sendMessage: AbstractChat<UIMessage>['sendMessage'];
+  stop: AbstractChat<UIMessage>['stop'];
+  status: ChatStatus;
+};
 
 /**
  * Custom hook that provides AI chat functionality with automatic transport setup,
@@ -44,7 +48,7 @@ export type AddToolResult = (
  * }
  * ```
  */
-export function useAiChat() {
+export function useAiChat(): UseAiChatResult {
   // Get current session and configuration
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
@@ -68,6 +72,19 @@ export function useAiChat() {
   const onChatData = useStoreWithAi((s) => s.ai.onChatData);
   const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
+  const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
+  const setChatSendMessage = useStoreWithAi((s) => s.ai.setChatSendMessage);
+  const setAddToolResult = useStoreWithAi((s) => s.ai.setAddToolResult);
+
+  // Abort/auto-send guards
+  const isAborted = useStoreWithAi(
+    (s) => s.ai.analysisAbortController?.signal.aborted ?? false,
+  );
+  const isAbortedRef = useRef<boolean>(isAborted);
+  // Keep a live ref so sendAutomaticallyWhen sees latest abort state even if useChat doesn't reinit
+  useEffect(() => {
+    isAbortedRef.current = isAborted;
+  }, [isAborted]);
 
   // Create transport (recreate when model changes)
   const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
@@ -82,28 +99,73 @@ export function useAiChat() {
 
   // Setup useChat with all configuration
   // Include messagesRevision in the id to force reset only when messages are explicitly deleted
-  // Store addToolResult in a variable that can be captured by the onToolCall closure
-  let capturedAddToolResult: AddToolResult;
+  // Store addToolResult in a ref that can be captured by the onToolCall closure
+  const addToolResultRef = useRef<AddToolResult>(null!);
 
-  const {messages, sendMessage, addToolResult} = useChat({
+  // Gate auto-send when analysis is aborted or cancelled, to prevent unintended follow-ups
+  type SendAutoWhenArg = Parameters<
+    typeof lastAssistantMessageIsCompleteWithToolCalls
+  >[0];
+  const shouldAutoSend = (options: SendAutoWhenArg) => {
+    if (isAbortedRef.current) return false;
+    return lastAssistantMessageIsCompleteWithToolCalls(options);
+  };
+
+  const initialMessages = useMemo(() => {
+    return completeIncompleteToolCalls(
+      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion (messagesRevision)
+  }, [sessionId, messagesRevision]);
+
+  const {messages, sendMessage, addToolResult, stop, status} = useChat({
     id: `${sessionId}-${messagesRevision}`,
     transport,
-    messages: (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
-    onToolCall: async ({toolCall}: {toolCall: any}) => {
+    messages: initialMessages,
+    onToolCall: async (opts) => {
+      const {toolCall} = opts as {toolCall: unknown};
       // Wrap the store's onChatToolCall to provide addToolResult
-      // Use the captured addToolResult from the outer scope
-      return onChatToolCall?.({toolCall, addToolResult: capturedAddToolResult});
+      // Use the captured addToolResult from the ref
+      return onChatToolCall?.({
+        toolCall: toolCall as ToolCall,
+        addToolResult: addToolResultRef.current,
+      });
     },
     onFinish: onChatFinish,
     onError: onChatError,
     onData: onChatData,
     // Automatically submit when all tool results are available
     // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
-    sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
+    sendAutomaticallyWhen: shouldAutoSend,
   });
 
   // Capture addToolResult for use in onToolCall
-  capturedAddToolResult = addToolResult;
+  addToolResultRef.current = addToolResult;
+
+  // If user aborts mid-stream, stop the local chat stream immediately
+  useEffect(() => {
+    if (isAbortedRef.current && status === 'streaming') {
+      stop();
+    }
+  }, [status, stop, isAborted]);
+
+  // Register stop with the store so cancelAnalysis can stop the stream
+  useEffect(() => {
+    setChatStop?.(stop);
+    return () => setChatStop?.(undefined);
+  }, [setChatStop, stop]);
+
+  // Register sendMessage with the store so it can be accessed from the slice
+  useEffect(() => {
+    setChatSendMessage?.(sendMessage);
+    return () => setChatSendMessage?.(undefined);
+  }, [setChatSendMessage, sendMessage]);
+
+  // Register addToolResult with the store so it can be accessed from the slice
+  useEffect(() => {
+    setAddToolResult?.(addToolResult);
+    return () => setAddToolResult?.(undefined);
+  }, [setAddToolResult, addToolResult]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
@@ -114,5 +176,7 @@ export function useAiChat() {
   return {
     messages,
     sendMessage,
+    stop,
+    status,
   };
 }

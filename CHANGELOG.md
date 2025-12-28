@@ -3,6 +3,114 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](/github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](github.com/sqlrooms/sqlrooms/commits/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+* using escapeVal for value-comparison in addTable ([#268](/github.com/sqlrooms/sqlrooms/issues/268)) ([cd90e62](github.com/sqlrooms/sqlrooms/commits/cd90e62c8917c2467abbc0b895c7d68717470f3f))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](/github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](github.com/sqlrooms/sqlrooms/commits/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* Crdt package for realtime collaboration ([#266](/github.com/sqlrooms/sqlrooms/issues/266)) ([ab128ba](github.com/sqlrooms/sqlrooms/commits/ab128ba4452072f1a8593582c3060819e9916134))
+* Introducing MosaicSlice ([#277](/github.com/sqlrooms/sqlrooms/issues/277)) ([55b37de](github.com/sqlrooms/sqlrooms/commits/55b37defa5894a57b96b0eaf3f238aa30e3bd05a))
+* SQLRooms CLI ([#263](/github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](github.com/sqlrooms/sqlrooms/commits/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+* Sync save debounce ([#273](/github.com/sqlrooms/sqlrooms/issues/273)) ([499dea1](github.com/sqlrooms/sqlrooms/commits/499dea1296ccf9705f3c4c892eb041acdd81eb9e))
+
+## [0.26.1-rc.13](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* downgrade styled-components to 6.1.8 ([#264](/github.com/sqlrooms/sqlrooms/issues/264)) ([f8b1ce1](github.com/sqlrooms/sqlrooms/commits/f8b1ce1df617ea6a14b43c91c8b6eb3ea77d8025))
+* Prevent infinite rerender in AI AnalysisResultsContainer ([#262](/github.com/sqlrooms/sqlrooms/issues/262)) ([1e46230](github.com/sqlrooms/sqlrooms/commits/1e46230bdab9b073b4e142b5c04850f802e10e8e))
+* Security alerts: Upgrade deps with vulnerabilities ([#260](/github.com/sqlrooms/sqlrooms/issues/260)) ([7022349](github.com/sqlrooms/sqlrooms/commits/70223493c82713073f14ae893833a809a876dab7))
+
+## [0.26.1-rc.12](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+### Bug Fixes
+
+* **deps:** update dependency @paralleldrive/cuid2 to v3 ([#250](/github.com/sqlrooms/sqlrooms/issues/250)) ([ad0c539](github.com/sqlrooms/sqlrooms/commits/ad0c539a7664b2cee60184674c4c27c67c90514e))
+* Update Kepler and fix duckdb imports ([#258](/github.com/sqlrooms/sqlrooms/issues/258)) ([adf8932](github.com/sqlrooms/sqlrooms/commits/adf8932961cdf0d9a47745e517f2bdc7902f5dd1))
+
+## [0.26.1-rc.11](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](/github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](github.com/sqlrooms/sqlrooms/commits/f21318636d8151b942db6a15480731e86c00f5d4))
+
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](github.com/sqlrooms/sqlrooms/commits/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
+## 0.26.1-rc.6 (2025-12-05)
+
+### Bug Fixes
+
+* Add missing dep @dnd-kit/modifiers ([78859e2](github.com/sqlrooms/sqlrooms/commits/78859e2b9ac0dad17209ac100d40e36f81da6c27))
+
+## 0.26.1-rc.5 (2025-12-05)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.4 (2025-12-01)
+
+### Bug Fixes
+
+* Upgrade immer to prevent Object.freeze errors in kepler ([#218](/github.com/sqlrooms/sqlrooms/issues/218)) ([1fe2250](github.com/sqlrooms/sqlrooms/commits/1fe2250ca2acf578c26931632baa229f4b8ce881))
+
+## [0.26.1-rc.3](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.2...v0.26.1-rc.3) (2025-12-01)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.2 (2025-12-01)
+
+### Bug Fixes
+
+* Kepler fixes to prevent example app from crashing ([#217](/github.com/sqlrooms/sqlrooms/issues/217)) ([f57d9ff](github.com/sqlrooms/sqlrooms/commits/f57d9ff63a2356866ec99ba3fd9b203a8e35abb3))
+
+## 0.26.1-rc.1 (2025-11-30)
+
+**Note:** Version bump only for package sqlrooms
+
+## 0.26.1-rc.0 (2025-11-30)
+
+**Note:** Version bump only for package sqlrooms
+
+# 0.26.0 (2025-11-17)
+
+**Note:** Version bump only for package sqlrooms
+
+# 0.26.0-rc.6 (2025-11-12)
+
+**Note:** Version bump only for package sqlrooms
+
+# 0.26.0-rc.5 (2025-11-12)
+
+### Features
+
+* Separate config for every slice ([#156](/github.com/sqlrooms/sqlrooms/issues/156)) ([ae600c1](github.com/sqlrooms/sqlrooms/commits/ae600c124bec754bea9a71218dcb8203f11a5cce))
+
+# 0.26.0-rc.4 (2025-11-10)
+
+### Bug Fixes
+
+* Styles of schema tree node and mosaic layout (main) ([#182](/github.com/sqlrooms/sqlrooms/issues/182)) ([0b4d55f](github.com/sqlrooms/sqlrooms/commits/0b4d55ff407b6a978acb47fecc3dd71203df3a69))
+
 # 0.26.0-rc.3 (2025-10-23)
 
 ### Features

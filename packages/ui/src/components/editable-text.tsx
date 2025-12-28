@@ -36,14 +36,10 @@ import {cn} from '../lib/utils';
  * ```
  */
 
-const EDITING_PAD = 12;
-
 export const EditableText: FC<{
   className?: string;
   isReadOnly?: boolean;
   value: string;
-  minWidth?: number;
-  maxWidth?: number;
   placeholder?: string;
   onChange: (text: string) => void;
 
@@ -62,8 +58,6 @@ export const EditableText: FC<{
   className,
   isReadOnly = false,
   defaultEditing = false,
-  minWidth = 100,
-  maxWidth = 500,
   isEditing,
   placeholder,
   value,
@@ -74,15 +68,37 @@ export const EditableText: FC<{
   const inputRef = useRef<HTMLInputElement>(null);
   const [internalValue, setInternalValue] = useState(value);
   const internalValueRef = useRef(internalValue);
-  internalValueRef.current = internalValue;
-
-  const [inputWidth, setInputWidth] = useState(minWidth);
-  const spanRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Update input width based on the invisible span width
-    setInputWidth(spanRef.current?.offsetWidth ?? 0);
+    internalValueRef.current = internalValue;
   }, [internalValue]);
+
+  // Keep internalValue in sync with value prop
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (value !== internalValueRef.current) {
+      setInternalValue(value);
+    }
+  }, [value]);
+
+  // Keep internal editing state in sync with controlled isEditing prop
+  // and focus the input when editing is enabled
+  useEffect(() => {
+    if (isEditing !== undefined && isEditing !== isInternalEditing) {
+      setInternalIsEditing(Boolean(isEditing));
+      if (isEditing) {
+        // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
+        // so we need to wait a bit before making sure the input is focused and selected
+        const timeoutId = setTimeout(() => {
+          inputRef.current?.select();
+          inputRef.current?.focus();
+        }, 200);
+        return () => clearTimeout(timeoutId);
+      }
+    }
+    return undefined;
+  }, [isEditing, isInternalEditing]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSetValue = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -116,25 +132,6 @@ export const EditableText: FC<{
     }
   }, [isInternalEditing, handleSetEditing]);
 
-  useEffect(() => {
-    if (value !== internalValueRef.current) {
-      setInternalValue(value);
-    }
-  }, [value]);
-  useEffect(() => {
-    if (isEditing !== undefined && isEditing !== isInternalEditing) {
-      setInternalIsEditing(Boolean(isEditing));
-      if (isEditing) {
-        setTimeout(() => {
-          // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
-          // so we need to wait a bit before making sure the input is focused and selected
-          inputRef.current?.select();
-          inputRef.current?.focus();
-        }, 200);
-      }
-    }
-  }, [isInternalEditing, handleSetEditing, isEditing]);
-
   // Add keydown event listener to handle enter key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -162,38 +159,27 @@ export const EditableText: FC<{
   }, [isInternalEditing, onChange, handleSetEditing, value]);
 
   return (
-    <>
-      {/* Hidden span to measure the input width, so that the we can make the input grow to fit the text */}
-      <span
-        ref={spanRef}
-        className={cn(
-          className,
-          'white-space-pre pointer-events-none invisible absolute left-0 top-0 px-1',
-        )}
-        style={{minWidth, maxWidth}}
-      >
-        {internalValue}
-      </span>
-      <Input
-        ref={inputRef}
-        className={cn(
-          'disabled:opacity-1 rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
-          {'select-none bg-transparent': !isInternalEditing},
-          className,
-        )}
-        style={{
-          width: inputWidth + EDITING_PAD, // add padding to avoid jittering when editing
-          caretColor: isInternalEditing ? undefined : 'transparent',
-        }}
-        value={internalValue}
-        onChange={handleSetValue}
-        onBlur={handleBlur}
-        disabled={isReadOnly}
-        onClick={handleClick}
-        placeholder={
-          !isInternalEditing ? (placeholder ?? 'Click to edit') : undefined
-        }
-      />
-    </>
+    <Input
+      ref={inputRef}
+      className={cn(
+        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-none focus:ring-blue-500 disabled:cursor-text',
+        {
+          'select-none bg-transparent': !isInternalEditing,
+          truncate: !isInternalEditing,
+        },
+        className,
+      )}
+      style={{
+        caretColor: isInternalEditing ? undefined : 'transparent',
+      }}
+      value={internalValue}
+      onChange={handleSetValue}
+      onBlur={handleBlur}
+      disabled={isReadOnly}
+      onClick={handleClick}
+      placeholder={
+        !isInternalEditing ? (placeholder ?? 'Click to edit') : undefined
+      }
+    />
   );
 };

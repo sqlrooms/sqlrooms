@@ -1,3 +1,6 @@
 packages:
   - 'packages/*'
   - 'examples/*'
+  - '!packages/kepler.gl'
+  - 'packages/kepler.gl/src/*'
+  - 'apps/*'

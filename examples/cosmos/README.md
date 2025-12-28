@@ -1,10 +1,32 @@
-# SQLRooms Vite demo app + UWData Mosaic
+### [Cosmos – Graph Visualization](http://sqlrooms-cosmos.netlify.app/)
 
-[More about this example](https://sqlrooms.github.io/examples/)
+[Try live](http://sqlrooms-cosmos.netlify.app/)
+| [Github repo](https://github.com/sqlrooms/examples/tree/main/cosmos)
+| [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/cosmos?embed=1&file=src/app.tsx)
 
-# Running locally
+[![Netlify Status](https://api.netlify.com/api/v1/badges/9e7cb117-0355-406d-88f8-54bf6d9050a0/deploy-status)](https://app.netlify.com/projects/sqlrooms-cosmos/deploys)
 
-Then, the run the following:
+<a href="http://sqlrooms-cosmos.netlify.app/" target="_blank">
+  <img src="/media/examples/cosmos-graph.webp" alt="SQLRooms Graph example showing network visualization" width=450>
+</a>
 
-    npm install
-    npm dev
+An example demonstrating integration with the [Cosmos](https://github.com/cosmograph-org/cosmos) GPU-accelerated graph visualization library. Features include:
+
+- WebGL-based force-directed layout computation
+- High-performance rendering of large networks
+- Real-time interaction and filtering capabilities
+- Customizable visual attributes and physics parameters
+- Event handling for node/edge interactions
+
+To create a new project from the cosmos example run this:
+
+```bash
+npx degit sqlrooms/examples/cosmos my-new-app/
+```
+
+#### Running locally
+
+```sh
+npm install
+npm dev
+```

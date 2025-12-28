@@ -1,5 +1,4 @@
 import {AiSliceState} from '@sqlrooms/ai-core';
-import {OpenAssistantTool} from '@openassistant/utils';
 import {
   arrowTableToJson,
   DuckDbConnector,
@@ -15,6 +14,7 @@ export const QueryToolParameters = z.object({
   sqlQuery: z.string(),
   reasoning: z.string(),
 });
+
 export type QueryToolParameters = z.infer<typeof QueryToolParameters>;
 
 export type QueryToolLlmResult = {
@@ -42,12 +42,7 @@ export type QueryToolOptions = {
 export function createQueryTool(
   store: StoreApi<AiSliceState & DuckDbSliceState>,
   options?: QueryToolOptions,
-): OpenAssistantTool<
-  typeof QueryToolParameters,
-  QueryToolLlmResult,
-  QueryToolAdditionalData,
-  unknown
-> {
+) {
   const {
     readOnly = true,
     autoSummary = false,
@@ -59,13 +54,15 @@ export function createQueryTool(
 Please only run one query at a time.
 If a query fails, please don't try to run it again with the same syntax.`,
     parameters: QueryToolParameters,
-    execute: async (params: QueryToolParameters) => {
+    execute: async (
+      params: QueryToolParameters,
+      options?: {abortSignal?: AbortSignal},
+    ) => {
       const {type, sqlQuery} = params;
+      const abortSignal = options?.abortSignal;
+
       try {
         const connector = await store.getState().db.getConnector();
-        // TODO use options.abortSignal: maybe call db.cancelPendingQuery
-        const result = await connector.query(sqlQuery);
-
         const parsedQuery = await store.getState().db.sqlSelectToJson(sqlQuery);
 
         if (
@@ -90,9 +87,12 @@ If a query fails, please don't try to run it again with the same syntax.`,
           }
         }
 
+        const result = await connector.query(sqlQuery, {signal: abortSignal});
+
         const summaryData = await (async () => {
           if (!autoSummary) return null;
           if (parsedQuery.error) return null;
+
           const lastNode =
             parsedQuery.statements[parsedQuery.statements.length - 1]?.node;
 
@@ -106,7 +106,7 @@ If a query fails, please don't try to run it again with the same syntax.`,
           const statements = splitSqlStatements(sqlQuery);
           const lastStatement = statements[statements.length - 1];
           if (!lastStatement) return null;
-          return await getQuerySummary(connector, lastStatement);
+          return await getQuerySummary(connector, lastStatement, abortSignal);
         })();
 
         // Conditionally get rows of the result as a json object based on numberOfRowsToShareWithLLM
@@ -150,15 +150,22 @@ If a query fails, please don't try to run it again with the same syntax.`,
  * @param sqlQuery - SQL SELECT query to analyze
  * @returns Summary statistics as JSON object, or null if the query is not a SELECT statement or if summary generation fails
  */
-async function getQuerySummary(connector: DuckDbConnector, sqlQuery: string) {
+export async function getQuerySummary(
+  connector: DuckDbConnector,
+  sqlQuery: string,
+  abortSignal?: AbortSignal,
+) {
   if (!sqlQuery.toLowerCase().trim().startsWith('select')) {
     return null;
   }
 
   try {
-    const summaryResult = await connector.query(`SUMMARIZE (
+    const summaryResult = await connector.query(
+      `SUMMARIZE (
       ${sqlQuery}
-    )`);
+    )`,
+      {signal: abortSignal},
+    );
     return arrowTableToJson(summaryResult);
   } catch (error) {
     console.warn('Failed to get summary for query. Error:', error);

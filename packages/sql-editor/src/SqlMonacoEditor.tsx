@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef} from 'react';
 import {MonacoEditor} from '@sqlrooms/monaco-editor';
 import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import type {OnMount} from '@monaco-editor/react';
@@ -11,8 +11,10 @@ import {
 import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
 import {getFunctionSuggestions} from './constants/functionSuggestions';
-export interface SqlMonacoEditorProps
-  extends Omit<MonacoEditorProps, 'language'> {
+export interface SqlMonacoEditorProps extends Omit<
+  MonacoEditorProps,
+  'language'
+> {
   connector?: DuckDbConnector;
   /**
    * Custom SQL keywords to add to the completion provider
@@ -35,6 +37,12 @@ export interface SqlMonacoEditorProps
   };
 }
 
+const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
+  formatOnPaste: true,
+  formatOnType: true,
+  wordWrap: 'on',
+};
+
 /**
  * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
  * This is an internal component used by SqlEditor
@@ -47,12 +55,20 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   getLatestSchemas,
   onMount,
   className,
-  ...props
+  options,
+  ...restProps
 }) => {
   // Store references to editor and monaco
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const disposableRef = useRef<any>(null);
+
+  // Store getLatestSchemas in a ref to avoid re-registering completion provider
+  // when the callback reference changes (e.g., non-memoized inline functions)
+  const getLatestSchemasRef = useRef(getLatestSchemas);
+  useEffect(() => {
+    getLatestSchemasRef.current = getLatestSchemas;
+  }, [getLatestSchemas]);
 
   // Function to register the completion provider
   const registerCompletionProvider = useCallback(() => {
@@ -73,8 +89,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
 
-          if (getLatestSchemas) {
-            const latest = getLatestSchemas();
+          if (getLatestSchemasRef.current) {
+            const latest = getLatestSchemasRef.current();
             currentSchemas = latest.tableSchemas;
           }
 
@@ -235,7 +251,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
     // Store the disposable to clean up later
     disposableRef.current = disposable;
-  }, [customKeywords, customFunctions, tableSchemas, getLatestSchemas]);
+  }, [connector, customKeywords, customFunctions, tableSchemas]);
 
   // Re-register completion provider when tableSchemas change
   useEffect(() => {
@@ -287,17 +303,20 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
 
+  const combinedOptions = useMemo(
+    (): MonacoEditorProps['options'] => ({
+      ...EDITOR_OPTIONS,
+      ...options,
+    }),
+    [options],
+  );
   return (
     <MonacoEditor
       language="sql"
       onMount={handleEditorDidMount}
       className={cn('h-full', className)}
-      options={{
-        formatOnPaste: true,
-        formatOnType: true,
-        wordWrap: 'on',
-      }}
-      {...props}
+      options={combinedOptions}
+      {...restProps}
     />
   );
 };

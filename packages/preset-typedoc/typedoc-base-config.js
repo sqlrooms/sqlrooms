@@ -33,6 +33,16 @@ const typedocOptions = {
   tsconfig: 'tsconfig.json',
   typeDeclarationFormat: 'table',
   typeDeclarationVisibility: 'compact',
+  // Prevent TypeScript from automatically including all `@types/*` packages
+  // as global type libraries when running under TypeDoc. This avoids errors
+  // when optional ambient type packages (like `@types/d3-sankey`) are present
+  // in the lockfile but not actually needed for documentation generation.
+  compilerOptions: {
+    // Only include Node.js ambient types; avoid pulling in every installed
+    // `@types/*` package (like `@types/d3-sankey`) which can cause issues
+    // for packages that don't actually depend on them.
+    types: ['node'],
+  },
 };
 
 /** @type {(options: Partial<import("typedoc").TypeDocOptions>) => Partial<import("typedoc").TypeDocOptions>} */

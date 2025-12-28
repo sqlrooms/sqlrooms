@@ -14,24 +14,46 @@ Here's how you can implement an offline-first experience with SQLRooms:
 
 ## 1. Persisting State in localStorage
 
-SQLRooms uses [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction) for state management. You can persist your app's state in the browser's `localStorage` using the `persist` middleware. This ensures user settings, layouts, and other state survive reloads and work offline.
+SQLRooms uses [Zustand](https://docs.pmnd.rs/zustand/getting-started/introduction) for state management. You can persist your app's state in the browser's `localStorage` using the `persistSliceConfigs` helper. This ensures user settings, layouts, and other state survive reloads and work offline.
 
 **Example:**
 
 ```ts
-import {persist} from 'zustand/middleware';
+import {
+  createRoomStore,
+  createRoomShellSlice,
+  RoomShellSliceState,
+  BaseRoomConfig,
+  LayoutConfig,
+  persistSliceConfigs,
+} from '@sqlrooms/room-shell';
 
-const {roomStore, useRoomStore} = createRoomStore(
-  persist(
-    (set, get, store) => ({
-      // ...slices and state
-    }),
+type RoomState = RoomShellSliceState;
+
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs(
     {
       name: 'sql-editor-example-app-state-storage', // localStorage key
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-      }),
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
     },
+    (set, get, store) => ({
+      ...createRoomShellSlice({
+        config: {
+          // Room configuration
+        },
+        layout: {
+          config: {
+            // Layout configuration
+          },
+          panels: {
+            // Panel definitions
+          },
+        },
+      })(set, get, store),
+    }),
   ),
 );
 ```

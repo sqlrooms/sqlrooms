@@ -3,41 +3,91 @@
  * @packageDocumentation
  */
 
-export * from './types';
-export * from './useDuckDb';
-export * from './exportToCsv';
-export {arrowTableToJson} from './arrow-utils';
+export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
+export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';
+
 export {
-  getDuckDbTypeCategory,
-  getArrowColumnTypeCategory,
-} from './typeCategories';
-export * from './useSql';
-export {
-  createDuckDbSlice,
-  type DuckDbSliceState,
-  useStoreWithDuckDb,
-  type SchemaAndDatabase,
-} from './DuckDbSlice';
-export * from './connectors/DuckDbConnector';
-export * from './connectors/BaseDuckDbConnector';
+  isSpatialLoadFileOptions,
+  LoadFileOptions,
+  SpatialLoadFileOptions,
+} from '@sqlrooms/room-config';
+
 export {
   createDuckDbConnector,
   createWasmDuckDbConnector,
   isWasmDuckDbConnector,
   type WasmDuckDbConnector,
+  type DuckDbConnectorType,
+  type DuckDbConnectorOptions,
 } from './connectors/createDuckDbConnector';
-export {createWebSocketDuckDbConnector} from './connectors/WebSocketDuckDbConnector';
-export * from './connectors/load/load';
-export * from './duckdb-utils';
+
 export {
-  LoadFileOptions,
-  SpatialLoadFileOptions,
-  isSpatialLoadFileOptions,
-} from '@sqlrooms/room-config';
+  createWebSocketDuckDbConnector,
+  type WebSocketDuckDbConnectorOptions,
+  type WebSocketDuckDbConnector,
+} from './connectors/WebSocketDuckDbConnector';
+
 export {
-  type TypedRowAccessor,
+  createDuckDbSlice,
+  useStoreWithDuckDb,
+  type DuckDbSliceState,
+  type SchemaAndDatabase,
+} from './DuckDbSlice';
+
+export {useExportToCsv} from './exportToCsv';
+
+export {useDuckDb} from './useDuckDb';
+
+export {
+  useSql,
+  useDuckDbQuery,
+  type UseSqlQueryResult,
+  type DuckDbQueryResult,
+} from './useSql';
+
+// Re-export from @sqlrooms/duckdb-core
+export {
   createTypedRowAccessor,
-} from './typedRowAccessor';
-export {DuckDBAccessMode} from '@duckdb/duckdb-wasm';
-export * from '@sqlrooms/duckdb-config';
-export type {DuckDBBundles, DuckDBConfig} from '@duckdb/duckdb-wasm';
+  type TypedRowAccessor,
+  createBaseDuckDbConnector,
+  type BaseDuckDbConnectorOptions,
+  type BaseDuckDbConnectorImpl,
+  literalToSQL,
+  sqlFrom,
+  load,
+  loadCSV,
+  loadJSON,
+  loadParquet,
+  loadSpatial,
+  loadObjects,
+  type QueryOptions,
+  type QueryHandle,
+  type DuckDbConnector,
+  arrowTableToJson,
+  isQualifiedTableName,
+  makeQualifiedTableName,
+  escapeVal,
+  escapeId,
+  isNumericDuckType,
+  getColValAsNumber,
+  getSqlErrorWithPointer,
+  splitSqlStatements,
+  sanitizeQuery,
+  makeLimitQuery,
+  separateLastStatement,
+  joinStatements,
+  type QualifiedTableName,
+  type SeparatedStatements,
+  getDuckDbTypeCategory,
+  getArrowColumnTypeCategory,
+  type ColumnTypeCategory,
+  createDbSchemaTrees,
+  type DbSchemaNode,
+  type NodeObject,
+  type ColumnNodeObject,
+  type TableNodeObject,
+  type SchemaNodeObject,
+  type DatabaseNodeObject,
+  type TableColumn,
+  type DataTable,
+} from '@sqlrooms/duckdb-core';

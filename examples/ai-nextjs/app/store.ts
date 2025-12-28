@@ -5,26 +5,31 @@ import {
   createAiSettingsSlice,
 } from '@sqlrooms/ai-settings';
 import {
-  BaseRoomConfig,
-  createRoomSlice,
+  BaseRoomStoreState,
+  createBaseRoomSlice,
   createRoomStore,
-  RoomState,
-  StateCreator,
+  persistSliceConfigs,
 } from '@sqlrooms/room-store';
-import {persist} from 'zustand/middleware';
 import {AI_SETTINGS} from '../config';
 import {getClientTools} from './lib/tools';
 
-type State = RoomState<BaseRoomConfig> & AiSliceState & AiSettingsSliceState;
+type State = BaseRoomStoreState & AiSliceState & AiSettingsSliceState;
 
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<State>(
+  persistSliceConfigs(
+    {
+      name: 'ai-nextjs-example-app-state-storage',
+      sliceConfigSchemas: {
+        ai: AiSliceConfig,
+        aiSettings: AiSettingsSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
-      ...createRoomSlice<BaseRoomConfig>()(set, get, store),
+      ...createBaseRoomSlice()(set, get, store),
 
       // Ai model config slice
       ...createAiSettingsSlice({config: AI_SETTINGS})(set, get, store),
@@ -44,28 +49,5 @@ export const {roomStore, useRoomStore} = createRoomStore<BaseRoomConfig, State>(
         },
       })(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'ai-nextjs-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        ai: AiSliceConfig.parse(state.ai.config),
-        aiSettings: AiSettingsSliceConfig.parse(state.aiSettings.config),
-      }),
-      // Combining the persisted state with the current one when loading from local storage
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        ai: {
-          ...currentState.ai,
-          config: AiSliceConfig.parse(persistedState.ai),
-        },
-        aiSettings: {
-          ...currentState.aiSettings,
-          config: AiSettingsSliceConfig.parse(persistedState.aiSettings),
-        },
-      }),
-    },
-  ) as StateCreator<State>,
+  ),
 );

@@ -38,45 +38,53 @@ console.log(roomConfig.name); // 'My SQL Room'
 
 ### Persisting Room Configuration
 
-Room configuration is designed to be saved and restored between sessions. Here's how to use it with Zustand's persist middleware:
+Room configuration is designed to be saved and restored between sessions. Here's how to use the `persistSliceConfigs` helper:
 
 ```tsx
-import {persist} from 'zustand/middleware';
-import {createRoomStore, createRoomShellSlice} from '@sqlrooms/room-shell';
+import {
+  createRoomStore,
+  createRoomShellSlice,
+  RoomShellSliceState,
+  persistSliceConfigs,
+  LayoutConfig,
+} from '@sqlrooms/room-shell';
 import {BaseRoomConfig} from '@sqlrooms/room-config';
 
+type MyRoomState = RoomShellSliceState;
+
 // Create a store with persistence for configuration
-const {useRoomStore} = createRoomStore(
-  persist(
+const {useRoomStore} = createRoomStore<MyRoomState>(
+  persistSliceConfigs(
+    {
+      name: 'room-config-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+      },
+    },
     (set, get, store) => ({
       ...createRoomShellSlice({
-        // Config is stored at the root level of state for persisting the app state
         config: {
           title: 'My Room',
           // Other configuration properties
         },
-        // Room object contains panels and runtime-only state
-        room: {
+        layout: {
+          config: {
+            // Layout configuration
+          },
           panels: {
             // Panel definitions
           },
         },
       })(set, get, store),
     }),
-    {
-      name: 'room-config-storage',
-      // Only persist the configuration part of the state
-      partialize: (state) => ({
-        config: state.config,
-      }),
-    },
   ),
 );
 
 // Access the config in components
 function ConfigComponent() {
-  // Config is accessed directly from state, not from state.room.config
-  const config = useRoomStore((state) => state.config);
+  // Config is accessed from state.room.config
+  const config = useRoomStore((state) => state.room.config);
 
   return <div>{config.title}</div>;
 }

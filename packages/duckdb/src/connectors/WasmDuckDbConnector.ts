@@ -1,19 +1,21 @@
 import * as duckdb from '@duckdb/duckdb-wasm';
 import {DuckDBDataProtocol} from '@duckdb/duckdb-wasm';
 import {
+  BaseDuckDbConnectorImpl,
+  DuckDbConnector,
+  createBaseDuckDbConnector,
+  getSqlErrorWithPointer,
+  load,
+  loadObjects as loadObjectsSql,
+  loadSpatial,
+} from '@sqlrooms/duckdb-core';
+import {
   LoadFileOptions,
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
 import {safeJsonParse, splitFilePath} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
-import {
-  BaseDuckDbConnectorImpl,
-  createBaseDuckDbConnector,
-} from './BaseDuckDbConnector';
-import {DuckDbConnector} from './DuckDbConnector';
-import {load, loadObjects as loadObjectsSql, loadSpatial} from './load/load';
-import {getSqlErrorWithPointer} from '../duckdb-utils';
 
 export interface WasmDuckDbConnectorOptions extends duckdb.DuckDBConfig {
   /** @deprecated use `path` instead */

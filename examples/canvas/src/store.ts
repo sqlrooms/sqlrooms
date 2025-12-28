@@ -8,40 +8,45 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataSourcesPanel} from './DataSourcesPanel';
+
+// App config schema
+export const AppConfig = z.object({
+  apiKey: z.string().default(''),
+});
+export type AppConfig = z.infer<typeof AppConfig>;
 
 export type RoomState = RoomShellSliceState &
   CanvasSliceState & {
-    apiKey: string;
-    setApiKey: (apiKey: string) => void;
+    app: {
+      config: AppConfig;
+      setApiKey: (apiKey: string) => void;
+    };
   };
 export const RoomPanelTypes = z.enum(['main', 'data'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
-export const {roomStore, useRoomStore} = createRoomStore<
-  BaseRoomConfig,
-  RoomState
->(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'canvas-example-app-state-storage',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        canvas: CanvasSliceConfig,
+        app: AppConfig,
+      },
+    },
     (set, get, store) => ({
       ...createRoomShellSlice({
         config: {
-          layout: {
-            type: LayoutTypes.enum.mosaic,
-            nodes: {
-              direction: 'row',
-              splitPercentage: 20,
-              first: 'data',
-              second: 'main',
-            },
-          },
           dataSources: [
             {
               tableName: 'earthquakes',
@@ -50,7 +55,16 @@ export const {roomStore, useRoomStore} = createRoomStore<
             },
           ],
         },
-        room: {
+        layout: {
+          config: {
+            type: LayoutTypes.enum.mosaic,
+            nodes: {
+              direction: 'row',
+              splitPercentage: 20,
+              first: 'data',
+              second: 'main',
+            },
+          },
           panels: {
             main: {
               title: 'Canvas',
@@ -70,34 +84,22 @@ export const {roomStore, useRoomStore} = createRoomStore<
 
       ...createCanvasSlice({
         ai: {
-          getApiKey: () => get().apiKey,
+          getApiKey: () => get().app.config.apiKey,
           defaultModel: 'gpt-4.1-mini',
         },
       })(set, get, store),
 
-      apiKey: '',
-      setApiKey: (apiKey) => set({apiKey}),
+      // App slice with config
+      app: {
+        config: AppConfig.parse({}),
+        setApiKey: (apiKey) =>
+          set((state) => ({
+            app: {
+              ...state.app,
+              config: {...state.app.config, apiKey},
+            },
+          })),
+      },
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'canvas-example-app-state-storage',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        apiKey: state.apiKey,
-        config: BaseRoomConfig.parse(state.config),
-        canvas: CanvasSliceConfig.parse(state.canvas.config),
-      }),
-      merge: (persistedState: any, currentState) => ({
-        ...currentState,
-        apiKey: persistedState.apiKey,
-        config: BaseRoomConfig.parse(persistedState.config),
-        canvas: {
-          ...currentState.canvas,
-          config: CanvasSliceConfig.parse(persistedState.canvas),
-        },
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

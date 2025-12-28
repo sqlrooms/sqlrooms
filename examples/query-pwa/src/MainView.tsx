@@ -16,24 +16,14 @@ import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
-  const lastQueryStatement = useRoomStore((s) =>
-    s.sqlEditor.queryResult?.status === 'success' &&
-    s.sqlEditor.queryResult?.type === 'select'
-      ? s.sqlEditor.queryResult.lastQueryStatement
-      : '',
-  );
-  const addOrUpdateSqlQueryDataSource = useRoomStore(
-    (state) => state.room.addOrUpdateSqlQueryDataSource,
+  const lastQuery = useRoomStore(({sqlEditor: {queryResult: qr}}) =>
+    qr?.status === 'success' && qr?.type === 'select' ? qr.query : '',
   );
   return (
     <>
       <div className="bg-muted flex h-full flex-col">
         <ResizablePanelGroup direction="vertical">
-          <ResizablePanel
-            defaultSize={50}
-            // this is for Monaco's completion menu to not being cut off
-            className="!overflow-visible"
-          >
+          <ResizablePanel defaultSize={50}>
             <QueryEditorPanel />
           </ResizablePanel>
           <ResizableHandle withHandle />
@@ -52,10 +42,11 @@ export const MainView: FC = () => {
         </ResizablePanelGroup>
       </div>
       <CreateTableModal
-        query={lastQueryStatement ?? ''}
+        query={lastQuery}
         isOpen={createTableModal.isOpen}
         onClose={createTableModal.onClose}
-        onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
+        allowMultipleStatements={true}
+        showSchemaSelection={true}
       />
     </>
   );

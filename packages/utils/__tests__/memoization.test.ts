@@ -75,7 +75,7 @@ describe('memoizeOnce', () => {
 
   test('handles different argument types correctly', () => {
     let callCount = 0;
-    const fn = (...args: any[]) => {
+    const fn = (...args: unknown[]) => {
       callCount++;
       return JSON.stringify(args) + `-${callCount}`;
     };
@@ -118,7 +118,7 @@ describe('memoizeOnce', () => {
 
   test('handles undefined and null arguments', () => {
     let callCount = 0;
-    const fn = (a: any, b: any) => {
+    const fn = (a: unknown, b: unknown) => {
       callCount++;
       return `${a}-${b}-${callCount}`;
     };
@@ -136,7 +136,7 @@ describe('memoizeOnce', () => {
   });
 
   test('preserves function context and return values', () => {
-    const fn = function (this: any, multiplier: number) {
+    const fn = function (this: {value: number}, multiplier: number) {
       return this.value * multiplier;
     };
 

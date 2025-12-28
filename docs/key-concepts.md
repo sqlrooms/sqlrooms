@@ -27,9 +27,9 @@ The `roomStore` is a [composable](#composing-store-from-slices) [`Zustand`](/sta
   - transient UI state (like "query running")
 
 ```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
         dataSources: [
           {
@@ -39,8 +39,13 @@ const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
           },
         ],
       },
-      room: {
-        // Runtime state initialization…
+      layout: {
+        config: {
+          // Layout configuration
+        },
+        panels: {
+          // Panel definitions
+        },
       },
     })(set, get, store),
   }),
@@ -108,25 +113,33 @@ The store can be enhanced with **slices**—modular pieces of state and logic th
 Here's an example showing how to combine the default room shell with SQL editor functionality:
 
 ```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>({
-  // Default slice
-  ...createRoomShellSlice<RoomConfig>({
-    config: {
-      // Add SQL editor slice persistable config
-      ...createDefaultSqlEditorConfig(),
-    },
-    room: {},
-  })(set, get, store),
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // Default slice
+    ...createRoomShellSlice({
+      config: {
+        // Room configuration
+      },
+      layout: {
+        config: {
+          // Layout configuration
+        },
+        panels: {
+          // Panel definitions
+        },
+      },
+    })(set, get, store),
 
-  // Mix in sql editor slice
-  ...createSqlEditorSlice()(set, get, store),
-});
+    // Mix in sql editor slice
+    ...createSqlEditorSlice()(set, get, store),
+  }),
+);
 ```
 
 You can access slices' namespaced config, state and functions in the store using selectors, for example:
 
 ```tsx
-const queries = useRoomStore((state) => state.config.sqlEditor.queries);
+const queries = useRoomStore((state) => state.sqlEditor.config.queries);
 const runQuery = useRoomStore((state) => state.sqlEditor.parseAndRunQuery);
 ```
 
@@ -146,11 +159,14 @@ The `LayoutComposer` provides a flexible panel layout for your Room's UI.
 Configure the room layout and panels during store initialization:
 
 ```tsx
-const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
+const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
-    ...createRoomShellSlice<RoomConfig>({
+    ...createRoomShellSlice({
       config: {
-        layout: {
+        dataSources: [],
+      },
+      layout: {
+        config: {
           type: LayoutTypes.enum.mosaic,
           nodes: {
             // Data panel on left (30%) and main view on right
@@ -160,9 +176,6 @@ const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             splitPercentage: 30,
           },
         },
-      },
-      room: {
-        // Define the available panels in the room layout
         panels: {
           'data-panel': {
             title: 'Data Sources',

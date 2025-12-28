@@ -25,7 +25,7 @@ export const QueryEditorPanelEditor: React.FC<{
   const connector = useStoreWithSqlEditor((s) => s.db.connector);
 
   const queryText = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.queries.find((q) => q.id === queryId)?.query,
+    (s) => s.sqlEditor.config.queries.find((q) => q.id === queryId)?.query,
   );
   const updateQueryText = useStoreWithSqlEditor(
     (s) => s.sqlEditor.updateQueryText,
@@ -59,7 +59,7 @@ export const QueryEditorPanelEditor: React.FC<{
         }
       });
     },
-    [runQuery],
+    [queryId, runQuery],
   );
 
   return (

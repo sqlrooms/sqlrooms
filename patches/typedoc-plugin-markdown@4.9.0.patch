@@ -1,0 +1,13 @@
+diff --git a/dist/theme/context/partials/member.typeDeclarationTable.js b/dist/theme/context/partials/member.typeDeclarationTable.js
+index 05f175ce6e21615b06a3df5fe756fc5a5f438aa8..f7b9986ad3724ecce35589d762e597b180bebcef 100644
+--- a/dist/theme/context/partials/member.typeDeclarationTable.js
++++ b/dist/theme/context/partials/member.typeDeclarationTable.js
+@@ -72,7 +72,7 @@ export function typeDeclarationTable(model, options) {
+                     isTableColumn: true,
+                 }));
+             }
+-            if (declaration.type.declaration?.signatures?.length) {
++            if (declaration.type && declaration.type.declaration?.signatures?.length) {
+                 declaration.type.declaration?.signatures.forEach((sig) => {
+                     if (sig.comment) {
+                         commentsOut.push(this.partials.comment(sig.comment, {

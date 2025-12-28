@@ -90,8 +90,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
-        // ... other room config
-        ...createDefaultSqlEditorConfig(),
       },
     })(set, get, store),
 
@@ -204,8 +202,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
-        // ... other room config
-        ...createDefaultSqlEditorConfig(),
       },
     })(set, get, store),
 
@@ -224,6 +220,7 @@ function MyComponent() {
 
   // Use actions
   const handleExecute = () => {
+    runQuery('SELECT * FROM users LIMIT 10');
     runQuery('SELECT * FROM users LIMIT 10');
   };
 
@@ -418,10 +415,10 @@ The SQL editor can be configured through the Zustand store.
 ```tsx
 const config = createDefaultSqlEditorConfig();
 // Customize if needed
-config.sqlEditor.queries = [
+sqlEditor.config.queries = [
   {id: 'default', name: 'Untitled', query: 'SELECT * FROM users LIMIT 10;'},
 ];
-config.sqlEditor.selectedQueryId = 'default';
+sqlEditor.config.selectedQueryId = 'default';
 
 // Use in store creation
 const {roomStore} = createRoomStore({

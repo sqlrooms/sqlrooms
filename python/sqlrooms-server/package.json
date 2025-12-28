@@ -1,0 +1,16 @@
+{
+  "name": "sqlrooms-server",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server",
+    "dev:sync": "uv run --group dev python -m watchdog.watchmedo auto-restart --pattern '*.py' --recursive --signal SIGTERM -- uv run python -m sqlrooms.server --sync",
+    "sync": "uv run python -m sqlrooms.server --sync",
+    "build": "uv build",
+    "check-fix": "uv run ruff check --fix",
+    "format": "uv run ruff format",
+    "prerelease": "uv run pytest && uv run ruff check && uv run ruff format --check",
+    "release": "pnpm run build && uvx twine upload --skip-existing ./dist/sqlrooms_server*",
+    "test": "uv run pytest -s --log-cli-level=DEBUG"
+  }
+}

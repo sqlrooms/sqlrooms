@@ -3,30 +3,29 @@ import {
   BaseRoomConfig,
   createRoomShellSlice,
   createRoomStore,
+  LayoutConfig,
   LayoutTypes,
+  persistSliceConfigs,
   RoomShellSliceState,
-  StateCreator,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
-import {persist} from 'zustand/middleware';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
 
 // Local DuckDB bundle files for bundler environments
-import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
-import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
-import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
-import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
-import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
-import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
 import coi_pthread_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.pthread.worker.js?url';
+import coi_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-coi.worker.js?url';
+import eh_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-eh.worker.js?url';
+import mvp_worker from '@duckdb/duckdb-wasm/dist/duckdb-browser-mvp.worker.js?url';
+import duckdb_wasm_coi from '@duckdb/duckdb-wasm/dist/duckdb-coi.wasm?url';
+import duckdb_wasm_eh from '@duckdb/duckdb-wasm/dist/duckdb-eh.wasm?url';
+import duckdb_wasm from '@duckdb/duckdb-wasm/dist/duckdb-mvp.wasm?url';
 
 const BUNDLES: DuckDBBundles = {
   mvp: {
@@ -48,19 +47,10 @@ export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 /**
- * Room config for saving
- */
-export const RoomConfig = BaseRoomConfig.merge(SqlEditorSliceConfig);
-export type RoomConfig = z.infer<typeof RoomConfig>;
-
-/**
  * Room state
  */
 
-export type RoomState = RoomShellSliceState<RoomConfig> &
-  SqlEditorSliceState & {
-    // Add your own state here
-  };
+export type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 /**
  * Path to the preloaded extensions directory.
@@ -75,11 +65,19 @@ const EXTENSIONS_PATH = `${globalThis.location.origin}/extensions`;
 /**
  * Create a customized room store
  */
-export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
-  persist(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs(
+    {
+      name: 'sqlrooms-query-pwa',
+      sliceConfigSchemas: {
+        room: BaseRoomConfig,
+        layout: LayoutConfig,
+        sqlEditor: SqlEditorSliceConfig,
+      },
+    },
     (set, get, store) => ({
       // Base room slice
-      ...createRoomShellSlice<RoomConfig>({
+      ...createRoomShellSlice({
         connector: createWasmDuckDbConnector({
           // Uncomment to use OPFS for persistent data storage
           // path: 'opfs://sqlrooms-query-pwa.db',
@@ -89,8 +87,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
             INSTALL json FROM '${EXTENSIONS_PATH}';
           `,
         }),
-        config: {
-          layout: {
+        layout: {
+          config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               first: RoomPanelTypes.enum['data'],
@@ -99,9 +97,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
               splitPercentage: 30,
             },
           },
-          ...createDefaultSqlEditorConfig(),
-        },
-        room: {
           panels: {
             [RoomPanelTypes.enum['main']]: {
               component: MainView,
@@ -120,15 +115,5 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
     }),
-
-    // Persist settings
-    {
-      // Local storage key
-      name: 'sqlrooms-query-pwa',
-      // Subset of the state to persist
-      partialize: (state) => ({
-        config: RoomConfig.parse(state.config),
-      }),
-    },
-  ) as StateCreator<RoomState>,
+  ),
 );

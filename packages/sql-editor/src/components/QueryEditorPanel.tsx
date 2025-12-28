@@ -1,5 +1,5 @@
 import React from 'react';
-import {cn, Tabs, TabsContent} from '@sqlrooms/ui';
+import {cn} from '@sqlrooms/ui';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {QueryEditorPanelActions} from './QueryEditorPanelActions';
 import {QueryEditorPanelEditor} from './QueryEditorPanelEditor';
@@ -13,20 +13,15 @@ export interface QueryEditorPanelProps {
 export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
   className,
 }) => {
-  // Get state and actions from store in a single call
-
   const selectedQueryId = useStoreWithSqlEditor(
-    (s) => s.config.sqlEditor.selectedQueryId,
+    (s) => s.sqlEditor.config.selectedQueryId,
   );
-  const queries = useStoreWithSqlEditor((s) => s.config.sqlEditor.queries);
-  const setSelectedQueryId = useStoreWithSqlEditor(
-    (s) => s.sqlEditor.setSelectedQueryId,
-  );
+  const openTabs = useStoreWithSqlEditor((s) => s.sqlEditor.config.openTabs);
+
+  const isSelectedOpen = openTabs.includes(selectedQueryId);
 
   return (
-    <Tabs
-      value={selectedQueryId}
-      onValueChange={setSelectedQueryId}
+    <div
       className={cn(
         'flex h-full flex-col',
         // this is for Monaco's completion menu to not being cut off
@@ -34,23 +29,24 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         className,
       )}
     >
-      <div className="border-border flex items-center border-b p-1">
-        <QueryEditorPanelActions />
+      <div className="border-border flex items-center gap-4 border-b px-2 pt-1">
         <QueryEditorPanelTabsList />
+        <div className="flex-1" />
+        <QueryEditorPanelActions />
       </div>
-      {queries.map((q) => (
-        <TabsContent
-          key={q.id}
-          value={q.id}
-          className="relative h-full flex-grow flex-col data-[state=active]:flex"
-        >
-          <div className="absolute inset-0 h-full w-full flex-grow">
-            {q.id === selectedQueryId && (
-              <QueryEditorPanelEditor queryId={q.id} />
-            )}
+      {isSelectedOpen ? (
+        <div className="bg-background h-full w-full py-1">
+          <div className="relative h-full flex-grow">
+            <div className="absolute inset-0">
+              <QueryEditorPanelEditor queryId={selectedQueryId} />
+            </div>
           </div>
-        </TabsContent>
-      ))}
-    </Tabs>
+        </div>
+      ) : (
+        <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
+          No open queries
+        </div>
+      )}
+    </div>
   );
 };

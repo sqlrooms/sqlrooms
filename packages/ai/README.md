@@ -1,5 +1,3 @@
-# @sqlrooms/ai
-
 An AI integration package for SQLRooms that provides components and utilities for adding AI-powered features to your data applications. This package enables natural language querying, data analysis, and AI-assisted insights.
 
 ## Features
@@ -133,7 +131,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     // Base room slice
     ...createRoomShellSlice({
       config: {
-        ...createDefaultSqlEditorConfig(),
+        // Base room slice config
       },
     }),
     // AI settings slice

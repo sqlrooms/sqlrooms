@@ -1,29 +1,53 @@
 import {z} from 'zod';
 
-// Saved state (persisted)
-export const SqlEditorSliceConfig = z.object({
-  sqlEditor: z.object({
-    queries: z.array(
-      z.object({
-        id: z.string().describe('Query identifier.'),
-        name: z.string().describe('Query name.'),
-        query: z.string().describe('SQL query to execute.'),
-      }),
-    ),
-    selectedQueryId: z
-      .string()
-      .default('default')
-      .describe('The id of the currently selected query.'),
-    lastExecutedQuery: z.string().optional().describe('Last executed query'),
-  }),
+const QuerySchema = z.object({
+  id: z.string().describe('Query identifier.'),
+  name: z.string().describe('Query name.'),
+  query: z.string().describe('SQL query to execute.'),
 });
-export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
+
+const SqlEditorSliceConfigSchema = z.object({
+  queries: z.array(QuerySchema),
+  selectedQueryId: z
+    .string()
+    .describe('The id of the currently selected query.'),
+  lastExecutedQuery: z.string().optional().describe('Last executed query'),
+  openTabs: z.array(z.string()).describe('IDs of open tabs'),
+});
+
+/**
+ * Config schema for the SQL editor slice.
+ * Automatically migrates legacy closedTabIds to openTabs format.
+ */
+export const SqlEditorSliceConfig = z.preprocess((data) => {
+  if (typeof data !== 'object' || data === null) return data;
+  const obj = data as Record<string, unknown>;
+
+  // If already has openTabs, no migration needed
+  if ('openTabs' in obj) return data;
+
+  // Migrate from closedTabIds to openTabs
+  if ('closedTabIds' in obj && 'queries' in obj) {
+    const closedTabIds = obj.closedTabIds as string[];
+    const queries = obj.queries as Array<{id: string}>;
+    const openTabs = queries
+      .map((q) => q.id)
+      .filter((id) => !closedTabIds.includes(id));
+
+    const {closedTabIds: _, ...rest} = obj;
+    return {...rest, openTabs};
+  }
+
+  // Fallback to empty openTabs if no openTabs or closedTabIds are present
+  return {...data, openTabs: []};
+}, SqlEditorSliceConfigSchema);
+
+export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfigSchema>;
 
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
-    sqlEditor: {
-      queries: [{id: 'default', name: 'Untitled', query: ''}],
-      selectedQueryId: 'default',
-    },
+    queries: [{id: 'default', name: 'SQL', query: ''}],
+    selectedQueryId: 'default',
+    openTabs: ['default'],
   };
 }

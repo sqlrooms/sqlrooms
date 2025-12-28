@@ -1,16 +1,17 @@
-import * as arrow from 'apache-arrow';
 import {
   BaseDuckDbConnectorImpl,
+  DuckDbConnector,
   createBaseDuckDbConnector,
-} from './BaseDuckDbConnector';
-import {DuckDbConnector} from './DuckDbConnector';
+} from '@sqlrooms/duckdb-core';
+import {load, loadObjects, loadSpatial} from '@sqlrooms/duckdb-core';
+
 import {
   LoadFileOptions,
   StandardLoadOptions,
   isSpatialLoadFileOptions,
 } from '@sqlrooms/room-config';
-import {load, loadObjects, loadSpatial} from './load/load';
 import {splitFilePath} from '@sqlrooms/utils';
+import * as arrow from 'apache-arrow';
 
 /**
  * Options for the WebSocket DuckDB connector.
@@ -70,7 +71,7 @@ export function createWebSocketDuckDbConnector(
   // Persistent socket and per-query waiters
   let socket: WebSocket | null = null;
   let opening: Promise<void> | null = null;
-  let lastSubscribedChannels: string[] | undefined = subscribeChannels;
+  const lastSubscribedChannels: string[] | undefined = subscribeChannels;
   const pending = new Map<
     string,
     {
@@ -83,6 +84,7 @@ export function createWebSocketDuckDbConnector(
     for (const [qid, waiter] of pending.entries()) {
       try {
         waiter.reject(new Error(reason));
+        // eslint-disable-next-line no-empty
       } catch {}
       pending.delete(qid);
     }
@@ -95,6 +97,7 @@ export function createWebSocketDuckDbConnector(
     for (const ch of lastSubscribedChannels) {
       try {
         socket.send(JSON.stringify({type: 'subscribe', channel: ch}));
+        // eslint-disable-next-line no-empty
       } catch {}
     }
   };
@@ -117,6 +120,7 @@ export function createWebSocketDuckDbConnector(
             if (authToken) {
               try {
                 ws.send(JSON.stringify({type: 'auth', token: authToken}));
+                // eslint-disable-next-line no-empty
               } catch {}
             } else {
               // No auth required; resolve immediately
@@ -124,6 +128,7 @@ export function createWebSocketDuckDbConnector(
               resubscribe();
               resolve();
             }
+            // eslint-disable-next-line no-empty
           } catch {}
         };
 
@@ -156,6 +161,7 @@ export function createWebSocketDuckDbConnector(
                 const payload = parsed?.payload;
                 try {
                   options.onNotification?.(payload);
+                  // eslint-disable-next-line no-empty
                 } catch {}
                 return;
               }
@@ -167,6 +173,7 @@ export function createWebSocketDuckDbConnector(
                   closeAndRejectAll('Unauthorized');
                   try {
                     ws.close();
+                    // eslint-disable-next-line no-empty
                   } catch {}
                   socket = null;
                   return;
@@ -242,6 +249,7 @@ export function createWebSocketDuckDbConnector(
           }
           try {
             ws.close();
+            // eslint-disable-next-line no-empty
           } catch {}
         };
 
@@ -271,6 +279,7 @@ export function createWebSocketDuckDbConnector(
     async destroyInternal() {
       try {
         socket?.close();
+        // eslint-disable-next-line no-empty
       } catch {}
       socket = null;
     },
@@ -292,6 +301,7 @@ export function createWebSocketDuckDbConnector(
             if (socket && socket.readyState === WebSocket.OPEN) {
               socket.send(JSON.stringify({type: 'cancel', queryId: qid}));
             }
+            // eslint-disable-next-line no-empty
           } catch {}
           pending.delete(qid);
           reject(new DOMException('Query was cancelled', 'AbortError'));
@@ -302,12 +312,14 @@ export function createWebSocketDuckDbConnector(
           resolve: (t) => {
             try {
               signal.removeEventListener('abort', onAbort);
+              // eslint-disable-next-line no-empty
             } catch {}
             resolve(t as arrow.Table<T>);
           },
           reject: (e) => {
             try {
               signal.removeEventListener('abort', onAbort);
+              // eslint-disable-next-line no-empty
             } catch {}
             reject(e);
           },
@@ -325,6 +337,7 @@ export function createWebSocketDuckDbConnector(
           pending.delete(qid);
           try {
             signal.removeEventListener('abort', onAbort);
+            // eslint-disable-next-line no-empty
           } catch {}
           reject(e);
         }

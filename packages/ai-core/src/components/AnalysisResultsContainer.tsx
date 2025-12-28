@@ -1,17 +1,32 @@
 import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
-import React, {useRef} from 'react';
+import React, {useEffect, useRef} from 'react';
+import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useScrollToBottom} from '../hooks/useScrollToBottom';
 import {AnalysisResult} from './AnalysisResult';
 import {AiThinkingDots} from './AiThinkingDots';
+import type {ErrorMessageComponentProps} from './ErrorMessage';
 
 export const AnalysisResultsContainer: React.FC<{
   className?: string;
-}> = ({className}) => {
+  enableReasoningBox?: boolean;
+  customMarkdownComponents?: Partial<Components>;
+  userTools?: string[];
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
+}> = ({
+  className,
+  enableReasoningBox = false,
+  customMarkdownComponents,
+  userTools,
+  ErrorMessageComponent,
+}) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
+  );
+  const uiMessages = useStoreWithAi(
+    (s) => s.ai.getCurrentSession()?.uiMessages,
   );
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -19,20 +34,31 @@ export const AnalysisResultsContainer: React.FC<{
   const {showScrollButton, scrollToBottom} = useScrollToBottom({
     containerRef,
     endRef,
-    dataToObserve: currentAnalysisResults,
+    dataToObserve: uiMessages,
   });
+
+  // Scroll to bottom when analysis starts
+  useEffect(() => {
+    if (isRunningAnalysis) {
+      scrollToBottom();
+    }
+  }, [isRunningAnalysis]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
-        ref={containerRef}
+        viewportRef={containerRef}
         className="flex w-full flex-grow flex-col gap-5"
       >
         {/* Render analysis results */}
-        {currentAnalysisResults.map((analysisResult) => (
+        {currentAnalysisResults?.map((analysisResult) => (
           <AnalysisResult
             key={analysisResult.id}
             analysisResult={analysisResult}
+            enableReasoningBox={enableReasoningBox}
+            customMarkdownComponents={customMarkdownComponents}
+            userTools={userTools}
+            ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
         {isRunningAnalysis && (

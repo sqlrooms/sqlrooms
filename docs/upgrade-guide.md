@@ -8,6 +8,121 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.27.0-rc.0
+
+### @sqlrooms/mosaic
+
+- `useMosaic` hook removed: Use `MosaicSlice` and `useMosaicClient` instead
+
+The `useMosaic` hook has been replaced with a more robust slice-based architecture. You now need to:
+
+1. Add `MosaicSlice` to your room store
+2. Check connection status via the store
+3. Use `useMosaicClient` for reactive data queries
+
+#### Before
+
+```tsx
+import {useMosaic} from '@sqlrooms/mosaic';
+
+function MyComponent() {
+  const {isMosaicLoading, mosaicConnector} = useMosaic();
+
+  if (isMosaicLoading) {
+    return <div>Loading...</div>;
+  }
+
+  // Use mosaicConnector directly
+  // ...
+}
+```
+
+#### After
+
+**Step 1: Add MosaicSlice to your store**
+
+```tsx
+import {createMosaicSlice, MosaicSliceState} from '@sqlrooms/mosaic';
+import {createRoomStore, RoomShellSliceState} from '@sqlrooms/room-shell';
+
+export type RoomState = RoomShellSliceState & MosaicSliceState;
+
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  (set, get, store) => ({
+    // ... other slices
+    ...createMosaicSlice()(set, get, store),
+  }),
+);
+```
+
+**Step 2: Check connection status via store**
+
+```tsx
+import {useRoomStore} from './store';
+
+function MyComponent() {
+  const mosaicConn = useRoomStore((state) => state.mosaic.connection);
+
+  if (mosaicConn.status === 'loading') {
+    return <div>Loading...</div>;
+  }
+
+  if (mosaicConn.status === 'error') {
+    return <div>Error: {mosaicConn.error.message}</div>;
+  }
+
+  // Mosaic is ready when status === 'ready'
+  // Access connector via mosaicConn.connector if needed
+}
+```
+
+**Step 3: Use `useMosaicClient` for reactive queries**
+
+```tsx
+import {Query, useMosaicClient} from '@sqlrooms/mosaic';
+import {Table} from 'apache-arrow';
+
+function MapView() {
+  const {data, isLoading, client} = useMosaicClient<Table>({
+    selectionName: 'brush',
+    query: (filter: any) => {
+      return Query.from('earthquakes')
+        .select('Latitude', 'Longitude', 'Magnitude')
+        .where(filter);
+    },
+  });
+
+  if (isLoading) {
+    return <div>Loading data...</div>;
+  }
+
+  // Use data for visualization
+  return <div>Data loaded: {data?.numRows} rows</div>;
+}
+```
+
+For more details, see the [Mosaic API documentation](/api/mosaic/) and the [DeckGL + Mosaic example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic).
+
+## 0.26.0-rc.5
+
+- There's no combined config in the store anymore. We decided to split the config into individual slices' configs to avoid confusion and simplify the store typing.
+
+      state.config.title -> state.room.config.title
+      state.config.dataSources -> state.room.config.dataSources
+      state.config.sqlEditor -> state.sqlEditor.config
+      state.config.layout -> state.layout.config
+      ...
+
+  If you were saving the combined config, make sure to update the persistence logic (check out the examples).
+
+- createStore, createSlice now only have one generic type parameter
+
+- room.setRoomConfig removed, use .setConfig in all individual slices
+
+- RoomState renamed to BaseRoomStoreState (meant to be internal) and RoomStore interface renamed to BaseRoomStore to avoid confusion with RoomState/RoomStore introduced in many of the examples
+
+- room.onSaveConfig, hasUnsavedChanges, lastSavedConfig were removed.
+
 ## 0.25.0-rc.1
 
 - createAiSlice init parameters changed:
@@ -198,7 +313,6 @@ const result = await connector.query('SELECT * FROM some_table').result;
 - `INITIAL_BASE_PROJECT_STATE` renamed into `INITIAL_PROJECT_BUILDER_STATE`
 
 - A number of project store props and moved from `.project` to `.db`:
-
   - `.tables`
   - `.addTable`
   - `.getTable`

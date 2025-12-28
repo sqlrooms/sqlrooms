@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useMemo} from 'react';
-import Markdown from 'react-markdown';
+import Markdown, {Components} from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import {truncate} from '@sqlrooms/utils';
@@ -10,6 +10,7 @@ import {cn} from '@sqlrooms/ui';
 type AnalysisAnswerProps = {
   content: string;
   isAnswer: boolean;
+  customMarkdownComponents?: Partial<Components>;
 };
 
 type ThinkContent = {
@@ -129,6 +130,7 @@ ThinkBlock.displayName = 'ThinkBlock';
 export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   props: AnalysisAnswerProps,
 ) {
+  const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
 
   const toggleThinkExpansion = useCallback((content: string) => {
@@ -145,8 +147,8 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 
   // Memoize content processing to avoid recalculation on every render
   const {processedContent, thinkContents} = useMemo(
-    () => processContent(props.content),
-    [props.content],
+    () => processContent(content),
+    [content],
   );
 
   // Memoize the think-block component to prevent unnecessary re-renders
@@ -182,17 +184,19 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     <div className="flex flex-col gap-5">
       <MessageContainer
         isSuccess={true}
-        type={props.isAnswer ? 'answer' : 'thinking'}
-        content={props}
+        type={isAnswer ? 'answer' : 'thinking'}
+        content={{content, isAnswer}}
       >
         <div className="prose dark:prose-invert max-w-none text-sm">
           <Markdown
             remarkPlugins={[remarkGfm]}
             rehypePlugins={[rehypeRaw]}
-            components={{
-              // @ts-expect-error - Custom HTML element not in react-markdown types
-              'think-block': thinkBlockComponent,
-            }}
+            components={
+              {
+                'think-block': thinkBlockComponent,
+                ...customMarkdownComponents,
+              } as Partial<Components>
+            }
           >
             {processedContent}
           </Markdown>
