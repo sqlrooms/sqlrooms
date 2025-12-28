@@ -47,7 +47,6 @@ export const FlowmapView: FC<{
       locations: locations.toArray(),
       flows: flows.toArray(),
     };
-    console.log('recalc', result);
     return result;
   }, [locations, flows]);
 
@@ -79,7 +78,7 @@ export const FlowmapView: FC<{
         }`}
       </style>
       <Map initialViewState={INITIAL_VIEW_STATE} mapStyle={MAP_STYLE}>
-        <DeckGLOverlay layers={layers} style={{mixBlendMode: 'darken'}} />
+        <DeckGLOverlay layers={layers} />
         <NavigationControl position="top-left" />
       </Map>
     </div>
