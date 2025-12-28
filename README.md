@@ -219,7 +219,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           {
             tableName: 'earthquakes',
             type: 'url',
-            url: 'https://huggingface.co/datasets/sqlrooms/earthquakes/resolve/main/earthquakes.parquet',
+            url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
           },
         ],
       },

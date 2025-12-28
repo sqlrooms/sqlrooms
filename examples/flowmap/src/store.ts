@@ -1,4 +1,3 @@
-import {createDefaultDiscussConfig} from '@sqlrooms/discuss';
 import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   createRoomShellSlice,
@@ -11,7 +10,7 @@ import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
 
-export type RoomState = RoomShellSliceState & SqlEditorSliceState;
+type RoomState = RoomShellSliceState & SqlEditorSliceState;
 
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
   (set, get, store) => ({
@@ -24,7 +23,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         initializationQuery: 'LOAD spatial',
       }),
       config: {
-        ...createDefaultDiscussConfig(),
         layout: {
           type: LayoutTypes.enum.mosaic,
           nodes: {

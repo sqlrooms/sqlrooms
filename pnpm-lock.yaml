@@ -1235,9 +1235,6 @@ importers:
       '@deck.gl/mapbox':
         specifier: ^8.9.35
         version: 8.9.36(@deck.gl/core@8.9.36)
-      '@flowmap.gl/data':
-        specifier: ^8.0.2
-        version: 8.0.2
       '@flowmap.gl/layers':
         specifier: ^8.0.2
         version: 8.0.2(@deck.gl/core@8.9.36)(@deck.gl/layers@8.9.36(@deck.gl/core@8.9.36)(@loaders.gl/core@4.3.4)(@luma.gl/core@8.5.21))(@luma.gl/constants@8.5.21)(@luma.gl/core@8.5.21)
@@ -1247,9 +1244,6 @@ importers:
       '@luma.gl/core':
         specifier: ^8.5.21
         version: 8.5.21
-      '@sqlrooms/discuss':
-        specifier: workspace:*
-        version: link:../../packages/discuss
       '@sqlrooms/dropzone':
         specifier: workspace:*
         version: link:../../packages/dropzone
@@ -1268,6 +1262,9 @@ importers:
       '@sqlrooms/utils':
         specifier: workspace:*
         version: link:../../packages/utils
+      apache-arrow:
+        specifier: 17.0.0
+        version: 17.0.0
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
@@ -22242,7 +22239,7 @@ snapshots:
 
   '@types/keyv@3.1.4':
     dependencies:
-      '@types/node': 20.19.26
+      '@types/node': 24.10.2
 
   '@types/leaflet@1.9.21':
     dependencies:

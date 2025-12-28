@@ -1,6 +1,6 @@
 import {useSql} from '@sqlrooms/duckdb';
 import {useRoomStore} from '../store';
-import {Flow, FlowmapView} from './FlowmapView';
+import {Location, Flow, FlowmapView} from './FlowmapView';
 
 export const MainView: React.FC = () => {
   const locationsTable = useRoomStore((s) => s.db.findTableByName('locations'));
