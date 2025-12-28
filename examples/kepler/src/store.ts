@@ -1,8 +1,5 @@
-import {
-  createDefaultKeplerConfig,
-  createKeplerSlice,
-  KeplerSliceState,
-} from '@sqlrooms/kepler';
+import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
+import {createKeplerSlice, KeplerSliceState} from '@sqlrooms/kepler';
 import {
   createRoomShellSlice,
   createRoomStore,
@@ -11,11 +8,7 @@ import {
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {
   DatabaseIcon,
@@ -33,7 +26,6 @@ import {
   KeplerSidePanelInteractionManager,
   KeplerSidePanelLayerManager,
 } from './components/KeplerSidePanels';
-import {createWasmDuckDbConnector} from '@sqlrooms/duckdb';
 
 export const RoomPanelTypes = z.enum([
   'data',
@@ -68,8 +60,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
               url: 'https://pub-334685c2155547fab4287d84cae47083.r2.dev/earthquakes.parquet',
             },
           ],
-          ...createDefaultKeplerConfig(),
-          ...createDefaultSqlEditorConfig(),
         },
         connector: createWasmDuckDbConnector({
           query: {

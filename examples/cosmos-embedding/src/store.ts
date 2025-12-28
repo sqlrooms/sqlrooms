@@ -1,8 +1,4 @@
-import {
-  CosmosSliceState,
-  createCosmosSlice,
-  createDefaultCosmosConfig,
-} from '@sqlrooms/cosmos';
+import {CosmosSliceState, createCosmosSlice} from '@sqlrooms/cosmos';
 import {
   createRoomShellSlice,
   createRoomStore,
@@ -10,11 +6,7 @@ import {
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
@@ -46,8 +38,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tableName: 'publications',
           },
         ],
-        ...createDefaultSqlEditorConfig(),
-        ...createDefaultCosmosConfig(),
       },
       layout: {
         config: {

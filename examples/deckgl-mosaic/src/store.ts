@@ -11,14 +11,13 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
-import {MainView} from './components/MainView';
 import DataSourcesPanel from './components/data-sources/DataSourcesPanel';
+import {MainView} from './components/MainView';
 import {
   createMapSettingsSlice,
   MapSettingsConfig,
@@ -51,7 +50,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           initializationQuery: 'LOAD spatial',
         }),
         config: {
-          ...createDefaultSqlEditorConfig(),
           dataSources: [
             {
               tableName: 'earthquakes',
