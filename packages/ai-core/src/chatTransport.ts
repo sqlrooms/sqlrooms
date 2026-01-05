@@ -5,7 +5,7 @@ import {
   streamText,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -16,10 +16,6 @@ import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
-
-export type CustomUIDataType = {
-  'tool-additional-output': {toolCallId: string; output: unknown};
-};
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -400,7 +396,7 @@ export function createChatHandlers({
         }
       }
     },
-    onChatData: (dataPart: DataUIPart<CustomUIDataType>) => {
+    onChatData: (dataPart: DataUIPart<UIDataTypes>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&

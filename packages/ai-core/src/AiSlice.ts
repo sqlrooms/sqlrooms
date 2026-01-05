@@ -15,7 +15,6 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
-  UITools,
   ChatOnDataCallback,
   generateText,
 } from 'ai';
@@ -27,7 +26,6 @@ import {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
 } from './chatTransport';
-import type {CustomUIDataType} from './chatTransport';
 import {AI_DEFAULT_TEMPERATURE} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
@@ -123,7 +121,7 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage<unknown, CustomUIDataType>>;
+    onChatData: ChatOnDataCallback<UIMessage>;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
