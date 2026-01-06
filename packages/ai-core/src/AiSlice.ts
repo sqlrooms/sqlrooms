@@ -47,6 +47,12 @@ export type AiSliceState = {
     isRunningAnalysis: boolean;
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
+    /**
+     * Session id that the current in-flight chat run is pinned to.
+     * This prevents streamed message/tool updates from being written into a different
+     * session if the user switches sessions mid-run.
+     */
+    activeChatSessionId?: string;
     analysisAbortController?: AbortController;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
@@ -222,6 +228,7 @@ export function createAiSlice(
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
+        activeChatSessionId: undefined,
         getProviderOptions,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
@@ -679,6 +686,7 @@ export function createAiSlice(
             produce(state, (draft) => {
               draft.ai.analysisAbortController = abortController;
               draft.ai.isRunningAnalysis = true;
+              draft.ai.activeChatSessionId = currentSession.id;
               draft.ai.analysisPrompt = '';
               draft.ai.promptSuggestionsVisible = false;
 
