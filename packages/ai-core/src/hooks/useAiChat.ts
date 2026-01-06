@@ -51,10 +51,22 @@ export type UseAiChatResult = {
 export function useAiChat(): UseAiChatResult {
   // Get current session and configuration
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const sessionId = currentSession?.id;
-  const model = currentSession?.model;
+  const pinnedSession = useStoreWithAi((s) =>
+    s.ai.activeChatSessionId
+      ? s.ai.config.sessions.find(
+          (sess) => sess.id === s.ai.activeChatSessionId,
+        )
+      : undefined,
+  );
+
+  // While a run is in-flight, pin all chat state to the session where it started.
+  // This prevents streamed messages from being written into a different session
+  // if the user switches sessions mid-stream.
+  const session = pinnedSession ?? currentSession;
+  const sessionId = session?.id;
+  const model = session?.model;
   // Use messagesRevision to force reset only when messages are explicitly deleted
-  const messagesRevision = currentSession?.messagesRevision ?? 0;
+  const messagesRevision = session?.messagesRevision ?? 0;
 
   // Get chat transport configuration
   const getLocalChatTransport = useStoreWithAi(
@@ -113,7 +125,7 @@ export function useAiChat(): UseAiChatResult {
 
   const initialMessages = useMemo(() => {
     return completeIncompleteToolCalls(
-      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
+      (session?.uiMessages as UIMessage[]) ?? [],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion (messagesRevision)
   }, [sessionId, messagesRevision]);
