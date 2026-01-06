@@ -15,9 +15,7 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
-  UITools,
   ChatOnDataCallback,
-  UIDataTypes,
   generateText,
 } from 'ai';
 import {
@@ -31,6 +29,7 @@ import {
 import {AI_DEFAULT_TEMPERATURE} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {GetProviderOptions} from './types';
 import {AddToolResult} from './types';
 import {cleanupPendingAnalysisResults} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
@@ -49,6 +48,7 @@ export type AiSliceState = {
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
+    getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
     /** Latest stop function from useChat to immediately halt local streaming */
@@ -121,7 +121,7 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage<unknown, UIDataTypes, UITools>>;
+    onChatData: ChatOnDataCallback<UIMessage>;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
@@ -150,6 +150,7 @@ export interface AiSliceOptions {
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
+  getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
@@ -172,6 +173,7 @@ export function createAiSlice(
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
     getCustomModel,
+    getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
   } = params;
@@ -220,6 +222,7 @@ export function createAiSlice(
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
+        getProviderOptions,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
             // Set up abort handler

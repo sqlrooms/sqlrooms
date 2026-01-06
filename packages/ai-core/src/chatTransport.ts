@@ -5,7 +5,7 @@ import {
   streamText,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -146,7 +146,7 @@ export function createOnToolCompletedHandler(
  */
 export function convertToAiSDKTools(
   tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
+  onToolCompleted?: OpenAssistantTool['onToolCompleted'],
 ): ToolSet {
   return Object.entries(tools || {}).reduce(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
@@ -224,6 +224,11 @@ export function createLocalChatTransportFactory({
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
 
+      const providerOptions = state.ai.getProviderOptions?.({
+        provider,
+        modelId,
+      });
+
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
@@ -231,6 +236,7 @@ export function createLocalChatTransportFactory({
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
         temperature: AI_DEFAULT_TEMPERATURE,
+        ...(providerOptions ? {providerOptions} : {}),
       });
 
       return result.toUIMessageStreamResponse();
@@ -390,9 +396,7 @@ export function createChatHandlers({
         }
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend (defensive guards)
+    onChatData: (dataPart: DataUIPart<UIDataTypes>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&
