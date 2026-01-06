@@ -1,9 +1,10 @@
 import type {UIMessage} from 'ai';
+import {streamText} from 'ai';
 import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
 import type {OpenAssistantToolSet} from '@openassistant/utils';
 
 export type ProviderOptions = NonNullable<
-  Parameters<typeof import('ai').streamText>[0]['providerOptions']
+  Parameters<typeof streamText>[0]['providerOptions']
 >;
 
 /**
