@@ -101,7 +101,7 @@ import {createAiEmbeddingProvider, type AiProvider} from '@sqlrooms/ai-rag';
 
 // Custom provider that implements the interface
 const myProvider: AiProvider = {
-  textEmbeddingModel(modelId: string, settings?: {dimensions?: number}) {
+  embedding(modelId: string, settings?: {dimensions?: number}) {
     return {
       // Your custom implementation
       // Must be compatible with Vercel AI SDK's embed() function

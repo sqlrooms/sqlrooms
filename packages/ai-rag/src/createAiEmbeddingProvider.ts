@@ -62,8 +62,8 @@ export type AiProviderFactory = (apiKey?: string) => AiProvider;
  * );
  * ```
  *
- * @note Requires AI SDK 5+ which uses v2 embedding specification.
- * The provider must support the `embedding()` method that returns a v2 model.
+ * @note Requires AI SDK v6 which uses the `embedding()` method.
+ * The provider must support the `embedding()` method that returns an embedding model.
  */
 export function createAiEmbeddingProvider(
   providerOrFactory: AiProvider | AiProviderFactory,
@@ -82,7 +82,7 @@ export function createAiEmbeddingProvider(
           ? providerOrFactory(apiKey)
           : providerOrFactory;
 
-      // Use v2 embedding API (required for AI SDK 5+)
+      // Use embedding API (AI SDK v6)
       const embeddingModel = provider.embedding(modelId, {
         dimensions,
       });
