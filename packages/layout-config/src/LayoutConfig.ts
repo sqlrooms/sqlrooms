@@ -59,6 +59,7 @@ export const MosaicLayoutConfig = z.object({
   nodes: MosaicLayoutNode.nullable(),
   pinned: z.array(MosaicLayoutNodeKey).optional(),
   fixed: z.array(MosaicLayoutNodeKey).optional(),
+  collapsed: z.array(MosaicLayoutNodeKey).optional(),
 });
 export type MosaicLayoutConfig = z.infer<typeof MosaicLayoutConfig>;
 

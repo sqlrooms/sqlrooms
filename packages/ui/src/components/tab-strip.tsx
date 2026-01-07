@@ -843,8 +843,8 @@ function TabStripRoot({
         >
           {children ?? (
             <>
-              <TabStripSearchDropdown />
               <TabStripTabs />
+              <TabStripSearchDropdown />
               <TabStripNewButton />
             </>
           )}
