@@ -1,6 +1,6 @@
 import {cn, Spinner, TabStrip} from '@sqlrooms/ui';
 import {HistoryIcon, PencilIcon, TrashIcon} from 'lucide-react';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog, RenameSessionDialog} from './session';
 
