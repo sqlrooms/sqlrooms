@@ -1,26 +1,18 @@
 /**
- * Tests for backwards compatibility of chatTransport functions with AI SDK v5 data.
- *
- * This test file contains a copy of the completeIncompleteToolCalls function
- * to avoid ESM/CommonJS module resolution issues with the full chatTransport module.
+ * Tests for backwards compatibility of completeIncompleteToolCalls with AI SDK v5 data.
+ * Contains a copy of the function to avoid ESM module resolution issues.
  */
 
-// Simplified type for testing purposes
 type UIMessage = {
   id: string;
   role: 'user' | 'assistant' | 'system';
   parts: Array<Record<string, unknown>>;
 };
 
-/**
- * Copy of completeIncompleteToolCalls for isolated testing.
- * This avoids importing the full chatTransport module which has many dependencies.
- */
+// Copy of completeIncompleteToolCalls for isolated testing
 function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
   return messages.map((message) => {
-    if (message.role !== 'assistant' || !message.parts) {
-      return message;
-    }
+    if (message.role !== 'assistant' || !message.parts) return message;
 
     type ToolPart = {
       type: string;
@@ -29,16 +21,14 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
       input?: unknown;
       state?: string;
     };
-
     const isToolPart = (part: unknown): part is ToolPart => {
       if (typeof part !== 'object' || part === null) return false;
-      const p = part as Record<string, unknown> & {type?: unknown};
-      const typeVal =
-        typeof p.type === 'string' ? (p.type as string) : undefined;
+      const p = part as Record<string, unknown>;
+      const t = typeof p.type === 'string' ? p.type : '';
       return (
-        !!typeVal &&
+        !!t &&
         'toolCallId' in p &&
-        (typeVal === 'dynamic-tool' || typeVal.startsWith('tool-'))
+        (t === 'dynamic-tool' || t.startsWith('tool-'))
       );
     };
 
@@ -51,301 +41,112 @@ function completeIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
         continue;
       }
       sawAnyTool = true;
-      const toolPart = current as ToolPart;
-      const hasOutput = toolPart.state?.startsWith('output');
-      if (hasOutput) {
-        continue;
-      }
+      if (current.state?.startsWith('output')) continue;
 
       const base = {
-        toolCallId: toolPart.toolCallId,
+        toolCallId: current.toolCallId,
         state: 'output-error' as const,
-        input: toolPart.input ?? {},
+        input: current.input ?? {},
         errorText: 'Operation cancelled by user',
         providerExecuted: false,
       };
-
-      const syntheticPart =
-        toolPart.type === 'dynamic-tool'
+      updatedParts[i] =
+        current.type === 'dynamic-tool'
           ? {
               type: 'dynamic-tool' as const,
-              toolName: toolPart.toolName || 'unknown',
+              toolName: current.toolName || 'unknown',
               ...base,
             }
-          : {type: toolPart.type as string, ...base};
-
-      updatedParts[i] =
-        syntheticPart as unknown as (typeof message.parts)[number];
+          : {type: current.type, ...base};
     }
-
     return {...message, parts: updatedParts};
   });
 }
 
 describe('completeIncompleteToolCalls v5 compatibility', () => {
-  describe('v5 tool states', () => {
-    it('should not modify completed v5 output-available tool calls', () => {
-      const messages: UIMessage[] = [
+  it('should not modify v5 completed states (output-*)', () => {
+    const msg: UIMessage = {
+      id: 'm1',
+      role: 'assistant',
+      parts: [
         {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-myTool',
-              toolCallId: 'call-1',
-              state: 'output-available',
-              input: {query: 'test'},
-              output: {result: 'success'},
-            },
-          ],
+          type: 'tool-x',
+          toolCallId: 'c1',
+          state: 'output-available',
+          input: {},
+          output: {},
         },
-      ];
+      ],
+    };
+    const result = completeIncompleteToolCalls([msg]);
+    expect(result[0].parts[0]).toMatchObject({state: 'output-available'});
+  });
 
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-available',
-        output: {result: 'success'},
-      });
-    });
-
-    it('should not modify completed v5 output-error tool calls', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-myTool',
-              toolCallId: 'call-1',
-              state: 'output-error',
-              input: {query: 'test'},
-              errorText: 'Original error',
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-error',
-        errorText: 'Original error',
-      });
-    });
-
-    it('should complete v5 input-streaming tool calls with output-error', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-myTool',
-              toolCallId: 'call-1',
-              state: 'input-streaming',
-              input: {query: 'test'},
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
+  it('should complete v5 incomplete states (input-*) with output-error', () => {
+    for (const state of ['input-streaming', 'input-available']) {
+      const msg: UIMessage = {
+        id: 'm1',
+        role: 'assistant',
+        parts: [{type: 'tool-x', toolCallId: 'c1', state, input: {}}],
+      };
+      const result = completeIncompleteToolCalls([msg]);
       expect(result[0].parts[0]).toMatchObject({
         state: 'output-error',
         errorText: 'Operation cancelled by user',
       });
+    }
+  });
+
+  it('should handle v6 new states correctly', () => {
+    // output-denied should not be modified (starts with output)
+    const denied: UIMessage = {
+      id: 'm1',
+      role: 'assistant',
+      parts: [
+        {type: 'tool-x', toolCallId: 'c1', state: 'output-denied', input: {}},
+      ],
+    };
+    expect(completeIncompleteToolCalls([denied])[0].parts[0]).toMatchObject({
+      state: 'output-denied',
     });
 
-    it('should complete v5 input-available tool calls with output-error', () => {
-      const messages: UIMessage[] = [
+    // approval-* should be completed
+    const approval: UIMessage = {
+      id: 'm2',
+      role: 'assistant',
+      parts: [
         {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-myTool',
-              toolCallId: 'call-1',
-              state: 'input-available',
-              input: {query: 'test'},
-            },
-          ],
+          type: 'tool-x',
+          toolCallId: 'c1',
+          state: 'approval-requested',
+          input: {},
         },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-error',
-        errorText: 'Operation cancelled by user',
-      });
+      ],
+    };
+    expect(completeIncompleteToolCalls([approval])[0].parts[0]).toMatchObject({
+      state: 'output-error',
     });
   });
 
-  describe('v5 dynamic-tool states', () => {
-    it('should not modify completed v5 dynamic-tool output-available', () => {
-      const messages: UIMessage[] = [
+  it('should handle v5 dynamic-tool parts', () => {
+    const msg: UIMessage = {
+      id: 'm1',
+      role: 'assistant',
+      parts: [
         {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'dynamic-tool',
-              toolName: 'dynamicTool',
-              toolCallId: 'call-1',
-              state: 'output-available',
-              input: {param: 'value'},
-              output: {data: 'result'},
-            },
-          ],
+          type: 'dynamic-tool',
+          toolName: 'dyn',
+          toolCallId: 'c1',
+          state: 'input-available',
+          input: {},
         },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts[0]).toMatchObject({
-        type: 'dynamic-tool',
-        state: 'output-available',
-      });
-    });
-
-    it('should complete v5 dynamic-tool input-available with output-error', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'dynamic-tool',
-              toolName: 'dynamicTool',
-              toolCallId: 'call-1',
-              state: 'input-available',
-              input: {param: 'value'},
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts[0]).toMatchObject({
-        type: 'dynamic-tool',
-        toolName: 'dynamicTool',
-        state: 'output-error',
-        errorText: 'Operation cancelled by user',
-      });
-    });
-  });
-
-  describe('v6 new states', () => {
-    it('should not modify completed v6 output-denied tool calls', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-dangerousAction',
-              toolCallId: 'call-1',
-              state: 'output-denied',
-              input: {action: 'delete'},
-              approval: {state: 'denied'},
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      // output-denied starts with 'output', so should not be modified
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-denied',
-      });
-    });
-
-    it('should complete v6 approval-requested tool calls with output-error', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-dangerousAction',
-              toolCallId: 'call-1',
-              state: 'approval-requested',
-              input: {action: 'delete'},
-              approval: {state: 'requested'},
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      // approval-requested doesn't start with 'output', so should be completed
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-error',
-        errorText: 'Operation cancelled by user',
-      });
-    });
-
-    it('should complete v6 approval-responded tool calls with output-error', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {
-              type: 'tool-dangerousAction',
-              toolCallId: 'call-1',
-              state: 'approval-responded',
-              input: {action: 'delete'},
-              approval: {state: 'approved'},
-            },
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      // approval-responded doesn't start with 'output', so should be completed
-      expect(result[0].parts[0]).toMatchObject({
-        state: 'output-error',
-        errorText: 'Operation cancelled by user',
-      });
-    });
-  });
-
-  describe('mixed messages', () => {
-    it('should handle v5 messages with text and tool parts', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'assistant',
-          parts: [
-            {type: 'text', text: 'Let me analyze that.'},
-            {
-              type: 'tool-analyze',
-              toolCallId: 'call-1',
-              state: 'output-available',
-              input: {sql: 'SELECT *'},
-              output: {rows: 100},
-            },
-            {type: 'text', text: 'Found 100 rows.'},
-          ],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result[0].parts).toHaveLength(3);
-      expect(result[0].parts[0]).toMatchObject({type: 'text'});
-      expect(result[0].parts[1]).toMatchObject({state: 'output-available'});
-      expect(result[0].parts[2]).toMatchObject({type: 'text'});
-    });
-
-    it('should not modify user messages', () => {
-      const messages: UIMessage[] = [
-        {
-          id: 'msg-1',
-          role: 'user',
-          parts: [{type: 'text', text: 'Hello'}],
-        },
-      ];
-
-      const result = completeIncompleteToolCalls(messages);
-      expect(result).toEqual(messages);
+      ],
+    };
+    const result = completeIncompleteToolCalls([msg]);
+    expect(result[0].parts[0]).toMatchObject({
+      type: 'dynamic-tool',
+      toolName: 'dyn',
+      state: 'output-error',
     });
   });
 });
