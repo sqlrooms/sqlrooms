@@ -17,8 +17,12 @@ type ToolCallInfoProps = {
   state:
     | 'input-streaming'
     | 'input-available'
+    | 'approval-requested'
+    | 'approval-responded'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'output-denied'
+    | string; // Allow any string to support future states
 };
 
 /**
@@ -72,7 +76,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
       {/* Expanded Arguments */}
       {isExpanded && (
         <div className="px-5 py-2">
-          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md p-2 font-mono text-xs">
+          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto rounded-md p-2 font-mono text-xs break-words whitespace-pre-wrap">
             {JSON.stringify(input, null, 2)}
           </pre>
         </div>
