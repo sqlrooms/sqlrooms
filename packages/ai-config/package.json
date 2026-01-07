@@ -22,9 +22,13 @@
     "@paralleldrive/cuid2": "^3.0.0",
     "zod": "^4.1.8"
   },
+  "devDependencies": {
+    "ts-jest": "^29.4.4"
+  },
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "jest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
