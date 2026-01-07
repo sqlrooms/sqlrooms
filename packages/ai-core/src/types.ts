@@ -37,7 +37,9 @@ export type AddToolResult = (
 export interface AiStateForTransport {
   config: AiSliceConfig;
   tools: OpenAssistantToolSet;
+  /** @deprecated Use getSessionAbortController(sessionId) instead */
   analysisAbortController?: AbortController;
+  /** @deprecated Use isSessionRunning(sessionId) instead */
   isRunningAnalysis: boolean;
   analysisPrompt: string;
   getProviderOptions?: GetProviderOptions;
@@ -54,6 +56,14 @@ export interface AiStateForTransport {
     abortSignal?: AbortSignal,
   ) => Promise<void>;
   getFullInstructions: () => string;
+  // Per-session state accessors (Maps are kept outside Zustand state to avoid Immer freezing)
+  isSessionRunning: (sessionId: string) => boolean;
+  getSessionAbortSignal: (sessionId: string) => AbortSignal | undefined;
+  getSessionAbortController: (sessionId: string) => AbortController | undefined;
+  /** Mark a session as running */
+  setSessionRunning: (sessionId: string, running: boolean) => void;
+  /** Clean up session abort controller */
+  clearSessionAbortController: (sessionId: string) => void;
 }
 
 /**

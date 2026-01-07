@@ -123,16 +123,22 @@ export type ChatTransportConfig = {
    * If provided, this model will be used instead of the default OpenAI-compatible client.
    */
   getCustomModel?: () => LanguageModel | undefined;
+  /**
+   * The session ID to operate on - captured at transport creation time.
+   * This ensures the transport writes to the correct session even after session switch.
+   */
+  sessionId: string;
 };
 
 /**
- * Creates a handler for tool completion that updates the tool additional data in the store
+ * Creates a handler for tool completion that updates the tool additional data in the store.
+ * Uses captured sessionId to ensure data goes to correct session even after session switch.
  */
 export function createOnToolCompletedHandler(
   store: StoreApi<AiSliceStateForTransport>,
+  sessionId: string,
 ) {
   return (toolCallId: string, additionalData: unknown) => {
-    const sessionId = store.getState().ai.config.currentSessionId;
     if (!sessionId) return;
 
     store
@@ -176,14 +182,18 @@ export function createLocalChatTransportFactory({
   headers,
   getInstructions,
   getCustomModel,
+  sessionId,
 }: ChatTransportConfig) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
       // Resolve provider/model and client at call time to pick up latest settings
       const state = store.getState();
-      const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || defaultProvider;
-      const modelId = currentSession?.model || defaultModel;
+      // Use the captured sessionId to get the session, not currentSession
+      const targetSession = state.ai.config.sessions.find(
+        (s) => s.id === sessionId,
+      );
+      const provider = targetSession?.modelProvider || defaultProvider;
+      const modelId = targetSession?.model || defaultModel;
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
@@ -212,7 +222,8 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(store);
+      // Use captured sessionId for tool completion handler
+      const onToolCompleted = createOnToolCompletedHandler(store, sessionId);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
       // Remove execute from tools for the model call so tool invocations are
       // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
@@ -229,12 +240,13 @@ export function createLocalChatTransportFactory({
         modelId,
       });
 
+      // Use per-session abort signal
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
-        abortSignal: state.ai.analysisAbortController?.signal,
+        abortSignal: state.ai.getSessionAbortSignal(sessionId),
         temperature: AI_DEFAULT_TEMPERATURE,
         ...(providerOptions ? {providerOptions} : {}),
       });
@@ -250,15 +262,19 @@ export function createRemoteChatTransportFactory(params: {
   store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
+  /** The session ID to operate on - captured at transport creation time */
+  sessionId: string;
 }) {
   return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
-      // Get current session's model and provider at request time
+      // Use captured sessionId to get the session, not currentSession
       const state = params.store.getState();
-      const currentSession = state.ai.getCurrentSession();
+      const targetSession = state.ai.config.sessions.find(
+        (s) => s.id === params.sessionId,
+      );
       const modelProvider =
-        currentSession?.modelProvider || params.defaultProvider;
-      const model = currentSession?.model || params.defaultModel;
+        targetSession?.modelProvider || params.defaultProvider;
+      const model = targetSession?.model || params.defaultModel;
 
       // Parse the existing body and add model information (defensive parsing)
       const body = init?.body as string;
@@ -277,6 +293,7 @@ export function createRemoteChatTransportFactory(params: {
         ...parsedObj,
         modelProvider,
         model,
+        sessionId: params.sessionId, // Include sessionId for server-side handling
       };
 
       // Make the request with enhanced body
@@ -295,10 +312,18 @@ export function createRemoteChatTransportFactory(params: {
   };
 }
 
+/**
+ * Create chat handlers that operate on a specific session.
+ * The sessionId is captured at creation time to ensure callbacks
+ * write to the correct session even if the user switches sessions during streaming.
+ */
 export function createChatHandlers({
   store,
+  sessionId,
 }: {
   store: StoreApi<AiSliceStateForTransport>;
+  /** The session ID to operate on - captured at chat start time */
+  sessionId: string;
 }) {
   return {
     onChatToolCall: async ({
@@ -313,8 +338,9 @@ export function createChatHandlers({
         // handle client tools
         const state = store.getState();
 
-        // Check if the stream was aborted before executing tool
-        if (state.ai.analysisAbortController?.signal.aborted) {
+        // Check if the stream was aborted before executing tool (use per-session signal)
+        const abortSignal = state.ai.getSessionAbortSignal(sessionId);
+        if (abortSignal?.aborted) {
           if (addToolResult) {
             addToolResult({
               tool: toolName,
@@ -326,7 +352,19 @@ export function createChatHandlers({
           return;
         }
 
-        const onToolCompleted = createOnToolCompletedHandler(store);
+        // Create onToolCompleted handler that uses captured sessionId
+        const onToolCompleted = (
+          toolCallId: string,
+          additionalData: unknown,
+        ) => {
+          store
+            .getState()
+            .ai.setSessionToolAdditionalData(
+              sessionId,
+              toolCallId,
+              additionalData,
+            );
+        };
         const tools = convertToAiSDKTools(
           state.ai.tools || {},
           onToolCompleted,
@@ -335,13 +373,16 @@ export function createChatHandlers({
         // find tool from tools using toolName
         const tool = tools[toolName];
         if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
-          // Always provide a defined messages array to the tool runtime
-          const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
+          // Get messages from the specific session, not current session
+          const targetSession = state.ai.config.sessions.find(
+            (s) => s.id === sessionId,
+          );
+          const sessionMessages = (targetSession?.uiMessages ??
             []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
             messages: convertToModelMessages(sessionMessages),
-            abortSignal: state.ai.analysisAbortController?.signal,
+            abortSignal: state.ai.getSessionAbortSignal(sessionId),
           });
 
           if (addToolResult) {
@@ -361,7 +402,7 @@ export function createChatHandlers({
               // Wait for the UI component to call addToolResult
               await state.ai.waitForToolResult(
                 toolCallId,
-                state.ai.analysisAbortController?.signal,
+                state.ai.getSessionAbortSignal(sessionId),
               );
             } catch (error) {
               // If waiting was cancelled or failed, ensure we add an error result
@@ -407,48 +448,51 @@ export function createChatHandlers({
           output: unknown;
         };
 
-        // Store the additional data in the session
-        const currentSessionId = store.getState().ai.config.currentSessionId;
-        if (currentSessionId) {
-          store
-            .getState()
-            .ai.setSessionToolAdditionalData(
-              currentSessionId,
-              toolCallId,
-              output,
-            );
-        }
+        // Store the additional data in the captured session (not current session)
+        store
+          .getState()
+          .ai.setSessionToolAdditionalData(sessionId, toolCallId, output);
       }
     },
     onChatFinish: ({messages}: {messages: UIMessage[]}) => {
       try {
-        const currentSessionId = store.getState().ai.config.currentSessionId;
-        if (!currentSessionId) return;
+        // Use captured sessionId instead of currentSessionId
+        if (!sessionId) return;
 
         // If the analysis has been aborted, force-complete and clean up immediately
-        const aborted =
-          !!store.getState().ai.analysisAbortController?.signal.aborted;
+        // Use per-session abort signal
+        const aborted = !!store.getState().ai.getSessionAbortSignal(sessionId)
+          ?.aborted;
         if (aborted) {
           // If messages are empty (possible when stopping immediately), fall back to existing session messages
+          const targetSession = store
+            .getState()
+            .ai.config.sessions.find((s) => s.id === sessionId);
           const sessionMessages =
-            (store.getState().ai.getCurrentSession()
-              ?.uiMessages as UIMessage[]) || [];
+            (targetSession?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
 
           const completedMessages = completeIncompleteToolCalls(sourceMessages);
           store
             .getState()
-            .ai.setSessionUiMessages(currentSessionId, completedMessages);
+            .ai.setSessionUiMessages(sessionId, completedMessages);
 
           // Ensure an analysis result exists and is marked as cancelled
+          // Also clean up per-session running state
+          store.getState().ai.setSessionRunning(sessionId, false);
+          store.getState().ai.clearSessionAbortController(sessionId);
+
           store.setState((state: AiSliceStateForTransport) =>
             produce(state, (draft: AiSliceStateForTransport) => {
-              draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisAbortController = undefined;
+              // Update legacy global state if this is the current session
+              if (draft.ai.config.currentSessionId === sessionId) {
+                draft.ai.isRunningAnalysis = false;
+                draft.ai.analysisAbortController = undefined;
+              }
 
               const targetSession = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === currentSessionId,
+                (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (!targetSession) return;
 
@@ -495,15 +539,13 @@ export function createChatHandlers({
         // Complete any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = completeIncompleteToolCalls(messages);
 
-        store
-          .getState()
-          .ai.setSessionUiMessages(currentSessionId, completedMessages);
+        store.getState().ai.setSessionUiMessages(sessionId, completedMessages);
 
         // Create or update analysis result with the user message ID for proper correlation
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (!targetSession) return;
 
@@ -583,11 +625,18 @@ export function createChatHandlers({
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
+          // Clean up per-session running state
+          store.getState().ai.setSessionRunning(sessionId, false);
+          store.getState().ai.clearSessionAbortController(sessionId);
+
           store.setState((state: AiSliceStateForTransport) =>
             produce(state, (draft: AiSliceStateForTransport) => {
-              draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisPrompt = '';
-              draft.ai.analysisAbortController = undefined;
+              // Update legacy global state if this is the current session
+              if (draft.ai.config.currentSessionId === sessionId) {
+                draft.ai.isRunningAnalysis = false;
+                draft.ai.analysisPrompt = '';
+                draft.ai.analysisAbortController = undefined;
+              }
             }),
           );
         }
@@ -602,12 +651,16 @@ export function createChatHandlers({
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
-        const currentSessionId = store.getState().ai.config.currentSessionId;
+
+        // Clean up per-session running state
+        store.getState().ai.setSessionRunning(sessionId, false);
+        store.getState().ai.clearSessionAbortController(sessionId);
+
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
-            if (!currentSessionId) return;
+            if (!sessionId) return;
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (targetSession) {
               // Ensure message structure is valid even on errors
@@ -664,8 +717,11 @@ export function createChatHandlers({
                 }
               }
             }
-            draft.ai.isRunningAnalysis = false;
-            draft.ai.analysisAbortController = undefined;
+            // Update legacy global state if this is the current session
+            if (draft.ai.config.currentSessionId === sessionId) {
+              draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisAbortController = undefined;
+            }
           }),
         );
       } catch (err) {

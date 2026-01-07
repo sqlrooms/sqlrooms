@@ -25,13 +25,18 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   onCancel,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const sessionId = currentSession?.id;
+  const model = currentSession?.model;
+
+  // Use per-session running state
+  const isSessionRunning = useStoreWithAi((s) => s.ai.isSessionRunning);
+  const isRunningAnalysis = sessionId ? isSessionRunning(sessionId) : false;
+
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
-  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
+  const cancelSession = useStoreWithAi((s) => s.ai.cancelSession);
   const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
   const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const model = currentSession?.model;
 
   // Use the custom hook for chat functionality
   const {sendMessage} = useAiChat();
@@ -60,27 +65,41 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         !e.metaKey
       ) {
         e.preventDefault();
-        if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis(sendMessage);
+        if (
+          !isRunningAnalysis &&
+          model &&
+          analysisPrompt.trim().length &&
+          sessionId
+        ) {
+          runAnalysis(sessionId, sendMessage);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
+    [
+      isRunningAnalysis,
+      model,
+      analysisPrompt,
+      runAnalysis,
+      sendMessage,
+      sessionId,
+    ],
   );
 
-  const canStart = Boolean(model && analysisPrompt.trim().length);
+  const canStart = Boolean(model && analysisPrompt.trim().length && sessionId);
 
   const handleClickRunOrCancel = useCallback(() => {
+    if (!sessionId) return;
     if (isRunningAnalysis) {
-      cancelAnalysis();
+      cancelSession(sessionId);
       onCancel?.();
     } else {
-      runAnalysis(sendMessage);
+      runAnalysis(sessionId, sendMessage);
       onRun?.();
     }
   }, [
+    sessionId,
     isRunningAnalysis,
-    cancelAnalysis,
+    cancelSession,
     onCancel,
     runAnalysis,
     sendMessage,

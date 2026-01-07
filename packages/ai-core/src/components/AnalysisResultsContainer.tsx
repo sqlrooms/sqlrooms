@@ -21,7 +21,13 @@ export const AnalysisResultsContainer: React.FC<{
   userTools,
   ErrorMessageComponent,
 }) => {
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
+  // Get current session and use per-session running state
+  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
+  const isSessionRunning = useStoreWithAi((s) => s.ai.isSessionRunning);
+  const isRunningAnalysis = currentSessionId
+    ? isSessionRunning(currentSessionId)
+    : false;
+
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
   );

@@ -56,7 +56,7 @@ export function useAiChat(): UseAiChatResult {
   // Use messagesRevision to force reset only when messages are explicitly deleted
   const messagesRevision = currentSession?.messagesRevision ?? 0;
 
-  // Get chat transport configuration
+  // Get chat transport configuration - these now require sessionId
   const getLocalChatTransport = useStoreWithAi(
     (s) => s.ai.getLocalChatTransport,
   );
@@ -66,36 +66,58 @@ export function useAiChat(): UseAiChatResult {
   const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
 
-  // Get chat handlers
-  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
-  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
-  const onChatData = useStoreWithAi((s) => s.ai.onChatData);
-  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+  // Get function to create session-specific handlers
+  const createChatHandlersForSession = useStoreWithAi(
+    (s) => s.ai.createChatHandlersForSession,
+  );
+
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
   const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
   const setChatSendMessage = useStoreWithAi((s) => s.ai.setChatSendMessage);
   const setAddToolResult = useStoreWithAi((s) => s.ai.setAddToolResult);
 
-  // Abort/auto-send guards
-  const isAborted = useStoreWithAi(
-    (s) => s.ai.analysisAbortController?.signal.aborted ?? false,
+  // Get per-session abort signal
+  const getSessionAbortSignal = useStoreWithAi(
+    (s) => s.ai.getSessionAbortSignal,
   );
+
+  // Abort/auto-send guards - use per-session abort signal
+  const isAborted = sessionId
+    ? (getSessionAbortSignal(sessionId)?.aborted ?? false)
+    : false;
   const isAbortedRef = useRef<boolean>(isAborted);
   // Keep a live ref so sendAutomaticallyWhen sees latest abort state even if useChat doesn't reinit
   useEffect(() => {
     isAbortedRef.current = isAborted;
   }, [isAborted]);
 
-  // Create transport (recreate when model changes)
-  const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+  // Capture sessionId for use in closures - this is the key fix for the bug
+  const capturedSessionId = sessionId;
+
+  // Create session-specific handlers (recreate when session changes)
+  const sessionHandlers = useMemo(() => {
+    if (!capturedSessionId) return null;
+    return createChatHandlersForSession(capturedSessionId);
+  }, [capturedSessionId, createChatHandlersForSession]);
+
+  // Create transport (recreate when model or session changes)
+  const transport: DefaultChatTransport<UIMessage> | null = useMemo(() => {
+    if (!capturedSessionId) return null;
     // Recreate transport when the model changes
     void model;
     const trimmed = (endPoint || '').trim();
     if (trimmed.length > 0) {
-      return getRemoteChatTransport(trimmed, headers);
+      return getRemoteChatTransport(capturedSessionId, trimmed, headers);
     }
-    return getLocalChatTransport();
-  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
+    return getLocalChatTransport(capturedSessionId);
+  }, [
+    getLocalChatTransport,
+    getRemoteChatTransport,
+    headers,
+    endPoint,
+    model,
+    capturedSessionId,
+  ]);
 
   // Setup useChat with all configuration
   // Include messagesRevision in the id to force reset only when messages are explicitly deleted
@@ -120,20 +142,19 @@ export function useAiChat(): UseAiChatResult {
 
   const {messages, sendMessage, addToolResult, stop, status} = useChat({
     id: `${sessionId}-${messagesRevision}`,
-    transport,
+    transport: transport!,
     messages: initialMessages,
     onToolCall: async (opts) => {
       const {toolCall} = opts as {toolCall: unknown};
-      // Wrap the store's onChatToolCall to provide addToolResult
-      // Use the captured addToolResult from the ref
-      return onChatToolCall?.({
+      // Use session-specific handler
+      return sessionHandlers?.onChatToolCall?.({
         toolCall: toolCall as ToolCall,
         addToolResult: addToolResultRef.current,
       });
     },
-    onFinish: onChatFinish,
-    onError: onChatError,
-    onData: onChatData,
+    onFinish: sessionHandlers?.onChatFinish,
+    onError: sessionHandlers?.onChatError,
+    onData: sessionHandlers?.onChatData,
     // Automatically submit when all tool results are available
     // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
     sendAutomaticallyWhen: shouldAutoSend,
@@ -149,29 +170,33 @@ export function useAiChat(): UseAiChatResult {
     }
   }, [status, stop, isAborted]);
 
-  // Register stop with the store so cancelAnalysis can stop the stream
+  // Register stop with the store keyed by sessionId so cancelSession can stop the stream
   useEffect(() => {
-    setChatStop?.(stop);
-    return () => setChatStop?.(undefined);
-  }, [setChatStop, stop]);
+    if (!capturedSessionId) return;
+    setChatStop?.(capturedSessionId, stop);
+    return () => setChatStop?.(capturedSessionId, undefined);
+  }, [setChatStop, stop, capturedSessionId]);
 
-  // Register sendMessage with the store so it can be accessed from the slice
+  // Register sendMessage with the store keyed by sessionId
   useEffect(() => {
-    setChatSendMessage?.(sendMessage);
-    return () => setChatSendMessage?.(undefined);
-  }, [setChatSendMessage, sendMessage]);
+    if (!capturedSessionId) return;
+    setChatSendMessage?.(capturedSessionId, sendMessage);
+    return () => setChatSendMessage?.(capturedSessionId, undefined);
+  }, [setChatSendMessage, sendMessage, capturedSessionId]);
 
-  // Register addToolResult with the store so it can be accessed from the slice
+  // Register addToolResult with the store keyed by sessionId
   useEffect(() => {
-    setAddToolResult?.(addToolResult);
-    return () => setAddToolResult?.(undefined);
-  }, [setAddToolResult, addToolResult]);
+    if (!capturedSessionId) return;
+    setAddToolResult?.(capturedSessionId, addToolResult);
+    return () => setAddToolResult?.(capturedSessionId, undefined);
+  }, [setAddToolResult, addToolResult, capturedSessionId]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
+  // Use capturedSessionId to ensure messages go to the correct session
   useEffect(() => {
-    if (!sessionId) return;
-    setSessionUiMessages(sessionId, messages as UIMessage[]);
-  }, [messages, sessionId, setSessionUiMessages]);
+    if (!capturedSessionId) return;
+    setSessionUiMessages(capturedSessionId, messages as UIMessage[]);
+  }, [messages, capturedSessionId, setSessionUiMessages]);
 
   return {
     messages,
