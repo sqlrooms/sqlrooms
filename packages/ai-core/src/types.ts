@@ -3,6 +3,8 @@ import {streamText} from 'ai';
 import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
 import type {OpenAssistantToolSet} from '@openassistant/utils';
 
+/* eslint-disable no-unused-vars -- This file primarily exports types; parameter names are for clarity/docs. */
+
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
 >;
@@ -37,15 +39,10 @@ export type AddToolResult = (
 export interface AiStateForTransport {
   config: AiSliceConfig;
   tools: OpenAssistantToolSet;
-  /**
-   * Session id that the currently in-flight chat run is pinned to.
-   * This prevents streamed message/tool updates from being written into a different
-   * session if the user switches sessions mid-stream.
-   */
-  activeChatSessionId?: string;
   analysisAbortController?: AbortController;
   isRunningAnalysis: boolean;
   analysisPrompt: string;
+  analysisRunSessionId?: string;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
   setSessionToolAdditionalData: (
