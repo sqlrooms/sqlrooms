@@ -17,8 +17,11 @@ type ToolData = {
     | 'partial-call'
     | 'input-streaming'
     | 'input-available'
+    | 'approval-requested'
+    | 'approval-responded'
     | 'output-available'
-    | 'output-error';
+    | 'output-error'
+    | 'output-denied';
   result?: any;
   output?: any;
   errorText?: string;

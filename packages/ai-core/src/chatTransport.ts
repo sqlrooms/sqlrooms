@@ -231,7 +231,7 @@ export function createLocalChatTransportFactory({
 
       const result = streamText({
         model,
-        messages: convertToModelMessages(messagesCopy),
+        messages: await convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
@@ -338,9 +338,10 @@ export function createChatHandlers({
           // Always provide a defined messages array to the tool runtime
           const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
             []) as UIMessage[];
+          const modelMessages = await convertToModelMessages(sessionMessages);
           const llmResult = await tool.execute(input, {
             toolCallId,
-            messages: convertToModelMessages(sessionMessages),
+            messages: modelMessages,
             abortSignal: state.ai.analysisAbortController?.signal,
           });
 
