@@ -368,7 +368,7 @@ AI SDK v5 supports message annotations, but these are still part of the message 
 
 ## Agent Framework
 
-The agent framework enables building autonomous AI agents that can use tools and make multi-step decisions. Built on top of AI SDK v5's `Experimental_Agent` class, it provides utilities for integrating agents as tools within the main chat interface.
+The agent framework enables building autonomous AI agents that can use tools and make multi-step decisions. Built on top of the Vercel AI SDK v6's `ToolLoopAgent` class, it provides utilities for integrating agents as tools within the main chat interface.
 
 ### What are Agents?
 
@@ -383,7 +383,7 @@ Agents differ from regular tools in that they:
 Agent tools follow the same OpenAssistantTool pattern but use the `processAgentStream` utility to handle streaming and progress tracking:
 
 ```typescript
-import {Experimental_Agent as Agent, tool} from 'ai';
+import {ToolLoopAgent, tool} from 'ai';
 import {processAgentStream} from '@sqlrooms/ai';
 import {z} from 'zod';
 
@@ -399,12 +399,13 @@ export function weatherAgentTool(store: StoreApi<RoomState>) {
       const currentSession = state.ai.getCurrentSession();
 
       // Create the agent with its own set of tools
-      const weatherAgent = new Agent({
+      const weatherAgent = new ToolLoopAgent({
         model: getModel(state),
+        instructions: 'You are a helpful weather assistant.',
         tools: {
           weather: tool({
             description: 'Get current weather in a location',
-            inputSchema: z.object({
+            parameters: z.object({
               location: z.string()
             }),
             execute: async ({location}) => ({
@@ -414,7 +415,7 @@ export function weatherAgentTool(store: StoreApi<RoomState>) {
           }),
           convertTemperature: tool({
             description: 'Convert temperature units',
-            inputSchema: z.object({
+            parameters: z.object({
               temperature: z.number(),
               from: z.enum(['F', 'C']),
               to: z.enum(['F', 'C'])
@@ -424,7 +425,7 @@ export function weatherAgentTool(store: StoreApi<RoomState>) {
             }
           })
         },
-        stopWhen: stepCountIs(10) // Limit agent steps
+        stopWhen: stepCountIs(10) // Limit agent steps (default is now 20)
       });
 
       // Stream the agent's execution
