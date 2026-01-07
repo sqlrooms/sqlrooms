@@ -56,7 +56,7 @@ const AgentProgressRenderer: React.FC<{
               </div>
 
               {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="ml-6 mt-1">
+                <div className="mt-1 ml-6">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />
@@ -92,14 +92,24 @@ export const ToolPartRenderer = ({part}: {part: UIMessagePart}) => {
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
-  const {type, toolCallId, state, input} = part;
+  // Cast to any to access union type properties uniformly
+  const toolPart = part as {
+    type: string;
+    toolCallId: string;
+    state: string;
+    input?: unknown;
+    output?: unknown;
+    errorText?: string;
+    toolName?: string;
+  };
+  const {type, toolCallId, state, input} = toolPart;
   const toolName =
     type === 'dynamic-tool'
-      ? part.toolName || 'unknown'
+      ? toolPart.toolName || 'unknown'
       : type.replace(/^tool-/, '') || 'unknown';
 
-  const output = state === 'output-available' ? part.output : undefined;
-  const errorText = state === 'output-error' ? part.errorText : undefined;
+  const output = state === 'output-available' ? toolPart.output : undefined;
+  const errorText = state === 'output-error' ? toolPart.errorText : undefined;
   const isCompleted = state === 'output-available' || state === 'output-error';
   const additionalData = toolAdditionalData[toolCallId];
 

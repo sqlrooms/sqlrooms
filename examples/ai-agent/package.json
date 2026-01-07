@@ -11,13 +11,13 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "^1.0.22",
+    "@ai-sdk/openai-compatible": "^2.0.4",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "ai": "^5.0.44",
+    "ai": "^6.0.18",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",

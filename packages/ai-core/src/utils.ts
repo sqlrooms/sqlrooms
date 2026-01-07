@@ -7,8 +7,9 @@ import {
   AnalysisResultSchema,
   AnalysisSessionSchema,
   UIMessagePart,
+  ToolUIPart,
 } from '@sqlrooms/ai-config';
-import {DynamicToolUIPart, TextUIPart, ToolUIPart} from 'ai';
+import {TextUIPart} from 'ai';
 
 /**
  * Custom error class for operation abort errors.
@@ -117,9 +118,14 @@ export function isToolPart(part: UIMessagePart): part is ToolUIPart {
   return typeof part.type === 'string' && part.type.startsWith('tool-');
 }
 
+/**
+ * Type guard to check if a UIMessagePart is a dynamic tool part
+ * @param part - The message part to check
+ * @returns True if the part is a dynamic tool part
+ */
 export function isDynamicToolPart(
   part: UIMessagePart,
-): part is DynamicToolUIPart {
+): part is UIMessagePart & {type: 'dynamic-tool'} {
   return part.type === 'dynamic-tool';
 }
 
