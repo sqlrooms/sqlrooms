@@ -1,4 +1,4 @@
-import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {Button, cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
 import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
@@ -22,8 +22,8 @@ export const AnalysisResultsContainer: React.FC<{
   ErrorMessageComponent,
 }) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const activeChatSessionId = useStoreWithAi((s) => s.ai.activeChatSessionId);
-  const currentSessionId = useStoreWithAi((s) => s.ai.getCurrentSession()?.id);
+  const analysisRunSessionId = useStoreWithAi((s) => s.ai.analysisRunSessionId);
+  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
   );
@@ -31,9 +31,17 @@ export const AnalysisResultsContainer: React.FC<{
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
 
+  // Only show the thinking indicator for the session that has a pending analysis result.
+  // This keeps other sessions visually untouched when switching mid-stream.
+  const hasPendingResult =
+    (currentAnalysisResults || []).some(
+      (r) => r.id === '__pending__' && !r.isCompleted,
+    ) ?? false;
   const isRunningForThisSession =
-    isRunningAnalysis &&
-    (activeChatSessionId ? activeChatSessionId === currentSessionId : true);
+    (isRunningAnalysis &&
+      analysisRunSessionId != null &&
+      analysisRunSessionId === currentSessionId) ||
+    (isRunningAnalysis && analysisRunSessionId == null && hasPendingResult);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);

@@ -5,6 +5,8 @@ import {
   AnalysisSessionSchema,
   createDefaultAiConfig,
 } from '@sqlrooms/ai-config';
+
+/* eslint-disable no-unused-vars -- This slice defines many public function signatures; argument names are for clarity/docs. */
 import {
   createSlice,
   useBaseRoomStore,
@@ -17,6 +19,7 @@ import {
   LanguageModel,
   ChatOnDataCallback,
   generateText,
+  type AbstractChat,
 } from 'ai';
 import {
   createChatHandlers,
@@ -34,25 +37,19 @@ import {AddToolResult} from './types';
 import {cleanupPendingAnalysisResults} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
-// Custom type for onChatToolCall that includes addToolResult
-type ExtendedChatOnToolCallCallback = (args: {
-  toolCall: ToolCall;
-  addToolResult?: AddToolResult;
-}) => Promise<void> | void;
-
 export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
     analysisPrompt: string;
     isRunningAnalysis: boolean;
+    /**
+     * Session id for the currently running analysis/chat stream.
+     * Used to keep the chat stream pinned to the session where it started
+     * even if the user switches the active session mid-stream.
+     */
+    analysisRunSessionId?: string;
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
-    /**
-     * Session id that the current in-flight chat run is pinned to.
-     * This prevents streamed message/tool updates from being written into a different
-     * session if the user switches sessions mid-run.
-     */
-    activeChatSessionId?: string;
     analysisAbortController?: AbortController;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
@@ -62,10 +59,10 @@ export type AiSliceState = {
     /** Register/replace the current chat stop function */
     setChatStop: (stop: (() => void) | undefined) => void;
     /** Latest sendMessage function from useChat to send messages */
-    chatSendMessage?: (message: {text: string}) => void;
+    chatSendMessage?: AbstractChat<UIMessage>['sendMessage'];
     /** Register/replace the current chat sendMessage function */
     setChatSendMessage: (
-      sendMessage: ((message: {text: string}) => void) | undefined,
+      sendMessage: AbstractChat<UIMessage>['sendMessage'] | undefined,
     ) => void;
     /** Latest addToolResult function from useChat to add tool results */
     addToolResult?: AddToolResult;
@@ -90,7 +87,7 @@ export type AiSliceState = {
       },
     ) => Promise<string>;
     startAnalysis: (
-      sendMessage: (message: {text: string}) => void,
+      sendMessage: AbstractChat<UIMessage>['sendMessage'],
     ) => Promise<void>;
     cancelAnalysis: () => void;
     setAiModel: (modelProvider: string, model: string) => void;
@@ -118,22 +115,35 @@ export type AiSliceState = {
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
     // Chat transport for useChat hook
-    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+    getLocalChatTransport: (
+      sessionId?: string,
+    ) => DefaultChatTransport<UIMessage>;
     /** Optional remote endpoint to use for chat; if empty, local transport is used */
     chatEndPoint: string;
     chatHeaders: Record<string, string>;
     getRemoteChatTransport: (
       endpoint: string,
       headers?: Record<string, string>,
+      sessionId?: string,
     ) => DefaultChatTransport<UIMessage>;
-    onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage>;
-    onChatFinish: (args: {
-      message: UIMessage;
-      messages: UIMessage[];
-      isError?: boolean;
-    }) => void;
-    onChatError: (error: unknown) => void;
+    onChatToolCall: (args: {
+      sessionId: string;
+      toolCall: ToolCall;
+      addToolResult?: AddToolResult;
+    }) => Promise<void> | void;
+    onChatData: (
+      sessionId: string,
+      dataPart: Parameters<ChatOnDataCallback<UIMessage>>[0],
+    ) => void;
+    onChatFinish: (
+      sessionId: string,
+      args: {
+        message: UIMessage;
+        messages: UIMessage[];
+        isError?: boolean;
+      },
+    ) => void;
+    onChatError: (sessionId: string, error: unknown) => void;
   };
 };
 
@@ -228,7 +238,6 @@ export function createAiSlice(
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
-        activeChatSessionId: undefined,
         getProviderOptions,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
@@ -293,7 +302,7 @@ export function createAiSlice(
         },
 
         setChatSendMessage: (
-          sendMessageFn: ((message: {text: string}) => void) | undefined,
+          sendMessageFn: AbstractChat<UIMessage>['sendMessage'] | undefined,
         ) => {
           set((state) =>
             produce(state, (draft) => {
@@ -670,7 +679,7 @@ export function createAiSlice(
          * Start the analysis
          */
         startAnalysis: async (
-          sendMessage: (message: {text: string}) => void,
+          sendMessage: AbstractChat<UIMessage>['sendMessage'],
         ) => {
           const abortController = new AbortController();
           const currentSession = get().ai.getCurrentSession();
@@ -686,7 +695,7 @@ export function createAiSlice(
             produce(state, (draft) => {
               draft.ai.analysisAbortController = abortController;
               draft.ai.isRunningAnalysis = true;
-              draft.ai.activeChatSessionId = currentSession.id;
+              draft.ai.analysisRunSessionId = currentSession.id;
               draft.ai.analysisPrompt = '';
               draft.ai.promptSuggestionsVisible = false;
 
@@ -712,7 +721,7 @@ export function createAiSlice(
           );
 
           // The pending analysis result will be updated in onChatFinish with the correct message ID
-          sendMessage({text: promptText});
+          void sendMessage({text: promptText});
         },
 
         cancelAnalysis: () => {
@@ -734,6 +743,7 @@ export function createAiSlice(
             produce(state, (draft) => {
               // Set isRunningAnalysis to false to update UI
               draft.ai.isRunningAnalysis = false;
+              draft.ai.analysisRunSessionId = undefined;
               // Keep analysisAbortController so handlers can check signal.aborted
               // It will be cleared by onChatFinish
 
@@ -892,7 +902,7 @@ export function createAiSlice(
         chatEndPoint,
         chatHeaders,
 
-        getLocalChatTransport: () => {
+        getLocalChatTransport: (sessionId?: string) => {
           const state = get();
           return createLocalChatTransportFactory({
             store,
@@ -902,18 +912,19 @@ export function createAiSlice(
             baseUrl: state.ai.getBaseUrlFromSettings(),
             getInstructions: () => store.getState().ai.getFullInstructions(),
             getCustomModel,
-          })();
+          })(sessionId);
         },
 
         getRemoteChatTransport: (
           endpoint: string,
           headers?: Record<string, string>,
+          sessionId?: string,
         ) =>
           createRemoteChatTransportFactory({
             store,
             defaultProvider,
             defaultModel,
-          })(endpoint, headers),
+          })(endpoint, headers, sessionId),
 
         ...createChatHandlers({store}),
       },
