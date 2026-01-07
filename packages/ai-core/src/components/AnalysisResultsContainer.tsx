@@ -1,4 +1,4 @@
-import {Button, cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
+import {cn, ScrollArea, ScrollBar} from '@sqlrooms/ui';
 import {ChevronDown} from 'lucide-react';
 import React, {useEffect, useRef} from 'react';
 import {Components} from 'react-markdown';
@@ -31,17 +31,11 @@ export const AnalysisResultsContainer: React.FC<{
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
 
-  // Only show the thinking indicator for the session that has a pending analysis result.
-  // This keeps other sessions visually untouched when switching mid-stream.
-  const hasPendingResult =
-    (currentAnalysisResults || []).some(
-      (r) => r.id === '__pending__' && !r.isCompleted,
-    ) ?? false;
   const isRunningForThisSession =
     (isRunningAnalysis &&
       analysisRunSessionId != null &&
       analysisRunSessionId === currentSessionId) ||
-    (isRunningAnalysis && analysisRunSessionId == null && hasPendingResult);
+    (isRunningAnalysis && analysisRunSessionId == null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
