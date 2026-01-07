@@ -52,6 +52,7 @@ export interface AiStateForTransport {
   setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
   findToolComponent: (toolName: string) => React.ComponentType | undefined;
   waitForToolResult: (
+    sessionId: string,
     toolCallId: string,
     abortSignal?: AbortSignal,
   ) => Promise<void>;

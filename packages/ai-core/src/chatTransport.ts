@@ -401,6 +401,7 @@ export function createChatHandlers({
             try {
               // Wait for the UI component to call addToolResult
               await state.ai.waitForToolResult(
+                sessionId,
                 toolCallId,
                 state.ai.getSessionAbortSignal(sessionId),
               );

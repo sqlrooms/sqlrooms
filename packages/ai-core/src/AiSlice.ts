@@ -81,6 +81,7 @@ export type AiSliceState = {
     ) => void;
     /** Wait for a tool result to be added by UI component */
     waitForToolResult: (
+      sessionId: string,
       toolCallId: string,
       abortSignal?: AbortSignal,
     ) => Promise<void>;
@@ -256,6 +257,10 @@ export function createAiSlice(
       {resolve: () => void; reject: (error: Error) => void}
     >();
 
+    // pending tool call is session-scoped, so we need to key by (sessionId, toolCallId)
+    const pendingToolCallKey = (sessionId: string, toolCallId: string) =>
+      `${sessionId}\u0000${toolCallId}`;
+
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
     if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
@@ -293,13 +298,18 @@ export function createAiSlice(
         getSessionAddToolResult: (sessionId: string) =>
           sessionAddToolResults.get(sessionId),
 
-        waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
+        waitForToolResult: (
+          sessionId: string,
+          toolCallId: string,
+          abortSignal?: AbortSignal,
+        ) => {
           return new Promise<void>((resolve, reject) => {
+            const key = pendingToolCallKey(sessionId, toolCallId);
             // Set up abort handler
             const abortHandler = () => {
-              const resolver = pendingToolCallResolvers.get(toolCallId);
+              const resolver = pendingToolCallResolvers.get(key);
               if (resolver) {
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 resolver.reject(new Error('Tool call cancelled by user'));
               }
             };
@@ -313,19 +323,19 @@ export function createAiSlice(
             }
 
             // Store resolver (overwrites any existing one, which is fine for our use case)
-            pendingToolCallResolvers.set(toolCallId, {
+            pendingToolCallResolvers.set(key, {
               resolve: () => {
                 if (abortSignal) {
                   abortSignal.removeEventListener('abort', abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 resolve();
               },
               reject: (error: Error) => {
                 if (abortSignal) {
                   abortSignal.removeEventListener('abort', abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 reject(error);
               },
             });
@@ -397,7 +407,7 @@ export function createAiSlice(
 
                   // Resolve the promise if there's a pending waiter for this toolCallId
                   const resolver = pendingToolCallResolvers.get(
-                    options.toolCallId,
+                    pendingToolCallKey(sessionId, options.toolCallId),
                   );
                   if (resolver) {
                     resolver.resolve();
