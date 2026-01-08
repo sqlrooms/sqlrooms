@@ -29,7 +29,9 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
 
       const weatherAgent = new Agent({
         model,
-        abortSignal: state.ai.analysisAbortController?.signal,
+        abortSignal: state.ai.getSessionAbortController(
+          currentSession?.id ?? '',
+        )?.signal,
         tools: {
           weather: tool({
             description: 'Get the weather in a location (in Fahrenheit)',
