@@ -39,6 +39,10 @@ const AnalysisSessionBaseSchema = z.object({
   toolAdditionalData: z.record(z.string(), z.unknown()).optional(),
   /** Revision counter that increments when messages are deleted, used to force useChat reset */
   messagesRevision: z.number().optional().default(0),
+  /** Per-session analysis prompt text */
+  analysisPrompt: z.string().optional().default(''),
+  /** Per-session flag indicating if analysis is running */
+  isRunningAnalysis: z.boolean().optional().default(false),
 });
 
 /**

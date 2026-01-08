@@ -37,11 +37,15 @@ export type AddToolResult = (
 export interface AiStateForTransport {
   config: AiSliceConfig;
   tools: OpenAssistantToolSet;
-  analysisAbortController?: AbortController;
-  isRunningAnalysis: boolean;
-  analysisPrompt: string;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
+  getSessionAbortController: (sessionId: string) => AbortController | undefined;
+  setSessionAbortController: (
+    sessionId: string,
+    controller: AbortController | undefined,
+  ) => void;
+  getSessionIsRunningAnalysis: (sessionId: string) => boolean;
+  setSessionIsRunningAnalysis: (sessionId: string, isRunning: boolean) => void;
   setSessionToolAdditionalData: (
     sessionId: string,
     toolCallId: string,

@@ -43,34 +43,59 @@ type ExtendedChatOnToolCallCallback = (args: {
 export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
-    analysisPrompt: string;
-    isRunningAnalysis: boolean;
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
-    analysisAbortController?: AbortController;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
-    /** Latest stop function from useChat to immediately halt local streaming */
-    chatStop?: () => void;
-    /** Register/replace the current chat stop function */
-    setChatStop: (stop: (() => void) | undefined) => void;
-    /** Latest sendMessage function from useChat to send messages */
-    chatSendMessage?: (message: {text: string}) => void;
-    /** Register/replace the current chat sendMessage function */
-    setChatSendMessage: (
+    /** Get abort controller for a specific session */
+    getSessionAbortController: (
+      sessionId: string,
+    ) => AbortController | undefined;
+    /** Set abort controller for a specific session */
+    setSessionAbortController: (
+      sessionId: string,
+      controller: AbortController | undefined,
+    ) => void;
+    /** Register/replace the chat stop function for a specific session */
+    setSessionChatStop: (
+      sessionId: string,
+      stop: (() => void) | undefined,
+    ) => void;
+    /** Get stop function for a specific session */
+    getSessionChatStop: (sessionId: string) => (() => void) | undefined;
+    /** Register/replace the chat sendMessage function for a specific session */
+    setSessionChatSendMessage: (
+      sessionId: string,
       sendMessage: ((message: {text: string}) => void) | undefined,
     ) => void;
-    /** Latest addToolResult function from useChat to add tool results */
-    addToolResult?: AddToolResult;
-    /** Register/replace the current addToolResult function */
-    setAddToolResult: (addToolResult: AddToolResult | undefined) => void;
+    /** Get sendMessage function for a specific session */
+    getSessionChatSendMessage: (
+      sessionId: string,
+    ) => ((message: {text: string}) => void) | undefined;
+    /** Register/replace the addToolResult function for a specific session */
+    setSessionAddToolResult: (
+      sessionId: string,
+      addToolResult: AddToolResult | undefined,
+    ) => void;
+    /** Get addToolResult function for a specific session */
+    getSessionAddToolResult: (sessionId: string) => AddToolResult | undefined;
     /** Wait for a tool result to be added by UI component */
     waitForToolResult: (
       toolCallId: string,
       abortSignal?: AbortSignal,
     ) => Promise<void>;
-    setAnalysisPrompt: (prompt: string) => void;
+    /** Set analysis prompt for a specific session */
+    setSessionAnalysisPrompt: (sessionId: string, prompt: string) => void;
+    /** Get analysis prompt for a specific session */
+    getSessionAnalysisPrompt: (sessionId: string) => string;
+    /** Set analysis running state for a specific session */
+    setSessionIsRunningAnalysis: (
+      sessionId: string,
+      isRunning: boolean,
+    ) => void;
+    /** Get analysis running state for a specific session */
+    getSessionIsRunningAnalysis: (sessionId: string) => boolean;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
       prompt: string,
@@ -83,10 +108,8 @@ export type AiSliceState = {
         useTools?: boolean;
       },
     ) => Promise<string>;
-    startAnalysis: (
-      sendMessage: (message: {text: string}) => void,
-    ) => Promise<void>;
-    cancelAnalysis: () => void;
+    startAnalysis: (sessionId: string) => Promise<void>;
+    cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
       name?: string,
@@ -199,11 +222,20 @@ export function createAiSlice(
         }
       : params.config;
 
-    // Create a persistent Map for pending tool call resolvers (outside of immer draft)
+    // Create persistent Maps (outside of immer draft)
     const pendingToolCallResolvers = new Map<
       string,
       {resolve: () => void; reject: (error: Error) => void}
     >();
+
+    // Per-session chat state Maps
+    const sessionAbortControllers = new Map<string, AbortController>();
+    const sessionChatStops = new Map<string, () => void>();
+    const sessionChatSendMessages = new Map<
+      string,
+      (message: {text: string}) => void
+    >();
+    const sessionAddToolResults = new Map<string, AddToolResult>();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -212,14 +244,15 @@ export function createAiSlice(
       if (firstSession) {
         firstSession.modelProvider = defaultProvider;
         firstSession.model = defaultModel;
+        // Initialize per-session state
+        firstSession.analysisPrompt = initialAnalysisPrompt;
+        firstSession.isRunningAnalysis = false;
       }
     }
 
     return {
       ai: {
         config: baseConfig,
-        analysisPrompt: initialAnalysisPrompt,
-        isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
         getProviderOptions,
@@ -261,12 +294,73 @@ export function createAiSlice(
             });
           });
         },
-        setChatStop: (stopFn: (() => void) | undefined) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.chatStop = stopFn;
-            }),
-          );
+
+        // Per-session abort controller management
+        getSessionAbortController: (sessionId: string) => {
+          return sessionAbortControllers.get(sessionId);
+        },
+        setSessionAbortController: (
+          sessionId: string,
+          controller: AbortController | undefined,
+        ) => {
+          if (controller) {
+            sessionAbortControllers.set(sessionId, controller);
+          } else {
+            sessionAbortControllers.delete(sessionId);
+          }
+        },
+
+        // Per-session chat stop management
+        setSessionChatStop: (
+          sessionId: string,
+          stopFn: (() => void) | undefined,
+        ) => {
+          if (stopFn) {
+            sessionChatStops.set(sessionId, stopFn);
+          } else {
+            sessionChatStops.delete(sessionId);
+          }
+        },
+        getSessionChatStop: (sessionId: string) => {
+          return sessionChatStops.get(sessionId);
+        },
+
+        // Per-session chat sendMessage management
+        setSessionChatSendMessage: (
+          sessionId: string,
+          sendMessageFn: ((message: {text: string}) => void) | undefined,
+        ) => {
+          if (sendMessageFn) {
+            sessionChatSendMessages.set(sessionId, sendMessageFn);
+          } else {
+            sessionChatSendMessages.delete(sessionId);
+          }
+        },
+        getSessionChatSendMessage: (sessionId: string) => {
+          return sessionChatSendMessages.get(sessionId);
+        },
+
+        // Per-session addToolResult management
+        setSessionAddToolResult: (
+          sessionId: string,
+          addToolResultFn: AddToolResult | undefined,
+        ) => {
+          if (addToolResultFn) {
+            // Wrap addToolResult to intercept calls and resolve pending promises
+            const wrappedAddToolResult: AddToolResult = (options) => {
+              addToolResultFn(options);
+              const resolver = pendingToolCallResolvers.get(options.toolCallId);
+              if (resolver) {
+                resolver.resolve();
+              }
+            };
+            sessionAddToolResults.set(sessionId, wrappedAddToolResult);
+          } else {
+            sessionAddToolResults.delete(sessionId);
+          }
+        },
+        getSessionAddToolResult: (sessionId: string) => {
+          return sessionAddToolResults.get(sessionId);
         },
 
         setConfig: (config: AiSliceConfig) => {
@@ -285,47 +379,49 @@ export function createAiSlice(
           );
         },
 
-        setChatSendMessage: (
-          sendMessageFn: ((message: {text: string}) => void) | undefined,
+        // Per-session analysis prompt management
+        setSessionAnalysisPrompt: (sessionId: string, prompt: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.analysisPrompt = prompt;
+              }
+            }),
+          );
+        },
+        getSessionAnalysisPrompt: (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
+          );
+          return session?.analysisPrompt || '';
+        },
+
+        // Per-session running analysis state management
+        setSessionIsRunningAnalysis: (
+          sessionId: string,
+          isRunning: boolean,
         ) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.chatSendMessage = sendMessageFn;
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.isRunningAnalysis = isRunning;
+              }
             }),
           );
         },
-
-        setAddToolResult: (addToolResultFn: AddToolResult | undefined) => {
-          // Wrap addToolResult to intercept calls and resolve pending promises
-          const wrappedAddToolResult: AddToolResult | undefined =
-            addToolResultFn
-              ? (options) => {
-                  // Call the original addToolResult
-                  addToolResultFn(options);
-
-                  // Resolve the promise if there's a pending waiter for this toolCallId
-                  const resolver = pendingToolCallResolvers.get(
-                    options.toolCallId,
-                  );
-                  if (resolver) {
-                    resolver.resolve();
-                  }
-                }
-              : undefined;
-
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.addToolResult = wrappedAddToolResult;
-            }),
+        getSessionIsRunningAnalysis: (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
           );
-        },
-
-        setAnalysisPrompt: (prompt: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.analysisPrompt = prompt;
-            }),
-          );
+          return session?.isRunningAnalysis || false;
         },
 
         /**
@@ -384,7 +480,7 @@ export function createAiSlice(
 
           set((state) =>
             produce(state, (draft) => {
-              // Add to AI sessions
+              // Add to AI sessions with per-session state
               draft.ai.config.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -398,6 +494,8 @@ export function createAiSlice(
                 uiMessages: [],
                 toolAdditionalData: {},
                 messagesRevision: 0,
+                analysisPrompt: '',
+                isRunningAnalysis: false,
               });
               draft.ai.config.currentSessionId = newSessionId;
             }),
@@ -432,9 +530,19 @@ export function createAiSlice(
         },
 
         /**
-         * Delete a session
+         * Delete a session and clean up its resources
          */
         deleteSession: (sessionId: string) => {
+          // Clean up per-session state
+          const abortController = sessionAbortControllers.get(sessionId);
+          if (abortController) {
+            abortController.abort('Session deleted');
+          }
+          sessionAbortControllers.delete(sessionId);
+          sessionChatStops.delete(sessionId);
+          sessionChatSendMessages.delete(sessionId);
+          sessionAddToolResults.delete(sessionId);
+
           set((state) =>
             produce(state, (draft) => {
               const sessionIndex = draft.ai.config.sessions.findIndex(
@@ -660,41 +768,53 @@ export function createAiSlice(
         },
 
         /**
-         * Start the analysis
+         * Start the analysis for a specific session
          */
-        startAnalysis: async (
-          sendMessage: (message: {text: string}) => void,
-        ) => {
-          const abortController = new AbortController();
-          const currentSession = get().ai.getCurrentSession();
+        startAnalysis: async (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
+          );
 
-          if (!currentSession) {
-            console.error('No current session found');
+          if (!session) {
+            console.error('Session not found:', sessionId);
             return;
           }
 
-          const promptText = get().ai.analysisPrompt;
+          const sendMessage = state.ai.getSessionChatSendMessage(sessionId);
+          if (!sendMessage) {
+            console.error(
+              'No sendMessage function found for session:',
+              sessionId,
+            );
+            return;
+          }
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.analysisAbortController = abortController;
-              draft.ai.isRunningAnalysis = true;
-              draft.ai.analysisPrompt = '';
-              draft.ai.promptSuggestionsVisible = false;
+          const abortController = new AbortController();
+          const promptText = session.analysisPrompt || '';
 
-              // Add incomplete analysis result to session immediately for instant UI rendering
-              const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === currentSession.id,
+          // Store abort controller for this session
+          state.ai.setSessionAbortController(sessionId, abortController);
+
+          set((stateToUpdate) =>
+            produce(stateToUpdate, (draft) => {
+              const draftSession = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
               );
-              if (session) {
-                // Remove any existing pending results (safety check for page refresh scenarios)
-                session.analysisResults = session.analysisResults.filter(
-                  (result: AnalysisResultSchema) => result.id !== '__pending__',
-                );
+              if (draftSession) {
+                draftSession.isRunningAnalysis = true;
+                draftSession.analysisPrompt = '';
+                draft.ai.promptSuggestionsVisible = false;
+
+                // Remove any existing pending results
+                draftSession.analysisResults =
+                  draftSession.analysisResults.filter(
+                    (result: AnalysisResultSchema) =>
+                      result.id !== '__pending__',
+                  );
 
                 // Add incomplete analysis result with a temporary ID
-                // This will be updated in onChatFinish with the actual user message ID
-                session.analysisResults.push({
+                draftSession.analysisResults.push({
                   id: '__pending__',
                   prompt: promptText,
                   isCompleted: false,
@@ -703,34 +823,35 @@ export function createAiSlice(
             }),
           );
 
-          // The pending analysis result will be updated in onChatFinish with the correct message ID
+          // Send the message through the session's chat instance
           sendMessage({text: promptText});
         },
 
-        cancelAnalysis: () => {
-          const abortController = get().ai.analysisAbortController;
+        cancelAnalysis: (sessionId: string) => {
+          const state = get();
+          const abortController = state.ai.getSessionAbortController(sessionId);
+          const stopFn = state.ai.getSessionChatStop(sessionId);
 
           // Stop local chat streaming immediately if available
           try {
-            get().ai.chatStop?.();
+            stopFn?.();
           } catch {
             // no-op
           }
 
           // Call abort to signal cancellation
-          // Keep the abort controller in state so that async handlers (onChatToolCall, onChatFinish)
-          // can check if it was aborted. The onChatFinish handler will clean it up.
           abortController?.abort('Analysis cancelled');
 
-          set((state) =>
-            produce(state, (draft) => {
-              // Set isRunningAnalysis to false to update UI
-              draft.ai.isRunningAnalysis = false;
-              // Keep analysisAbortController so handlers can check signal.aborted
+          set((stateToUpdate) =>
+            produce(stateToUpdate, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.isRunningAnalysis = false;
+              }
+              // Keep abort controller so handlers can check signal.aborted
               // It will be cleared by onChatFinish
-
-              // Intentionally preserve any pending analysis result so the
-              // conversation row remains visible until onChatFinish runs.
             }),
           );
         },

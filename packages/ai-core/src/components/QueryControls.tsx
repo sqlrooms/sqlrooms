@@ -1,14 +1,7 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {
-  PropsWithChildren,
-  useCallback,
-  useRef,
-  useEffect,
-  ReactNode,
-} from 'react';
+import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {useAiChat} from '../hooks/useAiChat';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -25,16 +18,22 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   onCancel,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
-  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
-  const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
-  const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const sessionId = currentSession?.id;
   const model = currentSession?.model;
 
-  // Use the custom hook for chat functionality
-  const {sendMessage} = useAiChat();
+  // Get per-session state and methods
+  const isRunningAnalysis = useStoreWithAi((s) =>
+    sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false,
+  );
+  const analysisPrompt = useStoreWithAi((s) =>
+    sessionId ? s.ai.getSessionAnalysisPrompt(sessionId) : '',
+  );
+  const setAnalysisPrompt = useStoreWithAi(
+    (s) => s.ai.setSessionAnalysisPrompt,
+  );
+  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -60,30 +59,36 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         !e.metaKey
       ) {
         e.preventDefault();
-        if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis(sendMessage);
+        if (
+          !isRunningAnalysis &&
+          sessionId &&
+          model &&
+          analysisPrompt.trim().length
+        ) {
+          runAnalysis(sessionId);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
+    [isRunningAnalysis, sessionId, model, analysisPrompt, runAnalysis],
   );
 
-  const canStart = Boolean(model && analysisPrompt.trim().length);
+  const canStart = Boolean(sessionId && model && analysisPrompt.trim().length);
 
   const handleClickRunOrCancel = useCallback(() => {
+    if (!sessionId) return;
     if (isRunningAnalysis) {
-      cancelAnalysis();
+      cancelAnalysis(sessionId);
       onCancel?.();
     } else {
-      runAnalysis(sendMessage);
+      runAnalysis(sessionId);
       onRun?.();
     }
   }, [
     isRunningAnalysis,
+    sessionId,
     cancelAnalysis,
     onCancel,
     runAnalysis,
-    sendMessage,
     onRun,
   ]);
 
@@ -101,7 +106,11 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
             autoResize
             value={analysisPrompt}
-            onChange={(e) => setAnalysisPrompt(e.target.value)}
+            onChange={(e) => {
+              if (sessionId) {
+                setAnalysisPrompt(sessionId, e.target.value);
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoFocus

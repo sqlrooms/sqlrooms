@@ -5,6 +5,7 @@ import {
   QueryControls,
   SessionControls,
   PromptSuggestions,
+  SessionChatManager,
 } from '@sqlrooms/ai';
 import {
   Button,
@@ -33,6 +34,9 @@ export const MainView: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
+      {/* SessionChatManager manages chat instances for all sessions */}
+      <SessionChatManager />
+
       <div className="mb-4 flex items-center justify-between gap-2">
         <SessionControls className="w-full" />
         {currentSessionId && (
@@ -49,7 +53,7 @@ export const MainView: React.FC = () => {
             <DialogTrigger asChild>
               <Button
                 variant="outline"
-                className="hover:bg-accent flex items-center justify-center transition-colors"
+                className="flex items-center justify-center transition-colors hover:bg-accent"
                 title="Configuration"
                 size="sm"
               >
@@ -98,7 +102,7 @@ export const MainView: React.FC = () => {
         ) : (
           <div className="flex h-full w-full flex-col items-center justify-center">
             <SkeletonPane className="p-4" />
-            <p className="text-muted-foreground mt-4">Loading database...</p>
+            <p className="mt-4 text-muted-foreground">Loading database...</p>
           </div>
         )}
       </div>

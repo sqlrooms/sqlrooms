@@ -229,12 +229,18 @@ export function createLocalChatTransportFactory({
         modelId,
       });
 
+      // Get abort controller for current session
+      const currentSessionId = state.ai.getCurrentSession()?.id;
+      const abortSignal = currentSessionId
+        ? state.ai.getSessionAbortController(currentSessionId)?.signal
+        : undefined;
+
       const result = streamText({
         model,
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
-        abortSignal: state.ai.analysisAbortController?.signal,
+        abortSignal,
         temperature: AI_DEFAULT_TEMPERATURE,
         ...(providerOptions ? {providerOptions} : {}),
       });
@@ -312,9 +318,14 @@ export function createChatHandlers({
       try {
         // handle client tools
         const state = store.getState();
+        const currentSession = state.ai.getCurrentSession();
+        const currentSessionId = currentSession?.id;
 
         // Check if the stream was aborted before executing tool
-        if (state.ai.analysisAbortController?.signal.aborted) {
+        const abortController = currentSessionId
+          ? state.ai.getSessionAbortController(currentSessionId)
+          : undefined;
+        if (abortController?.signal.aborted) {
           if (addToolResult) {
             addToolResult({
               tool: toolName,
@@ -336,12 +347,12 @@ export function createChatHandlers({
         const tool = tools[toolName];
         if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
           // Always provide a defined messages array to the tool runtime
-          const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
+          const sessionMessages = (currentSession?.uiMessages ??
             []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
             messages: convertToModelMessages(sessionMessages),
-            abortSignal: state.ai.analysisAbortController?.signal,
+            abortSignal: abortController?.signal,
           });
 
           if (addToolResult) {
@@ -361,7 +372,7 @@ export function createChatHandlers({
               // Wait for the UI component to call addToolResult
               await state.ai.waitForToolResult(
                 toolCallId,
-                state.ai.analysisAbortController?.signal,
+                abortController?.signal,
               );
             } catch (error) {
               // If waiting was cancelled or failed, ensure we add an error result
@@ -425,28 +436,29 @@ export function createChatHandlers({
         const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
 
+        const state = store.getState();
+        const abortController =
+          state.ai.getSessionAbortController(currentSessionId);
+
         // If the analysis has been aborted, force-complete and clean up immediately
-        const aborted =
-          !!store.getState().ai.analysisAbortController?.signal.aborted;
+        const aborted = !!abortController?.signal.aborted;
         if (aborted) {
           // If messages are empty (possible when stopping immediately), fall back to existing session messages
           const sessionMessages =
-            (store.getState().ai.getCurrentSession()
-              ?.uiMessages as UIMessage[]) || [];
+            (state.ai.getCurrentSession()?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
 
           const completedMessages = completeIncompleteToolCalls(sourceMessages);
-          store
-            .getState()
-            .ai.setSessionUiMessages(currentSessionId, completedMessages);
+          state.ai.setSessionUiMessages(currentSessionId, completedMessages);
+
+          // Update per-session state
+          state.ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          state.ai.setSessionAbortController(currentSessionId, undefined);
 
           // Ensure an analysis result exists and is marked as cancelled
-          store.setState((state: AiSliceStateForTransport) =>
-            produce(state, (draft: AiSliceStateForTransport) => {
-              draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisAbortController = undefined;
-
+          store.setState((stateToUpdate: AiSliceStateForTransport) =>
+            produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
               const targetSession = draft.ai.config.sessions.find(
                 (s: AnalysisSessionSchema) => s.id === currentSessionId,
               );
@@ -583,13 +595,13 @@ export function createChatHandlers({
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
-          store.setState((state: AiSliceStateForTransport) =>
-            produce(state, (draft: AiSliceStateForTransport) => {
-              draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisPrompt = '';
-              draft.ai.analysisAbortController = undefined;
-            }),
-          );
+          // Update per-session state
+          store
+            .getState()
+            .ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          store
+            .getState()
+            .ai.setSessionAbortController(currentSessionId, undefined);
         }
       } catch (err) {
         console.error('onChatFinish error:', err);
@@ -664,10 +676,18 @@ export function createChatHandlers({
                 }
               }
             }
-            draft.ai.isRunningAnalysis = false;
-            draft.ai.analysisAbortController = undefined;
           }),
         );
+
+        // Update per-session state outside the produce block
+        if (currentSessionId) {
+          store
+            .getState()
+            .ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          store
+            .getState()
+            .ai.setSessionAbortController(currentSessionId, undefined);
+        }
       } catch (err) {
         console.error('Failed to store chat error:', err);
         throw err;

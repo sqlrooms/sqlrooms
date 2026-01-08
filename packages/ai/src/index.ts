@@ -24,7 +24,6 @@ export {
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
-export {useAiChat} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
 export {
@@ -56,6 +55,7 @@ export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ReasoningBox} from '@sqlrooms/ai-core';
+export {SessionChatManager} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config
 export {

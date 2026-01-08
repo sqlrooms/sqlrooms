@@ -21,7 +21,11 @@ export const AnalysisResultsContainer: React.FC<{
   userTools,
   ErrorMessageComponent,
 }) => {
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const sessionId = currentSession?.id;
+  const isRunningAnalysis = useStoreWithAi((s) =>
+    sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false,
+  );
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
   );
@@ -42,7 +46,7 @@ export const AnalysisResultsContainer: React.FC<{
     if (isRunningAnalysis) {
       scrollToBottom();
     }
-  }, [isRunningAnalysis]);
+  }, [isRunningAnalysis, scrollToBottom]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>

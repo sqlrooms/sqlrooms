@@ -10,7 +10,9 @@ export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
-export {useAiChat} from './hooks/useAiChat';
+export {useSessionChat} from './hooks/useSessionChat';
+export {SessionChatProvider} from './components/SessionChatProvider';
+export {SessionChatManager} from './components/SessionChatManager';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';
