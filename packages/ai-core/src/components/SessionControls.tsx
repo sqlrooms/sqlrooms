@@ -1,4 +1,4 @@
-import {cn, TabStrip} from '@sqlrooms/ui';
+import {cn, Spinner, TabStrip} from '@sqlrooms/ui';
 import {HistoryIcon, PencilIcon, TrashIcon} from 'lucide-react';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
@@ -21,6 +21,9 @@ export const SessionControls: React.FC<{
 }> = ({className, children}) => {
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
   const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
+  const isSessionRunning = useStoreWithAi(
+    (s) => s.ai.getSessionIsRunningAnalysis,
+  );
   const switchSession = useStoreWithAi((s) => s.ai.switchSession);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
@@ -143,6 +146,14 @@ export const SessionControls: React.FC<{
             onSelect={switchSession}
             onCreate={() => createSession()}
             onRename={renameSession}
+            renderTabLabel={(tab) => (
+              <div className="flex items-center gap-2">
+                {isSessionRunning(tab.id) && (
+                  <Spinner className="text-muted-foreground h-4 w-4 flex-shrink-0 animate-spin" />
+                )}
+                <span className="truncate">{tab.name}</span>
+              </div>
+            )}
             renderTabMenu={(tab) => (
               <>
                 <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>

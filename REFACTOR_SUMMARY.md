@@ -18,6 +18,7 @@ Created a new hook that manages a `useChat` instance for a specific session:
 - Takes a `sessionId` parameter
 - Returns `{messages, sendMessage, stop, status, sessionId}`
 - Each invocation creates an independent chat instance
+- Encodes the session into `useChat({ id })` as `${sessionId}::${messagesRevision}` so transports/handlers can safely resolve the owning session even if the user switches sessions mid-stream
 
 ### 3. New Components
 
@@ -28,6 +29,7 @@ Created a new hook that manages a `useChat` instance for a specific session:
 **SessionChatManager** (`packages/ai-core/src/components/SessionChatManager.tsx`):
 - Renders a `SessionChatProvider` for each session
 - Ensures all sessions have active chat instances
+- Mounts providers for the current session **and** any sessions with `isRunningAnalysis === true` to keep streaming + stop/cancel session-correct when switching between sessions
 - Should be placed once at the application root
 
 ### 4. AiSlice Refactoring (`packages/ai-core/src/AiSlice.ts`)
@@ -84,6 +86,8 @@ Updated all chat handlers to use per-session state:
 - `onChatFinish` - Updates session-specific running state
 - `onChatError` - Cleans up session-specific resources
 - `createLocalChatTransportFactory` - Uses session-specific abort signal
+- `toolCallId -> sessionId` routing - Lets long-running tool streams resolve the correct session even if the user navigates away
+- `waitForToolResult(sessionId, toolCallId, ...)` - Waits for UI tool results in a session-scoped way to avoid cross-session tool result collisions
 
 ### 7. Type Updates (`packages/ai-core/src/types.ts`)
 
@@ -153,10 +157,10 @@ store.ai.startAnalysis(sendMessage);
 ```typescript
 const currentSession = useStoreWithAi(s => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
-const analysisPrompt = useStoreWithAi(s => 
+const analysisPrompt = useStoreWithAi(s =>
   sessionId ? s.ai.getSessionAnalysisPrompt(sessionId) : ''
 );
-const isRunning = useStoreWithAi(s => 
+const isRunning = useStoreWithAi(s =>
   sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false
 );
 store.ai.startAnalysis(sessionId);
