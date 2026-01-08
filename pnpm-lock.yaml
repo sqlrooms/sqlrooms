@@ -3104,8 +3104,8 @@ importers:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
       react-vega:
-        specifier: ^7.7.1
-        version: 7.7.1(react@19.2.1)(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0)
+        specifier: ^8.0.0
+        version: 8.0.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vega-embed@6.5.1(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0))
       vega:
         specifier: ^6.2.0
         version: 6.2.0
@@ -12792,12 +12792,12 @@ packages:
       react: 19.2.1
       react-dom: 19.2.1
 
-  react-vega@7.7.1:
-    resolution: {integrity: sha512-Dj7n1LkfJEkY/FdwQfOZqIQ+wGUcJNwlTuWhYcuQtbBpTgvtI4wwqOvJ0QWBE19nXMU7t9HmP8sqQO5v6soOlg==}
+  react-vega@8.0.0:
+    resolution: {integrity: sha512-euye4Gec2ScnUK1zbSA2tzZXUwBmbba8bfbzaRVhdEJTGQfaD78bSgqrccrl9b2fKZS1TZXR0NADEHVe6nxvBg==}
     peerDependencies:
       react: 19.2.1
-      vega: '*'
-      vega-lite: '*'
+      react-dom: 19.2.1
+      vega-embed: ^7
 
   react-virtual@2.10.4:
     resolution: {integrity: sha512-Ir6+oPQZTVHfa6+JL9M7cvMILstFZH/H3jqeYeKI4MSUX+rIruVwFC6nGVXw9wqAw8L0Kg2KvfXxI85OvYQdpQ==}
@@ -14392,6 +14392,7 @@ packages:
   whatwg-encoding@3.1.1:
     resolution: {integrity: sha512-6qN4hJdMwfYBtE3YBTTHhoeuUrDBPZmbQaxWAqSALV/MeEnR5z1xd8UKud2RAkFoPkmB+hli1TZSnyi84xz1vQ==}
     engines: {node: '>=18'}
+    deprecated: Use @exodus/bytes instead for a more spec-conformant and faster implementation
 
   whatwg-fetch@3.6.20:
     resolution: {integrity: sha512-EqhiFU6daOA8kpjOWTL0olhVOF3i7OrFzSYiGsEMB8GcXS+RrzauAERX65xMeNWVqxA6HXH2m69Z9LaKKdisfg==}
@@ -28222,15 +28223,12 @@ snapshots:
       react: 19.2.1
       react-dom: 19.2.1(react@19.2.1)
 
-  react-vega@7.7.1(react@19.2.1)(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0):
+  react-vega@8.0.0(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(vega-embed@6.5.1(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0)):
     dependencies:
-      '@types/react': 19.2.7
       fast-deep-equal: 3.1.3
-      prop-types: 15.8.1
       react: 19.2.1
-      vega: 6.2.0
+      react-dom: 19.2.1(react@19.2.1)
       vega-embed: 6.5.1(vega-lite@6.4.1(vega@6.2.0))(vega@6.2.0)
-      vega-lite: 6.4.1(vega@6.2.0)
 
   react-virtual@2.10.4(react@19.2.1):
     dependencies:
