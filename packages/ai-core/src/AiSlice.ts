@@ -21,7 +21,9 @@ import {
 import {
   createChatHandlers,
   createLocalChatTransportFactory,
+  createLocalChatTransportFactoryForSession,
   createRemoteChatTransportFactory,
+  createRemoteChatTransportFactoryForSession,
   ToolCall,
   convertToAiSDKTools,
   completeIncompleteToolCalls,
@@ -31,7 +33,7 @@ import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
 import type {GetProviderOptions} from './types';
 import {AddToolResult} from './types';
-import {cleanupPendingAnalysisResults} from './utils';
+import {cleanupPendingAnalysisResults, ToolAbortError} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 
 // Custom type for onChatToolCall that includes addToolResult
@@ -80,11 +82,15 @@ export type AiSliceState = {
     ) => void;
     /** Get addToolResult function for a specific session */
     getSessionAddToolResult: (sessionId: string) => AddToolResult | undefined;
-    /** Wait for a tool result to be added by UI component */
+    /** Wait for a tool result to be added by UI component (session-scoped to avoid cross-session collisions) */
     waitForToolResult: (
+      sessionId: string,
       toolCallId: string,
       abortSignal?: AbortSignal,
     ) => Promise<void>;
+    /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
+    setToolCallSession: (toolCallId: string, sessionId: string | undefined) => void;
+    getToolCallSession: (toolCallId: string) => string | undefined;
     /** Set analysis prompt for a specific session */
     setSessionAnalysisPrompt: (sessionId: string, prompt: string) => void;
     /** Get analysis prompt for a specific session */
@@ -136,10 +142,20 @@ export type AiSliceState = {
     getFullInstructions: () => string;
     // Chat transport for useChat hook
     getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+    /** Session-scoped transport (recommended for correct stop/cancel across sessions) */
+    getLocalChatTransportForSession?: (
+      sessionId: string,
+    ) => DefaultChatTransport<UIMessage>;
     /** Optional remote endpoint to use for chat; if empty, local transport is used */
     chatEndPoint: string;
     chatHeaders: Record<string, string>;
     getRemoteChatTransport: (
+      endpoint: string,
+      headers?: Record<string, string>,
+    ) => DefaultChatTransport<UIMessage>;
+    /** Session-scoped transport (recommended for correct stop/cancel across sessions) */
+    getRemoteChatTransportForSession?: (
+      sessionId: string,
       endpoint: string,
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
@@ -151,6 +167,21 @@ export type AiSliceState = {
       isError?: boolean;
     }) => void;
     onChatError: (error: unknown) => void;
+
+    /** Session-scoped chat handlers (avoid cross-session contamination when switching sessions mid-stream) */
+    onChatToolCallForSession: (
+      sessionId: string,
+      args: {toolCall: ToolCall; addToolResult?: AddToolResult},
+    ) => Promise<void> | void;
+    onChatDataForSession: (
+      sessionId: string,
+      dataPart: Parameters<ChatOnDataCallback<UIMessage>>[0],
+    ) => void;
+    onChatFinishForSession: (
+      sessionId: string,
+      args: {messages: UIMessage[]},
+    ) => void;
+    onChatErrorForSession: (sessionId: string, error: unknown) => void;
   };
 };
 
@@ -227,6 +258,7 @@ export function createAiSlice(
       string,
       {resolve: () => void; reject: (error: Error) => void}
     >();
+    const toolCallToSessionId = new Map<string, string>();
 
     // Per-session chat state Maps
     const sessionAbortControllers = new Map<string, AbortController>();
@@ -256,13 +288,18 @@ export function createAiSlice(
         promptSuggestionsVisible: true,
         tools,
         getProviderOptions,
-        waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
+        waitForToolResult: (
+          sessionId: string,
+          toolCallId: string,
+          abortSignal?: AbortSignal,
+        ) => {
+          const key = `${sessionId}:${toolCallId}`;
           return new Promise<void>((resolve, reject) => {
             // Set up abort handler
             const abortHandler = () => {
-              const resolver = pendingToolCallResolvers.get(toolCallId);
+              const resolver = pendingToolCallResolvers.get(key);
               if (resolver) {
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 resolver.reject(new Error('Tool call cancelled by user'));
               }
             };
@@ -276,23 +313,36 @@ export function createAiSlice(
             }
 
             // Store resolver (overwrites any existing one, which is fine for our use case)
-            pendingToolCallResolvers.set(toolCallId, {
+            pendingToolCallResolvers.set(key, {
               resolve: () => {
                 if (abortSignal) {
                   abortSignal.removeEventListener('abort', abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 resolve();
               },
               reject: (error: Error) => {
                 if (abortSignal) {
                   abortSignal.removeEventListener('abort', abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 reject(error);
               },
             });
           });
+        },
+
+        setToolCallSession: (toolCallId: string, sessionId: string | undefined) => {
+          if (!toolCallId) return;
+          if (sessionId) {
+            toolCallToSessionId.set(toolCallId, sessionId);
+          } else {
+            toolCallToSessionId.delete(toolCallId);
+          }
+        },
+        getToolCallSession: (toolCallId: string) => {
+          if (!toolCallId) return undefined;
+          return toolCallToSessionId.get(toolCallId);
         },
 
         // Per-session abort controller management
@@ -349,10 +399,13 @@ export function createAiSlice(
             // Wrap addToolResult to intercept calls and resolve pending promises
             const wrappedAddToolResult: AddToolResult = (options) => {
               addToolResultFn(options);
-              const resolver = pendingToolCallResolvers.get(options.toolCallId);
+              const key = `${sessionId}:${options.toolCallId}`;
+              const resolver = pendingToolCallResolvers.get(key);
               if (resolver) {
                 resolver.resolve();
               }
+              // Tool is complete (success or error), we can drop toolCall->session mapping.
+              toolCallToSessionId.delete(options.toolCallId);
             };
             sessionAddToolResults.set(sessionId, wrappedAddToolResult);
           } else {
@@ -729,6 +782,14 @@ export function createAiSlice(
             abortSignal,
             useTools = false,
           } = options;
+
+          const throwIfAborted = () => {
+            if (abortSignal?.aborted) {
+              throw new ToolAbortError('Operation cancelled by user');
+            }
+          };
+
+          throwIfAborted();
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
@@ -762,6 +823,13 @@ export function createAiSlice(
             });
             return response.text;
           } catch (error) {
+            const errorName =
+              typeof error === 'object' && error && 'name' in error
+                ? String((error as {name?: unknown}).name)
+                : '';
+            if (abortSignal?.aborted || errorName === 'AbortError') {
+              throw new ToolAbortError('Operation cancelled by user');
+            }
             console.error('Error generating text:', error);
             return 'error: can not generate response';
           }
@@ -1017,6 +1085,19 @@ export function createAiSlice(
             getCustomModel,
           })();
         },
+        getLocalChatTransportForSession: (sessionId: string) => {
+          const state = get();
+          return createLocalChatTransportFactoryForSession({
+            store,
+            defaultProvider: defaultProvider,
+            defaultModel: defaultModel,
+            apiKey: state.ai.getApiKeyFromSettings(),
+            baseUrl: state.ai.getBaseUrlFromSettings(),
+            getInstructions: () => store.getState().ai.getFullInstructions(),
+            getCustomModel,
+            sessionId,
+          })();
+        },
 
         getRemoteChatTransport: (
           endpoint: string,
@@ -1027,6 +1108,19 @@ export function createAiSlice(
             defaultProvider,
             defaultModel,
           })(endpoint, headers),
+        getRemoteChatTransportForSession: (
+          sessionId: string,
+          endpoint: string,
+          headers?: Record<string, string>,
+        ) =>
+          createRemoteChatTransportFactoryForSession(
+            {
+              store,
+              defaultProvider,
+              defaultModel,
+            },
+            sessionId,
+          )(endpoint, headers),
 
         ...createChatHandlers({store}),
       },

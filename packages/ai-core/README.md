@@ -467,6 +467,12 @@ The `processAgentStream` function handles the complexity of integrating agent ex
 await processAgentStream(agentResult, store, parentToolCallId)
 ```
 
+You can also pass an `AbortSignal` as the optional 4th argument to support cancellation:
+
+```typescript
+await processAgentStream(agentResult, store, parentToolCallId, abortSignal)
+```
+
 **What it handles:**
 
 1. **Progress Tracking**: Monitors all tool calls made by the agent in real-time

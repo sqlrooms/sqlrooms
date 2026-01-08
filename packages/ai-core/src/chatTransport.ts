@@ -141,6 +141,65 @@ export function createOnToolCompletedHandler(
   };
 }
 
+function getSessionById(
+  store: StoreApi<AiSliceStateForTransport>,
+  sessionId: string | undefined,
+): AnalysisSessionSchema | undefined {
+  if (!sessionId) return undefined;
+  return store
+    .getState()
+    .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
+}
+
+function getSessionIdFromRequestBody(parsed: unknown): string | undefined {
+  if (!parsed || typeof parsed !== 'object') return undefined;
+  const obj = parsed as Record<string, unknown>;
+  if (typeof obj.sessionId === 'string' && obj.sessionId.length > 0) {
+    return obj.sessionId;
+  }
+  // Fallback: derive from useChat request id when we embed sessionId as `${sessionId}::${revision}`
+  if (typeof obj.id === 'string') {
+    const id = obj.id;
+    const delimiter = '::';
+    const idx = id.indexOf(delimiter);
+    if (idx > 0) return id.slice(0, idx);
+  }
+  return undefined;
+}
+
+function mergeAbortSignals(
+  signals: Array<AbortSignal | undefined>,
+): AbortSignal | undefined {
+  const present = signals.filter(Boolean) as AbortSignal[];
+  if (present.length === 0) return undefined;
+  if (present.length === 1) return present[0];
+
+  const controller = new AbortController();
+  const abort = () => {
+    if (!controller.signal.aborted) controller.abort();
+  };
+
+  for (const s of present) {
+    if (s.aborted) {
+      abort();
+      break;
+    }
+    // once:true to avoid accumulating listeners on long-lived signals
+    s.addEventListener('abort', abort, {once: true});
+  }
+  return controller.signal;
+}
+
+export function createOnToolCompletedHandlerForSession(
+  store: StoreApi<AiSliceStateForTransport>,
+  sessionId: string,
+) {
+  return (toolCallId: string, additionalData: unknown) => {
+    if (!sessionId) return;
+    store.getState().ai.setSessionToolAdditionalData(sessionId, toolCallId, additionalData);
+  };
+}
+
 /**
  * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
  */
@@ -177,13 +236,51 @@ export function createLocalChatTransportFactory({
   getInstructions,
   getCustomModel,
 }: ChatTransportConfig) {
+  return createLocalChatTransportFactoryForSession({
+    store,
+    defaultProvider,
+    defaultModel,
+    apiKey,
+    baseUrl,
+    headers,
+    getInstructions,
+    getCustomModel,
+  });
+}
+
+export function createLocalChatTransportFactoryForSession({
+  store,
+  defaultProvider,
+  defaultModel,
+  apiKey,
+  baseUrl,
+  headers,
+  getInstructions,
+  getCustomModel,
+  sessionId,
+}: ChatTransportConfig & {sessionId?: string}) {
   return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
-      // Resolve provider/model and client at call time to pick up latest settings
+      // Parse caller-supplied body defensively to avoid breaking the stream
+      const body = init?.body as string;
+      let parsed: unknown = {};
+      try {
+        parsed = body ? JSON.parse(body) : {};
+      } catch {
+        parsed = {};
+      }
+      const parsedObj = (parsed as {messages?: unknown; sessionId?: unknown}) || {};
+      const requestSessionId = sessionId || getSessionIdFromRequestBody(parsed);
+
+      // Resolve provider/model and client at call time to pick up latest settings.
+      // IMPORTANT: scope to the session that owns this request, not the currentSessionId
+      // (users may switch sessions while a stream is in-flight).
       const state = store.getState();
+      const sessionFromBody = getSessionById(store, requestSessionId);
       const currentSession = state.ai.getCurrentSession();
-      const provider = currentSession?.modelProvider || defaultProvider;
-      const modelId = currentSession?.model || defaultModel;
+      const session = sessionFromBody || currentSession;
+      const provider = session?.modelProvider || defaultProvider;
+      const modelId = session?.model || defaultModel;
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
@@ -199,20 +296,13 @@ export function createLocalChatTransportFactory({
         model = openai.chatModel(modelId);
       }
 
-      // Parse caller-supplied body defensively to avoid breaking the stream
-      const body = init?.body as string;
-      let parsed: unknown = {};
-      try {
-        parsed = body ? JSON.parse(body) : {};
-      } catch {
-        parsed = {};
-      }
-      const parsedObj = (parsed as {messages?: unknown}) || {};
       const messagesCopy = Array.isArray(parsedObj.messages)
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(store);
+      const onToolCompleted = requestSessionId
+        ? createOnToolCompletedHandlerForSession(store, requestSessionId)
+        : createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
       // Remove execute from tools for the model call so tool invocations are
       // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
@@ -229,11 +319,18 @@ export function createLocalChatTransportFactory({
         modelId,
       });
 
-      // Get abort controller for current session
-      const currentSessionId = state.ai.getCurrentSession()?.id;
-      const abortSignal = currentSessionId
-        ? state.ai.getSessionAbortController(currentSessionId)?.signal
-        : undefined;
+      // Get abort controller for the owning session (from body) if available
+      const sessionAbortSignal = requestSessionId
+        ? state.ai.getSessionAbortController(requestSessionId)?.signal
+        : state.ai.getCurrentSession()?.id
+          ? state.ai.getSessionAbortController(state.ai.getCurrentSession()!.id)
+              ?.signal
+          : undefined;
+      // Also respect the request-level abort signal from useChat().stop()
+      const abortSignal = mergeAbortSignals([
+        init?.signal ?? undefined,
+        sessionAbortSignal,
+      ]);
 
       const result = streamText({
         model,
@@ -257,14 +354,21 @@ export function createRemoteChatTransportFactory(params: {
   defaultProvider: string;
   defaultModel: string;
 }) {
+  return createRemoteChatTransportFactoryForSession(params);
+}
+
+export function createRemoteChatTransportFactoryForSession(
+  params: {
+    store: StoreApi<AiSliceStateForTransport>;
+    defaultProvider: string;
+    defaultModel: string;
+  },
+  sessionId?: string,
+) {
   return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Get current session's model and provider at request time
       const state = params.store.getState();
-      const currentSession = state.ai.getCurrentSession();
-      const modelProvider =
-        currentSession?.modelProvider || params.defaultProvider;
-      const model = currentSession?.model || params.defaultModel;
 
       // Parse the existing body and add model information (defensive parsing)
       const body = init?.body as string;
@@ -274,6 +378,15 @@ export function createRemoteChatTransportFactory(params: {
       } catch {
         parsed = {};
       }
+
+      const requestSessionId = sessionId || getSessionIdFromRequestBody(parsed);
+      const sessionFromBody = getSessionById(params.store, requestSessionId);
+      const currentSession = state.ai.getCurrentSession();
+      const session = sessionFromBody || currentSession;
+
+      const modelProvider =
+        session?.modelProvider || params.defaultProvider;
+      const model = session?.model || params.defaultModel;
 
       const parsedObj =
         typeof parsed === 'object' && parsed !== null
@@ -285,9 +398,21 @@ export function createRemoteChatTransportFactory(params: {
         model,
       };
 
+      // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
+      const sessionAbortSignal = requestSessionId
+        ? state.ai.getSessionAbortController(requestSessionId)?.signal
+        : currentSession?.id
+          ? state.ai.getSessionAbortController(currentSession.id)?.signal
+          : undefined;
+      const abortSignal = mergeAbortSignals([
+        init?.signal ?? undefined,
+        sessionAbortSignal,
+      ]);
+
       // Make the request with enhanced body
       return fetch(input, {
         ...init,
+        signal: abortSignal,
         body: JSON.stringify(enhancedBody),
       });
     };
@@ -306,6 +431,9 @@ export function createChatHandlers({
 }: {
   store: StoreApi<AiSliceStateForTransport>;
 }) {
+  const resolveSessionId = (sessionIdOverride?: string) =>
+    sessionIdOverride || store.getState().ai.config.currentSessionId;
+
   return {
     onChatToolCall: async ({
       toolCall,
@@ -320,6 +448,9 @@ export function createChatHandlers({
         const state = store.getState();
         const currentSession = state.ai.getCurrentSession();
         const currentSessionId = currentSession?.id;
+        if (currentSessionId) {
+          state.ai.setToolCallSession(toolCallId, currentSessionId);
+        }
 
         // Check if the stream was aborted before executing tool
         const abortController = currentSessionId
@@ -363,6 +494,8 @@ export function createChatHandlers({
               output: llmResult,
             });
           }
+          // execution finished; clear mapping
+          state.ai.setToolCallSession(toolCallId, undefined);
         } else {
           // Tool has no execute function - wait for UI component to call addToolResult
           // Check if there's a ToolComponent for this tool
@@ -370,7 +503,11 @@ export function createChatHandlers({
           if (hasToolComponent && state.ai.waitForToolResult) {
             try {
               // Wait for the UI component to call addToolResult
+              if (!currentSessionId) {
+                throw new Error('No active session found for tool result');
+              }
               await state.ai.waitForToolResult(
+                currentSessionId,
                 toolCallId,
                 abortController?.signal,
               );
@@ -407,6 +544,97 @@ export function createChatHandlers({
         }
       }
     },
+    onChatToolCallForSession: async (
+      sessionId: string,
+      {
+        toolCall,
+        addToolResult,
+      }: {
+        toolCall: ToolCall;
+        addToolResult?: AddToolResult;
+      },
+    ) => {
+      const {input, toolCallId, toolName} = toolCall;
+      try {
+        const state = store.getState();
+        const session = getSessionById(store, sessionId);
+        state.ai.setToolCallSession(toolCallId, sessionId);
+
+        const abortController = sessionId
+          ? state.ai.getSessionAbortController(sessionId)
+          : undefined;
+        if (abortController?.signal.aborted) {
+          addToolResult?.({
+            tool: toolName,
+            toolCallId,
+            state: 'output-error',
+            errorText: 'Operation cancelled by user',
+          });
+          return;
+        }
+
+        const onToolCompleted = createOnToolCompletedHandlerForSession(
+          store,
+          sessionId,
+        );
+        const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
+
+        const tool = tools[toolName];
+        if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
+          const sessionMessages = (session?.uiMessages ?? []) as UIMessage[];
+          const llmResult = await tool.execute(input, {
+            toolCallId,
+            messages: convertToModelMessages(sessionMessages),
+            abortSignal: abortController?.signal,
+          });
+
+          addToolResult?.({
+            tool: toolName,
+            toolCallId,
+            output: llmResult,
+          });
+          state.ai.setToolCallSession(toolCallId, undefined);
+        } else {
+          const hasToolComponent = !!state.ai.findToolComponent(toolName);
+          if (hasToolComponent && state.ai.waitForToolResult) {
+            try {
+              await state.ai.waitForToolResult(
+                sessionId,
+                toolCallId,
+                abortController?.signal,
+              );
+              state.ai.setToolCallSession(toolCallId, undefined);
+            } catch (error) {
+              if (addToolResult && error instanceof Error) {
+                addToolResult({
+                  tool: toolName,
+                  toolCallId,
+                  state: 'output-error',
+                  errorText: error.message,
+                });
+              }
+              throw error;
+            }
+          }
+        }
+      } catch (error) {
+        const isAbortError = error instanceof ToolAbortError;
+        addToolResult?.({
+          tool: toolName,
+          toolCallId,
+          state: 'output-error',
+          errorText: isAbortError
+            ? 'Operation cancelled by user'
+            : getErrorMessageForDisplay(error),
+        });
+        // ensure mapping cleared on error too
+        try {
+          store.getState().ai.setToolCallSession(toolCallId, undefined);
+        } catch {
+          // no-op
+        }
+      }
+    },
     onChatData: (dataPart: DataUIPart<UIDataTypes>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
@@ -419,7 +647,7 @@ export function createChatHandlers({
         };
 
         // Store the additional data in the session
-        const currentSessionId = store.getState().ai.config.currentSessionId;
+        const currentSessionId = resolveSessionId();
         if (currentSessionId) {
           store
             .getState()
@@ -431,9 +659,24 @@ export function createChatHandlers({
         }
       }
     },
+    onChatDataForSession: (sessionId: string, dataPart: DataUIPart<UIDataTypes>) => {
+      if (
+        dataPart.type === 'data-tool-additional-output' &&
+        dataPart.data &&
+        (dataPart.data as {toolCallId?: unknown}).toolCallId != null
+      ) {
+        const {toolCallId, output} = dataPart.data as {
+          toolCallId: string;
+          output: unknown;
+        };
+        if (sessionId) {
+          store.getState().ai.setSessionToolAdditionalData(sessionId, toolCallId, output);
+        }
+      }
+    },
     onChatFinish: ({messages}: {messages: UIMessage[]}) => {
       try {
-        const currentSessionId = store.getState().ai.config.currentSessionId;
+        const currentSessionId = resolveSessionId();
         if (!currentSessionId) return;
 
         const state = store.getState();
@@ -445,7 +688,8 @@ export function createChatHandlers({
         if (aborted) {
           // If messages are empty (possible when stopping immediately), fall back to existing session messages
           const sessionMessages =
-            (state.ai.getCurrentSession()?.uiMessages as UIMessage[]) || [];
+            (getSessionById(store, currentSessionId)?.uiMessages as UIMessage[]) ||
+            [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
 
@@ -608,13 +852,168 @@ export function createChatHandlers({
         throw err;
       }
     },
+    onChatFinishForSession: (
+      sessionId: string,
+      {messages}: {messages: UIMessage[]},
+    ) => {
+      // Delegate to onChatFinish with an override resolved by closure.
+      // We inline the minimal necessary override behavior by temporarily resolving sessionId.
+      const currentSessionId = sessionId;
+      if (!currentSessionId) return;
+      try {
+        const state = store.getState();
+        const abortController =
+          state.ai.getSessionAbortController(currentSessionId);
+
+        const aborted = !!abortController?.signal.aborted;
+        if (aborted) {
+          const sessionMessages =
+            (getSessionById(store, currentSessionId)?.uiMessages as UIMessage[]) ||
+            [];
+          const sourceMessages =
+            messages && messages.length > 0 ? messages : sessionMessages;
+          const completedMessages = completeIncompleteToolCalls(sourceMessages);
+          state.ai.setSessionUiMessages(currentSessionId, completedMessages);
+
+          state.ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          state.ai.setSessionAbortController(currentSessionId, undefined);
+
+          store.setState((stateToUpdate: AiSliceStateForTransport) =>
+            produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
+              const targetSession = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              );
+              if (!targetSession) return;
+
+              const lastUserMessage = completedMessages
+                .filter((msg) => msg.role === 'user')
+                .slice(-1)[0];
+              if (!lastUserMessage) return;
+
+              const promptText = lastUserMessage.parts
+                .filter((part) => part.type === 'text')
+                .map((part) => (part as {text: string}).text)
+                .join('');
+
+              const pendingIndex = targetSession.analysisResults.findIndex(
+                (result) => result.id === '__pending__',
+              );
+
+              if (pendingIndex !== -1) {
+                targetSession.analysisResults[pendingIndex] = {
+                  id: lastUserMessage.id,
+                  prompt: promptText,
+                  errorMessage: {error: 'Operation cancelled by user'},
+                  isCompleted: true,
+                };
+              } else {
+                const existing = targetSession.analysisResults.find(
+                  (r) => r.id === lastUserMessage.id,
+                );
+                if (!existing) {
+                  targetSession.analysisResults.push({
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    errorMessage: {error: 'Operation cancelled by user'},
+                    isCompleted: true,
+                  });
+                }
+              }
+            }),
+          );
+          return;
+        }
+
+        const completedMessages = completeIncompleteToolCalls(messages);
+        state.ai.setSessionUiMessages(currentSessionId, completedMessages);
+
+        store.setState((stateToUpdate: AiSliceStateForTransport) =>
+          produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
+            const targetSession = draft.ai.config.sessions.find(
+              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+            );
+            if (!targetSession) return;
+
+            const lastUserMessage = completedMessages
+              .filter((msg) => msg.role === 'user')
+              .slice(-1)[0];
+
+            if (lastUserMessage) {
+              const promptText = lastUserMessage.parts
+                .filter((part) => part.type === 'text')
+                .map((part) => (part as {text: string}).text)
+                .join('');
+
+              const pendingIndex = targetSession.analysisResults.findIndex(
+                (result) => result.id === '__pending__',
+              );
+
+              if (pendingIndex !== -1) {
+                targetSession.analysisResults[pendingIndex] = {
+                  id: lastUserMessage.id,
+                  prompt: promptText,
+                  isCompleted: true,
+                };
+              } else {
+                const existingResult = targetSession.analysisResults.find(
+                  (result) => result.id === lastUserMessage.id,
+                );
+                if (!existingResult) {
+                  targetSession.analysisResults.push({
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    isCompleted: true,
+                  });
+                }
+              }
+            }
+          }),
+        );
+
+        const shouldAutoSendNext = lastAssistantMessageIsCompleteWithToolCalls({
+          messages: completedMessages,
+        });
+
+        const lastMessage = completedMessages[completedMessages.length - 1];
+        const isLastMessageAssistant = lastMessage?.role === 'assistant';
+        let tailHasTool = false;
+        if (isLastMessageAssistant) {
+          const parts = lastMessage?.parts ?? [];
+          let lastStepStartIndex = -1;
+          for (let i = parts.length - 1; i >= 0; i--) {
+            if (parts[i]?.type === 'step-start') {
+              lastStepStartIndex = i;
+              break;
+            }
+          }
+          const tailParts = parts.slice(lastStepStartIndex + 1);
+          tailHasTool = tailParts.some(
+            (part) =>
+              typeof part?.type === 'string' &&
+              (part.type.startsWith('tool-') || part.type === 'dynamic-tool'),
+          );
+        }
+
+        const shouldEndAnalysis =
+          (isLastMessageAssistant && !shouldAutoSendNext && !tailHasTool) ||
+          (!shouldAutoSendNext && !isLastMessageAssistant);
+
+        if (shouldEndAnalysis) {
+          state.ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          state.ai.setSessionAbortController(currentSessionId, undefined);
+        }
+      } catch (err) {
+        console.error('onChatFinish error:', err);
+        throw err;
+      }
+    },
     onChatError: (error: unknown) => {
       try {
         let errMsg = getErrorMessageForDisplay(error);
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
-        const currentSessionId = store.getState().ai.config.currentSessionId;
+        const currentSessionId = resolveSessionId();
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!currentSessionId) return;
@@ -684,6 +1083,81 @@ export function createChatHandlers({
           store
             .getState()
             .ai.setSessionIsRunningAnalysis(currentSessionId, false);
+          store
+            .getState()
+            .ai.setSessionAbortController(currentSessionId, undefined);
+        }
+      } catch (err) {
+        console.error('Failed to store chat error:', err);
+        throw err;
+      }
+    },
+    onChatErrorForSession: (sessionId: string, error: unknown) => {
+      // Reuse the existing logic but scoped to sessionId
+      const currentSessionId = sessionId;
+      try {
+        let errMsg = getErrorMessageForDisplay(error);
+        if (!errMsg || errMsg.trim().length === 0) {
+          errMsg = 'Unknown error';
+        }
+        store.setState((state: AiSliceStateForTransport) =>
+          produce(state, (draft: AiSliceStateForTransport) => {
+            if (!currentSessionId) return;
+            const targetSession = draft.ai.config.sessions.find(
+              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+            );
+            if (targetSession) {
+              const existingMessages = (targetSession.uiMessages ||
+                []) as UIMessage[];
+              targetSession.uiMessages = completeIncompleteToolCalls(
+                existingMessages,
+              ) as unknown as AnalysisSessionSchema['uiMessages'];
+
+              const uiMessages = targetSession.uiMessages as UIMessage[];
+              const lastUserMessage = uiMessages
+                .filter((msg) => msg.role === 'user')
+                .slice(-1)[0];
+
+              if (lastUserMessage) {
+                const promptText = lastUserMessage.parts
+                  .filter((part) => part.type === 'text')
+                  .map((part) => (part as {text: string}).text)
+                  .join('');
+
+                const pendingIndex = targetSession.analysisResults.findIndex(
+                  (result) => result.id === '__pending__',
+                );
+
+                if (pendingIndex !== -1) {
+                  targetSession.analysisResults[pendingIndex] = {
+                    id: lastUserMessage.id,
+                    prompt: promptText,
+                    errorMessage: {error: errMsg},
+                    isCompleted: true,
+                  };
+                } else {
+                  const existingResult = targetSession.analysisResults.find(
+                    (result) => result.id === lastUserMessage.id,
+                  );
+
+                  if (!existingResult) {
+                    targetSession.analysisResults.push({
+                      id: lastUserMessage.id,
+                      prompt: promptText,
+                      errorMessage: {error: errMsg},
+                      isCompleted: true,
+                    });
+                  } else {
+                    existingResult.errorMessage = {error: errMsg};
+                  }
+                }
+              }
+            }
+          }),
+        );
+
+        if (currentSessionId) {
+          store.getState().ai.setSessionIsRunningAnalysis(currentSessionId, false);
           store
             .getState()
             .ai.setSessionAbortController(currentSessionId, undefined);

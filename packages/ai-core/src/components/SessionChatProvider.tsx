@@ -14,7 +14,7 @@ export const SessionChatProvider: React.FC<{
   children?: React.ReactNode;
 }> = ({sessionId, children}) => {
   // Initialize and manage the chat instance for this session
-  const {messages, status} = useSessionChat(sessionId);
+  const {messages, status, stop} = useSessionChat(sessionId);
 
   // Log for debugging (can be removed in production)
   useEffect(() => {
@@ -22,6 +22,18 @@ export const SessionChatProvider: React.FC<{
       `[SessionChatProvider] Session ${sessionId}: ${messages.length} messages, status: ${status}`,
     );
   }, [sessionId, messages.length, status]);
+
+  // On session switch/unmount, stop any in-flight stream to avoid late callbacks
+  // writing into the newly active session.
+  useEffect(() => {
+    return () => {
+      try {
+        stop();
+      } catch {
+        // no-op
+      }
+    };
+  }, [stop]);
 
   // This component primarily exists to instantiate the useSessionChat hook
   // It doesn't render any visible UI

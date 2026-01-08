@@ -48,11 +48,10 @@ export type UseSessionChatResult = {
  * ```
  */
 export function useSessionChat(sessionId: string): UseSessionChatResult {
-  // Get the specific session
-  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
-  const currentSession = useMemo(
-    () => sessions.find((s) => s.id === sessionId),
-    [sessions, sessionId],
+  // Get the specific session - use a targeted selector to avoid unnecessary re-renders
+  // when other sessions change
+  const currentSession = useStoreWithAi((s) =>
+    s.ai.config.sessions.find((session) => session.id === sessionId),
   );
   const model = currentSession?.model;
   const messagesRevision = currentSession?.messagesRevision ?? 0;
@@ -61,17 +60,29 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const getLocalChatTransport = useStoreWithAi(
     (s) => s.ai.getLocalChatTransport,
   );
+  const getLocalChatTransportForSession = useStoreWithAi(
+    (s) => s.ai.getLocalChatTransportForSession,
+  );
   const getRemoteChatTransport = useStoreWithAi(
     (s) => s.ai.getRemoteChatTransport,
+  );
+  const getRemoteChatTransportForSession = useStoreWithAi(
+    (s) => s.ai.getRemoteChatTransportForSession,
   );
   const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
 
   // Get chat handlers
-  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
-  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
-  const onChatData = useStoreWithAi((s) => s.ai.onChatData);
-  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
+  const onChatToolCallForSession = useStoreWithAi(
+    (s) => s.ai.onChatToolCallForSession,
+  );
+  const onChatFinishForSession = useStoreWithAi(
+    (s) => s.ai.onChatFinishForSession,
+  );
+  const onChatDataForSession = useStoreWithAi((s) => s.ai.onChatDataForSession);
+  const onChatErrorForSession = useStoreWithAi(
+    (s) => s.ai.onChatErrorForSession,
+  );
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
   const setSessionChatStop = useStoreWithAi((s) => s.ai.setSessionChatStop);
   const setSessionChatSendMessage = useStoreWithAi(
@@ -99,10 +110,23 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     void model;
     const trimmed = (endPoint || '').trim();
     if (trimmed.length > 0) {
-      return getRemoteChatTransport(trimmed, headers);
+      return getRemoteChatTransportForSession
+        ? getRemoteChatTransportForSession(sessionId, trimmed, headers)
+        : getRemoteChatTransport(trimmed, headers);
     }
-    return getLocalChatTransport();
-  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
+    return getLocalChatTransportForSession
+      ? getLocalChatTransportForSession(sessionId)
+      : getLocalChatTransport();
+  }, [
+    getLocalChatTransport,
+    getLocalChatTransportForSession,
+    getRemoteChatTransport,
+    getRemoteChatTransportForSession,
+    headers,
+    endPoint,
+    model,
+    sessionId,
+  ]);
 
   // Store addToolResult in a ref that can be captured by the onToolCall closure
   const addToolResultRef = useRef<AddToolResult>(null!);
@@ -124,19 +148,21 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   }, [sessionId, messagesRevision]);
 
   const {messages, sendMessage, addToolResult, stop, status} = useChat({
-    id: `${sessionId}-${messagesRevision}`,
+    // Encode sessionId into the request id so transports can resolve the owning session
+    // even if the user switches sessions mid-stream.
+    id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
     onToolCall: async (opts) => {
       const {toolCall} = opts as {toolCall: unknown};
-      return onChatToolCall?.({
+      return onChatToolCallForSession?.(sessionId, {
         toolCall: toolCall as ToolCall,
         addToolResult: addToolResultRef.current,
       });
     },
-    onFinish: onChatFinish,
-    onError: onChatError,
-    onData: onChatData,
+    onFinish: ({messages}) => onChatFinishForSession?.(sessionId, {messages}),
+    onError: (error) => onChatErrorForSession?.(sessionId, error),
+    onData: (dataPart) => onChatDataForSession?.(sessionId, dataPart),
     sendAutomaticallyWhen: shouldAutoSend,
   });
 
