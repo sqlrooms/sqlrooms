@@ -30,6 +30,8 @@ export type AddToolResult = (
       },
 ) => void;
 
+export type AiChatSendMessage = (message: {text: string}) => void;
+
 /**
  * Minimal interface for the AI state accessed by chat transport functions.
  * This allows chatTransport.ts to avoid importing from AiSlice.ts directly.
@@ -39,13 +41,13 @@ export interface AiStateForTransport {
   tools: OpenAssistantToolSet;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
-  getSessionAbortController: (sessionId: string) => AbortController | undefined;
-  setSessionAbortController: (
+  getAbortController: (sessionId: string) => AbortController | undefined;
+  setAbortController: (
     sessionId: string,
     controller: AbortController | undefined,
   ) => void;
-  getSessionIsRunningAnalysis: (sessionId: string) => boolean;
-  setSessionIsRunningAnalysis: (sessionId: string, isRunning: boolean) => void;
+  getIsRunningAnalysis: (sessionId: string) => boolean;
+  setIsRunningAnalysis: (sessionId: string, isRunning: boolean) => void;
   setSessionToolAdditionalData: (
     sessionId: string,
     toolCallId: string,

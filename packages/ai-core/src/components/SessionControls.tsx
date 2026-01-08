@@ -22,7 +22,7 @@ export const SessionControls: React.FC<{
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
   const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const isSessionRunning = useStoreWithAi(
-    (s) => s.ai.getSessionIsRunningAnalysis,
+    (s) => s.ai.getIsRunningAnalysis,
   );
   const switchSession = useStoreWithAi((s) => s.ai.switchSession);
   const createSession = useStoreWithAi((s) => s.ai.createSession);

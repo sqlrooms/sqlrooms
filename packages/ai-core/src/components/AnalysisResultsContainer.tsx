@@ -24,7 +24,7 @@ export const AnalysisResultsContainer: React.FC<{
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
   const isRunningAnalysis = useStoreWithAi((s) =>
-    sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false,
+    sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false,
   );
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),

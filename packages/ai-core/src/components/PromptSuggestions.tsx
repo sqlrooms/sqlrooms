@@ -102,15 +102,15 @@ type PromptSuggestionsItemProps = {
  */
 const Item: React.FC<PromptSuggestionsItemProps> = ({text, className}) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const setSessionAnalysisPrompt = useStoreWithAi(
-    (s) => s.ai.setSessionAnalysisPrompt,
+  const setPrompt = useStoreWithAi(
+    (s) => s.ai.setPrompt,
   );
 
   const handleClick = useCallback(() => {
     if (currentSession?.id) {
-      setSessionAnalysisPrompt(currentSession.id, text);
+      setPrompt(currentSession.id, text);
     }
-  }, [text, setSessionAnalysisPrompt, currentSession]);
+  }, [text, setPrompt, currentSession]);
 
   return (
     <Tooltip>

@@ -49,18 +49,18 @@ Created a new hook that manages a `useChat` instance for a specific session:
 - ✅ `sessionAddToolResults: Map<string, AddToolResult>`
 
 **New Methods**:
-- `getSessionAbortController(sessionId)`
-- `setSessionAbortController(sessionId, controller)`
-- `getSessionChatStop(sessionId)`
-- `setSessionChatStop(sessionId, stop)`
-- `getSessionChatSendMessage(sessionId)`
-- `setSessionChatSendMessage(sessionId, sendMessage)`
-- `getSessionAddToolResult(sessionId)`
-- `setSessionAddToolResult(sessionId, addToolResult)`
-- `getSessionAnalysisPrompt(sessionId)`
-- `setSessionAnalysisPrompt(sessionId, prompt)`
-- `getSessionIsRunningAnalysis(sessionId)`
-- `setSessionIsRunningAnalysis(sessionId, isRunning)`
+- `getAbortController(sessionId)`
+- `setAbortController(sessionId, controller)`
+- `getChatStop(sessionId)`
+- `setChatStop(sessionId, stop)`
+- `getChatSendMessage(sessionId)`
+- `setChatSendMessage(sessionId, sendMessage)`
+- `getAddToolResult(sessionId)`
+- `setAddToolResult(sessionId, addToolResult)`
+- `getPrompt(sessionId)`
+- `setPrompt(sessionId, prompt)`
+- `getIsRunningAnalysis(sessionId)`
+- `setIsRunningAnalysis(sessionId, isRunning)`
 
 **Updated Methods**:
 - `startAnalysis(sessionId)` - Now takes sessionId instead of sendMessage
@@ -70,14 +70,14 @@ Created a new hook that manages a `useChat` instance for a specific session:
 ### 5. Component Updates
 
 **QueryControls** (`packages/ai-core/src/components/QueryControls.tsx`):
-- Now reads/writes per-session prompt using `getSessionAnalysisPrompt` and `setSessionAnalysisPrompt`
+- Now reads/writes per-session prompt using `getPrompt` and `setPrompt`
 - Passes `sessionId` to `startAnalysis` and `cancelAnalysis`
 
 **AnalysisResultsContainer** (`packages/ai-core/src/components/AnalysisResultsContainer.tsx`):
-- Now uses `getSessionIsRunningAnalysis(sessionId)` instead of global state
+- Now uses `getIsRunningAnalysis(sessionId)` instead of global state
 
 **PromptSuggestions** (`packages/ai-core/src/components/PromptSuggestions.tsx`):
-- Updated to use `setSessionAnalysisPrompt(sessionId, text)`
+- Updated to use `setPrompt(sessionId, text)`
 
 ### 6. Chat Transport Updates (`packages/ai-core/src/chatTransport.ts`)
 
@@ -92,10 +92,10 @@ Updated all chat handlers to use per-session state:
 ### 7. Type Updates (`packages/ai-core/src/types.ts`)
 
 Updated `AiStateForTransport` interface to reflect new per-session methods:
-- Added `getSessionAbortController(sessionId)`
-- Added `setSessionAbortController(sessionId, controller)`
-- Added `getSessionIsRunningAnalysis(sessionId)`
-- Added `setSessionIsRunningAnalysis(sessionId, isRunning)`
+- Added `getAbortController(sessionId)`
+- Added `setAbortController(sessionId, controller)`
+- Added `getIsRunningAnalysis(sessionId)`
+- Added `setIsRunningAnalysis(sessionId, isRunning)`
 - Removed global `analysisAbortController`, `isRunningAnalysis`, `analysisPrompt`
 
 ## Usage
@@ -122,12 +122,12 @@ export const App = () => {
 ```tsx
 // Session A
 const sessionA = store.ai.config.sessions[0];
-store.ai.setSessionAnalysisPrompt(sessionA.id, "What is the average price?");
+store.ai.setPrompt(sessionA.id, "What is the average price?");
 store.ai.startAnalysis(sessionA.id);
 
 // Session B (can be started while A is still running)
 const sessionB = store.ai.config.sessions[1];
-store.ai.setSessionAnalysisPrompt(sessionB.id, "Show me the top 10 products");
+store.ai.setPrompt(sessionB.id, "Show me the top 10 products");
 store.ai.startAnalysis(sessionB.id);
 
 // Cancel session A without affecting session B
@@ -158,10 +158,10 @@ store.ai.startAnalysis(sendMessage);
 const currentSession = useStoreWithAi(s => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
 const analysisPrompt = useStoreWithAi(s =>
-  sessionId ? s.ai.getSessionAnalysisPrompt(sessionId) : ''
+  sessionId ? s.ai.getPrompt(sessionId) : ''
 );
 const isRunning = useStoreWithAi(s =>
-  sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false
+  sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false
 );
 store.ai.startAnalysis(sessionId);
 ```

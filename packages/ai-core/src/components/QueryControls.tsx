@@ -24,13 +24,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
 
   // Get per-session state and methods
   const isRunningAnalysis = useStoreWithAi((s) =>
-    sessionId ? s.ai.getSessionIsRunningAnalysis(sessionId) : false,
+    sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false,
   );
   const analysisPrompt = useStoreWithAi((s) =>
-    sessionId ? s.ai.getSessionAnalysisPrompt(sessionId) : '',
+    sessionId ? s.ai.getPrompt(sessionId) : '',
   );
   const setAnalysisPrompt = useStoreWithAi(
-    (s) => s.ai.setSessionAnalysisPrompt,
+    (s) => s.ai.setPrompt,
   );
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);

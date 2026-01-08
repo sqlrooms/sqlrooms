@@ -29,7 +29,7 @@ export function weatherAgentTool(store: StoreApi<AiSliceState>) {
 
       const weatherAgent = new Agent({
         model,
-        abortSignal: state.ai.getSessionAbortController(
+        abortSignal: state.ai.getAbortController(
           currentSession?.id ?? '',
         )?.signal,
         tools: {

@@ -8,7 +8,8 @@ import {
   AnalysisSessionSchema,
   UIMessagePart,
 } from '@sqlrooms/ai-config';
-import {DynamicToolUIPart, TextUIPart, ToolUIPart} from 'ai';
+import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
+import {TOOL_CALL_CANCELLED} from './constants';
 
 /**
  * Custom error class for operation abort errors.
@@ -190,4 +191,88 @@ export function cleanupPendingAnalysisResults(
     ...session,
     analysisResults: [...nonPendingResults, ...restoredResults],
   };
+}
+
+/**
+ * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
+ * This is important when canceling with AbortController, which may leave incomplete tool-calls.
+ * Assumes sequential tool execution (only one tool runs at a time).
+ *
+ * @param messages - The messages to validate and complete
+ * @returns Cleaned messages with completed tool-call/result pairs
+ */
+export function fixIncompleteToolCalls(
+  messages: UIMessage[],
+): UIMessage[] {
+  return messages.map((message) => {
+    if (message.role !== 'assistant' || !message.parts) {
+      return message;
+    }
+
+    // Walk backward and complete any TRAILING tool parts that lack output.
+    // This covers multi-tool-step aborts where several tool calls were started
+    // but the stream was cancelled before the outputs were emitted.
+    type ToolPart = {
+      type: string;
+      toolCallId: string;
+      toolName?: string;
+      input?: unknown;
+      state?: string;
+    };
+    const isToolPart = (part: unknown): part is ToolPart => {
+      if (typeof part !== 'object' || part === null) return false;
+      const p = part as Record<string, unknown> & {type?: unknown};
+      const typeVal =
+        typeof p.type === 'string' ? (p.type as string) : undefined;
+      return (
+        !!typeVal &&
+        'toolCallId' in p &&
+        (typeVal === 'dynamic-tool' || typeVal.startsWith('tool-'))
+      );
+    };
+
+    const updatedParts = [...message.parts];
+    let sawAnyTool = false;
+    for (let i = updatedParts.length - 1; i >= 0; i--) {
+      const current = updatedParts[i] as unknown;
+      if (!isToolPart(current)) {
+        // Stop once we exit the trailing tool region
+        if (sawAnyTool) break;
+        continue;
+      }
+      sawAnyTool = true;
+      const toolPart = current as ToolPart;
+      const hasOutput = toolPart.state?.startsWith('output');
+      if (hasOutput) {
+        // Completed tool; continue checking earlier parts just in case
+        continue;
+      }
+
+      // Synthesize a completed error result for the incomplete tool call
+      const base = {
+        toolCallId: toolPart.toolCallId,
+        state: 'output-error' as const,
+        input: toolPart.input ?? {},
+        errorText: TOOL_CALL_CANCELLED,
+        providerExecuted: false,
+      };
+
+      const syntheticPart =
+        toolPart.type === 'dynamic-tool'
+          ? {
+              type: 'dynamic-tool' as const,
+              toolName: toolPart.toolName || 'unknown',
+              ...base,
+            }
+          : {type: toolPart.type as string, ...base};
+
+      updatedParts[i] =
+        syntheticPart as unknown as (typeof message.parts)[number];
+    }
+
+    return {
+      ...message,
+      parts: updatedParts,
+    };
+  });
 }

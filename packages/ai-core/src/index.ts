@@ -36,7 +36,7 @@ export {
 } from './utils';
 export {
   convertToAiSDKTools,
-  completeIncompleteToolCalls,
+  fixIncompleteToolCalls,
   createOnToolCompletedHandler,
 } from './chatTransport';
 export type {AddToolResult} from './types';

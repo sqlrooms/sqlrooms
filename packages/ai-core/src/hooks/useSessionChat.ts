@@ -7,7 +7,7 @@ import {
 import type {AbstractChat, ChatStatus, UIMessage} from 'ai';
 import {useStoreWithAi} from '../AiSlice';
 import type {ToolCall} from '../chatTransport';
-import {completeIncompleteToolCalls} from '../chatTransport';
+import {fixIncompleteToolCalls} from '../utils';
 import type {AddToolResult} from '../types';
 
 export type {AddToolResult} from '../types';
@@ -60,43 +60,25 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const getLocalChatTransport = useStoreWithAi(
     (s) => s.ai.getLocalChatTransport,
   );
-  const getLocalChatTransportForSession = useStoreWithAi(
-    (s) => s.ai.getLocalChatTransportForSession,
-  );
   const getRemoteChatTransport = useStoreWithAi(
     (s) => s.ai.getRemoteChatTransport,
-  );
-  const getRemoteChatTransportForSession = useStoreWithAi(
-    (s) => s.ai.getRemoteChatTransportForSession,
   );
   const endPoint = useStoreWithAi((s) => s.ai.chatEndPoint);
   const headers = useStoreWithAi((s) => s.ai.chatHeaders);
 
   // Get chat handlers
-  const onChatToolCallForSession = useStoreWithAi(
-    (s) => s.ai.onChatToolCallForSession,
-  );
-  const onChatFinishForSession = useStoreWithAi(
-    (s) => s.ai.onChatFinishForSession,
-  );
-  const onChatDataForSession = useStoreWithAi((s) => s.ai.onChatDataForSession);
-  const onChatErrorForSession = useStoreWithAi(
-    (s) => s.ai.onChatErrorForSession,
-  );
+  const onChatToolCall = useStoreWithAi((s) => s.ai.onChatToolCall);
+  const onChatFinish = useStoreWithAi((s) => s.ai.onChatFinish);
+  const onChatData = useStoreWithAi((s) => s.ai.onChatData);
+  const onChatError = useStoreWithAi((s) => s.ai.onChatError);
   const setSessionUiMessages = useStoreWithAi((s) => s.ai.setSessionUiMessages);
-  const setSessionChatStop = useStoreWithAi((s) => s.ai.setSessionChatStop);
-  const setSessionChatSendMessage = useStoreWithAi(
-    (s) => s.ai.setSessionChatSendMessage,
-  );
-  const setSessionAddToolResult = useStoreWithAi(
-    (s) => s.ai.setSessionAddToolResult,
-  );
+  const setChatStop = useStoreWithAi((s) => s.ai.setChatStop);
+  const setChatSendMessage = useStoreWithAi((s) => s.ai.setChatSendMessage);
+  const setAddToolResult = useStoreWithAi((s) => s.ai.setAddToolResult);
 
   // Get per-session abort controller
-  const getSessionAbortController = useStoreWithAi(
-    (s) => s.ai.getSessionAbortController,
-  );
-  const abortController = getSessionAbortController(sessionId);
+  const getAbortController = useStoreWithAi((s) => s.ai.getAbortController);
+  const abortController = getAbortController(sessionId);
   const isAborted = abortController?.signal.aborted ?? false;
   const isAbortedRef = useRef<boolean>(isAborted);
 
@@ -110,18 +92,12 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     void model;
     const trimmed = (endPoint || '').trim();
     if (trimmed.length > 0) {
-      return getRemoteChatTransportForSession
-        ? getRemoteChatTransportForSession(sessionId, trimmed, headers)
-        : getRemoteChatTransport(trimmed, headers);
+      return getRemoteChatTransport(sessionId, trimmed, headers);
     }
-    return getLocalChatTransportForSession
-      ? getLocalChatTransportForSession(sessionId)
-      : getLocalChatTransport();
+    return getLocalChatTransport(sessionId);
   }, [
     getLocalChatTransport,
-    getLocalChatTransportForSession,
     getRemoteChatTransport,
-    getRemoteChatTransportForSession,
     headers,
     endPoint,
     model,
@@ -141,7 +117,7 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   };
 
   const initialMessages = useMemo(() => {
-    return completeIncompleteToolCalls(
+    return fixIncompleteToolCalls(
       (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion
@@ -155,14 +131,15 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
     messages: initialMessages,
     onToolCall: async (opts) => {
       const {toolCall} = opts as {toolCall: unknown};
-      return onChatToolCallForSession?.(sessionId, {
+      return onChatToolCall?.({
+        sessionId,
         toolCall: toolCall as ToolCall,
         addToolResult: addToolResultRef.current,
       });
     },
-    onFinish: ({messages}) => onChatFinishForSession?.(sessionId, {messages}),
-    onError: (error) => onChatErrorForSession?.(sessionId, error),
-    onData: (dataPart) => onChatDataForSession?.(sessionId, dataPart),
+    onFinish: ({messages}) => onChatFinish?.({sessionId, messages}),
+    onError: (error) => onChatError?.(sessionId, error),
+    onData: (dataPart) => onChatData?.(sessionId, dataPart),
     sendAutomaticallyWhen: shouldAutoSend,
   });
 
@@ -178,21 +155,21 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
 
   // Register stop with the store for this specific session
   useEffect(() => {
-    setSessionChatStop?.(sessionId, stop);
-    return () => setSessionChatStop?.(sessionId, undefined);
-  }, [setSessionChatStop, stop, sessionId]);
+    setChatStop?.(sessionId, stop);
+    return () => setChatStop?.(sessionId, undefined);
+  }, [setChatStop, stop, sessionId]);
 
   // Register sendMessage with the store for this specific session
   useEffect(() => {
-    setSessionChatSendMessage?.(sessionId, sendMessage);
-    return () => setSessionChatSendMessage?.(sessionId, undefined);
-  }, [setSessionChatSendMessage, sendMessage, sessionId]);
+    setChatSendMessage?.(sessionId, sendMessage);
+    return () => setChatSendMessage?.(sessionId, undefined);
+  }, [setChatSendMessage, sendMessage, sessionId]);
 
   // Register addToolResult with the store for this specific session
   useEffect(() => {
-    setSessionAddToolResult?.(sessionId, addToolResult);
-    return () => setSessionAddToolResult?.(sessionId, undefined);
-  }, [setSessionAddToolResult, addToolResult, sessionId]);
+    setAddToolResult?.(sessionId, addToolResult);
+    return () => setAddToolResult?.(sessionId, undefined);
+  }, [setAddToolResult, addToolResult, sessionId]);
 
   // Sync streaming updates into the store so UiMessages renders incrementally
   useEffect(() => {
