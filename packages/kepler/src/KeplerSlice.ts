@@ -177,6 +177,7 @@ export type KeplerSliceState = {
 const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.LAYER_HOVER,
   KeplerActionTypes.UPDATE_MAP,
+  KeplerActionTypes.MOUSE_MOVE,
 ];
 
 export function createKeplerSlice({

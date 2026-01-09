@@ -15,9 +15,7 @@ import {
   UIMessage,
   DefaultChatTransport,
   LanguageModel,
-  UITools,
   ChatOnDataCallback,
-  UIDataTypes,
   generateText,
 } from 'ai';
 import {
@@ -28,8 +26,10 @@ import {
   convertToAiSDKTools,
   completeIncompleteToolCalls,
 } from './chatTransport';
+import {AI_DEFAULT_TEMPERATURE} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
+import type {GetProviderOptions} from './types';
 import {AddToolResult} from './types';
 import {cleanupPendingAnalysisResults} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
@@ -48,6 +48,7 @@ export type AiSliceState = {
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
     analysisAbortController?: AbortController;
+    getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
     /** Latest stop function from useChat to immediately halt local streaming */
@@ -102,7 +103,7 @@ export type AiSliceState = {
       toolCallId: string,
       additionalData: unknown,
     ) => void;
-    getAnalysisResults: () => AnalysisResultSchema[];
+    getAnalysisResults: () => AnalysisResultSchema[] | undefined;
     deleteAnalysisResult: (sessionId: string, resultId: string) => void;
     getAssistantMessageParts: (analysisResultId: string) => UIMessage['parts'];
     findToolComponent: (toolName: string) => React.ComponentType | undefined;
@@ -120,7 +121,7 @@ export type AiSliceState = {
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
     onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage<unknown, UIDataTypes, UITools>>;
+    onChatData: ChatOnDataCallback<UIMessage>;
     onChatFinish: (args: {
       message: UIMessage;
       messages: UIMessage[];
@@ -149,6 +150,7 @@ export interface AiSliceOptions {
   defaultModel?: string;
   /** Provide a pre-configured model client for a provider (e.g., Azure). */
   getCustomModel?: () => LanguageModel | undefined;
+  getProviderOptions?: GetProviderOptions;
   maxSteps?: number;
   getApiKey?: (modelProvider: string) => string;
   getBaseUrl?: () => string;
@@ -171,6 +173,7 @@ export function createAiSlice(
     defaultProvider = 'openai',
     defaultModel = 'gpt-4.1',
     getCustomModel,
+    getProviderOptions,
     chatEndPoint = '',
     chatHeaders = {},
   } = params;
@@ -202,13 +205,24 @@ export function createAiSlice(
       {resolve: () => void; reject: (error: Error) => void}
     >();
 
+    // Initialize base config and ensure the initial session respects default provider/model
+    const baseConfig = createDefaultAiConfig(cleanedConfig);
+    if (!cleanedConfig?.sessions || cleanedConfig.sessions.length === 0) {
+      const firstSession = baseConfig.sessions[0];
+      if (firstSession) {
+        firstSession.modelProvider = defaultProvider;
+        firstSession.model = defaultModel;
+      }
+    }
+
     return {
       ai: {
-        config: createDefaultAiConfig(cleanedConfig),
+        config: baseConfig,
         analysisPrompt: initialAnalysisPrompt,
         isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
+        getProviderOptions,
         waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
           return new Promise<void>((resolve, reject) => {
             // Set up abort handler
@@ -375,8 +389,10 @@ export function createAiSlice(
                 id: newSessionId,
                 name: sessionName,
                 modelProvider:
-                  modelProvider || currentSession?.modelProvider || 'openai',
-                model: model || currentSession?.model || 'gpt-4.1',
+                  modelProvider ||
+                  currentSession?.modelProvider ||
+                  defaultProvider,
+                model: model || currentSession?.model || defaultModel,
                 analysisResults: [],
                 createdAt: new Date(),
                 uiMessages: [],
@@ -628,6 +644,7 @@ export function createAiSlice(
           try {
             const response = await generateText({
               model,
+              temperature: AI_DEFAULT_TEMPERATURE,
               messages: [{role: 'user', content: prompt}],
               system: systemInstructions || state.ai.getFullInstructions(),
               abortSignal: abortSignal,
@@ -644,7 +661,6 @@ export function createAiSlice(
 
         /**
          * Start the analysis
-         * TODO: how to pass the history analysisResults?
          */
         startAnalysis: async (
           sendMessage: (message: {text: string}) => void,
@@ -826,9 +842,9 @@ export function createAiSlice(
          *
          * @returns Array of analysis results for the current session
          */
-        getAnalysisResults: (): AnalysisResultSchema[] => {
+        getAnalysisResults: () => {
           const currentSession = get().ai.getCurrentSession();
-          if (!currentSession) return [];
+          if (!currentSession) return undefined;
 
           return currentSession.analysisResults;
         },

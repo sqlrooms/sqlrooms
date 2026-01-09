@@ -4,10 +4,6 @@ on:
   # push:
   #   branches:
   #     - main
-
-permissions:
-  contents: write
-
   workflow_dispatch:
     inputs:
       version:
@@ -35,6 +31,9 @@ permissions:
           - patch
           - minor
           - major
+
+permissions:
+  contents: write
 
 jobs:
   publish:
@@ -133,8 +132,25 @@ jobs:
             echo "Release $tag already exists, skipping"
             exit 0
           fi
+          heading_tag="${tag#v}"
+          notes=$(awk -v t="$heading_tag" '
+            BEGIN { in_section = 0 }
+            /^##?[[:space:]]*\[?([vV]?){0,1}/ {
+              # start of a heading
+              if (in_section) exit;
+            }
+            /^##?[[:space:]]*\[?([vV]?){0,1}/ && $0 ~ t {
+              in_section = 1; next;
+            }
+            in_section { print }
+          ' CHANGELOG.md)
+          if [ -z "$notes" ]; then
+            notes="Automated release from npm publish workflow."
+          fi
+          notes_file=$(mktemp)
+          printf "%s\n" "$notes" > "$notes_file"
           prerelease_flag=""
           if [[ "$tag" == *"-"* ]]; then
             prerelease_flag="--prerelease"
           fi
-          gh release create "$tag" --title "$tag" --notes "Automated release from npm publish workflow." ${prerelease_flag}
+          gh release create "$tag" --title "$tag" --notes-file "$notes_file" ${prerelease_flag}

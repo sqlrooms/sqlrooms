@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+**Note:** Version bump only for package @sqlrooms/preset-typedoc
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/preset-typedoc
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+**Note:** Version bump only for package @sqlrooms/preset-typedoc
+
 ## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
 
 **Note:** Version bump only for package @sqlrooms/preset-typedoc

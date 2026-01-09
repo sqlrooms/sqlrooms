@@ -5,7 +5,7 @@ import {
   streamText,
   lastAssistantMessageIsCompleteWithToolCalls,
 } from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet} from 'ai';
+import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
 import {produce} from 'immer';
@@ -15,6 +15,7 @@ import {AddToolResult} from './types';
 import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
 import {ToolAbortError} from './utils';
+import {AI_DEFAULT_TEMPERATURE} from './constants';
 
 /**
  * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
@@ -127,7 +128,7 @@ export type ChatTransportConfig = {
 /**
  * Creates a handler for tool completion that updates the tool additional data in the store
  */
-function createOnToolCompletedHandler(
+export function createOnToolCompletedHandler(
   store: StoreApi<AiSliceStateForTransport>,
 ) {
   return (toolCallId: string, additionalData: unknown) => {
@@ -145,13 +146,20 @@ function createOnToolCompletedHandler(
  */
 export function convertToAiSDKTools(
   tools: Record<string, OpenAssistantTool>,
-  onToolCompleted?: (toolCallId: string, additionalData: unknown) => void,
+  onToolCompleted?: OpenAssistantTool['onToolCompleted'],
 ): ToolSet {
   return Object.entries(tools || {}).reduce(
     (acc: ToolSet, [name, tool]: [string, OpenAssistantTool]) => {
       acc[name] = convertToVercelAiToolV5({
         ...tool,
-        onToolCompleted,
+        onToolCompleted: (toolCallId: string, additionalData: unknown) => {
+          if (tool.onToolCompleted) {
+            // Call the onToolCompleted handler provided by the tool if it exists
+            tool.onToolCompleted(toolCallId, additionalData);
+          }
+          // Call the onToolCompleted handler provided by the caller if it exists
+          onToolCompleted?.(toolCallId, additionalData);
+        },
       });
       return acc;
     },
@@ -216,13 +224,19 @@ export function createLocalChatTransportFactory({
       // get system instructions dynamically at request time to ensure fresh table schema
       const systemInstructions = getInstructions();
 
+      const providerOptions = state.ai.getProviderOptions?.({
+        provider,
+        modelId,
+      });
+
       const result = streamText({
         model,
-        // Ensure we always pass an array of messages
         messages: convertToModelMessages(messagesCopy),
         tools,
         system: systemInstructions,
         abortSignal: state.ai.analysisAbortController?.signal,
+        temperature: AI_DEFAULT_TEMPERATURE,
+        ...(providerOptions ? {providerOptions} : {}),
       });
 
       return result.toUIMessageStreamResponse();
@@ -382,9 +396,7 @@ export function createChatHandlers({
         }
       }
     },
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    onChatData: (dataPart: DataUIPart<any>) => {
-      // Handle additional tool output data from the backend (defensive guards)
+    onChatData: (dataPart: DataUIPart<UIDataTypes>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&

@@ -1,6 +1,19 @@
 import type {UIMessage} from 'ai';
+import {streamText} from 'ai';
 import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
 import type {OpenAssistantToolSet} from '@openassistant/utils';
+
+export type ProviderOptions = NonNullable<
+  Parameters<typeof streamText>[0]['providerOptions']
+>;
+
+/**
+ * Provide provider-specific options for the underlying AI SDK call.
+ */
+export type GetProviderOptions = (args: {
+  provider: string;
+  modelId: string;
+}) => ProviderOptions | null | undefined;
 
 /**
  * Type for adding tool results to the chat.
@@ -27,6 +40,7 @@ export interface AiStateForTransport {
   analysisAbortController?: AbortController;
   isRunningAnalysis: boolean;
   analysisPrompt: string;
+  getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
   setSessionToolAdditionalData: (
     sessionId: string,

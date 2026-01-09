@@ -3,6 +3,29 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* using escapeVal for value-comparison in addTable ([#268](https://github.com/sqlrooms/sqlrooms/issues/268)) ([cd90e62](https://github.com/sqlrooms/sqlrooms/commit/cd90e62c8917c2467abbc0b895c7d68717470f3f))
+
+### Features
+
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* downgrade styled-components to 6.1.8 ([#264](https://github.com/sqlrooms/sqlrooms/issues/264)) ([f8b1ce1](https://github.com/sqlrooms/sqlrooms/commit/f8b1ce1df617ea6a14b43c91c8b6eb3ea77d8025))
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+### Bug Fixes
+
+* **deps:** update dependency @paralleldrive/cuid2 to v3 ([#250](https://github.com/sqlrooms/sqlrooms/issues/250)) ([ad0c539](https://github.com/sqlrooms/sqlrooms/commit/ad0c539a7664b2cee60184674c4c27c67c90514e))
+* Update Kepler and fix duckdb imports ([#258](https://github.com/sqlrooms/sqlrooms/issues/258)) ([adf8932](https://github.com/sqlrooms/sqlrooms/commit/adf8932961cdf0d9a47745e517f2bdc7902f5dd1))
+
 ## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
 
 **Note:** Version bump only for package @sqlrooms/kepler

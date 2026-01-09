@@ -1,12 +1,12 @@
 {
   "name": "@sqlrooms/kepler",
-  "version": "0.26.1-rc.11",
+  "version": "0.27.0-rc.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "sideEffects": false,
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -33,7 +33,7 @@
     "@kepler.gl/table": "3.2.4",
     "@kepler.gl/types": "3.2.4",
     "@kepler.gl/utils": "3.2.4",
-    "@paralleldrive/cuid2": "^2.2.2",
+    "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/kepler-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -47,7 +47,7 @@
     "react-redux": "^8.0.5",
     "redux": "^4.2.1",
     "redux-logger": "^3.0.6",
-    "styled-components": "6.1.19"
+    "styled-components": "6.1.8"
   },
   "peerDependencies": {
     "react": ">=18",

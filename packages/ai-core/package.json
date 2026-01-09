@@ -1,12 +1,12 @@
 {
   "name": "@sqlrooms/ai-core",
-  "version": "0.26.1-rc.11",
+  "version": "0.27.0-rc.0",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
   "sideEffects": false,
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -22,7 +22,7 @@
     "@ai-sdk/openai-compatible": "^1.0.18",
     "@ai-sdk/react": "^2.0.44",
     "@openassistant/utils": "1.0.0-alpha.0",
-    "@paralleldrive/cuid2": "^2.2.2",
+    "@paralleldrive/cuid2": "^3.0.0",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
