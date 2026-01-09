@@ -394,7 +394,7 @@ export function createChatHandlers({
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
           state.ai.setSessionUiMessages(sessionId, completedMessages);
 
-          state.ai.setIsRunningAnalysis(sessionId, false);
+          state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
 
           // Ensure an analysis result exists and is marked as cancelled
@@ -520,7 +520,7 @@ export function createChatHandlers({
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
-          state.ai.setIsRunningAnalysis(sessionId, false);
+          state.ai.setIsRunning(sessionId, false);
           state.ai.setAbortController(sessionId, undefined);
         }
       } catch (err) {
@@ -591,7 +591,7 @@ export function createChatHandlers({
           }),
         );
 
-        store.getState().ai.setIsRunningAnalysis(sessionId, false);
+        store.getState().ai.setIsRunning(sessionId, false);
         store.getState().ai.setAbortController(sessionId, undefined);
       } catch (err) {
         console.error('Failed to store chat error:', err);

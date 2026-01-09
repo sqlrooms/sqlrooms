@@ -46,8 +46,8 @@ export interface AiStateForTransport {
     sessionId: string,
     controller: AbortController | undefined,
   ) => void;
-  getIsRunningAnalysis: (sessionId: string) => boolean;
-  setIsRunningAnalysis: (sessionId: string, isRunning: boolean) => void;
+  getIsRunning: (sessionId: string) => boolean;
+  setIsRunning: (sessionId: string, isRunning: boolean) => void;
   setSessionToolAdditionalData: (
     sessionId: string,
     toolCallId: string,

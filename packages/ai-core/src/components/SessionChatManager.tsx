@@ -17,7 +17,7 @@ export const SessionChatManager: React.FC = () => {
   const sessionIdsToMount = new Set<string>();
   if (currentSessionId) sessionIdsToMount.add(currentSessionId);
   for (const s of sessions) {
-    if (s?.id && s.isRunningAnalysis) sessionIdsToMount.add(s.id);
+    if (s?.id && s.isRunning) sessionIdsToMount.add(s.id);
   }
 
   if (sessionIdsToMount.size === 0) return null;

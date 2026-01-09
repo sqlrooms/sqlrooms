@@ -9,8 +9,8 @@ This refactoring transforms the ai-core package from using a single global `useC
 ### 1. Schema Updates (`packages/ai-config/src/schema/AnalysisSessionSchema.ts`)
 
 Added per-session state fields to `AnalysisSessionSchema`:
-- `analysisPrompt: string` - Each session has its own prompt text
-- `isRunningAnalysis: boolean` - Each session tracks its own running state
+- `prompt: string` - Each session has its own prompt text
+- `isRunning: boolean` - Each session tracks its own running state
 
 ### 2. New Hook: `useSessionChat` (`packages/ai-core/src/hooks/useSessionChat.ts`)
 
@@ -30,15 +30,15 @@ Created a new hook that manages a `useChat` instance for a specific session:
 **SessionChatManager** (`packages/ai-core/src/components/SessionChatManager.tsx`):
 - Renders a `SessionChatProvider` for each session
 - Ensures all sessions have active chat instances
-- Mounts providers for the current session **and** any sessions with `isRunningAnalysis === true` to keep streaming + stop/cancel session-correct when switching between sessions
+- Mounts providers for the current session **and** any sessions with `isRunning === true` to keep streaming + stop/cancel session-correct when switching between sessions
 - Should be placed once at the application root
 
 ### 4. AiSlice Refactoring (`packages/ai-core/src/AiSlice.ts`)
 
 **Removed Global State**:
-- ❌ `analysisPrompt: string`
-- ❌ `isRunningAnalysis: boolean`
-- ❌ `analysisAbortController?: AbortController`
+- ❌ `prompt: string`
+- ❌ `isRunning: boolean`
+- ❌ `abortController?: AbortController`
 - ❌ `chatStop?: () => void`
 - ❌ `chatSendMessage?: ((message: {text: string}) => void)`
 - ❌ `addToolResult?: AddToolResult`
@@ -60,8 +60,8 @@ Created a new hook that manages a `useChat` instance for a specific session:
 - `setAddToolResult(sessionId, addToolResult)`
 - `getPrompt(sessionId)`
 - `setPrompt(sessionId, prompt)`
-- `getIsRunningAnalysis(sessionId)`
-- `setIsRunningAnalysis(sessionId, isRunning)`
+- `getIsRunning(sessionId)`
+- `setIsRunning(sessionId, isRunning)`
 
 **Updated Methods**:
 - `startAnalysis(sessionId)` - Now takes sessionId instead of sendMessage
@@ -75,7 +75,7 @@ Created a new hook that manages a `useChat` instance for a specific session:
 - Passes `sessionId` to `startAnalysis` and `cancelAnalysis`
 
 **AnalysisResultsContainer** (`packages/ai-core/src/components/AnalysisResultsContainer.tsx`):
-- Now uses `getIsRunningAnalysis(sessionId)` instead of global state
+- Now uses `getIsRunning(sessionId)` instead of global state
 
 **PromptSuggestions** (`packages/ai-core/src/components/PromptSuggestions.tsx`):
 - Updated to use `setPrompt(sessionId, text)`
@@ -95,9 +95,9 @@ Updated all chat handlers to use per-session state:
 Updated `AiStateForTransport` interface to reflect new per-session methods:
 - Added `getAbortController(sessionId)`
 - Added `setAbortController(sessionId, controller)`
-- Added `getIsRunningAnalysis(sessionId)`
-- Added `setIsRunningAnalysis(sessionId, isRunning)`
-- Removed global `analysisAbortController`, `isRunningAnalysis`, `analysisPrompt`
+- Added `getIsRunning(sessionId)`
+- Added `setIsRunning(sessionId, isRunning)`
+- Removed global `abortController`, `isRunning`, `prompt`
 
 ## Usage
 
@@ -142,7 +142,7 @@ store.ai.cancelAnalysis(sessionA.id);
 3. **Parallel Analysis**: Multiple sessions can run analysis simultaneously
 4. **Clean State Management**: Session-specific state is properly isolated
 5. **Resource Cleanup**: Deleting a session cleans up its chat resources
-6. **Session switching semantics**: Switching to session B does **not** automatically stop session A if A is still running. `SessionChatManager` keeps providers mounted for sessions with `isRunningAnalysis === true`, so their streams can continue in the background. Streaming is stopped when the session is cancelled (`cancelAnalysis`) or when its provider unmounts (cleanup calls `stop()`).
+6. **Session switching semantics**: Switching to session B does **not** automatically stop session A if A is still running. `SessionChatManager` keeps providers mounted for sessions with `isRunning === true`, so their streams can continue in the background. Streaming is stopped when the session is cancelled (`cancelAnalysis`) or when its provider unmounts (cleanup calls `stop()`).
 
 ## Migration Guide
 
@@ -150,8 +150,8 @@ If you have custom code that uses the old global state:
 
 ### Before
 ```typescript
-const analysisPrompt = useStoreWithAi(s => s.ai.analysisPrompt);
-const isRunning = useStoreWithAi(s => s.ai.isRunningAnalysis);
+const prompt = useStoreWithAi(s => s.ai.prompt);
+const isRunning = useStoreWithAi(s => s.ai.isRunning);
 store.ai.startAnalysis(sendMessage);
 ```
 
@@ -159,11 +159,11 @@ store.ai.startAnalysis(sendMessage);
 ```typescript
 const currentSession = useStoreWithAi(s => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
-const analysisPrompt = useStoreWithAi(s =>
+const prompt = useStoreWithAi(s =>
   sessionId ? s.ai.getPrompt(sessionId) : ''
 );
 const isRunning = useStoreWithAi(s =>
-  sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false
+  sessionId ? s.ai.getIsRunning(sessionId) : false
 );
 store.ai.startAnalysis(sessionId);
 ```

@@ -22,13 +22,13 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const sessionId = currentSession?.id;
   const model = currentSession?.model;
 
-  const isRunningAnalysis = useStoreWithAi((s) =>
-    sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false,
+  const isRunning = useStoreWithAi((s) =>
+    sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
-  const analysisPrompt = useStoreWithAi((s) =>
+  const prompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
-  const setAnalysisPrompt = useStoreWithAi(
+  const setPrompt = useStoreWithAi(
     (s) => s.ai.setPrompt,
   );
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
@@ -59,23 +59,23 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       ) {
         e.preventDefault();
         if (
-          !isRunningAnalysis &&
+          !isRunning &&
           sessionId &&
           model &&
-          analysisPrompt.trim().length
+          prompt.trim().length
         ) {
           runAnalysis(sessionId);
         }
       }
     },
-    [isRunningAnalysis, sessionId, model, analysisPrompt, runAnalysis],
+    [isRunning, sessionId, model, prompt, runAnalysis],
   );
 
-  const canStart = Boolean(sessionId && model && analysisPrompt.trim().length);
+  const canStart = Boolean(sessionId && model && prompt.trim().length);
 
   const handleClickRunOrCancel = useCallback(() => {
     if (!sessionId) return;
-    if (isRunningAnalysis) {
+    if (isRunning) {
       cancelAnalysis(sessionId);
       onCancel?.();
     } else {
@@ -83,7 +83,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       onRun?.();
     }
   }, [
-    isRunningAnalysis,
+    isRunning,
     sessionId,
     cancelAnalysis,
     onCancel,
@@ -104,10 +104,10 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             ref={textareaRef}
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
             autoResize
-            value={analysisPrompt}
+            value={prompt}
             onChange={(e) => {
               if (sessionId) {
-                setAnalysisPrompt(sessionId, e.target.value);
+                setPrompt(sessionId, e.target.value);
               }
             }}
             onKeyDown={handleKeyDown}
@@ -127,9 +127,9 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!isRunningAnalysis && !canStart}
+                  disabled={!isRunning && !canStart}
                 >
-                  {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
+                  {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>
               </div>
             </div>

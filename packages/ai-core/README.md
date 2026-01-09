@@ -43,7 +43,7 @@ const {roomStore, useRoomStore} = createRoomStore({
     getInstructions: () => {
       return `You are an AI assistant that can answer questions and help with tasks.`;
     },
-    initialAnalysisPrompt: 'What insights can you provide from my data?',
+    initialPrompt: 'What insights can you provide from my data?',
     tools: {
       // Your tools
     },

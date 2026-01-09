@@ -83,8 +83,8 @@ export type AiSliceState = {
     getToolCallSession: (toolCallId: string) => string | undefined;
     setPrompt: (sessionId: string, prompt: string) => void;
     getPrompt: (sessionId: string) => string;
-    setIsRunningAnalysis: (sessionId: string, isRunning: boolean) => void;
-    getIsRunningAnalysis: (sessionId: string) => boolean;
+    setIsRunning: (sessionId: string, isRunning: boolean) => void;
+    getIsRunning: (sessionId: string) => boolean;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
       prompt: string,
@@ -157,14 +157,8 @@ export type AiSliceState = {
  */
 export interface AiSliceOptions {
   config?: Partial<AiSliceConfig>;
-  /** Initial prompt to display in the analysis input */
-  initialAnalysisPrompt?: string;
-  /** Tools to add to the AI assistant */
+  initialPrompt?: string;
   tools: OpenAssistantToolSet;
-  /**
-   * Function to get custom instructions for the AI assistant
-   * @returns The instructions string to use
-   */
   getInstructions: () => string;
   defaultProvider?: string;
   defaultModel?: string;
@@ -184,7 +178,7 @@ export function createAiSlice(
   params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    initialAnalysisPrompt = '',
+    initialPrompt = '',
     tools,
     getApiKey,
     getBaseUrl,
@@ -238,8 +232,8 @@ export function createAiSlice(
       if (firstSession) {
         firstSession.modelProvider = defaultProvider;
         firstSession.model = defaultModel;
-        firstSession.analysisPrompt = initialAnalysisPrompt;
-        firstSession.isRunningAnalysis = false;
+        firstSession.prompt = initialPrompt;
+        firstSession.isRunning = false;
       }
     }
 
@@ -398,7 +392,7 @@ export function createAiSlice(
                 (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (session) {
-                session.analysisPrompt = prompt;
+                session.prompt = prompt;
               }
             }),
           );
@@ -408,27 +402,27 @@ export function createAiSlice(
           const session = state.ai.config.sessions.find(
             (s: AnalysisSessionSchema) => s.id === sessionId,
           );
-          return session?.analysisPrompt || '';
+          return session?.prompt || '';
         },
 
-        setIsRunningAnalysis: (sessionId: string, isRunning: boolean) => {
+        setIsRunning: (sessionId: string, isRunning: boolean) => {
           set((state) =>
             produce(state, (draft) => {
               const session = draft.ai.config.sessions.find(
                 (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (session) {
-                session.isRunningAnalysis = isRunning;
+                session.isRunning = isRunning;
               }
             }),
           );
         },
-        getIsRunningAnalysis: (sessionId: string) => {
+        getIsRunning: (sessionId: string) => {
           const state = get();
           const session = state.ai.config.sessions.find(
             (s: AnalysisSessionSchema) => s.id === sessionId,
           );
-          return session?.isRunningAnalysis || false;
+          return session?.isRunning || false;
         },
 
         /**
@@ -501,8 +495,8 @@ export function createAiSlice(
                 uiMessages: [],
                 toolAdditionalData: {},
                 messagesRevision: 0,
-                analysisPrompt: '',
-                isRunningAnalysis: false,
+                prompt: '',
+                isRunning: false,
               });
               draft.ai.config.currentSessionId = newSessionId;
             }),
@@ -806,7 +800,7 @@ export function createAiSlice(
           }
 
           const abortController = new AbortController();
-          const promptText = session.analysisPrompt || '';
+          const promptText = session.prompt || '';
 
           // Store abort controller for this session
           state.ai.setAbortController(sessionId, abortController);
@@ -817,8 +811,8 @@ export function createAiSlice(
                 (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (draftSession) {
-                draftSession.isRunningAnalysis = true;
-                draftSession.analysisPrompt = '';
+                draftSession.isRunning = true;
+                draftSession.prompt = '';
                 draft.ai.promptSuggestionsVisible = false;
 
                 // Remove any existing pending results
@@ -858,7 +852,7 @@ export function createAiSlice(
                 (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (session) {
-                session.isRunningAnalysis = false;
+                session.isRunning = false;
               }
               // Keep abort controller so handlers can check signal.aborted
               // It will be cleared by onChatFinish

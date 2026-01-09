@@ -23,8 +23,8 @@ export const AnalysisResultsContainer: React.FC<{
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
   const sessionId = currentSession?.id;
-  const isRunningAnalysis = useStoreWithAi((s) =>
-    sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false,
+  const isRunning = useStoreWithAi((s) =>
+    sessionId ? s.ai.getIsRunning(sessionId) : false,
   );
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
@@ -43,10 +43,10 @@ export const AnalysisResultsContainer: React.FC<{
 
   // Scroll to bottom when analysis starts
   useEffect(() => {
-    if (isRunningAnalysis) {
+    if (isRunning) {
       scrollToBottom();
     }
-  }, [isRunningAnalysis, scrollToBottom]);
+  }, [isRunning, scrollToBottom]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
@@ -65,7 +65,7 @@ export const AnalysisResultsContainer: React.FC<{
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
-        {isRunningAnalysis && (
+        {isRunning && (
           <AiThinkingDots className="text-muted-foreground p-4" />
         )}
         <div ref={endRef} className="h-10 w-full shrink-0" />
