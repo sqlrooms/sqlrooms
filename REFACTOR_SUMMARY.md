@@ -184,7 +184,5 @@ store.ai.startAnalysis(sessionId);
 - `packages/ai-core/src/index.ts`
 - `examples/ai/src/components/MainView.tsx`
 
-## Backward Compatibility
-
-The old `useAiChat` hook still exists but should not be used for new code. It will be deprecated in a future version. Use `useSessionChat` instead for new implementations.
+The old `useAiChat` hook still deleted and should not be used for new code. Use `useSessionChat` instead for new implementations.
 

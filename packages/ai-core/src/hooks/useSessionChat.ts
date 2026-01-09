@@ -23,6 +23,10 @@ export type UseSessionChatResult = {
   sessionId: string;
 };
 
+type SendAutoWhenArg = Parameters<
+  typeof lastAssistantMessageIsCompleteWithToolCalls
+>[0];
+
 /**
  * Custom hook that provides per-session AI chat functionality.
  * Each session gets its own independent useChat instance.
@@ -108,9 +112,6 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   const addToolResultRef = useRef<AddToolResult>(null!);
 
   // Gate auto-send when analysis is aborted or cancelled
-  type SendAutoWhenArg = Parameters<
-    typeof lastAssistantMessageIsCompleteWithToolCalls
-  >[0];
   const shouldAutoSend = (options: SendAutoWhenArg) => {
     if (isAbortedRef.current) return false;
     return lastAssistantMessageIsCompleteWithToolCalls(options);
