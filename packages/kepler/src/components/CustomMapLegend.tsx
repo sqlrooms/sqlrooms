@@ -1,28 +1,47 @@
 // SPDX-License-Identifier: MIT
 // Copyright contributors to the kepler.gl project
 
-import { layerConfigChange, toggleMapControl } from "@kepler.gl/actions";
-import { KeplerGlContext, LayerLegendContentFactory, LayerLegendHeaderFactory } from "@kepler.gl/components";
-import { MapLegendProps } from "@kepler.gl/components/dist/map/map-legend";
-import { DIMENSIONS } from "@kepler.gl/constants";
-import { Layer } from "@kepler.gl/layers";
-import { Button } from "@sqlrooms/ui";
-import { ArrowDown, ArrowRight, ChevronDownIcon, ChevronRightIcon, EyeIcon, EyeOffIcon, XIcon } from "lucide-react";
-import { MouseEventHandler, useCallback, useContext, useRef, useState } from "react";
-import { useStoreWithKepler } from "..";
+import {layerConfigChange, toggleMapControl} from '@kepler.gl/actions';
+import {
+  KeplerGlContext,
+  LayerLegendContentFactory,
+  LayerLegendHeaderFactory,
+} from '@kepler.gl/components';
+import {MapLegendProps} from '@kepler.gl/components/dist/map/map-legend';
+import {DIMENSIONS} from '@kepler.gl/constants';
+import {Layer} from '@kepler.gl/layers';
+import {Button} from '@sqlrooms/ui';
+import {
+  ArrowDown,
+  ArrowRight,
+  ChevronDownIcon,
+  ChevronRightIcon,
+  EyeIcon,
+  EyeOffIcon,
+  XIcon,
+} from 'lucide-react';
+import {
+  MouseEventHandler,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+} from 'react';
+import {useStoreWithKepler} from '..';
 
 const defaultActionIcons = {
   expanded: ArrowDown,
-  collapsed: ArrowRight
+  collapsed: ArrowRight,
 };
 
-
-CustomMapLegendFactory.deps = [LayerLegendHeaderFactory, LayerLegendContentFactory];
-
+CustomMapLegendFactory.deps = [
+  LayerLegendHeaderFactory,
+  LayerLegendContentFactory,
+];
 
 export function CustomMapLegendFactory(
   LayerLegendHeader: ReturnType<typeof LayerLegendHeaderFactory>,
-  LayerLegendContent: ReturnType<typeof LayerLegendContentFactory>
+  LayerLegendContent: ReturnType<typeof LayerLegendContentFactory>,
 ) {
   const MapLegend: React.FC<MapLegendProps> = ({
     layers = [],
@@ -40,34 +59,47 @@ export function CustomMapLegendFactory(
     };
 
     return (
-      <div className="map-legend relative h-full overflow-hidden" style={{ width: containerW }}>
+      <div
+        className="map-legend relative h-full overflow-hidden"
+        style={{width: containerW}}
+      >
         <div className="absolute inset-0 flex flex-col">
-          <div className="w-full flex items-center justify-between p-2 border-b border-muted">
+          <div className="border-muted flex w-full items-center justify-between border-b p-2">
             <div className="text-xs font-medium">Map Layers</div>
-            <Button variant="ghost" size="xs" className="w-6 h-6" onClick={handleClose}>
-              <XIcon className="w-4 h-4" />
+            <Button
+              variant="ghost"
+              size="xs"
+              className="h-6 w-6"
+              onClick={handleClose}
+            >
+              <XIcon className="h-4 w-4" />
             </Button>
           </div>
-          <div className="w-full flex flex-1 items-center flex-col overflow-auto">
-          {layers.map((layer, index) => {
-            return <LayerLegendItem key={index}
-                layer={layer}
-                containerW={containerW}
-                {...restProps}
-            />;
-          })}
+          <div className="flex w-full flex-1 flex-col items-center overflow-auto">
+            {layers.map((layer, index) => {
+              return (
+                <LayerLegendItem
+                  key={index}
+                  layer={layer}
+                  containerW={containerW}
+                  {...restProps}
+                />
+              );
+            })}
           </div>
         </div>
       </div>
     );
   };
 
-
-  const LayerLegendItem = ({ layer, containerW, isExport,
+  const LayerLegendItem = ({
+    layer,
+    containerW,
+    isExport,
     mapState,
     disableEdit,
     onLayerVisConfigChange,
-   }: { layer: Layer; containerW: number; } & MapLegendProps) => {
+  }: {layer: Layer; containerW: number} & MapLegendProps) => {
     const [isExpanded, setIsExpanded] = useState(layer.config.isVisible);
 
     const dispatchAction = useStoreWithKepler(
@@ -82,7 +114,7 @@ export function CustomMapLegendFactory(
         });
       });
     }, []);
-    
+
     const handleToggleExpanded: MouseEventHandler<HTMLElement> = (evt) => {
       evt.stopPropagation();
       const nextExpanded = !isExpanded;
@@ -94,10 +126,12 @@ export function CustomMapLegendFactory(
 
     const mapId = useContext(KeplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
-    const handleToggleVisibility = (evt: React.MouseEvent<HTMLButtonElement>) => {
+    const handleToggleVisibility = (
+      evt: React.MouseEvent<HTMLButtonElement>,
+    ) => {
       evt.stopPropagation();
       const nextVisible = !layer.config.isVisible;
-      dispatchAction(mapId, layerConfigChange(layer, { isVisible: nextVisible }));
+      dispatchAction(mapId, layerConfigChange(layer, {isVisible: nextVisible}));
     };
 
     if (!layer.isValidToSave() || layer.config.hidden) {
@@ -108,28 +142,50 @@ export function CustomMapLegendFactory(
       return null;
     }
 
-  
     return (
-      <div ref={containerRef} className="w-full flex flex-col border-b border-muted items-center">
+      <div
+        ref={containerRef}
+        className="border-muted flex w-full flex-col items-center border-b"
+      >
         <style>{`.legend--layer__item .panel--header__action { display: none !important; }`}</style>
-        <div className="flex flex-row gap-2 items-center w-full" onClick={handleToggleExpanded}>            
-          <div className="text-xs overflow-hidden text-ellipsis whitespace-nowrap p-2 items-center cursor-pointer select-none">
+        <div
+          className="flex w-full flex-row items-center gap-2"
+          onClick={handleToggleExpanded}
+        >
+          <div className="cursor-pointer select-none items-center overflow-hidden text-ellipsis whitespace-nowrap p-2 text-xs">
             {layer.config.label}
           </div>
           <div className="flex-1" />
-          <div className="flex flex-row gap-1 items-center justify-end">
-            <Button className="w-7 h-7" variant="ghost" size="icon" onClick={handleToggleVisibility}>
-              {layer.config.isVisible ? <EyeIcon className="w-4 h-4" /> : <EyeOffIcon className="w-4 h-4" />}
+          <div className="flex flex-row items-center justify-end gap-1">
+            <Button
+              className="h-7 w-7"
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleVisibility}
+            >
+              {layer.config.isVisible ? (
+                <EyeIcon className="h-4 w-4" />
+              ) : (
+                <EyeOffIcon className="h-4 w-4" />
+              )}
             </Button>
             <Button
-              className="w-7 h-7" variant="ghost" size="icon" onClick={handleToggleExpanded}
+              className="h-7 w-7"
+              variant="ghost"
+              size="icon"
+              onClick={handleToggleExpanded}
             >
-              {isExpanded ? <ChevronDownIcon className="w-4 h-4" /> : <ChevronRightIcon className="w-4 h-4" />}
+              {isExpanded ? (
+                <ChevronDownIcon className="h-4 w-4" />
+              ) : (
+                <ChevronRightIcon className="h-4 w-4" />
+              )}
             </Button>
           </div>
         </div>
-        
-        {isExpanded && <div className="text-xs w-full px-[8px] py-[5px]">
+
+        {isExpanded && (
+          <div className="w-full px-[8px] py-[5px] text-xs">
             <LayerLegendContent
               containerW={containerW}
               layer={layer}
@@ -138,8 +194,9 @@ export function CustomMapLegendFactory(
               isExport={isExport}
               onLayerVisConfigChange={onLayerVisConfigChange}
               actionIcons={defaultActionIcons}
-            /> 
-        </div>}
+            />
+          </div>
+        )}
       </div>
     );
   };
@@ -148,4 +205,3 @@ export function CustomMapLegendFactory(
 
   return MapLegend;
 }
-
