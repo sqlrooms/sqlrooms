@@ -27,7 +27,7 @@ import {
   useRef,
   useState,
 } from 'react';
-import {useStoreWithKepler} from '..';
+import {useStoreWithKepler} from '../KeplerSlice';
 
 const defaultActionIcons = {
   expanded: ArrowDown,
