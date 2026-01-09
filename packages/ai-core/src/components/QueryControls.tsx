@@ -22,7 +22,6 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const sessionId = currentSession?.id;
   const model = currentSession?.model;
 
-  // Get per-session state and methods
   const isRunningAnalysis = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunningAnalysis(sessionId) : false,
   );

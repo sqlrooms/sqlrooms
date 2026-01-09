@@ -25,6 +25,7 @@ Created a new hook that manages a `useChat` instance for a specific session:
 **SessionChatProvider** (`packages/ai-core/src/components/SessionChatProvider.tsx`):
 - Wraps `useSessionChat` for a specific session
 - Manages the lifecycle of a session's chat instance
+- On unmount (e.g., when a session is no longer mounted by `SessionChatManager`), calls `stop()` to cancel any in-flight stream and prevent late stream callbacks from writing into a newly active session
 
 **SessionChatManager** (`packages/ai-core/src/components/SessionChatManager.tsx`):
 - Renders a `SessionChatProvider` for each session
@@ -141,6 +142,7 @@ store.ai.cancelAnalysis(sessionA.id);
 3. **Parallel Analysis**: Multiple sessions can run analysis simultaneously
 4. **Clean State Management**: Session-specific state is properly isolated
 5. **Resource Cleanup**: Deleting a session cleans up its chat resources
+6. **Session switching semantics**: Switching to session B does **not** automatically stop session A if A is still running. `SessionChatManager` keeps providers mounted for sessions with `isRunningAnalysis === true`, so their streams can continue in the background. Streaming is stopped when the session is cancelled (`cancelAnalysis`) or when its provider unmounts (cleanup calls `stop()`).
 
 ## Migration Guide
 

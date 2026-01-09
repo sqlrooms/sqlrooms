@@ -36,10 +36,10 @@ export {
 } from './utils';
 export {
   convertToAiSDKTools,
-  fixIncompleteToolCalls,
   createOnToolCompletedHandler,
 } from './chatTransport';
 export type {AddToolResult} from './types';
+export {fixIncompleteToolCalls} from './utils';
 
 export {processAgentStream, updateAgentToolCallData} from './agents/AgentUtils';
 export type {

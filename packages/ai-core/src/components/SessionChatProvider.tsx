@@ -7,24 +7,18 @@ import {useSessionChat} from '../hooks/useSessionChat';
  * independent chat streams.
  *
  * @param sessionId - The ID of the session to manage
- * @param children - Optional children to render (typically not needed)
+ * @param children - Optional children to render
  */
 export const SessionChatProvider: React.FC<{
   sessionId: string;
   children?: React.ReactNode;
 }> = ({sessionId, children}) => {
   // Initialize and manage the chat instance for this session
-  const {messages, status, stop} = useSessionChat(sessionId);
+  const {stop} = useSessionChat(sessionId);
 
-  // Log for debugging (can be removed in production)
-  useEffect(() => {
-    console.log(
-      `[SessionChatProvider] Session ${sessionId}: ${messages.length} messages, status: ${status}`,
-    );
-  }, [sessionId, messages.length, status]);
-
-  // On session switch/unmount, stop any in-flight stream to avoid late callbacks
-  // writing into the newly active session.
+  // Cleanup: when this provider unmounts (e.g. switching away from a non-running session,
+  // or deleting the session) or when the underlying useChat instance is recreated (stop changes),
+  // cancel any in-flight stream so late chunks don't get applied after the session is no longer active.
   useEffect(() => {
     return () => {
       try {

@@ -1,20 +1,21 @@
 import {StoreApi} from '@sqlrooms/room-store';
 import {AiSliceState} from '../AiSlice';
 import {ToolAbortError} from '../utils';
+import {TOOL_CALL_CANCELLED} from '../constants';
 
 /**
  * Type definition for agent stream result (from ai package)
  * Represents the return value of Agent.stream()
  */
-export interface AgentStreamResult {
+export type AgentStreamResult = {
   toUIMessageStream(): AsyncIterable<UIMessageChunk>;
   text: Promise<string>;
-}
+};
 
 /**
  * Represents a chunk from the UI message stream
  */
-export interface UIMessageChunk {
+export type UIMessageChunk = {
   type: string;
   toolCallId?: string;
   toolName?: string;
@@ -23,54 +24,46 @@ export interface UIMessageChunk {
   delta?: string;
   id?: string;
   providerMetadata?: unknown;
-}
+};
 
 /**
  * Represents the state of a single tool call made by an agent
  */
-export interface AgentToolCall {
+export type AgentToolCall = {
   toolCallId: string;
   toolName: string;
   output?: unknown;
   errorText?: string;
   state: 'pending' | 'success' | 'error';
-}
+};
 
 /**
  * Additional data stored for an agent tool call to track progress
  */
-export interface AgentToolCallAdditionalData {
+export type AgentToolCallAdditionalData = {
   agentToolCalls: AgentToolCall[];
   finalOutput?: string;
   timestamp: string;
-}
+};
 
 /**
  * Updates the additional data for an agent tool call.
- *
- * IMPORTANT: must be session-scoped. If sessionId is omitted, we try to resolve it via
- * ai.getToolCallSession(parentToolCallId). This prevents agent streams from writing into
- * a different session if the user switches sessions mid-stream.
  */
-export function updateAgentToolCallData(
-  store: StoreApi<AiSliceState>,
-  parentToolCallId: string,
-  agentToolCalls: AgentToolCall[],
-  finalOutput?: string,
-  sessionId?: string,
-): void {
+export function updateAgentToolCallData(params: {
+  store: StoreApi<AiSliceState>;
+  parentToolCallId: string;
+  agentToolCalls: AgentToolCall[];
+  sessionId: string;
+  finalOutput?: string;
+}): void {
+  const {store, parentToolCallId, agentToolCalls, sessionId, finalOutput} =
+    params;
   const state = store.getState();
-  const resolvedSessionId =
-    sessionId ||
-    state.ai.getToolCallSession?.(parentToolCallId) ||
-    state.ai.config.currentSessionId;
-  if (resolvedSessionId) {
-    state.ai.setSessionToolAdditionalData(resolvedSessionId, parentToolCallId, {
-      agentToolCalls: [...agentToolCalls],
-      finalOutput,
-      timestamp: new Date().toISOString(),
-    } as AgentToolCallAdditionalData);
-  }
+  state.ai.setSessionToolAdditionalData(sessionId, parentToolCallId, {
+    agentToolCalls: [...agentToolCalls],
+    finalOutput,
+    timestamp: new Date().toISOString(),
+  } as AgentToolCallAdditionalData);
 }
 
 /**
@@ -85,6 +78,8 @@ export function updateAgentToolCallData(
  * @param agentResult - The stream result from agent.stream()
  * @param store - The store containing AiSliceState
  * @param parentToolCallId - The tool call ID of the parent agent tool (for storing additional data)
+ * @param sessionId - The session ID to use for storing additional data
+ * @param abortSignal - The abort signal to use for cancelling the stream
  * @returns The final text output from the agent
  */
 export async function processAgentStream(
@@ -93,14 +88,15 @@ export async function processAgentStream(
   parentToolCallId: string,
   abortSignal?: AbortSignal,
 ): Promise<string> {
-  const sessionId = parentToolCallId
-    ? store.getState().ai.getToolCallSession?.(parentToolCallId) ||
-      store.getState().ai.config.currentSessionId
-    : store.getState().ai.config.currentSessionId;
+  const sessionId = store.getState().ai.getToolCallSession?.(parentToolCallId);
+
+  if (!sessionId) {
+    throw new Error('Session ID not found');
+  }
 
   const throwIfAborted = () => {
     if (abortSignal?.aborted) {
-      throw new ToolAbortError('Operation cancelled by user');
+      throw new ToolAbortError(TOOL_CALL_CANCELLED);
     }
   };
 
@@ -127,14 +123,13 @@ export async function processAgentStream(
           state: 'pending',
         });
 
-        // Update additional data with current progress
-        updateAgentToolCallData(
+        updateAgentToolCallData({
           store,
           parentToolCallId,
           agentToolCalls,
-          finalOutput,
           sessionId,
-        );
+          finalOutput,
+        });
       }
 
       // Forward text deltas to writer stream
@@ -151,14 +146,13 @@ export async function processAgentStream(
               state: 'success',
             };
 
-            // Update additional data with current progress
-            updateAgentToolCallData(
+            updateAgentToolCallData({
               store,
               parentToolCallId,
               agentToolCalls,
-              finalOutput,
               sessionId,
-            );
+              finalOutput,
+            });
           }
         }
       } else if (chunk.type === 'tool-output-error' && chunk.toolCallId) {
@@ -174,14 +168,13 @@ export async function processAgentStream(
               state: 'error',
             };
 
-            // Update additional data with current progress
-            updateAgentToolCallData(
+            updateAgentToolCallData({
               store,
               parentToolCallId,
               agentToolCalls,
-              finalOutput,
               sessionId,
-            );
+              finalOutput,
+            });
           }
         }
       }
@@ -197,13 +190,13 @@ export async function processAgentStream(
   const resultText = await agentResult.text;
 
   // Store final additional data with all tool calls
-  updateAgentToolCallData(
+  updateAgentToolCallData({
     store,
     parentToolCallId,
     agentToolCalls,
-    resultText,
     sessionId,
-  );
+    finalOutput: resultText,
+  });
 
   return resultText;
 }
