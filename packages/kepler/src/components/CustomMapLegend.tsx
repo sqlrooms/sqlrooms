@@ -59,12 +59,9 @@ export function CustomMapLegendFactory(
     };
 
     return (
-      <div
-        className="map-legend relative h-full overflow-hidden"
-        style={{width: containerW}}
-      >
-        <div className="absolute inset-0 flex flex-col">
-          <div className="border-muted flex w-full items-center justify-between border-b p-2">
+      <div className="map-legend" style={{width: containerW}}>
+        <div className="relative flex flex-col">
+          <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
             <div className="text-xs font-medium">Map Layers</div>
             <Button
               variant="ghost"
@@ -75,7 +72,7 @@ export function CustomMapLegendFactory(
               <XIcon className="h-4 w-4" />
             </Button>
           </div>
-          <div className="flex w-full flex-1 flex-col items-center overflow-auto">
+          <div className="flex w-full flex-1 flex-col items-center">
             {layers.map((layer, index) => {
               return (
                 <LayerLegendItem

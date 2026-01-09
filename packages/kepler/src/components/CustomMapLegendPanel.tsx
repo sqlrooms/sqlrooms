@@ -1,6 +1,5 @@
 import {
   MapLegendPanelFactory,
-  MapLegendPanelFactoryDeps,
   MapLegendPanelProps,
 } from '@kepler.gl/components';
 
