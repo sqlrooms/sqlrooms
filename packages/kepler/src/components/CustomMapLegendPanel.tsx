@@ -7,11 +7,10 @@ import {
 CustomMapLegendPanelFactory.deps = MapLegendPanelFactory.deps;
 
 export function CustomMapLegendPanelFactory(
-  ...deps: MapLegendPanelFactoryDeps
+  ...deps: Parameters<typeof MapLegendPanelFactory>
 ): ReturnType<typeof MapLegendPanelFactory> {
-  // @ts-ignore
   const MapLegendPanel = MapLegendPanelFactory(...deps);
-  return (props: MapLegendPanelProps) => {
+  const CustomMapLegendPanel = (props: MapLegendPanelProps) => {
     return (
       <>
         <style>{`.draggable-legend .map-control__panel-header { display: none !important; }`}</style>
@@ -19,4 +18,6 @@ export function CustomMapLegendPanelFactory(
       </>
     );
   };
+  CustomMapLegendPanel.displayName = 'CustomMapLegendPanel';
+  return CustomMapLegendPanel;
 }
