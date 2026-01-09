@@ -26,10 +26,7 @@ export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
-export {
-  convertToAiSDKTools,
-  completeIncompleteToolCalls,
-} from '@sqlrooms/ai-core';
+export {convertToAiSDKTools, fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {processAgentStream, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
