@@ -727,7 +727,7 @@ export function createAiSlice(
         ) => {
           // One-shot generateText path with explicit abort lifecycle management
           const state = get();
-          const currentSession = state.ai.getCurrentSession();
+          const currentSession = state.ai.getCurrentSession(); // only used when no model provider is provided
           const {
             systemInstructions,
             modelProvider,
@@ -737,23 +737,16 @@ export function createAiSlice(
             useTools = false,
           } = options;
 
-          const throwIfAborted = () => {
-            if (abortSignal?.aborted) {
-              throw new ToolAbortError('Operation cancelled by user');
-            }
-          };
+          if (abortSignal?.aborted) {
+            throw new ToolAbortError(TOOL_CALL_CANCELLED);
+          }
 
-          throwIfAborted();
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL =
-            baseUrl ||
-            state.ai.getBaseUrlFromSettings() ||
-            'https://api.openai.com/v1';
+          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
           const tools = state.ai.tools;
 
-          // remove execute from tools
           const toolsWithoutExecute = Object.fromEntries(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
@@ -782,7 +775,7 @@ export function createAiSlice(
                 ? String((error as {name?: unknown}).name)
                 : '';
             if (abortSignal?.aborted || errorName === 'AbortError') {
-              throw new ToolAbortError('Operation cancelled by user');
+              throw new ToolAbortError(TOOL_CALL_CANCELLED);
             }
             console.error('Error generating text:', error);
             return 'error: can not generate response';
@@ -855,13 +848,8 @@ export function createAiSlice(
           const stopFn = state.ai.getChatStop(sessionId);
 
           // Stop local chat streaming immediately if available
-          try {
-            stopFn?.();
-          } catch {
-            // no-op
-          }
+          stopFn?.();
 
-          // Call abort to signal cancellation
           abortController?.abort('Analysis cancelled');
 
           set((stateToUpdate) =>

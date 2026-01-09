@@ -9,7 +9,46 @@ import {
   UIMessagePart,
 } from '@sqlrooms/ai-config';
 import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
-import {TOOL_CALL_CANCELLED} from './constants';
+import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
+
+/**
+ * Merge multiple AbortSignals into a single signal.
+ *
+ * Why this exists:
+ * - `@ai-sdk/react` (`useChat`) provides a request-level abort signal (e.g. when calling `stop()`).
+ * - This app also has a per-session AbortController a.k.a the Stop button (e.g. `cancelAnalysis(sessionId)`).
+ *
+ * When either of those sources abort, we want downstream work (streaming / tools / fetch)
+ * to see a *single* abort signal.
+ *
+ * Notes:
+ * - If 0 signals are provided, returns `undefined` (callers can omit abort handling).
+ * - If 1 signal is provided, returns it directly (no wrapping controller).
+ * - If 2+ signals are provided, creates a new AbortController and aborts it when any input aborts.
+ * - Uses `{once: true}` listeners to avoid accumulating listeners on long-lived signals.
+ */
+export function mergeAbortSignals(
+  signals: Array<AbortSignal | undefined>,
+): AbortSignal | undefined {
+  const present = signals.filter(Boolean) as AbortSignal[];
+  if (present.length === 0) return undefined;
+  if (present.length === 1) return present[0];
+
+  const controller = new AbortController();
+  const abort = () => {
+    if (!controller.signal.aborted) controller.abort();
+  };
+
+  for (const s of present) {
+    if (s.aborted) {
+      abort();
+      break;
+    }
+    s.addEventListener(ABORT_EVENT, abort, {once: true});
+  }
+
+  return controller.signal;
+}
 
 /**
  * Custom error class for operation abort errors.

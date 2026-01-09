@@ -14,9 +14,12 @@ import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import {AddToolResult} from './types';
 import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
-import {ToolAbortError, fixIncompleteToolCalls} from './utils';
 import {
-  ABORT_EVENT,
+  mergeAbortSignals,
+  ToolAbortError,
+  fixIncompleteToolCalls,
+} from './utils';
+import {
   AI_DEFAULT_TEMPERATURE,
   ANALYSIS_PENDING_ID,
   TOOL_CALL_CANCELLED,
@@ -79,45 +82,6 @@ function getSessionById(
     .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
 }
 
-function getSessionIdFromRequestBody(parsed: unknown): string | undefined {
-  if (!parsed || typeof parsed !== 'object') return undefined;
-  const obj = parsed as Record<string, unknown>;
-  if (typeof obj.sessionId === 'string' && obj.sessionId.length > 0) {
-    return obj.sessionId;
-  }
-  // derive sessionId from useChat request id when we embed it as `${sessionId}::${revision}`
-  if (typeof obj.id === 'string') {
-    const id = obj.id;
-    const delimiter = '::';
-    const idx = id.indexOf(delimiter);
-    if (idx > 0) return id.slice(0, idx);
-  }
-  return undefined;
-}
-
-function mergeAbortSignals(
-  signals: Array<AbortSignal | undefined>,
-): AbortSignal | undefined {
-  const present = signals.filter(Boolean) as AbortSignal[];
-  if (present.length === 0) return undefined;
-  if (present.length === 1) return present[0];
-
-  const controller = new AbortController();
-  const abort = () => {
-    if (!controller.signal.aborted) controller.abort();
-  };
-
-  for (const s of present) {
-    if (s.aborted) {
-      abort();
-      break;
-    }
-    // once:true to avoid accumulating listeners on long-lived signals
-    s.addEventListener(ABORT_EVENT, abort, {once: true});
-  }
-  return controller.signal;
-}
-
 /**
  * Converts OpenAssistant tools to Vercel AI SDK tools with onToolCompleted handler
  */
@@ -165,19 +129,13 @@ export function createLocalChatTransportFactory({
       } catch {
         parsed = {};
       }
-      const parsedObj =
-        (parsed as {messages?: unknown; sessionId?: unknown}) || {};
-      const requestSessionId = sessionId || getSessionIdFromRequestBody(parsed);
+      const parsedObj = (parsed as {messages?: unknown}) || {};
 
       // Resolve provider/model and client at call time to pick up latest settings.
-      // IMPORTANT: scope to the session that owns this request, not the currentSessionId
-      // (users may switch sessions while a stream is in-flight).
       const state = store.getState();
-      const sessionFromBody = getSessionById(store, requestSessionId);
-      const currentSession = state.ai.getCurrentSession();
-      const session = sessionFromBody || currentSession;
-      const provider = session?.modelProvider || defaultProvider;
-      const modelId = session?.model || defaultModel;
+      const sessionFromBody = getSessionById(store, sessionId);
+      const provider = sessionFromBody?.modelProvider || defaultProvider;
+      const modelId = sessionFromBody?.model || defaultModel;
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
@@ -187,7 +145,7 @@ export function createLocalChatTransportFactory({
         const openai = createOpenAICompatible({
           apiKey,
           name: provider,
-          baseURL: baseUrl || 'https://api.openai.com/v1',
+          baseURL: baseUrl ?? '',
           headers,
         });
         model = openai.chatModel(modelId);
@@ -197,10 +155,7 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(
-        store,
-        requestSessionId,
-      );
+      const onToolCompleted = createOnToolCompletedHandler(store, sessionId);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
       // Remove execute from tools for the model call so tool invocations are
       // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
@@ -218,12 +173,7 @@ export function createLocalChatTransportFactory({
       });
 
       // Get abort controller for the owning session (from body) if available
-      const sessionAbortSignal = requestSessionId
-        ? state.ai.getAbortController(requestSessionId)?.signal
-        : state.ai.getCurrentSession()?.id
-          ? state.ai.getAbortController(state.ai.getCurrentSession()!.id)
-              ?.signal
-          : undefined;
+      const sessionAbortSignal = state.ai.getAbortController(sessionId)?.signal;
       // Also respect the request-level abort signal from useChat().stop()
       const abortSignal = mergeAbortSignals([
         init?.signal ?? undefined,
@@ -251,7 +201,7 @@ export function createRemoteChatTransportFactory(params: {
   store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
-  sessionId?: string;
+  sessionId: string;
 }) {
   return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -268,13 +218,9 @@ export function createRemoteChatTransportFactory(params: {
         parsed = {};
       }
 
-      const requestSessionId = sessionId || getSessionIdFromRequestBody(parsed);
-      const sessionFromBody = getSessionById(store, requestSessionId);
-      const currentSession = state.ai.getCurrentSession();
-      const session = sessionFromBody || currentSession;
-
-      const modelProvider = session?.modelProvider || defaultProvider;
-      const model = session?.model || defaultModel;
+      const sessionFromBody = getSessionById(store, sessionId);
+      const modelProvider = sessionFromBody?.modelProvider || defaultProvider;
+      const model = sessionFromBody?.model || defaultModel;
 
       const parsedObj =
         typeof parsed === 'object' && parsed !== null
@@ -287,11 +233,7 @@ export function createRemoteChatTransportFactory(params: {
       };
 
       // Merge request abort (useChat.stop) with per-session abort (cancelAnalysis)
-      const sessionAbortSignal = requestSessionId
-        ? state.ai.getAbortController(requestSessionId)?.signal
-        : currentSession?.id
-          ? state.ai.getAbortController(currentSession.id)?.signal
-          : undefined;
+      const sessionAbortSignal = state.ai.getAbortController(sessionId)?.signal;
       const abortSignal = mergeAbortSignals([
         init?.signal ?? undefined,
         sessionAbortSignal,
@@ -343,7 +285,7 @@ export function createChatHandlers({
             tool: toolName,
             toolCallId,
             state: 'output-error',
-            errorText: 'Operation cancelled by user',
+            errorText: TOOL_CALL_CANCELLED,
           });
           return;
         }
@@ -402,7 +344,7 @@ export function createChatHandlers({
           toolCallId,
           state: 'output-error',
           errorText: isAbortError
-            ? 'Operation cancelled by user'
+            ? TOOL_CALL_CANCELLED
             : getErrorMessageForDisplay(error),
         });
         // ensure mapping cleared on error too
@@ -433,33 +375,29 @@ export function createChatHandlers({
       sessionId: string;
       messages: UIMessage[];
     }) => {
-      // Delegate to onChatFinish with an override resolved by closure.
-      // We inline the minimal necessary override behavior by temporarily resolving sessionId.
-      const currentSessionId = sessionId;
-      if (!currentSessionId) return;
+      if (!sessionId) return;
       try {
         const state = store.getState();
-        const abortController = state.ai.getAbortController(currentSessionId);
+        const abortController = state.ai.getAbortController(sessionId);
 
         // check if the analysis has been aborted, force-complete and clean up immediately
         const aborted = !!abortController?.signal.aborted;
         if (aborted) {
           const sessionMessages =
-            (getSessionById(store, currentSessionId)
-              ?.uiMessages as UIMessage[]) || [];
+            (getSessionById(store, sessionId)?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
           const completedMessages = fixIncompleteToolCalls(sourceMessages);
-          state.ai.setSessionUiMessages(currentSessionId, completedMessages);
+          state.ai.setSessionUiMessages(sessionId, completedMessages);
 
-          state.ai.setIsRunningAnalysis(currentSessionId, false);
-          state.ai.setAbortController(currentSessionId, undefined);
+          state.ai.setIsRunningAnalysis(sessionId, false);
+          state.ai.setAbortController(sessionId, undefined);
 
           // Ensure an analysis result exists and is marked as cancelled
           store.setState((stateToUpdate: AiSliceStateForTransport) =>
             produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
               const targetSession = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === currentSessionId,
+                (s: AnalysisSessionSchema) => s.id === sessionId,
               );
               if (!targetSession) return;
 
@@ -504,12 +442,12 @@ export function createChatHandlers({
 
         // fix any incomplete tool-calls before saving (can happen with AbortController)
         const completedMessages = fixIncompleteToolCalls(messages);
-        state.ai.setSessionUiMessages(currentSessionId, completedMessages);
+        state.ai.setSessionUiMessages(sessionId, completedMessages);
 
         store.setState((stateToUpdate: AiSliceStateForTransport) =>
           produce(stateToUpdate, (draft: AiSliceStateForTransport) => {
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (!targetSession) return;
 
@@ -578,8 +516,8 @@ export function createChatHandlers({
           (!shouldAutoSendNext && !isLastMessageAssistant);
 
         if (shouldEndAnalysis) {
-          state.ai.setIsRunningAnalysis(currentSessionId, false);
-          state.ai.setAbortController(currentSessionId, undefined);
+          state.ai.setIsRunningAnalysis(sessionId, false);
+          state.ai.setAbortController(sessionId, undefined);
         }
       } catch (err) {
         console.error('onChatFinish error:', err);
@@ -587,8 +525,6 @@ export function createChatHandlers({
       }
     },
     onChatError: (sessionId: string, error: unknown) => {
-      // Reuse the existing logic but scoped to sessionId
-      const currentSessionId = sessionId;
       try {
         let errMsg = getErrorMessageForDisplay(error);
         if (!errMsg || errMsg.trim().length === 0) {
@@ -596,9 +532,9 @@ export function createChatHandlers({
         }
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
-            if (!currentSessionId) return;
+            if (!sessionId) return;
             const targetSession = draft.ai.config.sessions.find(
-              (s: AnalysisSessionSchema) => s.id === currentSessionId,
+              (s: AnalysisSessionSchema) => s.id === sessionId,
             );
             if (targetSession) {
               // fix any incomplete tool-calls before saving (can happen with AbortController)
@@ -651,10 +587,8 @@ export function createChatHandlers({
           }),
         );
 
-        if (currentSessionId) {
-          store.getState().ai.setIsRunningAnalysis(currentSessionId, false);
-          store.getState().ai.setAbortController(currentSessionId, undefined);
-        }
+        store.getState().ai.setIsRunningAnalysis(sessionId, false);
+        store.getState().ai.setAbortController(sessionId, undefined);
       } catch (err) {
         console.error('Failed to store chat error:', err);
         throw err;

@@ -124,8 +124,8 @@ export function useSessionChat(sessionId: string): UseSessionChatResult {
   }, [sessionId, messagesRevision]);
 
   const {messages, sendMessage, addToolResult, stop, status} = useChat({
-    // Encode sessionId into the request id so transports can resolve the owning session
-    // even if the user switches sessions mid-stream.
+    // Unique per-session/per-revision id so each session has an independent chat stream,
+    // and we can force a reset when messagesRevision changes.
     id: `${sessionId}::${messagesRevision}`,
     transport,
     messages: initialMessages,
