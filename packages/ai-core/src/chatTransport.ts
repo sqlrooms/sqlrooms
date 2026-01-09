@@ -58,14 +58,18 @@ export function createOnToolCompletedHandler(
   sessionId?: string,
 ) {
   return (toolCallId: string, additionalData: unknown) => {
-    const currentSessionId =
-      sessionId || store.getState().ai.config.currentSessionId;
-    if (!currentSessionId) return;
+    // Prefer explicit sessionId if provided, otherwise attempt to resolve from toolCallId.
+    const toolCallSessionId = store.getState().ai.getToolCallSession(toolCallId);
+    const resolvedSessionId =
+      sessionId ||
+      toolCallSessionId ||
+      store.getState().ai.config.currentSessionId;
+    if (!resolvedSessionId) return;
 
     store
       .getState()
       .ai.setSessionToolAdditionalData(
-        currentSessionId,
+        resolvedSessionId,
         toolCallId,
         additionalData,
       );
