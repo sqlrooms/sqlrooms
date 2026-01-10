@@ -91,7 +91,9 @@ export async function processAgentStream(
   const sessionId = store.getState().ai.getToolCallSession?.(parentToolCallId);
 
   if (!sessionId) {
-    throw new Error('Session ID not found');
+    throw new Error(
+      `Session ID not found for tool call "${parentToolCallId}". The tool may have been called outside of a valid session context.`,
+    );
   }
 
   const throwIfAborted = () => {
@@ -104,7 +106,6 @@ export async function processAgentStream(
 
   // Keep track of tool calls by ID for updating state
   const toolCallMap = new Map<string, number>();
-  const finalOutput = undefined;
 
   try {
     for await (const chunk of agentResult.toUIMessageStream()) {
@@ -128,7 +129,6 @@ export async function processAgentStream(
           parentToolCallId,
           agentToolCalls,
           sessionId,
-          finalOutput,
         });
       }
 
@@ -151,7 +151,6 @@ export async function processAgentStream(
               parentToolCallId,
               agentToolCalls,
               sessionId,
-              finalOutput,
             });
           }
         }
@@ -173,7 +172,6 @@ export async function processAgentStream(
               parentToolCallId,
               agentToolCalls,
               sessionId,
-              finalOutput,
             });
           }
         }

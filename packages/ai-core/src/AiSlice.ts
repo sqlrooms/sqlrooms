@@ -28,7 +28,9 @@ import {
 import {
   ABORT_EVENT,
   AI_DEFAULT_TEMPERATURE,
+  ANALYSIS_CANCELLED,
   ANALYSIS_PENDING_ID,
+  SESSION_DELETED,
   TOOL_CALL_CANCELLED,
 } from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
@@ -537,7 +539,7 @@ export function createAiSlice(
           // Clean up per-session state
           const abortController = sessionAbortControllers.get(sessionId);
           if (abortController) {
-            abortController.abort('Session deleted');
+            abortController.abort(SESSION_DELETED);
           }
           sessionAbortControllers.delete(sessionId);
           sessionChatStops.delete(sessionId);
@@ -844,7 +846,7 @@ export function createAiSlice(
           // Stop local chat streaming immediately if available
           stopFn?.();
 
-          abortController?.abort('Analysis cancelled');
+          abortController?.abort(ANALYSIS_CANCELLED);
 
           set((stateToUpdate) =>
             produce(stateToUpdate, (draft) => {

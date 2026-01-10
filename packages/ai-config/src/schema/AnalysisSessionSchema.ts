@@ -12,10 +12,6 @@ import {
   needsV0_26_0Migration,
   migrateFromV0_26_0,
 } from '../migration/AnalysisSession-v0.26.0';
-import {
-  needsV0_27_0Migration,
-  migrateFromV0_27_0,
-} from '../migration/AnalysisSession-v0.27.0';
 
 export const ErrorMessageSchema = z.object({
   error: z.string(),
@@ -69,11 +65,6 @@ const migrateAnalysisSession = z.preprocess((data) => {
   // Apply v0.26.0 migration (add uiMessages and toolAdditionalData)
   if (needsV0_26_0Migration(migrated)) {
     migrated = migrateFromV0_26_0(migrated);
-  }
-
-  // Apply v0.27.0 migration (add prompt and isRunning to support multiple sessions)
-  if (needsV0_27_0Migration(migrated)) {
-    migrated = migrateFromV0_27_0(migrated);
   }
 
   return migrated;

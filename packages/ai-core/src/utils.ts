@@ -9,7 +9,11 @@ import {
   UIMessagePart,
 } from '@sqlrooms/ai-config';
 import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
-import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
+import {
+  ABORT_EVENT,
+  ANALYSIS_PENDING_ID,
+  TOOL_CALL_CANCELLED,
+} from './constants';
 
 /**
  * Merge multiple AbortSignals into a single signal.
@@ -25,7 +29,8 @@ import {ABORT_EVENT, TOOL_CALL_CANCELLED} from './constants';
  * - If 0 signals are provided, returns `undefined` (callers can omit abort handling).
  * - If 1 signal is provided, returns it directly (no wrapping controller).
  * - If 2+ signals are provided, creates a new AbortController and aborts it when any input aborts.
- * - Uses `{once: true}` listeners to avoid accumulating listeners on long-lived signals.
+ * - (not currently used) use native `AbortSignal.any()` to avoid per-request listener accumulation on long-lived signals.
+ * -`{once: true}` listeners if `AbortSignal.any()` is unavailable.
  */
 export function mergeAbortSignals(
   signals: Array<AbortSignal | undefined>,
@@ -33,6 +38,18 @@ export function mergeAbortSignals(
   const present = signals.filter(Boolean) as AbortSignal[];
   if (present.length === 0) return undefined;
   if (present.length === 1) return present[0];
+
+  // Prefer the platform implementation when available.
+  // It avoids attaching JS event listeners to long-lived signals (e.g. per-session AbortController),
+  // which would otherwise accumulate one listener per request if requests usually complete normally.
+  //
+  // Node >=22 and modern browsers support this.
+  // We intentionally use an `any` cast to keep compatibility with older TS lib typings.
+  // const anyFn = (AbortSignal as unknown as {any?: (signals: AbortSignal[]) => AbortSignal})
+  //   .any;
+  // if (typeof anyFn === 'function') {
+  //   return anyFn(present);
+  // }
 
   const controller = new AbortController();
   const abort = () => {
@@ -184,7 +201,7 @@ export function cleanupPendingAnalysisResults(
 
   // Remove all pending results
   const nonPendingResults = analysisResults.filter(
-    (result) => result.id !== '__pending__',
+    (result) => result.id !== ANALYSIS_PENDING_ID,
   );
 
   // Find all user messages that don't have a corresponding assistant response
@@ -240,9 +257,7 @@ export function cleanupPendingAnalysisResults(
  * @param messages - The messages to validate and complete
  * @returns Cleaned messages with completed tool-call/result pairs
  */
-export function fixIncompleteToolCalls(
-  messages: UIMessage[],
-): UIMessage[] {
+export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
   return messages.map((message) => {
     if (message.role !== 'assistant' || !message.parts) {
       return message;

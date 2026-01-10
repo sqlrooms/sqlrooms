@@ -59,7 +59,9 @@ export function createOnToolCompletedHandler(
 ) {
   return (toolCallId: string, additionalData: unknown) => {
     // Prefer explicit sessionId if provided, otherwise attempt to resolve from toolCallId.
-    const toolCallSessionId = store.getState().ai.getToolCallSession(toolCallId);
+    const toolCallSessionId = store
+      .getState()
+      .ai.getToolCallSession(toolCallId);
     const resolvedSessionId =
       sessionId ||
       toolCallSessionId ||
@@ -81,9 +83,21 @@ function getSessionById(
   sessionId: string | undefined,
 ): AnalysisSessionSchema | undefined {
   if (!sessionId) return undefined;
-  return store
-    .getState()
-    .ai.config.sessions.find((s: AnalysisSessionSchema) => s.id === sessionId);
+
+  const sessions = store.getState().ai.config.sessions;
+  const session = sessions.find(
+    (s: AnalysisSessionSchema) => s.id === sessionId,
+  );
+
+  if (!session) {
+    return undefined;
+  }
+
+  if (session.id !== sessionId) {
+    return undefined;
+  }
+
+  return session;
 }
 
 /**

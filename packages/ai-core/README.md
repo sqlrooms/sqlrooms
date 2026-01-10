@@ -464,12 +464,6 @@ createAiSlice({
 The `processAgentStream` function handles the complexity of integrating agent execution into the main conversation:
 
 ```typescript
-await processAgentStream(agentResult, store, parentToolCallId)
-```
-
-You can also pass an `AbortSignal` as the optional 4th argument to support cancellation:
-
-```typescript
 await processAgentStream(agentResult, store, parentToolCallId, abortSignal)
 ```
 
