@@ -1,9 +1,4 @@
-import {
-  AnalysisResultsContainer,
-  ModelSelector,
-  QueryControls,
-  SessionControls,
-} from '@sqlrooms/ai-core';
+import {ChatContainer, ModelSelector} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, Spinner, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -18,46 +13,48 @@ export const AssistantView: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-      <div className="relative mb-4">
-        <SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
-        <Button
-          variant="outline"
-          className="hover:bg-accent absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors"
-          onClick={settingsPanelOpen.onToggle}
-          title="Configuration"
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
-      </div>
-
-      {settingsPanelOpen.isOpen ? (
-        <div className="flex-grow overflow-auto">
-          {currentSessionId && (
-            <AiSettingsPanel disclosure={settingsPanelOpen}>
-              <AiSettingsPanel.ProvidersSettings />
-              <AiSettingsPanel.ModelsSettings />
-              <AiSettingsPanel.ModelParametersSettings />
-            </AiSettingsPanel>
-          )}
+      <ChatContainer>
+        <div className="relative mb-4">
+          <ChatContainer.SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
+          <Button
+            variant="outline"
+            className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
+            onClick={settingsPanelOpen.onToggle}
+            title="Configuration"
+          >
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
-      ) : (
-        <>
-          <div className="flex-grow overflow-auto">
-            <AnalysisResultsContainer
-              key={currentSessionId} // will prevent scrolling to bottom after changing current session
-            />
-            <div className="flex h-full w-full flex-col items-center justify-center">
-              <Spinner />
-            </div>
-          </div>
 
-          <QueryControls placeholder="What would you like to change in the app?'">
-            <div className="flex items-center justify-end gap-2">
-              <ModelSelector />
+        {settingsPanelOpen.isOpen ? (
+          <div className="flex-grow overflow-auto">
+            {currentSessionId && (
+              <AiSettingsPanel disclosure={settingsPanelOpen}>
+                <AiSettingsPanel.ProvidersSettings />
+                <AiSettingsPanel.ModelsSettings />
+                <AiSettingsPanel.ModelParametersSettings />
+              </AiSettingsPanel>
+            )}
+          </div>
+        ) : (
+          <>
+            <div className="flex-grow overflow-auto">
+              <ChatContainer.AnalysisResultsContainer
+                key={currentSessionId} // will prevent scrolling to bottom after changing current session
+              />
+              <div className="flex h-full w-full flex-col items-center justify-center">
+                <Spinner />
+              </div>
             </div>
-          </QueryControls>
-        </>
-      )}
+
+            <ChatContainer.QueryControls placeholder="What would you like to change in the app?'">
+              <div className="flex items-center justify-end gap-2">
+                <ModelSelector />
+              </div>
+            </ChatContainer.QueryControls>
+          </>
+        )}
+      </ChatContainer>
     </div>
   );
 };

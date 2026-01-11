@@ -52,7 +52,7 @@ export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ReasoningBox} from '@sqlrooms/ai-core';
-export {SessionChatManager} from '@sqlrooms/ai-core';
+export {ChatContainer} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config
 export {
