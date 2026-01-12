@@ -6,10 +6,14 @@ import {
   DndContextFactory,
   Factory,
   FilterPanelHeaderFactory,
+  MapLegendFactory,
+  MapLegendPanelFactory,
 } from '@kepler.gl/components';
 import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
 import {CustomFilterPanelHeaderFactory} from './CustomFilterPanelHeader';
+import {CustomMapLegendFactory} from './CustomMapLegend';
+import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
 
 const CustomAddDataButtonFactory = () => {
   return () => null;
@@ -27,6 +31,8 @@ const recipes = [
   [PanelTitleFactory, CustomPanelTitleFactory],
   [DndContextFactory, CustomDndContextFactory],
   [FilterPanelHeaderFactory, CustomFilterPanelHeaderFactory],
+  [MapLegendPanelFactory, CustomMapLegendPanelFactory],
+  [MapLegendFactory, CustomMapLegendFactory],
 ] as [Factory, Factory][];
 
 export const KeplerInjector = provideRecipesToInjector(recipes, appInjector);
