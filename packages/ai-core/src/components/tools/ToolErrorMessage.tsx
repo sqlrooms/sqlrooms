@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import { JsonMonacoEditor } from '@sqlrooms/monaco-editor';
 import {
   Button,
   Popover,
@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {TriangleAlertIcon} from 'lucide-react';
+import { TriangleAlertIcon } from 'lucide-react';
 
 /**
  * Displays a compact, reusable popover with a warning icon and error details.
@@ -61,21 +61,21 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
           <TriangleAlertIcon />
         </Button>
       </PopoverTrigger>
-      {popoverOpen.isOpen && (
-        <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
+      {popoverOpen.isOpen ? (
+        <PopoverContent align={align} style={{ width: '600px', maxWidth: '80%' }}>
           <div className="flex flex-col gap-2">
             <div className="border-b text-sm font-medium">{title}</div>
 
-            {errorText && (
+            {errorText ? (
               <div className="whitespace-pre-wrap font-mono text-xs">
                 {errorText}
               </div>
-            )}
+            ) : null}
 
-            {hasDetails && (
+            {hasDetails ? (
               <div
                 className="w-full overflow-hidden rounded-md border"
-                style={{height: editorHeightPx}}
+                style={{ height: editorHeightPx }}
               >
                 <JsonMonacoEditor
                   className="h-full"
@@ -83,16 +83,16 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
                   readOnly={true}
                   options={{
                     lineNumbers: 'off',
-                    minimap: {enabled: false},
+                    minimap: { enabled: false },
                     scrollBeyondLastLine: false,
                     wordWrap: 'on',
                   }}
                 />
               </div>
-            )}
+            ) : null}
           </div>
         </PopoverContent>
-      )}
+      ) : null}
     </Popover>
   );
 }
