@@ -147,11 +147,13 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
+            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         ) : (
           <MessagePartsList
             parts={uiMessageParts}
+            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         )}

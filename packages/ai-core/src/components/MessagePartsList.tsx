@@ -3,7 +3,12 @@ import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ToolPartRenderer} from './ToolPartRenderer';
-import {isTextPart, isReasoningPart, isToolPart} from '../utils';
+import {
+  isTextPart,
+  isReasoningPart,
+  isToolPart,
+  isDynamicToolPart,
+} from '../utils';
 
 /**
  * Props for the MessagePartsList component
@@ -11,6 +16,8 @@ import {isTextPart, isReasoningPart, isToolPart} from '../utils';
 type MessagePartsListProps = {
   /** Array of UI message parts to render */
   parts: UIMessagePart[];
+  /** Per-session additional data keyed by toolCallId */
+  toolAdditionalData?: Record<string, unknown>;
   /** Optional custom components for markdown rendering */
   customMarkdownComponents?: Partial<Components>;
 };
@@ -25,6 +32,7 @@ type MessagePartsListProps = {
  */
 export const MessagePartsList: React.FC<MessagePartsListProps> = ({
   parts,
+  toolAdditionalData,
   customMarkdownComponents,
 }) => {
   return (
@@ -47,8 +55,15 @@ export const MessagePartsList: React.FC<MessagePartsListProps> = ({
             </div>
           );
         }
-        if (isToolPart(part)) {
-          return <ToolPartRenderer key={`tool-call-${index}`} part={part} />;
+        if (isToolPart(part) || isDynamicToolPart(part)) {
+          return (
+            <ToolPartRenderer
+              key={`tool-call-${index}`}
+              part={part}
+              toolCallId={part.toolCallId}
+              toolAdditionalData={toolAdditionalData}
+            />
+          );
         }
         return null;
       })}

@@ -87,7 +87,7 @@ const {roomStore, useRoomStore} = createRoomStore({
   }),
   // Add AI slice
   ...createAiSlice({
-    initialAnalysisPrompt: 'What insights can you provide from my data?',
+    initialPrompt: 'What insights can you provide from my data?',
     // Optional: Add custom tools
     tools: {
       // Your custom tools
@@ -159,7 +159,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     }),
     // AI slice
     ...createAiSlice({
-      initialAnalysisPrompt: 'What insights can you provide from my data?',
+      initialPrompt: 'What insights can you provide from my data?',
       tools: {
         // Your custom tools
       },
@@ -218,13 +218,13 @@ function AnalysisPanel() {
 
 ```tsx
 function AiStatusIndicator() {
-  const isRunningAnalysis = useRoomStore((state) => state.ai.isRunningAnalysis);
-  const analysisPrompt = useRoomStore((state) => state.ai.analysisPrompt);
+  const isRunning = useRoomStore((state) => state.ai.isRunning);
+  const prompt = useRoomStore((state) => state.ai.prompt);
   const currentSession = useRoomStore((state) => state.ai.getCurrentSession());
   const lastResult =
     currentSession?.analysisResults[currentSession.analysisResults.length - 1];
 
-  if (isRunningAnalysis) {
+  if (isRunning) {
     return <div>AI is analyzing your data...</div>;
   }
 
@@ -232,8 +232,8 @@ function AiStatusIndicator() {
     return <div>Error: {lastResult.errorMessage.message}</div>;
   }
 
-  if (analysisPrompt) {
-    return <div>Last query: "{analysisPrompt}"</div>;
+  if (prompt) {
+    return <div>Last query: "{prompt}"</div>;
   }
 
   return <div>Ask AI a question about your data</div>;
@@ -246,20 +246,20 @@ The AiSlice provides a comprehensive set of state fields and methods for managin
 
 ### State Fields
 
-#### `analysisPrompt`
+#### `prompt`
 
 The current prompt text entered by the user for analysis.
 
 ```tsx
-const prompt = useRoomStore((state) => state.ai.analysisPrompt);
+const prompt = useRoomStore((state) => state.ai.prompt);
 ```
 
-#### `isRunningAnalysis`
+#### `isRunning`
 
 Boolean flag indicating whether an analysis is currently in progress.
 
 ```tsx
-const isRunning = useRoomStore((state) => state.ai.isRunningAnalysis);
+const isRunning = useRoomStore((state) => state.ai.isRunning);
 ```
 
 #### `tools`
@@ -270,24 +270,24 @@ Record of available AI tools that can be used during analysis.
 const availableTools = useRoomStore((state) => state.ai.tools);
 ```
 
-#### `analysisAbortController`
+#### `abortController`
 
 Optional AbortController instance that can be used to cancel an ongoing analysis.
 
 ```tsx
 const abortController = useRoomStore(
-  (state) => state.ai.analysisAbortController,
+  (state) => state.ai.abortController,
 );
 ```
 
 ### Methods
 
-#### `setAnalysisPrompt(prompt: string)`
+#### `setPrompt(prompt: string)`
 
 Sets the current analysis prompt text.
 
 ```tsx
-const setPrompt = useRoomStore((state) => state.ai.setAnalysisPrompt);
+const setPrompt = useRoomStore((state) => state.ai.setPrompt);
 setPrompt('Analyze sales trends for the last quarter');
 ```
 

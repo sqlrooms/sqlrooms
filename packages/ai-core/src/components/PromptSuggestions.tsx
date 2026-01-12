@@ -64,7 +64,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
                       'relative',
                       'flex items-center justify-center',
                       'px-4 py-2',
-                      'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
+                      'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
                     )}
                     type="button"
                   >
@@ -101,11 +101,16 @@ type PromptSuggestionsItemProps = {
  * Displays a single prompt suggestion and handles click events
  */
 const Item: React.FC<PromptSuggestionsItemProps> = ({text, className}) => {
-  const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const setPrompt = useStoreWithAi(
+    (s) => s.ai.setPrompt,
+  );
 
   const handleClick = useCallback(() => {
-    setAnalysisPrompt(text);
-  }, [text, setAnalysisPrompt]);
+    if (currentSession?.id) {
+      setPrompt(currentSession.id, text);
+    }
+  }, [text, setPrompt, currentSession]);
 
   return (
     <Tooltip>
@@ -125,14 +130,14 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({text, className}) => {
             'flex items-start justify-start',
             'text-left',
             'overflow-hidden',
-            'py-2 pl-8 pr-4',
-            'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
+            'py-2 pr-4 pl-8',
+            'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
             className,
           )}
           type="button"
           title={text}
         >
-          <Lightbulb className="absolute left-2 top-3 h-3.5 w-3.5 opacity-60" />
+          <Lightbulb className="absolute top-3 left-2 h-3.5 w-3.5 opacity-60" />
           <span className="line-clamp-2 text-wrap break-words">
             {truncate(text, 40)}
           </span>

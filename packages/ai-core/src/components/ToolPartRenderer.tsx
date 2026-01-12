@@ -84,15 +84,20 @@ const AgentProgressRenderer: React.FC<{
  * @param props.part - The UI message part to render
  * @returns A React component displaying the tool part, or null if not a tool part
  */
-export const ToolPartRenderer = ({part}: {part: UIMessagePart}) => {
-  const toolAdditionalData = useStoreWithAi(
-    (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
-  );
+export const ToolPartRenderer = ({
+  part,
+  toolCallId,
+  toolAdditionalData = {},
+}: {
+  part: UIMessagePart;
+  toolCallId: string;
+  toolAdditionalData?: Record<string, unknown>;
+}) => {
   const tools = useStoreWithAi((s) => s.ai.tools);
 
   if (!isToolPart(part) && !isDynamicToolPart(part)) return null;
 
-  const {type, toolCallId, state, input} = part;
+  const {type, state, input} = part;
   const toolName =
     type === 'dynamic-tool'
       ? part.toolName || 'unknown'

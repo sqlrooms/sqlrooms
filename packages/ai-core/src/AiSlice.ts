@@ -24,53 +24,69 @@ import {
   createRemoteChatTransportFactory,
   ToolCall,
   convertToAiSDKTools,
-  completeIncompleteToolCalls,
 } from './chatTransport';
-import {AI_DEFAULT_TEMPERATURE} from './constants';
+import {
+  ABORT_EVENT,
+  AI_DEFAULT_TEMPERATURE,
+  ANALYSIS_CANCELLED,
+  ANALYSIS_PENDING_ID,
+  SESSION_DELETED,
+  TOOL_CALL_CANCELLED,
+} from './constants';
 import {hasAiSettingsConfig} from './hasAiSettingsConfig';
 import {OpenAssistantToolSet} from '@openassistant/utils';
-import type {GetProviderOptions} from './types';
-import {AddToolResult} from './types';
-import {cleanupPendingAnalysisResults} from './utils';
+import type {
+  AddToolResult,
+  AiChatSendMessage,
+  GetProviderOptions,
+} from './types';
+import {
+  cleanupPendingAnalysisResults,
+  ToolAbortError,
+  fixIncompleteToolCalls,
+} from './utils';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
-
-// Custom type for onChatToolCall that includes addToolResult
-type ExtendedChatOnToolCallCallback = (args: {
-  toolCall: ToolCall;
-  addToolResult?: AddToolResult;
-}) => Promise<void> | void;
 
 export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
-    analysisPrompt: string;
-    isRunningAnalysis: boolean;
     promptSuggestionsVisible: boolean;
     tools: OpenAssistantToolSet;
-    analysisAbortController?: AbortController;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
-    /** Latest stop function from useChat to immediately halt local streaming */
-    chatStop?: () => void;
-    /** Register/replace the current chat stop function */
-    setChatStop: (stop: (() => void) | undefined) => void;
-    /** Latest sendMessage function from useChat to send messages */
-    chatSendMessage?: (message: {text: string}) => void;
-    /** Register/replace the current chat sendMessage function */
-    setChatSendMessage: (
-      sendMessage: ((message: {text: string}) => void) | undefined,
+    getAbortController: (sessionId: string) => AbortController | undefined;
+    setAbortController: (
+      sessionId: string,
+      controller: AbortController | undefined,
     ) => void;
-    /** Latest addToolResult function from useChat to add tool results */
-    addToolResult?: AddToolResult;
-    /** Register/replace the current addToolResult function */
-    setAddToolResult: (addToolResult: AddToolResult | undefined) => void;
-    /** Wait for a tool result to be added by UI component */
+    setChatStop: (sessionId: string, stop: (() => void) | undefined) => void;
+    getChatStop: (sessionId: string) => (() => void) | undefined;
+    setChatSendMessage: (
+      sessionId: string,
+      sendMessage: AiChatSendMessage | undefined,
+    ) => void;
+    getChatSendMessage: (sessionId: string) => AiChatSendMessage | undefined;
+    setAddToolResult: (
+      sessionId: string,
+      addToolResult: AddToolResult | undefined,
+    ) => void;
+    getAddToolResult: (sessionId: string) => AddToolResult | undefined;
     waitForToolResult: (
+      sessionId: string,
       toolCallId: string,
       abortSignal?: AbortSignal,
     ) => Promise<void>;
-    setAnalysisPrompt: (prompt: string) => void;
+    /** Map toolCallId -> sessionId for long-running tool streams (e.g. agent tools) */
+    setToolCallSession: (
+      toolCallId: string,
+      sessionId: string | undefined,
+    ) => void;
+    getToolCallSession: (toolCallId: string) => string | undefined;
+    setPrompt: (sessionId: string, prompt: string) => void;
+    getPrompt: (sessionId: string) => string;
+    setIsRunning: (sessionId: string, isRunning: boolean) => void;
+    getIsRunning: (sessionId: string) => boolean;
     addAnalysisResult: (message: UIMessage) => void;
     sendPrompt: (
       prompt: string,
@@ -83,10 +99,8 @@ export type AiSliceState = {
         useTools?: boolean;
       },
     ) => Promise<string>;
-    startAnalysis: (
-      sendMessage: (message: {text: string}) => void,
-    ) => Promise<void>;
-    cancelAnalysis: () => void;
+    startAnalysis: (sessionId: string) => Promise<void>;
+    cancelAnalysis: (sessionId: string) => void;
     setAiModel: (modelProvider: string, model: string) => void;
     createSession: (
       name?: string,
@@ -111,23 +125,32 @@ export type AiSliceState = {
     getBaseUrlFromSettings: () => string | undefined;
     getMaxStepsFromSettings: () => number;
     getFullInstructions: () => string;
-    // Chat transport for useChat hook
-    getLocalChatTransport: () => DefaultChatTransport<UIMessage>;
+    getLocalChatTransport: (
+      sessionId: string,
+    ) => DefaultChatTransport<UIMessage>;
     /** Optional remote endpoint to use for chat; if empty, local transport is used */
     chatEndPoint: string;
     chatHeaders: Record<string, string>;
     getRemoteChatTransport: (
+      sessionId: string,
       endpoint: string,
       headers?: Record<string, string>,
     ) => DefaultChatTransport<UIMessage>;
-    onChatToolCall: ExtendedChatOnToolCallCallback;
-    onChatData: ChatOnDataCallback<UIMessage>;
     onChatFinish: (args: {
-      message: UIMessage;
+      sessionId: string;
       messages: UIMessage[];
       isError?: boolean;
     }) => void;
-    onChatError: (error: unknown) => void;
+    onChatToolCall: (args: {
+      sessionId: string;
+      toolCall: ToolCall;
+      addToolResult?: AddToolResult;
+    }) => Promise<void> | void;
+    onChatData: (
+      sessionId: string,
+      dataPart: Parameters<ChatOnDataCallback<UIMessage>>[0],
+    ) => void;
+    onChatError: (sessionId: string, error: unknown) => void;
   };
 };
 
@@ -136,15 +159,8 @@ export type AiSliceState = {
  */
 export interface AiSliceOptions {
   config?: Partial<AiSliceConfig>;
-  /** Initial prompt to display in the analysis input */
-  initialAnalysisPrompt?: string;
-  /** Tools to add to the AI assistant */
+  initialPrompt?: string;
   tools: OpenAssistantToolSet;
-
-  /**
-   * Function to get custom instructions for the AI assistant
-   * @returns The instructions string to use
-   */
   getInstructions: () => string;
   defaultProvider?: string;
   defaultModel?: string;
@@ -164,7 +180,7 @@ export function createAiSlice(
   params: AiSliceOptions,
 ): StateCreator<AiSliceState> {
   const {
-    initialAnalysisPrompt = '',
+    initialPrompt = '',
     tools,
     getApiKey,
     getBaseUrl,
@@ -186,7 +202,7 @@ export function createAiSlice(
           sessions: params.config.sessions.map((session) => {
             const cleaned = cleanupPendingAnalysisResults(session);
             const completedUiMessages = Array.isArray(cleaned.uiMessages)
-              ? completeIncompleteToolCalls(
+              ? fixIncompleteToolCalls(
                   (cleaned.uiMessages as unknown as UIMessage[]) || [],
                 )
               : [];
@@ -199,11 +215,17 @@ export function createAiSlice(
         }
       : params.config;
 
-    // Create a persistent Map for pending tool call resolvers (outside of immer draft)
+    // Create persistent Maps (outside of immer draft)
     const pendingToolCallResolvers = new Map<
       string,
       {resolve: () => void; reject: (error: Error) => void}
     >();
+
+    const toolCallToSessionId = new Map<string, string>();
+    const sessionAbortControllers = new Map<string, AbortController>();
+    const sessionChatStops = new Map<string, () => void>();
+    const sessionChatSendMessages = new Map<string, AiChatSendMessage>();
+    const sessionAddToolResults = new Map<string, AddToolResult>();
 
     // Initialize base config and ensure the initial session respects default provider/model
     const baseConfig = createDefaultAiConfig(cleanedConfig);
@@ -212,61 +234,141 @@ export function createAiSlice(
       if (firstSession) {
         firstSession.modelProvider = defaultProvider;
         firstSession.model = defaultModel;
+        firstSession.prompt = initialPrompt;
+        firstSession.isRunning = false;
       }
     }
 
     return {
       ai: {
         config: baseConfig,
-        analysisPrompt: initialAnalysisPrompt,
-        isRunningAnalysis: false,
         promptSuggestionsVisible: true,
         tools,
         getProviderOptions,
-        waitForToolResult: (toolCallId: string, abortSignal?: AbortSignal) => {
+        waitForToolResult: (
+          sessionId: string,
+          toolCallId: string,
+          abortSignal?: AbortSignal,
+        ) => {
+          const key = `${sessionId}:${toolCallId}`;
           return new Promise<void>((resolve, reject) => {
             // Set up abort handler
             const abortHandler = () => {
-              const resolver = pendingToolCallResolvers.get(toolCallId);
+              const resolver = pendingToolCallResolvers.get(key);
               if (resolver) {
-                pendingToolCallResolvers.delete(toolCallId);
-                resolver.reject(new Error('Tool call cancelled by user'));
+                pendingToolCallResolvers.delete(key);
+                resolver.reject(new Error(TOOL_CALL_CANCELLED));
               }
             };
 
             if (abortSignal) {
               if (abortSignal.aborted) {
-                reject(new Error('Tool call cancelled by user'));
+                reject(new Error(TOOL_CALL_CANCELLED));
                 return;
               }
-              abortSignal.addEventListener('abort', abortHandler, {once: true});
+              abortSignal.addEventListener(ABORT_EVENT, abortHandler, {
+                once: true,
+              });
             }
 
             // Store resolver (overwrites any existing one, which is fine for our use case)
-            pendingToolCallResolvers.set(toolCallId, {
+            pendingToolCallResolvers.set(key, {
               resolve: () => {
                 if (abortSignal) {
-                  abortSignal.removeEventListener('abort', abortHandler);
+                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 resolve();
               },
               reject: (error: Error) => {
                 if (abortSignal) {
-                  abortSignal.removeEventListener('abort', abortHandler);
+                  abortSignal.removeEventListener(ABORT_EVENT, abortHandler);
                 }
-                pendingToolCallResolvers.delete(toolCallId);
+                pendingToolCallResolvers.delete(key);
                 reject(error);
               },
             });
           });
         },
-        setChatStop: (stopFn: (() => void) | undefined) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.chatStop = stopFn;
-            }),
-          );
+
+        setToolCallSession: (
+          toolCallId: string,
+          sessionId: string | undefined,
+        ) => {
+          if (!toolCallId) return;
+          if (sessionId) {
+            toolCallToSessionId.set(toolCallId, sessionId);
+          } else {
+            toolCallToSessionId.delete(toolCallId);
+          }
+        },
+        getToolCallSession: (toolCallId: string) => {
+          if (!toolCallId) return undefined;
+          return toolCallToSessionId.get(toolCallId);
+        },
+
+        getAbortController: (sessionId: string) => {
+          return sessionAbortControllers.get(sessionId);
+        },
+        setAbortController: (
+          sessionId: string,
+          controller: AbortController | undefined,
+        ) => {
+          if (controller) {
+            sessionAbortControllers.set(sessionId, controller);
+          } else {
+            sessionAbortControllers.delete(sessionId);
+          }
+        },
+
+        setChatStop: (sessionId: string, stopFn: (() => void) | undefined) => {
+          if (stopFn) {
+            sessionChatStops.set(sessionId, stopFn);
+          } else {
+            sessionChatStops.delete(sessionId);
+          }
+        },
+        getChatStop: (sessionId: string) => {
+          return sessionChatStops.get(sessionId);
+        },
+
+        setChatSendMessage: (
+          sessionId: string,
+          sendMessageFn: AiChatSendMessage | undefined,
+        ) => {
+          if (sendMessageFn) {
+            sessionChatSendMessages.set(sessionId, sendMessageFn);
+          } else {
+            sessionChatSendMessages.delete(sessionId);
+          }
+        },
+        getChatSendMessage: (sessionId: string) => {
+          return sessionChatSendMessages.get(sessionId);
+        },
+
+        setAddToolResult: (
+          sessionId: string,
+          addToolResultFn: AddToolResult | undefined,
+        ) => {
+          if (addToolResultFn) {
+            // Wrap addToolResult to intercept calls and resolve pending promises
+            const wrappedAddToolResult: AddToolResult = (options) => {
+              addToolResultFn(options);
+              const key = `${sessionId}:${options.toolCallId}`;
+              const resolver = pendingToolCallResolvers.get(key);
+              if (resolver) {
+                resolver.resolve();
+              }
+              // Tool is complete (success or error), we can drop toolCall->session mapping.
+              toolCallToSessionId.delete(options.toolCallId);
+            };
+            sessionAddToolResults.set(sessionId, wrappedAddToolResult);
+          } else {
+            sessionAddToolResults.delete(sessionId);
+          }
+        },
+        getAddToolResult: (sessionId: string) => {
+          return sessionAddToolResults.get(sessionId);
         },
 
         setConfig: (config: AiSliceConfig) => {
@@ -285,47 +387,44 @@ export function createAiSlice(
           );
         },
 
-        setChatSendMessage: (
-          sendMessageFn: ((message: {text: string}) => void) | undefined,
-        ) => {
+        setPrompt: (sessionId: string, prompt: string) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.chatSendMessage = sendMessageFn;
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.prompt = prompt;
+              }
             }),
           );
         },
+        getPrompt: (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
+          );
+          return session?.prompt || '';
+        },
 
-        setAddToolResult: (addToolResultFn: AddToolResult | undefined) => {
-          // Wrap addToolResult to intercept calls and resolve pending promises
-          const wrappedAddToolResult: AddToolResult | undefined =
-            addToolResultFn
-              ? (options) => {
-                  // Call the original addToolResult
-                  addToolResultFn(options);
-
-                  // Resolve the promise if there's a pending waiter for this toolCallId
-                  const resolver = pendingToolCallResolvers.get(
-                    options.toolCallId,
-                  );
-                  if (resolver) {
-                    resolver.resolve();
-                  }
-                }
-              : undefined;
-
+        setIsRunning: (sessionId: string, isRunning: boolean) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.ai.addToolResult = wrappedAddToolResult;
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.isRunning = isRunning;
+              }
             }),
           );
         },
-
-        setAnalysisPrompt: (prompt: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.analysisPrompt = prompt;
-            }),
+        getIsRunning: (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
           );
+          return session?.isRunning || false;
         },
 
         /**
@@ -384,7 +483,7 @@ export function createAiSlice(
 
           set((state) =>
             produce(state, (draft) => {
-              // Add to AI sessions
+              // Add to AI sessions with per-session state
               draft.ai.config.sessions.unshift({
                 id: newSessionId,
                 name: sessionName,
@@ -398,6 +497,8 @@ export function createAiSlice(
                 uiMessages: [],
                 toolAdditionalData: {},
                 messagesRevision: 0,
+                prompt: '',
+                isRunning: false,
               });
               draft.ai.config.currentSessionId = newSessionId;
             }),
@@ -432,9 +533,19 @@ export function createAiSlice(
         },
 
         /**
-         * Delete a session
+         * Delete a session and clean up its resources
          */
         deleteSession: (sessionId: string) => {
+          // Clean up per-session state
+          const abortController = sessionAbortControllers.get(sessionId);
+          if (abortController) {
+            abortController.abort(SESSION_DELETED);
+          }
+          sessionAbortControllers.delete(sessionId);
+          sessionChatStops.delete(sessionId);
+          sessionChatSendMessages.delete(sessionId);
+          sessionAddToolResults.delete(sessionId);
+
           set((state) =>
             produce(state, (draft) => {
               const sessionIndex = draft.ai.config.sessions.findIndex(
@@ -612,7 +723,7 @@ export function createAiSlice(
         ) => {
           // One-shot generateText path with explicit abort lifecycle management
           const state = get();
-          const currentSession = state.ai.getCurrentSession();
+          const currentSession = state.ai.getCurrentSession(); // only used when no model provider is provided
           const {
             systemInstructions,
             modelProvider,
@@ -621,16 +732,17 @@ export function createAiSlice(
             abortSignal,
             useTools = false,
           } = options;
+
+          if (abortSignal?.aborted) {
+            throw new ToolAbortError(TOOL_CALL_CANCELLED);
+          }
+
           const provider =
             modelProvider || currentSession?.modelProvider || defaultProvider;
           const modelId = modelName || currentSession?.model || defaultModel;
-          const baseURL =
-            baseUrl ||
-            state.ai.getBaseUrlFromSettings() ||
-            'https://api.openai.com/v1';
+          const baseURL = baseUrl ?? state.ai.getBaseUrlFromSettings() ?? '';
           const tools = state.ai.tools;
 
-          // remove execute from tools
           const toolsWithoutExecute = Object.fromEntries(
             Object.entries(tools).filter(([, tool]) => !tool.execute),
           );
@@ -654,48 +766,67 @@ export function createAiSlice(
             });
             return response.text;
           } catch (error) {
+            const errorName =
+              typeof error === 'object' && error && 'name' in error
+                ? String((error as {name?: unknown}).name)
+                : '';
+            if (abortSignal?.aborted || errorName === 'AbortError') {
+              throw new ToolAbortError(TOOL_CALL_CANCELLED);
+            }
             console.error('Error generating text:', error);
             return 'error: can not generate response';
           }
         },
 
         /**
-         * Start the analysis
+         * Start the analysis for a specific session
          */
-        startAnalysis: async (
-          sendMessage: (message: {text: string}) => void,
-        ) => {
-          const abortController = new AbortController();
-          const currentSession = get().ai.getCurrentSession();
+        startAnalysis: async (sessionId: string) => {
+          const state = get();
+          const session = state.ai.config.sessions.find(
+            (s: AnalysisSessionSchema) => s.id === sessionId,
+          );
 
-          if (!currentSession) {
-            console.error('No current session found');
+          if (!session) {
+            console.error('Session not found:', sessionId);
             return;
           }
 
-          const promptText = get().ai.analysisPrompt;
+          const sendMessage = state.ai.getChatSendMessage(sessionId);
+          if (!sendMessage) {
+            console.error(
+              'No sendMessage function found for session:',
+              sessionId,
+            );
+            return;
+          }
 
-          set((state) =>
-            produce(state, (draft) => {
-              draft.ai.analysisAbortController = abortController;
-              draft.ai.isRunningAnalysis = true;
-              draft.ai.analysisPrompt = '';
-              draft.ai.promptSuggestionsVisible = false;
+          const abortController = new AbortController();
+          const promptText = session.prompt || '';
 
-              // Add incomplete analysis result to session immediately for instant UI rendering
-              const session = draft.ai.config.sessions.find(
-                (s: AnalysisSessionSchema) => s.id === currentSession.id,
+          // Store abort controller for this session
+          state.ai.setAbortController(sessionId, abortController);
+
+          set((stateToUpdate) =>
+            produce(stateToUpdate, (draft) => {
+              const draftSession = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
               );
-              if (session) {
-                // Remove any existing pending results (safety check for page refresh scenarios)
-                session.analysisResults = session.analysisResults.filter(
-                  (result: AnalysisResultSchema) => result.id !== '__pending__',
-                );
+              if (draftSession) {
+                draftSession.isRunning = true;
+                draftSession.prompt = '';
+                draft.ai.promptSuggestionsVisible = false;
+
+                // Remove any existing pending results
+                draftSession.analysisResults =
+                  draftSession.analysisResults.filter(
+                    (result: AnalysisResultSchema) =>
+                      result.id !== ANALYSIS_PENDING_ID,
+                  );
 
                 // Add incomplete analysis result with a temporary ID
-                // This will be updated in onChatFinish with the actual user message ID
-                session.analysisResults.push({
-                  id: '__pending__',
+                draftSession.analysisResults.push({
+                  id: ANALYSIS_PENDING_ID,
                   prompt: promptText,
                   isCompleted: false,
                 });
@@ -703,34 +834,30 @@ export function createAiSlice(
             }),
           );
 
-          // The pending analysis result will be updated in onChatFinish with the correct message ID
+          // Send the message through the session's chat instance
           sendMessage({text: promptText});
         },
 
-        cancelAnalysis: () => {
-          const abortController = get().ai.analysisAbortController;
+        cancelAnalysis: (sessionId: string) => {
+          const state = get();
+          const abortController = state.ai.getAbortController(sessionId);
+          const stopFn = state.ai.getChatStop(sessionId);
 
           // Stop local chat streaming immediately if available
-          try {
-            get().ai.chatStop?.();
-          } catch {
-            // no-op
-          }
+          stopFn?.();
 
-          // Call abort to signal cancellation
-          // Keep the abort controller in state so that async handlers (onChatToolCall, onChatFinish)
-          // can check if it was aborted. The onChatFinish handler will clean it up.
-          abortController?.abort('Analysis cancelled');
+          abortController?.abort(ANALYSIS_CANCELLED);
 
-          set((state) =>
-            produce(state, (draft) => {
-              // Set isRunningAnalysis to false to update UI
-              draft.ai.isRunningAnalysis = false;
-              // Keep analysisAbortController so handlers can check signal.aborted
+          set((stateToUpdate) =>
+            produce(stateToUpdate, (draft) => {
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.isRunning = false;
+              }
+              // Keep abort controller so handlers can check signal.aborted
               // It will be cleared by onChatFinish
-
-              // Intentionally preserve any pending analysis result so the
-              // conversation row remains visible until onChatFinish runs.
             }),
           );
         },
@@ -884,7 +1011,7 @@ export function createAiSlice(
         chatEndPoint,
         chatHeaders,
 
-        getLocalChatTransport: () => {
+        getLocalChatTransport: (sessionId: string) => {
           const state = get();
           return createLocalChatTransportFactory({
             store,
@@ -894,10 +1021,12 @@ export function createAiSlice(
             baseUrl: state.ai.getBaseUrlFromSettings(),
             getInstructions: () => store.getState().ai.getFullInstructions(),
             getCustomModel,
+            sessionId,
           })();
         },
 
         getRemoteChatTransport: (
+          sessionId: string,
           endpoint: string,
           headers?: Record<string, string>,
         ) =>
@@ -905,6 +1034,7 @@ export function createAiSlice(
             store,
             defaultProvider,
             defaultModel,
+            sessionId,
           })(endpoint, headers),
 
         ...createChatHandlers({store}),

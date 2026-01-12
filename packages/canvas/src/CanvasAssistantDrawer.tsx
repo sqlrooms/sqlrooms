@@ -1,4 +1,4 @@
-import {AnalysisResultsContainer, QueryControls} from '@sqlrooms/ai';
+import {Chat} from '@sqlrooms/ai';
 import {
   Button,
   Drawer,
@@ -30,7 +30,7 @@ export const CanvasAssistantDrawer: FC = () => {
       <DrawerTrigger asChild>
         <Button
           variant="default"
-          className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full"
+          className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full"
         >
           <SparklesIcon className="h-4 w-4" />
         </Button>
@@ -45,18 +45,20 @@ export const CanvasAssistantDrawer: FC = () => {
         overlayClassName="bg-transparent"
       >
         <div className="border-border bg-background relative mx-auto flex h-full w-full flex-col gap-0 overflow-hidden rounded-md border">
-          <DrawerHeader>
-            <DrawerTitle>Assistant</DrawerTitle>
-            <DrawerClose asChild className="absolute right-2 top-2">
-              <Button variant="ghost" size="xs">
-                <XIcon className="h-4 w-4" />
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <AnalysisResultsContainer className="flex-grow overflow-auto px-4" />
-          <DrawerFooter>
-            <QueryControls placeholder="What would you like to do?" />
-          </DrawerFooter>
+          <Chat>
+            <DrawerHeader>
+              <DrawerTitle>Assistant</DrawerTitle>
+              <DrawerClose asChild className="absolute top-2 right-2">
+                <Button variant="ghost" size="xs">
+                  <XIcon className="h-4 w-4" />
+                </Button>
+              </DrawerClose>
+            </DrawerHeader>
+            <Chat.Messages className="flex-grow overflow-auto px-4" />
+            <DrawerFooter>
+              <Chat.Composer placeholder="What would you like to do?" />
+            </DrawerFooter>
+          </Chat>
         </div>
       </DrawerContent>
     </Drawer>

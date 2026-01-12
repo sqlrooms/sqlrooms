@@ -43,7 +43,7 @@ const {roomStore, useRoomStore} = createRoomStore({
     getInstructions: () => {
       return `You are an AI assistant that can answer questions and help with tasks.`;
     },
-    initialAnalysisPrompt: 'What insights can you provide from my data?',
+    initialPrompt: 'What insights can you provide from my data?',
     tools: {
       // Your tools
     },
@@ -464,7 +464,7 @@ createAiSlice({
 The `processAgentStream` function handles the complexity of integrating agent execution into the main conversation:
 
 ```typescript
-await processAgentStream(agentResult, store, parentToolCallId)
+await processAgentStream(agentResult, store, parentToolCallId, abortSignal)
 ```
 
 **What it handles:**
