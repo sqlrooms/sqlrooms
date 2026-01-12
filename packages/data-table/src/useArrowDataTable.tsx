@@ -82,25 +82,31 @@ export default function useArrowDataTable(
                   className={`w-auto max-w-[500px] text-${fontSize}`}
                 >
                   <div className="space-y-2">
-                    <div className="font-medium">{`"${field.name}" (${field.type})`}</div>
-                    <div className="relative">
-                      <pre className="whitespace-pre-wrap text-xs">
-                        {valueStr}
-                      </pre>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => navigator.clipboard.writeText(valueStr)}
+                    <div className="flex items-center gap-2 text-xs">
+                      <span
+                        className="min-w-0 flex-1 font-medium"
+                        title={field.name}
                       >
-                        <ClipboardIcon className="h-3 w-3" />
-                      </Button>
+                        {shorten(field.name, MAX_VALUE_LENGTH)}
+                      </span>
+                      <span className="text-muted-foreground shrink-0">
+                        {`(${field.type})`}
+                      </span>
                     </div>
-                    <div
-                      className="h-full w-full overflow-auto"
-                      style={{maxHeight: '200px', maxWidth: '500px'}}
-                    >
-                      <div className="whitespace-pre-wrap font-mono text-xs">
+                    <div className="max-h-[300px] min-h-[100px] w-full max-w-[500px] overflow-auto">
+                      <div className="font-mono text-xs break-words whitespace-pre-wrap">
                         {valueStr}
+                      </div>
+                      <div className="mt-2 flex justify-end">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() =>
+                            navigator.clipboard.writeText(valueStr)
+                          }
+                        >
+                          <ClipboardIcon className="h-3 w-3 bg-red-500" />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -110,7 +116,7 @@ export default function useArrowDataTable(
               valueStr
             );
           },
-          header: field.name,
+          header: shorten(field.name, MAX_VALUE_LENGTH),
           meta: {
             type: field.type,
             isNumeric:
