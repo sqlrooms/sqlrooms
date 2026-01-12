@@ -1,6 +1,7 @@
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
-import {shorten} from '@sqlrooms/utils';
+import {safeJsonParse, shorten} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
@@ -70,6 +71,8 @@ export default function useArrowDataTable(
           cell: (info) => {
             const value = info.getValue();
             const valueStr = valueToString(field.type, value);
+            const parsedJson = safeJsonParse<unknown>(valueStr);
+            const isJsonValue = parsedJson !== undefined;
 
             return valueStr.length > MAX_VALUE_LENGTH ? (
               <Popover>
@@ -78,10 +81,15 @@ export default function useArrowDataTable(
                     {shorten(`${valueStr}`, MAX_VALUE_LENGTH)}
                   </span>
                 </PopoverTrigger>
+
+                {/* Fixed PopoverContent width */}
                 <PopoverContent
-                  className={`w-auto max-w-[500px] text-${fontSize}`}
+                  sideOffset={4}
+                  align="center"
+                  className={`w-[400px] max-w-[90vw] p-4 ${`text-${fontSize}`} rounded-md shadow-md`}
                 >
                   <div className="space-y-2">
+                    {/* Header row */}
                     <div className="flex items-center gap-2 text-xs">
                       <span
                         className="min-w-0 flex-1 font-medium"
@@ -93,21 +101,36 @@ export default function useArrowDataTable(
                         {`(${field.type})`}
                       </span>
                     </div>
-                    <div className="max-h-[300px] min-h-[100px] w-full max-w-[500px] overflow-auto">
-                      <div className="font-mono text-xs break-words whitespace-pre-wrap">
-                        {valueStr}
-                      </div>
-                      <div className="mt-2 flex justify-end">
-                        <Button
-                          variant="ghost"
-                          size="xs"
-                          onClick={() =>
-                            navigator.clipboard.writeText(valueStr)
-                          }
-                        >
-                          <ClipboardIcon className="h-3 w-3 bg-red-500" />
-                        </Button>
-                      </div>
+
+                    {/* Scrollable content - JSON or raw text */}
+                    <div className="max-h-[300px] min-h-[100px] overflow-auto">
+                      {isJsonValue && parsedJson ? (
+                        <JsonMonacoEditor
+                          value={parsedJson as any}
+                          readOnly={true}
+                          options={{
+                            lineNumbers: 'off',
+                            minimap: {enabled: false},
+                            scrollBeyondLastLine: false,
+                            wordWrap: 'on',
+                          }}
+                        />
+                      ) : (
+                        <div className="font-mono text-xs break-words whitespace-pre-wrap">
+                          {valueStr}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Copy button */}
+                    <div className="mt-2 flex justify-end">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => navigator.clipboard.writeText(valueStr)}
+                      >
+                        <ClipboardIcon className="h-3 w-3" />
+                      </Button>
                     </div>
                   </div>
                 </PopoverContent>
