@@ -1,6 +1,6 @@
 'use client';
 
-import {ChatContainer, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat, ModelSelector} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure, ThemeProvider} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -16,9 +16,9 @@ export const MainView: React.FC = () => {
   return (
     <ThemeProvider defaultTheme="dark" storageKey="sqlrooms-ai-nextjs-theme">
       <div className="flex h-screen w-full flex-col gap-0 overflow-hidden p-4">
-        <ChatContainer>
+        <Chat>
           <div className="relative mb-4">
-            <ChatContainer.SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
+            <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
             <Button
               variant="outline"
               className="hover:bg-accent absolute top-0 right-0 flex h-8 w-8 items-center justify-center transition-colors"
@@ -40,7 +40,7 @@ export const MainView: React.FC = () => {
           ) : (
             <>
               <div className="flex-grow overflow-auto">
-                <ChatContainer.AnalysisResultsContainer
+                <Chat.Messages
                   key={currentSessionId} // will prevent scrolling to bottom after changing current session
                 />
                 {!currentSessionId && (
@@ -53,14 +53,14 @@ export const MainView: React.FC = () => {
                 )}
               </div>
 
-              <ChatContainer.QueryControls placeholder="Ask me anything! For example: 'Search the web for the latest news on AI'">
+              <Chat.Composer placeholder="Ask me anything! For example: 'Search the web for the latest news on AI'">
                 <div className="flex items-center justify-end gap-2">
                   <ModelSelector />
                 </div>
-              </ChatContainer.QueryControls>
+              </Chat.Composer>
             </>
           )}
-        </ChatContainer>
+        </Chat>
       </div>
     </ThemeProvider>
   );

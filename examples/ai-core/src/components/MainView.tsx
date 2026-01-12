@@ -1,4 +1,4 @@
-import {ChatContainer, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat, ModelSelector} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -13,9 +13,9 @@ export const MainView: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-      <ChatContainer>
+      <Chat>
         <div className="relative mb-4">
-          <ChatContainer.SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
+          <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <Button
             variant="outline"
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
@@ -39,7 +39,7 @@ export const MainView: React.FC = () => {
         ) : (
           <>
             <div className="flex-grow overflow-auto">
-              <ChatContainer.AnalysisResultsContainer
+              <Chat.Messages
                 key={currentSessionId} // will prevent scrolling to bottom after changing current session
               />
               <div className="flex h-full w-full flex-col items-center justify-center">
@@ -50,14 +50,14 @@ export const MainView: React.FC = () => {
               </div>
             </div>
 
-            <ChatContainer.QueryControls placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+            <Chat.Composer placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
               <div className="flex items-center justify-end gap-2">
                 <ModelSelector />
               </div>
-            </ChatContainer.QueryControls>
+            </Chat.Composer>
           </>
         )}
-      </ChatContainer>
+      </Chat>
     </div>
   );
 };

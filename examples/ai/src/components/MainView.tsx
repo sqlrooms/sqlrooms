@@ -2,7 +2,7 @@ import {
   AiSettingsPanel,
   ModelSelector,
   PromptSuggestions,
-  ChatContainer,
+  Chat,
 } from '@sqlrooms/ai';
 import {
   Button,
@@ -31,9 +31,9 @@ export const MainView: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-      <ChatContainer>
+      <Chat>
         <div className="mb-4 flex items-center justify-between gap-2">
-          <ChatContainer.SessionControls className="w-full" />
+          <Chat.Sessions className="w-full" />
           {currentSessionId && (
             <Dialog
               open={settingsPanelOpen.isOpen}
@@ -94,7 +94,7 @@ export const MainView: React.FC = () => {
 
         <div className="print-container flex-grow overflow-auto">
           {isDataAvailable ? (
-            <ChatContainer.AnalysisResultsContainer
+            <Chat.Messages
               key={currentSessionId} // will prevent scrolling to bottom after changing current session
             />
           ) : (
@@ -112,13 +112,13 @@ export const MainView: React.FC = () => {
           <PromptSuggestions.Item text="Help me understand the data structure" />
         </PromptSuggestions.Container>
 
-        <ChatContainer.QueryControls placeholder="What would you like to learn about the data?">
+        <Chat.Composer placeholder="What would you like to learn about the data?">
           <div className="flex items-center justify-end gap-2">
             <PromptSuggestions.VisibilityToggle />
             <ModelSelector />
           </div>
-        </ChatContainer.QueryControls>
-      </ChatContainer>
+        </Chat.Composer>
+      </Chat>
     </div>
   );
 };

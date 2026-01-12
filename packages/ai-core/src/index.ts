@@ -6,12 +6,13 @@
 export {createAiSlice, useStoreWithAi} from './AiSlice';
 
 export type {AiSliceState} from './AiSlice';
+// @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from './components/AnalysisResultsContainer';
 export {AnalysisResult} from './components/AnalysisResult';
 export {ErrorMessage} from './components/ErrorMessage';
 export {useScrollToBottom} from './hooks/useScrollToBottom';
 export {useSessionChat} from './hooks/useSessionChat';
-export {ChatContainer} from './components/ChatContainer';
+export {Chat} from './components/Chat';
 
 export {PromptSuggestions} from './components/PromptSuggestions';
 export {ModelSelector} from './components/ModelSelector';

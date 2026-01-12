@@ -2,7 +2,7 @@ import {
   AiSettingsPanel,
   ModelSelector,
   PromptSuggestions,
-  ChatContainer,
+  Chat,
 } from '@sqlrooms/ai';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -18,9 +18,9 @@ export const MainView: React.FC = () => {
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
-      <ChatContainer>
+      <Chat>
         <div className="relative mb-4">
-          <ChatContainer.SessionControls className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
+          <Chat.Sessions className="mr-8 max-w-[calc(100%-3rem)] overflow-hidden" />
           <Button
             variant="outline"
             className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center transition-colors hover:bg-accent"
@@ -45,7 +45,7 @@ export const MainView: React.FC = () => {
           <>
             <div className="flex-grow overflow-auto">
               {isDataAvailable ? (
-                <ChatContainer.AnalysisResultsContainer
+                <Chat.Messages
                   key={currentSessionId} // will prevent scrolling to bottom after changing current session
                 />
               ) : (
@@ -65,15 +65,15 @@ export const MainView: React.FC = () => {
               <PromptSuggestions.Item text="Help me understand the data structure" />
             </PromptSuggestions.Container>
 
-            <ChatContainer.QueryControls placeholder="What would you like to learn about the data?">
+            <Chat.Composer placeholder="What would you like to learn about the data?">
               <div className="flex items-center justify-end gap-2">
                 <PromptSuggestions.VisibilityToggle />
                 <ModelSelector />
               </div>
-            </ChatContainer.QueryControls>
+            </Chat.Composer>
           </>
         )}
-      </ChatContainer>
+      </Chat>
     </div>
   );
 };
