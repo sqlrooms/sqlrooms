@@ -3,8 +3,6 @@ import {streamText} from 'ai';
 import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
 import type {OpenAssistantToolSet} from '@openassistant/utils';
 
-/* eslint-disable no-unused-vars -- This file primarily exports types; parameter names are for clarity/docs. */
-
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
 >;
@@ -42,7 +40,6 @@ export interface AiStateForTransport {
   analysisAbortController?: AbortController;
   isRunningAnalysis: boolean;
   analysisPrompt: string;
-  analysisRunSessionId?: string;
   getProviderOptions?: GetProviderOptions;
   getCurrentSession: () => AnalysisSessionSchema | undefined;
   setSessionToolAdditionalData: (

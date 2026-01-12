@@ -1,4 +1,4 @@
-import {useCallback, useEffect, useMemo, useRef} from 'react';
+import {useEffect, useMemo, useRef} from 'react';
 import {useChat} from '@ai-sdk/react';
 import {
   DefaultChatTransport,
@@ -51,25 +51,10 @@ export type UseAiChatResult = {
 export function useAiChat(): UseAiChatResult {
   // Get current session and configuration
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const sessions = useStoreWithAi((s) => s.ai.config.sessions);
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const analysisRunSessionId = useStoreWithAi((s) => s.ai.analysisRunSessionId);
-
-  // Pin the in-flight run to the session where it started (local to this hook).
-  // This prevents session switching from re-keying useChat mid-stream and misrouting
-  // streamed updates. We intentionally do NOT store this in global state.
-  const runSessionIdRef = useRef<string | undefined>(undefined);
-  const pinnedSessionId = analysisRunSessionId ?? runSessionIdRef.current;
-  const pinnedSession =
-    pinnedSessionId != null
-      ? sessions.find((sess) => sess.id === pinnedSessionId)
-      : undefined;
-
-  const session = pinnedSession ?? currentSession;
-  const sessionId = session?.id;
-  const model = session?.model;
+  const sessionId = currentSession?.id;
+  const model = currentSession?.model;
   // Use messagesRevision to force reset only when messages are explicitly deleted
-  const messagesRevision = session?.messagesRevision ?? 0;
+  const messagesRevision = currentSession?.messagesRevision ?? 0;
 
   // Get chat transport configuration
   const getLocalChatTransport = useStoreWithAi(
@@ -103,20 +88,14 @@ export function useAiChat(): UseAiChatResult {
 
   // Create transport (recreate when model changes)
   const transport: DefaultChatTransport<UIMessage> = useMemo(() => {
+    // Recreate transport when the model changes
     void model;
     const trimmed = (endPoint || '').trim();
     if (trimmed.length > 0) {
-      return getRemoteChatTransport(trimmed, headers, sessionId);
+      return getRemoteChatTransport(trimmed, headers);
     }
-    return getLocalChatTransport(sessionId);
-  }, [
-    getLocalChatTransport,
-    getRemoteChatTransport,
-    headers,
-    endPoint,
-    model,
-    sessionId,
-  ]);
+    return getLocalChatTransport();
+  }, [getLocalChatTransport, getRemoteChatTransport, headers, endPoint, model]);
 
   // Setup useChat with all configuration
   // Include messagesRevision in the id to force reset only when messages are explicitly deleted
@@ -134,7 +113,7 @@ export function useAiChat(): UseAiChatResult {
 
   const initialMessages = useMemo(() => {
     return completeIncompleteToolCalls(
-      (session?.uiMessages as UIMessage[]) ?? [],
+      (currentSession?.uiMessages as unknown as UIMessage[]) ?? [],
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps -- Intentionally exclude uiMessages; only recompute on session change or explicit message deletion (messagesRevision)
   }, [sessionId, messagesRevision]);
@@ -147,53 +126,18 @@ export function useAiChat(): UseAiChatResult {
       const {toolCall} = opts as {toolCall: unknown};
       // Wrap the store's onChatToolCall to provide addToolResult
       // Use the captured addToolResult from the ref
-      const targetSessionId =
-        analysisRunSessionId ?? runSessionIdRef.current ?? sessionId;
-      if (!targetSessionId) return;
       return onChatToolCall?.({
-        sessionId: targetSessionId,
         toolCall: toolCall as ToolCall,
         addToolResult: addToolResultRef.current,
       });
     },
-    onFinish: (args) => {
-      const targetSessionId =
-        analysisRunSessionId ?? runSessionIdRef.current ?? sessionId;
-      if (targetSessionId) {
-        onChatFinish?.(targetSessionId, args);
-      }
-      // Clear local pin when the run ends
-      runSessionIdRef.current = undefined;
-    },
-    onError: (error) => {
-      const targetSessionId =
-        analysisRunSessionId ?? runSessionIdRef.current ?? sessionId;
-      if (targetSessionId) {
-        onChatError?.(targetSessionId, error);
-      }
-      runSessionIdRef.current = undefined;
-    },
-    onData: (dataPart) => {
-      const targetSessionId =
-        analysisRunSessionId ?? runSessionIdRef.current ?? sessionId;
-      if (targetSessionId) {
-        onChatData?.(targetSessionId, dataPart);
-      }
-    },
+    onFinish: onChatFinish,
+    onError: onChatError,
+    onData: onChatData,
     // Automatically submit when all tool results are available
     // NOTE: When using sendAutomaticallyWhen, don't use await with addToolResult inside onChatToolCall as it can cause deadlocks.
     sendAutomaticallyWhen: shouldAutoSend,
   });
-
-  const wrappedSendMessage = useCallback<typeof sendMessage>(
-    (message, opts) => {
-      if (!runSessionIdRef.current && sessionId) {
-        runSessionIdRef.current = sessionId;
-      }
-      return sendMessage(message, opts);
-    },
-    [sendMessage, sessionId],
-  );
 
   // Capture addToolResult for use in onToolCall
   addToolResultRef.current = addToolResult;
@@ -213,9 +157,9 @@ export function useAiChat(): UseAiChatResult {
 
   // Register sendMessage with the store so it can be accessed from the slice
   useEffect(() => {
-    setChatSendMessage?.(wrappedSendMessage);
+    setChatSendMessage?.(sendMessage);
     return () => setChatSendMessage?.(undefined);
-  }, [setChatSendMessage, wrappedSendMessage]);
+  }, [setChatSendMessage, sendMessage]);
 
   // Register addToolResult with the store so it can be accessed from the slice
   useEffect(() => {
@@ -229,16 +173,9 @@ export function useAiChat(): UseAiChatResult {
     setSessionUiMessages(sessionId, messages as UIMessage[]);
   }, [messages, sessionId, setSessionUiMessages]);
 
-  // Ensure we clear any stale local pin when analysis is no longer running
-  useEffect(() => {
-    if (!isRunningAnalysis) {
-      runSessionIdRef.current = undefined;
-    }
-  }, [isRunningAnalysis]);
-
   return {
     messages,
-    sendMessage: wrappedSendMessage,
+    sendMessage,
     stop,
     status,
   };

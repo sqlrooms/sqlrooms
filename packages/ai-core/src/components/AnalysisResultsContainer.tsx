@@ -22,20 +22,12 @@ export const AnalysisResultsContainer: React.FC<{
   ErrorMessageComponent,
 }) => {
   const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const analysisRunSessionId = useStoreWithAi((s) => s.ai.analysisRunSessionId);
-  const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const currentAnalysisResults = useStoreWithAi((s) =>
     s.ai.getAnalysisResults(),
   );
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages,
   );
-
-  const isRunningForThisSession =
-    (isRunningAnalysis &&
-      analysisRunSessionId != null &&
-      analysisRunSessionId === currentSessionId) ||
-    (isRunningAnalysis && analysisRunSessionId == null);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -47,10 +39,10 @@ export const AnalysisResultsContainer: React.FC<{
 
   // Scroll to bottom when analysis starts
   useEffect(() => {
-    if (isRunningForThisSession) {
+    if (isRunningAnalysis) {
       scrollToBottom();
     }
-  }, [isRunningForThisSession, scrollToBottom]);
+  }, [isRunningAnalysis]);
 
   return (
     <div className={cn('relative flex h-full w-full flex-col', className)}>
@@ -69,7 +61,7 @@ export const AnalysisResultsContainer: React.FC<{
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
-        {isRunningForThisSession && (
+        {isRunningAnalysis && (
           <AiThinkingDots className="text-muted-foreground p-4" />
         )}
         <div ref={endRef} className="h-10 w-full shrink-0" />

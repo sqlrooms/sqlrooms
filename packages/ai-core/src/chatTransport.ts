@@ -130,20 +130,14 @@ export type ChatTransportConfig = {
  */
 export function createOnToolCompletedHandler(
   store: StoreApi<AiSliceStateForTransport>,
-  sessionId?: string,
 ) {
   return (toolCallId: string, additionalData: unknown) => {
-    const state = store.getState();
-    const targetSessionId = sessionId ?? state.ai.config.currentSessionId;
-    if (!targetSessionId) return;
+    const sessionId = store.getState().ai.config.currentSessionId;
+    if (!sessionId) return;
 
     store
       .getState()
-      .ai.setSessionToolAdditionalData(
-        targetSessionId,
-        toolCallId,
-        additionalData,
-      );
+      .ai.setSessionToolAdditionalData(sessionId, toolCallId, additionalData);
   };
 }
 
@@ -183,17 +177,13 @@ export function createLocalChatTransportFactory({
   getInstructions,
   getCustomModel,
 }: ChatTransportConfig) {
-  return (sessionId?: string) => {
+  return () => {
     const fetchImpl = async (_input: RequestInfo | URL, init?: RequestInit) => {
       // Resolve provider/model and client at call time to pick up latest settings
       const state = store.getState();
-      const resolvedSession =
-        sessionId != null
-          ? state.ai.config.sessions.find((s) => s.id === sessionId)
-          : undefined;
-      const activeSession = resolvedSession ?? state.ai.getCurrentSession();
-      const provider = activeSession?.modelProvider || defaultProvider;
-      const modelId = activeSession?.model || defaultModel;
+      const currentSession = state.ai.getCurrentSession();
+      const provider = currentSession?.modelProvider || defaultProvider;
+      const modelId = currentSession?.model || defaultModel;
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
@@ -222,7 +212,7 @@ export function createLocalChatTransportFactory({
         ? (parsedObj.messages as UIMessage[])
         : [];
 
-      const onToolCompleted = createOnToolCompletedHandler(store, sessionId);
+      const onToolCompleted = createOnToolCompletedHandler(store);
       const tools = convertToAiSDKTools(state.ai.tools || {}, onToolCompleted);
       // Remove execute from tools for the model call so tool invocations are
       // handled exclusively by onChatToolCall. convertToAiSDKTools is expected
@@ -261,22 +251,14 @@ export function createRemoteChatTransportFactory(params: {
   defaultProvider: string;
   defaultModel: string;
 }) {
-  return (
-    endpoint: string,
-    headers?: Record<string, string>,
-    sessionId?: string,
-  ) => {
+  return (endpoint: string, headers?: Record<string, string>) => {
     const fetchImpl = async (input: RequestInfo | URL, init?: RequestInit) => {
       // Get current session's model and provider at request time
       const state = params.store.getState();
-      const resolvedSession =
-        sessionId != null
-          ? state.ai.config.sessions.find((s) => s.id === sessionId)
-          : undefined;
-      const activeSession = resolvedSession ?? state.ai.getCurrentSession();
+      const currentSession = state.ai.getCurrentSession();
       const modelProvider =
-        activeSession?.modelProvider || params.defaultProvider;
-      const model = activeSession?.model || params.defaultModel;
+        currentSession?.modelProvider || params.defaultProvider;
+      const model = currentSession?.model || params.defaultModel;
 
       // Parse the existing body and add model information (defensive parsing)
       const body = init?.body as string;
@@ -320,11 +302,9 @@ export function createChatHandlers({
 }) {
   return {
     onChatToolCall: async ({
-      sessionId,
       toolCall,
       addToolResult,
     }: {
-      sessionId: string;
       toolCall: ToolCall;
       addToolResult?: AddToolResult;
     }) => {
@@ -332,7 +312,6 @@ export function createChatHandlers({
       try {
         // handle client tools
         const state = store.getState();
-        const targetSessionId = sessionId ?? state.ai.config.currentSessionId;
 
         // Check if the stream was aborted before executing tool
         if (state.ai.analysisAbortController?.signal.aborted) {
@@ -347,10 +326,7 @@ export function createChatHandlers({
           return;
         }
 
-        const onToolCompleted = createOnToolCompletedHandler(
-          store,
-          targetSessionId,
-        );
+        const onToolCompleted = createOnToolCompletedHandler(store);
         const tools = convertToAiSDKTools(
           state.ai.tools || {},
           onToolCompleted,
@@ -360,10 +336,8 @@ export function createChatHandlers({
         const tool = tools[toolName];
         if (tool && state.ai.tools[toolName]?.execute && tool.execute) {
           // Always provide a defined messages array to the tool runtime
-          const sessionMessages = ((targetSessionId
-            ? state.ai.config.sessions.find((s) => s.id === targetSessionId)
-                ?.uiMessages
-            : state.ai.getCurrentSession()?.uiMessages) ?? []) as UIMessage[];
+          const sessionMessages = (state.ai.getCurrentSession()?.uiMessages ??
+            []) as UIMessage[];
           const llmResult = await tool.execute(input, {
             toolCallId,
             messages: convertToModelMessages(sessionMessages),
@@ -422,7 +396,7 @@ export function createChatHandlers({
         }
       }
     },
-    onChatData: (sessionId: string, dataPart: DataUIPart<UIDataTypes>) => {
+    onChatData: (dataPart: DataUIPart<UIDataTypes>) => {
       if (
         dataPart.type === 'data-tool-additional-output' &&
         dataPart.data &&
@@ -434,26 +408,21 @@ export function createChatHandlers({
         };
 
         // Store the additional data in the session
-        const state = store.getState();
-        const targetSessionId = sessionId ?? state.ai.config.currentSessionId;
-        if (targetSessionId) {
+        const currentSessionId = store.getState().ai.config.currentSessionId;
+        if (currentSessionId) {
           store
             .getState()
             .ai.setSessionToolAdditionalData(
-              targetSessionId,
+              currentSessionId,
               toolCallId,
               output,
             );
         }
       }
     },
-    onChatFinish: (
-      sessionId: string,
-      {messages}: {messages: UIMessage[]; message?: UIMessage; isError?: boolean},
-    ) => {
+    onChatFinish: ({messages}: {messages: UIMessage[]}) => {
       try {
-        const state = store.getState();
-        const currentSessionId = sessionId ?? state.ai.config.currentSessionId;
+        const currentSessionId = store.getState().ai.config.currentSessionId;
         if (!currentSessionId) return;
 
         // If the analysis has been aborted, force-complete and clean up immediately
@@ -462,9 +431,7 @@ export function createChatHandlers({
         if (aborted) {
           // If messages are empty (possible when stopping immediately), fall back to existing session messages
           const sessionMessages =
-            (store
-              .getState()
-              .ai.config.sessions.find((s) => s.id === currentSessionId)
+            (store.getState().ai.getCurrentSession()
               ?.uiMessages as UIMessage[]) || [];
           const sourceMessages =
             messages && messages.length > 0 ? messages : sessionMessages;
@@ -478,7 +445,6 @@ export function createChatHandlers({
           store.setState((state: AiSliceStateForTransport) =>
             produce(state, (draft: AiSliceStateForTransport) => {
               draft.ai.isRunningAnalysis = false;
-              draft.ai.analysisRunSessionId = undefined;
               draft.ai.analysisAbortController = undefined;
 
               const targetSession = draft.ai.config.sessions.find(
@@ -621,7 +587,6 @@ export function createChatHandlers({
             produce(state, (draft: AiSliceStateForTransport) => {
               draft.ai.isRunningAnalysis = false;
               draft.ai.analysisPrompt = '';
-              draft.ai.analysisRunSessionId = undefined;
               draft.ai.analysisAbortController = undefined;
             }),
           );
@@ -631,20 +596,16 @@ export function createChatHandlers({
         throw err;
       }
     },
-    onChatError: (sessionId: string, error: unknown) => {
+    onChatError: (error: unknown) => {
       try {
         let errMsg = getErrorMessageForDisplay(error);
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
-        const state = store.getState();
-        const currentSessionId = sessionId ?? state.ai.config.currentSessionId;
+        const currentSessionId = store.getState().ai.config.currentSessionId;
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!currentSessionId) return;
-            draft.ai.analysisRunSessionId = undefined;
-            draft.ai.isRunningAnalysis = false;
-            draft.ai.analysisAbortController = undefined;
             const targetSession = draft.ai.config.sessions.find(
               (s: AnalysisSessionSchema) => s.id === currentSessionId,
             );
