@@ -1,4 +1,4 @@
-import { JsonMonacoEditor } from '@sqlrooms/monaco-editor';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   Popover,
@@ -6,7 +6,7 @@ import {
   PopoverTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import { TriangleAlertIcon } from 'lucide-react';
+import {TriangleAlertIcon} from 'lucide-react';
 
 /**
  * Displays a compact, reusable popover with a warning icon and error details.
@@ -62,12 +62,12 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
         </Button>
       </PopoverTrigger>
       {popoverOpen.isOpen ? (
-        <PopoverContent align={align} style={{ width: '600px', maxWidth: '80%' }}>
+        <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
           <div className="flex flex-col gap-2">
             <div className="border-b text-sm font-medium">{title}</div>
 
             {errorText ? (
-              <div className="whitespace-pre-wrap font-mono text-xs">
+              <div className="font-mono text-xs whitespace-pre-wrap">
                 {errorText}
               </div>
             ) : null}
@@ -75,15 +75,17 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
             {hasDetails ? (
               <div
                 className="w-full overflow-hidden rounded-md border"
-                style={{ height: editorHeightPx }}
+                style={{height: editorHeightPx}}
               >
                 <JsonMonacoEditor
                   className="h-full"
-                  value={props.details as unknown as object | string | undefined}
+                  value={
+                    props.details as unknown as object | string | undefined
+                  }
                   readOnly={true}
                   options={{
                     lineNumbers: 'off',
-                    minimap: { enabled: false },
+                    minimap: {enabled: false},
                     scrollBeyondLastLine: false,
                     wordWrap: 'on',
                   }}
