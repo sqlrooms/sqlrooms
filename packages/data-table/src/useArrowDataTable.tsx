@@ -27,8 +27,6 @@ const MAX_VALUE_LENGTH = 64;
  * Converts an Arrow value into a human-readable string.
  */
 function valueToString(type: arrow.DataType, value: unknown): string {
-  console.log('valueToString', type, value);
-
   if (value === null || value === undefined) return 'NULL';
 
   // --- DECIMAL ---
