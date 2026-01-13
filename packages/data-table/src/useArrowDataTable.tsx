@@ -23,10 +23,50 @@ export type ArrowColumnMeta = {
 
 const MAX_VALUE_LENGTH = 64;
 
+/**
+ * Converts an Arrow value into a human-readable string.
+ */
 function valueToString(type: arrow.DataType, value: unknown): string {
-  if (value === null || value === undefined) {
-    return 'NULL';
+  console.log('valueToString', type, value);
+
+  if (value === null || value === undefined) return 'NULL';
+
+  // --- DECIMAL ---
+  // Arrow DECIMAL(20,10) can be:
+  // - Uint32Array (raw 128-bit integer) -> 1.6700000000
+  // - BigInt (raw scaled integer)       -> 1.6700000000
+  // - JS number (float)                 -> may have float noise
+  if (arrow.DataType.isDecimal(type)) {
+    const scale = (type as any).scale;
+
+    if (value instanceof Uint32Array) {
+      // reconstruct BigInt from 128-bit array
+      let n = 0n;
+      for (let i = value.length - 1; i >= 0; i--) {
+        n = (n << 32n) + BigInt(value[i]!);
+      }
+      const s = n.toString().padStart(scale + 1, '0');
+      const intPart = s.slice(0, -scale) || '0';
+      const fracPart = s.slice(-scale).replace(/0+$/, '');
+      return fracPart ? `${intPart}.${fracPart}` : intPart;
+    }
+
+    if (typeof value === 'bigint') {
+      const s = value.toString().padStart(scale + 1, '0');
+      const intPart = s.slice(0, -scale) || '0';
+      const fracPart = s.slice(-scale).replace(/0+$/, '');
+      return fracPart ? `${intPart}.${fracPart}` : intPart;
+    }
+
+    if (typeof value === 'number') {
+      // JS number fallback (may have float noise)
+      return value.toFixed(scale).replace(/\.?0+$/, '');
+    }
+
+    return String(value);
   }
+
+  // --- TIMESTAMP ---
   if (arrow.DataType.isTimestamp(type)) {
     switch (typeof value) {
       case 'number':
@@ -36,6 +76,8 @@ function valueToString(type: arrow.DataType, value: unknown): string {
         return new Date(value).toISOString();
     }
   }
+
+  // --- TIME ---
   if (arrow.DataType.isTime(type)) {
     switch (typeof value) {
       case 'number':
@@ -45,50 +87,60 @@ function valueToString(type: arrow.DataType, value: unknown): string {
         return new Date(value).toISOString().substring(11, 19);
     }
   }
-  if (arrow.DataType.isDate(type)) {
-    if (value instanceof Date) {
-      return value.toISOString();
-    }
 
-    // Fix: Arrow JS may report DATE as Date32 (days) but still return milliseconds
-    // (e.g. 1688083200000 = 2023-06-30).
-    // Heuristicly check for if the value is too large to be days, treat it as milliseconds.
+  // --- DATE ---
+  // Handle Arrow Date32/Date64 values coming
+  //
+  // 1. If `value` is already a JS Date, format it directly.
+  // 2. If `castTimestampToDate` store config is true, DuckDB may return a number or bigint:
+  //    - If the number is very large (>100,000), assume it is already in milliseconds.
+  //    - Otherwise, treat it as Date32 (days) and convert to milliseconds.
+  // 3. If `value` is a string, try to parse it as a date.
+  //
+  // This ensures DATE columns are displayed as "YYYY-MM-DD" regardless of underlying Arrow type.
+  if (arrow.DataType.isDate(type)) {
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+
+    // Number or BigInt coming from Arrow
     if (typeof value === 'number' || typeof value === 'bigint') {
       const raw = Number(value);
-      if (!Number.isFinite(raw)) return String(value);
+      if (!Number.isFinite(raw)) {
+        return String(value);
+      }
 
       let ms: number;
-
-      // if value is too large to be days, it's already ms
       if (Math.abs(raw) > 100_000) {
-        // already milliseconds
+        // Value is likely already in milliseconds
         ms = raw;
       } else {
-        // convert days as milliseconds
+        // Value is in days (Date32), convert to milliseconds
         ms = raw * 24 * 60 * 60 * 1000;
       }
 
       const d = new Date(ms);
-      if (Number.isNaN(d.getTime())) return String(value);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toISOString().slice(0, 10);
+      }
 
-      return d.toISOString().slice(0, 10);
+      return String(value);
     }
 
     if (typeof value === 'string') {
       const d = new Date(value);
-      if (!Number.isNaN(d.getTime())) {
-        return d.toISOString().slice(0, 10);
-      }
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
     }
   }
 
+  // --- FLOAT ---
   if (arrow.DataType.isFloat(type)) {
-    if (typeof value === 'number') {
-      return value.toFixed(2);
-    }
+    if (typeof value === 'number') return value.toFixed(3);
     return String(value);
   }
 
+  // --- BIGINT / INT ---
+  if (arrow.DataType.isInt(type)) return String(value);
+
+  // --- fallback ---
   return String(value);
 }
 
