@@ -44,6 +44,7 @@ function valueToString(type: arrow.DataType, value: unknown): string {
       for (let i = value.length - 1; i >= 0; i--) {
         n = (n << 32n) + BigInt(value[i]!);
       }
+      if (scale === 0) return n.toString();
       const s = n.toString().padStart(scale + 1, '0');
       const intPart = s.slice(0, -scale) || '0';
       const fracPart = s.slice(-scale).replace(/0+$/, '');
@@ -51,6 +52,7 @@ function valueToString(type: arrow.DataType, value: unknown): string {
     }
 
     if (typeof value === 'bigint') {
+      if (scale === 0) return value.toString();
       const s = value.toString().padStart(scale + 1, '0');
       const intPart = s.slice(0, -scale) || '0';
       const fracPart = s.slice(-scale).replace(/0+$/, '');
