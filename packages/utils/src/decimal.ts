@@ -15,7 +15,7 @@
 // specific language governing permissions and limitations
 // under the License.
 
-// TODO: Remove this file and test cases once Apache Arrow exposes a stable helper for this
+// TODO: Remove this file once Apache Arrow merges the PR below
 // https://github.com/apache/arrow-js/pull/341/files#diff-41952a54a60919187ac886be5edde88ec0c80027e2815342d29ec2a77b14d0a6
 
 /**
