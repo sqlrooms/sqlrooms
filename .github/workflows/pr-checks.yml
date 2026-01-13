@@ -11,6 +11,7 @@ on:
     paths-ignore:
       - 'python/**'
       - 'docs/**'
+  workflow_dispatch:
 
 jobs:
   check-pr-title:
