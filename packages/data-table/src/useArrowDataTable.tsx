@@ -49,9 +49,49 @@ function valueToString(type: arrow.DataType, value: unknown): string {
     if (value instanceof Date) {
       return value.toISOString();
     }
+
+    // Fix: Arrow JS may report DATE as Date32 (days) but still return milliseconds
+    // (e.g. 1688083200000 = 2023-06-30).
+    // Heuristicly check for if the value is too large to be days, treat it as milliseconds.
+    if (typeof value === 'number' || typeof value === 'bigint') {
+      const raw = Number(value);
+      if (!Number.isFinite(raw)) return String(value);
+
+      let ms: number;
+
+      // if value is too large to be days, it's already ms
+      if (Math.abs(raw) > 100_000) {
+        // already milliseconds
+        ms = raw;
+      } else {
+        // convert days as milliseconds
+        ms = raw * 24 * 60 * 60 * 1000;
+      }
+
+      const d = new Date(ms);
+      if (Number.isNaN(d.getTime())) return String(value);
+
+      return d.toISOString().slice(0, 10);
+    }
+
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) {
+        return d.toISOString().slice(0, 10);
+      }
+    }
   }
+
+  if (arrow.DataType.isFloat(type)) {
+    if (typeof value === 'number') {
+      return value.toFixed(2);
+    }
+    return String(value);
+  }
+
   return String(value);
 }
+
 // Only use for small tables or in combination with pagination
 export default function useArrowDataTable(
   table: arrow.Table | undefined,
