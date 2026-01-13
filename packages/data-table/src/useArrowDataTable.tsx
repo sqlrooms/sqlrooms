@@ -83,11 +83,12 @@ function valueToString(type: arrow.DataType, value: unknown): string {
       }
 
       let ms: number;
-      if (Math.abs(raw) > 100_000) {
-        // Value is likely already in milliseconds
+      const dateType = type as arrow.Date_;
+      if (dateType.unit === arrow.DateUnit.MILLISECOND) {
+        // Date64: value is in milliseconds
         ms = raw;
       } else {
-        // Value is in days (Date32), convert to milliseconds
+        // Date32 (DateUnit.DAY): value is in days
         ms = raw * 24 * 60 * 60 * 1000;
       }
 
