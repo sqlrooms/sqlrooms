@@ -31,9 +31,10 @@ function valueToString(type: arrow.DataType, value: unknown): string {
 
   // --- DECIMAL ---
   // Arrow DECIMAL(20,10) can be:
+  // - regular JS number (float)
+  // or if castDecimalToDouble store config is true, DuckDB may return a number or bigint which represents scaled integer
   // - Uint32Array (raw 128-bit integer) -> 1.6700000000
   // - BigInt (raw scaled integer)       -> 1.6700000000
-  // - JS number (float)                 -> may have float noise
   if (arrow.DataType.isDecimal(type)) {
     const scale = (type as any).scale;
 
@@ -90,12 +91,10 @@ function valueToString(type: arrow.DataType, value: unknown): string {
   // Handle Arrow Date32/Date64 values coming
   //
   // 1. If `value` is already a JS Date, format it directly.
-  // 2. If `castTimestampToDate` store config is true, DuckDB may return a number or bigint:
+  // 2. If `castTimestampToDate` store config is true, DuckDB may return a number or bigint which represents count of days or milliseconds
   //    - If the number is very large (>100,000), assume it is already in milliseconds.
   //    - Otherwise, treat it as Date32 (days) and convert to milliseconds.
   // 3. If `value` is a string, try to parse it as a date.
-  //
-  // This ensures DATE columns are displayed as "YYYY-MM-DD" regardless of underlying Arrow type.
   if (arrow.DataType.isDate(type)) {
     if (value instanceof Date) return value.toISOString().slice(0, 10);
 
