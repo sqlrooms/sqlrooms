@@ -1,7 +1,7 @@
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
-import {safeJsonParse, shorten} from '@sqlrooms/utils';
+import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
@@ -30,40 +30,15 @@ function valueToString(type: arrow.DataType, value: unknown): string {
   if (value === null || value === undefined) return 'NULL';
 
   // --- DECIMAL ---
-  // Arrow DECIMAL(20,10) can be:
-  // - regular JS number (float)
-  // or if castDecimalToDouble store config is true, DuckDB may return a number or bigint which represents scaled integer
-  // - Uint32Array (raw 128-bit integer) -> 1.6700000000
-  // - BigInt (raw scaled integer)       -> 1.6700000000
   if (arrow.DataType.isDecimal(type)) {
-    const scale = (type as any).scale;
+    const scale = (type as any).scale ?? 0;
 
     if (value instanceof Uint32Array) {
-      // reconstruct BigInt from 128-bit array
-      let n = 0n;
-      for (let i = value.length - 1; i >= 0; i--) {
-        n = (n << 32n) + BigInt(value[i]!);
-      }
-      if (scale === 0) return n.toString();
-      const s = n.toString().padStart(scale + 1, '0');
-      const intPart = s.slice(0, -scale) || '0';
-      const fracPart = s.slice(-scale).replace(/0+$/, '');
-      return fracPart ? `${intPart}.${fracPart}` : intPart;
+      // Use Apache Arrow–style helper to convert Decimal128 buffer to string
+      return toDecimalString(value, scale);
     }
 
-    if (typeof value === 'bigint') {
-      if (scale === 0) return value.toString();
-      const s = value.toString().padStart(scale + 1, '0');
-      const intPart = s.slice(0, -scale) || '0';
-      const fracPart = s.slice(-scale).replace(/0+$/, '');
-      return fracPart ? `${intPart}.${fracPart}` : intPart;
-    }
-
-    if (typeof value === 'number') {
-      // JS number fallback (may have float noise)
-      return value.toFixed(scale).replace(/\.?0+$/, '');
-    }
-
+    // For non-Uint32Array values, fall back to default string rendering.
     return String(value);
   }
 
@@ -128,12 +103,6 @@ function valueToString(type: arrow.DataType, value: unknown): string {
       const d = new Date(value);
       if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
     }
-  }
-
-  // --- FLOAT ---
-  if (arrow.DataType.isFloat(type)) {
-    if (typeof value === 'number') return value.toFixed(3);
-    return String(value);
   }
 
   // --- BIGINT / INT ---
