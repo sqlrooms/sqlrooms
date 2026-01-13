@@ -72,25 +72,25 @@ export function negateDecimal(value: Uint32Array): Uint32Array {
  * @ignore
  */
 export function toDecimalString(value: Uint32Array, scale: number): string {
-  // Build BigInt from little-endian 4x Uint32 words
+  // Build BigInt from little-endian Uint32 words (supports 128-bit and 256-bit)
   const toBigIntLE = (words: Uint32Array) => {
-    return (
-      (BigInt(words[3]!) << BigInt(96)) |
-      (BigInt(words[2]!) << BigInt(64)) |
-      (BigInt(words[1]!) << BigInt(32)) |
-      BigInt(words[0]!)
-    );
+    let acc = BigInt(0);
+    for (let i = 0; i < words.length; i++) {
+      acc |= BigInt(words[i]!) << BigInt(32 * i);
+    }
+    return acc;
   };
 
   // Detect sign via MSB of most-significant word
-  const isNegative = (value[3]! & 0x80000000) !== 0;
-  const mask128 = (BigInt(1) << BigInt(128)) - BigInt(1);
+  const isNegative = (value[value.length - 1]! & 0x80000000) !== 0;
+  // Dynamic width mask (replaces fixed `mask128`)
+  const mask = (BigInt(1) << BigInt(value.length * 32)) - BigInt(1);
 
   const n = toBigIntLE(value);
 
   // If negative, convert two's complement to magnitude:
   // magnitude = (~n + 1) & mask128
-  const magnitude: bigint = isNegative ? (~n + BigInt(1)) & mask128 : n;
+  const magnitude: bigint = isNegative ? (~n + BigInt(1)) & mask : n;
 
   // Magnitude as decimal string
   const digits = magnitude.toString(10);

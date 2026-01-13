@@ -123,6 +123,26 @@ describe('Decimal Utilities', () => {
       expect(toDecimalString(zero, 0)).toBe('0');
       expect(toDecimalString(zero, 2)).toBe('0.0');
     });
+
+    test('supports Decimal256: converts large positive integers (scale 0)', () => {
+      // Construct a 256-bit value: (1 << 200) + 12345
+      const big = (BigInt(1) << BigInt(200)) + BigInt(12345);
+      const words = new Uint32Array(8);
+      for (let i = 0; i < words.length; i++) {
+        words[i] = Number((big >> BigInt(i * 32)) & BigInt(0xffffffff));
+      }
+      expect(toDecimalString(words, 0)).toBe(big.toString(10));
+    });
+
+    test("supports Decimal256: formats negative values via two's complement (scale 0)", () => {
+      // -42 represented in 256-bit two's complement: (1 << 256) - 42
+      const twos = (BigInt(1) << BigInt(256)) - BigInt(42);
+      const words = new Uint32Array(8);
+      for (let i = 0; i < words.length; i++) {
+        words[i] = Number((twos >> BigInt(i * 32)) & BigInt(0xffffffff));
+      }
+      expect(toDecimalString(words, 0)).toBe('-42');
+    });
   });
 
   describe('toDecimalNumber', () => {
