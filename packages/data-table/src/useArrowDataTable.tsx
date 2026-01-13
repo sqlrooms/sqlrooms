@@ -97,9 +97,6 @@ function valueToString(type: arrow.DataType, value: unknown): string {
     return String(value);
   }
 
-  // --- BIGINT / INT ---
-  if (arrow.DataType.isInt(type)) return String(value);
-
   // --- fallback ---
   return String(value);
 }
