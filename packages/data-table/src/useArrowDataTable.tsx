@@ -65,45 +65,36 @@ function valueToString(type: arrow.DataType, value: unknown): string {
   }
 
   // --- DATE ---
-  // Handle Arrow Date32/Date64 values coming
+  // Handle Arrow Date32/Date64 values coming from DuckDB-WASM.
   //
   // 1. If `value` is already a JS Date, format it directly.
-  // 2. If `castTimestampToDate` store config is true, DuckDB may return a number or bigint which represents count of days or milliseconds
-  //    - If the number is very large (>100,000), assume it is already in milliseconds.
-  //    - Otherwise, treat it as Date32 (days) and convert to milliseconds.
+  // 2. If store config`castTimestampToDate` is true, DuckDB may return a number or bigint:
   // 3. If `value` is a string, try to parse it as a date.
+  //
+  // This ensures DATE columns are displayed as "YYYY-MM-DD" regardless of underlying Arrow type.
   if (arrow.DataType.isDate(type)) {
+    const dateType = type as arrow.Date_;
+
+    // Already a JS Date
     if (value instanceof Date) return value.toISOString().slice(0, 10);
 
-    // Number or BigInt coming from Arrow
     if (typeof value === 'number' || typeof value === 'bigint') {
-      const raw = Number(value);
-      if (!Number.isFinite(raw)) {
-        return String(value);
-      }
+      const num = Number(value);
+      if (!Number.isFinite(num)) return String(num);
 
-      let ms: number;
-      const dateType = type as arrow.Date_;
-      if (dateType.unit === arrow.DateUnit.MILLISECOND) {
-        // Date64: value is in milliseconds
-        ms = raw;
-      } else {
-        // Date32 (DateUnit.DAY): value is in days
-        ms = raw * 24 * 60 * 60 * 1000;
-      }
+      const d = new Date(num);
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
 
-      const d = new Date(ms);
-      if (!Number.isNaN(d.getTime())) {
-        return d.toISOString().slice(0, 10);
-      }
-
-      return String(value);
+      return String(num);
     }
 
+    // Fallback for strings
     if (typeof value === 'string') {
       const d = new Date(value);
       if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
     }
+
+    return String(value);
   }
 
   // --- BIGINT / INT ---
