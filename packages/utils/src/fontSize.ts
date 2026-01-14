@@ -1,50 +1,36 @@
 /**
- * Map a font size token to a concrete Tailwind text size class.
- *
- * Accepts either bare tokens ("xs", "sm", "md", "lg", "base") or full class
- * names ("text-xs", "text-sm", etc.) and always returns a safe Tailwind class.
+ * Mapping from shorthand tokens to Tailwind text-size classes.
  */
-export type FontSizeToken =
-  | 'xs'
-  | 'sm'
-  | 'md'
-  | 'lg'
-  | 'base'
-  | 'text-xs'
-  | 'text-sm'
-  | 'text-md'
-  | 'text-lg'
-  | 'text-base';
+const TOKEN_TO_CLASS = {
+  xs: 'text-xs',
+  sm: 'text-sm',
+  md: 'text-base',
+  lg: 'text-lg',
+  xl: 'text-xl',
+  base: 'text-base',
+} as const;
 
+export type FontSizeToken = keyof typeof TOKEN_TO_CLASS;
+
+/**
+ * Resolves a font-size token or Tailwind class to a concrete Tailwind class.
+ *
+ * @param token - A bare token ("xs", "sm", …) or a full Tailwind class ("text-xs", "text-2xl", …)
+ * @returns A Tailwind text-size class string
+ *
+ * @example
+ * resolveFontSizeClass('sm');         // "text-sm"
+ * resolveFontSizeClass('text-4xl');   // "text-4xl"
+ * resolveFontSizeClass(undefined);    // "text-xs"
+ */
 export function resolveFontSizeClass(
   token: FontSizeToken | string | undefined,
-) {
+): string {
   if (!token) return 'text-xs';
 
-  // If the caller already passed a known text-* class, trust it.
-  if (
-    token === 'text-xs' ||
-    token === 'text-sm' ||
-    token === 'text-base' ||
-    token === 'text-md' ||
-    token === 'text-lg'
-  ) {
-    return token;
-  }
+  // Pass through any explicit Tailwind text-* class.
+  if (token.startsWith('text-')) return token;
 
-  // Map bare tokens to Tailwind classes.
-  switch (token) {
-    case 'xs':
-      return 'text-xs';
-    case 'sm':
-      return 'text-sm';
-    case 'md':
-      return 'text-base';
-    case 'lg':
-      return 'text-lg';
-    case 'base':
-      return 'text-base';
-    default:
-      return 'text-xs';
-  }
+  // Look up shorthand tokens.
+  return TOKEN_TO_CLASS[token as FontSizeToken] ?? 'text-xs';
 }
