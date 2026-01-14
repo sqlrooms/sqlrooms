@@ -1,12 +1,13 @@
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
-import {ClipboardIcon} from 'lucide-react';
 import {
+  Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   resolveFontSizeClass,
-  safeJsonParse,
-  shorten,
-  toDecimalString,
-} from '@sqlrooms/utils';
+} from '@sqlrooms/ui';
+import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
+import {ClipboardIcon} from 'lucide-react';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';

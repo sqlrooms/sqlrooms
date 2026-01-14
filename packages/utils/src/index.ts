@@ -45,4 +45,3 @@ export {
   toDecimalNumber,
   fromDecimalString,
 } from './decimal';
-export {resolveFontSizeClass} from './fontSize';

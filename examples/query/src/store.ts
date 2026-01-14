@@ -16,6 +16,7 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataPanel} from './DataPanel';
 import {MainView} from './MainView';
+import {createWasmDuckDbConnector} from '../../../packages/duckdb/dist';
 
 export const RoomPanelTypes = z.enum(['data', 'main'] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
@@ -45,6 +46,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       // Base room slice
       ...createRoomShellSlice({
+        connector: createWasmDuckDbConnector({
+          query: {
+            castDecimalToDouble: true,
+            castTimestampToDate: true,
+            castBigIntToDouble: true,
+          },
+        }),
         layout: {
           config: {
             type: LayoutTypes.enum.mosaic,

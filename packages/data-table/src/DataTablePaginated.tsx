@@ -24,8 +24,9 @@ import {
   cn,
   ScrollArea,
   ScrollBar,
+  resolveFontSizeClass,
 } from '@sqlrooms/ui';
-import {formatCount, resolveFontSizeClass} from '@sqlrooms/utils';
+import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   PaginationState,
