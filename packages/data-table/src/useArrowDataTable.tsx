@@ -1,7 +1,12 @@
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
-import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
+import {
+  resolveFontSizeClass,
+  safeJsonParse,
+  shorten,
+  toDecimalString,
+} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
@@ -110,6 +115,7 @@ export default function useArrowDataTable(
   } = {},
 ): UseArrowDataTableResult | undefined {
   const {fontSize = 'base'} = options ?? {};
+  const fontSizeClass = resolveFontSizeClass(fontSize);
   const data = useMemo(() => ({length: table?.numRows ?? 0}), [table]);
   const columns = useMemo(() => {
     if (!table) return undefined;
@@ -135,7 +141,7 @@ export default function useArrowDataTable(
                 <PopoverContent
                   sideOffset={4}
                   align="center"
-                  className={`w-[400px] max-w-[90vw] p-4 ${`text-${fontSize}`} rounded-md shadow-md`}
+                  className={`w-[400px] max-w-[90vw] p-4 ${fontSizeClass} rounded-md shadow-md`}
                 >
                   <div className="space-y-2">
                     {/* Header row */}
@@ -200,7 +206,7 @@ export default function useArrowDataTable(
       );
     }
     return columns;
-  }, [table, fontSize]);
+  }, [table, fontSizeClass]);
 
   return data && columns ? {data, columns} : undefined;
 }
