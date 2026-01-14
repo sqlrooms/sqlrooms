@@ -107,15 +107,48 @@ function valueToString(type: arrow.DataType, value: unknown): string {
   return String(value);
 }
 
+/**
+ * Formatter for rendering Arrow cell values in data tables.
+ * Return a string to override the default formatting.
+ * If you don't return anything (or return undefined), the default formatter is used.
+ *
+ * @param type - The Arrow DataType for the column
+ * @param value - The raw cell value
+ * @returns A formatted string, or undefined/nothing to fall back to the default
+ *
+ * @example
+ * ```ts
+ * formatValue: (type, value) => {
+ *   if (arrow.DataType.isDecimal(type)) {
+ *     return `$${value}`;
+ *   }
+ *   if (arrow.DataType.isBinary(type) && value instanceof Uint8Array) {
+ *     return `${value.byteLength} bytes`;
+ *   }
+ * }
+ * ```
+ */
+export type ArrowDataTableValueFormatter = (
+  type: arrow.DataType,
+  value: unknown,
+) => string | undefined;
+
+export type UseArrowDataTableOptions = {
+  /** Custom font size for the table e.g. xs, sm, md, lg, base */
+  fontSize?: string;
+  /**
+   * Custom value formatter that overrides the default valueToString.
+   * Return a string to use your custom formatting, or undefined to fall back to the default.
+   */
+  formatValue?: ArrowDataTableValueFormatter;
+};
+
 // Only use for small tables or in combination with pagination
 export default function useArrowDataTable(
   table: arrow.Table | undefined,
-  options: {
-    /** Custom font size for the table e.g. xs, sm, md, lg, base */
-    fontSize?: string;
-  } = {},
+  options: UseArrowDataTableOptions = {},
 ): UseArrowDataTableResult | undefined {
-  const {fontSize = 'base'} = options ?? {};
+  const {fontSize = 'base', formatValue} = options;
   const fontSizeClass = resolveFontSizeClass(fontSize);
   const data = useMemo(() => ({length: table?.numRows ?? 0}), [table]);
   const columns = useMemo(() => {
@@ -126,7 +159,10 @@ export default function useArrowDataTable(
         columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
           cell: (info) => {
             const value = info.getValue();
-            const valueStr = valueToString(field.type, value);
+            // Try custom formatter first, fall back to default
+            const valueStr =
+              formatValue?.(field.type, value) ??
+              valueToString(field.type, value);
             const parsedJson = safeJsonParse<unknown>(valueStr);
             const isJsonValue = parsedJson !== undefined;
 
@@ -207,7 +243,7 @@ export default function useArrowDataTable(
       );
     }
     return columns;
-  }, [table, fontSizeClass]);
+  }, [table, fontSizeClass, formatValue]);
 
   return data && columns ? {data, columns} : undefined;
 }
