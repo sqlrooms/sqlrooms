@@ -159,7 +159,6 @@ export default function useArrowDataTable(
         columnHelper.accessor((_row, i) => table.getChild(field.name)?.get(i), {
           cell: (info) => {
             const value = info.getValue();
-            // Try custom formatter first, fall back to default
             const valueStr =
               formatValue?.(field.type, value) ??
               valueToString(field.type, value);
