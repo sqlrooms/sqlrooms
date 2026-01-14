@@ -1,7 +1,7 @@
 import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {Button, Popover, PopoverContent, PopoverTrigger} from '@sqlrooms/ui';
 import {ClipboardIcon} from 'lucide-react';
-import {safeJsonParse, shorten} from '@sqlrooms/utils';
+import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
@@ -23,10 +23,26 @@ export type ArrowColumnMeta = {
 
 const MAX_VALUE_LENGTH = 64;
 
+/**
+ * Converts an Arrow value into a human-readable string.
+ */
 function valueToString(type: arrow.DataType, value: unknown): string {
-  if (value === null || value === undefined) {
-    return 'NULL';
+  if (value === null || value === undefined) return 'NULL';
+
+  // --- DECIMAL ---
+  if (arrow.DataType.isDecimal(type)) {
+    const scale = (type as any).scale ?? 0;
+
+    if (value instanceof Uint32Array) {
+      // Use Apache Arrow–style helper to convert Decimal128 buffer to string
+      return toDecimalString(value, scale);
+    }
+
+    // For non-Uint32Array values, fall back to default string rendering.
+    return String(value);
   }
+
+  // --- TIMESTAMP ---
   if (arrow.DataType.isTimestamp(type)) {
     switch (typeof value) {
       case 'number':
@@ -36,6 +52,8 @@ function valueToString(type: arrow.DataType, value: unknown): string {
         return new Date(value).toISOString();
     }
   }
+
+  // --- TIME ---
   if (arrow.DataType.isTime(type)) {
     switch (typeof value) {
       case 'number':
@@ -45,13 +63,44 @@ function valueToString(type: arrow.DataType, value: unknown): string {
         return new Date(value).toISOString().substring(11, 19);
     }
   }
+
+  // --- DATE ---
+  // Handle Arrow Date32/Date64 values coming from DuckDB-WASM.
+  //
+  // 1. If `value` is already a JS Date, format it directly.
+  // 2. If store config`castTimestampToDate` is true, DuckDB may return a number or bigint:
+  // 3. If `value` is a string, try to parse it as a date.
+  //
+  // This ensures DATE columns are displayed as "YYYY-MM-DD" regardless of underlying Arrow type.
   if (arrow.DataType.isDate(type)) {
-    if (value instanceof Date) {
-      return value.toISOString();
+    const dateType = type as arrow.Date_;
+
+    // Already a JS Date
+    if (value instanceof Date) return value.toISOString().slice(0, 10);
+
+    if (typeof value === 'number' || typeof value === 'bigint') {
+      const num = Number(value);
+      if (!Number.isFinite(num)) return String(num);
+
+      const d = new Date(num);
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+
+      return String(num);
     }
+
+    // Fallback for strings
+    if (typeof value === 'string') {
+      const d = new Date(value);
+      if (!Number.isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+    }
+
+    return String(value);
   }
+
+  // --- fallback ---
   return String(value);
 }
+
 // Only use for small tables or in combination with pagination
 export default function useArrowDataTable(
   table: arrow.Table | undefined,
