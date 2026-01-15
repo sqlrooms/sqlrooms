@@ -24,6 +24,8 @@ export function createDefaultAiConfig(
         uiMessages: [],
         toolAdditionalData: {},
         messagesRevision: 0,
+        prompt: '',
+        isRunning: false,
       },
     ],
     currentSessionId: defaultSessionId,

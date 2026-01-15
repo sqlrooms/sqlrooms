@@ -24,13 +24,9 @@ export {
 export {createAiSlice, useStoreWithAi} from '@sqlrooms/ai-core';
 export type {AiSliceState} from '@sqlrooms/ai-core';
 export {useScrollToBottom} from '@sqlrooms/ai-core';
-export {useAiChat} from '@sqlrooms/ai-core';
 export {AiThinkingDots} from '@sqlrooms/ai-core';
 export {cleanupPendingAnalysisResults, ToolAbortError} from '@sqlrooms/ai-core';
-export {
-  convertToAiSDKTools,
-  completeIncompleteToolCalls,
-} from '@sqlrooms/ai-core';
+export {convertToAiSDKTools, fixIncompleteToolCalls} from '@sqlrooms/ai-core';
 export {processAgentStream, updateAgentToolCallData} from '@sqlrooms/ai-core';
 export type {
   AgentStreamResult,
@@ -40,6 +36,7 @@ export type {
 } from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-core - Components
+// @deprecated Use `Chat.Messages` instead.
 export {AnalysisResultsContainer} from '@sqlrooms/ai-core';
 export {AnalysisResult} from '@sqlrooms/ai-core';
 export {ErrorMessage} from '@sqlrooms/ai-core';
@@ -56,6 +53,7 @@ export type {SessionType} from '@sqlrooms/ai-core';
 export {ToolErrorMessage} from '@sqlrooms/ai-core';
 export {ToolCallInfo} from '@sqlrooms/ai-core';
 export {ReasoningBox} from '@sqlrooms/ai-core';
+export {Chat} from '@sqlrooms/ai-core';
 
 // From @sqlrooms/ai-config
 export {

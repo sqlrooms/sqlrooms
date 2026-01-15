@@ -7,45 +7,16 @@ on:
       - 'python/**'
       - 'docs/**'
   pull_request:
-    types: [opened, edited, synchronize, reopened]
+    types: [opened, synchronize, reopened]
     paths-ignore:
       - 'python/**'
       - 'docs/**'
+  workflow_dispatch:
 
 jobs:
-  check-pr-title:
-    name: Validate PR Title
-    runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
-    steps:
-      - uses: amannn/action-semantic-pull-request@v6
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          types: |
-            fix
-            feat
-            chore
-            docs
-            style
-            refactor
-            perf
-            test
-            build
-            ci
-            revert
-          subjectPattern: ^.+$
-          validateSingleCommit: false
-          validateSingleCommitMatchesPrTitle: true
-          ignoreLabels: |
-            bot
-            ignore-semantic-pull-request
-
   build-and-test:
     name: Build and Test
     runs-on: ubuntu-latest
-    needs: check-pr-title
-    if: github.event_name != 'pull_request' || github.event.action != 'edited' || github.event.pull_request.user.login == 'renovate[bot]'
 
     steps:
       - name: Checkout

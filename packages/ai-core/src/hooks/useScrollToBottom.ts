@@ -35,7 +35,7 @@ const AT_BOTTOM_TOLERANCE = 100;
  * import { useRef } from 'react';
  * import { useScrollToBottom } from './use-scroll-to-bottom';
  *
- * function ChatContainer({ messages }) {
+ * function Chat({ messages }) {
  *   const containerRef = useRef<HTMLDivElement>(null);
  *   const endRef = useRef<HTMLDivElement>(null);
  *

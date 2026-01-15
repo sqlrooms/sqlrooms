@@ -38,3 +38,10 @@ export {
 
 export {safeJsonParse} from './json';
 export {memoizeOnce} from './memoization';
+export {
+  isNegativeDecimal,
+  negateDecimal,
+  toDecimalString,
+  toDecimalNumber,
+  fromDecimalString,
+} from './decimal';
