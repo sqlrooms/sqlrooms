@@ -22,6 +22,7 @@
     "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.556.0",

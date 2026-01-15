@@ -1,16 +1,23 @@
 import {QueryToolResult} from '@sqlrooms/ai';
 import {useSql} from '@sqlrooms/duckdb';
 import {
+  Button,
   cn,
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
   useDisclosure,
   useTheme,
 } from '@sqlrooms/ui';
-import {TriangleAlertIcon} from 'lucide-react';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {EditIcon, Settings2Icon, TriangleAlertIcon} from 'lucide-react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
-import {useMemo} from 'react';
+import {useEffect, useMemo, useState} from 'react';
 import {
   VegaLiteArrowChart,
   makeDefaultVegaLiteOptions,
@@ -32,12 +39,22 @@ type VegaChartToolResultProps = {
 export function VegaChartToolResult({
   className,
   sqlQuery,
-  vegaLiteSpec,
+  vegaLiteSpec: initialVegaLiteSpec,
   options: propsOptions,
 }: VegaChartToolResultProps) {
   const result = useSql({query: sqlQuery});
   const popoverOpen = useDisclosure();
+  const editDialogOpen = useDisclosure();
   const {theme} = useTheme();
+  const [vegaLiteSpec, setVegaLiteSpec] =
+    useState<VisualizationSpec>(initialVegaLiteSpec);
+  const [editedSpecString, setEditedSpecString] = useState<string>('');
+
+  // Sync local state when initial spec prop changes
+  useEffect(() => {
+    setVegaLiteSpec(initialVegaLiteSpec);
+  }, [initialVegaLiteSpec]);
+
   const options = useMemo(
     () =>
       makeDefaultVegaLiteOptions({
@@ -46,6 +63,31 @@ export function VegaChartToolResult({
       }),
     [theme, propsOptions],
   );
+
+  const handleEditClick = () => {
+    setEditedSpecString(
+      typeof vegaLiteSpec === 'string'
+        ? vegaLiteSpec
+        : JSON.stringify(vegaLiteSpec, null, 2),
+    );
+    editDialogOpen.onOpen();
+  };
+
+  const handleApply = () => {
+    try {
+      const parsed = JSON.parse(editedSpecString) as VisualizationSpec;
+      setVegaLiteSpec(parsed);
+      editDialogOpen.onClose();
+    } catch (error) {
+      // JSON parse error - could show a toast or error message
+      console.error('Invalid JSON:', error);
+    }
+  };
+
+  const handleCancel = () => {
+    editDialogOpen.onClose();
+  };
+
   return (
     <>
       {vegaLiteSpec && (
@@ -89,16 +131,58 @@ export function VegaChartToolResult({
               Running query for chart data…
             </div>
           ) : (
-            <VegaLiteArrowChart
-              className={cn(className)}
-              aspectRatio={16 / 9}
-              arrowTable={result.data?.arrowTable}
-              spec={vegaLiteSpec}
-              options={options}
-            />
+            <div className="relative">
+              <Button
+                className="absolute right-0 top-0 z-10"
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={handleEditClick}
+                aria-label="Edit chart specification"
+              >
+                <EditIcon className="h-4 w-4" />
+              </Button>
+              <VegaLiteArrowChart
+                className={cn(className)}
+                aspectRatio={16 / 9}
+                arrowTable={result.data?.arrowTable}
+                spec={vegaLiteSpec}
+                options={options}
+              />
+            </div>
           )}
         </div>
       )}
+
+      <Dialog
+        open={editDialogOpen.isOpen}
+        onOpenChange={editDialogOpen.onToggle}
+      >
+        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
+          <DialogHeader>
+            <DialogTitle>Edit Chart Specification</DialogTitle>
+          </DialogHeader>
+          <div className="relative flex h-full min-h-[400px] flex-1 flex-col overflow-hidden">
+            <JsonMonacoEditor
+              className="absolute inset-0 h-full w-full border"
+              value={editedSpecString}
+              onChange={(value) => {
+                if (value !== undefined) {
+                  setEditedSpecString(value);
+                }
+              }}
+            />
+          </div>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={handleCancel}>
+              Cancel
+            </Button>
+            <Button type="button" onClick={handleApply}>
+              Apply
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
