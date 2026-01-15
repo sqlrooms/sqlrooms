@@ -109,11 +109,7 @@ export const TableTreeNode: FC<{
             <TableIcon size="16px" className="shrink-0 text-blue-500" />
           )}
           <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
-            <span
-              className="shrink-0 truncate"
-              style={{maxWidth: '70%'}}
-              title={name}
-            >
+            <span className="max-w-[70%] shrink-0 truncate" title={name}>
               {name}
             </span>
             {rowCount !== undefined && rowCount > 0 && (
