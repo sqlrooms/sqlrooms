@@ -25,9 +25,10 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.556.0",
-    "react-vega": "^7.7.1",
+    "react-vega": "^8.0.0",
     "vega": "^6.2.0",
-    "vega-lite": "^6.4.0",
+    "vega-lite": "^6.4.2",
+    "vega-embed": "^7.1.0",
     "zod": "^4.1.8"
   },
   "peerDependencies": {
