@@ -20,6 +20,8 @@ export {
 export {
   default as useArrowDataTable,
   type ArrowColumnMeta,
+  type ArrowDataTableValueFormatter,
+  type UseArrowDataTableOptions,
 } from './useArrowDataTable';
 export {ColumnTypeBadge} from './ColumnTypeBadge';
 export {DataTableArrowPaginated} from './DataTableArrowPaginated';
