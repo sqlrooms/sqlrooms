@@ -6,16 +6,22 @@ import {
   PopoverContent,
   PopoverTrigger,
   useDisclosure,
+  useTheme,
 } from '@sqlrooms/ui';
 import {TriangleAlertIcon} from 'lucide-react';
-import {VisualizationSpec} from 'react-vega';
-import {VegaLiteChart} from './VegaLiteChart';
+import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {useMemo} from 'react';
+import {
+  VegaLiteArrowChart,
+  makeDefaultVegaLiteOptions,
+} from './VegaLiteArrowChart';
 
 type VegaChartToolResultProps = {
   className?: string;
   reasoning: string;
   sqlQuery: string;
   vegaLiteSpec: VisualizationSpec;
+  options?: Partial<EmbedOptions>;
 };
 
 /**
@@ -27,9 +33,19 @@ export function VegaChartToolResult({
   className,
   sqlQuery,
   vegaLiteSpec,
+  options: propsOptions,
 }: VegaChartToolResultProps) {
   const result = useSql({query: sqlQuery});
   const popoverOpen = useDisclosure();
+  const {theme} = useTheme();
+  const options = useMemo(
+    () =>
+      makeDefaultVegaLiteOptions({
+        theme: theme === 'dark' ? 'dark' : undefined,
+        ...propsOptions,
+      }),
+    [theme, propsOptions],
+  );
   return (
     <>
       {vegaLiteSpec && (
@@ -73,11 +89,12 @@ export function VegaChartToolResult({
               Running query for chart data…
             </div>
           ) : (
-            <VegaLiteChart.ArrowChart
+            <VegaLiteArrowChart
               className={cn(className)}
               aspectRatio={16 / 9}
               arrowTable={result.data?.arrowTable}
               spec={vegaLiteSpec}
+              options={options}
             />
           )}
         </div>
