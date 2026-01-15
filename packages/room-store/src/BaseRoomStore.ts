@@ -1,5 +1,6 @@
 import {produce} from 'immer';
 import {StateCreator, StoreApi, createStore, useStore} from 'zustand';
+import {DEV_HMR} from './hmr';
 
 // Re-export for convenience
 export type {StateCreator};
@@ -110,10 +111,26 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
     createRoomStore: (...args: Parameters<TFactory>) => StoreApi<RS>;
     useRoomStore: <T>(selector: (state: RS) => T) => T;
   } {
+    const storeId = DEV_HMR?.nextId();
     let store: StoreApi<RS> | undefined;
 
     function createRoomStore(...args: Parameters<TFactory>): StoreApi<RS> {
+      // Dev-only: Check for existing store from previous hot reload
+      if (DEV_HMR && storeId) {
+        const existingStore = DEV_HMR.get(storeId);
+        if (existingStore) {
+          store = existingStore;
+          return existingStore;
+        }
+      }
+
       store = createStore(stateCreatorFactory(...args));
+
+      // Dev-only: Register store for HMR preservation
+      if (DEV_HMR && storeId) {
+        DEV_HMR.set(storeId, store);
+      }
+
       if (typeof window !== 'undefined') {
         (async () => {
           try {
