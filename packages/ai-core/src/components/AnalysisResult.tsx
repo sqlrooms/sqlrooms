@@ -10,7 +10,6 @@ import {useStoreWithAi} from '../AiSlice';
 import {useToolGrouping} from '../hooks/useToolGrouping';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import type {UIMessage} from 'ai';
-import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
  * Props for the AnalysisResult component
@@ -52,8 +51,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -108,36 +105,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               size="icon"
               className="h-6 w-6"
               ariaLabel="Copy prompt"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                setDeleteTargetId(analysisResult.id);
-                setShowDeleteConfirmation(true);
-              }}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-
-            <DeleteConfirmationDialog
-              open={showDeleteConfirmation}
-              onOpenChange={(open) => {
-                setShowDeleteConfirmation(open);
-                if (!open) {
-                  setDeleteTargetId(null);
-                }
-              }}
-              onConfirm={() => {
-                if (currentSession?.id && deleteTargetId) {
-                  deleteAnalysisResult(currentSession.id, deleteTargetId);
-                }
-                setShowDeleteConfirmation(false);
-                setDeleteTargetId(null);
-              }}
-              canConfirm={Boolean(currentSession?.id && deleteTargetId)}
-              contentClassName="sm:max-w-[425px]"
             />
           </div>
         </div>
