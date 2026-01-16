@@ -13,19 +13,13 @@ import {
   PopoverContent,
   PopoverTrigger,
   useDisclosure,
-  useTheme,
 } from '@sqlrooms/ui';
 import {EditIcon, TriangleAlertIcon} from 'lucide-react';
-import {useEffect, useMemo, useState} from 'react';
+import {useEffect, useState} from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
-import {
-  makeDefaultVegaLiteOptions,
-  VegaLiteArrowChart,
-} from './VegaLiteArrowChart';
-import {darkTheme} from './themes/darkTheme';
-import {Config} from 'vega-lite';
+import {VegaLiteArrowChart} from './VegaLiteArrowChart';
 
-type VegaChartToolResultProps = {
+export type VegaChartToolResultProps = {
   className?: string;
   reasoning: string;
   sqlQuery: string;

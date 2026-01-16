@@ -1,5 +1,8 @@
 import {z} from 'zod';
-import {VegaChartToolResult} from './VegaChartToolResult';
+import {
+  VegaChartToolResult,
+  VegaChartToolResultProps,
+} from './VegaChartToolResult';
 import type {OpenAssistantTool} from '@openassistant/utils';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
@@ -60,10 +63,10 @@ Best practices for creating charts:
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
-  options = makeDefaultVegaLiteOptions(),
+  embedOptions = makeDefaultVegaLiteOptions(),
 }: {
   description?: string;
-  options?: EmbedOptions;
+  embedOptions?: EmbedOptions;
 } = {}): OpenAssistantTool<
   typeof VegaChartToolParameters,
   VegaChartToolLlmResult,
@@ -132,6 +135,11 @@ export function createVegaChartTool({
         };
       }
     },
-    component: VegaChartToolResult,
+    component: ({options, ...restProps}: VegaChartToolResultProps) => (
+      <VegaChartToolResult
+        {...restProps}
+        options={{...options, ...embedOptions}}
+      />
+    ),
   };
 }
