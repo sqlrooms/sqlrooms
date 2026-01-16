@@ -1,4 +1,4 @@
-import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
+import {DataTablePaginated, useArrowDataTable, ArrowDataTableValueFormatter} from '@sqlrooms/data-table';
 import type {Row} from '@tanstack/react-table';
 import {
   cn,
@@ -40,6 +40,10 @@ export interface QueryResultPanelProps {
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
+  /**
+   * Optional custom value formatter for binary/geometry data.
+   */
+  formatValue?: ArrowDataTableValueFormatter;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
@@ -49,6 +53,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   onRowClick,
   onRowDoubleClick,
   onAskAiAboutError,
+  formatValue,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
   const getCurrentQuery = useStoreWithSqlEditor(
@@ -72,6 +77,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }, [queryResultLimitOptions, queryResultLimit]);
   const arrowTableData = useArrowDataTable(
     isQueryWithResult(queryResult) ? queryResult.result : undefined,
+    {formatValue},
   );
 
   const handleAskAiAboutError = React.useCallback(() => {

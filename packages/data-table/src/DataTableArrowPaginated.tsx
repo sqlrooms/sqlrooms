@@ -3,16 +3,27 @@ import {FC, useMemo, useState} from 'react';
 import DataTablePaginated, {
   DataTablePaginatedProps,
 } from './DataTablePaginated';
-import useArrowDataTable from './useArrowDataTable';
+import useArrowDataTable, {ArrowDataTableValueFormatter} from './useArrowDataTable';
 import {PaginationState} from '@tanstack/react-table';
 
-export const DataTableArrowPaginated: FC<{
+export type DataTableArrowPaginatedProps = {
   className?: string;
   table: arrow.Table | undefined;
   fontSize?: DataTablePaginatedProps<any>['fontSize'];
   footerActions?: DataTablePaginatedProps<any>['footerActions'];
   pageSize?: number;
-}> = ({className, table, fontSize, footerActions, pageSize = 100}) => {
+  /** Optional custom value formatter for binary/geometry data */
+  formatValue?: ArrowDataTableValueFormatter;
+};
+
+export const DataTableArrowPaginated: FC<DataTableArrowPaginatedProps> = ({
+  className,
+  table,
+  fontSize,
+  footerActions,
+  pageSize = 100,
+  formatValue,
+}) => {
   const [pagination, setPagination] = useState<PaginationState | undefined>(
     // If the table has less than pageSize rows, don't show pagination.
     table?.numRows && table.numRows <= pageSize
@@ -26,7 +37,7 @@ export const DataTableArrowPaginated: FC<{
     return table.slice(startIndex, endIndex);
   }, [table, pagination]);
 
-  const adt = useArrowDataTable(pageData);
+  const adt = useArrowDataTable(pageData, {formatValue});
   if (!adt) {
     return <div className="p-4 text-xs">No data</div>;
   }
