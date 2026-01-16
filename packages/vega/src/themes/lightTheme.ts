@@ -10,7 +10,11 @@ export const lightTheme: Config = {
   arc: {fill: markColor},
   area: {fill: markColor},
   line: {stroke: markColor, strokeWidth: 2},
+  point: {fill: markColor},
+  bar: {fill: markColor},
   rect: {fill: markColor},
+  circle: {fill: markColor},
+  square: {fill: markColor},
 
   view: {
     stroke: medColor,

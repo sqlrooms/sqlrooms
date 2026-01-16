@@ -28,7 +28,7 @@ export const DeleteConfirmationDialog: React.FC<
   onOpenChange,
   onConfirm,
   title = 'Confirm Deletion',
-  description = 'Are you sure you want to delete this analysis result? This action cannot be undone.',
+  description = 'Are you sure you want to delete this message? This action cannot be undone.',
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
   canConfirm = true,

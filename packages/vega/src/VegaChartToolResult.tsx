@@ -125,7 +125,7 @@ export function VegaChartToolResult({
           ) : (
             <div className="relative">
               <Button
-                className="absolute right-0 top-0 z-10"
+                className="absolute right-3 top-[40px] z-10"
                 type="button"
                 variant="ghost"
                 size="icon"
