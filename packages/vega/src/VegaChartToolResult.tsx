@@ -30,7 +30,7 @@ type VegaChartToolResultProps = {
   reasoning: string;
   sqlQuery: string;
   vegaLiteSpec: VisualizationSpec;
-  options?: Partial<EmbedOptions>;
+  options?: EmbedOptions;
 };
 
 /**

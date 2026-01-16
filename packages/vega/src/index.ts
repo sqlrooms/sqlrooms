@@ -13,6 +13,7 @@ export {
   VegaChartToolParameters,
   DEFAULT_VEGA_CHART_DESCRIPTION,
 } from './VegaChartTool';
+
 export type {VegaChartToolParameters as VegaChartToolParametersType} from './VegaChartTool';
 
 export const VegaLiteChart = Object.assign(VegaLiteSqlChart, {

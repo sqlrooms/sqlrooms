@@ -3,6 +3,8 @@ import {VegaChartToolResult} from './VegaChartToolResult';
 import type {OpenAssistantTool} from '@openassistant/utils';
 import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
+import {EmbedOptions} from 'vega-embed';
+import {makeDefaultVegaLiteOptions} from './VegaLiteArrowChart';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -58,8 +60,10 @@ Best practices for creating charts:
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
+  options = makeDefaultVegaLiteOptions(),
 }: {
   description?: string;
+  options?: EmbedOptions;
 } = {}): OpenAssistantTool<
   typeof VegaChartToolParameters,
   VegaChartToolLlmResult,

@@ -21,19 +21,23 @@ export type VegaLiteArrowChartProps = {
 };
 
 export function makeDefaultVegaLiteOptions(
-  options?: Partial<EmbedOptions>,
+  options?: EmbedOptions,
 ): EmbedOptions {
   return {
     mode: 'vega-lite',
     theme: undefined,
     tooltip: true,
-    actions: {
-      export: true,
-      source: false,
-      compiled: false,
-      editor: false,
-    },
     ...options,
+    actions:
+      options?.actions === false
+        ? false
+        : {
+            export: true,
+            source: false,
+            compiled: false,
+            editor: false,
+            ...(typeof options?.actions === 'object' ? options.actions : {}),
+          },
   };
 }
 
