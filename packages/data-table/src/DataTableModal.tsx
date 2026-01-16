@@ -41,26 +41,22 @@ import {ArrowDataTableValueFormatter} from './useArrowDataTable';
  * };
  * ```
  */
-type DataTableModalBaseProps = {
+export type DataTableModalProps = {
   className?: string;
   title: string | undefined;
   tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
   /** Optional custom value formatter for binary/geometry data */
   formatValue?: ArrowDataTableValueFormatter;
-};
-
-type DataTableModalQueryProps = {
-  query: string | undefined;
-  arrowTable?: never;
-};
-
-type DataTableModalArrowTableProps = {
-  arrowTable: arrow.Table | undefined;
-  query?: never;
-};
-
-export type DataTableModalProps = DataTableModalBaseProps &
-  (DataTableModalQueryProps | DataTableModalArrowTableProps);
+} & (
+  | {
+      query: string | undefined;
+      arrowTable?: never;
+    }
+  | {
+      arrowTable: arrow.Table | undefined;
+      query?: never;
+    }
+);
 
 const DataTableModal: FC<DataTableModalProps> = (props) => {
   const {className, title, tableModal, formatValue} = props;
