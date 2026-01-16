@@ -40,9 +40,7 @@ export interface QueryResultPanelProps {
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
-  /**
-   * Optional custom value formatter for binary/geometry data.
-   */
+  /** Custom value formatter for arrow data */
   formatValue?: ArrowDataTableValueFormatter;
 }
 
