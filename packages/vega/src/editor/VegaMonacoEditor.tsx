@@ -1,4 +1,4 @@
-import {OnMount} from '@monaco-editor/react';
+import type {OnMount} from '@monaco-editor/react';
 import {MonacoEditor, MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import React, {useEffect, useRef} from 'react';
 import {loadVegaLiteSchema} from '../schema/vegaLiteSchema';
