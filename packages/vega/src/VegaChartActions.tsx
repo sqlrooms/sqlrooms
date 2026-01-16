@@ -36,7 +36,7 @@ export const VegaChartActions: React.FC<VegaChartActionsProps> = ({
   return (
     <div
       className={cn(
-        'absolute right-0 top-0 z-10 flex items-center gap-1',
+        'bg-background absolute right-0 top-1 z-10 flex items-center gap-1',
         className,
       )}
     >

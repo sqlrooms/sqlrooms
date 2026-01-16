@@ -17,6 +17,7 @@ import {lightTheme} from './themes/lightTheme';
 import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaChartActions} from './VegaChartActions';
 import {VegaExportAction} from './VegaExportAction';
+import {VegaEditAction} from './VegaEditAction';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -50,6 +51,12 @@ export function makeDefaultVegaLiteOptions(
     theme: undefined,
     tooltip: true,
     actions: false,
+    padding: {
+      top: 20,
+      right: 10,
+      bottom: 10,
+      left: 10,
+    },
     ...options,
   };
 }
@@ -203,4 +210,8 @@ export const VegaLiteArrowChart = Object.assign(VegaLiteArrowChartBase, {
    * Built-in export action with PNG/SVG download
    */
   ExportAction: VegaExportAction,
+  /**
+   * Built-in edit action with spec/SQL editor popover
+   */
+  EditAction: VegaEditAction,
 });
