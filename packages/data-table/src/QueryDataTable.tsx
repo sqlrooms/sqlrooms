@@ -5,7 +5,7 @@ import DataTablePaginated, {
   DataTablePaginatedProps,
 } from './DataTablePaginated';
 import {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
-import useArrowDataTable from './useArrowDataTable';
+import useArrowDataTable, {ArrowDataTableValueFormatter} from './useArrowDataTable';
 import {makePagedQuery} from './utils';
 
 export type QueryDataTableProps = {
@@ -15,6 +15,8 @@ export type QueryDataTableProps = {
   query: string;
   queryKeyComponents?: unknown[];
   renderActions?: (query: string) => React.ReactNode;
+  /** Custom value formatter for arrow data */
+  formatValue?: ArrowDataTableValueFormatter;
 };
 
 const QueryDataTable: FC<QueryDataTableProps> = ({
@@ -22,6 +24,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   fontSize = 'text-xs',
   query,
   renderActions = (query) => <QueryDataTableActionsMenu query={query} />,
+  formatValue,
 }) => {
   const [sorting, setSorting] = useState<SortingState>([]);
   const [pagination, setPagination] = useState<PaginationState>({
@@ -36,7 +39,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   const countQueryResult = useSql<{count: number}>({
     query: `SELECT COUNT(*)::int AS count FROM (${sanitizedQuery})`,
   });
-  const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable);
+  const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable, {formatValue});
 
   if (queryResult.error) {
     return (

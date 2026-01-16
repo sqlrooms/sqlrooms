@@ -3,7 +3,7 @@
  * @packageDocumentation
  */
 
-export {default as DataTableModal} from './DataTableModal';
+export {default as DataTableModal, type DataTableModalProps} from './DataTableModal';
 export {
   default as DataTablePaginated,
   type DataTablePaginatedProps,
@@ -24,6 +24,6 @@ export {
   type UseArrowDataTableOptions,
 } from './useArrowDataTable';
 export {ColumnTypeBadge} from './ColumnTypeBadge';
-export {DataTableArrowPaginated} from './DataTableArrowPaginated';
+export {DataTableArrowPaginated, type DataTableArrowPaginatedProps} from './DataTableArrowPaginated';
 export {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
 export {makePagedQuery} from './utils';
