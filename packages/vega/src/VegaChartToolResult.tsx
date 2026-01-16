@@ -155,7 +155,7 @@ export function VegaChartToolResult({
         {/* Chart with edit popover */}
         <div className="relative min-h-[300px]">
           <VegaChartDisplay aspectRatio={16 / 9}>
-            <VegaLiteArrowChart.Actions className="right-[70px]">
+            <VegaLiteArrowChart.Actions className="right-3 top-[-1px]">
               <VegaExportAction />
             </VegaLiteArrowChart.Actions>
           </VegaChartDisplay>
