@@ -8,6 +8,7 @@ import {compile, TopLevelSpec} from 'vega-lite';
 import {parse as vegaParse} from 'vega';
 import {EmbedOptions} from 'vega-embed';
 import {makeDefaultVegaLiteOptions} from './VegaLiteArrowChart';
+import {EditorMode} from './editor/types';
 
 /**
  * Zod schema for the VegaChart tool parameters
@@ -56,18 +57,43 @@ Best practices for creating charts:
 - If the chart uses an encoding channel like color, shape, or size to represent a data field, then include a legend object in that channel's encoding (unless explicitly told not to).`;
 
 /**
+ * Options for creating a VegaChart tool
+ */
+export type VegaChartToolOptions = {
+  /**
+   * Custom description for the tool
+   */
+  description?: string;
+  /**
+   * Vega embed options
+   */
+  embedOptions?: EmbedOptions;
+  /**
+   * Whether editing is enabled
+   * @default true
+   */
+  editable?: boolean;
+  /**
+   * Which editors to show when editing
+   * @default 'both'
+   */
+  editorMode?: EditorMode;
+};
+
+/**
  * Creates a VegaLite chart visualization tool for AI assistants
  * @param options - Configuration options for the VegaChart tool
  * @param options.description - Custom description for the tool (defaults to a standard description)
+ * @param options.editable - Whether editing is enabled (defaults to true)
+ * @param options.editorMode - Which editors to show ('spec', 'sql', 'both', 'none')
  * @returns A tool that can be used with the AI assistant
  */
 export function createVegaChartTool({
   description = DEFAULT_VEGA_CHART_DESCRIPTION,
   embedOptions = makeDefaultVegaLiteOptions(),
-}: {
-  description?: string;
-  embedOptions?: EmbedOptions;
-} = {}): OpenAssistantTool<
+  editable = true,
+  editorMode = 'both',
+}: VegaChartToolOptions = {}): OpenAssistantTool<
   typeof VegaChartToolParameters,
   VegaChartToolLlmResult,
   VegaChartToolAdditionalData,
@@ -139,6 +165,8 @@ export function createVegaChartTool({
       <VegaChartToolResult
         {...restProps}
         options={{...options, ...embedOptions}}
+        editable={editable}
+        editorMode={editorMode}
       />
     ),
   };

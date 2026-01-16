@@ -30,6 +30,10 @@ export type {QueryEditorPanelProps} from './components/QueryEditorPanel';
 export {QueryEditorPanelActions} from './components/QueryEditorPanelActions';
 export {QueryEditorPanelTabsList} from './components/QueryEditorPanelTabsList';
 export {QueryEditorPanelEditor} from './components/QueryEditorPanelEditor';
+export {QueryResultLimitSelect} from './components/QueryResultLimitSelect';
+export type {QueryResultLimitSelectProps} from './components/QueryResultLimitSelect';
+export {SqlQueryPreview} from './components/SqlQueryPreview';
+export type {SqlQueryPreviewProps} from './components/SqlQueryPreview';
 
 // Re-export from @sqlrooms/sql-editor-config
 // Values also export their corresponding types automatically (Zod pattern)

@@ -1,6 +1,5 @@
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-import {VisualizationSpec} from 'vega-embed';
 import {
   VegaLiteArrowChart,
   VegaLiteArrowChartProps,

@@ -1,23 +1,25 @@
-import {QueryToolResult} from '@sqlrooms/ai';
-import {useSql} from '@sqlrooms/duckdb';
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import {useStoreWithAi} from '@sqlrooms/ai';
 import {
   Button,
   cn,
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {EditIcon, TriangleAlertIcon} from 'lucide-react';
-import {useEffect, useState} from 'react';
+import {Check, Code2, Database, EditIcon} from 'lucide-react';
+import {useCallback, useState} from 'react';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
-import {VegaLiteArrowChart} from './VegaLiteArrowChart';
+import {VegaChartContainer} from './editor/VegaChartContainer';
+import {VegaChartDisplay} from './editor/VegaChartDisplay';
+import {useVegaEditorContext} from './editor/VegaEditorContext';
+import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
+import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
+import {EditorMode} from './editor/types';
 
 export type VegaChartToolResultProps = {
   className?: string;
@@ -25,150 +27,217 @@ export type VegaChartToolResultProps = {
   sqlQuery: string;
   vegaLiteSpec: VisualizationSpec;
   options?: EmbedOptions;
+  /**
+   * Tool call ID for AI slice integration (enables persistence)
+   */
+  toolCallId?: string;
+  /**
+   * Whether editing is enabled
+   * @default true
+   */
+  editable?: boolean;
+  /**
+   * Which editors to show when editing
+   * @default 'both'
+   */
+  editorMode?: EditorMode;
 };
 
 /**
- * Renders a chart tool call with visualization using Vega-Lite
+ * Inline editor actions component (Discard + Apply)
+ */
+function EditorActions({onClose}: {onClose: () => void}) {
+  const {actions, canApply, hasChanges} = useVegaEditorContext();
+
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="xs"
+        onClick={() => {
+          actions.cancelChanges();
+        }}
+        disabled={!hasChanges}
+        title="Discard changes"
+      >
+        Discard
+      </Button>
+      <Button
+        variant="default"
+        size="xs"
+        onClick={() => {
+          actions.applyChanges();
+          onClose();
+        }}
+        disabled={!canApply}
+        title="Apply changes"
+      >
+        <Check className="mr-1 h-3 w-3" />
+        Apply
+      </Button>
+    </div>
+  );
+}
+
+/**
+ * Renders a chart tool call with visualization using Vega-Lite.
+ * Supports inline editing with AI slice persistence.
+ *
  * @param {VegaChartToolResultProps} props - The component props
  * @returns {JSX.Element} The rendered chart tool call
  */
 export function VegaChartToolResult({
   className,
   sqlQuery,
-  vegaLiteSpec: initialVegaLiteSpec,
+  vegaLiteSpec,
   options,
+  toolCallId,
+  editable = true,
+  editorMode = 'both',
 }: VegaChartToolResultProps) {
-  const result = useSql({query: sqlQuery});
-  const popoverOpen = useDisclosure();
-  const editDialogOpen = useDisclosure();
-  const [vegaLiteSpec, setVegaLiteSpec] =
-    useState<VisualizationSpec>(initialVegaLiteSpec);
-  const [editedSpecString, setEditedSpecString] = useState<string>('');
+  const editorPopover = useDisclosure();
+  const [activeTab, setActiveTab] = useState<'spec' | 'sql'>('spec');
 
-  // Sync local state when initial spec prop changes
-  useEffect(() => {
-    setVegaLiteSpec(initialVegaLiteSpec);
-  }, [initialVegaLiteSpec]);
+  // AI slice integration for persisting changes
+  const setToolAdditionalData = useStoreWithAi(
+    (s) => s.ai.setSessionToolAdditionalData,
+  );
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const currentSessionId = currentSession?.id;
 
-  const handleEditClick = () => {
-    setEditedSpecString(
-      typeof vegaLiteSpec === 'string'
-        ? vegaLiteSpec
-        : JSON.stringify(vegaLiteSpec, null, 2),
-    );
-    editDialogOpen.onOpen();
-  };
+  // Track applied values for callbacks (to persist both spec and sql together)
+  const [appliedSpec, setAppliedSpec] = useState(vegaLiteSpec);
+  const [appliedSql, setAppliedSql] = useState(sqlQuery);
 
-  const handleApply = () => {
-    try {
-      const parsed = JSON.parse(editedSpecString) as VisualizationSpec;
-      setVegaLiteSpec(parsed);
-      editDialogOpen.onClose();
-    } catch (error) {
-      // JSON parse error - could show a toast or error message
-      console.error('Invalid JSON:', error);
-    }
-  };
+  // Callbacks to persist changes to AI slice
+  const handleSpecChange = useCallback(
+    (newSpec: VisualizationSpec) => {
+      setAppliedSpec(newSpec);
+      if (toolCallId && currentSessionId) {
+        setToolAdditionalData(currentSessionId, toolCallId, {
+          sqlQuery: appliedSql,
+          vegaLiteSpec: newSpec,
+        });
+      }
+    },
+    [toolCallId, currentSessionId, appliedSql, setToolAdditionalData],
+  );
 
-  const handleCancel = () => {
-    editDialogOpen.onClose();
-  };
+  const handleSqlChange = useCallback(
+    (newSql: string) => {
+      setAppliedSql(newSql);
+      if (toolCallId && currentSessionId) {
+        setToolAdditionalData(currentSessionId, toolCallId, {
+          sqlQuery: newSql,
+          vegaLiteSpec: appliedSpec,
+        });
+      }
+    },
+    [toolCallId, currentSessionId, appliedSpec, setToolAdditionalData],
+  );
+
+  const showSpecEditor = editorMode === 'spec' || editorMode === 'both';
+  const showSqlEditor = editorMode === 'sql' || editorMode === 'both';
+  const showTabs = showSpecEditor && showSqlEditor;
 
   return (
-    <>
-      {vegaLiteSpec && (
-        <div className="flex flex-col gap-2">
-          <QueryToolResult
-            title=""
-            arrowTable={result.data?.arrowTable}
-            sqlQuery={sqlQuery}
-          />
-          {result.error ? (
+    <div className={cn('flex flex-col gap-2', className)}>
+      <VegaChartContainer
+        spec={vegaLiteSpec}
+        sqlQuery={sqlQuery}
+        options={options}
+        editable={editable}
+        onSpecChange={handleSpecChange}
+        onSqlChange={handleSqlChange}
+      >
+        {/* Chart with edit popover */}
+        <div className="relative min-h-[300px]">
+          <VegaChartDisplay aspectRatio={16 / 9} />
+
+          {/* Edit button with popover */}
+          {editable && (
             <Popover
-              open={popoverOpen.isOpen}
-              onOpenChange={popoverOpen.onToggle}
+              open={editorPopover.isOpen}
+              onOpenChange={editorPopover.onToggle}
             >
               <PopoverTrigger asChild>
-                <button
+                <Button
+                  className="absolute right-0 top-[50px]"
                   type="button"
-                  className="flex items-center gap-2 transition-colors"
-                  aria-label="Show error details"
+                  variant="ghost"
+                  size="xs"
+                  aria-label="Edit chart specification"
                 >
-                  <TriangleAlertIcon className="h-4 w-4" />
-                </button>
+                  <EditIcon className="h-4 w-4" />
+                </Button>
               </PopoverTrigger>
               <PopoverContent
-                align="start"
-                style={{width: '600px', maxWidth: '80%'}}
+                align="end"
+                side="bottom"
+                className="w-[400px] p-0"
               >
-                <div className="flex flex-col gap-2">
-                  <div className="border-b text-sm font-medium">
-                    Query Error
+                <div className="flex h-[400px] flex-col">
+                  {/* Header with tabs */}
+                  <div className="flex items-center justify-between border-b px-2 py-1">
+                    {showTabs ? (
+                      <Tabs
+                        value={activeTab}
+                        onValueChange={(v) => setActiveTab(v as 'spec' | 'sql')}
+                        className="w-full"
+                      >
+                        <div className="flex items-center justify-between">
+                          <TabsList className="h-7">
+                            <TabsTrigger
+                              value="spec"
+                              className="h-6 px-2 text-xs"
+                            >
+                              <Code2 className="mr-1 h-3 w-3" />
+                              Spec
+                            </TabsTrigger>
+                            <TabsTrigger
+                              value="sql"
+                              className="h-6 px-2 text-xs"
+                            >
+                              <Database className="mr-1 h-3 w-3" />
+                              SQL
+                            </TabsTrigger>
+                          </TabsList>
+                          <EditorActions onClose={editorPopover.onClose} />
+                        </div>
+                      </Tabs>
+                    ) : (
+                      <div className="flex w-full items-center justify-between">
+                        <span className="text-sm font-medium">
+                          {showSpecEditor ? 'Vega-Lite Spec' : 'SQL Query'}
+                        </span>
+                        <EditorActions onClose={editorPopover.onClose} />
+                      </div>
+                    )}
                   </div>
-                  <div className="whitespace-pre-wrap font-mono text-sm text-red-500">
-                    {result.error?.message}
+
+                  {/* Editor content */}
+                  <div className="flex-1 overflow-hidden">
+                    {showTabs ? (
+                      <Tabs value={activeTab} className="h-full">
+                        <TabsContent value="spec" className="mt-0 h-full">
+                          <VegaSpecEditorPanel title="" className="h-full" />
+                        </TabsContent>
+                        <TabsContent value="sql" className="mt-0 h-full">
+                          <VegaSqlEditorPanel title="" className="h-full" />
+                        </TabsContent>
+                      </Tabs>
+                    ) : showSpecEditor ? (
+                      <VegaSpecEditorPanel title="" className="h-full" />
+                    ) : (
+                      <VegaSqlEditorPanel title="" className="h-full" />
+                    )}
                   </div>
                 </div>
               </PopoverContent>
             </Popover>
-          ) : result.isLoading ? (
-            <div className="text-muted-foreground align-center flex gap-2 px-2">
-              <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-blue-600"></div>
-              Running query for chart data…
-            </div>
-          ) : (
-            <div className="relative">
-              <Button
-                className="absolute right-3 top-[40px] z-10"
-                type="button"
-                variant="ghost"
-                size="icon"
-                onClick={handleEditClick}
-                aria-label="Edit chart specification"
-              >
-                <EditIcon className="h-4 w-4" />
-              </Button>
-              <VegaLiteArrowChart
-                className={cn('pr-4', className)}
-                aspectRatio={16 / 9}
-                arrowTable={result.data?.arrowTable}
-                spec={vegaLiteSpec}
-                options={options}
-              />
-            </div>
           )}
         </div>
-      )}
-
-      <Dialog
-        open={editDialogOpen.isOpen}
-        onOpenChange={editDialogOpen.onToggle}
-      >
-        <DialogContent className="flex max-h-[90vh] max-w-4xl flex-col">
-          <DialogHeader>
-            <DialogTitle>Edit Chart Specification</DialogTitle>
-          </DialogHeader>
-          <div className="relative flex h-full min-h-[400px] flex-1 flex-col overflow-hidden">
-            <JsonMonacoEditor
-              className="absolute inset-0 h-full w-full border"
-              value={editedSpecString}
-              onChange={(value) => {
-                if (value !== undefined) {
-                  setEditedSpecString(value);
-                }
-              }}
-            />
-          </div>
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={handleCancel}>
-              Cancel
-            </Button>
-            <Button type="button" onClick={handleApply}>
-              Apply
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </>
+      </VegaChartContainer>
+    </div>
   );
 }
