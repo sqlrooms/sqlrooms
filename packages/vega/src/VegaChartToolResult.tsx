@@ -1,5 +1,6 @@
 import {QueryToolResult} from '@sqlrooms/ai';
 import {useSql} from '@sqlrooms/duckdb';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   cn,
@@ -14,14 +15,15 @@ import {
   useDisclosure,
   useTheme,
 } from '@sqlrooms/ui';
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {EditIcon, Settings2Icon, TriangleAlertIcon} from 'lucide-react';
-import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {EditIcon, TriangleAlertIcon} from 'lucide-react';
 import {useEffect, useMemo, useState} from 'react';
+import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {
-  VegaLiteArrowChart,
   makeDefaultVegaLiteOptions,
+  VegaLiteArrowChart,
 } from './VegaLiteArrowChart';
+import {darkTheme} from './themes/darkTheme';
+import {Config} from 'vega-lite';
 
 type VegaChartToolResultProps = {
   className?: string;
@@ -40,12 +42,11 @@ export function VegaChartToolResult({
   className,
   sqlQuery,
   vegaLiteSpec: initialVegaLiteSpec,
-  options: propsOptions,
+  options,
 }: VegaChartToolResultProps) {
   const result = useSql({query: sqlQuery});
   const popoverOpen = useDisclosure();
   const editDialogOpen = useDisclosure();
-  const {theme} = useTheme();
   const [vegaLiteSpec, setVegaLiteSpec] =
     useState<VisualizationSpec>(initialVegaLiteSpec);
   const [editedSpecString, setEditedSpecString] = useState<string>('');
@@ -54,15 +55,6 @@ export function VegaChartToolResult({
   useEffect(() => {
     setVegaLiteSpec(initialVegaLiteSpec);
   }, [initialVegaLiteSpec]);
-
-  const options = useMemo(
-    () =>
-      makeDefaultVegaLiteOptions({
-        theme: theme === 'dark' ? 'dark' : undefined,
-        ...propsOptions,
-      }),
-    [theme, propsOptions],
-  );
 
   const handleEditClick = () => {
     setEditedSpecString(
@@ -143,7 +135,7 @@ export function VegaChartToolResult({
                 <EditIcon className="h-4 w-4" />
               </Button>
               <VegaLiteArrowChart
-                className={cn(className)}
+                className={cn('pr-4', className)}
                 aspectRatio={16 / 9}
                 arrowTable={result.data?.arrowTable}
                 spec={vegaLiteSpec}
