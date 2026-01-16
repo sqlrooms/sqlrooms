@@ -15,7 +15,7 @@ export type QueryDataTableProps = {
   query: string;
   queryKeyComponents?: unknown[];
   renderActions?: (query: string) => React.ReactNode;
-  /** Optional custom value formatter for binary/geometry data */
+  /** Custom value formatter for arrow data */
   formatValue?: ArrowDataTableValueFormatter;
 };
 
