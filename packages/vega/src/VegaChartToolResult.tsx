@@ -162,7 +162,7 @@ export function VegaChartToolResult({
             >
               <PopoverTrigger asChild>
                 <Button
-                  className="absolute right-0 top-[50px]"
+                  className="absolute right-[40px] top-0"
                   type="button"
                   variant="ghost"
                   size="xs"

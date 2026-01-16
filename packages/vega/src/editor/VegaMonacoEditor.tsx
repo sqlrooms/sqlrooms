@@ -83,6 +83,7 @@ export const VegaMonacoEditor: React.FC<VegaMonacoEditorProps> = ({
         formatOnType: true,
         folding: true,
         foldingStrategy: 'indentation',
+        lineNumbers: 'off',
         ...options,
       }}
       {...props}
