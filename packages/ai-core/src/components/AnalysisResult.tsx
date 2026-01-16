@@ -1,16 +1,15 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {Button, CopyButton} from '@sqlrooms/ui';
-import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState, useRef, useEffect} from 'react';
+import {CopyButton} from '@sqlrooms/ui';
+import type {UIMessage} from 'ai';
+import {SquareTerminalIcon} from 'lucide-react';
+import {useEffect, useRef, useState} from 'react';
 import {Components} from 'react-markdown';
+import {useStoreWithAi} from '../AiSlice';
+import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import {useToolGrouping} from '../hooks/useToolGrouping';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
-import {useStoreWithAi} from '../AiSlice';
-import {useToolGrouping} from '../hooks/useToolGrouping';
-import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
-import type {UIMessage} from 'ai';
-import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
  * Props for the AnalysisResult component
@@ -44,16 +43,12 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   userTools,
   ErrorMessageComponent,
 }) => {
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -108,36 +103,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               size="icon"
               className="h-6 w-6"
               ariaLabel="Copy prompt"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                setDeleteTargetId(analysisResult.id);
-                setShowDeleteConfirmation(true);
-              }}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-
-            <DeleteConfirmationDialog
-              open={showDeleteConfirmation}
-              onOpenChange={(open) => {
-                setShowDeleteConfirmation(open);
-                if (!open) {
-                  setDeleteTargetId(null);
-                }
-              }}
-              onConfirm={() => {
-                if (currentSession?.id && deleteTargetId) {
-                  deleteAnalysisResult(currentSession.id, deleteTargetId);
-                }
-                setShowDeleteConfirmation(false);
-                setDeleteTargetId(null);
-              }}
-              canConfirm={Boolean(currentSession?.id && deleteTargetId)}
-              contentClassName="sm:max-w-[425px]"
             />
           </div>
         </div>
