@@ -45,6 +45,8 @@ export function useVegaChartEditor({
       // Track previous prop values for change detection
       prevInitialSpecString: specString,
       prevInitialSql: initialSql,
+      // Track last successfully parsed spec for fallback during errors
+      lastValidSpec: initialSpec,
     };
   });
 
@@ -97,6 +99,12 @@ export function useVegaChartEditor({
       return {parsedSpec: null, specParseError: message};
     }
   }, [debouncedSpecString]);
+
+  // Update lastValidSpec when we successfully parse a new spec (render-time pattern)
+  if (parsedSpec && parsedSpec !== editorState.lastValidSpec) {
+    setEditorState((prev) => ({...prev, lastValidSpec: parsedSpec}));
+  }
+  const lastValidSpec = editorState.lastValidSpec;
 
   // Calculate dirty state
   const isSpecDirty = useMemo(() => {
@@ -215,6 +223,7 @@ export function useVegaChartEditor({
     editedSql,
     appliedSql,
     parsedSpec,
+    lastValidSpec,
     specParseError,
     isSpecDirty,
     isSqlDirty,

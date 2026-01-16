@@ -28,6 +28,8 @@ export interface VegaEditorState {
   appliedSql: string;
   /** Parsed spec object (null if parse error) */
   parsedSpec: VisualizationSpec | null;
+  /** Last successfully parsed spec (for fallback during errors) */
+  lastValidSpec: VisualizationSpec;
   /** JSON parse error message if any */
   specParseError: string | null;
   /** Whether spec has been modified from initial */

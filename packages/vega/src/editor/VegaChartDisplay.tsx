@@ -1,6 +1,5 @@
 import {useSql} from '@sqlrooms/duckdb';
 import {cn} from '@sqlrooms/ui';
-import {AlertCircle} from 'lucide-react';
 import React from 'react';
 import {VegaLiteArrowChart} from '../VegaLiteArrowChart';
 import {useVegaEditorContext} from './VegaEditorContext';
@@ -50,8 +49,9 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   // Use arrow table if provided, otherwise use SQL result
   const chartData = arrowTable ?? sqlResult.data?.arrowTable;
 
-  // Use parsed spec for live preview, fall back to string if parse failed
-  const spec = state.parsedSpec ?? state.editedSpecString;
+  // Use parsed spec for live preview, fall back to last valid spec if parse failed
+  // This ensures the chart keeps rendering during typing even with invalid JSON
+  const spec = state.parsedSpec ?? state.lastValidSpec;
 
   // Show loading state
   if (sqlQuery && !arrowTable && sqlResult.isLoading) {
@@ -91,15 +91,6 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
         aspectRatio={aspectRatio}
         options={options}
       />
-      {/* Spec parse error overlay */}
-      {state.specParseError && (
-        <div className="absolute inset-x-0 bottom-0 bg-red-500/90 px-3 py-2 text-white backdrop-blur-sm">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span className="truncate text-xs">{state.specParseError}</span>
-          </div>
-        </div>
-      )}
     </div>
   );
 };
