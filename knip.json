@@ -19,7 +19,8 @@
         "@lerna-lite/*",
         "glob",
         "remove",
-        "vitepress-plugin-llms"
+        "vitepress-plugin-llms",
+        "typescript-language-server"
       ],
       "ignoreBinaries": ["madge", "uv"]
     },

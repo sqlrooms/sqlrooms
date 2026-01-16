@@ -1,0 +1,15 @@
+{
+  "lsp": {
+    "typescript": {
+      "command": "pnpm",
+      "args": ["exec", "typescript-language-server", "--stdio"],
+      "filetypes": [
+        "typescript",
+        "typescriptreact",
+        "javascript",
+        "javascriptreact"
+      ],
+      "rootPatterns": ["tsconfig.json", "package.json"]
+    }
+  }
+}
