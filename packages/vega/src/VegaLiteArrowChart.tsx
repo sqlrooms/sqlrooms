@@ -1,14 +1,22 @@
 import {ToolErrorMessage} from '@sqlrooms/ai';
 import {arrowTableToJson} from '@sqlrooms/duckdb';
-import {AspectRatio, cn, useTheme} from '@sqlrooms/ui';
+import {
+  AspectRatio,
+  cn,
+  useAspectRatioDimensions,
+  useTheme,
+} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useVegaEmbed} from 'react-vega';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {Config} from 'vega-lite';
 import {darkTheme} from './themes/darkTheme';
 import {lightTheme} from './themes/lightTheme';
+import {VegaChartContextProvider} from './VegaChartContext';
+import {VegaChartActions} from './VegaChartActions';
+import {VegaExportAction} from './VegaExportAction';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -18,6 +26,20 @@ export type VegaLiteArrowChartProps = {
   spec: string | VisualizationSpec;
   options?: EmbedOptions;
   arrowTable: arrow.Table | undefined;
+  /**
+   * Children for composing actions and other elements.
+   * Use VegaLiteArrowChart.Actions to add action buttons.
+   *
+   * @example
+   * ```tsx
+   * <VegaLiteArrowChart spec={spec} arrowTable={data}>
+   *   <VegaLiteArrowChart.Actions>
+   *     <VegaExportAction />
+   *   </VegaLiteArrowChart.Actions>
+   * </VegaLiteArrowChart>
+   * ```
+   */
+  children?: React.ReactNode;
 };
 
 export function makeDefaultVegaLiteOptions(
@@ -27,26 +49,20 @@ export function makeDefaultVegaLiteOptions(
     mode: 'vega-lite',
     theme: undefined,
     tooltip: true,
+    actions: false,
     ...options,
-    actions:
-      options?.actions === false
-        ? false
-        : {
-            export: true,
-            source: false,
-            compiled: false,
-            editor: false,
-            ...(typeof options?.actions === 'object' ? options.actions : {}),
-          },
   };
 }
 
-export const VegaLiteArrowChart: React.FC<VegaLiteArrowChartProps> = ({
+const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   className,
-  aspectRatio = 3 / 2,
+  aspectRatio = 16 / 9,
   spec,
   arrowTable,
   options: propsOptions,
+  width = 'auto',
+  height = 'auto',
+  children,
 }) => {
   const {theme} = useTheme();
 
@@ -104,48 +120,87 @@ export const VegaLiteArrowChart: React.FC<VegaLiteArrowChartProps> = ({
     options,
   });
 
-  // const dimensions = useAspectRatioDimensions({
-  //   containerRef,
-  //   width,
-  //   height,
-  //   aspectRatio,
-  // });
-
-  // const changeDimensions = useCallback(
-  //   (width: number, height: number) => {
-  //     embed?.view.width(width).height(height).runAsync();
-  //   },
-  //   [embed],
-  // );
-
-  // useEffect(() => {
-  //   changeDimensions(dimensions.width, dimensions.height);
-  // }, [changeDimensions, dimensions.width, dimensions.height]);
+  const dimensions = useAspectRatioDimensions({
+    containerRef,
+    width,
+    height,
+    aspectRatio,
+  });
+  const changeDimensions = useCallback(
+    (width: number, height: number) => {
+      embed?.view.width(width).height(height).runAsync();
+    },
+    [embed],
+  );
+  useEffect(() => {
+    changeDimensions(dimensions.width, dimensions.height);
+  }, [changeDimensions, dimensions.width, dimensions.height]);
 
   return (
-    <div
-      ref={containerRef}
-      className={cn(
-        'flex h-full w-full flex-col gap-2 overflow-hidden',
-        className,
-      )}
-    >
-      {chartError ? (
-        <ToolErrorMessage
-          error={chartError}
-          triggerLabel="Chart rendering failed"
-          title="Chart error"
-          align="start"
-          details={spec}
-        />
-      ) : (
-        specWithData &&
-        data && (
-          <AspectRatio ratio={aspectRatio} className="overflow-auto" asChild>
-            <div ref={ref} />
-          </AspectRatio>
-        )
-      )}
-    </div>
+    <VegaChartContextProvider value={{embed}}>
+      <div
+        ref={containerRef}
+        className={cn(
+          'relative flex h-full w-full flex-col gap-2 overflow-hidden',
+          className,
+        )}
+      >
+        {chartError ? (
+          <ToolErrorMessage
+            error={chartError}
+            triggerLabel="Chart rendering failed"
+            title="Chart error"
+            align="start"
+            details={spec}
+          />
+        ) : (
+          specWithData &&
+          data && (
+            <AspectRatio ratio={aspectRatio} className="overflow-auto" asChild>
+              <div ref={ref} />
+            </AspectRatio>
+          )
+        )}
+        {children}
+      </div>
+    </VegaChartContextProvider>
   );
 };
+
+/**
+ * Composable Vega-Lite chart component with support for custom actions.
+ *
+ * @example
+ * ```tsx
+ * // Basic usage without actions (backwards compatible)
+ * <VegaLiteArrowChart spec={spec} arrowTable={data} />
+ *
+ * // With export action
+ * <VegaLiteArrowChart spec={spec} arrowTable={data}>
+ *   <VegaLiteArrowChart.Actions>
+ *     <VegaExportAction />
+ *   </VegaLiteArrowChart.Actions>
+ * </VegaLiteArrowChart>
+ *
+ * // Custom actions with separator
+ * <VegaLiteArrowChart spec={spec} arrowTable={data}>
+ *   <VegaLiteArrowChart.Actions>
+ *     <VegaExportAction pngScale={3} />
+ *     <Separator orientation="vertical" className="h-4" />
+ *     <Button size="xs" variant="ghost" onClick={handleRefresh}>
+ *       <RefreshCw className="h-4 w-4" />
+ *     </Button>
+ *   </VegaLiteArrowChart.Actions>
+ * </VegaLiteArrowChart>
+ * ```
+ */
+export const VegaLiteArrowChart = Object.assign(VegaLiteArrowChartBase, {
+  /**
+   * Container for action buttons, positioned as an overlay
+   */
+  Actions: VegaChartActions,
+  /**
+   * Built-in export action with PNG/SVG download
+   */
+  ExportAction: VegaExportAction,
+});

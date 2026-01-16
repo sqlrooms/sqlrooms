@@ -81,3 +81,13 @@ export {
   getCachedVegaLiteSchema,
   preloadVegaLiteSchema,
 } from './schema/vegaLiteSchema';
+
+// Export chart context and hook for custom actions
+export {useVegaChartContext} from './VegaChartContext';
+export type {VegaChartContextValue} from './VegaChartContext';
+
+// Export action components
+export {VegaExportAction} from './VegaExportAction';
+export type {VegaExportActionProps} from './VegaExportAction';
+export {VegaChartActions} from './VegaChartActions';
+export type {VegaChartActionsProps} from './VegaChartActions';

@@ -20,6 +20,8 @@ import {useVegaEditorContext} from './editor/VegaEditorContext';
 import {VegaSpecEditorPanel} from './editor/VegaSpecEditorPanel';
 import {VegaSqlEditorPanel} from './editor/VegaSqlEditorPanel';
 import {EditorMode} from './editor/types';
+import {VegaLiteArrowChart} from './VegaLiteArrowChart';
+import {VegaExportAction} from './VegaExportAction';
 
 export type VegaChartToolResultProps = {
   className?: string;
@@ -152,7 +154,11 @@ export function VegaChartToolResult({
       >
         {/* Chart with edit popover */}
         <div className="relative min-h-[300px]">
-          <VegaChartDisplay aspectRatio={16 / 9} />
+          <VegaChartDisplay aspectRatio={16 / 9}>
+            <VegaLiteArrowChart.Actions className="right-[70px]">
+              <VegaExportAction />
+            </VegaLiteArrowChart.Actions>
+          </VegaChartDisplay>
 
           {/* Edit button with popover */}
           {editable && (

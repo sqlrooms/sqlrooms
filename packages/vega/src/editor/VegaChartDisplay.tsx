@@ -14,6 +14,10 @@ export interface VegaChartDisplayProps {
    * @default 16/9
    */
   aspectRatio?: number;
+  /**
+   * Children passed through to VegaLiteArrowChart (e.g., action components)
+   */
+  children?: React.ReactNode;
 }
 
 /**
@@ -34,6 +38,7 @@ export interface VegaChartDisplayProps {
 export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   className,
   aspectRatio = 16 / 9,
+  children,
 }) => {
   const {state, arrowTable, options} = useVegaEditorContext();
 
@@ -90,7 +95,9 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
         arrowTable={chartData}
         aspectRatio={aspectRatio}
         options={options}
-      />
+      >
+        {children}
+      </VegaLiteArrowChart>
     </div>
   );
 };
