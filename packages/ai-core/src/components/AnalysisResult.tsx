@@ -1,15 +1,15 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {Button, CopyButton} from '@sqlrooms/ui';
-import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState, useRef, useEffect} from 'react';
+import {CopyButton} from '@sqlrooms/ui';
+import type {UIMessage} from 'ai';
+import {SquareTerminalIcon} from 'lucide-react';
+import {useEffect, useRef, useState} from 'react';
 import {Components} from 'react-markdown';
+import {useStoreWithAi} from '../AiSlice';
+import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import {useToolGrouping} from '../hooks/useToolGrouping';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
-import {useStoreWithAi} from '../AiSlice';
-import {useToolGrouping} from '../hooks/useToolGrouping';
-import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
-import type {UIMessage} from 'ai';
 
 /**
  * Props for the AnalysisResult component
@@ -43,8 +43,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   userTools,
   ErrorMessageComponent,
 }) => {
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
