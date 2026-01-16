@@ -3091,6 +3091,12 @@ importers:
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../duckdb
+      '@sqlrooms/monaco-editor':
+        specifier: workspace:*
+        version: link:../monaco-editor
+      '@sqlrooms/sql-editor':
+        specifier: workspace:*
+        version: link:../sql-editor
       '@sqlrooms/ui':
         specifier: workspace:*
         version: link:../ui
@@ -3124,6 +3130,10 @@ importers:
       zod:
         specifier: 4.1.13
         version: 4.1.13
+    devDependencies:
+      '@monaco-editor/react':
+        specifier: ^4.7.0
+        version: 4.7.0(monaco-editor@0.55.1)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
 
 packages:
 

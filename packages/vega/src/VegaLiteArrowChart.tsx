@@ -1,11 +1,14 @@
 import {ToolErrorMessage} from '@sqlrooms/ai';
 import {arrowTableToJson} from '@sqlrooms/duckdb';
-import {AspectRatio, cn, useAspectRatioDimensions} from '@sqlrooms/ui';
+import {AspectRatio, cn, useTheme} from '@sqlrooms/ui';
 import {safeJsonParse} from '@sqlrooms/utils';
 import * as arrow from 'apache-arrow';
-import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useMemo, useRef, useState} from 'react';
 import {useVegaEmbed} from 'react-vega';
 import {EmbedOptions, VisualizationSpec} from 'vega-embed';
+import {Config} from 'vega-lite';
+import {darkTheme} from './themes/darkTheme';
+import {lightTheme} from './themes/lightTheme';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -18,38 +21,52 @@ export type VegaLiteArrowChartProps = {
 };
 
 export function makeDefaultVegaLiteOptions(
-  options?: Partial<EmbedOptions>,
+  options?: EmbedOptions,
 ): EmbedOptions {
   return {
     mode: 'vega-lite',
     theme: undefined,
     tooltip: true,
-    actions: false,
     ...options,
+    actions:
+      options?.actions === false
+        ? false
+        : {
+            export: true,
+            source: false,
+            compiled: false,
+            editor: false,
+            ...(typeof options?.actions === 'object' ? options.actions : {}),
+          },
   };
 }
 
 export const VegaLiteArrowChart: React.FC<VegaLiteArrowChartProps> = ({
   className,
-  width = 'auto',
-  height = 'auto',
   aspectRatio = 3 / 2,
   spec,
   arrowTable,
   options: propsOptions,
 }) => {
+  const {theme} = useTheme();
+
   const options = useMemo(
-    () => makeDefaultVegaLiteOptions(propsOptions),
-    [propsOptions],
+    () =>
+      makeDefaultVegaLiteOptions({
+        config: {
+          ...(theme === 'dark' ? darkTheme : lightTheme),
+          ...(typeof propsOptions?.config === 'object'
+            ? (propsOptions.config as Config)
+            : {}),
+        },
+
+        ...propsOptions,
+      }),
+    [theme, propsOptions],
   );
+
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartError, setChartError] = useState<Error | null>(null);
-  const dimensions = useAspectRatioDimensions({
-    containerRef,
-    width,
-    height,
-    aspectRatio,
-  });
 
   const data = useMemo(() => {
     if (!arrowTable) return null;
@@ -63,8 +80,11 @@ export const VegaLiteArrowChart: React.FC<VegaLiteArrowChartProps> = ({
       return null;
     }
     return {
+      padding: 10,
+      background: 'transparent',
       ...parsed,
       data: data,
+      // Override the following props to ensure the chart is responsive
       width: 'container',
       height: 'container',
       autosize: {contains: 'padding'},
@@ -84,17 +104,23 @@ export const VegaLiteArrowChart: React.FC<VegaLiteArrowChartProps> = ({
     options,
   });
 
-  const changeDimensions = useCallback(
-    (width: number, height: number) => {
-      console.log('changing dimensions', width, height);
-      embed?.view.width(width).height(height).runAsync();
-    },
-    [embed],
-  );
+  // const dimensions = useAspectRatioDimensions({
+  //   containerRef,
+  //   width,
+  //   height,
+  //   aspectRatio,
+  // });
 
-  useEffect(() => {
-    changeDimensions(dimensions.width, dimensions.height);
-  }, [changeDimensions, dimensions.width, dimensions.height]);
+  // const changeDimensions = useCallback(
+  //   (width: number, height: number) => {
+  //     embed?.view.width(width).height(height).runAsync();
+  //   },
+  //   [embed],
+  // );
+
+  // useEffect(() => {
+  //   changeDimensions(dimensions.width, dimensions.height);
+  // }, [changeDimensions, dimensions.width, dimensions.height]);
 
   return (
     <div

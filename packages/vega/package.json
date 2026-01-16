@@ -22,6 +22,8 @@
     "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.556.0",
@@ -30,6 +32,9 @@
     "vega-lite": "^6.4.2",
     "vega-embed": "^7.1.0",
     "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@monaco-editor/react": "^4.7.0"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0",
