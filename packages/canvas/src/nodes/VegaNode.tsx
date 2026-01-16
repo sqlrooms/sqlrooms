@@ -25,7 +25,7 @@ export const VegaNode: FC<{id: string; data: VegaData}> = ({id, data}) => {
           <VegaLiteChart
             spec={vegaSpec}
             sqlQuery={sql}
-            aspectRatio={3 / 2}
+            aspectRatio={16 / 9}
             className="h-full"
           />
         ) : null}
