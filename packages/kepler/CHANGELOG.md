@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* timeline slider not showing for trip layer ([#276](https://github.com/sqlrooms/sqlrooms/issues/276)) ([5c28903](https://github.com/sqlrooms/sqlrooms/commit/5c289033711d5d39a621f729ddd8788ae1740728))
+
+### Features
+
+* Kepler legend fixes ([#285](https://github.com/sqlrooms/sqlrooms/issues/285)) ([809aaa8](https://github.com/sqlrooms/sqlrooms/commit/809aaa8b2b23dbda4802e1b22076abd94cd979b6))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Bug Fixes

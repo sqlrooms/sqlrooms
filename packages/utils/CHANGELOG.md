@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* Date and decimal types display incorrectly in data table ([#289](https://github.com/sqlrooms/sqlrooms/issues/289)) ([41a5750](https://github.com/sqlrooms/sqlrooms/commit/41a575076874eccb04e2e4f787136bbe43ae7b6d))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features

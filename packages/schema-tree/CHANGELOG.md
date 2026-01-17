@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* schema tree row count alignment ([#295](https://github.com/sqlrooms/sqlrooms/issues/295)) ([02f4395](https://github.com/sqlrooms/sqlrooms/commit/02f439557af647f024dfef0672d55000baaba255))
+
+### Features
+
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features

@@ -3,6 +3,19 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* AI Fix tool error message layout ([#287](https://github.com/sqlrooms/sqlrooms/issues/287)) ([660a7df](https://github.com/sqlrooms/sqlrooms/commit/660a7df8dfcd8a39e007ad8eb7e4e8d6e2bbeaff))
+
+### Features
+
+* add provider options to AiSlice ([#275](https://github.com/sqlrooms/sqlrooms/issues/275)) ([f23a72b](https://github.com/sqlrooms/sqlrooms/commit/f23a72beef0008a410813861da50a2347355d144))
+* AI: Support parallel sessions ([#284](https://github.com/sqlrooms/sqlrooms/issues/284)) ([d5c6402](https://github.com/sqlrooms/sqlrooms/commit/d5c6402981341da9dec73d2b6da738a7d430f598))
+* Remove delete chat message button ([#298](https://github.com/sqlrooms/sqlrooms/issues/298)) ([b955820](https://github.com/sqlrooms/sqlrooms/commit/b9558201b6190e4802943eecc142e40550f8face))
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Bug Fixes

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Features
+
+* AI: Support parallel sessions ([#284](https://github.com/sqlrooms/sqlrooms/issues/284)) ([d5c6402](https://github.com/sqlrooms/sqlrooms/commit/d5c6402981341da9dec73d2b6da738a7d430f598))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features
