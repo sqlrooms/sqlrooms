@@ -52,6 +52,7 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
   const errorText = props.error != null ? String(props.error) : '';
   const editorHeightPx = props.editorHeightPx ?? 300;
   const hasDetails = props.details != null;
+  const hasErrorText = errorText != null;
   const popoverOpen = useDisclosure();
 
   return (
@@ -66,11 +67,13 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
           <div className="flex flex-col gap-2">
             <div className="border-b text-sm font-medium">{title}</div>
 
-            {errorText ? (
+            {/* Only show error text if there are no details. Details are shown in Monaco editor. */}
+            {!hasDetails && hasErrorText ? (
               <div className="font-mono text-xs whitespace-pre-wrap">
                 {errorText}
               </div>
             ) : null}
+
 
             {hasDetails ? (
               <div
