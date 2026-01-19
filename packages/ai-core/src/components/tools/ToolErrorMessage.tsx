@@ -52,7 +52,7 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
   const errorText = props.error != null ? String(props.error) : '';
   const editorHeightPx = props.editorHeightPx ?? 300;
   const hasDetails = props.details != null;
-  const hasErrorText = errorText != null;
+  const hasErrorText = errorText.length > 0;
   const popoverOpen = useDisclosure();
 
   return (
