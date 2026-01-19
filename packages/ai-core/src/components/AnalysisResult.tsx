@@ -22,6 +22,7 @@ type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
+  // TODO: maybe rename to excludeFromGrouping
   userTools?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
