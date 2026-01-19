@@ -138,11 +138,11 @@ export const VegaCellContent: React.FC<VegaCellContentProps> = ({
         ) : (
           <VegaLiteChart
             sqlQuery={selectedSqlQuery}
-            isLoading={
-              selectedSqlStatus?.type === 'sql' &&
-              selectedSqlStatus.status === 'running'
-            }
-            lastRunTime={lastRunTime}
+            // isLoading={
+            //   selectedSqlStatus?.type === 'sql' &&
+            //   selectedSqlStatus.status === 'running'
+            // }
+            // lastRunTime={lastRunTime}
             spec={draftSpec}
             className="h-full w-full"
             aspectRatio={isEditing ? undefined : 3 / 2}

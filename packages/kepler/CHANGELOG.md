@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* timeline slider not showing for trip layer ([#276](https://github.com/sqlrooms/sqlrooms/issues/276)) ([5c28903](https://github.com/sqlrooms/sqlrooms/commit/5c289033711d5d39a621f729ddd8788ae1740728))
+
+### Features
+
+* Kepler legend fixes ([#285](https://github.com/sqlrooms/sqlrooms/issues/285)) ([809aaa8](https://github.com/sqlrooms/sqlrooms/commit/809aaa8b2b23dbda4802e1b22076abd94cd979b6))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* using escapeVal for value-comparison in addTable ([#268](https://github.com/sqlrooms/sqlrooms/issues/268)) ([cd90e62](https://github.com/sqlrooms/sqlrooms/commit/cd90e62c8917c2467abbc0b895c7d68717470f3f))
+
+### Features
+
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
 ## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
 
 ### Bug Fixes

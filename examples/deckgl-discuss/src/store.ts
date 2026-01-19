@@ -15,7 +15,6 @@ import {
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
 import {
-  createDefaultSqlEditorConfig,
   createSqlEditorSlice,
   SqlEditorSliceConfig,
   SqlEditorSliceState,
@@ -59,7 +58,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           initializationQuery: 'LOAD spatial',
         }),
         config: {
-          ...createDefaultSqlEditorConfig(),
           dataSources: [
             {
               type: 'url',

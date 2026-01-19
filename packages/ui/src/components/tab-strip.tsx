@@ -85,6 +85,7 @@ interface TabStripContextValue {
   renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
   setSearch: (value: string) => void;
@@ -125,6 +126,7 @@ interface SortableTabProps {
   onInlineRename: (tabId: string, newName: string) => void;
   renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -141,6 +143,7 @@ function SortableTab({
   onInlineRename,
   renderTabTitle,
   renderTabMenu,
+  renderTabLabel,
 }: SortableTabProps) {
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({id: tab.id});
@@ -179,11 +182,9 @@ function SortableTab({
           onDoubleClick={() => onStartEditing(tab.id)}
         >
           {editingTabId !== tab.id ? (
-            renderTabTitle ? (
-              renderTabTitle(tab)
-            ) : (
-              <div className="truncate text-sm">{tab.name}</div>
-            )
+            <div className="truncate text-sm">
+              {renderTabLabel ? renderTabLabel(tab) : tab.name}
+            </div>
           ) : (
             <EditableText
               value={tab.name}
@@ -346,6 +347,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     onOpenTabsChange,
     renderTabTitle,
     renderTabMenu,
+    renderTabLabel,
     preventCloseLastTab,
     handleStartEditing,
     handleStopEditing,
@@ -409,6 +411,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               onInlineRename={handleInlineRename}
               renderTabTitle={renderTabTitle}
               renderTabMenu={renderTabMenu}
+              renderTabLabel={renderTabLabel}
             />
           ))}
         </div>
@@ -670,6 +673,8 @@ export interface TabStripProps {
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  /** Render function for custom tab content. Receives the tab and returns the content to display. */
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -709,6 +714,7 @@ function TabStripRoot({
   renderTabTitle,
   renderTabMenu,
   renderSearchItemActions,
+  renderTabLabel,
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
@@ -830,6 +836,7 @@ function TabStripRoot({
     renderTabTitle,
     renderTabMenu,
     renderSearchItemActions,
+    renderTabLabel,
     setSearch,
     handleStartEditing,
     handleStopEditing,

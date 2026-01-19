@@ -1,3 +1,5 @@
+import {createMosaicSlice} from '@sqlrooms/mosaic';
+import {MosaicSliceState} from '@sqlrooms/mosaic/dist/MosaicSlice';
 import {
   createRoomShellSlice,
   createRoomStore,
@@ -5,11 +7,7 @@ import {
   MAIN_VIEW,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon, InfoIcon, MapIcon} from 'lucide-react';
 import {z} from 'zod';
 import DataSourcesPanel from './components/DataSourcesPanel';
@@ -29,7 +27,9 @@ export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 /**
  * Room state
  */
-export type RoomState = RoomShellSliceState & SqlEditorSliceState;
+export type RoomState = RoomShellSliceState &
+  MosaicSliceState &
+  SqlEditorSliceState;
 
 /**
  * Create a customized room store
@@ -47,7 +47,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             tableName: 'latency',
           },
         ],
-        ...createDefaultSqlEditorConfig(),
       },
       layout: {
         config: {
@@ -81,6 +80,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         },
       },
     })(set, get, store),
+
+    ...createMosaicSlice()(set, get, store),
 
     // Sql editor slice
     ...createSqlEditorSlice()(set, get, store),

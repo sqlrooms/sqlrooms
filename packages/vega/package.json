@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/vega",
-  "version": "0.26.1-rc.13",
+  "version": "0.27.0-rc.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -22,13 +22,19 @@
     "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "^0.556.0",
-    "react-vega": "^7.7.1",
+    "react-vega": "^8.0.0",
     "vega": "^6.2.0",
-    "vega-lite": "^6.4.0",
+    "vega-embed": "^7.1.0",
+    "vega-lite": "^6.4.2",
     "zod": "^4.1.8"
+  },
+  "devDependencies": {
+    "@monaco-editor/react": "^4.7.0"
   },
   "peerDependencies": {
     "apache-arrow": "17.0.0",

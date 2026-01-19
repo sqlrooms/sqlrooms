@@ -3,6 +3,24 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Features
+
+* AI: Support parallel sessions ([#284](https://github.com/sqlrooms/sqlrooms/issues/284)) ([d5c6402](https://github.com/sqlrooms/sqlrooms/commit/d5c6402981341da9dec73d2b6da738a7d430f598))
+* propagate the change to the arrow table to parent components ([#299](https://github.com/sqlrooms/sqlrooms/issues/299)) ([0d6a335](https://github.com/sqlrooms/sqlrooms/commit/0d6a335fd770a90fa454d7f5d3a5f21aedb0e5d1))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](https://github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](https://github.com/sqlrooms/sqlrooms/commit/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](https://github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](https://github.com/sqlrooms/sqlrooms/commit/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
 ## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
 
 **Note:** Version bump only for package @sqlrooms/ai

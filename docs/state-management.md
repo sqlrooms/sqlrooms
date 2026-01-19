@@ -133,9 +133,7 @@ When using the combined configuration type in your store, you can ensure that al
 // Using the combined RoomConfig in the store
 ...createRoomShellSlice({
   config: {
-    // SQL Editor slice configuration
-    ...createDefaultSqlEditorConfig(),
-    // Other configuration properties...
+    // Base room slice config
   },
   layout: {
     config: {

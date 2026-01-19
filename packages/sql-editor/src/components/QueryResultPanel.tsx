@@ -1,18 +1,15 @@
-import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
-import type {Row} from '@tanstack/react-table';
 import {
-  cn,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SpinnerPane,
-  Button,
-} from '@sqlrooms/ui';
+  DataTablePaginated,
+  useArrowDataTable,
+  ArrowDataTableValueFormatter,
+} from '@sqlrooms/data-table';
+import type {Row} from '@tanstack/react-table';
+import {cn, SpinnerPane, Button} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {MessageCircleQuestion} from 'lucide-react';
+import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -40,6 +37,8 @@ export interface QueryResultPanelProps {
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
+  /** Custom value formatter for arrow data */
+  formatValue?: ArrowDataTableValueFormatter;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
@@ -49,6 +48,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   onRowClick,
   onRowDoubleClick,
   onAskAiAboutError,
+  formatValue,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
   const getCurrentQuery = useStoreWithSqlEditor(
@@ -64,14 +64,9 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
 
-  const limitOptions = React.useMemo(() => {
-    if (!queryResultLimitOptions.includes(queryResultLimit)) {
-      return [queryResultLimit, ...queryResultLimitOptions];
-    }
-    return queryResultLimitOptions;
-  }, [queryResultLimitOptions, queryResultLimit]);
   const arrowTableData = useArrowDataTable(
     isQueryWithResult(queryResult) ? queryResult.result : undefined,
+    {formatValue},
   );
 
   const handleAskAiAboutError = React.useCallback(() => {
@@ -148,25 +143,11 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                     {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
                   </div>
 
-                  <Select
-                    value={queryResultLimit.toString()}
-                    onValueChange={(value) =>
-                      setQueryResultLimit(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="h-6 w-fit">
-                      <div className="text-xs text-gray-500">
-                        {`Limit results to ${formatCount(queryResultLimit)} rows`}
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {limitOptions.map((limit) => (
-                        <SelectItem key={limit} value={limit.toString()}>
-                          {`${formatCount(limit)} rows`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <QueryResultLimitSelect
+                    value={queryResultLimit}
+                    onChange={setQueryResultLimit}
+                    options={queryResultLimitOptions}
+                  />
                 </>
               ) : null}
               <div className="flex-1" />

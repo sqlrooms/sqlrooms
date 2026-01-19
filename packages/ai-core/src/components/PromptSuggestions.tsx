@@ -101,11 +101,14 @@ type PromptSuggestionsItemProps = {
  * Displays a single prompt suggestion and handles click events
  */
 const Item: React.FC<PromptSuggestionsItemProps> = ({text, className}) => {
-  const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
+  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
 
   const handleClick = useCallback(() => {
-    setAnalysisPrompt(text);
-  }, [text, setAnalysisPrompt]);
+    if (currentSession?.id) {
+      setPrompt(currentSession.id, text);
+    }
+  }, [text, setPrompt, currentSession]);
 
   return (
     <Tooltip>

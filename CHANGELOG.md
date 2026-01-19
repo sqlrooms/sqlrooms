@@ -3,6 +3,45 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* AI Fix tool error message layout ([#287](/github.com/sqlrooms/sqlrooms/issues/287)) ([660a7df](github.com/sqlrooms/sqlrooms/commits/660a7df8dfcd8a39e007ad8eb7e4e8d6e2bbeaff))
+* Date and decimal types display incorrectly in data table ([#289](/github.com/sqlrooms/sqlrooms/issues/289)) ([41a5750](github.com/sqlrooms/sqlrooms/commits/41a575076874eccb04e2e4f787136bbe43ae7b6d))
+* **deps:** update dependency react-vega to v8 ([#255](/github.com/sqlrooms/sqlrooms/issues/255)) ([fa352f4](github.com/sqlrooms/sqlrooms/commits/fa352f43b1ed32afce7ca9a8575ecd1205001d45))
+* Dev-only: HMR store preservation utilities ([#294](/github.com/sqlrooms/sqlrooms/issues/294)) ([d0e73ad](github.com/sqlrooms/sqlrooms/commits/d0e73addf068b1216d6cb430d7deedbb6a0b6cbe))
+* dynamic font class resolver ([#291](/github.com/sqlrooms/sqlrooms/issues/291)) ([7b11d21](github.com/sqlrooms/sqlrooms/commits/7b11d212e2ac930920c0779abe48899ebbd2a78b))
+* query data table popover content format ([#288](/github.com/sqlrooms/sqlrooms/issues/288)) ([b1cd872](github.com/sqlrooms/sqlrooms/commits/b1cd872bb8839aa4631765824e4385762f589c57))
+* schema tree row count alignment ([#295](/github.com/sqlrooms/sqlrooms/issues/295)) ([02f4395](github.com/sqlrooms/sqlrooms/commits/02f439557af647f024dfef0672d55000baaba255))
+* timeline slider not showing for trip layer ([#276](/github.com/sqlrooms/sqlrooms/issues/276)) ([5c28903](github.com/sqlrooms/sqlrooms/commits/5c289033711d5d39a621f729ddd8788ae1740728))
+
+### Features
+
+* add custom value rendered for arrow table ([#292](/github.com/sqlrooms/sqlrooms/issues/292)) ([9e86149](github.com/sqlrooms/sqlrooms/commits/9e86149106cb8371739d5acaa88b943c7a3d06c9))
+* add provider options to AiSlice ([#275](/github.com/sqlrooms/sqlrooms/issues/275)) ([f23a72b](github.com/sqlrooms/sqlrooms/commits/f23a72beef0008a410813861da50a2347355d144))
+* AI: Support parallel sessions ([#284](/github.com/sqlrooms/sqlrooms/issues/284)) ([d5c6402](github.com/sqlrooms/sqlrooms/commits/d5c6402981341da9dec73d2b6da738a7d430f598))
+* Kepler legend fixes ([#285](/github.com/sqlrooms/sqlrooms/issues/285)) ([809aaa8](github.com/sqlrooms/sqlrooms/commits/809aaa8b2b23dbda4802e1b22076abd94cd979b6))
+* propagate the change to the arrow table to parent components ([#299](/github.com/sqlrooms/sqlrooms/issues/299)) ([0d6a335](github.com/sqlrooms/sqlrooms/commits/0d6a335fd770a90fa454d7f5d3a5f21aedb0e5d1))
+* Remove delete chat message button ([#298](/github.com/sqlrooms/sqlrooms/issues/298)) ([b955820](github.com/sqlrooms/sqlrooms/commits/b9558201b6190e4802943eecc142e40550f8face))
+* Vega actions toolbar ([#301](/github.com/sqlrooms/sqlrooms/issues/301)) ([ef68f2e](github.com/sqlrooms/sqlrooms/commits/ef68f2ef0b6c36855dbe247261cd7e4beb345d7f))
+* Vega improvements ([#297](/github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](github.com/sqlrooms/sqlrooms/commits/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
+# [0.27.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](/github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](github.com/sqlrooms/sqlrooms/commits/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+* using escapeVal for value-comparison in addTable ([#268](/github.com/sqlrooms/sqlrooms/issues/268)) ([cd90e62](github.com/sqlrooms/sqlrooms/commits/cd90e62c8917c2467abbc0b895c7d68717470f3f))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](/github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](github.com/sqlrooms/sqlrooms/commits/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* Crdt package for realtime collaboration ([#266](/github.com/sqlrooms/sqlrooms/issues/266)) ([ab128ba](github.com/sqlrooms/sqlrooms/commits/ab128ba4452072f1a8593582c3060819e9916134))
+* Introducing MosaicSlice ([#277](/github.com/sqlrooms/sqlrooms/issues/277)) ([55b37de](github.com/sqlrooms/sqlrooms/commits/55b37defa5894a57b96b0eaf3f238aa30e3bd05a))
+* SQLRooms CLI ([#263](/github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](github.com/sqlrooms/sqlrooms/commits/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+* Sync save debounce ([#273](/github.com/sqlrooms/sqlrooms/issues/273)) ([499dea1](github.com/sqlrooms/sqlrooms/commits/499dea1296ccf9705f3c4c892eb041acdd81eb9e))
+
 ## [0.26.1-rc.13](github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
 
 ### Bug Fixes

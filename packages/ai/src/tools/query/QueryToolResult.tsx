@@ -1,4 +1,7 @@
-import {DataTableModal} from '@sqlrooms/data-table';
+import {
+  DataTableModal,
+  ArrowDataTableValueFormatter,
+} from '@sqlrooms/data-table';
 import {Button, CopyButton, useDisclosure} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {TableIcon} from 'lucide-react';
@@ -10,10 +13,12 @@ type QueryToolResultProps = {
   arrowTable?: arrow.Table;
   /** Whether to show the SQL text in the result */
   showSql?: boolean;
+  /** Optional custom value formatter for binary/geometry data */
+  formatValue?: ArrowDataTableValueFormatter;
 };
 
 export function QueryToolResult(props: QueryToolResultProps) {
-  const {title, sqlQuery, showSql = true} = props;
+  const {title, sqlQuery, showSql = true, formatValue} = props;
   const tableModal = useDisclosure();
   return (
     <>
@@ -44,6 +49,7 @@ export function QueryToolResult(props: QueryToolResultProps) {
             title={title}
             arrowTable={props.arrowTable}
             tableModal={tableModal}
+            formatValue={formatValue}
           />
         ) : (
           <div className="p-4 text-xs">No data</div>
@@ -53,6 +59,7 @@ export function QueryToolResult(props: QueryToolResultProps) {
           title={title}
           query={sqlQuery}
           tableModal={tableModal}
+          formatValue={formatValue}
         />
       )}
     </>

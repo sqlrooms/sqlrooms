@@ -1,6 +1,6 @@
 {
   "name": "@sqlrooms/data-table",
-  "version": "0.26.1-rc.13",
+  "version": "0.27.0-rc.1",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "@tanstack/react-table": "^8.21.3",

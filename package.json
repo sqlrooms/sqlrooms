@@ -84,6 +84,7 @@
     "typedoc-plugin-zod": "1.4.3",
     "typedoc-vitepress-theme": "1.1.2",
     "typescript": "5.9.3",
+    "typescript-language-server": "^5.1.3",
     "vitepress": "^1.6.4",
     "vitepress-plugin-llms": "^1.8.0"
   },

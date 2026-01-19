@@ -6,11 +6,7 @@ import {
   LayoutTypes,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {DatabaseIcon} from 'lucide-react';
 import {DataPanel} from './components/DataPanel';
 import {MainView} from './components/MainView';
@@ -38,7 +34,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             splitPercentage: 30,
           },
         },
-        ...createDefaultSqlEditorConfig(),
         dataSources: [
           {
             type: 'url',

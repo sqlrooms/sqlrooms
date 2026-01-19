@@ -61,33 +61,40 @@ export function ToolErrorMessage(props: ToolErrorMessageProps) {
           <TriangleAlertIcon />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
-        <div className="flex flex-col gap-2">
-          <div className="border-b text-sm font-medium">{title}</div>
-          {errorText ? (
-            <div className="whitespace-pre-wrap font-mono text-xs">
-              {errorText}
-            </div>
-          ) : null}
-          {hasDetails && popoverOpen.isOpen ? (
-            <div
-              className="w-full overflow-hidden rounded-md border"
-              style={{height: editorHeightPx}}
-            >
-              <JsonMonacoEditor
-                value={props.details as unknown as object | string | undefined}
-                readOnly={true}
-                options={{
-                  lineNumbers: 'off',
-                  minimap: {enabled: false},
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                }}
-              />
-            </div>
-          ) : null}
-        </div>
-      </PopoverContent>
+      {popoverOpen.isOpen ? (
+        <PopoverContent align={align} style={{width: '600px', maxWidth: '80%'}}>
+          <div className="flex flex-col gap-2">
+            <div className="border-b text-sm font-medium">{title}</div>
+
+            {errorText ? (
+              <div className="whitespace-pre-wrap font-mono text-xs">
+                {errorText}
+              </div>
+            ) : null}
+
+            {hasDetails ? (
+              <div
+                className="w-full overflow-hidden rounded-md border"
+                style={{height: editorHeightPx}}
+              >
+                <JsonMonacoEditor
+                  className="h-full"
+                  value={
+                    props.details as unknown as object | string | undefined
+                  }
+                  readOnly={true}
+                  options={{
+                    lineNumbers: 'off',
+                    minimap: {enabled: false},
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                  }}
+                />
+              </div>
+            ) : null}
+          </div>
+        </PopoverContent>
+      ) : null}
     </Popover>
   );
 }

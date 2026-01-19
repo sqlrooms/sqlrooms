@@ -38,11 +38,13 @@ npx degit sqlrooms/examples/get-started my-new-app/
 
 ## Geospatial
 
+<!--@include: ../examples/deckgl-mosaic/README.md-->
+
+<!--@include: ../examples/kepler/README.md-->
+
 <!--@include: ../examples/deckgl/README.md-->
 
 <!--@include: ../examples/deckgl-discuss/README.md-->
-
-<!--@include: ../examples/kepler/README.md-->
 
 ## Graph and embedding visualization
 
