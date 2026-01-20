@@ -40,9 +40,12 @@ export type SqlEditorProps = {
 const SqlEditor = React.memo<SqlEditorProps>((props) => {
   const {schema = '*', documentationPanel, queryResultProps} = props;
 
-  const lastQuery = useStoreWithSqlEditor(({sqlEditor: {queryResult: qr}}) =>
-    qr?.status === 'success' && qr?.type === 'select' ? qr.query : '',
-  );
+  const lastQuery = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    const qr = s.sqlEditor.queryResultsById[selectedId];
+    if (qr?.status === 'success' && qr?.type === 'select') return qr.query;
+    return s.sqlEditor.getCurrentQuery();
+  });
   // UI state
   const [showDocs, setShowDocs] = useState(false);
   const [createTableModalOpen, setCreateTableModalOpen] = useState(false);
