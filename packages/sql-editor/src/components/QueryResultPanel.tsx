@@ -1,4 +1,8 @@
-import {DataTablePaginated, useArrowDataTable, ArrowDataTableValueFormatter} from '@sqlrooms/data-table';
+import {
+  DataTablePaginated,
+  useArrowDataTable,
+  ArrowDataTableValueFormatter,
+} from '@sqlrooms/data-table';
 import type {Row} from '@tanstack/react-table';
 import {cn, SpinnerPane, Button} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
@@ -46,7 +50,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   onAskAiAboutError,
   formatValue,
 }) => {
-  const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
   const getCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.getCurrentQuery,
   );
@@ -95,7 +102,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute right-2 top-2 h-8 w-8"
+            className="absolute top-2 right-2 h-8 w-8"
             onClick={handleAskAiAboutError}
             title="Ask AI for help"
           >
@@ -104,7 +111,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
         )}
         <pre
           className={cn(
-            'whitespace-pre-wrap text-xs leading-tight text-red-500',
+            'text-xs leading-tight whitespace-pre-wrap text-red-500',
             onAskAiAboutError && 'pr-12',
           )}
         >
