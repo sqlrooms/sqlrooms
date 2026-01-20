@@ -88,7 +88,9 @@ class CrdtWs:
         self._log.debug(
             f"_crdt_update called with payload len: {len(payload)} bytes (ws id: {id(ws)}, conn_id: {conn_id}, client_id: {self.get_client_id(conn_id)})"
         )
-        self._log.debug(f"resolved room_id: {room_id} (ws id: {id(ws)}, conn_id: {conn_id})")
+        self._log.debug(
+            f"resolved room_id: {room_id} (ws id: {id(ws)}, conn_id: {conn_id})"
+        )
         if not room_id:
             self._log.warning("no room_id found")
             return
@@ -99,14 +101,18 @@ class CrdtWs:
             update = payload
             await self._state.schedule_save(room_id, delay_ms=self._save_debounce_ms)
         self._log.debug(f"scheduled snapshot save for {room_id}")
-        self._log.debug(f"publishing update to room {room_id}, len: {len(update)} bytes")
+        self._log.debug(
+            f"publishing update to room {room_id}, len: {len(update)} bytes"
+        )
         self._app.publish(room_id, update, OpCode.BINARY)
         self._log.debug(f"published update to room {room_id}")
         ws.send({"type": "crdt-update-ack", "roomId": room_id}, OpCode.TEXT)
 
     async def handle_client_snapshot(self, ws, *, room_id: str, data_b64: str) -> None:
         if not self._allow_client_snapshots:
-            ws.send({"type": "error", "error": "client snapshots disabled"}, OpCode.TEXT)
+            ws.send(
+                {"type": "error", "error": "client snapshots disabled"}, OpCode.TEXT
+            )
             return
 
         try:
@@ -125,7 +131,10 @@ class CrdtWs:
             current = room.doc.export(ExportMode.Snapshot())
             if len(current) > self._empty_snapshot_len + 64:
                 ws.send(
-                    {"type": "error", "error": "room already has state; snapshot rejected"},
+                    {
+                        "type": "error",
+                        "error": "room already has state; snapshot rejected",
+                    },
                     OpCode.TEXT,
                 )
                 return
@@ -153,7 +162,9 @@ class CrdtWs:
             room_id = str(message.get("roomId") or "").strip()
             data_b64 = message.get("data")
             if not room_id or not isinstance(data_b64, str):
-                ws.send({"type": "error", "error": "missing roomId or data"}, OpCode.TEXT)
+                ws.send(
+                    {"type": "error", "error": "missing roomId or data"}, OpCode.TEXT
+                )
                 return True
             await self.handle_client_snapshot(ws, room_id=room_id, data_b64=data_b64)
             return True

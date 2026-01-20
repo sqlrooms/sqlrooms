@@ -52,7 +52,7 @@ If you only want the DuckDB websocket server (no HTTP UI server), install/run `s
 uvx sqlrooms-server --db-path ./sqlrooms.db --port 4000
 ```
 
-`sqlrooms-duckdb-server` is also available as an alias console script.
+`sqlrooms-server` is also available as an alias console script.
 
 ## Developer setup
 
