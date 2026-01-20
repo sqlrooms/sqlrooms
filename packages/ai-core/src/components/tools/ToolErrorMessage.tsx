@@ -1,4 +1,4 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
+import { JsonMonacoEditor } from '@sqlrooms/monaco-editor';
 import {
   Button,
   Popover,
@@ -10,77 +10,42 @@ import {
   TabsTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import {TriangleAlertIcon} from 'lucide-react';
-import React from 'react';
+import { TriangleAlertIcon } from 'lucide-react';
+import React, { memo, useMemo } from 'react';
 
-function ToolErrorMessageContent({
-  title,
-  errorText,
-  details,
-  editorHeightPx,
-}: {
+type TabKey = 'error' | 'details';
+
+interface ToolErrorMessageContentProps {
   title: string;
   errorText: string;
-  details: string | object | undefined;
+  details?: string | object;
   editorHeightPx: number;
-}) {
-  const hasDetails = details != null;
-  const hasErrorText = errorText.length > 0;
+}
 
-  const tabCount = Number(hasErrorText) + Number(hasDetails);
-  const showTabs = tabCount > 1;
+const ToolErrorMessageContent = memo(
+  ({ title, errorText, details, editorHeightPx }: ToolErrorMessageContentProps) => {
+    const hasErrorText = errorText.length > 0;
+    const hasDetails = details != null;
 
-  const [activeTab, setActiveTab] = React.useState<'error' | 'details'>(
-    hasErrorText ? 'error' : 'details',
-  );
+    const defaultTab: TabKey = hasErrorText ? 'error' : 'details';
 
-  return (
-    <div className="flex flex-col gap-2">
-      <div className="border-b text-sm font-medium">{title}</div>
-
-      {tabCount === 0 ? null : !showTabs ? (
-        hasErrorText ? (
-          <div className="max-h-[300px] overflow-auto font-mono text-xs whitespace-pre-wrap">
-            {errorText}
-          </div>
-        ) : (
-          <div
-            className="w-full overflow-hidden rounded-md border"
-            style={{height: editorHeightPx}}
-          >
-            <JsonMonacoEditor
-              className="h-full"
-              value={details as unknown as object | string | undefined}
-              readOnly={true}
-              options={{
-                lineNumbers: 'off',
-                minimap: {enabled: false},
-                scrollBeyondLastLine: false,
-                wordWrap: 'on',
-              }}
-            />
-          </div>
-        )
-      ) : (
-        <Tabs
-          value={activeTab}
-          onValueChange={(v) => setActiveTab(v as 'error' | 'details')}
-        >
-          <TabsList className="h-8 gap-1">
-            {hasErrorText ? (
-              <TabsTrigger value="error" className="h-6 px-2 text-xs">
-                error
-              </TabsTrigger>
-            ) : null}
-            {hasDetails ? (
-              <TabsTrigger value="details" className="h-6 px-2 text-xs">
-                details
-              </TabsTrigger>
-            ) : null}
-          </TabsList>
+    return (
+      <Tabs defaultValue={defaultTab}>
+        <TabsList className="mb-2 h-8 gap-1">
+          {hasErrorText && (
+            <TabsTrigger value="error" className="h-6 px-2 text-xs">
+              {title}
+            </TabsTrigger>
+          )}
+          {hasDetails && (
+            <TabsTrigger value="details" className="h-6 px-2 text-xs">
+              Details
+            </TabsTrigger>
+          )}
+        </TabsList>
 
           <TabsContent value="error" className="mt-0">
-            <div className="max-h-[300px] overflow-auto font-mono text-xs whitespace-pre-wrap">
+            <div className="max-h-[300px] overflow-auto whitespace-pre-wrap font-mono text-xs">
               {errorText}
             </div>
           </TabsContent>
@@ -88,101 +53,75 @@ function ToolErrorMessageContent({
           <TabsContent value="details" className="mt-0">
             <div
               className="w-full overflow-hidden rounded-md border"
-              style={{height: editorHeightPx}}
+              style={{ height: editorHeightPx }}
             >
-              {activeTab === 'details' ? (
-                <JsonMonacoEditor
-                  className="h-full"
-                  value={details as unknown as object | string | undefined}
-                  readOnly={true}
-                  options={{
-                    lineNumbers: 'off',
-                    minimap: {enabled: false},
-                    scrollBeyondLastLine: false,
-                    wordWrap: 'on',
-                  }}
-                />
-              ) : null}
+              <JsonMonacoEditor
+                className="h-full"
+                value={details}
+                readOnly
+                options={{
+                  lineNumbers: 'off',
+                  minimap: { enabled: false },
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                }}
+              />
             </div>
           </TabsContent>
-        </Tabs>
-      )}
-    </div>
-  );
-}
+      </Tabs>
+    );
+  }
+);
 
-/**
- * Displays a compact, reusable popover with a warning icon and error details.
- * Intended for tool rendering/processing errors to keep UIs consistent.
- *
- * The popover is controllable to optimize performance by only rendering the
- * JsonMonacoEditor when the popover is actually open.
- */
+ToolErrorMessageContent.displayName = 'ToolErrorMessageContent';
+
 export interface ToolErrorMessageProps {
-  /**
-   * Error object or message to display inside the popover body.
-   */
   error?: unknown;
-  /**
-   * Optional structured details to render in a Monaco JSON editor.
-   */
   details?: string | object;
-  /**
-   * Header text shown at the top of the popover.
-   * Defaults to "Tool call error".
-   */
   title?: string;
-  /**
-   * Label shown next to the warning icon in the trigger button.
-   * Defaults to "Tool rendering failed".
-   */
   triggerLabel?: string;
-  /**
-   * Alignment of the popover content relative to its trigger.
-   * Defaults to "start".
-   */
   align?: 'start' | 'center' | 'end';
-  /**
-   * Height for the embedded editor when details are provided.
-   * Defaults to 300px.
-   */
   editorHeightPx?: number;
 }
 
-export function ToolErrorMessage(props: ToolErrorMessageProps) {
-  const title = props.title ?? 'Tool call error';
-  const align = props.align ?? 'start';
-  const errorText = props.error != null ? String(props.error) : '';
-  const editorHeightPx = props.editorHeightPx ?? 300;
-  const popoverOpen = useDisclosure();
+export function ToolErrorMessage({
+  error,
+  details,
+  title = 'Tool call error',
+  triggerLabel = 'Tool rendering failed',
+  align = 'start',
+  editorHeightPx = 300,
+}: ToolErrorMessageProps) {
+  const popover = useDisclosure();
 
-  if (!popoverOpen.isOpen) {
-    return (
-      <Popover open={popoverOpen.isOpen} onOpenChange={popoverOpen.onToggle}>
-        <PopoverTrigger asChild>
-          <Button className="w-fit" variant="ghost" size="xs">
-            <TriangleAlertIcon />
-          </Button>
-        </PopoverTrigger>
-      </Popover>
-    );
-  }
+  const errorText = useMemo(
+    () => (error != null ? String(error) : ''),
+    [error]
+  );
 
   return (
-    <Popover open={popoverOpen.isOpen} onOpenChange={popoverOpen.onToggle}>
+    <Popover open={popover.isOpen} onOpenChange={popover.onToggle}>
       <PopoverTrigger asChild>
-        <Button className="w-fit" variant="ghost" size="xs">
+        <Button
+          className="w-fit"
+          variant="ghost"
+          size="xs"
+          aria-label={triggerLabel}
+        >
           <TriangleAlertIcon />
         </Button>
       </PopoverTrigger>
-      <PopoverContent align={align} className="w-[600px] max-w-[80vw]">
-        <ToolErrorMessageContent
-          title={title}
-          errorText={errorText}
-          details={props.details}
-          editorHeightPx={editorHeightPx}
-        />
-      </PopoverContent>
+
+      {popover.isOpen && (
+        <PopoverContent align={align} className="w-[600px] max-w-[80vw]">
+          <ToolErrorMessageContent
+            title={title}
+            errorText={errorText}
+            details={details}
+            editorHeightPx={editorHeightPx}
+          />
+        </PopoverContent>
+      )}
     </Popover>
   );
 }
