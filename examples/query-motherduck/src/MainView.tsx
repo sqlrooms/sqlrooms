@@ -26,9 +26,11 @@ export const MainView: FC = () => {
   const createTableModal = useDisclosure();
   const confirmClearTokenModal = useDisclosure();
 
-  const lastQuery = useRoomStore(({sqlEditor: {queryResult: qr}}) =>
-    qr?.status === 'success' && qr?.type === 'select' ? qr.query : '',
-  );
+  const lastQuery = useRoomStore((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    const qr = s.sqlEditor.queryResultsById[selectedId];
+    return qr?.status === 'success' && qr?.type === 'select' ? qr.query : '';
+  });
 
   const handleClearToken = () => {
     localStorage.removeItem(MD_TOKEN_KEY);
@@ -37,8 +39,8 @@ export const MainView: FC = () => {
 
   return (
     <>
-      <div className="bg-muted flex h-full flex-col">
-        <div className="bg-background flex items-center justify-end gap-2 pb-2">
+      <div className="flex h-full flex-col bg-muted">
+        <div className="flex items-center justify-end gap-2 bg-background pb-2">
           <Button
             variant="ghost"
             size="xs"
