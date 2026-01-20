@@ -66,49 +66,45 @@ function ToolErrorMessageContent({
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as 'error' | 'details')}
         >
-          <TabsList className="h-8">
+          <TabsList className="h-8 gap-1">
             {hasErrorText ? (
               <TabsTrigger value="error" className="h-6 px-2 text-xs">
-                Error text
+                error
               </TabsTrigger>
             ) : null}
             {hasDetails ? (
               <TabsTrigger value="details" className="h-6 px-2 text-xs">
-                Full tool call
+                details
               </TabsTrigger>
             ) : null}
           </TabsList>
 
-          {hasErrorText ? (
-            <TabsContent value="error" className="mt-0">
-              <div className="max-h-[300px] overflow-auto font-mono text-xs whitespace-pre-wrap">
-                {errorText}
-              </div>
-            </TabsContent>
-          ) : null}
+          <TabsContent value="error" className="mt-0">
+            <div className="max-h-[300px] overflow-auto font-mono text-xs whitespace-pre-wrap">
+              {errorText}
+            </div>
+          </TabsContent>
 
-          {hasDetails ? (
-            <TabsContent value="details" className="mt-0">
-              <div
-                className="w-full overflow-hidden rounded-md border"
-                style={{height: editorHeightPx}}
-              >
-                {activeTab === 'details' ? (
-                  <JsonMonacoEditor
-                    className="h-full"
-                    value={details as unknown as object | string | undefined}
-                    readOnly={true}
-                    options={{
-                      lineNumbers: 'off',
-                      minimap: {enabled: false},
-                      scrollBeyondLastLine: false,
-                      wordWrap: 'on',
-                    }}
-                  />
-                ) : null}
-              </div>
-            </TabsContent>
-          ) : null}
+          <TabsContent value="details" className="mt-0">
+            <div
+              className="w-full overflow-hidden rounded-md border"
+              style={{height: editorHeightPx}}
+            >
+              {activeTab === 'details' ? (
+                <JsonMonacoEditor
+                  className="h-full"
+                  value={details as unknown as object | string | undefined}
+                  readOnly={true}
+                  options={{
+                    lineNumbers: 'off',
+                    minimap: {enabled: false},
+                    scrollBeyondLastLine: false,
+                    wordWrap: 'on',
+                  }}
+                />
+              ) : null}
+            </div>
+          </TabsContent>
         </Tabs>
       )}
     </div>
