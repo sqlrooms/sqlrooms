@@ -248,9 +248,9 @@ export function createSqlEditorSlice({
               draft.sqlEditor.config.openTabs = openTabs.filter(
                 (id) => id !== queryId,
               );
-              // Remove runtime results for deleted query.
-              // eslint-disable-next-line @typescript-eslint/no-dynamic-delete
-              delete draft.sqlEditor.queryResultsById[queryId];
+              const {[queryId]: _removed, ...rest} =
+                draft.sqlEditor.queryResultsById;
+              draft.sqlEditor.queryResultsById = rest;
 
               // If we deleted the selected query, select another one
               if (wasSelected) {
