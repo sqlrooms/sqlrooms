@@ -2,20 +2,28 @@ import {
   CreateTableModal,
   QueryEditorPanel,
   QueryResultPanel,
+  SqlMonacoEditor,
 } from '@sqlrooms/sql-editor';
 import {
   Button,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
   ResizableHandle,
   ResizablePanel,
   ResizablePanelGroup,
   useDisclosure,
 } from '@sqlrooms/ui';
 import {PlusIcon} from 'lucide-react';
-import {FC} from 'react';
+import {FC, useState} from 'react';
 import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
+  const monacoModal = useDisclosure();
+  const [monacoValue, setMonacoValue] = useState(
+    'SELECT 1 AS hello, 2 AS world;',
+  );
   const lastQuery = useRoomStore((s) => {
     const selectedId = s.sqlEditor.config.selectedQueryId;
     const qr = s.sqlEditor.queryResultsById[selectedId];
@@ -24,6 +32,37 @@ export const MainView: FC = () => {
   return (
     <>
       <div className="flex h-full flex-col bg-muted">
+        <Popover
+          open={monacoModal.isOpen}
+          onOpenChange={(open) =>
+            open ? monacoModal.onOpen() : monacoModal.onClose()
+          }
+        >
+          <PopoverTrigger asChild>
+            <Button size="xs" variant="outline">
+              Open Monaco
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent
+            className="mt-20 w-[500px] max-w-[90vw] p-3"
+            align="start"
+          >
+            <div className="mb-2 text-sm font-medium">Monaco editor</div>
+            <div className="h-[500px] w-full overflow-hidden rounded-md border">
+              <SqlMonacoEditor
+                className="h-full"
+                value={monacoValue}
+                onChange={(v) => setMonacoValue(v ?? '')}
+                options={{
+                  minimap: {enabled: false},
+                  scrollBeyondLastLine: false,
+                  wordWrap: 'on',
+                }}
+              />
+            </div>
+          </PopoverContent>
+        </Popover>
+
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={50}>
             <QueryEditorPanel />
