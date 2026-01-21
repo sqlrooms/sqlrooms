@@ -9,6 +9,38 @@ import {
 } from '../utils/color-utils';
 import type * as Monaco from 'monaco-editor';
 
+// Rendering issue fix for white rectangle appearing above text in Monaco.
+// Monaco creates a hidden textarea for IME input. If Monaco CSS loads late,
+// this textarea can briefly render as a normal white block and shift content.
+// Force it to never participate in layout / painting.
+let isImeTextareaStyleInjected = false;
+function suppressMonacoTextareaFlash() {
+  if (isImeTextareaStyleInjected) return;
+  if (typeof document === 'undefined') return;
+  isImeTextareaStyleInjected = true;
+
+  const style = document.createElement('style');
+  style.setAttribute('data-sqlrooms-monaco-ime-style', 'true');
+  style.textContent = `
+    .monaco-editor textarea.ime-text-area {
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      width: 1px !important;
+      height: 1px !important;
+      opacity: 0 !important;
+      background: transparent !important;
+      color: transparent !important;
+      border: 0 !important;
+      padding: 0 !important;
+      margin: 0 !important;
+      pointer-events: none !important;
+      z-index: -1 !important;
+    }
+  `;
+  document.head.appendChild(style);
+}
+
 export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   /**
    * Callback when the editor is mounted
@@ -126,6 +158,8 @@ function defineSqlroomsThemes(monaco: typeof Monaco) {
 }
 
 function setupMonacoThemes(monaco: typeof Monaco) {
+  suppressMonacoTextareaFlash();
+
   if (!jsonTokenizerDefined) {
     jsonTokenizerDefined = true;
     // Special language configuration for JSON
@@ -162,6 +196,9 @@ const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions
     automaticLayout: true,
     fontLigatures: true,
     fixedOverflowWidgets: true,
+    // Prevent an initial top "reserved" area that can appear briefly while Monaco
+    // computes sticky scroll layout (shows up as a blank/white rectangle above text).
+    stickyScroll: {enabled: false} as any,
   };
 /**
  * A wrapper around the Monaco Editor component
@@ -219,6 +256,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   const handleBeforeMount: NonNullable<EditorProps['beforeMount']> = (
     monaco,
   ) => {
+    suppressMonacoTextareaFlash();
     setupMonacoThemes(monaco);
     beforeMount?.(monaco);
   };

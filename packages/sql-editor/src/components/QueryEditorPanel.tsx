@@ -38,7 +38,24 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         <div className="bg-background h-full w-full py-1">
           <div className="relative h-full flex-grow">
             <div className="absolute inset-0">
-              <QueryEditorPanelEditor queryId={selectedQueryId} />
+              {openTabs.map((queryId) => {
+                // Keep all editors mounted to avoid MonacoEditor flashing bright on tab switch.
+                const isActive = queryId === selectedQueryId;
+                return (
+                  <div
+                    key={queryId}
+                    className={cn(
+                      'absolute inset-0',
+                      isActive
+                        ? 'opacity-100'
+                        : 'pointer-events-none opacity-0',
+                    )}
+                    aria-hidden={!isActive}
+                  >
+                    <QueryEditorPanelEditor queryId={queryId} />
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
