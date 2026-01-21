@@ -69,6 +69,26 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
         }
 
         if (group.type === 'tool-group') {
+          // "Excluded" tools (see `useToolGrouping(exclude=...)`) are marked with
+          // `defaultExpanded: true`. Render them inline as part of the normal flow
+          // (not inside a collapsible ReasoningBox), so charts/maps/etc don't get hidden.
+          if (group.defaultExpanded) {
+            return (
+              <div key={`group-${groupIndex}`} className="flex flex-col gap-2">
+                {group.parts.map((part, partIndex) =>
+                  isToolPart(part) || isDynamicToolPart(part) ? (
+                    <ToolPartRenderer
+                      key={`tool-call-${groupIndex}-${partIndex}`}
+                      part={part}
+                      toolCallId={part.toolCallId}
+                      toolAdditionalData={toolAdditionalData}
+                    />
+                  ) : null,
+                )}
+              </div>
+            );
+          }
+
           return (
             <ReasoningBox
               key={`group-${groupIndex}`}
