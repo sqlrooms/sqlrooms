@@ -43,54 +43,61 @@ const EDITOR_OPTIONS: MonacoEditorProps['options'] = {
   wordWrap: 'on',
 };
 
-/**
- * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
- * This is an internal component used by SqlEditor
- */
-export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
-  connector,
-  customKeywords = [],
-  customFunctions = [],
-  tableSchemas = [],
-  getLatestSchemas,
-  onMount,
-  className,
-  options,
-  ...restProps
-}) => {
-  // Store references to editor and monaco
-  const editorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
-  const disposableRef = useRef<any>(null);
+type MonacoInstance = typeof Monaco;
 
-  // Store getLatestSchemas in a ref to avoid re-registering completion provider
-  // when the callback reference changes (e.g., non-memoized inline functions)
-  const getLatestSchemasRef = useRef(getLatestSchemas);
-  useEffect(() => {
-    getLatestSchemasRef.current = getLatestSchemas;
-  }, [getLatestSchemas]);
+type SqlCompletionContext = {
+  connector?: DuckDbConnector;
+  tableSchemas: DataTable[];
+  getLatestSchemas?: () => {tableSchemas: DataTable[]};
+  customKeywords: string[];
+  customFunctions: string[];
+};
 
-  // Function to register the completion provider
-  const registerCompletionProvider = useCallback(() => {
-    if (!editorRef.current || !monacoRef.current) return;
+// Singleton guards to prevent re-registration on every editor mount (causes flashing)
+let sqlLanguageConfigured = false;
+let sqlCompletionProviderDisposable: Monaco.IDisposable | null = null;
+// Per-model context map so multiple SqlMonacoEditor instances don't clobber each other
+const sqlCompletionContextByModelUri = new Map<string, SqlCompletionContext>();
 
-    const monaco = monacoRef.current;
+function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
+  if (sqlLanguageConfigured) return;
+  sqlLanguageConfigured = true;
 
-    // Dispose previous provider if it exists
-    if (disposableRef.current) {
-      disposableRef.current.dispose();
-    }
+  if (!monaco.languages.getLanguages().some((lang: any) => lang.id === 'sql')) {
+    monaco.languages.register({id: 'sql'});
+  }
 
-    // Register SQL completion provider
-    const disposable = monaco.languages.registerCompletionItemProvider('sql', {
+  // Tokenization is GLOBAL. Use stable DuckDB dialect.
+  monaco.languages.setMonarchTokensProvider('sql', {
+    ...SQL_LANGUAGE_CONFIGURATION,
+    keywords: DUCKDB_KEYWORDS,
+    builtinFunctions: DUCKDB_FUNCTIONS,
+  } as any);
+}
+
+function ensureSqlCompletionProvider(monaco: MonacoInstance) {
+  if (sqlCompletionProviderDisposable) return;
+
+  sqlCompletionProviderDisposable =
+    monaco.languages.registerCompletionItemProvider('sql', {
       triggerCharacters: [' ', '.', ',', '(', '='],
       provideCompletionItems: async (model: any, position: any) => {
         try {
-          // Get the latest schemas if the callback is provided
-          let currentSchemas = tableSchemas;
+          const uri: string | undefined = model?.uri?.toString?.();
+          const ctx = (uri
+            ? sqlCompletionContextByModelUri.get(uri)
+            : undefined) ?? {
+            connector: undefined,
+            tableSchemas: [],
+            getLatestSchemas: undefined,
+            customKeywords: [],
+            customFunctions: [],
+          };
 
-          if (getLatestSchemasRef.current) {
-            const latest = getLatestSchemasRef.current();
+          // Get the latest schemas if the callback is provided
+          let currentSchemas = ctx.tableSchemas;
+          if (ctx.getLatestSchemas) {
+            const latest = ctx.getLatestSchemas();
             currentSchemas = latest.tableSchemas;
           }
 
@@ -119,8 +126,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           const isColumnContext = /\b(\w+)\.\w*$/.test(textBeforeCursor);
 
           // Combine keywords and functions with custom ones
-          const keywords = [...DUCKDB_KEYWORDS, ...customKeywords];
-          const functions = [...DUCKDB_FUNCTIONS, ...customFunctions];
+          const keywords = [...DUCKDB_KEYWORDS, ...ctx.customKeywords];
+          const functions = [...DUCKDB_FUNCTIONS, ...ctx.customFunctions];
 
           // Add keyword suggestions (if not in a specific context)
           if (!isColumnContext) {
@@ -148,9 +155,9 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
                 sortText: isTableContext ? 'z' + func : 'b' + func, // Lower priority in table context
               });
             });
-            if (connector) {
+            if (ctx.connector) {
               const functionSuggestions = await getFunctionSuggestions(
-                connector,
+                ctx.connector,
                 word.word,
               );
               for (const {name, documentation} of functionSuggestions) {
@@ -239,26 +246,53 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
             }
           });
 
-          return {
-            suggestions,
-          };
+          return {suggestions};
         } catch (error) {
           console.error('Error in SQL completion provider:', error);
           return {suggestions: []};
         }
       },
     });
+}
 
-    // Store the disposable to clean up later
-    disposableRef.current = disposable;
-  }, [connector, customKeywords, customFunctions, tableSchemas]);
+/**
+ * A Monaco editor for editing SQL with DuckDB syntax highlighting and autocompletion
+ * This is an internal component used by SqlEditor
+ */
+export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
+  connector,
+  customKeywords = [],
+  customFunctions = [],
+  tableSchemas = [],
+  getLatestSchemas,
+  onMount,
+  className,
+  options,
+  ...restProps
+}) => {
+  // Store references to editor and monaco
+  const editorRef = useRef<any>(null);
+  const monacoRef = useRef<any>(null);
+  const modelUriRef = useRef<string | undefined>(undefined);
 
-  // Re-register completion provider when tableSchemas change
+  // Store getLatestSchemas in a ref to avoid triggering effects
+  const getLatestSchemasRef = useRef(getLatestSchemas);
   useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      registerCompletionProvider();
-    }
-  }, [tableSchemas, registerCompletionProvider]);
+    getLatestSchemasRef.current = getLatestSchemas;
+  }, [getLatestSchemas]);
+
+  // Update per-model context when props change
+  useEffect(() => {
+    const uri = modelUriRef.current;
+    if (!uri) return;
+    sqlCompletionContextByModelUri.set(uri, {
+      connector,
+      tableSchemas,
+      getLatestSchemas: getLatestSchemasRef.current,
+      customKeywords,
+      customFunctions,
+    });
+  }, [connector, tableSchemas, customKeywords, customFunctions]);
 
   // Handle editor mounting to configure SQL language features
   const handleEditorDidMount = useCallback<OnMount>(
@@ -267,32 +301,25 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       editorRef.current = editor;
       monacoRef.current = monaco;
 
-      // Register SQL language if not already registered
-      if (
-        !monaco.languages.getLanguages().some((lang: any) => lang.id === 'sql')
-      ) {
-        monaco.languages.register({id: 'sql'});
+      ensureSqlLanguageConfigured(monaco);
+      ensureSqlCompletionProvider(monaco);
+
+      const uri = editor.getModel()?.uri?.toString?.();
+      if (uri) {
+        modelUriRef.current = uri;
+        sqlCompletionContextByModelUri.set(uri, {
+          connector,
+          tableSchemas,
+          getLatestSchemas: getLatestSchemasRef.current,
+          customKeywords,
+          customFunctions,
+        });
       }
 
-      // Combine keywords and functions with custom ones
-      const keywords = [...DUCKDB_KEYWORDS, ...customKeywords];
-      const functions = [...DUCKDB_FUNCTIONS, ...customFunctions];
-
-      // Set the language configuration
-      monaco.languages.setMonarchTokensProvider('sql', {
-        ...SQL_LANGUAGE_CONFIGURATION,
-        keywords,
-        builtinFunctions: functions,
-      } as any); // Using 'as any' to bypass the type checking issue
-
-      // Register the completion provider
-      registerCompletionProvider();
-
-      // Store the disposable to clean up later if needed
+      // Cleanup on dispose
       editor.onDidDispose(() => {
-        if (disposableRef.current) {
-          disposableRef.current.dispose();
-        }
+        const uri = modelUriRef.current;
+        if (uri) sqlCompletionContextByModelUri.delete(uri);
       });
 
       // Call the original onMount if provided
@@ -300,7 +327,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         onMount(editor, monaco);
       }
     },
-    [customKeywords, customFunctions, onMount, registerCompletionProvider],
+    [connector, customKeywords, customFunctions, onMount, tableSchemas],
   );
 
   const combinedOptions = useMemo(
