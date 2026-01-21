@@ -1,4 +1,10 @@
-import {createContext, useContext, useEffect, useState} from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'react';
 
 /**
  * Available theme options
@@ -72,7 +78,12 @@ export function ThemeProvider({
     () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
   );
 
-  useEffect(() => {
+  // Apply theme class before paint to avoid a light-theme flash on initial load.
+  // (useLayoutEffect on the client, fall back to useEffect in non-DOM environments)
+  const useIsomorphicLayoutEffect =
+    typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+  useIsomorphicLayoutEffect(() => {
     const root = window.document.documentElement;
 
     root.classList.remove('light', 'dark');
