@@ -19,6 +19,7 @@ class RoomDoc:
         self.dirty = False
         self.save_task: Optional[asyncio.Task] = None
 
+
 class CrdtState:
     """Manages per-room LoroDoc with lazy load/save to DuckDB (via db_async helpers)."""
 

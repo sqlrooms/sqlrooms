@@ -1,12 +1,12 @@
 # SQLRooms CRDT Sync Example (Vite)
 
-Minimal React + Zustand example that mirrors state to a Loro CRDT via `@sqlrooms/crdt` and syncs against `sqlrooms-duckdb-server` with CRDT enabled.
+Minimal React + Zustand example that mirrors state to a Loro CRDT via `@sqlrooms/crdt` and syncs against `sqlrooms-server` with CRDT enabled.
 
 ## Run the server (with CRDT)
 
 ```bash
-cd python/sqlrooms-duckdb-server
-uv run sqlrooms-duckdb-server --db-path main.db --crdt-db crdt.db --port 4000
+cd python/sqlrooms-server
+uv run sqlrooms-server --db-path main.db --crdt-db crdt.db --port 4000
 ```
 
 ## Run the client

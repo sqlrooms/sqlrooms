@@ -83,7 +83,7 @@ function App() {
     >
       <h1>SQLRooms CRDT Sync</h1>
       <p style={{color: '#555'}}>
-        Connects to sqlrooms-duckdb-server with CRDT enabled.
+        Connects to sqlrooms-server with CRDT enabled.
       </p>
 
       <div

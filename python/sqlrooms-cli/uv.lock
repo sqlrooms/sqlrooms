@@ -861,7 +861,7 @@ dependencies = [
     { name = "fastapi" },
     { name = "jinja2" },
     { name = "python-multipart" },
-    { name = "sqlrooms-duckdb-server" },
+    { name = "sqlrooms-server" },
     { name = "typer" },
     { name = "uvicorn" },
 ]
@@ -872,13 +872,13 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
     { name = "jinja2", specifier = ">=3.1.0" },
     { name = "python-multipart", specifier = ">=0.0.9" },
-    { name = "sqlrooms-duckdb-server" },
+    { name = "sqlrooms-server" },
     { name = "typer", specifier = ">=0.12.5" },
     { name = "uvicorn", specifier = ">=0.30.0" },
 ]
 
 [[package]]
-name = "sqlrooms-duckdb-server"
+name = "sqlrooms-server"
 version = "0.2.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
