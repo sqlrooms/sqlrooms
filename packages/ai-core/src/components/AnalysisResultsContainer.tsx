@@ -12,13 +12,13 @@ export const AnalysisResultsContainer: React.FC<{
   className?: string;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  userTools?: string[];
+  excludeFromGrouping?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 }> = ({
   className,
   enableReasoningBox = false,
   customMarkdownComponents,
-  userTools,
+  excludeFromGrouping: excludeFromGrouping,
   ErrorMessageComponent,
 }) => {
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
@@ -61,7 +61,7 @@ export const AnalysisResultsContainer: React.FC<{
             analysisResult={analysisResult}
             enableReasoningBox={enableReasoningBox}
             customMarkdownComponents={customMarkdownComponents}
-            userTools={userTools}
+            excludeFromGrouping={excludeFromGrouping}
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
