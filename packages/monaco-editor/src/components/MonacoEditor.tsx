@@ -1,12 +1,6 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
-import React, {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useSyncExternalStore,
-} from 'react';
+import React, {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {
   getCssColor,
   getJsonEditorTheme,
@@ -55,6 +49,112 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
+let jsonTokenizerDefined = false;
+let themesDefined = false;
+function withRootThemeClass<T>(themeClass: 'light' | 'dark', fn: () => T): T {
+  if (typeof document === 'undefined') return fn();
+
+  const root = document.documentElement;
+  const hadLight = root.classList.contains('light');
+  const hadDark = root.classList.contains('dark');
+
+  root.classList.remove('light', 'dark');
+  root.classList.add(themeClass);
+
+  try {
+    return fn();
+  } finally {
+    root.classList.remove('light', 'dark');
+    if (hadLight) root.classList.add('light');
+    if (hadDark) root.classList.add('dark');
+  }
+}
+
+function defineSqlroomsThemes(monaco: typeof Monaco) {
+  if (themesDefined) return;
+  themesDefined = true;
+
+  // IMPORTANT:
+  // Our Tailwind CSS variables change between `.light` and `.dark`.
+  // If we define themes while the app is in dark mode, then `sqlrooms-light`
+  // would incorrectly capture dark colors (and vice versa). To avoid all the
+  // "light first, then flips" + tab flicker, we read CSS vars under each class.
+
+  withRootThemeClass('light', () => {
+    monaco.editor.defineTheme('sqlrooms-light', {
+      base: 'vs',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': getCssColor('--background', '#ffffff'),
+        'editor.foreground': getCssColor('--foreground', '#000000'),
+        'editor.lineHighlightBackground': getCssColor('--muted', '#f5f5f5'),
+        'editorCursor.foreground': getCssColor('--primary', '#000000'),
+        'editor.selectionBackground': getCssColor('--accent', '#e3e3e3'),
+        'editorLineNumber.foreground': getCssColor(
+          '--muted-foreground',
+          '#888888',
+        ),
+        ...getMenuColors(false),
+      },
+    });
+
+    monaco.editor.defineTheme('sqlrooms-json-light', getJsonEditorTheme(false));
+  });
+
+  withRootThemeClass('dark', () => {
+    monaco.editor.defineTheme('sqlrooms-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [],
+      colors: {
+        'editor.background': getCssColor('--background', '#1e1e1e'),
+        'editor.foreground': getCssColor('--foreground', '#d4d4d4'),
+        'editor.lineHighlightBackground': getCssColor('--muted', '#2a2a2a'),
+        'editorCursor.foreground': getCssColor('--primary', '#ffffff'),
+        'editor.selectionBackground': getCssColor('--accent', '#264f78'),
+        'editorLineNumber.foreground': getCssColor(
+          '--muted-foreground',
+          '#858585',
+        ),
+        ...getMenuColors(true),
+      },
+    });
+
+    monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
+  });
+}
+
+function setupMonacoThemes(monaco: typeof Monaco) {
+  if (!jsonTokenizerDefined) {
+    jsonTokenizerDefined = true;
+    // Special language configuration for JSON
+    monaco.languages.setMonarchTokensProvider('json', {
+      tokenizer: {
+        root: [
+          // Property keys (strings followed by a colon)
+          [/"([^"]*)"(?=\s*:)/, 'string.key.json'],
+
+          // Regular string values (any quoted string not followed by a colon)
+          [/"([^"]*)"(?!\s*:)/, 'string.value.json'],
+
+          // Numbers (integers, decimals, and scientific notation)
+          [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
+
+          // Keywords
+          [/\b(?:true|false|null)\b/, 'keyword'],
+
+          // Punctuation and delimiters
+          [/[{}[\],:]/, 'delimiter'],
+        ],
+      },
+    });
+  }
+
+  // Define themes once, but with the correct CSS vars for each mode.
+  defineSqlroomsThemes(monaco);
+}
+
 const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions =
   {
     minimap: {enabled: false},
@@ -75,6 +175,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
   onMount,
   onChange,
   options = {},
+  beforeMount,
   ...props
 }) => {
   const {theme: appTheme} = useTheme();
@@ -103,100 +204,31 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         ? false
         : appTheme === 'dark' || (appTheme === 'system' && systemPrefersDark);
 
-  // Determine editor theme name passed to the Editor component
-  const theme = isDark ? 'vs-dark' : 'light';
+  const monacoTheme =
+    language === 'json'
+      ? isDark
+        ? 'sqlrooms-json-dark'
+        : 'sqlrooms-json-light'
+      : isDark
+        ? 'sqlrooms-dark'
+        : 'sqlrooms-light';
 
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
+
+  const handleBeforeMount: NonNullable<EditorProps['beforeMount']> = (
+    monaco,
+  ) => {
+    setupMonacoThemes(monaco);
+    beforeMount?.(monaco);
+  };
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
     monacoRef.current = monaco;
 
-    // Special language configuration for JSON
-    if (language === 'json') {
-      // Define a more robust tokenizer for JSON with improved rules
-      monaco.languages.setMonarchTokensProvider('json', {
-        tokenizer: {
-          root: [
-            // Property keys (strings followed by a colon)
-            [/"([^"]*)"(?=\s*:)/, 'string.key.json'],
-
-            // Regular string values (any quoted string not followed by a colon)
-            [/"([^"]*)"(?!\s*:)/, 'string.value.json'],
-
-            // Numbers (integers, decimals, and scientific notation)
-            [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
-
-            // Keywords
-            [/\b(?:true|false|null)\b/, 'keyword'],
-
-            // Punctuation and delimiters
-            [/[{}[\],:]/, 'delimiter'],
-          ],
-        },
-      });
-    }
-
-    // Define editor themes with Tailwind CSS variables
-    monaco.editor.defineTheme('sqlrooms-light', {
-      base: 'vs',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': getCssColor('--background', '#ffffff'),
-        'editor.foreground': getCssColor('--foreground', '#000000'),
-        'editor.lineHighlightBackground': getCssColor('--muted', '#f5f5f5'),
-        'editorCursor.foreground': getCssColor('--primary', '#000000'),
-        'editor.selectionBackground': getCssColor('--accent', '#e3e3e3'),
-        'editorLineNumber.foreground': getCssColor(
-          '--muted-foreground',
-          '#888888',
-        ),
-        ...getMenuColors(false),
-      },
-    });
-
-    monaco.editor.defineTheme('sqlrooms-dark', {
-      base: 'vs-dark',
-      inherit: true,
-      rules: [],
-      colors: {
-        'editor.background': getCssColor('--background', '#1e1e1e'),
-        'editor.foreground': getCssColor('--foreground', '#d4d4d4'),
-        'editor.lineHighlightBackground': getCssColor('--muted', '#2a2a2a'),
-        'editorCursor.foreground': getCssColor('--primary', '#ffffff'),
-        'editor.selectionBackground': getCssColor('--accent', '#264f78'),
-        'editorLineNumber.foreground': getCssColor(
-          '--muted-foreground',
-          '#858585',
-        ),
-        ...getMenuColors(true),
-      },
-    });
-
-    // Define JSON-specific themes with rich token coloring
-    monaco.editor.defineTheme('sqlrooms-json-light', getJsonEditorTheme(false));
-    monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
-
-    // Apply the custom theme based on content type
-    const isDarkMount =
-      explicitTheme === 'vs-dark'
-        ? true
-        : explicitTheme === 'light'
-          ? false
-          : appTheme === 'dark' ||
-            (appTheme === 'system' &&
-              window.matchMedia('(prefers-color-scheme: dark)').matches);
-
-    // Use JSON-specific theme for JSON files
-    if (language === 'json') {
-      monaco.editor.setTheme(
-        isDarkMount ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
-      );
-    } else {
-      monaco.editor.setTheme(isDarkMount ? 'sqlrooms-dark' : 'sqlrooms-light');
-    }
+    // Safety: in case beforeMount didn't run for any reason.
+    setupMonacoThemes(monaco);
 
     if (onMount) {
       onMount(editor, monaco);
@@ -209,58 +241,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
       editorRef.current.updateOptions({readOnly});
     }
   }, [readOnly]);
-
-  // Update the editor theme when app theme changes
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current) {
-      const targetDark =
-        explicitTheme === 'vs-dark'
-          ? true
-          : explicitTheme === 'light'
-            ? false
-            : isDark;
-
-      // Use JSON-specific theme for JSON files
-      if (language === 'json') {
-        monacoRef.current.editor.setTheme(
-          targetDark ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
-        );
-      } else {
-        monacoRef.current.editor.setTheme(
-          targetDark ? 'sqlrooms-dark' : 'sqlrooms-light',
-        );
-      }
-    }
-  }, [appTheme, explicitTheme, isDark, language]);
-
-  // Listen for system theme changes if using system theme
-  useEffect(() => {
-    if (appTheme === 'system' && !explicitTheme && monacoRef.current) {
-      const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-      const handleChange = () => {
-        if (monacoRef.current) {
-          // Use JSON-specific theme for JSON files
-          if (language === 'json') {
-            monacoRef.current.editor.setTheme(
-              mediaQuery.matches ? 'sqlrooms-json-dark' : 'sqlrooms-json-light',
-            );
-          } else {
-            monacoRef.current.editor.setTheme(
-              mediaQuery.matches ? 'sqlrooms-dark' : 'sqlrooms-light',
-            );
-          }
-        }
-      };
-
-      // Add listener for theme changes
-      mediaQuery.addEventListener('change', handleChange);
-
-      // Clean up
-      return () => {
-        mediaQuery.removeEventListener('change', handleChange);
-      };
-    }
-  }, [appTheme, explicitTheme, language]);
 
   // Get monospace font for code editor
   const fontFamily = getMonospaceFont();
@@ -275,24 +255,19 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     [options, fontFamily, readOnly],
   );
 
-  // Force remount when theme or language changes so Monaco applies the scheme.
-  const [renderKey, setRenderKey] = useState(`${theme}-${language}`);
-  useEffect(() => {
-    setRenderKey(`${theme}-${language}`);
-  }, [theme, language]);
   return (
     <div className={cn('h-[300px] w-full', className)}>
       <Editor
         height="100%"
         width="100%"
         language={language}
-        theme={theme}
+        theme={monacoTheme}
         value={value}
         options={combinedOptions}
+        beforeMount={handleBeforeMount}
         onMount={handleEditorDidMount}
         onChange={onChange}
         loading={<Spinner />}
-        key={renderKey}
         {...props}
       />
     </div>
