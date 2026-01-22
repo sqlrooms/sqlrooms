@@ -11,6 +11,33 @@ import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {MessageCircleQuestion} from 'lucide-react';
 import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
+/**
+ * Turns DuckDB's EXPLAIN result table into a readable plan string.
+ * Prefer the `explain_value` column (DuckDB default); otherwise fall back
+ * to the first column and join all rows with newlines.
+ */
+function arrowTableToExplainText(result: any): string {
+  if (!result) return '';
+
+  const numRows: number = result.numRows ?? 0;
+  const fields: {name: string}[] = result.schema?.fields ?? [];
+  const fieldNames = fields.map((f) => f.name);
+
+  const hasExplainValueColumn = fieldNames.includes('explain_value');
+  const columnName = hasExplainValueColumn ? 'explain_value' : fieldNames[0];
+  if (!columnName) return '';
+
+  const col = result.getChild?.(columnName);
+  if (!col) return '';
+
+  const lines: string[] = [];
+  for (let i = 0; i < numRows; i++) {
+    const v = col.get(i);
+    if (v != null && String(v).length > 0) lines.push(String(v));
+  }
+  return lines.join('\n');
+}
+
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
@@ -67,10 +94,23 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
 
-  const arrowTableData = useArrowDataTable(
-    isQueryWithResult(queryResult) ? queryResult.result : undefined,
-    {formatValue},
-  );
+  // EXPLAIN returns a result table, but it’s really “text output” (a plan) and
+  // rendering it as a normal data table tends to truncate it to a single cell.
+  // We special-case EXPLAIN: render the full plan as text, and only use the
+  // DataTable renderer for real tabular results (SELECT/PRAGMA).
+  const tableForDataTable =
+    isQueryWithResult(queryResult) && queryResult.type !== 'explain'
+      ? queryResult.result
+      : undefined;
+
+  const arrowTableData = useArrowDataTable(tableForDataTable, {formatValue});
+
+  const explainText = React.useMemo(() => {
+    if (queryResult?.status !== 'success' || queryResult.type !== 'explain') {
+      return undefined;
+    }
+    return arrowTableToExplainText(queryResult.result);
+  }, [queryResult]);
 
   const handleAskAiAboutError = React.useCallback(() => {
     if (queryResult?.status === 'error' && onAskAiAboutError) {
@@ -129,7 +169,20 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           className,
         )}
       >
-        {isQueryWithResult(queryResult) ? (
+        {queryResult.type === 'explain' ? (
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight break-words whitespace-pre-wrap">
+              {explainText}
+            </pre>
+            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+              <div className="font-mono text-xs">EXPLAIN</div>
+              <div className="flex-1" />
+              {renderActions
+                ? renderActions(queryResult.lastQueryStatement)
+                : undefined}
+            </div>
+          </div>
+        ) : isQueryWithResult(queryResult) ? (
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
               {...arrowTableData}
@@ -146,11 +199,13 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                     {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
                   </div>
 
-                  <QueryResultLimitSelect
-                    value={queryResultLimit}
-                    onChange={setQueryResultLimit}
-                    options={queryResultLimitOptions}
-                  />
+                  {queryResult.type === 'select' ? (
+                    <QueryResultLimitSelect
+                      value={queryResultLimit}
+                      onChange={setQueryResultLimit}
+                      options={queryResultLimitOptions}
+                    />
+                  ) : null}
                 </>
               ) : null}
               <div className="flex-1" />
