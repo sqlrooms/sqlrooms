@@ -94,10 +94,6 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
 
-  // EXPLAIN returns a result table, but it’s really “text output” (a plan) and
-  // rendering it as a normal data table tends to truncate it to a single cell.
-  // We special-case EXPLAIN: render the full plan as text, and only use the
-  // DataTable renderer for real tabular results (SELECT/PRAGMA).
   const tableForDataTable =
     isQueryWithResult(queryResult) && queryResult.type !== 'explain'
       ? queryResult.result
