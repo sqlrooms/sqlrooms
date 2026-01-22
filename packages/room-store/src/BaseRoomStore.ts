@@ -25,6 +25,19 @@ export type CreateBaseRoomSliceProps = {
   captureException?: BaseRoomStoreState['room']['captureException'];
 };
 
+export type CreateRoomStoreOptions = {
+  /**
+   * Optional store key used for dev HMR reuse.
+   * Provide a project-specific key to force recreation when it changes.
+   */
+  storeKey?: string;
+};
+
+type CreateRoomStoreArgs<TFactory extends (...args: any[]) => any> = [
+  ...Parameters<TFactory>,
+  CreateRoomStoreOptions?,
+];
+
 export function createBaseRoomSlice(
   props?: CreateBaseRoomSliceProps,
 ): StateCreator<BaseRoomStoreState> {
@@ -103,32 +116,69 @@ export function createRoomStore<RS extends BaseRoomStoreState>(
  * @param stateCreatorFactory - A function that takes params and returns a Zustand state creator
  * @returns An object with createRoomStore(params) and useRoomStore(selector)
  *
+ * @example
+ * const {createRoomStore} = createRoomStoreCreator<MyRoomState>()(
+ *   (projectId: string) => createMyRoomState(projectId),
+ * );
+ * createRoomStore('project-a', {storeKey: 'project-a'});
  */
 export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
   return function <TFactory extends (...args: any[]) => StateCreator<RS>>(
     stateCreatorFactory: TFactory,
   ): {
-    createRoomStore: (...args: Parameters<TFactory>) => StoreApi<RS>;
+    createRoomStore: (...args: CreateRoomStoreArgs<TFactory>) => StoreApi<RS>;
     useRoomStore: <T>(selector: (state: RS) => T) => T;
   } {
-    const storeId = DEV_HMR?.nextId();
+    const defaultStoreKey = DEV_HMR?.nextId();
     let store: StoreApi<RS> | undefined;
+    let currentStoreKey: string | undefined = defaultStoreKey;
 
-    function createRoomStore(...args: Parameters<TFactory>): StoreApi<RS> {
+    function isCreateRoomStoreOptions(
+      value: unknown,
+    ): value is CreateRoomStoreOptions {
+      return typeof value === 'object' && value !== null && 'storeKey' in value;
+    }
+
+    function createRoomStore(
+      ...args: CreateRoomStoreArgs<TFactory>
+    ): StoreApi<RS> {
+      const lastArg = args[args.length - 1];
+      const options = isCreateRoomStoreOptions(lastArg) ? lastArg : undefined;
+      const factoryArgs = (
+        options ? args.slice(0, -1) : args
+      ) as Parameters<TFactory>;
+      const storeKey = DEV_HMR
+        ? (options?.storeKey ?? defaultStoreKey)
+        : undefined;
+
       // Dev-only: Check for existing store from previous hot reload
-      if (DEV_HMR && storeId) {
-        const existingStore = DEV_HMR.get(storeId);
+      if (DEV_HMR && storeKey) {
+        if (currentStoreKey && currentStoreKey !== storeKey) {
+          const previousStore = DEV_HMR.get(currentStoreKey);
+          if (previousStore) {
+            const state = previousStore.getState();
+            if (isRoomSliceWithDestroy(state.room)) {
+              state.room.destroy().catch((error: unknown) => {
+                state.room.captureException(error);
+              });
+            }
+          }
+          DEV_HMR.delete(currentStoreKey);
+        }
+        currentStoreKey = storeKey;
+
+        const existingStore = DEV_HMR.get(storeKey);
         if (existingStore) {
           store = existingStore;
           return existingStore;
         }
       }
 
-      store = createStore(stateCreatorFactory(...args));
+      store = createStore(stateCreatorFactory(...factoryArgs));
 
       // Dev-only: Register store for HMR preservation
-      if (DEV_HMR && storeId) {
-        DEV_HMR.set(storeId, store);
+      if (DEV_HMR && currentStoreKey) {
+        DEV_HMR.set(currentStoreKey, store);
       }
 
       if (typeof window !== 'undefined') {
