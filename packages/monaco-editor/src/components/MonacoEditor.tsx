@@ -81,7 +81,6 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
-let jsonTokenizerDefined = false;
 let themesDefined = false;
 function withRootThemeClass<T>(themeClass: 'light' | 'dark', fn: () => T): T {
   if (typeof document === 'undefined') return fn();
@@ -159,31 +158,6 @@ function defineSqlroomsThemes(monaco: typeof Monaco) {
 
 function setupMonacoThemes(monaco: typeof Monaco) {
   suppressMonacoTextareaFlash();
-
-  if (!jsonTokenizerDefined) {
-    jsonTokenizerDefined = true;
-    // Special language configuration for JSON
-    monaco.languages.setMonarchTokensProvider('json', {
-      tokenizer: {
-        root: [
-          // Property keys (strings followed by a colon)
-          [/"([^"]*)"(?=\s*:)/, 'string.key.json'],
-
-          // Regular string values (any quoted string not followed by a colon)
-          [/"([^"]*)"(?!\s*:)/, 'string.value.json'],
-
-          // Numbers (integers, decimals, and scientific notation)
-          [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
-
-          // Keywords
-          [/\b(?:true|false|null)\b/, 'keyword'],
-
-          // Punctuation and delimiters
-          [/[{}[\],:]/, 'delimiter'],
-        ],
-      },
-    });
-  }
 
   // Define themes once, but with the correct CSS vars for each mode.
   defineSqlroomsThemes(monaco);

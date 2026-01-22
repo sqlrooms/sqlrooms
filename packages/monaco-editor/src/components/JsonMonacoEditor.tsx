@@ -1,9 +1,12 @@
 import React from 'react';
 import {MonacoEditor, MonacoEditorProps} from './MonacoEditor';
 import {OnMount} from '@monaco-editor/react';
+import type * as Monaco from 'monaco-editor';
 
-export interface JsonMonacoEditorProps
-  extends Omit<MonacoEditorProps, 'language' | 'value'> {
+export interface JsonMonacoEditorProps extends Omit<
+  MonacoEditorProps,
+  'language' | 'value'
+> {
   /**
    * The JSON schema to validate against
    */
@@ -22,8 +25,38 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
   value = '',
   onMount,
   className,
+  beforeMount,
   ...props
 }) => {
+  // JSON tokenizer registration is a GLOBAL side-effect. Keep it scoped to JsonMonacoEditor
+  // (not the generic MonacoEditor wrapper) and only register once.
+  const ensureJsonTokenizerDefined = (monaco: typeof Monaco) => {
+    const g = globalThis as any;
+    if (g.__sqlrooms_json_tokenizer_defined__) return;
+    g.__sqlrooms_json_tokenizer_defined__ = true;
+
+    monaco.languages.setMonarchTokensProvider('json', {
+      tokenizer: {
+        root: [
+          // Property keys (strings followed by a colon)
+          [/"([^"]*)"(?=\\s*:)/, 'string.key.json'],
+
+          // Regular string values (any quoted string not followed by a colon)
+          [/"([^"]*)"(?!\\s*:)/, 'string.value.json'],
+
+          // Numbers (integers, decimals, and scientific notation)
+          [/-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?/, 'number'],
+
+          // Keywords
+          [/\\b(?:true|false|null)\\b/, 'keyword'],
+
+          // Punctuation and delimiters
+          [/[{}[\\],:]/, 'delimiter'],
+        ],
+      },
+    });
+  };
+
   // Convert object value to string if needed
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
@@ -60,6 +93,10 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
     <MonacoEditor
       language="json"
       value={stringValue}
+      beforeMount={(monaco) => {
+        ensureJsonTokenizerDefined(monaco as unknown as typeof Monaco);
+        beforeMount?.(monaco);
+      }}
       onMount={handleEditorDidMount}
       className={className}
       options={{
