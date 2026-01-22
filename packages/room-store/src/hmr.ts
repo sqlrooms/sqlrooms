@@ -47,5 +47,6 @@ export const DEV_HMR = (() => {
     nextId: () => `store_${idCounter++}`,
     get: (id: string) => registry.get(id),
     set: (id: string, store: StoreApi<any>) => registry.set(id, store),
+    delete: (id: string) => registry.delete(id),
   };
 })();
