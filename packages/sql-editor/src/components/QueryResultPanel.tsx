@@ -162,14 +162,15 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }
 
   if (queryResult?.status === 'success') {
-    return (
-      <div
-        className={cn(
-          'relative flex h-full w-full flex-grow flex-col overflow-hidden',
-          className,
-        )}
-      >
-        {queryResult.type === 'explain' ? (
+    const contentWrapperClassName = cn(
+      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      className,
+    );
+
+    // Result shows the EXPLAIN schema
+    if (queryResult.type === 'explain') {
+      return (
+        <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col overflow-hidden">
             <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight break-words whitespace-pre-wrap">
               {explainText}
@@ -182,7 +183,14 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                 : undefined}
             </div>
           </div>
-        ) : isQueryWithResult(queryResult) ? (
+        </div>
+      );
+    }
+
+    // Result shows the SELECT/PRAGMA table
+    if (isQueryWithResult(queryResult)) {
+      return (
+        <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
               {...arrowTableData}
@@ -214,11 +222,16 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                 : undefined}
             </div>
           </div>
-        ) : (
-          <pre className="p-4 text-xs leading-tight text-green-500">
-            Successfully executed query
-          </pre>
-        )}
+        </div>
+      );
+    }
+
+    // Fallback message to show when the query result is not a SELECT/PRAGMA or EXPLAIN
+    return (
+      <div className={contentWrapperClassName}>
+        <pre className="p-4 text-xs leading-tight text-green-500">
+          Successfully executed query
+        </pre>
       </div>
     );
   }
