@@ -283,11 +283,17 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     sqlCompletionContextByModel.set(model as object, {
       connector,
       tableSchemas,
-      getLatestSchemas: getLatestSchemasRef.current,
+      getLatestSchemas,
       customKeywords,
       customFunctions,
     });
-  }, [connector, tableSchemas, customKeywords, customFunctions]);
+  }, [
+    connector,
+    tableSchemas,
+    getLatestSchemas,
+    customKeywords,
+    customFunctions,
+  ]);
 
   // Backstop cleanup: if the React component unmounts before Monaco disposes the model,
   // ensure we don't hold on to context longer than necessary.
@@ -310,7 +316,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         sqlCompletionContextByModel.set(model as object, {
           connector,
           tableSchemas,
-          getLatestSchemas: getLatestSchemasRef.current,
+          getLatestSchemas,
           customKeywords,
           customFunctions,
         });
@@ -328,7 +334,14 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
         onMount(editor, monaco);
       }
     },
-    [connector, customKeywords, customFunctions, onMount, tableSchemas],
+    [
+      connector,
+      customKeywords,
+      customFunctions,
+      getLatestSchemas,
+      onMount,
+      tableSchemas,
+    ],
   );
 
   const combinedOptions = useMemo(
