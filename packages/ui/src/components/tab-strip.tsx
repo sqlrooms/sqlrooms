@@ -27,6 +27,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -161,6 +162,7 @@ function SortableTab({
       ref={setNodeRef}
       className="h-full flex-shrink-0"
       style={style}
+      data-tab-id={tab.id}
       {...attributes}
       {...listeners}
     >
@@ -712,6 +714,7 @@ function TabStripRoot({
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null!);
   const prevSelectedIdRef = useRef<string | null>(null);
+  const prevOpenTabIdsRef = useRef<Set<string>>(new Set());
 
   const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
 
@@ -744,7 +747,7 @@ function TabStripRoot({
   );
 
   // Auto-scroll to selected tab
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedTabId) return;
     if (prevSelectedIdRef.current === selectedTabId) return;
     prevSelectedIdRef.current = selectedTabId;
@@ -755,7 +758,8 @@ function TabStripRoot({
     const isOpen = openTabItems.some((tab) => tab.id === selectedTabId);
     if (!isOpen) return;
 
-    const frameId = requestAnimationFrame(() => {
+    // Use queueMicrotask to defer scroll until after Radix UI updates the DOM
+    queueMicrotask(() => {
       const activeTab = container.querySelector<HTMLElement>(
         '[data-state="active"]',
       );
@@ -767,11 +771,42 @@ function TabStripRoot({
         inline: 'nearest',
       });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTabId]);
 
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [selectedTabId, openTabItems]);
+  // Auto-scroll to newly added tab
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Find newly added tabs (in openTabs but not in prevOpenTabIdsRef)
+    const newTabIds = openTabs.filter(
+      (id) => !prevOpenTabIdsRef.current.has(id),
+    );
+
+    // Update ref for next comparison
+    prevOpenTabIdsRef.current = new Set(openTabs);
+
+    // Skip scroll on initial render (when ref was empty, all tabs appear "new")
+    if (newTabIds.length === openTabs.length) return;
+
+    // If there are new tabs, scroll to the last one added
+    if (newTabIds.length === 0) return;
+    const newTabId = newTabIds[newTabIds.length - 1];
+
+    queueMicrotask(() => {
+      const newTabElement = container.querySelector<HTMLElement>(
+        `[data-tab-id="${newTabId}"]`,
+      );
+      if (!newTabElement) return;
+
+      newTabElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    });
+  }, [openTabs]);
 
   const handleInlineRename = (tabId: string, newName: string) => {
     if (!onRename) return;

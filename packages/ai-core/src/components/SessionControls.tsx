@@ -22,10 +22,6 @@ export const SessionControls: React.FC<{
   const sessions = useStoreWithAi((s) => s.ai.config.sessions);
   const currentSessionId = useStoreWithAi((s) => s.ai.config.currentSessionId);
   const getIsSessionRunning = useStoreWithAi((s) => s.ai.getIsRunning);
-  const isSessionRunning = useCallback(
-    (sessionId: string) => getIsSessionRunning(sessionId),
-    [getIsSessionRunning],
-  );
   const switchSession = useStoreWithAi((s) => s.ai.switchSession);
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
@@ -128,6 +124,63 @@ export const SessionControls: React.FC<{
     [sessionToRename, renameSession],
   );
 
+  // Memoize render functions to prevent unnecessary re-renders
+  const renderTabLabel = useCallback(
+    (tab: {id: string; name: string}) => (
+      <div className="flex items-center gap-2">
+        {getIsSessionRunning(tab.id) && (
+          <Spinner className="text-muted-foreground h-4 w-4 flex-shrink-0 animate-spin" />
+        )}
+        <span className="truncate">{tab.name}</span>
+      </div>
+    ),
+    [getIsSessionRunning],
+  );
+
+  const renderTabMenu = useCallback(
+    (tab: {id: string; name: string}) => (
+      <>
+        <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>
+          <PencilIcon className="mr-2 h-4 w-4" />
+          Rename
+        </TabStrip.MenuItem>
+        {sessions.length > 1 && (
+          <>
+            <TabStrip.MenuSeparator />
+            <TabStrip.MenuItem
+              variant="destructive"
+              onClick={() => handleDelete(tab.id)}
+            >
+              <TrashIcon className="mr-2 h-4 w-4" />
+              Delete
+            </TabStrip.MenuItem>
+          </>
+        )}
+      </>
+    ),
+    [handleRenameRequest, handleDelete, sessions.length],
+  );
+
+  const renderSearchItemActions = useCallback(
+    (tab: {id: string; name: string}) => (
+      <>
+        <TabStrip.SearchItemAction
+          icon={<PencilIcon className="h-3 w-3" />}
+          aria-label={`Rename ${tab.name}`}
+          onClick={() => handleRenameRequest(tab.id)}
+        />
+        {sessions.length > 1 && (
+          <TabStrip.SearchItemAction
+            icon={<TrashIcon className="h-3 w-3" />}
+            aria-label={`Delete ${tab.name}`}
+            onClick={() => handleDelete(tab.id)}
+          />
+        )}
+      </>
+    ),
+    [handleRenameRequest, handleDelete, sessions.length],
+  );
+
   return (
     <>
       <div
@@ -148,50 +201,9 @@ export const SessionControls: React.FC<{
             onSelect={switchSession}
             onCreate={() => createSession()}
             onRename={renameSession}
-            renderTabLabel={(tab) => (
-              <div className="flex items-center gap-2">
-                {isSessionRunning(tab.id) && (
-                  <Spinner className="text-muted-foreground h-4 w-4 flex-shrink-0 animate-spin" />
-                )}
-                <span className="truncate">{tab.name}</span>
-              </div>
-            )}
-            renderTabMenu={(tab) => (
-              <>
-                <TabStrip.MenuItem onClick={() => handleRenameRequest(tab.id)}>
-                  <PencilIcon className="mr-2 h-4 w-4" />
-                  Rename
-                </TabStrip.MenuItem>
-                {sessions.length > 1 && (
-                  <>
-                    <TabStrip.MenuSeparator />
-                    <TabStrip.MenuItem
-                      variant="destructive"
-                      onClick={() => handleDelete(tab.id)}
-                    >
-                      <TrashIcon className="mr-2 h-4 w-4" />
-                      Delete
-                    </TabStrip.MenuItem>
-                  </>
-                )}
-              </>
-            )}
-            renderSearchItemActions={(tab) => (
-              <>
-                <TabStrip.SearchItemAction
-                  icon={<PencilIcon className="h-3 w-3" />}
-                  aria-label={`Rename ${tab.name}`}
-                  onClick={() => handleRenameRequest(tab.id)}
-                />
-                {sessions.length > 1 && (
-                  <TabStrip.SearchItemAction
-                    icon={<TrashIcon className="h-3 w-3" />}
-                    aria-label={`Delete ${tab.name}`}
-                    onClick={() => handleDelete(tab.id)}
-                  />
-                )}
-              </>
-            )}
+            renderTabLabel={renderTabLabel}
+            renderTabMenu={renderTabMenu}
+            renderSearchItemActions={renderSearchItemActions}
           >
             <TabStrip.SearchDropdown
               triggerIcon={<HistoryIcon className="h-4 w-4" />}
