@@ -19,12 +19,16 @@ export const QueryEditorPanelActions: React.FC<{className?: string}> = ({
   const abortCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.abortCurrentQuery,
   );
-  const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const selectedQueryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
   const isMac = isMacOS();
 
-  const isLoading = queryResult?.status === 'loading';
+  const isLoading = selectedQueryResult?.status === 'loading';
   const isAborted =
-    queryResult?.status === 'loading' && queryResult.isBeingAborted;
+    selectedQueryResult?.status === 'loading' &&
+    selectedQueryResult.isBeingAborted;
 
   const handleClick = () => {
     if (isLoading) {

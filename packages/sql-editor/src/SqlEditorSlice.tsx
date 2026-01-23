@@ -59,7 +59,10 @@ export type SqlEditorSliceState = {
   sqlEditor: {
     config: SqlEditorSliceConfig;
     // Runtime state
-    queryResult?: QueryResult;
+    /**
+     * Query results keyed by queryId (tab id).
+     */
+    queryResultsById: Record<string, QueryResult | undefined>;
     /** @deprecated  */
     selectedTable?: string;
     /** @deprecated Use `useStoreWithSqlEditor((s) => s.db.isRefreshingTableSchemas)` instead. */
@@ -182,6 +185,7 @@ export function createSqlEditorSlice({
       sqlEditor: {
         config,
         // Initialize runtime state
+        queryResultsById: {},
         isTablesLoading: false,
         queryResultLimit,
         queryResultLimitOptions,
@@ -245,6 +249,9 @@ export function createSqlEditorSlice({
               draft.sqlEditor.config.openTabs = openTabs.filter(
                 (id) => id !== queryId,
               );
+              const {[queryId]: _removed, ...rest} =
+                draft.sqlEditor.queryResultsById;
+              draft.sqlEditor.queryResultsById = rest;
 
               // If we deleted the selected query, select another one
               if (wasSelected) {
@@ -355,30 +362,29 @@ export function createSqlEditorSlice({
         },
 
         clearQueryResults: () => {
-          // Update state without using Immer for the Table type
-          set((state) => ({
-            ...state,
-            sqlEditor: {
-              ...state.sqlEditor,
-              queryResults: null,
-              queryError: undefined,
-            },
-          }));
+          set((state) =>
+            produce(state, (draft) => {
+              draft.sqlEditor.queryResultsById = {};
+            }),
+          );
         },
 
         parseAndRunCurrentQuery: async (): Promise<void> =>
           get().sqlEditor.parseAndRunQuery(get().sqlEditor.getCurrentQuery()),
 
         abortCurrentQuery: () => {
-          const currentResult = get().sqlEditor.queryResult;
+          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
+          const currentResult =
+            get().sqlEditor.queryResultsById[selectedQueryId];
           if (currentResult?.status === 'loading' && currentResult.controller) {
             currentResult.controller.abort();
           }
 
           set((state) =>
             produce(state, (draft) => {
-              if (draft.sqlEditor.queryResult?.status === 'loading') {
-                draft.sqlEditor.queryResult.isBeingAborted = true;
+              const result = draft.sqlEditor.queryResultsById[selectedQueryId];
+              if (result?.status === 'loading') {
+                result.isBeingAborted = true;
               }
             }),
           );
@@ -393,7 +399,10 @@ export function createSqlEditorSlice({
         },
 
         parseAndRunQuery: async (query): Promise<void> => {
-          if (get().sqlEditor.queryResult?.status === 'loading') {
+          const selectedQueryId = get().sqlEditor.config.selectedQueryId;
+          const existingResult =
+            get().sqlEditor.queryResultsById[selectedQueryId];
+          if (existingResult?.status === 'loading') {
             throw new Error('Query already running');
           }
           if (!query.trim()) {
@@ -407,7 +416,7 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.selectedTable = undefined;
-              draft.sqlEditor.queryResult = {
+              draft.sqlEditor.queryResultsById[selectedQueryId] = {
                 status: 'loading',
                 isBeingAborted: false,
                 controller: queryController,
@@ -523,9 +532,16 @@ export function createSqlEditorSlice({
             }
           }
 
+          // Update state without Immer since Arrow Tables don't play well with drafts.
           set((state) => ({
             ...state,
-            sqlEditor: {...state.sqlEditor, queryResult},
+            sqlEditor: {
+              ...state.sqlEditor,
+              queryResultsById: {
+                ...state.sqlEditor.queryResultsById,
+                [selectedQueryId]: queryResult,
+              },
+            },
           }));
         },
       },

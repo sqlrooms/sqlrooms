@@ -22,7 +22,7 @@ type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  userTools?: string[];
+  excludeFromGrouping?: string[];
   ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
@@ -40,7 +40,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
   enableReasoningBox = false,
   customMarkdownComponents,
-  userTools,
+  excludeFromGrouping: userTools,
   ErrorMessageComponent,
 }) => {
   const uiMessages = useStoreWithAi(

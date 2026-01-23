@@ -96,7 +96,7 @@ export function VegaChartToolResult({
         onSqlChange={handleSqlChange}
       >
         {/* Chart with actions toolbar */}
-        <div className="relative min-h-[300px]">
+        <div className="relative">
           <VegaChartDisplay aspectRatio={16 / 9} className="pt-2">
             <VegaLiteArrowChart.Actions className="right-3">
               <VegaExportAction />

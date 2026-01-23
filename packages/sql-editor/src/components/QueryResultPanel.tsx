@@ -11,6 +11,33 @@ import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {MessageCircleQuestion} from 'lucide-react';
 import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
+/**
+ * Turns DuckDB's EXPLAIN result table into a readable plan string.
+ * Prefer the `explain_value` column (DuckDB default); otherwise fall back
+ * to the first column and join all rows with newlines.
+ */
+function arrowTableToExplainText(result: any): string {
+  if (!result) return '';
+
+  const numRows: number = result.numRows ?? 0;
+  const fields: {name: string}[] = result.schema?.fields ?? [];
+  const fieldNames = fields.map((f) => f.name);
+
+  const hasExplainValueColumn = fieldNames.includes('explain_value');
+  const columnName = hasExplainValueColumn ? 'explain_value' : fieldNames[0];
+  if (!columnName) return '';
+
+  const col = result.getChild?.(columnName);
+  if (!col) return '';
+
+  const lines: string[] = [];
+  for (let i = 0; i < numRows; i++) {
+    const v = col.get(i);
+    if (v != null && String(v).length > 0) lines.push(String(v));
+  }
+  return lines.join('\n');
+}
+
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
   className?: string;
@@ -50,7 +77,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   onAskAiAboutError,
   formatValue,
 }) => {
-  const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
   const getCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.getCurrentQuery,
   );
@@ -64,10 +94,19 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
 
-  const arrowTableData = useArrowDataTable(
-    isQueryWithResult(queryResult) ? queryResult.result : undefined,
-    {formatValue},
-  );
+  const tableForDataTable =
+    isQueryWithResult(queryResult) && queryResult.type !== 'explain'
+      ? queryResult.result
+      : undefined;
+
+  const arrowTableData = useArrowDataTable(tableForDataTable, {formatValue});
+
+  const explainText = React.useMemo(() => {
+    if (queryResult?.status !== 'success' || queryResult.type !== 'explain') {
+      return undefined;
+    }
+    return arrowTableToExplainText(queryResult.result);
+  }, [queryResult]);
 
   const handleAskAiAboutError = React.useCallback(() => {
     if (queryResult?.status === 'error' && onAskAiAboutError) {
@@ -119,14 +158,35 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }
 
   if (queryResult?.status === 'success') {
-    return (
-      <div
-        className={cn(
-          'relative flex h-full w-full flex-grow flex-col overflow-hidden',
-          className,
-        )}
-      >
-        {isQueryWithResult(queryResult) ? (
+    const contentWrapperClassName = cn(
+      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      className,
+    );
+
+    // Result shows the EXPLAIN schema
+    if (queryResult.type === 'explain') {
+      return (
+        <div className={contentWrapperClassName}>
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-tight">
+              {explainText}
+            </pre>
+            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+              <div className="font-mono text-xs">EXPLAIN</div>
+              <div className="flex-1" />
+              {renderActions
+                ? renderActions(queryResult.lastQueryStatement)
+                : undefined}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Result shows the SELECT/PRAGMA table
+    if (isQueryWithResult(queryResult)) {
+      return (
+        <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
               {...arrowTableData}
@@ -143,11 +203,13 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                     {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
                   </div>
 
-                  <QueryResultLimitSelect
-                    value={queryResultLimit}
-                    onChange={setQueryResultLimit}
-                    options={queryResultLimitOptions}
-                  />
+                  {queryResult.type === 'select' ? (
+                    <QueryResultLimitSelect
+                      value={queryResultLimit}
+                      onChange={setQueryResultLimit}
+                      options={queryResultLimitOptions}
+                    />
+                  ) : null}
                 </>
               ) : null}
               <div className="flex-1" />
@@ -156,11 +218,16 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                 : undefined}
             </div>
           </div>
-        ) : (
-          <pre className="p-4 text-xs leading-tight text-green-500">
-            Successfully executed query
-          </pre>
-        )}
+        </div>
+      );
+    }
+
+    // Fallback message to show when the query result is not a SELECT/PRAGMA or EXPLAIN
+    return (
+      <div className={contentWrapperClassName}>
+        <pre className="p-4 text-xs leading-tight text-green-500">
+          Successfully executed query
+        </pre>
       </div>
     );
   }

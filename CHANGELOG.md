@@ -3,6 +3,18 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.2](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* query result panels are mapped based on query tab id ([#304](/github.com/sqlrooms/sqlrooms/issues/304)) ([a3c6a83](github.com/sqlrooms/sqlrooms/commits/a3c6a83d2b567890496d4409a834e527afb1f89c))
+* show chart as inline component in the sidebar ([#303](/github.com/sqlrooms/sqlrooms/issues/303)) ([a201c46](github.com/sqlrooms/sqlrooms/commits/a201c46e7504ef0fd0390f58ae5728dad8847b88))
+
+### Features
+
+* Add storeKey to createRoomStore ([#307](/github.com/sqlrooms/sqlrooms/issues/307)) ([c829bdb](github.com/sqlrooms/sqlrooms/commits/c829bdbabd71cdceac4afd818cbff405377e3cd0))
+* Prepare sqlrooms-server for publishing ([#305](/github.com/sqlrooms/sqlrooms/issues/305)) ([d120996](github.com/sqlrooms/sqlrooms/commits/d120996cb3c5a02c36df048b5e79947c55140aa1))
+
 # [0.27.0-rc.1](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
 
 ### Bug Fixes

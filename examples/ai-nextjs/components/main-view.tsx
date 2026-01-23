@@ -1,8 +1,8 @@
 'use client';
 
-import {Chat, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
-import {Button, SkeletonPane, useDisclosure, ThemeProvider} from '@sqlrooms/ui';
+import {Button, SkeletonPane, ThemeProvider, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../app/store';
 
@@ -55,7 +55,7 @@ export const MainView: React.FC = () => {
 
               <Chat.Composer placeholder="Ask me anything! For example: 'Search the web for the latest news on AI'">
                 <div className="flex items-center justify-end gap-2">
-                  <ModelSelector />
+                  <Chat.ModelSelector />
                 </div>
               </Chat.Composer>
             </>

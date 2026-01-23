@@ -107,7 +107,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 gap-2 pr-2">
+              <div className="ml-auto shrink-0 gap-2 p-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"

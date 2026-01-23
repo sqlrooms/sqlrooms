@@ -1,9 +1,4 @@
-import {
-  AiSettingsPanel,
-  ModelSelector,
-  PromptSuggestions,
-  Chat,
-} from '@sqlrooms/ai';
+import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
 import {
   Button,
   Dialog,
@@ -105,17 +100,17 @@ export const MainView: React.FC = () => {
           )}
         </div>
 
-        <PromptSuggestions.Container>
-          <PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
-          <PromptSuggestions.Item text="Show me a summary of the data" />
-          <PromptSuggestions.Item text="What are the key trends?" />
-          <PromptSuggestions.Item text="Help me understand the data structure" />
-        </PromptSuggestions.Container>
+        <Chat.PromptSuggestions>
+          <Chat.PromptSuggestions.Item text="What questions can I ask to get insights from my data?" />
+          <Chat.PromptSuggestions.Item text="Show me a summary of the data" />
+          <Chat.PromptSuggestions.Item text="What are the key trends?" />
+          <Chat.PromptSuggestions.Item text="Help me understand the data structure" />
+        </Chat.PromptSuggestions>
 
         <Chat.Composer placeholder="What would you like to learn about the data?">
           <div className="flex items-center justify-end gap-2">
-            <PromptSuggestions.VisibilityToggle />
-            <ModelSelector />
+            <Chat.PromptSuggestions.VisibilityToggle />
+            <Chat.ModelSelector />
           </div>
         </Chat.Composer>
       </Chat>
