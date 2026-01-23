@@ -66,7 +66,7 @@ let sqlLanguageConfigured = false;
 let sqlCompletionProviderDisposable: Monaco.IDisposable | null = null;
 // Per-model context store so multiple SqlMonacoEditor instances don't clobber each other.
 // WeakMap is used so entries can be GC'd in long-lived apps.
-const sqlCompletionContextByModel = new WeakMap<object, SqlCompletionContext>();
+const sqlCompletionContextByModel = new WeakMap<Monaco.editor.ITextModel, SqlCompletionContext>();
 
 function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
   if (sqlLanguageConfigured) return;
