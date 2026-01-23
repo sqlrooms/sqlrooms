@@ -55,7 +55,7 @@ export const MainView: React.FC = () => {
 
               <Chat.Composer placeholder="Ask me anything! For example: 'Search the web for the latest news on AI'">
                 <div className="flex items-center justify-end gap-2">
-                  <ModelSelector />
+                  <Chat.ModelSelector />
                 </div>
               </Chat.Composer>
             </>
