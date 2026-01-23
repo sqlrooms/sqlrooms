@@ -18,7 +18,7 @@ export type NotebookSliceState = {
     initializeSheet: (id: string) => void;
 
     // Cell actions (delegate to cells, keep display order here)
-    addCell: (tabId: string, type: string, index?: number) => string;
+    addCell: (tabId: string, type: string, index?: number) => Promise<string>;
     moveCell: (tabId: string, cellId: string, direction: 'up' | 'down') => void;
     removeCell: (cellId: string) => void;
     renameCell: (cellId: string, name: string) => void;

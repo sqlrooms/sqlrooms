@@ -1,8 +1,7 @@
+import type {DuckDbSliceState} from '@sqlrooms/duckdb';
+import type {BaseRoomStoreState} from '@sqlrooms/room-shell';
 import type React from 'react';
 import {z} from 'zod';
-import type {StateCreator} from '@sqlrooms/room-store';
-import type {BaseRoomStoreState} from '@sqlrooms/room-shell';
-import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 
 /** Cell types */
 export type BuiltInCellType = 'sql' | 'text' | 'vega' | 'input';
@@ -109,6 +108,13 @@ export type CellContainerProps = {
   footer?: React.ReactNode;
 };
 
+/** Type for SQL AST parsing function from DuckDB slice */
+export type SqlSelectToJsonFn = (sql: string) => Promise<{
+  error: boolean;
+  error_type?: string;
+  statements?: unknown[];
+}>;
+
 export type CellRegistryItem<TCell extends Cell = Cell> = {
   type: string;
   title: string;
@@ -118,12 +124,19 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     cell: TCell;
     renderContainer: (props: CellContainerProps) => React.ReactElement;
   }) => React.ReactElement;
-  /** Find dependencies for DAG - each cell type defines its own logic */
+  /** Find dependencies for DAG - each cell type defines its own logic (sync version) */
   findDependencies: (args: {
     cell: TCell;
     cells: Record<string, Cell>;
     sheetId: string;
   }) => string[];
+  /** Optional async version that can use SQL AST parsing for more accurate detection */
+  findDependenciesAsync?: (args: {
+    cell: TCell;
+    cells: Record<string, Cell>;
+    sheetId: string;
+    sqlSelectToJson?: SqlSelectToJsonFn;
+  }) => Promise<string[]>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
   runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
 };
@@ -224,9 +237,9 @@ export type CellsSliceState = {
     supportedSheetTypes: SheetType[];
 
     // Cell CRUD
-    addCell: (sheetId: string, cell: Cell, index?: number) => void;
+    addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;
     removeCell: (id: string) => void;
-    updateCell: (id: string, updater: (cell: Cell) => Cell) => void;
+    updateCell: (id: string, updater: (cell: Cell) => Cell) => Promise<void>;
 
     // Sheet CRUD
     addSheet: (title?: string, type?: SheetType) => string;
@@ -240,7 +253,7 @@ export type CellsSliceState = {
     // Edge management
     addEdge: (sheetId: string, edge: Omit<Edge, 'id'>) => void;
     removeEdge: (sheetId: string, edgeId: string) => void;
-    updateEdgesFromSql: (sheetId: string, cellId: string) => void;
+    updateEdgesFromSql: (sheetId: string, cellId: string) => Promise<void>;
 
     // Execution
     runCell: (

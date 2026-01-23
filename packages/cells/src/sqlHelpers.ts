@@ -112,3 +112,77 @@ export async function runSqlWithCallbacks(
     callbacks.onFinally?.();
   }
 }
+
+/**
+ * Recursively extract table names from a parsed SQL AST.
+ */
+function extractTablesFromAst(statements: unknown[]): Set<string> {
+  const tables = new Set<string>();
+
+  const walk = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    const obj = node as Record<string, unknown>;
+
+    // DuckDB AST uses table_name for table references
+    if (typeof obj.table_name === 'string') {
+      tables.add(obj.table_name.toLowerCase());
+    }
+
+    for (const value of Object.values(obj)) {
+      if (Array.isArray(value)) {
+        value.forEach(walk);
+      } else if (value && typeof value === 'object') {
+        walk(value);
+      }
+    }
+  };
+
+  for (const stmt of statements) {
+    const stmtObj = stmt as Record<string, unknown>;
+    if (stmtObj.node) {
+      walk(stmtObj.node);
+    } else {
+      walk(stmt);
+    }
+  }
+
+  return tables;
+}
+
+/**
+ * Find SQL cell dependencies using AST-based parsing.
+ * This provides more accurate detection than text-based matching.
+ */
+export async function findSqlDependenciesFromAst(opts: {
+  sql: string;
+  cells: Record<string, Cell>;
+  sqlSelectToJson: (sql: string) => Promise<{
+    error: boolean;
+    statements?: unknown[];
+  }>;
+}): Promise<string[]> {
+  const {sql, cells, sqlSelectToJson} = opts;
+
+  try {
+    const parsed = await sqlSelectToJson(sql);
+    if (parsed.error || !parsed.statements) {
+      return []; // Fall back to empty deps on parse error
+    }
+
+    const referencedTables = extractTablesFromAst(parsed.statements);
+    const deps: string[] = [];
+
+    for (const [id, cell] of Object.entries(cells)) {
+      if (cell.type === 'sql') {
+        const title = (cell.data as {title?: string}).title?.toLowerCase();
+        if (title && referencedTables.has(title)) {
+          deps.push(id);
+        }
+      }
+    }
+
+    return deps;
+  } catch {
+    return [];
+  }
+}

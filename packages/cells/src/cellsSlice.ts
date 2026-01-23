@@ -5,6 +5,7 @@ import {generateUniqueName} from '@sqlrooms/utils';
 import {executeSqlCell} from './execution';
 import {
   buildDependencyGraph,
+  buildDependencyGraphAsync,
   collectReachable,
   topologicalOrder,
 } from './dagUtils';
@@ -16,7 +17,27 @@ import type {
   CellsSliceState,
   Edge,
   SheetType,
+  SqlSelectToJsonFn,
 } from './types';
+
+/**
+ * Helper to resolve dependencies using async method if available, falling back to sync.
+ */
+async function resolveDependencies(
+  cell: Cell,
+  cells: Record<string, Cell>,
+  sheetId: string,
+  registry: CellRegistry,
+  sqlSelectToJson?: SqlSelectToJsonFn,
+): Promise<string[]> {
+  const item = registry[cell.type];
+  if (!item) return [];
+
+  if (item.findDependenciesAsync && sqlSelectToJson) {
+    return item.findDependenciesAsync({cell, cells, sheetId, sqlSelectToJson});
+  }
+  return item.findDependencies({cell, cells, sheetId});
+}
 
 export type {CellsRootState} from './types';
 
@@ -73,7 +94,19 @@ export function createCellsSlice(props: CellsSliceOptions) {
         status: {},
         activeAbortControllers: {},
 
-        addCell: (sheetId: string, cell: Cell, index?: number) => {
+        addCell: async (sheetId: string, cell: Cell, index?: number) => {
+          // Pre-compute dependencies outside produce() to support async
+          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
+            | SqlSelectToJsonFn
+            | undefined;
+          const deps = await resolveDependencies(
+            cell,
+            get().cells.config.data,
+            sheetId,
+            props.cellRegistry,
+            sqlSelectToJson,
+          );
+
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[cell.id] = cell as any;
@@ -107,13 +140,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
                 index !== undefined ? index : sheet.cellIds.length;
               sheet.cellIds.splice(newIndex, 0, cell.id);
 
-              // Auto-derive edges from dependencies
-              const deps =
-                props.cellRegistry[cell.type]?.findDependencies({
-                  cell: cell as any,
-                  cells: draft.cells.config.data as Record<string, Cell>,
-                  sheetId,
-                }) ?? [];
+              // Add edges from pre-computed dependencies
               for (const depId of deps) {
                 sheet.edges.push({
                   id: `${depId}-${cell.id}`,
@@ -147,47 +174,51 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
 
-        updateCell: (id: string, updater: (cell: Cell) => Cell) => {
+        updateCell: async (id: string, updater: (cell: Cell) => Cell) => {
+          const cell = get().cells.config.data[id];
+          if (!cell) return;
+
+          const updatedCell = updater(cell);
+
+          // Pre-compute dependencies outside produce() to support async
+          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
+            | SqlSelectToJsonFn
+            | undefined;
+          const newDeps = await resolveDependencies(
+            updatedCell,
+            get().cells.config.data,
+            '', // sheetId not needed for dependency derivation
+            props.cellRegistry,
+            sqlSelectToJson,
+          );
+
           set((state) =>
             produce(state, (draft) => {
-              const cell = draft.cells.config.data[id];
-              if (cell) {
-                const updatedCell = updater(cell as any);
-                draft.cells.config.data[id] = updatedCell as any;
+              draft.cells.config.data[id] = updatedCell as any;
 
-                // Update edges in all sheets this cell belongs to
-                const newDeps =
-                  props.cellRegistry[updatedCell.type]?.findDependencies({
-                    cell: updatedCell as any,
-                    cells: draft.cells.config.data as Record<string, Cell>,
-                    sheetId: '', // sheetId not needed for dependency derivation usually
-                  }) ?? [];
-
-                for (const sheet of Object.values(draft.cells.config.sheets)) {
-                  if (sheet.cellIds.includes(id)) {
-                    // Remove old edges for this target
-                    sheet.edges = sheet.edges.filter((e) => e.target !== id);
-                    // Add new ones
-                    for (const depId of newDeps) {
-                      sheet.edges.push({
-                        id: `${depId}-${id}`,
-                        source: depId,
-                        target: id,
-                      });
-                    }
+              // Update edges in all sheets this cell belongs to
+              for (const sheet of Object.values(draft.cells.config.sheets)) {
+                if (sheet.cellIds.includes(id)) {
+                  // Remove old edges for this target
+                  sheet.edges = sheet.edges.filter((e) => e.target !== id);
+                  // Add new ones
+                  for (const depId of newDeps) {
+                    sheet.edges.push({
+                      id: `${depId}-${id}`,
+                      source: depId,
+                      target: id,
+                    });
                   }
                 }
               }
             }),
           );
+
           // After update, trigger cascade
-          const cell = get().cells.config.data[id];
-          if (cell) {
-            for (const sheetId of get().cells.config.sheetOrder) {
-              const sheet = get().cells.config.sheets[sheetId];
-              if (sheet?.cellIds.includes(id)) {
-                void get().cells.runDownstreamCascade(sheetId, id);
-              }
+          for (const sheetId of get().cells.config.sheetOrder) {
+            const sheet = get().cells.config.sheets[sheetId];
+            if (sheet?.cellIds.includes(id)) {
+              void get().cells.runDownstreamCascade(sheetId, id);
             }
           }
         },
@@ -324,21 +355,32 @@ export function createCellsSlice(props: CellsSliceOptions) {
           );
         },
 
-        updateEdgesFromSql: (sheetId: string, cellId: string) => {
+        updateEdgesFromSql: async (sheetId: string, cellId: string) => {
+          const cell = get().cells.config.data[cellId];
+          const sheet = get().cells.config.sheets[sheetId];
+          if (!cell || !sheet) return;
+
+          // Pre-compute dependencies outside produce() to support async
+          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
+            | SqlSelectToJsonFn
+            | undefined;
+          const deps = await resolveDependencies(
+            cell,
+            get().cells.config.data,
+            sheetId,
+            props.cellRegistry,
+            sqlSelectToJson,
+          );
+
           set((state) =>
             produce(state, (draft) => {
-              const cell = draft.cells.config.data[cellId];
-              const sheet = draft.cells.config.sheets[sheetId];
-              if (cell && sheet) {
-                const deps =
-                  props.cellRegistry[cell.type]?.findDependencies({
-                    cell: cell as any,
-                    cells: draft.cells.config.data as Record<string, Cell>,
-                    sheetId,
-                  }) ?? [];
-                sheet.edges = sheet.edges.filter((e) => e.target !== cellId);
+              const draftSheet = draft.cells.config.sheets[sheetId];
+              if (draftSheet) {
+                draftSheet.edges = draftSheet.edges.filter(
+                  (e) => e.target !== cellId,
+                );
                 for (const depId of deps) {
-                  sheet.edges.push({
+                  draftSheet.edges.push({
                     id: `${depId}-${cellId}`,
                     source: depId,
                     target: cellId,
@@ -389,7 +431,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
 
-        // DAG methods
+        // DAG methods (sync versions for UI usage)
         getRootCells: (sheetId: string) => {
           const {dependencies} = buildDependencyGraph(sheetId, get());
           const ids = Object.keys(dependencies);
@@ -414,10 +456,15 @@ export function createCellsSlice(props: CellsSliceOptions) {
             reachable,
           );
         },
+        // Async cascade execution using AST-based dependency resolution
         runAllCellsCascade: async (sheetId: string) => {
-          const {dependencies, dependents} = buildDependencyGraph(
+          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
+            | SqlSelectToJsonFn
+            | undefined;
+          const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),
+            sqlSelectToJson,
           );
           const roots = Object.keys(dependencies).filter(
             (id) => (dependencies[id]?.length ?? 0) === 0,
@@ -428,9 +475,13 @@ export function createCellsSlice(props: CellsSliceOptions) {
           }
         },
         runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
-          const {dependencies, dependents} = buildDependencyGraph(
+          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
+            | SqlSelectToJsonFn
+            | undefined;
+          const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),
+            sqlSelectToJson,
           );
           const reachable = collectReachable(sourceCellId, dependents);
           if (!reachable.size) return;

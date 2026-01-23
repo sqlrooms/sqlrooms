@@ -84,10 +84,13 @@ export type CanvasSliceState = AiSliceState & {
       nodeType?: string;
       initialPosition?: XYPosition;
       parentId?: string;
-    }) => string;
+    }) => Promise<string>;
 
     renameNode: (nodeId: string, newTitle: string) => Promise<void>;
-    updateNode: (nodeId: string, updater: (cell: Cell) => Cell) => void;
+    updateNode: (
+      nodeId: string,
+      updater: (cell: Cell) => Cell,
+    ) => Promise<void>;
     deleteNode: (nodeId: string) => void;
 
     applyNodeChanges: (changes: NodeChange<CanvasNodeMeta>[]) => void;
@@ -167,7 +170,7 @@ export function createCanvasSlice(props: {
           await get().db.refreshTableSchemas();
         },
 
-        addNode: ({
+        addNode: async ({
           sheetId,
           nodeType = 'sql',
           initialPosition,
@@ -195,7 +198,7 @@ export function createCanvasSlice(props: {
             ' ',
           );
 
-          get().cells.addCell(sheetId, cell);
+          await get().cells.addCell(sheetId, cell);
 
           // 2. If parent exists, add an edge in CellsSlice
           if (parentId) {
@@ -246,15 +249,15 @@ export function createCanvasSlice(props: {
         },
 
         renameNode: async (nodeId: string, newTitle: string) => {
-          get().cells.updateCell(nodeId, (c) =>
+          await get().cells.updateCell(nodeId, (c) =>
             produce(c, (draft) => {
               (draft.data as any).title = newTitle;
             }),
           );
         },
 
-        updateNode: (nodeId: string, updater: (cell: Cell) => Cell) => {
-          get().cells.updateCell(nodeId, updater);
+        updateNode: async (nodeId: string, updater: (cell: Cell) => Cell) => {
+          await get().cells.updateCell(nodeId, updater);
         },
 
         deleteNode: (nodeId: string) => {

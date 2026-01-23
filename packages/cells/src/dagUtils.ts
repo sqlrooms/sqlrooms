@@ -1,4 +1,4 @@
-import type {Cell, CellsRootState} from './types';
+import type {Cell, CellsRootState, SqlSelectToJsonFn} from './types';
 
 export type DependencyGraph = {
   dependencies: Record<string, string[]>;
@@ -100,4 +100,64 @@ export function collectReachable(
     }
   }
   return reachable;
+}
+
+/**
+ * Async version of buildDependencyGraph that uses findDependenciesAsync when available.
+ */
+export async function buildDependencyGraphAsync(
+  sheetId: string,
+  state: CellsRootState,
+  sqlSelectToJson?: SqlSelectToJsonFn,
+): Promise<DependencyGraph> {
+  const sheet = state.cells.config.sheets[sheetId];
+  const registry = state.cells.cellRegistry;
+  if (!sheet) {
+    return {dependencies: {}, dependents: {}};
+  }
+
+  const dependencies: Record<string, string[]> = {};
+  const dependents: Record<string, string[]> = {};
+
+  // Process all cells in parallel
+  const cellDeps = await Promise.all(
+    sheet.cellIds.map(async (cellId) => {
+      const cell = state.cells.config.data[cellId];
+      if (!cell) return {cellId, deps: []};
+
+      const registryItem = registry[cell.type];
+      if (!registryItem) return {cellId, deps: []};
+
+      let deps: string[];
+      if (registryItem.findDependenciesAsync && sqlSelectToJson) {
+        deps = await registryItem.findDependenciesAsync({
+          cell,
+          cells: state.cells.config.data as Record<string, Cell>,
+          sheetId,
+          sqlSelectToJson,
+        });
+      } else {
+        deps = registryItem.findDependencies({
+          cell,
+          cells: state.cells.config.data as Record<string, Cell>,
+          sheetId,
+        });
+      }
+
+      return {cellId, deps: Array.from(new Set(deps))};
+    }),
+  );
+
+  // Build the graph from results
+  for (const {cellId, deps} of cellDeps) {
+    dependencies[cellId] = deps;
+    for (const dep of deps) {
+      const list = dependents[dep] || (dependents[dep] = []);
+      if (!list.includes(cellId)) {
+        list.push(cellId);
+      }
+    }
+  }
+
+  return {dependencies, dependents};
 }

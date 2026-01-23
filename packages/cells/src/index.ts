@@ -12,6 +12,7 @@ export {useCellsStore} from './hooks';
 export {SheetsTabBar} from './components/SheetsTabBar';
 export {
   findSqlDependencies,
+  findSqlDependenciesFromAst,
   renderSqlWithInputs,
   runSqlWithCallbacks,
 } from './sqlHelpers';

@@ -11,7 +11,7 @@ import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {InputCellContent} from './components/InputCellContent';
-import {findSqlDependencies} from './sqlHelpers';
+import {findSqlDependencies, findSqlDependenciesFromAst} from './sqlHelpers';
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -31,6 +31,35 @@ export function createDefaultCellRegistry(): CellRegistry {
         />
       ),
       findDependencies: ({cell, cells}) => {
+        return findSqlDependencies({
+          targetCell: cell,
+          cells,
+          getSqlText: (c) => (c as SqlCell).data.sql,
+          getInputVarName: (c) =>
+            c.type === 'input'
+              ? (c as InputCell).data.input.varName
+              : undefined,
+          getSqlResultName: (cid) => {
+            const c = cells[cid];
+            return c?.type === 'sql' ? (c as SqlCell).data.title : undefined;
+          },
+        });
+      },
+      findDependenciesAsync: async ({cell, cells, sqlSelectToJson}) => {
+        // Use AST-based detection if sqlSelectToJson is available
+        if (sqlSelectToJson) {
+          const astDeps = await findSqlDependenciesFromAst({
+            sql: (cell as SqlCell).data.sql,
+            cells,
+            sqlSelectToJson,
+          });
+          // If AST parsing succeeded and found deps, use them
+          // Otherwise fall back to text-based detection
+          if (astDeps.length > 0) {
+            return astDeps;
+          }
+        }
+        // Fall back to sync text-based detection
         return findSqlDependencies({
           targetCell: cell,
           cells,

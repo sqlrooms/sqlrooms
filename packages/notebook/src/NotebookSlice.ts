@@ -137,7 +137,7 @@ export function createNotebookSlice(props?: {
             );
           },
 
-          addCell: (tabId, type, index) => {
+          addCell: async (tabId, type, index) => {
             const id = createId();
             const reg = get().cells.cellRegistry[type];
             if (!reg) return id;
@@ -166,7 +166,7 @@ export function createNotebookSlice(props?: {
               );
             }
 
-            get().cells.addCell(tabId, cell, index);
+            await get().cells.addCell(tabId, cell, index);
 
             set((state) =>
               produce(state, (draft) => {
@@ -241,7 +241,7 @@ export function createNotebookSlice(props?: {
           },
 
           renameCell: (cellId, name) => {
-            get().cells.updateCell(cellId, (cell) => {
+            void get().cells.updateCell(cellId, (cell) => {
               const newCell = {...cell};
               (newCell.data as any).title = name;
               return newCell;
@@ -249,7 +249,7 @@ export function createNotebookSlice(props?: {
           },
 
           updateCell: (cellId, updater) => {
-            get().cells.updateCell(cellId, updater as any);
+            void get().cells.updateCell(cellId, updater as any);
           },
 
           setCurrentCell: (id) => {
