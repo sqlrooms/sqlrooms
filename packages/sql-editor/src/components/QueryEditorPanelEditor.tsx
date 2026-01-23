@@ -31,7 +31,6 @@ export const QueryEditorPanelEditor: React.FC<{
     (s) => s.sqlEditor.updateQueryText,
   );
   // Editor instance ref for keyboard shortcuts
-  //
   const editorRef = useRef<{
     [key: string]: EditorInstance;
   }>({});
