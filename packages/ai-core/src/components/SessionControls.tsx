@@ -1,6 +1,6 @@
 import {cn, Spinner, TabStrip} from '@sqlrooms/ui';
 import {HistoryIcon, PencilIcon, TrashIcon} from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {DeleteSessionDialog, RenameSessionDialog} from './session';
 
@@ -26,35 +26,14 @@ export const SessionControls: React.FC<{
   const createSession = useStoreWithAi((s) => s.ai.createSession);
   const renameSession = useStoreWithAi((s) => s.ai.renameSession);
   const deleteSession = useStoreWithAi((s) => s.ai.deleteSession);
+  const openTabs = useStoreWithAi((s) => s.ai.config.openSessionTabs);
+  const setOpenTabs = useStoreWithAi((s) => s.ai.setOpenSessionTabs);
 
   const [sessionToDelete, setSessionToDelete] = useState<string | null>(null);
   const [sessionToRename, setSessionToRename] = useState<{
     id: string;
     name: string;
   } | null>(null);
-  const [openTabs, setOpenTabs] = useState<string[]>(() =>
-    currentSessionId ? [currentSessionId] : [],
-  );
-
-  // Keep openTabs consistent with existing sessions and currentSessionId
-  // These effects intentionally update state based on store-driven changes
-  /* eslint-disable react-hooks/set-state-in-effect */
-  useEffect(() => {
-    // Remove tabs for sessions that no longer exist
-    const sessionIdSet = new Set(sessions.map((s) => s.id));
-    setOpenTabs((prev) => prev.filter((id) => sessionIdSet.has(id)));
-  }, [sessions]);
-
-  useEffect(() => {
-    // Ensure current session is always present in openTabs
-    if (!currentSessionId) {
-      return;
-    }
-    setOpenTabs((prev) =>
-      prev.includes(currentSessionId) ? prev : [...prev, currentSessionId],
-    );
-  }, [currentSessionId]);
-  /* eslint-enable react-hooks/set-state-in-effect */
 
   // Convert sessions to TabDescriptor format
   const tabs = useMemo(
@@ -65,19 +44,17 @@ export const SessionControls: React.FC<{
   const handleClose = useCallback(
     (sessionId: string) => {
       // Don't close if it's the only open tab
-      if (openTabs.length <= 1) return;
+      if (!openTabs || openTabs.length <= 1) return;
 
-      setOpenTabs((prev) => prev.filter((id) => id !== sessionId));
+      const remaining = openTabs.filter((id) => id !== sessionId);
+      setOpenTabs(remaining);
 
       // If closing the current session, switch to another open one
-      if (sessionId === currentSessionId) {
-        const remaining = openTabs.filter((id) => id !== sessionId);
-        if (remaining.length > 0) {
-          switchSession(remaining[0]!);
-        }
+      if (sessionId === currentSessionId && remaining.length > 0) {
+        switchSession(remaining[0]!);
       }
     },
-    [openTabs, currentSessionId, switchSession],
+    [openTabs, currentSessionId, switchSession, setOpenTabs],
   );
 
   const handleDelete = useCallback(

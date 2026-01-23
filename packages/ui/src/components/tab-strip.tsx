@@ -75,7 +75,7 @@ interface TabStripContextValue {
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
   selectedTabId?: string | null;
-  openTabs: string[];
+  openTabs?: string[];
   preventCloseLastTab: boolean;
 
   // Callbacks
@@ -465,7 +465,7 @@ function TabStripSearchDropdown({
   const handleTabClick = (tabId: string) => {
     if (closedTabIds.has(tabId)) {
       // Opening a closed tab: add to openTabs and select it
-      onOpenTabsChange?.([...openTabs, tabId]);
+      onOpenTabsChange?.([...(openTabs ?? []), tabId]);
       onSelect?.(tabId);
     } else {
       // Already open: just select it
@@ -649,7 +649,7 @@ export interface TabStripProps {
   /** All available tabs. */
   tabs: TabDescriptor[];
   /** IDs of tabs that are currently open. */
-  openTabs: string[];
+  openTabs?: string[];
   /** ID of the currently selected tab. */
   selectedTabId?: string | null;
   /** If true, hides the close button when only one tab remains open. */
@@ -721,7 +721,7 @@ function TabStripRoot({
   // Build openTabItems in the order of openTabs (for drag-to-reorder)
   const openTabItems = useMemo(() => {
     const tabsById = new Map(tabs.map((tab) => [tab.id, tab]));
-    return openTabs
+    return (openTabs ?? [])
       .map((id) => tabsById.get(id))
       .filter((tab): tab is TabDescriptor => tab !== undefined);
   }, [tabs, openTabs]);
@@ -780,7 +780,7 @@ function TabStripRoot({
     if (!container) return;
 
     // Find newly added tabs (in openTabs but not in prevOpenTabIdsRef)
-    const newTabIds = openTabs.filter(
+    const newTabIds = (openTabs ?? []).filter(
       (id) => !prevOpenTabIdsRef.current.has(id),
     );
 
@@ -788,7 +788,7 @@ function TabStripRoot({
     prevOpenTabIdsRef.current = new Set(openTabs);
 
     // Skip scroll on initial render (when ref was empty, all tabs appear "new")
-    if (newTabIds.length === openTabs.length) return;
+    if (newTabIds.length === (openTabs?.length ?? 0)) return;
 
     // If there are new tabs, scroll to the last one added
     if (newTabIds.length === 0) return;

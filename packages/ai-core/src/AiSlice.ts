@@ -110,6 +110,7 @@ export type AiSliceState = {
     switchSession: (sessionId: string) => void;
     renameSession: (sessionId: string, name: string) => void;
     deleteSession: (sessionId: string) => void;
+    setOpenSessionTabs: (tabs: string[]) => void;
     getCurrentSession: () => AnalysisSessionSchema | undefined;
     setSessionUiMessages: (sessionId: string, uiMessages: UIMessage[]) => void;
     setSessionToolAdditionalData: (
@@ -237,6 +238,23 @@ export function createAiSlice(
         firstSession.prompt = initialPrompt;
         firstSession.isRunning = false;
       }
+    }
+
+    // Clean up openSessionTabs for sessions that no longer exist and ensure it's initialized
+    const sessionIdSet = new Set(baseConfig.sessions.map((s) => s.id));
+    if (baseConfig.openSessionTabs && baseConfig.openSessionTabs.length > 0) {
+      baseConfig.openSessionTabs = baseConfig.openSessionTabs.filter((id) =>
+        sessionIdSet.has(id),
+      );
+    }
+    // Ensure openSessionTabs is initialized with current session if empty/missing
+    if (
+      !baseConfig.openSessionTabs ||
+      baseConfig.openSessionTabs.length === 0
+    ) {
+      baseConfig.openSessionTabs = baseConfig.currentSessionId
+        ? [baseConfig.currentSessionId]
+        : [];
     }
 
     return {
@@ -501,6 +519,11 @@ export function createAiSlice(
                 isRunning: false,
               });
               draft.ai.config.currentSessionId = newSessionId;
+              // Add new session to open tabs
+              if (!draft.ai.config.openSessionTabs) {
+                draft.ai.config.openSessionTabs = [];
+              }
+              draft.ai.config.openSessionTabs.push(newSessionId);
             }),
           );
         },
@@ -512,6 +535,30 @@ export function createAiSlice(
           set((state) =>
             produce(state, (draft) => {
               draft.ai.config.currentSessionId = sessionId;
+              // Ensure current session is always in openSessionTabs
+              if (!draft.ai.config.openSessionTabs) {
+                draft.ai.config.openSessionTabs = [];
+              }
+              if (!draft.ai.config.openSessionTabs.includes(sessionId)) {
+                draft.ai.config.openSessionTabs.push(sessionId);
+              }
+            }),
+          );
+        },
+
+        /**
+         * Set the list of open session tab IDs
+         */
+        setOpenSessionTabs: (tabs: string[]) => {
+          set((state) =>
+            produce(state, (draft) => {
+              // Filter out any tabs for sessions that no longer exist
+              const sessionIdSet = new Set(
+                draft.ai.config.sessions.map((s) => s.id),
+              );
+              draft.ai.config.openSessionTabs = tabs.filter((id) =>
+                sessionIdSet.has(id),
+              );
             }),
           );
         },
@@ -555,6 +602,13 @@ export function createAiSlice(
                 // Don't delete the last session
                 if (draft.ai.config.sessions.length > 1) {
                   draft.ai.config.sessions.splice(sessionIndex, 1);
+                  // Remove from open tabs
+                  if (draft.ai.config.openSessionTabs) {
+                    draft.ai.config.openSessionTabs =
+                      draft.ai.config.openSessionTabs.filter(
+                        (id) => id !== sessionId,
+                      );
+                  }
                   // If we deleted the current session, switch to another one
                   if (draft.ai.config.currentSessionId === sessionId) {
                     // Make sure there's at least one session before accessing its id
