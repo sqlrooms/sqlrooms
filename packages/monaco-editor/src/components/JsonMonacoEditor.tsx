@@ -39,19 +39,19 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       tokenizer: {
         root: [
           // Property keys (strings followed by a colon)
-          [/"([^"]*)"(?=\\s*:)/, 'string.key.json'],
+          [/"([^"]*)"(?=\s*:)/, 'string.key.json'],
 
           // Regular string values (any quoted string not followed by a colon)
-          [/"([^"]*)"(?!\\s*:)/, 'string.value.json'],
+          [/"([^"]*)"(?!\s*:)/, 'string.value.json'],
 
           // Numbers (integers, decimals, and scientific notation)
-          [/-?\\d+(?:\\.\\d+)?(?:[eE][+-]?\\d+)?/, 'number'],
+          [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
 
           // Keywords
-          [/\\b(?:true|false|null)\\b/, 'keyword'],
+          [/\b(?:true|false|null)\b/, 'keyword'],
 
           // Punctuation and delimiters
-          [/[{}[\\],:]/, 'delimiter'],
+          [[{}\[\],:]/, 'delimiter'],
         ],
       },
     });
