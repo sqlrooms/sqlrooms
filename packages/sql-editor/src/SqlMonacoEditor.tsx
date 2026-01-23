@@ -17,11 +17,19 @@ export interface SqlMonacoEditorProps extends Omit<
 > {
   connector?: DuckDbConnector;
   /**
-   * Custom SQL keywords to add to the completion provider
+   * Custom SQL keywords to add to the completion provider.
+   *
+   * Note: syntax highlighting is global and uses the built-in DuckDB dialect
+   * (`DUCKDB_KEYWORDS` / `DUCKDB_FUNCTIONS`) to avoid per-editor global reconfiguration
+   * (which can cause flashing). These are currently **completion-only**.
    */
   customKeywords?: string[];
   /**
-   * Custom SQL functions to add to the completion provider
+   * Custom SQL functions to add to the completion provider.
+   *
+   * Note: syntax highlighting is global and uses the built-in DuckDB dialect
+   * (`DUCKDB_KEYWORDS` / `DUCKDB_FUNCTIONS`) to avoid per-editor global reconfiguration
+   * (which can cause flashing). These are currently **completion-only**.
    */
   customFunctions?: string[];
   /**
@@ -68,7 +76,8 @@ function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
     monaco.languages.register({id: 'sql'});
   }
 
-  // Tokenization is GLOBAL. Use stable DuckDB dialect.
+  // Tokenization is GLOBAL. Keep it stable for DuckDB to avoid global re-tokenization
+  // when multiple SqlMonacoEditors exist (tabs/modals) which can cause flashing.
   monaco.languages.setMonarchTokensProvider('sql', {
     ...SQL_LANGUAGE_CONFIGURATION,
     keywords: DUCKDB_KEYWORDS,
