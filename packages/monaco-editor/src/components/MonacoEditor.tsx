@@ -2,7 +2,6 @@ import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
 import React, {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {
-  getCssColor,
   getCssColorFromThemeMode,
   getJsonEditorTheme,
   getMenuColors,
