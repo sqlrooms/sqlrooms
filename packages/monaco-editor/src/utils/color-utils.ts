@@ -183,6 +183,9 @@ export function getCssColorFromElement(
  * @returns Monospace font family string suitable for code editors
  */
 export function getMonospaceFont(): string {
+  if (typeof document === 'undefined') {
+    return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+  }
   return (
     getComputedStyle(document.documentElement)
       .getPropertyValue('--font-mono')
@@ -199,8 +202,15 @@ export function getMonospaceFont(): string {
  */
 export function getMenuColors(
   isDarkTheme: boolean,
-  elementOrMode: Element | 'light' | 'dark' = document.documentElement,
+  elementOrMode?: Element | 'light' | 'dark',
 ): Record<string, string> {
+  const resolvedElementOrMode =
+    elementOrMode ??
+    (typeof document === 'undefined'
+      ? isDarkTheme
+        ? 'dark'
+        : 'light'
+      : document.documentElement);
   const defaultDarkColors = {
     'editorWidget.background': '#1f1f1f',
     'editorWidget.foreground': '#cccccc',
@@ -240,10 +250,10 @@ export function getMenuColors(
   const result: Record<string, string> = {};
 
   const get = (varName: string, fallback: string) => {
-    if (typeof elementOrMode === 'string') {
-      return getCssColorFromThemeMode(elementOrMode, varName, fallback);
+    if (typeof resolvedElementOrMode === 'string') {
+      return getCssColorFromThemeMode(resolvedElementOrMode, varName, fallback);
     }
-    return getCssColorFromElement(elementOrMode, varName, fallback);
+    return getCssColorFromElement(resolvedElementOrMode, varName, fallback);
   };
 
   // Map Tailwind variables to Monaco color settings
@@ -369,8 +379,15 @@ export function getMenuColors(
  */
 export function getJsonEditorTheme(
   isDarkTheme: boolean,
-  elementOrMode: Element | 'light' | 'dark' = document.documentElement,
+  elementOrMode?: Element | 'light' | 'dark',
 ): any {
+  const resolvedElementOrMode =
+    elementOrMode ??
+    (typeof document === 'undefined'
+      ? isDarkTheme
+        ? 'dark'
+        : 'light'
+      : document.documentElement);
   // Predefined pastel colors for syntax highlighting
   // Light theme colors
   const lightThemeColors = {
@@ -395,10 +412,10 @@ export function getJsonEditorTheme(
 
   // Theme background and UI colors - still using CSS variables for the editor itself
   const get = (varName: string, fallback: string) => {
-    if (typeof elementOrMode === 'string') {
-      return getCssColorFromThemeMode(elementOrMode, varName, fallback);
+    if (typeof resolvedElementOrMode === 'string') {
+      return getCssColorFromThemeMode(resolvedElementOrMode, varName, fallback);
     }
-    return getCssColorFromElement(elementOrMode, varName, fallback);
+    return getCssColorFromElement(resolvedElementOrMode, varName, fallback);
   };
 
   const background = get('--background', isDarkTheme ? '#1E1E1E' : '#FFFFFF');
