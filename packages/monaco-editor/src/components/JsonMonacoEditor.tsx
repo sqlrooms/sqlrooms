@@ -59,6 +59,7 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
 
     // Open suggestions immediately when a quote is typed (opening a JSON string).
     let suggestScheduled = false;
+    let rafId: number | null = null;
     const changeDisposable = editor.onDidChangeModelContent(
       (e: Monaco.editor.IModelContentChangedEvent) => {
         if (
@@ -77,8 +78,9 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
 
         if (suggestScheduled) return;
         suggestScheduled = true;
-        requestAnimationFrame(() => {
+        rafId = requestAnimationFrame(() => {
           suggestScheduled = false;
+          rafId = null;
           editor.trigger('sqlrooms', 'editor.action.triggerSuggest', {});
         });
       },
@@ -89,7 +91,13 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       onMount(editor, monaco);
     }
 
-    editor.onDidDispose(() => changeDisposable.dispose());
+    editor.onDidDispose(() => {
+      changeDisposable.dispose();
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    });
   };
 
   return (
