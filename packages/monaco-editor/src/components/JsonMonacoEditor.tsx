@@ -1,6 +1,7 @@
 import React from 'react';
 import {MonacoEditor, MonacoEditorProps} from './MonacoEditor';
 import {OnMount} from '@monaco-editor/react';
+import type * as Monaco from 'monaco-editor';
 
 // Ensure Monaco's JSON language service is registered (completions, schema-based suggestions, etc).
 import 'monaco-editor/esm/vs/language/json/monaco.contribution';
@@ -56,10 +57,39 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       editor.getAction('editor.action.formatDocument')?.run();
     }, 100);
 
+    // Open suggestions immediately when a quote is typed (opening a JSON string).
+    let suggestScheduled = false;
+    const changeDisposable = editor.onDidChangeModelContent(
+      (e: Monaco.editor.IModelContentChangedEvent) => {
+        if (
+          (e as any).isFlush ||
+          (e as any).isUndoing ||
+          (e as any).isRedoing
+        ) {
+          return;
+        }
+        if (!editor.hasTextFocus?.()) return;
+
+        // Only trigger when a quote was inserted (opening a JSON string; Monaco may auto-close
+        // and insert `""` in one edit).
+        const insertedQuote = e.changes.some((c) => c.text.includes('"'));
+        if (!insertedQuote) return;
+
+        if (suggestScheduled) return;
+        suggestScheduled = true;
+        requestAnimationFrame(() => {
+          suggestScheduled = false;
+          editor.trigger('sqlrooms', 'editor.action.triggerSuggest', {});
+        });
+      },
+    );
+
     // Call the original onMount if provided
     if (onMount) {
       onMount(editor, monaco);
     }
+
+    editor.onDidDispose(() => changeDisposable.dispose());
   };
 
   return (
