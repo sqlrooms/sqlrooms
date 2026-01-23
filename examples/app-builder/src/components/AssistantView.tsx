@@ -1,4 +1,4 @@
-import {Chat, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, Spinner, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -49,7 +49,7 @@ export const AssistantView: React.FC = () => {
 
             <Chat.Composer placeholder="What would you like to change in the app?'">
               <div className="flex items-center justify-end gap-2">
-                <ModelSelector />
+                <Chat.ModelSelector />
               </div>
             </Chat.Composer>
           </>

@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* query result panels are mapped based on query tab id ([#304](https://github.com/sqlrooms/sqlrooms/issues/304)) ([a3c6a83](https://github.com/sqlrooms/sqlrooms/commit/a3c6a83d2b567890496d4409a834e527afb1f89c))
+
 # [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
 
 ### Features

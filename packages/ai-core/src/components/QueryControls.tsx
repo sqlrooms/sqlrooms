@@ -28,9 +28,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const prompt = useStoreWithAi((s) =>
     sessionId ? s.ai.getPrompt(sessionId) : '',
   );
-  const setPrompt = useStoreWithAi(
-    (s) => s.ai.setPrompt,
-  );
+  const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
   const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
   const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
@@ -58,12 +56,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         !e.metaKey
       ) {
         e.preventDefault();
-        if (
-          !isRunning &&
-          sessionId &&
-          model &&
-          prompt.trim().length
-        ) {
+        if (!isRunning && sessionId && model && prompt.trim().length) {
           runAnalysis(sessionId);
         }
       }
@@ -82,14 +75,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
       runAnalysis(sessionId);
       onRun?.();
     }
-  }, [
-    isRunning,
-    sessionId,
-    cancelAnalysis,
-    onCancel,
-    runAnalysis,
-    onRun,
-  ]);
+  }, [isRunning, sessionId, cancelAnalysis, onCancel, runAnalysis, onRun]);
 
   return (
     <div
@@ -121,7 +107,7 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 gap-2 pr-2">
+              <div className="ml-auto shrink-0 gap-2 p-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
