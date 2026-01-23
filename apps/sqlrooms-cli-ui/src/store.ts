@@ -9,14 +9,14 @@ import {
   createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
-  createCanvasSlice,
   CanvasSliceConfig,
   CanvasSliceState,
+  createCanvasSlice,
 } from '@sqlrooms/canvas';
 import {
-  createCellsSlice,
   CellsSliceConfig,
   CellsSliceState,
+  createCellsSlice,
   createDefaultCellRegistry,
 } from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
@@ -40,17 +40,16 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {SpinnerPane} from '@sqlrooms/ui';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
-import {z} from 'zod';
 import {createElement, Suspense} from 'react';
-import {SpinnerPane} from '@sqlrooms/ui';
+import {z} from 'zod';
 
-import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {fetchRuntimeConfig} from './runtimeConfig';
-import {MainView} from './components/MainView';
-import {AssistantPanel} from './components/AssistantPanel';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
+import {fetchRuntimeConfig} from './runtimeConfig';
+import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 
 export const RoomPanelTypes = z.enum([
   'room-details',
