@@ -275,9 +275,7 @@ const availableTools = useRoomStore((state) => state.ai.tools);
 Optional AbortController instance that can be used to cancel an ongoing analysis.
 
 ```tsx
-const abortController = useRoomStore(
-  (state) => state.ai.abortController,
-);
+const abortController = useRoomStore((state) => state.ai.abortController);
 ```
 
 ### Methods
@@ -428,7 +426,7 @@ import {useRoomStore} from '../store';
 </AiSettingsPanel>
 
 // Standalone model selector
-<ModelSelector />
+<Chat.ModelSelector />
 ```
 
 ### AI Settings API Reference

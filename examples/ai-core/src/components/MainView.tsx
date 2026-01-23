@@ -1,4 +1,4 @@
-import {Chat, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
@@ -52,7 +52,7 @@ export const MainView: React.FC = () => {
 
             <Chat.Composer placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
               <div className="flex items-center justify-end gap-2">
-                <ModelSelector />
+                <Chat.ModelSelector />
               </div>
             </Chat.Composer>
           </>
