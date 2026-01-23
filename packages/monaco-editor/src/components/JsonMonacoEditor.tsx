@@ -1,7 +1,9 @@
 import React from 'react';
 import {MonacoEditor, MonacoEditorProps} from './MonacoEditor';
 import {OnMount} from '@monaco-editor/react';
-import type * as Monaco from 'monaco-editor';
+
+// Ensure Monaco's JSON language service is registered (completions, schema-based suggestions, etc).
+import 'monaco-editor/esm/vs/language/json/monaco.contribution';
 
 export interface JsonMonacoEditorProps extends Omit<
   MonacoEditorProps,
@@ -26,37 +28,9 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
   onMount,
   className,
   beforeMount,
+  options: userOptions,
   ...props
 }) => {
-  // JSON tokenizer registration is a GLOBAL side-effect. Keep it scoped to JsonMonacoEditor
-  // (not the generic MonacoEditor wrapper) and only register once.
-  const ensureJsonTokenizerDefined = (monaco: typeof Monaco) => {
-    const g = globalThis as any;
-    if (g.__sqlrooms_json_tokenizer_defined__) return;
-    g.__sqlrooms_json_tokenizer_defined__ = true;
-
-    monaco.languages.setMonarchTokensProvider('json', {
-      tokenizer: {
-        root: [
-          // Property keys (strings followed by a colon)
-          [/"([^"]*)"(?=\s*:)/, 'string.key.json'],
-
-          // Regular string values (any quoted string not followed by a colon)
-          [/"([^"]*)"(?!\s*:)/, 'string.value.json'],
-
-          // Numbers (integers, decimals, and scientific notation)
-          [/-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?/, 'number'],
-
-          // Keywords
-          [/\b(?:true|false|null)\b/, 'keyword'],
-
-          // Punctuation and delimiters
-          [/[{}[\],:]/, 'delimiter'],
-        ],
-      },
-    });
-  };
-
   // Convert object value to string if needed
   const stringValue =
     typeof value === 'object' ? JSON.stringify(value, null, 2) : value;
@@ -79,7 +53,6 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
 
     // Format the document on initial load
     setTimeout(() => {
-      console.log('formatting document');
       editor.getAction('editor.action.formatDocument')?.run();
     }, 100);
 
@@ -93,15 +66,20 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
     <MonacoEditor
       language="json"
       value={stringValue}
-      beforeMount={(monaco) => {
-        ensureJsonTokenizerDefined(monaco as unknown as typeof Monaco);
-        beforeMount?.(monaco);
-      }}
+      beforeMount={beforeMount}
       onMount={handleEditorDidMount}
       className={className}
       options={{
         formatOnPaste: true,
         formatOnType: true,
+        // Word-based suggestions from existing content in this editor:
+        // typing inside quotes should suggest previously used strings like "q", "fff", "sddd", etc.
+        wordBasedSuggestions: 'currentDocument' as any,
+        wordBasedSuggestionsOnlySameLanguage: true,
+        suggest: {showWords: true} as any,
+        quickSuggestions: {other: true, comments: false, strings: true} as any,
+        suggestOnTriggerCharacters: true,
+        ...userOptions,
       }}
       {...props}
     />
