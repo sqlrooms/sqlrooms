@@ -5,7 +5,7 @@ import {
   getSheetsByType,
 } from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
-import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-shell';
+import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {NotebookCell, NotebookSliceConfig} from './cellSchemas';

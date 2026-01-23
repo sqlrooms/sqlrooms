@@ -1,5 +1,5 @@
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
-import type {BaseRoomStoreState} from '@sqlrooms/room-shell';
+import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import type React from 'react';
 import {z} from 'zod';
 

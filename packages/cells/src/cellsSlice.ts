@@ -1,5 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {createSlice} from '@sqlrooms/room-shell';
+import {createSlice} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {executeSqlCell} from './execution';

@@ -1,4 +1,4 @@
-import {useBaseRoomStore} from '@sqlrooms/room-shell';
+import {useBaseRoomStore} from '@sqlrooms/room-store';
 import type {CellsSliceState} from './types';
 
 export type CellsStoreState = {

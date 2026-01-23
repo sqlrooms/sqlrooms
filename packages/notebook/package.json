@@ -36,18 +36,12 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/cells": "workspace:*",
-    "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/room-shell": "workspace:*",
-    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
     "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
-    "react-hook-form": "^7.68.0",
-    "react-markdown": "^10.1.0",
-    "remark-gfm": "^4.0.1",
     "zod": "^4.1.13"
   }
 }

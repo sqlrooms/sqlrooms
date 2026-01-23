@@ -1,6 +1,6 @@
 import type {CellsSliceState} from '@sqlrooms/cells';
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
-import {BaseRoomStoreState, useBaseRoomStore} from '@sqlrooms/room-shell';
+import {BaseRoomStoreState, useBaseRoomStore} from '@sqlrooms/room-store';
 
 import type {NotebookSliceState} from './NotebookStateTypes';
 

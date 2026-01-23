@@ -5,18 +5,13 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
-import {
-  type Cell,
-  type CellsRootState,
-  type CellsSliceState,
-  getSheetsByType,
-} from '@sqlrooms/cells';
+import {type Cell, type CellsRootState, getSheetsByType} from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
-} from '@sqlrooms/room-shell';
+} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
@@ -26,7 +21,6 @@ import {
   type EdgeChange,
   type NodeChange,
 } from '@xyflow/react';
-import {NotebookSliceState} from '@sqlrooms/notebook';
 import {produce} from 'immer';
 import {z} from 'zod';
 
@@ -125,8 +119,7 @@ export function createCanvasSlice(props: {
   type CanvasRootState = BaseRoomStoreState &
     DuckDbSliceState &
     CanvasSliceState &
-    CellsRootState &
-    NotebookSliceState;
+    CellsRootState;
 
   return createSlice<CanvasSliceState, CanvasRootState>((set, get, store) => {
     return {
