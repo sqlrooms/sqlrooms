@@ -51,7 +51,7 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
           [/\b(?:true|false|null)\b/, 'keyword'],
 
           // Punctuation and delimiters
-          [[{}\[\],:]/, 'delimiter'],
+          [/[{}[\],:]/, 'delimiter'],
         ],
       },
     });

@@ -268,9 +268,6 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   options,
   ...restProps
 }) => {
-  // Store references to editor and monaco
-  const editorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
   const modelRef = useRef<any>(null);
 
   // Store getLatestSchemas in a ref to avoid triggering effects
@@ -304,10 +301,6 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   // Handle editor mounting to configure SQL language features
   const handleEditorDidMount = useCallback<OnMount>(
     (editor, monaco) => {
-      // Store references
-      editorRef.current = editor;
-      monacoRef.current = monaco;
-
       ensureSqlLanguageConfigured(monaco);
       ensureSqlCompletionProvider(monaco);
 
