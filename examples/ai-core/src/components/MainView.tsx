@@ -1,4 +1,4 @@
-import {Chat, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';

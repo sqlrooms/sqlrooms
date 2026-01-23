@@ -1,8 +1,8 @@
 'use client';
 
-import {Chat, ModelSelector} from '@sqlrooms/ai-core';
+import {Chat} from '@sqlrooms/ai-core';
 import {AiSettingsPanel} from '@sqlrooms/ai-settings';
-import {Button, SkeletonPane, useDisclosure, ThemeProvider} from '@sqlrooms/ui';
+import {Button, SkeletonPane, ThemeProvider, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../app/store';
 
