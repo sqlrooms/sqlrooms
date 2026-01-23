@@ -787,6 +787,9 @@ function TabStripRoot({
     // Update ref for next comparison
     prevOpenTabIdsRef.current = new Set(openTabs);
 
+    // Skip scroll on initial render (when ref was empty, all tabs appear "new")
+    if (newTabIds.length === openTabs.length) return;
+
     // If there are new tabs, scroll to the last one added
     if (newTabIds.length === 0) return;
     const newTabId = newTabIds[newTabIds.length - 1];
