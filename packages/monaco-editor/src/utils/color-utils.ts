@@ -124,6 +124,7 @@ export function getCssColorFromThemeMode(
   variableName: string,
   fallbackColor: string,
 ): string {
+  if (typeof document === 'undefined') return fallbackColor;
   try {
     const selector = themeMode === 'dark' ? '.dark' : ':root';
     const raw = getRawCssVarFromStylesheets(selector, variableName);
@@ -146,6 +147,7 @@ export function getCssColor(
   variableName: string,
   fallbackColor: string,
 ): string {
+  if (typeof document === 'undefined') return fallbackColor;
   return getCssColorFromElement(
     document.documentElement,
     variableName,

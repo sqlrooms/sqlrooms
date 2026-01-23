@@ -57,9 +57,10 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedQueryId, openTabs.join('|'), isSelectedOpen]);
 
-  // Prevent an initial blank render: if the keep-alive list hasn't been computed yet,
-  const mountedIdsToRender =
-    mountedIds.length > 0 && isSelectedOpen ? mountedIds : [selectedQueryId];
+  // Always include the selected tab id in the render set (prevents blank/flash on tab switch).
+  const mountedIdsToRender = isSelectedOpen
+    ? [selectedQueryId, ...mountedIds]
+    : [];
   const mountedIdSet = React.useMemo(
     () => new Set(mountedIdsToRender),
     [mountedIdsToRender],
