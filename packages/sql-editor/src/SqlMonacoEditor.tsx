@@ -270,12 +270,6 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 }) => {
   const modelRef = useRef<any>(null);
 
-  // Store getLatestSchemas in a ref to avoid triggering effects
-  const getLatestSchemasRef = useRef(getLatestSchemas);
-  useEffect(() => {
-    getLatestSchemasRef.current = getLatestSchemas;
-  }, [getLatestSchemas]);
-
   // Update per-model context when props change
   useEffect(() => {
     const model = modelRef.current;

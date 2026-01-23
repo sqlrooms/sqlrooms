@@ -57,7 +57,13 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedQueryId, openTabs.join('|'), isSelectedOpen]);
 
-  const mountedIdSet = React.useMemo(() => new Set(mountedIds), [mountedIds]);
+  // Prevent an initial blank render: if the keep-alive list hasn't been computed yet,
+  const mountedIdsToRender =
+    mountedIds.length > 0 && isSelectedOpen ? mountedIds : [selectedQueryId];
+  const mountedIdSet = React.useMemo(
+    () => new Set(mountedIdsToRender),
+    [mountedIdsToRender],
+  );
 
   return (
     <div
