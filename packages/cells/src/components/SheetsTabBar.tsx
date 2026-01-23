@@ -161,15 +161,20 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
   );
 };
 
-const AddNewSheetButton: React.FC<{onClick?: () => void}> = ({onClick}) => {
+const AddNewSheetButton = React.forwardRef<
+  HTMLButtonElement,
+  React.ComponentPropsWithoutRef<typeof Button>
+>(({className, ...props}, ref) => {
   return (
     <Button
+      ref={ref}
       size="icon"
       variant="ghost"
-      className="hover:bg-primary/10 h-full w-8 rounded-none"
-      onClick={onClick}
+      className={`hover:bg-primary/10 h-full w-8 rounded-none ${className ?? ''}`}
+      {...props}
     >
       <PlusIcon className="h-4 w-4" />
     </Button>
   );
-};
+});
+AddNewSheetButton.displayName = 'AddNewSheetButton';

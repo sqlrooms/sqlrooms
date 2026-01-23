@@ -131,12 +131,12 @@ const store = createRoomStore<RoomState>(
               component: DataSourcesPanel,
               placement: 'sidebar',
             },
-            [RoomPanelTypes.enum.assistant]: {
-              title: 'Assistant',
-              icon: () => null,
-              component: AssistantPanel,
-              placement: 'sidebar',
-            },
+            // [RoomPanelTypes.enum.assistant]: {
+            //   title: 'Assistant',
+            //   icon: () => null,
+            //   component: AssistantPanel,
+            //   placement: 'sidebar',
+            // },
             main: {
               title: 'Main view',
               icon: () => null,
