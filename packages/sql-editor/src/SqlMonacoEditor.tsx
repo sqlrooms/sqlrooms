@@ -56,8 +56,9 @@ type SqlCompletionContext = {
 // Singleton guards to prevent re-registration on every editor mount (causes flashing)
 let sqlLanguageConfigured = false;
 let sqlCompletionProviderDisposable: Monaco.IDisposable | null = null;
-// Per-model context map so multiple SqlMonacoEditor instances don't clobber each other
-const sqlCompletionContextByModelUri = new Map<string, SqlCompletionContext>();
+// Per-model context store so multiple SqlMonacoEditor instances don't clobber each other.
+// WeakMap is used so entries can be GC'd in long-lived apps.
+const sqlCompletionContextByModel = new WeakMap<object, SqlCompletionContext>();
 
 function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
   if (sqlLanguageConfigured) return;
@@ -83,10 +84,7 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
       triggerCharacters: [' ', '.', ',', '(', '='],
       provideCompletionItems: async (model: any, position: any) => {
         try {
-          const uri: string | undefined = model?.uri?.toString?.();
-          const ctx = (uri
-            ? sqlCompletionContextByModelUri.get(uri)
-            : undefined) ?? {
+          const ctx = sqlCompletionContextByModel.get(model as object) ?? {
             connector: undefined,
             tableSchemas: [],
             getLatestSchemas: undefined,
@@ -273,7 +271,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   // Store references to editor and monaco
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
-  const modelUriRef = useRef<string | undefined>(undefined);
+  const modelRef = useRef<any>(null);
 
   // Store getLatestSchemas in a ref to avoid triggering effects
   const getLatestSchemasRef = useRef(getLatestSchemas);
@@ -283,9 +281,9 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
   // Update per-model context when props change
   useEffect(() => {
-    const uri = modelUriRef.current;
-    if (!uri) return;
-    sqlCompletionContextByModelUri.set(uri, {
+    const model = modelRef.current;
+    if (!model) return;
+    sqlCompletionContextByModel.set(model as object, {
       connector,
       tableSchemas,
       getLatestSchemas: getLatestSchemasRef.current,
@@ -293,6 +291,15 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       customFunctions,
     });
   }, [connector, tableSchemas, customKeywords, customFunctions]);
+
+  // Backstop cleanup: if the React component unmounts before Monaco disposes the model,
+  // ensure we don't hold on to context longer than necessary.
+  useEffect(() => {
+    return () => {
+      const model = modelRef.current;
+      if (model) sqlCompletionContextByModel.delete(model as object);
+    };
+  }, []);
 
   // Handle editor mounting to configure SQL language features
   const handleEditorDidMount = useCallback<OnMount>(
@@ -304,10 +311,10 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       ensureSqlLanguageConfigured(monaco);
       ensureSqlCompletionProvider(monaco);
 
-      const uri = editor.getModel()?.uri?.toString?.();
-      if (uri) {
-        modelUriRef.current = uri;
-        sqlCompletionContextByModelUri.set(uri, {
+      const model = editor.getModel?.();
+      if (model) {
+        modelRef.current = model;
+        sqlCompletionContextByModel.set(model as object, {
           connector,
           tableSchemas,
           getLatestSchemas: getLatestSchemasRef.current,
@@ -317,10 +324,11 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       }
 
       // Cleanup on dispose
-      editor.onDidDispose(() => {
-        const uri = modelUriRef.current;
-        if (uri) sqlCompletionContextByModelUri.delete(uri);
-      });
+      if (model) {
+        editor.onDidDispose(() => {
+          sqlCompletionContextByModel.delete(model as object);
+        });
+      }
 
       // Call the original onMount if provided
       if (onMount) {

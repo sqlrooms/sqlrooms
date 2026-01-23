@@ -20,6 +20,45 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
 
   const isSelectedOpen = openTabs.includes(selectedQueryId);
 
+  // Monaco editor virtualization:
+  // Monaco editors are expensive to keep mounted (memory, undo stack, etc).
+  // We keep a small "keep-alive" set to reduce flashing while bounding cost.
+  const MAX_MOUNTED_EDITORS = 5;
+  const [mountedIds, setMountedIds] = React.useState<string[]>([]);
+
+  React.useEffect(() => {
+    if (!isSelectedOpen) {
+      setMountedIds([]);
+      return;
+    }
+
+    const selectedIndex = openTabs.indexOf(selectedQueryId);
+    const prevId = selectedIndex > 0 ? openTabs[selectedIndex - 1] : undefined;
+    const nextId =
+      selectedIndex >= 0 && selectedIndex < openTabs.length - 1
+        ? openTabs[selectedIndex + 1]
+        : undefined;
+
+    const nextMounted = [selectedQueryId, prevId, nextId, ...mountedIds].filter(
+      (id): id is string => Boolean(id) && openTabs.includes(id as string),
+    );
+
+    // Deduplicate while preserving order.
+    const seen = new Set<string>();
+    const deduped: string[] = [];
+    for (const id of nextMounted) {
+      if (seen.has(id)) continue;
+      seen.add(id);
+      deduped.push(id);
+      if (deduped.length >= MAX_MOUNTED_EDITORS) break;
+    }
+
+    setMountedIds(deduped);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedQueryId, openTabs.join('|'), isSelectedOpen]);
+
+  const mountedIdSet = React.useMemo(() => new Set(mountedIds), [mountedIds]);
+
   return (
     <div
       className={cn(
@@ -38,24 +77,25 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
         <div className="bg-background h-full w-full py-1">
           <div className="relative h-full flex-grow">
             <div className="absolute inset-0">
-              {openTabs.map((queryId) => {
-                // Keep all editors mounted to avoid MonacoEditor flashing bright on tab switch.
-                const isActive = queryId === selectedQueryId;
-                return (
-                  <div
-                    key={queryId}
-                    className={cn(
-                      'absolute inset-0',
-                      isActive
-                        ? 'opacity-100'
-                        : 'pointer-events-none opacity-0',
-                    )}
-                    aria-hidden={!isActive}
-                  >
-                    <QueryEditorPanelEditor queryId={queryId} />
-                  </div>
-                );
-              })}
+              {openTabs
+                .filter((id) => mountedIdSet.has(id))
+                .map((queryId) => {
+                  const isActive = queryId === selectedQueryId;
+                  return (
+                    <div
+                      key={queryId}
+                      className={cn(
+                        'absolute inset-0',
+                        isActive
+                          ? 'opacity-100'
+                          : 'pointer-events-none opacity-0',
+                      )}
+                      aria-hidden={!isActive}
+                    >
+                      <QueryEditorPanelEditor queryId={queryId} />
+                    </div>
+                  );
+                })}
             </div>
           </div>
         </div>
