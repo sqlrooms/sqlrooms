@@ -251,7 +251,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
         : 'sqlrooms-light';
 
   const editorRef = useRef<any>(null);
-  const monacoRef = useRef<any>(null);
 
   const handleBeforeMount: NonNullable<EditorProps['beforeMount']> = (
     monaco,
@@ -263,7 +262,6 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
 
   const handleEditorDidMount: OnMount = (editor, monaco) => {
     editorRef.current = editor;
-    monacoRef.current = monaco;
 
     // Safety: in case beforeMount didn't run for any reason.
     setupMonacoThemes(monaco);
