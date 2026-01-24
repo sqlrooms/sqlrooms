@@ -4,10 +4,7 @@ import {useIntl} from 'react-intl';
 import {TooltipConfigFactory} from '@kepler.gl/components';
 import {Datasets} from '@kepler.gl/table';
 
-import {KeplerInjector} from './KeplerInjector';
-
-// Get the original TooltipConfig from kepler.gl
-const TooltipConfig = KeplerInjector.get(TooltipConfigFactory);
+import {getKeplerFactory} from './KeplerInjector';
 
 const TooltipConfigWrapper = styled.div<{isDark: boolean}>`
   width: 100%;
@@ -110,6 +107,8 @@ type CustomTooltipConfigProps = {
   isDark: boolean;
 };
 
+const TooltipConfig = getKeplerFactory(TooltipConfigFactory);
+
 export const CustomTooltipConfig: React.FC<CustomTooltipConfigProps> = ({
   config,
   datasets,
@@ -126,7 +125,7 @@ export const CustomTooltipConfig: React.FC<CustomTooltipConfigProps> = ({
         datasets={datasets}
         onChange={onChange}
         onDisplayFormatChange={onDisplayFormatChange}
-        intl={intl}
+        {...(intl ? {intl} : {})}
       />
     </TooltipConfigWrapper>
   );

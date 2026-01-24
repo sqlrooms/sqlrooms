@@ -26,13 +26,56 @@ const CustomPanelTitleFactory = () => {
 
   return PanelTitle;
 };
-const recipes = [
+export type KeplerFactory<TReturn = unknown> = (...args: any[]) => TReturn;
+export type KeplerFactoryRecipe = [KeplerFactory, KeplerFactory];
+export type KeplerFactoryRecipeMode = 'append' | 'replace';
+
+const defaultRecipes: KeplerFactoryRecipe[] = [
   [AddDataButtonFactory, CustomAddDataButtonFactory],
   [PanelTitleFactory, CustomPanelTitleFactory],
   [DndContextFactory, CustomDndContextFactory],
   [FilterPanelHeaderFactory, CustomFilterPanelHeaderFactory],
   [MapLegendPanelFactory, CustomMapLegendPanelFactory],
   [MapLegendFactory, CustomMapLegendFactory],
-] as [Factory, Factory][];
+];
 
-export const KeplerInjector = provideRecipesToInjector(recipes, appInjector);
+let customRecipes: KeplerFactoryRecipe[] = [];
+let injector = createKeplerInjector();
+
+function createKeplerInjector(recipes: KeplerFactoryRecipe[] = []) {
+  return provideRecipesToInjector(
+    [...defaultRecipes, ...recipes] as unknown as [Factory, Factory][],
+    appInjector,
+  );
+}
+
+export function configureKeplerInjector(
+  recipes: KeplerFactoryRecipe[],
+  options: {mode?: KeplerFactoryRecipeMode} = {},
+) {
+  const mode = options.mode ?? 'append';
+  customRecipes =
+    mode === 'replace' ? [...recipes] : [...customRecipes, ...recipes];
+  injector = createKeplerInjector(customRecipes);
+}
+
+export function resetKeplerInjectorRecipes() {
+  customRecipes = [];
+  injector = createKeplerInjector();
+}
+
+export function getKeplerInjector() {
+  return injector;
+}
+
+export function getKeplerFactory<TFactory extends KeplerFactory>(
+  factory: TFactory,
+): ReturnType<TFactory> {
+  return getKeplerInjector().get(factory as unknown as Factory);
+}
+
+export const KeplerInjector = {
+  get<TFactory extends KeplerFactory>(factory: TFactory) {
+    return getKeplerInjector().get(factory as unknown as Factory);
+  },
+};

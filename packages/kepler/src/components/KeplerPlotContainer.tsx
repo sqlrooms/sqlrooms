@@ -5,10 +5,11 @@ import {
   plotContainerSelector,
 } from '@kepler.gl/components';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 
-const PlotContainer = KeplerInjector.get(PlotContainerFactory);
+const PlotContainer = getKeplerFactory(PlotContainerFactory);
+
 const KEPLER_PROPS = {
   mapboxApiUrl: 'https://api.mapbox.com',
   appName: 'kepler.gl',

@@ -26,6 +26,16 @@ export {KeplerProvider} from './components/KeplerProvider';
 export {useKeplerStateActions} from './hooks/useKeplerStateActions';
 export {KeplerPlotContainer} from './components/KeplerPlotContainer';
 export {KeplerImageExport} from './components/KeplerImageExport';
+export {
+  configureKeplerInjector,
+  resetKeplerInjectorRecipes,
+  getKeplerInjector,
+  getKeplerFactory,
+} from './components/KeplerInjector';
+export type {
+  KeplerFactoryRecipe,
+  KeplerFactoryRecipeMode,
+} from './components/KeplerInjector';
 
 // Re-export from @sqlrooms/kepler-config
 // Values also export their corresponding types automatically (Zod pattern)
