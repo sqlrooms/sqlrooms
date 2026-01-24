@@ -42,11 +42,6 @@ import {
   useBaseRoomShellStore,
   type StateCreator,
 } from '@sqlrooms/room-shell';
-import {
-  configureKeplerInjector,
-  type KeplerFactoryRecipe,
-  type KeplerFactoryRecipeMode,
-} from './components/KeplerInjector';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
 import {taskMiddleware} from 'react-palm/tasks';
@@ -80,16 +75,6 @@ export type CreateKeplerSliceOptions = {
   actionLogging?: boolean | ReduxLoggerOptions;
   middlewares?: Middleware[];
   applicationConfig?: KeplerApplicationConfig;
-  /**
-   * Global injector recipes to register before Kepler mounts.
-   * Prefer calling configureKeplerInjector directly when you need global setup.
-   */
-  injectorRecipes?: KeplerFactoryRecipe[];
-  /**
-   * How to apply injector recipes when provided.
-   * Defaults to 'append'.
-   */
-  injectorRecipesMode?: KeplerFactoryRecipeMode;
   /**
    * Called when a kepler action is dispatched
    * @param mapId - The map id
@@ -219,8 +204,6 @@ export function createKeplerSlice({
   actionLogging = false,
   middlewares: additionalMiddlewares = [],
   applicationConfig,
-  injectorRecipes,
-  injectorRecipesMode = 'append',
   onAction,
 }: CreateKeplerSliceOptions = {}): StateCreator<KeplerSliceState> {
   const initialConfig = createDefaultKeplerConfig(initialConfigProps);
@@ -228,9 +211,6 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
-  if (injectorRecipes?.length) {
-    configureKeplerInjector(injectorRecipes, {mode: injectorRecipesMode});
-  }
   return createSlice<
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
