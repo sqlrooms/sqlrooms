@@ -111,7 +111,11 @@ export const Notebook: React.FC = () => {
 
       <div className="tab-scrollable-content flex flex-1 flex-col gap-1 overflow-auto px-6">
         {tab.cellOrder.map((id: string, index: number) => (
-          <div className="flex flex-col space-y-1" key={`cellOrder-${id}`}>
+          <div
+            className="flex flex-col space-y-1"
+            // Include the index so moving a cell remounts Monaco cleanly.
+            key={`cellOrder-${id}-${index}`}
+          >
             <AddNewCellTabs onAdd={(type) => addCell(tab.id, type, index)} />
             <CellView id={id} />
           </div>
