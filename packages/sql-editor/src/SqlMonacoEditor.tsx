@@ -66,6 +66,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   const editorRef = useRef<any>(null);
   const monacoRef = useRef<any>(null);
   const disposableRef = useRef<any>(null);
+  const editorDisposedRef = useRef(false);
 
   // Store getLatestSchemas in a ref to avoid re-registering completion provider
   // when the callback reference changes (e.g., non-memoized inline functions)
@@ -76,13 +77,15 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
   // Function to register the completion provider
   const registerCompletionProvider = useCallback(() => {
-    if (!editorRef.current || !monacoRef.current) return;
+    if (editorDisposedRef.current || !editorRef.current || !monacoRef.current)
+      return;
 
     const monaco = monacoRef.current;
 
     // Dispose previous provider if it exists
     if (disposableRef.current) {
       disposableRef.current.dispose();
+      disposableRef.current = null;
     }
 
     // Register SQL completion provider
@@ -90,6 +93,9 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       triggerCharacters: [' ', '.', ',', '(', '='],
       provideCompletionItems: async (model: any, position: any) => {
         try {
+          if (editorDisposedRef.current) {
+            return {suggestions: []};
+          }
           // Get the latest schemas if the callback is provided
           let currentSchemas = tableSchemas;
 
@@ -270,6 +276,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       // Store references
       editorRef.current = editor;
       monacoRef.current = monaco;
+      editorDisposedRef.current = false;
 
       // Register SQL language if not already registered
       if (
@@ -294,9 +301,13 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
 
       // Store the disposable to clean up later if needed
       editor.onDidDispose(() => {
+        editorDisposedRef.current = true;
         if (disposableRef.current) {
           disposableRef.current.dispose();
+          disposableRef.current = null;
         }
+        editorRef.current = null;
+        monacoRef.current = null;
       });
 
       // Call the original onMount if provided
@@ -306,6 +317,18 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
     },
     [customKeywords, customFunctions, onMount, registerCompletionProvider],
   );
+
+  useEffect(() => {
+    return () => {
+      editorDisposedRef.current = true;
+      if (disposableRef.current) {
+        disposableRef.current.dispose();
+        disposableRef.current = null;
+      }
+      editorRef.current = null;
+      monacoRef.current = null;
+    };
+  }, []);
 
   const combinedOptions = useMemo(
     (): MonacoEditorProps['options'] => ({

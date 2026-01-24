@@ -241,15 +241,16 @@ export function createNotebookSlice(props?: {
           },
 
           renameCell: (cellId, name) => {
-            void get().cells.updateCell(cellId, (cell) => {
-              const newCell = {...cell};
-              (newCell.data as any).title = name;
-              return newCell;
-            });
+            void get().cells.updateCell(cellId, (cell) => ({
+              ...cell,
+              data: {...cell.data, title: name},
+            }));
           },
 
           updateCell: (cellId, updater) => {
-            void get().cells.updateCell(cellId, updater as any);
+            void get().cells.updateCell(cellId, (cell) => {
+              return updater(cell as NotebookCell) as Cell;
+            });
           },
 
           setCurrentCell: (id) => {
