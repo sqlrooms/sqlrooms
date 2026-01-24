@@ -13,7 +13,7 @@ import {PANEL_VIEW_TOGGLES, SIDEBAR_PANELS} from '@kepler.gl/constants';
 import {LayerClassesType} from '@kepler.gl/layers';
 import {getApplicationConfig} from '@kepler.gl/utils';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {
   KeplerActions,
   useKeplerStateActions,
@@ -21,10 +21,10 @@ import {
 import {RGBColor} from '@kepler.gl/types';
 
 // Get the kepler.gl components through the injector
-const LayerList = KeplerInjector.get(LayerListFactory);
-const DatasetLayerGroup = KeplerInjector.get(DatasetLayerGroupFactory);
-const PanelTitle = KeplerInjector.get(PanelTitleFactory);
-const AddLayerButton = KeplerInjector.get(AddLayerButtonFactory);
+const LayerList = getKeplerFactory(LayerListFactory);
+const DatasetLayerGroup = getKeplerFactory(DatasetLayerGroupFactory);
+const PanelTitle = getKeplerFactory(PanelTitleFactory);
+const AddLayerButton = getKeplerFactory(AddLayerButtonFactory);
 
 const layerPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'layer');
 
