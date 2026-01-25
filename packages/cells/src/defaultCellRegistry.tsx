@@ -1,4 +1,5 @@
 import React from 'react';
+import {produce} from 'immer';
 import type {
   CellRegistry,
   Cell,
@@ -15,6 +16,7 @@ import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {InputCellContent} from './components/InputCellContent';
 import {findSqlDependencies, findSqlDependenciesFromAst} from './sqlHelpers';
+import {executeSqlCell} from './execution';
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -88,6 +90,23 @@ export function createDefaultCellRegistry(): CellRegistry {
             return undefined;
           },
         });
+      },
+      runCell: async ({id, opts, get, set}) => {
+        const controller = new AbortController();
+        set((s) =>
+          produce(s, (draft) => {
+            draft.cells.activeAbortControllers[id] = controller;
+          }),
+        );
+
+        await executeSqlCell(id, get, set, {
+          schemaName: opts?.schemaName || 'main',
+          cascade: opts?.cascade,
+          signal: controller.signal,
+        });
+
+        // Refresh table schemas after execution (fire and forget)
+        void get().db.refreshTableSchemas();
       },
     },
     text: {

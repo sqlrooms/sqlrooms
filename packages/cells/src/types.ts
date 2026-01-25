@@ -161,7 +161,12 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     sqlSelectToJson?: SqlSelectToJsonFn;
   }) => Promise<string[]>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
-  runCell?: (args: {id: string; opts?: {cascade?: boolean}}) => Promise<void>;
+  runCell?: (args: {
+    id: string;
+    opts?: {cascade?: boolean; schemaName?: string};
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => Promise<void>;
 };
 
 export type CellRegistry = Record<string, CellRegistryItem<any>>;

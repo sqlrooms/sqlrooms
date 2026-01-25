@@ -2,7 +2,6 @@ import {createId} from '@paralleldrive/cuid2';
 import {createSlice} from '@sqlrooms/room-store';
 import {produce} from 'immer';
 import {generateUniqueName} from '@sqlrooms/utils';
-import {executeSqlCell} from './execution';
 import {
   buildDependencyGraph,
   buildDependencyGraphAsync,
@@ -421,25 +420,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
           if (!registryItem) return;
 
           if (registryItem.runCell) {
-            await registryItem.runCell({id, opts});
+            // Pass get/set to registry's runCell
+            await registryItem.runCell({id, opts, get, set});
             return;
           }
 
-          // Default behavior for SQL cells if no runCell provided in registry
-          if (cell.type === 'sql') {
-            const controller = new AbortController();
-            set((s) =>
-              produce(s, (draft) => {
-                draft.cells.activeAbortControllers[id] = controller;
-              }),
-            );
-
-            await executeSqlCell(id, get, set, {
-              schemaName: opts?.schemaName || 'main',
-              cascade: opts?.cascade,
-              signal: controller.signal,
-            });
-          }
+          // No default behavior - each cell type must define runCell if needed
         },
         cancelCell: (id: string) => {
           const state = get();
