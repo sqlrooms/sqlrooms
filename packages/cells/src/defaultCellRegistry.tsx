@@ -3,10 +3,13 @@ import type {
   CellRegistry,
   Cell,
   SqlCell,
+  SqlCellData,
   TextCell,
   VegaCell,
   InputCell,
 } from './types';
+import {getEffectiveResultName} from './types';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
@@ -41,7 +44,13 @@ export function createDefaultCellRegistry(): CellRegistry {
               : undefined,
           getSqlResultName: (cid) => {
             const c = cells[cid];
-            return c?.type === 'sql' ? (c as SqlCell).data.title : undefined;
+            if (c?.type === 'sql') {
+              return getEffectiveResultName(
+                c.data as SqlCellData,
+                convertToValidColumnOrTableName,
+              );
+            }
+            return undefined;
           },
         });
       },
@@ -70,7 +79,13 @@ export function createDefaultCellRegistry(): CellRegistry {
               : undefined,
           getSqlResultName: (cid) => {
             const c = cells[cid];
-            return c?.type === 'sql' ? (c as SqlCell).data.title : undefined;
+            if (c?.type === 'sql') {
+              return getEffectiveResultName(
+                c.data as SqlCellData,
+                convertToValidColumnOrTableName,
+              );
+            }
+            return undefined;
           },
         });
       },

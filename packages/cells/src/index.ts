@@ -16,6 +16,7 @@ export {
   renderSqlWithInputs,
   runSqlWithCallbacks,
 } from './sqlHelpers';
+export {isValidSqlIdentifier, getEffectiveResultName} from './types';
 export * from './types';
 export {SqlCellRunButton} from './components/SqlCellRunButton';
 export {SqlCellContent} from './components/SqlCellContent';

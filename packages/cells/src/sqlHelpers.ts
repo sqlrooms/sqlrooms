@@ -1,11 +1,14 @@
 import type {
   Cell,
   Edge,
+  SqlCellData,
   SqlDependencyOptions,
   SqlRenderInput,
   SqlRunCallbacks,
   SqlRunResult,
 } from './types';
+import {getEffectiveResultName} from './types';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 
 export function deriveEdgesFromSql(
   cellId: string,
@@ -23,7 +26,13 @@ export function deriveEdgesFromSql(
       cell.type === 'input' ? cell.data.input.varName : undefined,
     getSqlResultName: (cid) => {
       const cell = allCells[cid];
-      return cell?.type === 'sql' ? cell.data.title : undefined;
+      if (cell?.type === 'sql') {
+        return getEffectiveResultName(
+          cell.data as SqlCellData,
+          convertToValidColumnOrTableName,
+        );
+      }
+      return undefined;
     },
   });
 
@@ -72,6 +81,7 @@ export function findSqlDependencies<
     options,
   } = opts;
   const sql = getSqlText(targetCell) || '';
+  const sqlLower = sql.toLowerCase();
   const deps: string[] = [];
   const inputTypes = options?.inputTypes ?? ['input'];
   const sqlTypes = options?.sqlTypes ?? ['sql'];
@@ -88,10 +98,13 @@ export function findSqlDependencies<
       }
     } else if (sqlTypes.includes(other.type)) {
       const resultName = getSqlResultName(other.id);
-      const nameMatch =
-        (other as any).data?.title && sql.includes((other as any).data.title);
-      const resultMatch = resultName && sql.includes(resultName);
-      if (nameMatch || resultMatch) deps.push(other.id);
+      const title = (other as any).data?.title;
+      // Match on title (case-insensitive)
+      const titleMatch = title && sqlLower.includes(title.toLowerCase());
+      // Match on effective result name (case-insensitive)
+      const resultMatch =
+        resultName && sqlLower.includes(resultName.toLowerCase());
+      if (titleMatch || resultMatch) deps.push(other.id);
     }
   }
   return Array.from(new Set(deps));
@@ -174,8 +187,17 @@ export async function findSqlDependenciesFromAst(opts: {
 
     for (const [id, cell] of Object.entries(cells)) {
       if (cell.type === 'sql') {
-        const title = (cell.data as {title?: string}).title?.toLowerCase();
-        if (title && referencedTables.has(title)) {
+        const cellData = cell.data as SqlCellData;
+        const title = cellData.title?.toLowerCase();
+        const effectiveName = getEffectiveResultName(
+          cellData,
+          convertToValidColumnOrTableName,
+        ).toLowerCase();
+        // Match on either title or effective result name
+        if (
+          (title && referencedTables.has(title)) ||
+          referencedTables.has(effectiveName)
+        ) {
           deps.push(id);
         }
       }

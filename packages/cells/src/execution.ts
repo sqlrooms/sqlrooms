@@ -1,8 +1,10 @@
 import type {CellsRootState} from './cellsSlice';
 import {renderSqlWithInputs, findSqlDependencies} from './sqlHelpers';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import type {Cell, SqlCellStatus} from './types';
+import type {Cell, SqlCellStatus, SqlCellData} from './types';
+import {getEffectiveResultName} from './types';
 import {findSheetIdForCell} from './cellsSlice';
 
 export type ExecuteSqlCellOptions = {
@@ -67,8 +69,12 @@ export async function executeSqlCell(
       `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
     );
 
+    const effectiveResultName = getEffectiveResultName(
+      cell.data as SqlCellData,
+      convertToValidColumnOrTableName,
+    );
     const tableName = makeQualifiedTableName({
-      table: (cell.data as any).title as string,
+      table: effectiveResultName,
       schema: finalSchemaName,
       database: db.currentDatabase,
     }).toString();

@@ -180,6 +180,12 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           const updatedCell = updater(cell);
 
+          // Check if resultName changed for SQL cells - need to invalidate status
+          const resultNameChanged =
+            cell.type === 'sql' &&
+            updatedCell.type === 'sql' &&
+            cell.data.resultName !== updatedCell.data.resultName;
+
           // Pre-compute dependencies outside produce() to support async
           const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
             | SqlSelectToJsonFn
@@ -195,6 +201,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[id] = updatedCell as any;
+
+              // If resultName changed, invalidate the cell status so user re-runs
+              if (resultNameChanged) {
+                const status = draft.cells.status[id];
+                if (status?.type === 'sql') {
+                  draft.cells.status[id] = {
+                    type: 'sql',
+                    status: 'idle',
+                    referencedTables: status.referencedTables || [],
+                  };
+                }
+              }
 
               // Update edges in all sheets this cell belongs to
               for (const sheet of Object.values(draft.cells.config.sheets)) {
@@ -429,6 +447,21 @@ export function createCellsSlice(props: CellsSliceOptions) {
           if (controller) {
             controller.abort();
           }
+        },
+        invalidateCellStatus: (id: string) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const status = draft.cells.status[id];
+              if (status?.type === 'sql') {
+                // Reset to idle, clearing the result so user knows to re-run
+                draft.cells.status[id] = {
+                  type: 'sql',
+                  status: 'idle',
+                  referencedTables: status.referencedTables || [],
+                };
+              }
+            }),
+          );
         },
 
         // DAG methods (sync versions for UI usage)

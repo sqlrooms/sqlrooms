@@ -1,8 +1,11 @@
 import React, {useCallback, useEffect, useRef} from 'react';
 import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
+import {Input} from '@sqlrooms/ui';
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useCellsStore} from '../hooks';
-import type {CellContainerProps, SqlCell} from '../types';
+import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
+import {isValidSqlIdentifier, getEffectiveResultName} from '../types';
 import {SqlCellRunButton} from './SqlCellRunButton';
 import {produce} from 'immer';
 import type * as Monaco from 'monaco-editor';
@@ -43,6 +46,29 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const handleCancel = useCallback(() => {
     cancelCell(id);
   }, [id, cancelCell]);
+
+  const handleResultNameChange = useCallback(
+    (value: string) => {
+      // Allow empty string or valid SQL identifiers
+      if (value === '' || isValidSqlIdentifier(value)) {
+        updateCell(id, (c) =>
+          produce(c, (draft) => {
+            if (draft.type === 'sql') {
+              draft.data.resultName = value || undefined;
+            }
+          }),
+        );
+        // Status is automatically invalidated by the slice when resultName changes
+      }
+    },
+    [id, updateCell],
+  );
+
+  const effectiveResultName = getEffectiveResultName(
+    cell.data as SqlCellData,
+    convertToValidColumnOrTableName,
+  );
+  const hasExplicitResultName = Boolean((cell.data as SqlCellData).resultName);
 
   const status =
     cellStatus?.type === 'sql'
@@ -114,7 +140,20 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     </div>
   );
 
-  const footer = null;
+  const footer = (
+    <div className="text-muted-foreground flex items-center gap-2 px-2 py-1 text-xs">
+      <span className="font-medium">Result:</span>
+      <Input
+        value={(cell.data as SqlCellData).resultName || ''}
+        placeholder={effectiveResultName}
+        onChange={(e) => handleResultNameChange(e.target.value)}
+        className="h-6 w-40 font-mono text-xs"
+      />
+      {!hasExplicitResultName && (
+        <span className="text-[10px] italic opacity-50">(auto)</span>
+      )}
+    </div>
+  );
 
   return renderContainer({
     header: (
