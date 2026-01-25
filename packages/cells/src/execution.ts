@@ -1,11 +1,11 @@
-import type {CellsRootState} from './cellsSlice';
-import {renderSqlWithInputs, findSqlDependencies} from './sqlHelpers';
 import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
-import type {Cell, SqlCellStatus, SqlCellData} from './types';
+import type {CellsRootState} from './cellsSlice';
+import {findSheetIdForCell} from './helpers';
+import {findSqlDependencies, renderSqlWithInputs} from './sqlHelpers';
+import type {SqlCellData, SqlCellStatus} from './types';
 import {getEffectiveResultName} from './types';
-import {findSheetIdForCell} from './cellsSlice';
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;

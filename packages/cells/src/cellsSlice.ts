@@ -12,84 +12,53 @@ import type {
   Cell,
   CellRegistry,
   CellsRootState,
+  CellsSliceConfig,
   CellsSliceOptions,
   CellsSliceState,
   Edge,
   SheetType,
   SqlSelectToJsonFn,
 } from './types';
-
-/**
- * Helper to resolve dependencies using async method if available, falling back to sync.
- */
-async function resolveDependencies(
-  cell: Cell,
-  cells: Record<string, Cell>,
-  sheetId: string,
-  registry: CellRegistry,
-  sqlSelectToJson?: SqlSelectToJsonFn,
-): Promise<string[]> {
-  const item = registry[cell.type];
-  if (!item) return [];
-
-  if (item.findDependenciesAsync && sqlSelectToJson) {
-    return item.findDependenciesAsync({cell, cells, sheetId, sqlSelectToJson});
-  }
-  return item.findDependencies({cell, cells, sheetId});
-}
+import {createDefaultCellRegistry} from './defaultCellRegistry';
+import {resolveDependencies} from './helpers';
 
 export type {CellsRootState} from './types';
 
-/**
- * Finds the sheet ID that contains the given cell ID.
- */
-export function findSheetIdForCell(
-  state: CellsRootState,
-  cellId: string,
-): string | undefined {
-  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
-    if (sheet.cellIds.includes(cellId)) {
-      return id;
-    }
-  }
-  return undefined;
-}
-
-/**
- * Gets all sheets of a specific type.
- */
-export function getSheetsByType(
-  state: CellsRootState,
-  type: SheetType,
-): Record<string, import('./types').Sheet> {
-  const sheets: Record<string, import('./types').Sheet> = {};
-  for (const [id, sheet] of Object.entries(state.cells.config.sheets)) {
-    if (sheet.type === type) {
-      sheets[id] = sheet;
-    }
-  }
-  return sheets;
+function createDefaultCellsConfig(
+  config: Partial<CellsSliceConfig> | undefined,
+): CellsSliceConfig {
+  const sheetId = createId();
+  return {
+    data: {},
+    sheets: {
+      [sheetId]: {
+        id: createId(),
+        type: 'notebook',
+        title: 'Sheet',
+        cellIds: [],
+        edges: [],
+      },
+    },
+    sheetOrder: [],
+    currentSheetId: sheetId,
+    ...config,
+  };
 }
 
 // --- Slice Implementation ---
 
-export function createCellsSlice(props: CellsSliceOptions) {
-  const supportedSheetTypes = props.supportedSheetTypes ?? [
-    'notebook',
-    'canvas',
-  ];
-
+export function createCellsSlice(props?: CellsSliceOptions) {
+  const {
+    cellRegistry = createDefaultCellRegistry(),
+    supportedSheetTypes = ['notebook', 'canvas'],
+  } = props ?? {};
+  const initialConfig = createDefaultCellsConfig(props?.config);
   return createSlice<CellsSliceState, CellsRootState>((set, get, store) => {
     return {
       cells: {
-        cellRegistry: props.cellRegistry,
+        cellRegistry,
         supportedSheetTypes,
-        config: {
-          data: {},
-          sheets: {},
-          sheetOrder: [],
-          currentSheetId: undefined,
-        },
+        config: initialConfig,
         status: {},
         activeAbortControllers: {},
 
@@ -102,7 +71,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             cell,
             get().cells.config.data,
             sheetId,
-            props.cellRegistry,
+            cellRegistry,
             sqlSelectToJson,
           );
 
@@ -200,7 +169,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             updatedCell,
             get().cells.config.data,
             '', // sheetId not needed for dependency derivation
-            props.cellRegistry,
+            cellRegistry,
             sqlSelectToJson,
           );
 
@@ -228,7 +197,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           // If we have an existing view, rename it instead of invalidating
           if (hasExistingView && existingStatus?.resultView) {
-            const registryItem = props.cellRegistry[cell.type];
+            const registryItem = cellRegistry[cell.type];
             if (registryItem?.renameResult) {
               void registryItem.renameResult({
                 id,
@@ -393,7 +362,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
             cell,
             get().cells.config.data,
             sheetId,
-            props.cellRegistry,
+            cellRegistry,
             sqlSelectToJson,
           );
 
@@ -424,7 +393,7 @@ export function createCellsSlice(props: CellsSliceOptions) {
           const cell = state.cells.config.data[id];
           if (!cell) return;
 
-          const registryItem = props.cellRegistry[cell.type];
+          const registryItem = cellRegistry[cell.type];
           if (!registryItem) return;
 
           if (registryItem.runCell) {

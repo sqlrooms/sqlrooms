@@ -259,6 +259,7 @@ export const CellsSliceConfig = z.object({
 export type CellsSliceConfig = z.infer<typeof CellsSliceConfig>;
 
 export type CellsSliceOptions = {
+  config?: Partial<CellsSliceConfig>;
   cellRegistry: CellRegistry;
   supportedSheetTypes?: SheetType[];
 };

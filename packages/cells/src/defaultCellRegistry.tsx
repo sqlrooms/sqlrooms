@@ -21,7 +21,7 @@ import {
   renderSqlWithInputs,
 } from './sqlHelpers';
 import {executeSqlCell} from './execution';
-import {findSheetIdForCell} from './cellsSlice';
+import {findSheetIdForCell} from './helpers';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 
 export function createDefaultCellRegistry(): CellRegistry {

@@ -1,5 +1,4 @@
 import {createId} from '@paralleldrive/cuid2';
-import {AiSliceState, createAiSlice} from '@sqlrooms/ai';
 import {type Cell, type CellsRootState, getSheetsByType} from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
@@ -115,7 +114,6 @@ export function createDefaultCanvasConfig(
 
 export function createCanvasSlice(props: {
   config?: Partial<CanvasSliceConfig>;
-  ai?: Partial<Parameters<typeof createAiSlice>[0]>;
 }) {
   type CanvasRootState = BaseRoomStoreState &
     DuckDbSliceState &
