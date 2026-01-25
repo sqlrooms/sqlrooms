@@ -51,7 +51,7 @@ New `@sqlrooms/ai-rag` module for Retrieval Augmented Generation. Query your doc
 
 <img src="/media/examples/rag.webp" alt="SQLRooms AI RAG example" width=450>
 
-Check the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/examples/ai-rag)
+Check the [AI RAG example](https://github.com/sqlrooms/examples/tree/main/ai-rag)
 
 ## 0.26.0 (2025-11-17)
 
