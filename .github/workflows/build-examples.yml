@@ -1,7 +1,8 @@
-name: PR Checks
+name: Build examples
 
 on:
   workflow_dispatch:
+  workflow_call:
 
 jobs:
   build-examples:
