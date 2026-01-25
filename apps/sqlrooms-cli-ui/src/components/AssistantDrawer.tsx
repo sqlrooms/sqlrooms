@@ -37,9 +37,9 @@ export const AssistantDrawer: React.FC<{
     (s) => s.ai.config.currentSessionId || null,
   );
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
-
   const settingsPanelOpen = useDisclosure();
-  const [isAssistantOpen, setAssistantOpen] = React.useState(false);
+  const isAssistantOpen = useRoomStore((state) => state.isAssistantOpen);
+  const setAssistantOpen = useRoomStore((state) => state.setAssistantOpen);
 
   return (
     <Drawer
