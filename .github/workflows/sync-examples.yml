@@ -20,8 +20,9 @@ jobs:
     uses: ./.github/workflows/build-examples.yml
 
   sync:
+  sync:
     needs: [build-examples]
-    if: ${{ !inputs.build_examples || needs.build-examples.result == 'success' }}
+    if: ${{ always() && (!inputs.build_examples || needs.build-examples.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source
