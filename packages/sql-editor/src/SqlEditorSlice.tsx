@@ -211,8 +211,9 @@ export function createSqlEditorSlice({
           const newQuery = {
             id: createId(),
             name: generateUniqueName(
-              'Untitled',
+              'Untitled 1',
               sqlEditorConfig.queries.map((q) => q.name),
+              ' ',
             ),
             query: initialQuery,
           };

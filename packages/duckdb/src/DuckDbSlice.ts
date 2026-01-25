@@ -155,7 +155,10 @@ export type DuckDbSliceState = {
      * @param query - The SQL query to execute
      * @returns The QueryHandle for the query or null if disabled
      */
-    executeSql: (query: string) => Promise<QueryHandle | null>;
+    executeSql: (
+      query: string,
+      version?: number,
+    ) => Promise<QueryHandle | null>;
 
     /**
      * @deprecated Use .tables or .loadTableSchemas() instead

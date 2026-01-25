@@ -20,7 +20,7 @@
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
     "lucide-react": "0.544.0",
-    "monaco-editor": "^0.52.2",
+    "monaco-editor": "^0.55.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "zod": "^4.1.8"

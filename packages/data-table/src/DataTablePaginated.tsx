@@ -128,20 +128,23 @@ export default function DataTablePaginated<Data extends object>({
   }, [pagination?.pageIndex]);
 
   return (
-    <div className={cn(`relative flex h-full w-full flex-col`, className)}>
-      <div className="border-border flex-1 overflow-hidden border font-mono">
+    <div
+      className={cn(`relative flex h-full w-full flex-col border`, className)}
+    >
+      <div
+        className={cn(
+          'flex-1 overflow-hidden font-mono',
+          isFetching && 'pointer-events-none opacity-50',
+        )}
+      >
         <ScrollArea className="h-full overflow-auto">
           <Table disableWrapper>
             <TableHeader>
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`bg-background sticky top-[-1px] left-0 z-10 w-auto border-r py-2 text-center whitespace-nowrap`}
-                  >
-                    {isFetching ? (
-                      <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
-                    ) : null}
-                  </TableHead>
+                    className={`bg-background sticky left-0 top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2 text-center`}
+                  />
                   {headerGroup.headers.map((header) => {
                     const meta = header.column.columnDef
                       .meta as ArrowColumnMeta;
@@ -150,7 +153,7 @@ export default function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto border-r py-2 whitespace-nowrap',
+                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2',
                           pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
                           fontSizeClass,
@@ -184,7 +187,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full border-t border-r py-2 whitespace-nowrap" />
+                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -215,7 +218,7 @@ export default function DataTablePaginated<Data extends object>({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          'max-w-[500px] truncate overflow-hidden border-r px-7',
+                          'max-w-[500px] overflow-hidden truncate border-r px-7',
                           fontSizeClass,
                           meta?.isNumeric ? 'text-right' : 'text-left',
                         )}
@@ -227,7 +230,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableCell>
                     );
                   })}
-                  <TableCell className="border-r">&nbsp;</TableCell>
+                  <TableCell>&nbsp;</TableCell>
                 </TableRow>
               ))}
             </TableBody>
@@ -236,105 +239,111 @@ export default function DataTablePaginated<Data extends object>({
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
       </div>
-      {pagination || footerActions ? (
-        <div className="bg-background sticky bottom-0 left-0 flex flex-wrap items-center gap-2 border border-t-0 p-2">
-          {pagination ? (
-            <>
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.setPageIndex(0)}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronDoubleLeftIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.previousPage()}
-                  disabled={!table.getCanPreviousPage()}
-                >
-                  <ChevronLeftIcon className="h-4 w-4" />
-                </Button>
-                <div
-                  className={`ml-1 flex items-center gap-1 ${fontSizeClass}`}
-                >
-                  <div>Page</div>
-                  <Input
-                    type="number"
-                    min={1}
-                    max={table.getPageCount()}
-                    className="h-8 w-16"
-                    value={internalPageIndex + 1}
-                    onChange={(e) => {
-                      const value = e.target.value;
-                      if (value) {
-                        const page = Math.max(
-                          0,
-                          Math.min(table.getPageCount() - 1, Number(value) - 1),
-                        );
-                        setInternalPageIndex(page);
-                      }
-                    }}
-                    onBlur={() => {
-                      if (internalPageIndex !== pagination?.pageIndex) {
-                        table.setPageIndex(internalPageIndex);
-                      }
-                    }}
-                  />
-                  <div>{`of ${formatCount(table.getPageCount())}`}</div>
-                </div>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.nextPage()}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronRightIcon className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-                  disabled={!table.getCanNextPage()}
-                >
-                  <ChevronDoubleRightIcon className="h-4 w-4" />
-                </Button>
-                <Select
-                  value={String(table.getState().pagination.pageSize)}
-                  onValueChange={(value) => table.setPageSize(Number(value))}
-                >
-                  <SelectTrigger className="h-8 w-[110px]">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[10, 50, 100, 500, 1000].map((pageSize) => (
-                      <SelectItem key={pageSize} value={String(pageSize)}>
-                        {`${pageSize} rows`}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="flex-1" />
-            </>
-          ) : null}
 
+      <div className="bg-background sticky bottom-0 left-0 flex h-[45px] items-center gap-2 border-t px-2">
+        {isFetching ? (
+          <div className="ml-2 text-xs">Loading...</div>
+        ) : (
           <>
+            {pagination ? (
+              <>
+                <div className="flex items-center gap-1 truncate">
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 w-7"
+                    onClick={() => table.setPageIndex(0)}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronDoubleLeftIcon size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 w-7"
+                    onClick={() => table.previousPage()}
+                    disabled={!table.getCanPreviousPage()}
+                  >
+                    <ChevronLeftIcon size={16} />
+                  </Button>
+                  <div
+                    className={`ml-1 flex items-center gap-1 ${fontSizeClass}`}
+                  >
+                    <div>Page</div>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={table.getPageCount()}
+                      className="h-7 w-16"
+                      value={internalPageIndex + 1}
+                      onChange={(e) => {
+                        const value = e.target.value;
+                        if (value) {
+                          const page = Math.max(
+                            0,
+                            Math.min(
+                              table.getPageCount() - 1,
+                              Number(value) - 1,
+                            ),
+                          );
+                          setInternalPageIndex(page);
+                        }
+                      }}
+                      onBlur={() => {
+                        if (internalPageIndex !== pagination?.pageIndex) {
+                          table.setPageIndex(internalPageIndex);
+                        }
+                      }}
+                    />
+                    <div>{`of ${formatCount(table.getPageCount())}`}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 w-7"
+                    onClick={() => table.nextPage()}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <ChevronRightIcon size={16} />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="xs"
+                    className="h-7 w-7"
+                    onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+                    disabled={!table.getCanNextPage()}
+                  >
+                    <ChevronDoubleRightIcon size={16} />
+                  </Button>
+                  <Select
+                    value={String(table.getState().pagination.pageSize)}
+                    onValueChange={(value) => table.setPageSize(Number(value))}
+                  >
+                    <SelectTrigger className="hidden h-7 w-[110px] lg:inline-flex">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {[10, 50, 100, 500, 1000].map((pageSize) => (
+                        <SelectItem key={pageSize} value={String(pageSize)}>
+                          {`${pageSize} rows`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="min-w-0 flex-1" />
+              </>
+            ) : null}
+
             {numRows !== undefined && isFinite(numRows) ? (
-              <div className={`font-normal ${fontSizeClass}`}>
+              <div className={`min-w-fit font-normal ${fontSizeClass}`}>
                 {`${formatCount(numRows)} rows`}
               </div>
             ) : null}
+            {footerActions}
           </>
-          {footerActions}
-        </div>
-      ) : null}
-
-      {isFetching ? (
-        <div className="bg-background/80 absolute inset-0 animate-pulse" />
-      ) : null}
+        )}
+      </div>
     </div>
   );
 }

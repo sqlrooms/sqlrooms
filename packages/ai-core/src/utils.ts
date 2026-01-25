@@ -98,8 +98,8 @@ export class ToolAbortError extends Error {
     super(message);
     this.name = 'ToolAbortError';
     // Maintains proper stack trace for where our error was thrown (only available on V8)
-    if (Error.captureStackTrace) {
-      Error.captureStackTrace(this, ToolAbortError);
+    if ((Error as any).captureStackTrace) {
+      (Error as any).captureStackTrace(this, ToolAbortError);
     }
   }
 }

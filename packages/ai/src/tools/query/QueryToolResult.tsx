@@ -1,4 +1,7 @@
-import {DataTableModal, ArrowDataTableValueFormatter} from '@sqlrooms/data-table';
+import {
+  DataTableModal,
+  ArrowDataTableValueFormatter,
+} from '@sqlrooms/data-table';
 import {Button, CopyButton, useDisclosure} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {TableIcon} from 'lucide-react';
