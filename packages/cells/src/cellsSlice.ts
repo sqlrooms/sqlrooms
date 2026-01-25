@@ -179,11 +179,18 @@ export function createCellsSlice(props: CellsSliceOptions) {
 
           const updatedCell = updater(cell);
 
-          // Check if resultName changed for SQL cells - need to invalidate status
+          // Check if resultName changed for SQL cells with successful execution
           const resultNameChanged =
             cell.type === 'sql' &&
             updatedCell.type === 'sql' &&
             cell.data.resultName !== updatedCell.data.resultName;
+
+          const existingStatus = get().cells.status[id];
+          const hasExistingView =
+            resultNameChanged &&
+            existingStatus?.type === 'sql' &&
+            existingStatus.status === 'success' &&
+            existingStatus.resultView;
 
           // Pre-compute dependencies outside produce() to support async
           const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
@@ -200,18 +207,6 @@ export function createCellsSlice(props: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               draft.cells.config.data[id] = updatedCell as any;
-
-              // If resultName changed, invalidate the cell status so user re-runs
-              if (resultNameChanged) {
-                const status = draft.cells.status[id];
-                if (status?.type === 'sql') {
-                  draft.cells.status[id] = {
-                    type: 'sql',
-                    status: 'idle',
-                    referencedTables: status.referencedTables || [],
-                  };
-                }
-              }
 
               // Update edges in all sheets this cell belongs to
               for (const sheet of Object.values(draft.cells.config.sheets)) {
@@ -230,6 +225,19 @@ export function createCellsSlice(props: CellsSliceOptions) {
               }
             }),
           );
+
+          // If we have an existing view, rename it instead of invalidating
+          if (hasExistingView && existingStatus?.resultView) {
+            const registryItem = props.cellRegistry[cell.type];
+            if (registryItem?.renameResult) {
+              void registryItem.renameResult({
+                id,
+                oldResultView: existingStatus.resultView,
+                get,
+                set,
+              });
+            }
+          }
 
           // After update, trigger cascade
           for (const sheetId of get().cells.config.sheetOrder) {

@@ -167,6 +167,13 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     get: () => CellsRootState;
     set: (updater: (state: CellsRootState) => CellsRootState) => void;
   }) => Promise<void>;
+  /** Optional: rename the result view when resultName changes */
+  renameResult?: (args: {
+    id: string;
+    oldResultView: string;
+    get: () => CellsRootState;
+    set: (updater: (state: CellsRootState) => CellsRootState) => void;
+  }) => Promise<void>;
 };
 
 export type CellRegistry = Record<string, CellRegistryItem<any>>;

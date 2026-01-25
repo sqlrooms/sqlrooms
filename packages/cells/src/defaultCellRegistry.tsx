@@ -15,8 +15,14 @@ import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
 import {InputCellContent} from './components/InputCellContent';
-import {findSqlDependencies, findSqlDependenciesFromAst} from './sqlHelpers';
+import {
+  findSqlDependencies,
+  findSqlDependenciesFromAst,
+  renderSqlWithInputs,
+} from './sqlHelpers';
 import {executeSqlCell} from './execution';
+import {findSheetIdForCell} from './cellsSlice';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -106,6 +112,57 @@ export function createDefaultCellRegistry(): CellRegistry {
         });
 
         // Refresh table schemas after execution (fire and forget)
+        void get().db.refreshTableSchemas();
+      },
+      renameResult: async ({id, oldResultView, get, set}) => {
+        const state = get();
+        const cell = state.cells.config.data[id];
+        if (!cell || cell.type !== 'sql') return;
+
+        const sheetId = findSheetIdForCell(state, id);
+        const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
+        const schemaName = sheet?.title || 'main';
+
+        const effectiveResultName = getEffectiveResultName(
+          cell.data as SqlCellData,
+          convertToValidColumnOrTableName,
+        );
+        const newTableName = makeQualifiedTableName({
+          table: effectiveResultName,
+          schema: schemaName,
+          database: state.db.currentDatabase,
+        }).toString();
+
+        // Create new view from same SQL, drop old view
+        const connector = await state.db.getConnector();
+        const sql = (cell.data as SqlCellData).sql;
+
+        // Gather inputs for SQL rendering
+        const inputs = Object.values(state.cells.config.data)
+          .filter((c) => c.type === 'input')
+          .map((c) => ({
+            varName: (c.data as any).input.varName as string,
+            value: (c.data as any).input.value as string | number,
+          }));
+        const renderedSql = renderSqlWithInputs(sql, inputs);
+
+        await connector.query(
+          `CREATE OR REPLACE VIEW ${newTableName} AS ${renderedSql}`,
+        );
+        await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
+
+        // Update status with new view name
+        set((s) =>
+          produce(s, (draft) => {
+            const status = draft.cells.status[id];
+            if (status?.type === 'sql') {
+              status.resultName = newTableName;
+              status.resultView = newTableName;
+            }
+          }),
+        );
+
+        // Refresh schema tree
         void get().db.refreshTableSchemas();
       },
     },
