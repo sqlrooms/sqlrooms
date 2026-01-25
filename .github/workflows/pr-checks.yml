@@ -52,8 +52,8 @@ jobs:
       - name: Build apps
         run: pnpm build:apps
 
-      - name: Build examples
-        run: pnpm build:examples:ci
+      - name: Typecheck examples
+        run: pnpm typecheck:examples
 
       - name: Test
         run: pnpm test
