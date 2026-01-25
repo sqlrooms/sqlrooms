@@ -32,7 +32,6 @@
   },
   "dependencies": {
     "@paralleldrive/cuid2": "^3.0.0",
-    "@sqlrooms/ai": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",

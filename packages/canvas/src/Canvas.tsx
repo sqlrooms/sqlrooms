@@ -11,7 +11,6 @@ import {
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
 import React, {useMemo} from 'react';
-import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
@@ -95,9 +94,9 @@ export const Canvas: React.FC = () => {
   const empty = nodes.length === 0;
   const {theme: colorMode} = useTheme();
 
-  if (!cellsSheet || cellsSheet.type !== 'canvas') {
-    return null;
-  }
+  // if (!cellsSheet || cellsSheet.type !== 'canvas') {
+  //   return null;
+  // }
 
   return (
     <div className="flex h-full w-full flex-col">
@@ -130,7 +129,6 @@ export const Canvas: React.FC = () => {
           <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
       </div>
-      <CanvasAssistantDrawer />
     </div>
   );
 };

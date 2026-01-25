@@ -60,7 +60,10 @@ export type RoomState = RoomShellSliceState &
   AiSettingsSliceState &
   CellsSliceState &
   NotebookSliceState &
-  CanvasSliceState;
+  CanvasSliceState & {
+    isAssistantOpen: boolean;
+    setAssistantOpen: (isAssistantOpen: boolean) => void;
+  };
 
 const runtimeConfig = await fetchRuntimeConfig();
 
@@ -78,8 +81,8 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
-const store = createRoomStore<RoomState>(
-  persistSliceConfigs(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas: {
@@ -97,11 +100,14 @@ const store = createRoomStore<RoomState>(
       }),
     },
     (set, get, store) => ({
+      isAssistantOpen: false,
+      setAssistantOpen: (isAssistantOpen: boolean) => {
+        set({isAssistantOpen});
+      },
+
       ...createRoomShellSlice({
         connector,
-        config: {
-          dataSources: [],
-        },
+        config: {dataSources: []},
         layout: {
           config: {
             type: LayoutTypes.enum.mosaic,
@@ -176,6 +182,3 @@ const store = createRoomStore<RoomState>(
     }),
   ),
 );
-
-export const roomStore: any = store.roomStore;
-export const useRoomStore = store.useRoomStore;

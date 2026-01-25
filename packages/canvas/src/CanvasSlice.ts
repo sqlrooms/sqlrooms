@@ -1,10 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
-import {
-  AiSliceState,
-  createAiSlice,
-  createDefaultAiInstructions,
-  createDefaultAiTools,
-} from '@sqlrooms/ai';
+import {AiSliceState, createAiSlice} from '@sqlrooms/ai';
 import {type Cell, type CellsRootState, getSheetsByType} from '@sqlrooms/cells';
 import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import {
@@ -13,7 +8,6 @@ import {
   useBaseRoomStore,
 } from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
-import {createVegaChartTool} from '@sqlrooms/vega';
 import type {Viewport, XYPosition} from '@xyflow/react';
 import {
   applyNodeChanges,
@@ -63,14 +57,12 @@ export const CanvasSliceConfig = z.object({
 });
 export type CanvasSliceConfig = z.infer<typeof CanvasSliceConfig>;
 
-export type CanvasSliceState = AiSliceState & {
+export type CanvasSliceState = {
   canvas: {
     config: CanvasSliceConfig;
-    isAssistantOpen: boolean;
     initialize: () => Promise<void>;
     setConfig: (config: CanvasSliceConfig) => void;
     setViewport: (viewport: Viewport) => void;
-    setAssistantOpen: (isAssistantOpen: boolean) => void;
     getCanvasSheets: () => Record<string, import('@sqlrooms/cells').Sheet>;
 
     addNode: (params: {
@@ -123,31 +115,12 @@ export function createCanvasSlice(props: {
 
   return createSlice<CanvasSliceState, CanvasRootState>((set, get, store) => {
     return {
-      ...createAiSlice({
-        getInstructions: () => {
-          return createDefaultAiInstructions(store);
-        },
-        tools: {
-          ...createDefaultAiTools(store),
-          chart: createVegaChartTool(),
-          ...props.ai?.tools,
-        },
-        ...props.ai,
-      })(set, get, store),
       canvas: {
         config: createDefaultCanvasConfig(props.config),
-        isAssistantOpen: false,
         setConfig: (config: CanvasSliceConfig) => {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
               draft.canvas.config = config;
-            }),
-          );
-        },
-        setAssistantOpen: (isAssistantOpen: boolean) => {
-          set((state: CanvasRootState) =>
-            produce(state, (draft: CanvasRootState) => {
-              draft.canvas.isAssistantOpen = isAssistantOpen;
             }),
           );
         },
