@@ -21,6 +21,7 @@ import {z} from 'zod';
 const DEFAULT_NODE_WIDTH = 800;
 const DEFAULT_NODE_HEIGHT = 600;
 const CANVAS_SCHEMA_NAME = 'canvas';
+const VIEWPORT_EPSILON = 0.1;
 
 /** View metadata for a single node on the canvas */
 export const CanvasNodeMeta = z.object({
@@ -92,6 +93,14 @@ export type CanvasSliceState = {
 
 function getSheet(config: CanvasSliceConfig, sheetId: string) {
   return config.sheets[sheetId];
+}
+
+function isSameViewport(a: Viewport, b: Viewport) {
+  return (
+    Math.abs(a.x - b.x) < VIEWPORT_EPSILON &&
+    Math.abs(a.y - b.y) < VIEWPORT_EPSILON &&
+    Math.abs(a.zoom - b.zoom) < VIEWPORT_EPSILON
+  );
 }
 
 export function createDefaultCanvasConfig(
@@ -314,10 +323,14 @@ export function createCanvasSlice(props: {
         },
 
         setViewport: (viewport: Viewport) => {
+          const sheetId = get().cells.config.currentSheetId;
+          if (!sheetId) return;
+          const existing = get().canvas.config.sheets[sheetId];
+          if (existing && isSameViewport(existing.meta.viewport, viewport)) {
+            return;
+          }
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
-              const sheetId = draft.cells.config.currentSheetId;
-              if (!sheetId) return;
               let sheet = getSheet(draft.canvas.config, sheetId);
               if (!sheet) {
                 // Initialize metadata if needed

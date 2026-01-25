@@ -1,14 +1,6 @@
-import {QueryControls} from '@sqlrooms/ai';
-import {
-  Button,
-  EditableText,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-  cn,
-} from '@sqlrooms/ui';
+import {Button, EditableText, cn} from '@sqlrooms/ui';
 import {Handle, NodeResizer, Position} from '@xyflow/react';
-import {PlusIcon, SparklesIcon} from 'lucide-react';
+import {PlusIcon} from 'lucide-react';
 import {FC, PropsWithChildren, ReactNode, useCallback} from 'react';
 import {useStoreWithCanvas} from '../CanvasSlice';
 import {AddNodePopover} from './AddNodePopover';
@@ -42,7 +34,6 @@ export const CanvasNodeContainer: FC<
     },
     [id, renameNode],
   );
-  const setAssistantOpen = useStoreWithCanvas((s) => s.canvas.setAssistantOpen);
   return (
     <div
       className={cn(
@@ -62,7 +53,7 @@ export const CanvasNodeContainer: FC<
             <div className="flex items-center gap-2">{headerRight}</div>
           </div>
         )}
-        <Popover>
+        {/* <Popover>
           <PopoverTrigger asChild>
             <Button
               variant="default"
@@ -79,11 +70,11 @@ export const CanvasNodeContainer: FC<
                 ]
               }`}
               onRun={() => {
-                setAssistantOpen(true);
+                setAssistantOpen?.(true);
               }}
             />
           </PopoverContent>
-        </Popover>
+        </Popover> */}
         <div className="w-full flex-1 overflow-auto">{children}</div>
       </div>
       <AddNodePopover className="absolute -right-10 top-1/2" parentId={id}>

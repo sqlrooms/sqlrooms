@@ -10,7 +10,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
-import React, {useMemo} from 'react';
+import React, {useCallback, useMemo, useRef} from 'react';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
@@ -91,6 +91,20 @@ export const Canvas: React.FC = () => {
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
 
+  // Debounce viewport updates to prevent rapid state saves from React Flow
+  const viewportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSetViewport = useCallback(
+    (viewport: {x: number; y: number; zoom: number}) => {
+      if (viewportTimeoutRef.current) {
+        clearTimeout(viewportTimeoutRef.current);
+      }
+      viewportTimeoutRef.current = setTimeout(() => {
+        setViewport(viewport);
+      }, 150);
+    },
+    [setViewport],
+  );
+
   const empty = nodes.length === 0;
   const {theme: colorMode} = useTheme();
 
@@ -119,7 +133,7 @@ export const Canvas: React.FC = () => {
           nodeTypes={nodeTypes}
           onNodesChange={applyNodeChanges}
           onEdgesChange={applyEdgeChanges}
-          onViewportChange={setViewport}
+          onViewportChange={debouncedSetViewport}
           onConnect={addEdge}
           viewport={viewport}
           // fitView
