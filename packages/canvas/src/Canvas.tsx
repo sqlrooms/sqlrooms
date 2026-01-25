@@ -7,10 +7,11 @@ import {
   MiniMap,
   Node,
   ReactFlow,
+  Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
-import React, {useCallback, useMemo, useRef} from 'react';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
@@ -90,11 +91,13 @@ export const Canvas: React.FC = () => {
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
   const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
+  const [internalViewport, setInternalViewport] = useState<Viewport>(viewport);
 
   // Debounce viewport updates to prevent rapid state saves from React Flow
   const viewportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const debouncedSetViewport = useCallback(
-    (viewport: {x: number; y: number; zoom: number}) => {
+    (viewport: Viewport) => {
+      setInternalViewport(viewport);
       if (viewportTimeoutRef.current) {
         clearTimeout(viewportTimeoutRef.current);
       }
@@ -133,9 +136,9 @@ export const Canvas: React.FC = () => {
           nodeTypes={nodeTypes}
           onNodesChange={applyNodeChanges}
           onEdgesChange={applyEdgeChanges}
+          viewport={internalViewport}
           onViewportChange={debouncedSetViewport}
           onConnect={addEdge}
-          viewport={viewport}
           // fitView
         >
           <MiniMap />
