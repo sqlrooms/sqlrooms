@@ -12,7 +12,7 @@ import {
 import {SIDEBAR_PANELS, ADD_MAP_STYLE_ID} from '@kepler.gl/constants';
 import {MapStyle} from '@kepler.gl/reducers';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {
   KeplerActions,
   useKeplerStateActions,
@@ -27,8 +27,8 @@ import {
 import {ChevronDown} from 'lucide-react';
 
 // Get the kepler.gl components through the injector
-const LayerGroupSelector = KeplerInjector.get(LayerGroupSelectorFactory);
-const PanelTitle = KeplerInjector.get(PanelTitleFactory);
+const LayerGroupSelector = getKeplerFactory(LayerGroupSelectorFactory);
+const PanelTitle = getKeplerFactory(PanelTitleFactory);
 
 // Import icons from kepler.gl
 const {Add, Trash} = Icons;

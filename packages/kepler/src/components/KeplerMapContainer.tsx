@@ -15,15 +15,15 @@ import {
 import {useDimensions, getAnimatableVisibleLayers} from '@kepler.gl/utils';
 import styled, {useTheme} from 'styled-components';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
 import {useStoreWithKepler} from '../KeplerSlice';
 
-const MapContainer = KeplerInjector.get(MapContainerFactory);
-const BottomWidget = KeplerInjector.get(BottomWidgetFactory);
-const GeoCoderPanel = KeplerInjector.get(GeocoderPanelFactory);
-const ModalContainer = KeplerInjector.get(ModalContainerFactory);
+const MapContainer = getKeplerFactory(MapContainerFactory);
+const BottomWidget = getKeplerFactory(BottomWidgetFactory);
+const GeoCoderPanel = getKeplerFactory(GeocoderPanelFactory);
+const ModalContainer = getKeplerFactory(ModalContainerFactory);
 
 const DEFAULT_DIMENSIONS = {
   width: 0,
@@ -135,19 +135,19 @@ const KeplerGl: FC<{
               key={0}
               index={0}
               {...mapFields}
-              mapboxApiAccessToken={mapboxApiAccessToken}
+              mapboxApiAccessToken={mapboxApiAccessToken || ''}
             />
           </MapViewStateContextProvider>
         ) : null}
-        {interactionConfig?.geocoder?.enabled ? (
+        {geoCoderPanelFields && interactionConfig?.geocoder?.enabled ? (
           <GeoCoderPanel
             {...geoCoderPanelFields}
             index={0}
             unsyncedViewports={false}
-            mapboxApiAccessToken={mapboxApiAccessToken}
+            mapboxApiAccessToken={mapboxApiAccessToken || ''}
           />
         ) : null}
-        {bottomWidgetFields ? (
+        {size && bottomWidgetFields ? (
           <BottomWidget
             rootRef={bottomWidgetRef}
             {...bottomWidgetFields}
@@ -155,7 +155,7 @@ const KeplerGl: FC<{
             containerW={size?.width}
           />
         ) : null}
-        {modalContainerFields ? (
+        {size && size.width && size.height && modalContainerFields ? (
           <ModalContainer
             {...modalContainerFields}
             containerW={size?.width}
