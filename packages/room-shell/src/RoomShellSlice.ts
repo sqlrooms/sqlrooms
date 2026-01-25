@@ -224,38 +224,40 @@ export function createRoomShellSlice(
 
         async initialize() {
           const {setTaskProgress} = get().room;
-          setTaskProgress(INIT_DB_TASK, {
-            message: 'Initializing database…',
-            progress: undefined,
-          });
-          await get().db.initialize();
-          setTaskProgress(INIT_DB_TASK, undefined);
+          try {
+            setTaskProgress(INIT_DB_TASK, {
+              message: 'Initializing database…',
+              progress: undefined,
+            });
+            await get().db.initialize();
+            setTaskProgress(INIT_DB_TASK, undefined);
 
-          setTaskProgress(INIT_ROOM_TASK, {
-            message: 'Loading data sources…',
-            progress: undefined,
-          });
-          await updateReadyDataSources();
-          await maybeDownloadDataSources();
+            setTaskProgress(INIT_ROOM_TASK, {
+              message: 'Loading data sources…',
+              progress: undefined,
+            });
+            await updateReadyDataSources();
+            await maybeDownloadDataSources();
 
-          // Call initialize on all other slices that have an initialize function
-          const slices = Object.entries(store.getState()).filter(
-            ([key, value]) =>
-              key !== 'room' &&
-              key !== 'db' &&
-              isRoomSliceWithInitialize(value),
-          );
-          for (const [_, slice] of slices) {
-            if (isRoomSliceWithInitialize(slice)) {
-              await slice.initialize();
+            // Call initialize on all other slices that have an initialize function
+            const slices = Object.entries(store.getState()).filter(
+              ([key, value]) =>
+                key !== 'room' &&
+                key !== 'db' &&
+                isRoomSliceWithInitialize(value),
+            );
+            for (const [_, slice] of slices) {
+              if (isRoomSliceWithInitialize(slice)) {
+                await slice.initialize();
+              }
             }
+            const state = store.getState();
+            if (isRoomSliceWithInitialize(state)) {
+              await state.initialize();
+            }
+          } finally {
+            setTaskProgress(INIT_ROOM_TASK, undefined);
           }
-          const state = store.getState();
-          if (isRoomSliceWithInitialize(state)) {
-            await state.initialize();
-          }
-
-          setTaskProgress(INIT_ROOM_TASK, undefined);
         },
 
         /** Returns the progress of the last task */
