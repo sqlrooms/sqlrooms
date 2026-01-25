@@ -51,13 +51,7 @@ import {MainView} from './components/MainView';
 import {fetchRuntimeConfig} from './runtimeConfig';
 import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 
-export const RoomPanelTypes = z.enum([
-  'room-details',
-  'data-sources',
-  'view-configuration',
-  'assistant',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
@@ -114,12 +108,7 @@ const store = createRoomStore<RoomState>(
             nodes: {
               direction: 'row',
               first: RoomPanelTypes.enum['data-sources'],
-              second: {
-                direction: 'row',
-                first: MAIN_VIEW,
-                second: RoomPanelTypes.enum.assistant,
-                splitPercentage: 70,
-              },
+              second: 'main',
               splitPercentage: 20,
             },
           },

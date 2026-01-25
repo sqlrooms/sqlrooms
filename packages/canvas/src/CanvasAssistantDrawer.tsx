@@ -5,7 +5,6 @@ import {
   DrawerClose,
   DrawerContent,
   DrawerFooter,
-  DrawerHandle,
   DrawerHeader,
   DrawerTitle,
   DrawerTrigger,
