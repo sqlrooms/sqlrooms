@@ -1,6 +1,6 @@
-import { zodResolver } from '@hookform/resolvers/zod';
-import { makeQualifiedTableName } from '@sqlrooms/duckdb';
-import { SqlQueryDataSource } from '@sqlrooms/room-shell';
+import {zodResolver} from '@hookform/resolvers/zod';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Alert,
   AlertDescription,
@@ -34,14 +34,14 @@ import {
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-  cn
+  cn,
 } from '@sqlrooms/ui';
-import { Check, ChevronsUpDown, HelpCircle } from 'lucide-react';
-import { FC, useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import {Check, ChevronsUpDown, HelpCircle} from 'lucide-react';
+import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useForm} from 'react-hook-form';
 import * as z from 'zod';
-import { useStoreWithSqlEditor } from '../SqlEditorSlice';
-import { SqlMonacoEditor } from '../SqlMonacoEditor';
+import {useStoreWithSqlEditor} from '../SqlEditorSlice';
+import {SqlMonacoEditor} from '../SqlMonacoEditor';
 
 const VALID_TABLE_OR_COLUMN_REGEX = /^[a-zA-Z_][a-zA-Z0-9_]{0,62}$/;
 
@@ -133,9 +133,7 @@ const isAbortError = (err: unknown): boolean => {
     return err.name === 'AbortError';
   }
   if (err instanceof Error) {
-    return (
-      err.name === 'AbortError' || /cancelled|canceled/i.test(err.message)
-    );
+    return err.name === 'AbortError' || /cancelled|canceled/i.test(err.message);
   }
   return false;
 };
@@ -160,54 +158,54 @@ const SchemaCombobox: FC<{
   emptyMessage,
   disabled,
 }) => {
-    const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(false);
 
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            role="combobox"
-            aria-expanded={open}
-            className="h-9 w-full min-w-0 justify-between font-mono text-xs"
-            disabled={disabled}
-          >
-            <span className="min-w-0 truncate">{value || placeholder}</span>
-            <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-[180px] p-0">
-          <Command>
-            <CommandInput placeholder={searchPlaceholder} className="text-xs" />
-            <CommandList>
-              <CommandEmpty className="text-xs">{emptyMessage}</CommandEmpty>
-              <CommandGroup>
-                {options.map((option) => (
-                  <CommandItem
-                    key={option}
-                    value={option}
-                    className="text-xs"
-                    onSelect={(currentValue) => {
-                      onChange(currentValue === value ? undefined : currentValue);
-                      setOpen(false);
-                    }}
-                  >
-                    <Check
-                      className={cn(
-                        'mr-2 h-3 w-3',
-                        value === option ? 'opacity-100' : 'opacity-0',
-                      )}
-                    />
-                    {option}
-                  </CommandItem>
-                ))}
-              </CommandGroup>
-            </CommandList>
-          </Command>
-        </PopoverContent>
-      </Popover>
-    );
-  };
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-9 w-full min-w-0 justify-between font-mono text-xs"
+          disabled={disabled}
+        >
+          <span className="min-w-0 truncate">{value || placeholder}</span>
+          <ChevronsUpDown className="ml-1 h-3 w-3 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[180px] p-0">
+        <Command>
+          <CommandInput placeholder={searchPlaceholder} className="text-xs" />
+          <CommandList>
+            <CommandEmpty className="text-xs">{emptyMessage}</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  className="text-xs"
+                  onSelect={(currentValue) => {
+                    onChange(currentValue === value ? undefined : currentValue);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-3 w-3',
+                      value === option ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
+                  {option}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 /**
  * Compact checkbox option with clickable label and tooltip.
@@ -219,7 +217,7 @@ const OptionCheckbox: FC<{
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
   disabled?: boolean;
-}> = ({ id, label, tooltip, checked, onCheckedChange, disabled }) => (
+}> = ({id, label, tooltip, checked, onCheckedChange, disabled}) => (
   <div className="flex items-center gap-1.5">
     <Checkbox
       id={id}
@@ -276,7 +274,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   );
 
   // Extract unique schemas and databases from tables (excluding system ones)
-  const { schemas, databases } = useMemo(() => {
+  const {schemas, databases} = useMemo(() => {
     const schemaSet = new Set<string>();
     const databaseSet = new Set<string>();
 
@@ -332,7 +330,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
       abortControllerRef.current = abortController;
       setIsCancelling(false);
       try {
-        const { tableName, query, schema, database, replace, temp, view } =
+        const {tableName, query, schema, database, replace, temp, view} =
           values;
 
         if (onAddOrUpdateSqlQuery) {
@@ -347,7 +345,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           // New path: call createTableFromQuery directly
           const qualifiedName =
             schema || database
-              ? makeQualifiedTableName({ table: tableName, schema, database })
+              ? makeQualifiedTableName({table: tableName, schema, database})
               : tableName;
 
           await createTableFromQuery(qualifiedName, query, {
@@ -368,7 +366,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
         if (isAbortError(err)) {
           return;
         }
-        form.setError('root', { type: 'manual', message: `${err}` });
+        form.setError('root', {type: 'manual', message: `${err}`});
       } finally {
         abortControllerRef.current = null;
         setIsCancelling(false);
@@ -433,7 +431,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
             <FormField
               control={form.control}
               name="tableName"
-              render={({ field }) => (
+              render={({field}) => (
                 <FormItem className="min-w-0 flex-[2]">
                   <FormLabel className="text-xs">
                     {watchView ? 'View name' : 'Table name'}
@@ -456,7 +454,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
                 <FormField
                   control={form.control}
                   name="schema"
-                  render={({ field }) => (
+                  render={({field}) => (
                     <FormItem className="min-w-0 flex-1">
                       <FormLabel className="text-xs">Schema</FormLabel>
                       <FormControl>
@@ -478,7 +476,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
                   <FormField
                     control={form.control}
                     name="database"
-                    render={({ field }) => (
+                    render={({field}) => (
                       <FormItem className="min-w-0 flex-1">
                         <FormLabel className="text-xs">Database</FormLabel>
                         <FormControl>
@@ -503,7 +501,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           <FormField
             control={form.control}
             name="query"
-            render={({ field }) => (
+            render={({field}) => (
               <FormItem className="relative flex h-[200px] flex-col">
                 <FormControl>
                   <SqlMonacoEditor
@@ -514,7 +512,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
                     options={{
                       scrollBeyondLastLine: false,
                       automaticLayout: true,
-                      minimap: { enabled: false },
+                      minimap: {enabled: false},
                       wordWrap: 'on',
                       folding: false,
                       lineNumbers: 'off',
@@ -534,7 +532,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
               <FormField
                 control={form.control}
                 name="view"
-                render={({ field }) => (
+                render={({field}) => (
                   <OptionCheckbox
                     id="create-table-view"
                     label="View"
@@ -564,7 +562,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
               <FormField
                 control={form.control}
                 name="replace"
-                render={({ field }) => (
+                render={({field}) => (
                   <OptionCheckbox
                     id="create-table-replace"
                     label="Overwrite"
@@ -579,19 +577,13 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           )}
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onRequestClose}
-            >
+            <Button type="button" variant="outline" onClick={onRequestClose}>
               Close
             </Button>
             <Button
               type={isSubmitting ? 'button' : 'submit'}
               onClick={isSubmitting ? handleCancel : undefined}
-              disabled={
-                isSubmitting ? isCancelling : !watchTableName?.trim()
-              }
+              disabled={isSubmitting ? isCancelling : !watchTableName?.trim()}
             >
               {isSubmitting && <Spinner className="mr-2" />}
               {isSubmitting
@@ -625,27 +617,29 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const cancelRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
-    if (!isOpen) {
-      setIsSubmitting(false);
-      setIsConfirmOpen(false);
-      cancelRef.current = null;
-    }
-  }, [isOpen]);
+  const resetState = useCallback(() => {
+    setIsSubmitting(false);
+    setIsConfirmOpen(false);
+    cancelRef.current = null;
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetState();
+    onClose();
+  }, [onClose, resetState]);
 
   const handleRequestClose = useCallback(() => {
     if (!isSubmitting) {
-      onClose();
+      handleClose();
       return;
     }
     setIsConfirmOpen(true);
-  }, [isSubmitting, onClose]);
+  }, [handleClose, isSubmitting]);
 
   const handleConfirmClose = useCallback(() => {
-    setIsConfirmOpen(false);
     cancelRef.current?.();
-    onClose();
-  }, [onClose]);
+    handleClose();
+  }, [handleClose]);
 
   return (
     <Dialog
@@ -660,7 +654,7 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
         {isOpen && (
           <CreateTableForm
             query={query}
-            onClose={onClose}
+            onClose={handleClose}
             onRequestClose={handleRequestClose}
             editDataSource={editDataSource}
             allowMultipleStatements={allowMultipleStatements}

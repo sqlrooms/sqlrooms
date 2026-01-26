@@ -37,7 +37,7 @@ import {
   convertToValidColumnOrTableName,
   downloadFile,
 } from '@sqlrooms/utils';
-import {castDraft, produce} from 'immer';
+import {produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
 import {
@@ -57,7 +57,7 @@ export type TaskProgress = {
 };
 
 export type RoomShellSliceState = {
-   initialize?: () => Promise<void>;
+  initialize?: () => Promise<void>;
   room: BaseRoomStoreState['room'] & {
     config: RoomShellSliceConfig;
     tasksProgress: Record<string, TaskProgress>;
@@ -333,9 +333,13 @@ export function createRoomShellSlice(
                   await db.getTables(schema),
                 )
               : tableName;
-          const {rowCount} = await db.createTableFromQuery(newTableName, query, {
-            abortSignal,
-          });
+          const {rowCount} = await db.createTableFromQuery(
+            newTableName,
+            query,
+            {
+              abortSignal,
+            },
+          );
           if (rowCount !== undefined) {
             get().db.setTableRowCount(newTableName, rowCount);
           }
