@@ -66,7 +66,7 @@ let sqlLanguageConfigured = false;
 let sqlCompletionProviderDisposable: Monaco.IDisposable | null = null;
 // Per-model context store so multiple SqlMonacoEditor instances don't clobber each other.
 // WeakMap is used so entries can be GC'd in long-lived apps.
-const sqlCompletionContextByModel = new WeakMap<Monaco.editor.ITextModel, SqlCompletionContext>();
+const sqlCompletionContextByModel = new WeakMap<object, SqlCompletionContext>();
 
 function ensureSqlLanguageConfigured(monaco: MonacoInstance) {
   if (sqlLanguageConfigured) return;
@@ -93,7 +93,7 @@ function ensureSqlCompletionProvider(monaco: MonacoInstance) {
       triggerCharacters: [' ', '.', ',', '(', '='],
       provideCompletionItems: async (model: any, position: any) => {
         try {
-          const ctx = sqlCompletionContextByModel.get(model as object) ?? {
+          const ctx = sqlCompletionContextByModel.get(model) ?? {
             connector: undefined,
             tableSchemas: [],
             getLatestSchemas: undefined,
@@ -283,7 +283,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   useEffect(() => {
     const model = modelRef.current;
     if (!model) return;
-    sqlCompletionContextByModel.set(model as object, {
+    sqlCompletionContextByModel.set(model, {
       connector,
       tableSchemas,
       getLatestSchemas,
@@ -303,7 +303,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
   useEffect(() => {
     return () => {
       const model = modelRef.current;
-      if (model) sqlCompletionContextByModel.delete(model as object);
+      if (model) sqlCompletionContextByModel.delete(model);
     };
   }, []);
 
@@ -316,7 +316,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       const model = editor.getModel?.();
       if (model) {
         modelRef.current = model;
-        sqlCompletionContextByModel.set(model as object, {
+        sqlCompletionContextByModel.set(model, {
           connector,
           tableSchemas,
           getLatestSchemas,
@@ -328,7 +328,7 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       // Cleanup on dispose
       if (model) {
         editor.onDidDispose(() => {
-          sqlCompletionContextByModel.delete(model as object);
+          sqlCompletionContextByModel.delete(model);
         });
       }
 
