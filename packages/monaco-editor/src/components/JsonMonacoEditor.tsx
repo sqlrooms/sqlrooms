@@ -58,6 +58,7 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
     }, 100);
 
     // Auto-trigger suggestions when user types a quote character.
+    let pendingSuggestRaf: number | null = null;
     const autoSuggestPopupTrigger = editor.onDidChangeModelContent(
       (e: Monaco.editor.IModelContentChangedEvent) => {
         // Skip programmatic changes, undo/redo, and full model replacements to avoid unnecessary triggers.
@@ -74,7 +75,8 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
         if (!insertedQuote) return;
 
         // Defer trigger to Monaco's next animation frame to avoid re-renders
-        requestAnimationFrame(() => {
+        pendingSuggestRaf = requestAnimationFrame(() => {
+          pendingSuggestRaf = null;
           try {
             // Preferred: use editor.trigger API for programmatic command invocation.
             editor.trigger('sqlrooms', 'editor.action.triggerSuggest', {});
@@ -91,8 +93,14 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       onMount(editor, monaco);
     }
 
-    // Clean up the content listener when the editor is disposed.
-    editor.onDidDispose(() => autoSuggestPopupTrigger.dispose());
+    // Clean up the content listener and any pending RAF when the editor is disposed.
+    editor.onDidDispose(() => {
+      autoSuggestPopupTrigger.dispose();
+      if (pendingSuggestRaf !== null) {
+        cancelAnimationFrame(pendingSuggestRaf);
+        pendingSuggestRaf = null;
+      }
+    });
   };
 
   return (
