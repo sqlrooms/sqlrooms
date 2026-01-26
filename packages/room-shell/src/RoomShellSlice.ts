@@ -57,7 +57,7 @@ export type TaskProgress = {
 };
 
 export type RoomShellSliceState = {
-  initialize?: () => Promise<void>;
+   initialize?: () => Promise<void>;
   room: BaseRoomStoreState['room'] & {
     config: RoomShellSliceConfig;
     tasksProgress: Record<string, TaskProgress>;

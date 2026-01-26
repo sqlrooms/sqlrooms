@@ -656,7 +656,6 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
         }
       }}
     >
-      <DialogHeader></DialogHeader>
       <DialogContent className={cn('w-3xl max-w-[80%]', className)}>
         {isOpen && (
           <CreateTableForm
