@@ -57,11 +57,10 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       editor.getAction('editor.action.formatDocument')?.run();
     }, 100);
 
-    // Open suggestions immediately when a quote is typed (opening a JSON string).
-    let suggestScheduled = false;
-    let rafId: number | null = null;
-    const changeDisposable = editor.onDidChangeModelContent(
+    // Auto-trigger suggestions when user types a quote character.
+    const autoSuggestPopupTrigger = editor.onDidChangeModelContent(
       (e: Monaco.editor.IModelContentChangedEvent) => {
+        // Skip programmatic changes, undo/redo, and full model replacements to avoid unnecessary triggers.
         if (
           (e as any).isFlush ||
           (e as any).isUndoing ||
@@ -69,35 +68,31 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
         ) {
           return;
         }
-        if (!editor.hasTextFocus?.()) return;
 
-        // Only trigger when a quote was inserted (opening a JSON string; Monaco may auto-close
-        // and insert `""` in one edit).
-        const insertedQuote = e.changes.some((c) => c.text.includes('"'));
+        // Check if the change included one or more quote characters (e.g., typing `"` or Monaco auto-inserting `""`).
+        const insertedQuote = e.changes.some((c) => /^"+$/.test(c.text));
         if (!insertedQuote) return;
 
-        if (suggestScheduled) return;
-        suggestScheduled = true;
-        rafId = requestAnimationFrame(() => {
-          suggestScheduled = false;
-          rafId = null;
-          editor.trigger('sqlrooms', 'editor.action.triggerSuggest', {});
+        // Defer trigger to Monaco's next animation frame to avoid re-renders
+        requestAnimationFrame(() => {
+          try {
+            // Preferred: use editor.trigger API for programmatic command invocation.
+            editor.trigger('sqlrooms', 'editor.action.triggerSuggest', {});
+          } catch {
+            // Fallback: if trigger API fails (rare), invoke the action directly.
+            editor.getAction('editor.action.triggerSuggest')?.run();
+          }
         });
       },
     );
 
-    // Call the original onMount if provided
+    // Invoke caller's onMount callback after our setup is complete.
     if (onMount) {
       onMount(editor, monaco);
     }
 
-    editor.onDidDispose(() => {
-      changeDisposable.dispose();
-      if (rafId !== null) {
-        cancelAnimationFrame(rafId);
-        rafId = null;
-      }
-    });
+    // Clean up the content listener when the editor is disposed.
+    editor.onDidDispose(() => autoSuggestPopupTrigger.dispose());
   };
 
   return (
@@ -110,8 +105,6 @@ export const JsonMonacoEditor: React.FC<JsonMonacoEditorProps> = ({
       options={{
         formatOnPaste: true,
         formatOnType: true,
-        // Word-based suggestions from existing content in this editor:
-        // typing inside quotes should suggest previously used strings like "q", "fff", "sddd", etc.
         wordBasedSuggestions: 'currentDocument' as any,
         wordBasedSuggestionsOnlySameLanguage: true,
         suggest: {showWords: true} as any,
