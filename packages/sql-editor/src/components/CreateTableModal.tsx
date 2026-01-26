@@ -37,7 +37,7 @@ import {
   cn,
 } from '@sqlrooms/ui';
 import {Check, ChevronsUpDown, HelpCircle} from 'lucide-react';
-import {FC, useCallback, useMemo, useState} from 'react';
+import {FC, useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useForm} from 'react-hook-form';
 import * as z from 'zod';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
@@ -98,6 +98,7 @@ export type CreateTableModalProps = {
     tableName: string,
     query: string,
     oldTableName?: string,
+    abortSignal?: AbortSignal,
   ) => Promise<void>;
   /**
    * Additional class name for the dialog content.
@@ -112,6 +113,7 @@ export type CreateTableModalProps = {
 type CreateTableFormProps = {
   query: string;
   onClose: () => void;
+  onRequestClose: () => void;
   editDataSource?: SqlQueryDataSource;
   allowMultipleStatements?: boolean;
   showSchemaSelection?: boolean;
@@ -119,8 +121,21 @@ type CreateTableFormProps = {
     tableName: string,
     query: string,
     oldTableName?: string,
+    abortSignal?: AbortSignal,
   ) => Promise<void>;
   initialValues?: CreateTableFormInitialValues;
+  onSubmittingChange?: (isSubmitting: boolean) => void;
+  onRegisterCancel?: (cancel: () => void) => void;
+};
+
+const isAbortError = (err: unknown): boolean => {
+  if (err instanceof DOMException) {
+    return err.name === 'AbortError';
+  }
+  if (err instanceof Error) {
+    return err.name === 'AbortError' || /cancelled|canceled/i.test(err.message);
+  }
+  return false;
 };
 
 /**
@@ -234,11 +249,14 @@ const OptionCheckbox: FC<{
 const CreateTableForm: FC<CreateTableFormProps> = ({
   query,
   onClose,
+  onRequestClose,
   editDataSource,
   allowMultipleStatements = false,
   showSchemaSelection = false,
   onAddOrUpdateSqlQuery,
   initialValues,
+  onSubmittingChange,
+  onRegisterCancel,
 }) => {
   const connector = useStoreWithSqlEditor((state) => state.db.connector);
   const createTableFromQuery = useStoreWithSqlEditor(
@@ -293,9 +311,24 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   });
 
   const isSubmitting = form.formState.isSubmitting;
+  const [isCancelling, setIsCancelling] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
+    };
+  }, []);
+  useEffect(() => {
+    onSubmittingChange?.(isSubmitting);
+  }, [isSubmitting, onSubmittingChange]);
 
   const onSubmit = useCallback(
     async (values: FormValues) => {
+      const abortController = new AbortController();
+      abortControllerRef.current = abortController;
+      setIsCancelling(false);
       try {
         const {tableName, query, schema, database, replace, temp, view} =
           values;
@@ -306,6 +339,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
             tableName,
             query,
             editDataSource?.tableName,
+            abortController.signal,
           );
         } else {
           // New path: call createTableFromQuery directly
@@ -319,6 +353,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
             temp,
             view,
             allowMultipleStatements,
+            abortSignal: abortController.signal,
           });
 
           // Refresh table schemas to show the new table
@@ -328,7 +363,13 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
         form.reset();
         onClose();
       } catch (err) {
+        if (isAbortError(err)) {
+          return;
+        }
         form.setError('root', {type: 'manual', message: `${err}`});
+      } finally {
+        abortControllerRef.current = null;
+        setIsCancelling(false);
       }
     },
     [
@@ -345,6 +386,16 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
   const watchView = form.watch('view');
   const watchTemp = form.watch('temp');
   const watchTableName = form.watch('tableName');
+
+  const handleCancel = useCallback(async () => {
+    if (abortControllerRef.current) {
+      setIsCancelling(true);
+      abortControllerRef.current.abort();
+    }
+  }, []);
+  useEffect(() => {
+    onRegisterCancel?.(handleCancel);
+  }, [handleCancel, onRegisterCancel]);
 
   return (
     <TooltipProvider delayDuration={200}>
@@ -376,7 +427,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           )}
 
           {/* Table name, schema, database in single row */}
-          <div className="flex items-end gap-3">
+          <div className="flex items-start gap-3">
             <FormField
               control={form.control}
               name="tableName"
@@ -526,20 +577,22 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
           )}
 
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
-              Cancel
+            <Button type="button" variant="outline" onClick={onRequestClose}>
+              Close
             </Button>
             <Button
-              type="submit"
-              disabled={isSubmitting || !watchTableName?.trim()}
+              type={isSubmitting ? 'button' : 'submit'}
+              onClick={isSubmitting ? handleCancel : undefined}
+              disabled={isSubmitting ? isCancelling : !watchTableName?.trim()}
             >
               {isSubmitting && <Spinner className="mr-2" />}
-              {editDataSource ? 'Update' : 'Create'}
+              {isSubmitting
+                ? isCancelling
+                  ? 'Cancelling...'
+                  : 'Cancel'
+                : editDataSource
+                  ? 'Update'
+                  : 'Create'}
             </Button>
           </DialogFooter>
         </form>
@@ -560,22 +613,84 @@ const CreateTableModal: FC<CreateTableModalProps> = (props) => {
     className,
     initialValues,
   } = props;
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const cancelRef = useRef<(() => void) | null>(null);
+
+  const resetState = useCallback(() => {
+    setIsSubmitting(false);
+    setIsConfirmOpen(false);
+    cancelRef.current = null;
+  }, []);
+
+  const handleClose = useCallback(() => {
+    resetState();
+    onClose();
+  }, [onClose, resetState]);
+
+  const handleRequestClose = useCallback(() => {
+    if (!isSubmitting) {
+      handleClose();
+      return;
+    }
+    setIsConfirmOpen(true);
+  }, [handleClose, isSubmitting]);
+
+  const handleConfirmClose = useCallback(() => {
+    cancelRef.current?.();
+    handleClose();
+  }, [handleClose]);
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
+    <Dialog
+      open={isOpen}
+      onOpenChange={(open) => {
+        if (!open) {
+          handleRequestClose();
+        }
+      }}
+    >
       <DialogContent className={cn('w-3xl max-w-[80%]', className)}>
         {isOpen && (
           <CreateTableForm
             query={query}
-            onClose={onClose}
+            onClose={handleClose}
+            onRequestClose={handleRequestClose}
             editDataSource={editDataSource}
             allowMultipleStatements={allowMultipleStatements}
             showSchemaSelection={showSchemaSelection}
             onAddOrUpdateSqlQuery={onAddOrUpdateSqlQuery}
             initialValues={initialValues}
+            onSubmittingChange={setIsSubmitting}
+            onRegisterCancel={(cancel) => {
+              cancelRef.current = cancel;
+            }}
           />
         )}
       </DialogContent>
+      <Dialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel running query?</DialogTitle>
+            <DialogDescription>
+              A query is still running. Cancelling it will stop the query and
+              close this dialog.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsConfirmOpen(false)}
+            >
+              Keep running
+            </Button>
+            <Button type="button" onClick={handleConfirmClose}>
+              Cancel & close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Dialog>
   );
 };
