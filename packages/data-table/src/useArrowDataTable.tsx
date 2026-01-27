@@ -240,7 +240,7 @@ export default function useArrowDataTable(
                 </PopoverContent>
               </Popover>
             ) : (
-              shorten(valueStr, MAX_VALUE_LENGTH)
+              valueStr
             );
           },
           header: shorten(field.name, MAX_VALUE_LENGTH),
