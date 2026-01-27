@@ -151,6 +151,7 @@ export type KeplerSliceState = {
         metadata: VectorTileDatasetMetadata;
       },
       tileMetadata: Record<string, any>,
+      autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
     removeDatasetFromMaps: (datasetId: string) => void;
@@ -489,7 +490,13 @@ export function createKeplerSlice({
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
 
-        addTileSetToMap: (mapId, tableName, tileset, tileMetadata) => {
+        addTileSetToMap: (
+          mapId,
+          tableName,
+          tileset,
+          tileMetadata,
+          autoCreateLayers = true,
+        ) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const dataset = {
             info: {
@@ -521,7 +528,7 @@ export function createKeplerSlice({
             addDataToMap({
               datasets: dataset,
               options: {
-                autoCreateLayers: true,
+                autoCreateLayers,
                 centerMap: true,
               },
             }),
