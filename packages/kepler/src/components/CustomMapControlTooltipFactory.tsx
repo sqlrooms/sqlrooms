@@ -18,7 +18,7 @@ export const CustomMapControlTooltipFactory = () => {
         </div>
       </TooltipTrigger>
       <TooltipContent side="left">
-        {<FormattedMessage id={message} />}
+        <FormattedMessage id={message} />
       </TooltipContent>
     </Tooltip>
   );
