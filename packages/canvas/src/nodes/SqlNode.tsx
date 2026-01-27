@@ -67,7 +67,7 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           <Button size="sm" variant="secondary" onClick={() => execute(id)}>
             Run
           </Button>
-          <span className="text-[10px] uppercase text-gray-500">SQL</span>
+          <span className="text-[10px] text-gray-500 uppercase">SQL</span>
         </>
       }
     >
@@ -85,12 +85,12 @@ export const SqlNode: FC<{id: string; data: SqlData}> = ({id, data}) => {
           />
         </div>
         {result?.status === 'error' && (
-          <div className="flex-1 overflow-auto whitespace-pre-wrap border-t p-4 font-mono text-xs text-red-600">
+          <div className="flex-1 overflow-auto border-t p-4 font-mono text-xs whitespace-pre-wrap text-red-600">
             {result.error}
           </div>
         )}
         {result?.status === 'success' && (
-          <div className="flex-[2] overflow-hidden border-t">
+          <div className="flex-2 overflow-hidden border-t">
             <QueryDataTable
               query={`SELECT * FROM ${result.tableName}`}
               fontSize="text-xs"

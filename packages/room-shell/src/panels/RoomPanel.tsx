@@ -10,9 +10,9 @@ const RoomPanel: FC<
   }>
 > = ({type: roomPanelType, children, className, showHeader = true}) => {
   return (
-    <div className={cn('flex h-full flex-grow flex-col gap-3', className)}>
+    <div className={cn('flex h-full grow flex-col gap-3', className)}>
       {showHeader && <RoomPanelHeader panelKey={roomPanelType} />}
-      <div className="flex h-full flex-grow flex-col gap-3 overflow-auto">
+      <div className="flex h-full grow flex-col gap-3 overflow-auto">
         {children}
       </div>
     </div>

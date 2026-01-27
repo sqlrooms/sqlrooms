@@ -30,7 +30,7 @@ export const SqlEditorHeader: React.FC<SqlEditorHeaderProps> = ({
     <div className={cn('flex w-full items-center gap-2 px-2 py-1', className)}>
       {title && <h2 className="text-md ml-1 font-semibold">{title}</h2>}
       {children}
-      <div className="flex-grow" />
+      <div className="grow" />
       {documentationPanel ? (
         <Button
           size="sm"

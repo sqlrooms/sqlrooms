@@ -55,7 +55,7 @@ const SqlQueryDataSourcesPanel: FC<{
   );
 
   return (
-    <div className="flex flex-grow flex-col overflow-auto">
+    <div className="flex grow flex-col overflow-auto">
       <div className="flex flex-col items-stretch">
         <Button
           variant="secondary"
@@ -75,7 +75,7 @@ const SqlQueryDataSourcesPanel: FC<{
         onAddOrUpdateSqlQuery={addOrUpdateSqlQueryDataSource}
       />
 
-      <div className="flex flex-grow flex-col overflow-auto">
+      <div className="flex grow flex-col overflow-auto">
         {queryDataSources.map((dataSource) => (
           <div key={dataSource.tableName} className="flex flex-col gap-1 p-2">
             <div className="flex cursor-pointer flex-row items-center gap-1">
@@ -83,7 +83,7 @@ const SqlQueryDataSourcesPanel: FC<{
                 <FileIcon className="w-[15px]" />
               </div>
               <div className="flex-1 overflow-hidden text-ellipsis">
-                <span className="break-words text-xs">
+                <span className="text-xs wrap-break-word">
                   {dataSource.tableName}
                 </span>
               </div>
