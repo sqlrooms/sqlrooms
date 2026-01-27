@@ -98,7 +98,11 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
                           : 'pointer-events-none opacity-0',
                       )}
                       aria-hidden={!isActive}
-                      inert={!isActive}
+                      ref={(el) => {
+                        if (!el) return;
+                        (el as HTMLDivElement & {inert: boolean}).inert =
+                          !isActive;
+                      }}
                     >
                       <QueryEditorPanelEditor queryId={queryId} />
                     </div>
