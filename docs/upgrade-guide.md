@@ -8,6 +8,116 @@ This document provides detailed guidance for upgrading between different version
 
 When upgrading, please follow the version-specific instructions below that apply to your project. If you encounter any issues during the upgrade process, please refer to our [GitHub issues](https://github.com/sqlrooms/sqlrooms/issues) or contact support.
 
+## 0.28.0-rc.0
+
+- Tailwind upgraded from v3 to v4
+
+1. Move content paths from `tailwind.config.js` to global css `index.css`. Also, add `index.html` and pay attention to relative paths since `index.css` is usually located under `src/` folder while `tailwind.config.js` is in the root.
+
+Before:
+
+```javascript
+// tailwind.config.js
+import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
+import type {Config} from 'tailwindcss';
+
+const config = {
+  presets: [sqlroomsTailwindPreset()],
+  content: [
+    'src/**/*.{ts,tsx}',
+    '../packages/*/src/**/*.{ts,tsx}',
+    // If you make a precise list of packages used, instead of @sqlrooms/*,
+    // it would help Vite start faster in dev mode
+    '{./,../../}node_modules/@sqlrooms/*/dist/**/*.js',
+    '{./,../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js',
+  ],
+} satisfies Config;
+
+export default config;
+```
+
+After:
+
+```css
+/* index.css */
+
+@import '@sqlrooms/ui/tailwind-preset.css';
+
+@source '../index.html';
+@source 'src/**/*.{ts,tsx}';
+@source '../../../packages/*/src/**/*.{ts,tsx}';
+@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.js';
+@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.js';
+
+/* styles */
+```
+
+2. Remove `@layer base { ... }` from `index.css`
+
+Before:
+
+```css
+/* index.css */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+    /* ... */
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    /* ... */
+  }
+}
+```
+
+After:
+
+```css
+/* index.css */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  /* ... */
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  /* ... */
+}
+```
+
+4. For Vite projects:
+
+- Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
+
+```bash
+pnpm add @tailwindcss/vite
+```
+
+```javascript
+// vite.config.js
+
+import {defineConfig} from 'vite';
+import tailwindcss from '@tailwindcss/vite';
+import react from '@vitejs/plugin-react';
+
+// https://vite.dev/config/
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+});
+```
+
+- Remove `autoprefixer` and `postcss`
+- Remove `postcss.config.js`
+
+5. Remove `tailwind.config.js`
+
 ## 0.27.0-rc.0
 
 ### @sqlrooms/mosaic
@@ -135,7 +245,9 @@ await useRoomStore.getState().ai.startAnalysis(sendMessage);
 const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
 const sessionId = currentSession?.id;
 
-const prompt = useRoomStore((s) => (sessionId ? s.ai.getPrompt(sessionId) : ''));
+const prompt = useRoomStore((s) =>
+  sessionId ? s.ai.getPrompt(sessionId) : '',
+);
 const isRunning = useRoomStore((s) =>
   sessionId ? s.ai.getIsRunning(sessionId) : false,
 );
