@@ -64,7 +64,6 @@ export function makeDefaultVegaLiteOptions(
 function getResponsiveFontSizeConfig(containerWidth: number): Partial<Config> {
   const w = Number.isFinite(containerWidth) ? containerWidth : 0;
 
-  // Basic breakpoint-based mapper (no scaling math)
   let preset: {
     axisLabel: number;
     axisTitle: number;
@@ -81,7 +80,7 @@ function getResponsiveFontSizeConfig(containerWidth: number): Partial<Config> {
       legendTitle: 9,
       title: 10,
     };
-  } else if (w < 520) {
+  } else {
     preset = {
       axisLabel: 10,
       axisTitle: 11,
