@@ -52,7 +52,9 @@ After:
 /* styles */
 ```
 
-2. Remove `@layer base { ... }` from `index.css`
+2. Remove `tailwind.config.js`
+
+3. Remove `@layer base { ... }` from `index.css`
 
 Before:
 
@@ -97,7 +99,7 @@ After:
 - Install `@tailwindcss/vite` and add it to your `vite.config.js` file,
 
 ```bash
-pnpm add @tailwindcss/vite
+pnpm add -D @tailwindcss/vite
 ```
 
 ```javascript
@@ -116,7 +118,32 @@ export default defineConfig({
 - Remove `autoprefixer` and `postcss`
 - Remove `postcss.config.js`
 
-5. Remove `tailwind.config.js`
+5. For NextJS projects update `postcss.config.js`
+
+Before:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: ['@tailwindcss/postcss'],
+};
+
+export default config;
+```
+
+After:
+
+```javascript
+// postcss.config.js
+
+const config = {
+  plugins: {
+    '@tailwindcss/postcss': {},
+  },
+};
+export default config;
+```
 
 ## 0.27.0-rc.0
 

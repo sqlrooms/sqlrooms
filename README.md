@@ -137,17 +137,14 @@ You can follow [this guide](https://tailwindcss.com/docs/installation/using-vite
 
 ```bash [npm]
 npm install -D tailwindcss@4
-npx tailwindcss init
 ```
 
 ```bash [pnpm]
 pnpm add -D tailwindcss@4
-npx tailwindcss init
 ```
 
 ```bash [yarn]
 yarn add -D tailwindcss@4
-npx tailwindcss init
 ```
 
 :::
