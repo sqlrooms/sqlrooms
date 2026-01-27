@@ -162,7 +162,7 @@ function SortableTab({
   return (
     <div
       ref={setNodeRef}
-      className="h-full flex-shrink-0"
+      className="h-full shrink-0"
       style={style}
       data-tab-id={tab.id}
       {...attributes}
@@ -568,10 +568,7 @@ function TabStripSearchDropdown({
       <Button
         variant="ghost"
         aria-label="Browse tabs"
-        className={cn(
-          'hover:bg-primary/10 h-full flex-shrink-0',
-          triggerClassName,
-        )}
+        className={cn('hover:bg-primary/10 h-full shrink-0', triggerClassName)}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -599,7 +596,7 @@ function TabStripSearchDropdown({
           className,
         )}
       >
-        <div className="flex flex-shrink-0 items-center gap-1 px-2">
+        <div className="flex shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
           <Input
             value={search}
@@ -624,7 +621,7 @@ function TabStripSearchDropdown({
             autoFocus={autoFocus}
           />
         </div>
-        <DropdownMenuSeparator className="flex-shrink-0" />
+        <DropdownMenuSeparator className="shrink-0" />
 
         <div className="overflow-y-auto overflow-x-hidden">
           {isSearching ? (
@@ -765,7 +762,7 @@ function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
       variant="ghost"
       aria-label="Create new tab"
       onClick={() => onCreate()}
-      className={cn('hover:bg-primary/10 h-full flex-shrink-0', className)}
+      className={cn('hover:bg-primary/10 h-full shrink-0', className)}
     >
       <PlusIcon className="h-4 w-4" />
     </Button>
