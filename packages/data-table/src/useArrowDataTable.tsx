@@ -141,6 +141,12 @@ export type UseArrowDataTableOptions = {
    * Return a string to use your custom formatting, or undefined to fall back to the default.
    */
   formatValue?: ArrowDataTableValueFormatter;
+  /**
+   * Whether to show the popover for binary data types by default.
+   * When false, binary values will be displayed inline without the popover.
+   * @default true
+   */
+  showBinaryColumnPopover?: boolean;
 };
 
 // Only use for small tables or in combination with pagination
@@ -148,7 +154,11 @@ export default function useArrowDataTable(
   table: arrow.Table | undefined,
   options: UseArrowDataTableOptions = {},
 ): UseArrowDataTableResult | undefined {
-  const {fontSize = 'base', formatValue} = options;
+  const {
+    fontSize = 'base',
+    formatValue,
+    showBinaryColumnPopover: showBinaryPopover = false,
+  } = options;
   const fontSizeClass = resolveFontSizeClass(fontSize);
   const data = useMemo(() => ({length: table?.numRows ?? 0}), [table]);
   const columns = useMemo(() => {
@@ -165,7 +175,11 @@ export default function useArrowDataTable(
             const parsedJson = safeJsonParse<unknown>(valueStr);
             const isJsonValue = parsedJson !== undefined;
 
-            return valueStr.length > MAX_VALUE_LENGTH ? (
+            // Check if this is a binary type and if we should skip the popover
+            const isBinaryType = arrow.DataType.isBinary(field.type);
+            const shouldShowPopover = isBinaryType ? showBinaryPopover : true;
+
+            return valueStr.length > MAX_VALUE_LENGTH && shouldShowPopover ? (
               <Popover>
                 <PopoverTrigger asChild>
                   <span className="cursor-pointer">
@@ -227,7 +241,7 @@ export default function useArrowDataTable(
                 </PopoverContent>
               </Popover>
             ) : (
-              valueStr
+              shorten(valueStr, MAX_VALUE_LENGTH)
             );
           },
           header: shorten(field.name, MAX_VALUE_LENGTH),
@@ -242,7 +256,7 @@ export default function useArrowDataTable(
       );
     }
     return columns;
-  }, [table, fontSizeClass, formatValue]);
+  }, [table, fontSizeClass, formatValue, showBinaryPopover]);
 
   return data && columns ? {data, columns} : undefined;
 }
