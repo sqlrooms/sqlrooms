@@ -1,17 +1,19 @@
 import {
-  appInjector,
-  provideRecipesToInjector,
   AddDataButtonFactory,
-  PanelTitleFactory,
+  appInjector,
   DndContextFactory,
   Factory,
   FilterPanelHeaderFactory,
+  MapControlTooltipFactory,
   MapLegendFactory,
   MapLegendPanelFactory,
+  PanelTitleFactory,
+  provideRecipesToInjector,
 } from '@kepler.gl/components';
 import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
 import {CustomFilterPanelHeaderFactory} from './CustomFilterPanelHeader';
+import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
 import {CustomMapLegendFactory} from './CustomMapLegend';
 import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
 
@@ -37,6 +39,7 @@ const defaultRecipes: KeplerFactoryRecipe[] = [
   [FilterPanelHeaderFactory, CustomFilterPanelHeaderFactory],
   [MapLegendPanelFactory, CustomMapLegendPanelFactory],
   [MapLegendFactory, CustomMapLegendFactory],
+  [MapControlTooltipFactory, CustomMapControlTooltipFactory],
 ];
 
 let customRecipes: KeplerFactoryRecipe[] = [];
@@ -71,11 +74,19 @@ export function getKeplerInjector() {
 export function getKeplerFactory<TFactory extends KeplerFactory>(
   factory: TFactory,
 ): ReturnType<TFactory> {
-  return getKeplerInjector().get(factory as unknown as Factory);
+  // Resolve from the injector at render time so late configuration works,
+  // while keeping a stable component definition outside render.
+  const Wrapped = ((props: Record<string, unknown>) => {
+    const Component = getKeplerInjector().get(
+      factory as unknown as Factory,
+    ) as React.ComponentType<Record<string, unknown>>;
+    return <Component {...props} />;
+  }) as unknown as ReturnType<TFactory>;
+  return Wrapped;
 }
 
 export const KeplerInjector = {
   get<TFactory extends KeplerFactory>(factory: TFactory) {
-    return getKeplerInjector().get(factory as unknown as Factory);
+    return getKeplerFactory(factory);
   },
 };
