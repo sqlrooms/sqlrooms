@@ -61,35 +61,47 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
+type FontSizePreset = {
+  maxWidth: number;
+  axisLabel: number;
+  axisTitle: number;
+  legendLabel: number;
+  legendTitle: number;
+  title: number;
+};
+
+const RESPONSIVE_FONT_SIZE_PRESETS: readonly FontSizePreset[] = [
+  {
+    maxWidth: 320,
+    axisLabel: 8,
+    axisTitle: 9,
+    legendLabel: 8,
+    legendTitle: 9,
+    title: 10,
+  },
+  {
+    maxWidth: 420,
+    axisLabel: 9,
+    axisTitle: 10,
+    legendLabel: 9,
+    legendTitle: 10,
+    title: 11,
+  },
+  {
+    maxWidth: 520,
+    axisLabel: 10,
+    axisTitle: 11,
+    legendLabel: 10,
+    legendTitle: 11,
+    title: 12,
+  },
+];
+
 function getResponsiveFontSizeConfig(containerWidth: number): Partial<Config> {
   const w = Number.isFinite(containerWidth) ? containerWidth : 0;
-
-  let preset: {
-    axisLabel: number;
-    axisTitle: number;
-    legendLabel: number;
-    legendTitle: number;
-    title: number;
-  } | null = null;
-
-  if (w < 320) {
-    preset = {
-      axisLabel: 8,
-      axisTitle: 9,
-      legendLabel: 8,
-      legendTitle: 9,
-      title: 10,
-    };
-  } else {
-    preset = {
-      axisLabel: 10,
-      axisTitle: 11,
-      legendLabel: 10,
-      legendTitle: 11,
-      title: 12,
-    };
-  }
-
+  const preset = RESPONSIVE_FONT_SIZE_PRESETS.find(
+    (p) => w > 0 && w < p.maxWidth,
+  );
   if (!preset) return {};
 
   return {
@@ -139,6 +151,11 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     aspectRatio,
   });
 
+  const responsiveFontConfig = useMemo(
+    () => getResponsiveFontSizeConfig(dimensions.width),
+    [dimensions.width],
+  );
+
   const data = useMemo(() => {
     if (!arrowTable) return null;
     return {values: arrowTableToJson(arrowTable)};
@@ -155,19 +172,16 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       background: 'transparent',
       ...parsed,
       config: {
-      config: {
-        ...(typeof propsOptions?.config === 'object'
-          ? (propsOptions.config as Config)
-          : {}),
-        ...(theme === 'dark' ? darkTheme : lightTheme),
-        ...getResponsiveFontSizeConfig(dimensions.width),
+        ...((parsed as any)?.config ?? {}),
+        ...responsiveFontConfig,
       },
+      data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',
       height: 'container',
       autosize: {contains: 'padding'},
     } as VisualizationSpec;
-  }, [spec, data, dimensions.width]);
+  }, [spec, data, responsiveFontConfig]);
 
   // Reset chart error whenever spec or data changes
   useEffect(() => {
