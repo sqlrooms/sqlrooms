@@ -160,7 +160,7 @@ function SortableTab({
   return (
     <div
       ref={setNodeRef}
-      className="h-full flex-shrink-0"
+      className="h-full shrink-0"
       style={style}
       data-tab-id={tab.id}
       {...attributes}
@@ -170,9 +170,9 @@ function SortableTab({
         value={tab.id}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
-          'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
+          'group flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
           'items-center justify-between gap-1 overflow-hidden rounded-b-none',
-          'py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
+          'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
           tabClassName,
         )}
       >
@@ -199,7 +199,7 @@ function SortableTab({
           )}
         </div>
 
-        <div className="flex flex-shrink-0 items-center">
+        <div className="flex shrink-0 items-center">
           {menuContent && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -479,10 +479,7 @@ function TabStripSearchDropdown({
       <Button
         variant="ghost"
         aria-label="Browse tabs"
-        className={cn(
-          'hover:bg-primary/10 h-full flex-shrink-0',
-          triggerClassName,
-        )}
+        className={cn('hover:bg-primary/10 h-full shrink-0', triggerClassName)}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -507,7 +504,7 @@ function TabStripSearchDropdown({
         onCloseAutoFocus={(event) => event.preventDefault()}
         className={cn('flex max-h-[400px] max-w-[240px] flex-col', className)}
       >
-        <div className="flex flex-shrink-0 items-center gap-1 px-2">
+        <div className="flex shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
           <Input
             value={search}
@@ -532,7 +529,7 @@ function TabStripSearchDropdown({
             autoFocus={autoFocus}
           />
         </div>
-        <DropdownMenuSeparator className="flex-shrink-0" />
+        <DropdownMenuSeparator className="shrink-0" />
 
         <div className="overflow-y-auto">
           {isSearching ? (
@@ -618,7 +615,7 @@ function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
       variant="ghost"
       aria-label="Create new tab"
       onClick={() => onCreate()}
-      className={cn('hover:bg-primary/10 h-full flex-shrink-0', className)}
+      className={cn('hover:bg-primary/10 h-full shrink-0', className)}
     >
       <PlusIcon className="h-4 w-4" />
     </Button>

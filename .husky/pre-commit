@@ -1,8 +1,11 @@
+export PATH="$HOME/.volta/bin:$PATH"
+
 # Update README with included content
-pnpm run update-readme
+
+npx pnpm run update-readme
 
 # Stage any changes made to README.md by the update script
+
 git add README.md
 
 pnpx lint-staged
-
