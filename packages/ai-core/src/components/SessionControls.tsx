@@ -106,7 +106,7 @@ export const SessionControls: React.FC<{
     (tab: {id: string; name: string}) => (
       <div className="flex items-center gap-2">
         {getIsSessionRunning(tab.id) && (
-          <Spinner className="text-muted-foreground h-4 w-4 flex-shrink-0 animate-spin" />
+          <Spinner className="text-muted-foreground h-4 w-4 shrink-0 animate-spin" />
         )}
         <span className="truncate">{tab.name}</span>
       </div>

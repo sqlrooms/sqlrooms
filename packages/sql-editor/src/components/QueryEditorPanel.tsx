@@ -82,7 +82,7 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
       </div>
       {isSelectedOpen ? (
         <div className="bg-background h-full w-full py-1">
-          <div className="relative h-full flex-grow">
+          <div className="relative h-full grow">
             <div className="absolute inset-0">
               {openTabs
                 .filter((id) => mountedIdSet.has(id))

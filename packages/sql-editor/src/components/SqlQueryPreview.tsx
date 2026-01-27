@@ -78,7 +78,7 @@ export const SqlQueryPreview: React.FC<SqlQueryPreviewProps> = ({
       <div
         className={cn('flex items-center gap-2 p-3 text-red-500', className)}
       >
-        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+        <AlertCircle className="h-4 w-4 shrink-0" />
         <span className="text-xs">{error}</span>
       </div>
     );

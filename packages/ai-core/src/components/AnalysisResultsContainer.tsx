@@ -52,7 +52,7 @@ export const AnalysisResultsContainer: React.FC<{
     <div className={cn('relative flex h-full w-full flex-col', className)}>
       <ScrollArea
         viewportRef={containerRef}
-        className="flex w-full flex-grow flex-col gap-5"
+        className="flex w-full grow flex-col gap-5"
       >
         {/* Render analysis results */}
         {currentAnalysisResults?.map((analysisResult) => (
@@ -65,9 +65,7 @@ export const AnalysisResultsContainer: React.FC<{
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
-        {isRunning && (
-          <AiThinkingDots className="text-muted-foreground p-4" />
-        )}
+        {isRunning && <AiThinkingDots className="text-muted-foreground p-4" />}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />

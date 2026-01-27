@@ -1,4 +1,7 @@
-import {DataTableModal, ArrowDataTableValueFormatter} from '@sqlrooms/data-table';
+import {
+  DataTableModal,
+  ArrowDataTableValueFormatter,
+} from '@sqlrooms/data-table';
 import {Button, CopyButton, useDisclosure} from '@sqlrooms/ui';
 import * as arrow from 'apache-arrow';
 import {TableIcon} from 'lucide-react';
@@ -21,8 +24,10 @@ export function QueryToolResult(props: QueryToolResultProps) {
     <>
       {showSql && (
         <div className="text-muted-foreground bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
-          <pre className="whitespace-pre-wrap break-words pr-8">{sqlQuery}</pre>
-          <div className="absolute right-1 top-1">
+          <pre className="pr-8 wrap-break-word whitespace-pre-wrap">
+            {sqlQuery}
+          </pre>
+          <div className="absolute top-1 right-1">
             <CopyButton
               text={sqlQuery}
               variant="ghost"
