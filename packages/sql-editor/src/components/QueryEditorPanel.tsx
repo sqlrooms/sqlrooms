@@ -87,20 +87,20 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
               {openTabs
                 .filter((id) => mountedIdSet.has(id))
                 .map((queryId) => {
-                  const isActive = queryId === selectedQueryId;
+                  const isSelected = queryId === selectedQueryId;
                   return (
                     <div
                       key={queryId}
                       className={cn(
                         'absolute inset-0',
-                        isActive
+                        isSelected
                           ? 'opacity-100'
                           : 'pointer-events-none opacity-0',
                       )}
-                      aria-hidden={!isActive}
+                      aria-hidden={!isSelected}
                       {
                         // prevent type errors in React 18 which don't have `inert`
-                        ...(!isActive ? {inert: true} : null)
+                        ...(!isSelected ? {inert: true} : null)
                       }
                     >
                       <QueryEditorPanelEditor queryId={queryId} />
