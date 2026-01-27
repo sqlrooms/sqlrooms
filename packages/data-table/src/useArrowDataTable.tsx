@@ -142,9 +142,8 @@ export type UseArrowDataTableOptions = {
    */
   formatValue?: ArrowDataTableValueFormatter;
   /**
-   * Whether to show the popover for binary data types by default.
-   * When false, binary values will be displayed inline without the popover.
-   * @default true
+   * Show the popover for binary data types by default.
+   * @default false
    */
   showBinaryColumnPopover?: boolean;
 };
