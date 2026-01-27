@@ -1,5 +1,7 @@
-@import '@sqlrooms/ui/tailwind-preset.css';
+@import 'tailwindcss';
 @import 'tw-animate-css';
+
+@import '@sqlrooms/ui/tailwind-preset.css';
 
 @source './**/*.{ts,tsx,js,jsx,mdx}';
 @source '../components/**/*.{ts,tsx,js,jsx,mdx}';
