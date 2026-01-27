@@ -193,15 +193,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.1.2
         version: 5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -695,9 +689,6 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
-      '@eslint/js':
-        specifier: ^9.36.0
-        version: 9.39.1
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
@@ -765,9 +756,6 @@ importers:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
-      '@eslint/js':
-        specifier: ^9.36.0
-        version: 9.39.1
       '@tailwindcss/vite':
         specifier: ^4.1.18
         version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
@@ -23225,8 +23213,8 @@ snapshots:
 
   autoprefixer@10.4.22(postcss@8.5.6):
     dependencies:
-      browserslist: 4.28.0
-      caniuse-lite: 1.0.30001754
+      browserslist: 4.28.1
+      caniuse-lite: 1.0.30001764
       fraction.js: 5.3.4
       normalize-range: 0.1.2
       picocolors: 1.1.1
