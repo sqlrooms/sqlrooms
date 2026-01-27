@@ -155,9 +155,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       background: 'transparent',
       ...parsed,
       config: {
+      config: {
+        ...(typeof propsOptions?.config === 'object'
+          ? (propsOptions.config as Config)
+          : {}),
+        ...(theme === 'dark' ? darkTheme : lightTheme),
         ...getResponsiveFontSizeConfig(dimensions.width),
       },
-      data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',
       height: 'container',
