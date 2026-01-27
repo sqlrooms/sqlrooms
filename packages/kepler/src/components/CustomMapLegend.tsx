@@ -59,7 +59,10 @@ export function CustomMapLegendFactory(
     };
 
     return (
-      <div className="map-legend" style={{width: containerW}}>
+      <div
+        className="map-legend border-border border"
+        style={{width: containerW}}
+      >
         <div className="relative flex flex-col">
           <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
             <div className="text-xs font-medium">Map Layers</div>
@@ -149,7 +152,7 @@ export function CustomMapLegendFactory(
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
         >
-          <div className="cursor-pointer select-none items-center overflow-hidden text-ellipsis whitespace-nowrap p-2 text-xs">
+          <div className="cursor-pointer items-center overflow-hidden p-2 text-xs text-ellipsis whitespace-nowrap select-none">
             {layer.config.label}
           </div>
           <div className="flex-1" />

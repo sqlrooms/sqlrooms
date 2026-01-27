@@ -1,5 +1,5 @@
-import React from 'react';
 import {cn} from '@sqlrooms/ui';
+import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {QueryEditorPanelActions} from './QueryEditorPanelActions';
 import {QueryEditorPanelEditor} from './QueryEditorPanelEditor';
@@ -87,22 +87,21 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
               {openTabs
                 .filter((id) => mountedIdSet.has(id))
                 .map((queryId) => {
-                  const isActive = queryId === selectedQueryId;
+                  const isSelected = queryId === selectedQueryId;
                   return (
                     <div
                       key={queryId}
                       className={cn(
                         'absolute inset-0',
-                        isActive
+                        isSelected
                           ? 'opacity-100'
                           : 'pointer-events-none opacity-0',
                       )}
-                      aria-hidden={!isActive}
-                      ref={(el) => {
-                        if (!el) return;
-                        (el as HTMLDivElement & {inert: boolean}).inert =
-                          !isActive;
-                      }}
+                      aria-hidden={!isSelected}
+                      {
+                        // prevent type errors in React 18 which don't have `inert`
+                        ...(!isSelected ? {inert: true} : null)
+                      }
                     >
                       <QueryEditorPanelEditor queryId={queryId} />
                     </div>
