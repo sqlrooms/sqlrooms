@@ -1,5 +1,5 @@
-import React from 'react';
 import {cn} from '@sqlrooms/ui';
+import React from 'react';
 import {useStoreWithSqlEditor} from '../SqlEditorSlice';
 import {QueryEditorPanelActions} from './QueryEditorPanelActions';
 import {QueryEditorPanelEditor} from './QueryEditorPanelEditor';
@@ -98,7 +98,10 @@ export const QueryEditorPanel: React.FC<QueryEditorPanelProps> = ({
                           : 'pointer-events-none opacity-0',
                       )}
                       aria-hidden={!isActive}
-                      inert={!isActive}
+                      {
+                        // prevent type errors in React 18 which don't have `inert`
+                        ...(!isActive ? {inert: true} : null)
+                      }
                     >
                       <QueryEditorPanelEditor queryId={queryId} />
                     </div>
