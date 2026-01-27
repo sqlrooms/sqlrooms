@@ -61,6 +61,48 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
+function getResponsiveFontSizeConfig(containerWidth: number): Partial<Config> {
+  const w = Number.isFinite(containerWidth) ? containerWidth : 0;
+
+  // Basic breakpoint-based mapper (no scaling math)
+  let preset: {
+    axisLabel: number;
+    axisTitle: number;
+    legendLabel: number;
+    legendTitle: number;
+    title: number;
+  } | null = null;
+
+  if (w < 320) {
+    preset = {
+      axisLabel: 8,
+      axisTitle: 9,
+      legendLabel: 8,
+      legendTitle: 9,
+      title: 10,
+    };
+  } else if (w < 520) {
+    preset = {
+      axisLabel: 10,
+      axisTitle: 11,
+      legendLabel: 10,
+      legendTitle: 11,
+      title: 12,
+    };
+  }
+
+  if (!preset) return {};
+
+  return {
+    axis: {labelFontSize: preset.axisLabel, titleFontSize: preset.axisTitle},
+    legend: {
+      labelFontSize: preset.legendLabel,
+      titleFontSize: preset.legendTitle,
+    },
+    title: {fontSize: preset.title},
+  };
+}
+
 const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   className,
   aspectRatio = 16 / 9,
@@ -91,6 +133,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartError, setChartError] = useState<Error | null>(null);
 
+  const dimensions = useAspectRatioDimensions({
+    containerRef,
+    width,
+    height,
+    aspectRatio,
+  });
+
   const data = useMemo(() => {
     if (!arrowTable) return null;
     return {values: arrowTableToJson(arrowTable)};
@@ -106,13 +155,16 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       padding: 10,
       background: 'transparent',
       ...parsed,
+      config: {
+        ...getResponsiveFontSizeConfig(dimensions.width),
+      },
       data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',
       height: 'container',
       autosize: {contains: 'padding'},
     } as VisualizationSpec;
-  }, [spec, data]);
+  }, [spec, data, dimensions.width]);
 
   // Reset chart error whenever spec or data changes
   useEffect(() => {
@@ -127,12 +179,6 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     options,
   });
 
-  const dimensions = useAspectRatioDimensions({
-    containerRef,
-    width,
-    height,
-    aspectRatio,
-  });
   const changeDimensions = useCallback(
     (width: number, height: number) => {
       embed?.view.width(width).height(height).runAsync();
@@ -147,10 +193,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     <VegaChartContextProvider value={{embed}}>
       <div
         ref={containerRef}
-        className={cn(
-          'relative flex h-full w-full flex-col gap-2 overflow-hidden',
-          className,
-        )}
+        className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
         {chartError ? (
           <ToolErrorMessage
@@ -163,8 +206,17 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
         ) : (
           specWithData &&
           data && (
-            <AspectRatio ratio={aspectRatio} className="overflow-auto" asChild>
-              <div ref={ref} />
+            <AspectRatio
+              ratio={aspectRatio}
+              className="overflow-visible"
+              asChild
+            >
+              <div
+                ref={ref}
+                // Ensure the Vega SVG title isn't clipped when it shifts upward
+                // on small container widths.
+                className="[&_svg]:overflow-visible"
+              />
             </AspectRatio>
           )
         )}
