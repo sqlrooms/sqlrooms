@@ -528,7 +528,7 @@ export function createKeplerSlice({
             addDataToMap({
               datasets: dataset,
               options: {
-                autoCreateLayers: autoCreateLayers,
+                autoCreateLayers,
                 centerMap: true,
               },
             }),
