@@ -133,47 +133,28 @@ yarn add @sqlrooms/room-shell @sqlrooms/duckdb @sqlrooms/ui
 
 ### Configure Tailwind CSS
 
-You can follow [this guide](https://v3.tailwindcss.com/docs/installation) to install and configure Tailwind 3 (Tailwind 4 support is still experimental).
+You can follow [this guide](https://tailwindcss.com/docs/installation/using-vite) to install and configure Tailwind 4.
 
 ::: code-group
 
 ```bash [npm]
-npm install -D tailwindcss@3
+npm install -D tailwindcss@4
 npx tailwindcss init
 ```
 
 ```bash [pnpm]
-pnpm add -D tailwindcss@3
+pnpm add -D tailwindcss@4
 npx tailwindcss init
 ```
 
 ```bash [yarn]
-yarn add -D tailwindcss@3
+yarn add -D tailwindcss@4
 npx tailwindcss init
 ```
 
 :::
 
-SQLRooms provides a Tailwind preset that includes all the necessary styles. Update your `tailwind.config.js` or `tailwind.config.ts`:
-
-```typescript
-import {sqlroomsTailwindPreset} from '@sqlrooms/ui';
-import type {Config} from 'tailwindcss';
-
-const config = {
-  presets: [sqlroomsTailwindPreset()],
-  content: [
-    // Your content paths...
-    './src/**/*.{ts,tsx}',
-    // Add SQLRooms packages to content paths
-    './node_modules/@sqlrooms/**/dist/**/*.js',
-  ],
-} satisfies Config;
-
-export default config;
-```
-
-Make sure to import the preset Tailwind styles in your main CSS file:
+SQLRooms provides a Tailwind preset that includes all the necessary styles. Make sure to import the preset Tailwind styles in your main CSS file:
 
 ```css
 @import '@sqlrooms/ui/tailwind-preset.css';
