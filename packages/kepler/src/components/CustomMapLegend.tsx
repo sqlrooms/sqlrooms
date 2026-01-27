@@ -152,7 +152,7 @@ export function CustomMapLegendFactory(
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
         >
-          <div className="cursor-pointer select-none items-center overflow-hidden text-ellipsis whitespace-nowrap p-2 text-xs">
+          <div className="cursor-pointer items-center overflow-hidden p-2 text-xs text-ellipsis whitespace-nowrap select-none">
             {layer.config.label}
           </div>
           <div className="flex-1" />

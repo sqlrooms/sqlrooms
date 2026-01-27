@@ -17,11 +17,15 @@ const AgentProgressRenderer: React.FC<{
     state: 'pending' | 'success' | 'error';
   }>;
   finalOutput?: string;
-}> = ({agentToolCalls, finalOutput}) => {
+  reasoning?: string;
+}> = ({agentToolCalls, finalOutput, reasoning}) => {
   const findToolComponent = useStoreWithAi((s) => s.ai.findToolComponent);
 
   return (
     <div className="mt-2 px-5 text-[0.9em]">
+      {reasoning ? (
+        <div className="mb-2 text-sm text-gray-500">{reasoning}</div>
+      ) : null}
       <div className="ml-3">
         {agentToolCalls.map((toolCall) => {
           const ToolComponent = findToolComponent(toolCall.toolName);
@@ -56,7 +60,7 @@ const AgentProgressRenderer: React.FC<{
               </div>
 
               {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="ml-6 mt-1">
+                <div className="mt-1 ml-6">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />
@@ -145,6 +149,10 @@ export const ToolPartRenderer = ({
       isAgentTool &&
       agentData?.agentToolCalls &&
       agentData.agentToolCalls.length > 0;
+    const reasoning =
+      input instanceof Object && 'reasoning' in input
+        ? (input.reasoning as string)
+        : undefined;
 
     return (
       <div>
@@ -159,6 +167,7 @@ export const ToolPartRenderer = ({
             <AgentProgressRenderer
               agentToolCalls={agentData.agentToolCalls!}
               finalOutput={agentData.finalOutput}
+              reasoning={reasoning}
             />
           ) : (
             <ToolResult
