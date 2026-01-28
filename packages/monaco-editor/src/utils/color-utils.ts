@@ -84,6 +84,31 @@ function getRawCssVarFromStylesheets(
   if (typeof document === 'undefined') return undefined;
   const sheets = Array.from(document.styleSheets ?? []);
 
+  let lastWalkRulesMatch: string | undefined = undefined;
+  // Helper to recursively walk CSSRuleList (handles @layer, @media, @supports, etc.)
+  function walkRules(rules: CSSRuleList): void {
+    for (const rule of Array.from(rules)) {
+      // Check if this is a style rule with the selector we're looking for
+      const styleRule = rule as CSSStyleRule;
+      if (styleRule.selectorText && styleRule.style) {
+        if (
+          styleRule.selectorText
+            .split(',')
+            .map((s) => s.trim())
+            .includes(selector)
+        ) {
+          const raw = styleRule.style.getPropertyValue(variableName);
+          if (raw) lastWalkRulesMatch = raw.trim();
+        }
+      }
+
+      // Check if this rule has nested rules (CSSGroupingRule includes @layer, @media, @supports)
+      if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
+        walkRules((rule as CSSGroupingRule).cssRules);
+      }
+    }
+  }
+
   for (const sheet of sheets) {
     let rules: CSSRuleList | undefined;
     try {
@@ -94,24 +119,10 @@ function getRawCssVarFromStylesheets(
     }
     if (!rules) continue;
 
-    for (const rule of Array.from(rules)) {
-      // Only CSSStyleRule has selectorText/style
-      const styleRule = rule as CSSStyleRule;
-      if (!styleRule.selectorText || !styleRule.style) continue;
-
-      if (
-        styleRule.selectorText
-          .split(',')
-          .map((s) => s.trim())
-          .includes(selector)
-      ) {
-        const raw = styleRule.style.getPropertyValue(variableName);
-        if (raw) return raw.trim();
-      }
-    }
+    walkRules(rules);
   }
 
-  return undefined;
+  return lastWalkRulesMatch;
 }
 
 /**
