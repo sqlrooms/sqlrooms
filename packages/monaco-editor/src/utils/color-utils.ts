@@ -77,6 +77,54 @@ function normalizeCssColorValue(
   return fallbackColor;
 }
 
+/**
+ * Recursively walks CSSRuleList to find a CSS variable value for a given selector.
+ * Handles nested rules like @layer, @media, @supports.
+ * Returns the last matching value found (respecting CSS cascade rules).
+ *
+ * @param rules - The CSS rules to walk
+ * @param selector - The CSS selector to match (e.g., ':root', '.dark')
+ * @param variableName - The CSS variable name to find (e.g., '--background')
+ * @param currentMatch - The last match found so far (used internally for recursion to accumulate results across nested rules)
+ * @returns The last matching CSS variable value, or undefined if not found
+ */
+function walkCssRulesForVariable(
+  rules: CSSRuleList,
+  selector: string,
+  variableName: string,
+  currentMatch?: string,
+): string | undefined {
+  let lastMatch = currentMatch;
+
+  for (const rule of Array.from(rules)) {
+    // Check if this is a style rule with the selector we're looking for
+    const styleRule = rule as CSSStyleRule;
+    if (styleRule.selectorText && styleRule.style) {
+      if (
+        styleRule.selectorText
+          .split(',')
+          .map((s) => s.trim())
+          .includes(selector)
+      ) {
+        const raw = styleRule.style.getPropertyValue(variableName);
+        if (raw) lastMatch = raw.trim();
+      }
+    }
+
+    // Check if this rule has nested rules (CSSGroupingRule includes @layer, @media, @supports)
+    if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
+      lastMatch = walkCssRulesForVariable(
+        (rule as CSSGroupingRule).cssRules,
+        selector,
+        variableName,
+        lastMatch,
+      );
+    }
+  }
+
+  return lastMatch;
+}
+
 function getRawCssVarFromStylesheets(
   selector: string,
   variableName: string,
@@ -84,30 +132,7 @@ function getRawCssVarFromStylesheets(
   if (typeof document === 'undefined') return undefined;
   const sheets = Array.from(document.styleSheets ?? []);
 
-  let lastWalkRulesMatch: string | undefined = undefined;
-  // Helper to recursively walk CSSRuleList (handles @layer, @media, @supports, etc.)
-  function walkRules(rules: CSSRuleList): void {
-    for (const rule of Array.from(rules)) {
-      // Check if this is a style rule with the selector we're looking for
-      const styleRule = rule as CSSStyleRule;
-      if (styleRule.selectorText && styleRule.style) {
-        if (
-          styleRule.selectorText
-            .split(',')
-            .map((s) => s.trim())
-            .includes(selector)
-        ) {
-          const raw = styleRule.style.getPropertyValue(variableName);
-          if (raw) lastWalkRulesMatch = raw.trim();
-        }
-      }
-
-      // Check if this rule has nested rules (CSSGroupingRule includes @layer, @media, @supports)
-      if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
-        walkRules((rule as CSSGroupingRule).cssRules);
-      }
-    }
-  }
+  let lastMatch: string | undefined = undefined;
 
   for (const sheet of sheets) {
     let rules: CSSRuleList | undefined;
@@ -119,10 +144,15 @@ function getRawCssVarFromStylesheets(
     }
     if (!rules) continue;
 
-    walkRules(rules);
+    lastMatch = walkCssRulesForVariable(
+      rules,
+      selector,
+      variableName,
+      lastMatch,
+    );
   }
 
-  return lastWalkRulesMatch;
+  return lastMatch;
 }
 
 /**
