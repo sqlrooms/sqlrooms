@@ -41,7 +41,9 @@ class FlowmapProcessor:
         self.conn = None
         self.extent = None  # Global spatial extent for Hilbert indexing
 
-    def process(self, output_file: str, flows_output_file: Optional[str] = None) -> None:
+    def process(
+        self, output_file: str, flows_output_file: Optional[str] = None
+    ) -> None:
         """
         Process the flowmap data and generate hierarchical clusters.
 
@@ -129,7 +131,7 @@ class FlowmapProcessor:
         ).fetchone()
 
         min_x, max_x, min_y, max_y = extent_result
-        
+
         # Store extent as geometry for use in flows processing
         self.conn.execute(
             f"""
@@ -219,9 +221,11 @@ class FlowmapProcessor:
         num_locations = self.conn.execute(
             "SELECT COUNT(*) FROM location_weights"
         ).fetchone()[0]
-        
-        print(f"\nClustering {num_locations} locations from z={self.max_zoom} down to z={self.min_zoom}:")
-        
+
+        print(
+            f"\nClustering {num_locations} locations from z={self.max_zoom} down to z={self.min_zoom}:"
+        )
+
         self.conn.execute(
             f"""
             CREATE TABLE clusters AS
@@ -245,9 +249,6 @@ class FlowmapProcessor:
             """
         )
 
-        # Find the highest zoom level that actually has locations
-        start_zoom = self.max_zoom
-
         # Cluster from max_zoom down to min_zoom
         for z in range(self.max_zoom, self.min_zoom - 1, -1):
             self._cluster_at_zoom(z)
@@ -258,14 +259,14 @@ class FlowmapProcessor:
         # Remove zoom levels with no actual clustering
         print("\nRemoving duplicate zoom levels...")
         self._remove_duplicate_zoom_levels()
-        
+
         # Fix parent_id links that point to deleted zoom levels
         print("Fixing parent links after deduplication...")
         self._fix_parents_after_deduplication()
-        
+
         # Validate flow statistics AFTER deduplication
         self._validate_cluster_flow_stats()
-        
+
         # Show final zoom level distribution
         zoom_dist = self.conn.execute(
             """
@@ -276,7 +277,7 @@ class FlowmapProcessor:
             ORDER BY z DESC
             """
         ).fetchall()
-        print(f"\nFinal distribution:")
+        print("\nFinal distribution:")
         for z, count in zoom_dist:
             print(f"  z={z}: {count} clusters")
 
@@ -296,7 +297,7 @@ class FlowmapProcessor:
         # Earth's radius in meters (Web Mercator uses WGS84)
         earth_radius = 6378137.0
         # Meters per pixel at this zoom level (at equator)
-        resolution = (2 * math.pi * earth_radius) / (256 * (2 ** z))
+        resolution = (2 * math.pi * earth_radius) / (256 * (2**z))
         # Convert pixel radius to meters
         return self.cluster_radius_pixels * resolution
 
@@ -323,8 +324,11 @@ class FlowmapProcessor:
         clustered_ids = set()
         new_cluster_id = 0
         cluster_radius = self._get_cluster_radius_for_zoom(z)
-        
-        print(f"  z={z}: radius={cluster_radius:.0f}m, {len(unclustered)} locations", end="")
+
+        print(
+            f"  z={z}: radius={cluster_radius:.0f}m, {len(unclustered)} locations",
+            end="",
+        )
 
         while len(clustered_ids) < len(unclustered):
             # Find next unclustered location with highest weight
@@ -337,12 +341,34 @@ class FlowmapProcessor:
             if seed is None:
                 break
 
-            seed_id, seed_label, seed_x, seed_y, seed_weight, seed_h, seed_lat, seed_lon, seed_size, seed_top_id = seed
+            (
+                seed_id,
+                seed_label,
+                seed_x,
+                seed_y,
+                seed_weight,
+                seed_h,
+                seed_lat,
+                seed_lon,
+                seed_size,
+                seed_top_id,
+            ) = seed
 
             # Find all locations within cluster radius
             cluster_members = []
             for loc in unclustered:
-                loc_id, loc_label, loc_x, loc_y, loc_weight, loc_h, loc_lat, loc_lon, loc_size, loc_top_id = loc
+                (
+                    loc_id,
+                    loc_label,
+                    loc_x,
+                    loc_y,
+                    loc_weight,
+                    loc_h,
+                    loc_lat,
+                    loc_lon,
+                    loc_size,
+                    loc_top_id,
+                ) = loc
                 if loc_id not in clustered_ids:
                     dist = math.sqrt((loc_x - seed_x) ** 2 + (loc_y - seed_y) ** 2)
                     if dist <= cluster_radius:
@@ -416,11 +442,13 @@ class FlowmapProcessor:
 
                 # Calculate total leaves and find top leaf
                 total_leaves = sum(m[8] for m in cluster_members)  # size is index 8
-                
+
                 # Find the member with highest weight to determine top_id
-                top_member = max(cluster_members, key=lambda m: m[4])  # weight is index 4
+                top_member = max(
+                    cluster_members, key=lambda m: m[4]
+                )  # weight is index 4
                 top_id = top_member[9]  # top_id is index 9
-                
+
                 # Get the name of the top leaf location
                 top_leaf_name = self.conn.execute(
                     f"""
@@ -429,7 +457,7 @@ class FlowmapProcessor:
                     WHERE id = '{top_id}'
                     """
                 ).fetchone()[0]
-                
+
                 # Create cluster name
                 if total_leaves == 1:
                     cluster_label = top_leaf_name
@@ -470,7 +498,7 @@ class FlowmapProcessor:
                     WHERE z = {z + 1} AND id IN ('{member_ids_str}')
                     """
                 )
-        
+
         # Count how many actual clusters were created (self-reference = top-level)
         num_clusters = self.conn.execute(
             f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND parent_id = id"
@@ -493,34 +521,36 @@ class FlowmapProcessor:
               AND p.id IS NULL
             """
         ).fetchone()[0]
-        
+
         if broken_count == 0:
             print("  No broken parent links found")
             return
-        
+
         print(f"  Found {broken_count} broken parent links, fixing...")
-        
+
         # Strategy: For items at high zoom levels that lost their parent links due to
         # deduplication, find what cluster contains them at lower zoom levels.
         # Since we process high-to-low, fix from lowest zoom up.
-        
+
         # Get remaining zoom levels after deduplication
         remaining_zooms = self.conn.execute(
             "SELECT DISTINCT z FROM clusters ORDER BY z ASC"
         ).fetchall()
         remaining_zooms = [z[0] for z in remaining_zooms]
-        
+
         # For each zoom level (low to high), find items with broken parents
         # and map them to the appropriate cluster at a lower zoom
         for current_z in remaining_zooms:
             if current_z == min(remaining_zooms):
                 continue  # Lowest zoom, nothing to fix
-            
+
             # Find next lower zoom level that exists
-            next_lower_z = max([z for z in remaining_zooms if z < current_z], default=None)
+            next_lower_z = max(
+                [z for z in remaining_zooms if z < current_z], default=None
+            )
             if next_lower_z is None:
                 continue
-            
+
             # For each item at current_z with a broken parent, find which cluster
             # at next_lower_z contains it (by checking the cluster's members)
             self.conn.execute(
@@ -595,7 +625,7 @@ class FlowmapProcessor:
     def _calculate_cluster_flow_stats(self) -> None:
         """Calculate flow statistics (total_in, total_out, total_self) for each cluster at every zoom level."""
         print("\nCalculating cluster flow statistics...")
-        
+
         # Get all zoom levels in descending order
         zoom_levels = self.conn.execute(
             """
@@ -605,12 +635,10 @@ class FlowmapProcessor:
             """
         ).fetchall()
         zoom_levels = [z[0] for z in zoom_levels]
-        
-        highest_zoom = zoom_levels[0] if zoom_levels else self.max_zoom + 1
-        
+
         # Step 1: Calculate flow statistics for all base locations (singletons) at ALL zoom levels
         # This is needed because singletons are copied down during clustering with NULL stats
-        print(f"  Calculating for base locations at all zoom levels...")
+        print("  Calculating for base locations at all zoom levels...")
         for z in zoom_levels:
             self.conn.execute(
                 f"""
@@ -634,20 +662,22 @@ class FlowmapProcessor:
                 WHERE c.z = {z} AND c.id NOT LIKE 'cluster_%'
                 """
             )
-        
+
         # Step 2: Aggregate flow statistics for merged clusters at each zoom level
         for z in zoom_levels[1:]:
             # Count merged clusters at this level (not singletons, which already have stats)
             total_at_z = self.conn.execute(
                 f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND id LIKE 'cluster_%'"
             ).fetchone()[0]
-            
+
             if total_at_z == 0:
-                print(f"  Calculating for z={z} ({total_at_z} merged clusters) - skipping")
+                print(
+                    f"  Calculating for z={z} ({total_at_z} merged clusters) - skipping"
+                )
                 continue
-            
+
             print(f"  Calculating for z={z} ({total_at_z} merged clusters)...")
-            
+
             # For each cluster at this zoom level, aggregate from child clusters
             # Note: Calculate for ALL clusters (even those with parents), since they may be referenced by parent clusters
             clusters_at_z = self.conn.execute(
@@ -657,14 +687,14 @@ class FlowmapProcessor:
                 WHERE z = {z} AND id LIKE 'cluster_%'
                 """
             ).fetchall()
-            
+
             for (cluster_id,) in clusters_at_z:
                 # Find all child locations/clusters that belong to this cluster
                 # This includes direct children and needs to recursively find all base locations
-                
+
                 # Drop and recreate the temp table for each cluster
                 self.conn.execute("DROP TABLE IF EXISTS cluster_members")
-                
+
                 # Find all leaf members by recursing through parent_id links
                 # We need to go back to flows_raw to properly account for flows between members
                 self.conn.execute(
@@ -687,7 +717,7 @@ class FlowmapProcessor:
                     SELECT DISTINCT id FROM find_members WHERE id NOT LIKE 'cluster_%'
                     """
                 )
-                
+
                 # Calculate flow statistics from flows_raw using the member list
                 self.conn.execute(
                     f"""
@@ -722,14 +752,14 @@ class FlowmapProcessor:
                     WHERE c.id = '{cluster_id}' AND c.z = {z}
                     """
                 )
-        
+
         # Clean up temp table
         self.conn.execute("DROP TABLE IF EXISTS cluster_members")
 
     def _validate_cluster_flow_stats(self) -> None:
         """Validate that flow statistics are consistent across all zoom levels."""
         print("\nValidating cluster flow statistics...")
-        
+
         # Calculate total from original flows
         flow_totals = self.conn.execute(
             """
@@ -740,13 +770,15 @@ class FlowmapProcessor:
             FROM flows_raw
             """
         ).fetchone()
-        
+
         non_self_total = flow_totals[0] or 0
         self_total = flow_totals[1] or 0
         grand_total = flow_totals[2] or 0
-        
-        print(f"  Original flows: non-self={non_self_total:,.0f}, self={self_total:,.0f}, total={grand_total:,.0f}")
-        
+
+        print(
+            f"  Original flows: non-self={non_self_total:,.0f}, self={self_total:,.0f}, total={grand_total:,.0f}"
+        )
+
         # Get all zoom levels
         zoom_levels = self.conn.execute(
             """
@@ -755,9 +787,9 @@ class FlowmapProcessor:
             ORDER BY z DESC
             """
         ).fetchall()
-        
+
         all_valid = True
-        
+
         # Check each zoom level
         for (z,) in zoom_levels:
             stats = self.conn.execute(
@@ -770,41 +802,44 @@ class FlowmapProcessor:
                 WHERE z = {z}
                 """
             ).fetchone()
-            
+
             sum_out = stats[0] or 0
             sum_in = stats[1] or 0
             sum_self = stats[2] or 0
-            
+
             # Key invariant: At each zoom level, ALL flows must be accounted for.
             # As locations cluster together, flows between them transition from
             # "external" (total_out/total_in) to "internal" (total_self).
             # sum_out + sum_self should equal grand_total (each flow counted once)
             # sum_in + sum_self should equal grand_total (each flow counted once)
-            
+
             total_from_out = sum_out + sum_self
             total_from_in = sum_in + sum_self
-            
+
             out_diff = abs(total_from_out - grand_total)
             in_diff = abs(total_from_in - grand_total)
-            
+
             # Additionally, total_self should be at least the original self-loops
             self_diff = 0 if sum_self >= self_total else (self_total - sum_self)
-            
-            out_pct = (out_diff / grand_total * 100) if grand_total > 0 else 0
-            in_pct = (in_diff / grand_total * 100) if grand_total > 0 else 0
-            
+
             status_out = "✓" if out_diff <= 0.01 else "⚠️"
             status_in = "✓" if in_diff <= 0.01 else "⚠️"
             status_self = "✓" if self_diff <= 0.01 else "⚠️"
-            
+
             print(f"  z={z:2d}:")
-            print(f"    out+self:   {total_from_out:>12,.0f}  (expected: {grand_total:,.0f}, diff: {out_diff:>8,.0f})  {status_out}")
-            print(f"    in+self:    {total_from_in:>12,.0f}  (expected: {grand_total:,.0f}, diff: {in_diff:>8,.0f})  {status_in}")
-            print(f"    self >= orig: {sum_self:>12,.0f} >= {self_total:,.0f}  {status_self}")
-            
+            print(
+                f"    out+self:   {total_from_out:>12,.0f}  (expected: {grand_total:,.0f}, diff: {out_diff:>8,.0f})  {status_out}"
+            )
+            print(
+                f"    in+self:    {total_from_in:>12,.0f}  (expected: {grand_total:,.0f}, diff: {in_diff:>8,.0f})  {status_in}"
+            )
+            print(
+                f"    self >= orig: {sum_self:>12,.0f} >= {self_total:,.0f}  {status_self}"
+            )
+
             if out_diff > 0.01 or in_diff > 0.01 or self_diff > 0.01:
                 all_valid = False
-        
+
         print()
         if all_valid:
             print("  ✓ All zoom levels have consistent flow statistics")
@@ -814,7 +849,7 @@ class FlowmapProcessor:
     def _process_flows(self) -> None:
         """Process flows with nested Hilbert indexing for all zoom levels."""
         print("\nProcessing flows with nested Hilbert indexing...")
-        
+
         # Step 1: Compute location Hilbert indices
         print("  Computing location Hilbert indices...")
         self.conn.execute(
@@ -828,19 +863,22 @@ class FlowmapProcessor:
             FROM location_weights
             """
         )
-        
+
         # Step 2: Join flows with location Hilbert indices
         print("  Joining flows with location indices...")
-        
+
         # Check if time column exists
-        has_time = self.conn.execute(
-            """
+        has_time = (
+            self.conn.execute(
+                """
             SELECT COUNT(*) 
             FROM information_schema.columns 
             WHERE table_name = 'flows_raw' AND column_name = 'time'
             """
-        ).fetchone()[0] > 0
-        
+            ).fetchone()[0]
+            > 0
+        )
+
         time_select = ""
         time_group = ""
         if has_time and self.time_bucket:
@@ -849,7 +887,7 @@ class FlowmapProcessor:
         elif has_time:
             time_select = ", time"
             time_group = ", time"
-        
+
         # Create base flows with Hilbert indices
         self.conn.execute(
             f"""
@@ -866,7 +904,7 @@ class FlowmapProcessor:
             JOIN location_h d ON f.dest = d.id
             """
         )
-        
+
         # Step 3: Compute extent over (origin_h, dest_h) for nested Hilbert
         print("  Computing OD extent for nested Hilbert...")
         self.conn.execute(
@@ -879,7 +917,7 @@ class FlowmapProcessor:
             FROM flows_with_h
             """
         )
-        
+
         # Step 4: Compute nested Hilbert index (flow_h)
         print("  Computing nested Hilbert index for flows...")
         self.conn.execute(
@@ -897,7 +935,7 @@ class FlowmapProcessor:
             )
             """
         )
-        
+
         # Step 5: Get actual zoom levels that exist in clusters (after deduplication)
         # Self-reference = top-level
         existing_zooms = self.conn.execute(
@@ -909,16 +947,18 @@ class FlowmapProcessor:
             """
         ).fetchall()
         existing_zooms = [z[0] for z in existing_zooms]
-        
-        print(f"  Aggregating flows for {len(existing_zooms)} zoom levels: {existing_zooms}")
-        
+
+        print(
+            f"  Aggregating flows for {len(existing_zooms)} zoom levels: {existing_zooms}"
+        )
+
         # Step 6: Create empty tiled_flows table
         time_col_def = ""
         if has_time and self.time_bucket:
             time_col_def = ", time_bucket TIMESTAMP"
         elif has_time:
             time_col_def = ", time TIMESTAMP"
-            
+
         self.conn.execute(
             f"""
             CREATE TABLE tiled_flows (
@@ -931,13 +971,13 @@ class FlowmapProcessor:
             )
             """
         )
-        
+
         # Step 7: Aggregate flows for each zoom level using cluster hierarchy
         highest_zoom = existing_zooms[0] if existing_zooms else self.max_zoom + 1
-        
+
         for i, z in enumerate(existing_zooms):
             print(f"  Aggregating flows at z={z}...")
-            
+
             # For the highest zoom level, use base flows directly (includes self-loops)
             if i == 0:
                 # Use base flows directly
@@ -950,12 +990,12 @@ class FlowmapProcessor:
                         origin,
                         dest,
                         count
-                        {time_group and ', time_bucket' or (has_time and ', time' or '')}
+                        {time_group and ", time_bucket" or (has_time and ", time" or "")}
                     FROM flows_with_h
                     """
                 )
                 continue
-            
+
             # Get cluster assignments for this zoom level
             # Need to map each original location to its cluster at this zoom
             self.conn.execute(
@@ -984,7 +1024,7 @@ class FlowmapProcessor:
                 FROM location_weights lw
                 """
             )
-            
+
             # Aggregate flows using cluster mapping
             # This includes both flows between different clusters AND cluster self-loops
             self.conn.execute(
@@ -994,14 +1034,14 @@ class FlowmapProcessor:
                     COALESCE(co.cluster_id, f.origin) as origin,
                     COALESCE(cd.cluster_id, f.dest) as dest,
                     SUM(f.count) as count
-                    {time_group and ', f.time_bucket' or (has_time and ', f.time' or '')}
+                    {time_group and ", f.time_bucket" or (has_time and ", f.time" or "")}
                 FROM flows_with_h f
                 LEFT JOIN cluster_map_z{z} co ON f.origin = co.id
                 LEFT JOIN cluster_map_z{z} cd ON f.dest = cd.id
-                GROUP BY COALESCE(co.cluster_id, f.origin), COALESCE(cd.cluster_id, f.dest){time_group or (has_time and ', f.time' or '')}
+                GROUP BY COALESCE(co.cluster_id, f.origin), COALESCE(cd.cluster_id, f.dest){time_group or (has_time and ", f.time" or "")}
                 """
             )
-            
+
             # Compute flow_h for aggregated flows using cluster coordinates
             self.conn.execute(
                 f"""
@@ -1028,26 +1068,28 @@ class FlowmapProcessor:
                     f.origin,
                     f.dest,
                     f.count
-                    {time_group and ', f.time_bucket' or (has_time and ', f.time' or '')}
+                    {time_group and ", f.time_bucket" or (has_time and ", f.time" or "")}
                 FROM flows_z{z} f
                 """
             )
-            
+
             # Clean up temp tables
             self.conn.execute(f"DROP TABLE flows_z{z}")
             self.conn.execute(f"DROP TABLE cluster_map_z{z}")
-        
-        print(f"  Total flows: {self.conn.execute('SELECT COUNT(*) FROM tiled_flows').fetchone()[0]:,}")
-        
+
+        print(
+            f"  Total flows: {self.conn.execute('SELECT COUNT(*) FROM tiled_flows').fetchone()[0]:,}"
+        )
+
         # Validate flow totals
         self._validate_flow_totals()
-    
+
     def _validate_flow_totals(self) -> None:
         """
         Validate that total flow counts match between original and aggregated data at all zoom levels.
         """
         print("\nValidating flow totals...")
-        
+
         # Calculate total from original flows (including self-loops)
         original_total = self.conn.execute(
             """
@@ -1055,13 +1097,13 @@ class FlowmapProcessor:
             FROM flows_raw
             """
         ).fetchone()[0]
-        
+
         if original_total is None:
             original_total = 0
-        
+
         print(f"  Original total: {original_total:,.0f}")
         print()
-        
+
         # Get all zoom levels
         zoom_levels = self.conn.execute(
             """
@@ -1070,9 +1112,9 @@ class FlowmapProcessor:
             ORDER BY z DESC
             """
         ).fetchall()
-        
+
         all_valid = True
-        
+
         # Check each zoom level with breakdown
         for (z,) in zoom_levels:
             stats = self.conn.execute(
@@ -1085,29 +1127,34 @@ class FlowmapProcessor:
                 WHERE z = {z}
                 """
             ).fetchone()
-            
+
             non_self = stats[0] or 0
             self_loops = stats[1] or 0
             total = stats[2] or 0
-            
+
             # At highest zoom, should match original total
             if z == zoom_levels[0][0]:
                 diff = abs(original_total - total)
-                diff_pct = (diff / original_total * 100) if original_total > 0 else 0
                 status = "✓" if diff <= 0.01 else "⚠️"
-                print(f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}  {status}")
+                print(
+                    f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}  {status}"
+                )
                 if diff > 0.01:
                     all_valid = False
             else:
-                print(f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}")
-        
+                print(
+                    f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}"
+                )
+
         print()
         if all_valid:
             print("  ✓ Flow totals validated at highest zoom level")
-            print("  Note: Lower zoom levels have fewer flows as locations cluster together")
+            print(
+                "  Note: Lower zoom levels have fewer flows as locations cluster together"
+            )
         else:
             print("  ⚠️  Warning: Highest zoom level doesn't match original total!")
-    
+
     def _export_flows(self, output_file: str) -> None:
         """
         Export tiled flows to Parquet file.
@@ -1116,19 +1163,22 @@ class FlowmapProcessor:
             output_file: Path to output Parquet file for flows
         """
         print(f"\nExporting flows to {output_file}...")
-        
+
         # Determine if we have time column
-        has_time = self.conn.execute(
-            """
+        has_time = (
+            self.conn.execute(
+                """
             SELECT COUNT(*) 
             FROM information_schema.columns 
             WHERE table_name = 'tiled_flows' AND column_name IN ('time', 'time_bucket')
             """
-        ).fetchone()[0] > 0
-        
+            ).fetchone()[0]
+            > 0
+        )
+
         time_col = "time_bucket" if self.time_bucket else "time"
         order_clause = f"z DESC, flow_h, {time_col}" if has_time else "z DESC, flow_h"
-        
+
         self.conn.execute(
             f"""
             COPY (
@@ -1137,12 +1187,12 @@ class FlowmapProcessor:
             ) TO '{output_file}' (FORMAT PARQUET)
             """
         )
-        
+
         # Export metadata with extents for Hilbert range computation
-        import os
-        metadata_file = output_file.replace('.parquet', '-metadata.parquet')
+
+        metadata_file = output_file.replace(".parquet", "-metadata.parquet")
         print(f"Exporting metadata to {metadata_file}...")
-        
+
         self.conn.execute(
             f"""
             COPY (
@@ -1169,4 +1219,3 @@ class FlowmapProcessor:
             ) TO '{output_file}' (FORMAT PARQUET)
             """
         )
-

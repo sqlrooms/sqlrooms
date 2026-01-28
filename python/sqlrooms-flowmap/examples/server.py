@@ -7,7 +7,6 @@ Usage:
 
 import argparse
 import bisect
-from pathlib import Path
 
 import duckdb
 import flask
@@ -23,34 +22,34 @@ available_zooms = []
 def init_database(dataset_name: str, output_dir: str = "../output"):
     """Initialize DuckDB connection and load data."""
     global con, available_zooms
-    
+
     # Construct file paths
     clusters_file = f"{output_dir}/{dataset_name}-clusters.parquet"
     flows_file = f"{output_dir}/{dataset_name}-flows.parquet"
     metadata_file = f"{output_dir}/{dataset_name}-flows-metadata.parquet"
-    
+
     print(f"Loading dataset '{dataset_name}' from {output_dir}/")
     print(f"  Clusters: {clusters_file}")
     print(f"  Flows: {flows_file}")
     print(f"  Metadata: {metadata_file}")
-    
+
     # Create DuckDB connection with spatial extension
     con = duckdb.connect(":memory:")
     con.execute("INSTALL spatial")
     con.execute("LOAD spatial")
-    
+
     # Load clusters
     con.execute(f"""
         CREATE TABLE clusters AS 
         SELECT * FROM read_parquet('{clusters_file}')
     """)
-    
+
     # Load flows
     con.execute(f"""
         CREATE TABLE flows AS 
         SELECT * FROM read_parquet('{flows_file}')
     """)
-    
+
     # Load metadata for Hilbert range computation
     try:
         con.execute(f"""
@@ -61,20 +60,20 @@ def init_database(dataset_name: str, output_dir: str = "../output"):
     except Exception as e:
         print(f"Warning: Could not load metadata file {metadata_file}: {e}")
         print("Hilbert range filtering will not be available")
-    
+
     # Get available zoom levels (sorted ascending for bisect)
     available_zooms = con.execute("""
         SELECT DISTINCT z FROM clusters ORDER BY z ASC
     """).fetchall()
     available_zooms = [z[0] for z in available_zooms]
-    
+
     print(f"Loaded data with zoom levels: {available_zooms}")
-    
+
     # Create indexes for performance
     con.execute("CREATE INDEX idx_clusters_z_id ON clusters(z, id)")
     con.execute("CREATE INDEX idx_clusters_z_parent ON clusters(z, parent_id)")
     con.execute("CREATE INDEX idx_flows_z_h ON flows(z, flow_h)")
-    
+
     # The indexes will help, especially idx_flows_z_h which leverages the
     # sorting. The main benefit of flow_h is: Parquet file ordering - Spatially
     # close flows are stored together, making sequential reads efficient Index
@@ -86,7 +85,6 @@ def init_database(dataset_name: str, output_dir: str = "../output"):
     # Hilbert ranges for tiles, but that's complex. The current approach with
     # improved indexes should work well. The sorted Parquet + index means DuckDB
     # can efficiently skip irrelevant flow ranges.
-
 
     # Also create a spatial index on cluster coordinates if possible
     # try:
@@ -101,7 +99,7 @@ def find_best_zoom(requested_zoom: int) -> int:
     """Find the best matching zoom level from available data."""
     if not available_zooms:
         return requested_zoom
-    
+
     # Find the closest zoom level that is <= requested zoom
     idx = bisect.bisect_right(available_zooms, requested_zoom)
     if idx == 0:
@@ -112,13 +110,14 @@ def find_best_zoom(requested_zoom: int) -> int:
 def compute_hilbert_range_for_tile(z: int, x: int, y: int) -> tuple:
     """
     Compute Hilbert index range for flows within a tile.
-    
+
     Returns (min_h, max_h) covering flows that might be visible in the tile.
     Uses a bounding box approach - may over-select but guarantees coverage.
     """
     with con.cursor() as cursor:
         # Compute everything in one query to avoid passing geometries through Python
-        result = cursor.execute("""
+        result = cursor.execute(
+            """
             WITH tile_info AS (
                 SELECT 
                     CAST(location_extent AS BOX_2D) as loc_ext,
@@ -165,23 +164,26 @@ def compute_hilbert_range_for_tile(z: int, x: int, y: int) -> tuple:
                     ST_Hilbert(ST_XMax(od_ext), max_loc_h, od_ext)
                 ) as max_flow_h
             FROM loc_range
-        """, [z, x, y]).fetchone()
-        
+        """,
+            [z, x, y],
+        ).fetchone()
+
         if not result:
             return (None, None)
-        
+
         min_flow_h, max_flow_h = result
         return (min_flow_h, max_flow_h)
 
 
-@app.route('/clusters/<int:z>/<int:x>/<int:y>.pbf')
+@app.route("/clusters/<int:z>/<int:x>/<int:y>.pbf")
 def get_clusters_tile(z, x, y):
     """Serve location clusters as vector tiles."""
     # Find best matching zoom level
     data_zoom = find_best_zoom(z)
-    
+
     with con.cursor() as cursor:
-        tile_blob = cursor.execute("""
+        tile_blob = cursor.execute(
+            """
             WITH tile_bounds AS (
                 SELECT 
                     ST_TileEnvelope($1, $2, $3) AS envelope,
@@ -209,32 +211,37 @@ def get_clusters_tile(z, x, y):
                   AND ST_Within(ST_Point(x, y), envelope)
             ) AS tile_data
             WHERE geometry IS NOT NULL
-        """, [z, x, y, data_zoom]).fetchone()
-        
-        tile = tile_blob[0] if tile_blob and tile_blob[0] else b''
-        
+        """,
+            [z, x, y, data_zoom],
+        ).fetchone()
+
+        tile = tile_blob[0] if tile_blob and tile_blob[0] else b""
+
         # Debug logging
         if tile:
-            print(f"Clusters tile z={z} x={x} y={y} (data_zoom={data_zoom}): {len(tile)} bytes")
+            print(
+                f"Clusters tile z={z} x={x} y={y} (data_zoom={data_zoom}): {len(tile)} bytes"
+            )
         else:
             print(f"Clusters tile z={z} x={x} y={y} (data_zoom={data_zoom}): empty")
-        
-        return flask.Response(tile, mimetype='application/x-protobuf')
+
+        return flask.Response(tile, mimetype="application/x-protobuf")
 
 
-@app.route('/flows/<int:z>/<int:x>/<int:y>.pbf')
+@app.route("/flows/<int:z>/<int:x>/<int:y>.pbf")
 def get_flows_tile(z, x, y):
     """Serve flows as vector tiles."""
     # Find best matching zoom level
     data_zoom = find_best_zoom(z)
-    
+
     # Compute Hilbert range for this tile
     min_h, max_h = compute_hilbert_range_for_tile(z, x, y)
-    
+
     with con.cursor() as cursor:
         # Use Hilbert range if available for fast pre-filtering
         if min_h is not None and max_h is not None:
-            tile_blob = cursor.execute("""
+            tile_blob = cursor.execute(
+                """
                 WITH tile_bounds AS (
                     SELECT 
                         ST_TileEnvelope($1, $2, $3) AS envelope,
@@ -266,10 +273,13 @@ def get_flows_tile(z, x, y):
                       )
                 ) AS tile_data
                 WHERE geometry IS NOT NULL
-            """, [z, x, y, data_zoom, min_h, max_h]).fetchone()
+            """,
+                [z, x, y, data_zoom, min_h, max_h],
+            ).fetchone()
         else:
             # Fallback without Hilbert filtering
-            tile_blob = cursor.execute("""
+            tile_blob = cursor.execute(
+                """
                 WITH tile_bounds AS (
                     SELECT 
                         ST_TileEnvelope($1, $2, $3) AS envelope,
@@ -300,21 +310,25 @@ def get_flows_tile(z, x, y):
                       )
                 ) AS tile_data
                 WHERE geometry IS NOT NULL
-            """, [z, x, y, data_zoom]).fetchone()
-        
-        tile = tile_blob[0] if tile_blob and tile_blob[0] else b''
-        
+            """,
+                [z, x, y, data_zoom],
+            ).fetchone()
+
+        tile = tile_blob[0] if tile_blob and tile_blob[0] else b""
+
         # Debug logging
         if tile:
             range_info = f" (Hilbert: {min_h}-{max_h})" if min_h is not None else ""
-            print(f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}){range_info}: {len(tile)} bytes")
+            print(
+                f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}){range_info}: {len(tile)} bytes"
+            )
         else:
             print(f"Flows tile z={z} x={x} y={y} (data_zoom={data_zoom}): empty")
-        
-        return flask.Response(tile, mimetype='application/x-protobuf')
+
+        return flask.Response(tile, mimetype="application/x-protobuf")
 
 
-@app.route('/debug/clusters')
+@app.route("/debug/clusters")
 def debug_clusters():
     """Debug endpoint to check cluster data."""
     with con.cursor() as cursor:
@@ -325,13 +339,25 @@ def debug_clusters():
             GROUP BY z
             ORDER BY z DESC
         """).fetchall()
-        
-        return flask.jsonify({
-            'zoom_levels': [{'z': row[0], 'count': row[1], 'min_x': row[2], 'max_x': row[3], 'min_y': row[4], 'max_y': row[5]} for row in sample]
-        })
+
+        return flask.jsonify(
+            {
+                "zoom_levels": [
+                    {
+                        "z": row[0],
+                        "count": row[1],
+                        "min_x": row[2],
+                        "max_x": row[3],
+                        "min_y": row[4],
+                        "max_y": row[5],
+                    }
+                    for row in sample
+                ]
+            }
+        )
 
 
-@app.route('/metadata')
+@app.route("/metadata")
 def get_metadata():
     """Return metadata about available data."""
     with con.cursor() as cursor:
@@ -345,34 +371,36 @@ def get_metadata():
             FROM clusters
             WHERE parent_id = id  -- Self-reference = top-level
         """).fetchone()
-        
+
         # Get location count
         location_count = cursor.execute("""
             SELECT COUNT(DISTINCT id) 
             FROM clusters 
             WHERE parent_id = id  -- Self-reference = top-level
         """).fetchone()[0]
-        
+
         # Get flow count
         flow_count = cursor.execute("""
             SELECT COUNT(*) FROM flows
         """).fetchone()[0]
-        
-        return flask.jsonify({
-            'bounds': {
-                'min_lon': bounds[0],
-                'min_lat': bounds[1],
-                'max_lon': bounds[2],
-                'max_lat': bounds[3]
-            },
-            'center': {
-                'lon': (bounds[0] + bounds[2]) / 2,
-                'lat': (bounds[1] + bounds[3]) / 2
-            },
-            'zoom_levels': available_zooms,
-            'location_count': location_count,
-            'flow_count': flow_count
-        })
+
+        return flask.jsonify(
+            {
+                "bounds": {
+                    "min_lon": bounds[0],
+                    "min_lat": bounds[1],
+                    "max_lon": bounds[2],
+                    "max_lat": bounds[3],
+                },
+                "center": {
+                    "lon": (bounds[0] + bounds[2]) / 2,
+                    "lat": (bounds[1] + bounds[3]) / 2,
+                },
+                "zoom_levels": available_zooms,
+                "location_count": location_count,
+                "flow_count": flow_count,
+            }
+        )
 
 
 # HTML content for the index page
@@ -577,22 +605,28 @@ INDEX_HTML = """
 @app.route("/")
 def index():
     """Serve the index page."""
-    return flask.Response(INDEX_HTML, mimetype='text/html')
+    return flask.Response(INDEX_HTML, mimetype="text/html")
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='Serve flowmap data as vector tiles')
-    parser.add_argument('dataset', help='Dataset name (e.g., "locations" for output/locations-*.parquet)')
-    parser.add_argument('--output-dir', default='output', help='Output directory containing Parquet files (default: output)')
-    parser.add_argument('--host', default='127.0.0.1', help='Host to bind to')
-    parser.add_argument('--port', default=5000, type=int, help='Port to bind to')
-    
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Serve flowmap data as vector tiles")
+    parser.add_argument(
+        "dataset",
+        help='Dataset name (e.g., "locations" for output/locations-*.parquet)',
+    )
+    parser.add_argument(
+        "--output-dir",
+        default="output",
+        help="Output directory containing Parquet files (default: output)",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="Host to bind to")
+    parser.add_argument("--port", default=5000, type=int, help="Port to bind to")
+
     args = parser.parse_args()
-    
+
     # Initialize database
     init_database(args.dataset, args.output_dir)
-    
+
     # Start server
     print(f"Starting server at http://{args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=True)
-

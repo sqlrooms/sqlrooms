@@ -75,14 +75,16 @@ def main(
     """Prepare origin-destination datasets for tiling using DuckDB."""
     # Create output directory if it doesn't exist
     os.makedirs(output_dir, exist_ok=True)
-    
+
     # Derive base name from locations file
     base_name = Path(locations).stem
-    
+
     # Generate output file paths
     clusters_output = os.path.join(output_dir, f"{base_name}-clusters.parquet")
-    flows_output = None if skip_flows else os.path.join(output_dir, f"{base_name}-flows.parquet")
-    
+    flows_output = (
+        None if skip_flows else os.path.join(output_dir, f"{base_name}-flows.parquet")
+    )
+
     click.echo("SQLRooms Flowmap Processor")
     click.echo(f"Locations: {locations}")
     click.echo(f"Flows: {flows}")
@@ -106,7 +108,7 @@ def main(
     )
 
     processor.process(clusters_output, flows_output)
-    click.echo(f"\n✓ Complete!")
+    click.echo("\n✓ Complete!")
     click.echo(f"  Clusters: {clusters_output}")
     if flows_output:
         click.echo(f"  Flows: {flows_output}")
@@ -114,4 +116,3 @@ def main(
 
 if __name__ == "__main__":
     main()
-
