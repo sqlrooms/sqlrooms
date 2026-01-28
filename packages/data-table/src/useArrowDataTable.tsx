@@ -207,7 +207,7 @@ export default function useArrowDataTable(
                           }}
                         />
                       ) : (
-                        <div className="font-mono text-xs break-words whitespace-pre-wrap">
+                        <div className="font-mono text-xs wrap-break-word whitespace-pre-wrap">
                           {valueStr}
                         </div>
                       )}

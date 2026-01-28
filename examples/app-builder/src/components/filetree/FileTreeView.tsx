@@ -15,7 +15,7 @@ export const RenderFileTreeNode = (
   const {object} = node;
   const openFile = useRoomStore((s) => s.webContainer.openFile);
   return (
-    <BaseTreeNode asChild className={cn('h-[22px]')} nodeObject={object}>
+    <BaseTreeNode asChild className={cn('h-5.5')} nodeObject={object}>
       {object.type === 'directory' ? (
         <div className="text-foreground/50 flex items-center truncate">
           {object.name}
@@ -55,7 +55,7 @@ export const FileTreeView: FC<{
   return (
     <div
       className={cn(
-        'flex h-full w-full select-none flex-col overflow-auto p-2 text-sm',
+        'flex h-full w-full flex-col overflow-auto p-2 text-sm select-none',
         className,
       )}
     >

@@ -181,6 +181,9 @@ importers:
         specifier: ^5.0.8
         version: 5.0.9(@types/react@19.2.7)(immer@11.0.1)(react@19.2.1)(use-sync-external-store@1.6.0(react@19.2.1))
     devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -189,25 +192,19 @@ importers:
         version: 19.2.3(@types/react@19.2.7)
       '@vitejs/plugin-react':
         specifier: ^5.1.2
-        version: 5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
+        version: 5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       eslint:
         specifier: ^9.36.0
-        version: 9.39.1(jiti@1.21.7)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
+        version: 9.39.1(jiti@2.6.1)
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
       vite:
         specifier: ^7.1.9
-        version: 7.2.2(@types/node@24.10.8)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
+        version: 7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   examples/ai:
     dependencies:
@@ -242,6 +239,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -251,9 +251,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -266,12 +263,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -321,6 +315,9 @@ importers:
       '@eslint/js':
         specifier: ^9.28.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -330,9 +327,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.7.0(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
         version: 9.39.1(jiti@2.6.1)
@@ -345,12 +339,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.4
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -394,6 +385,9 @@ importers:
       '@eslint/js':
         specifier: ^9.28.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -403,9 +397,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.7.0(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
         version: 9.39.1(jiti@2.6.1)
@@ -418,12 +409,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.4
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -537,6 +525,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -546,9 +537,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -561,12 +549,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -631,6 +616,9 @@ importers:
       '@eslint/js':
         specifier: ^9.28.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -640,9 +628,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.7.0(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
         version: 9.39.1(jiti@2.6.1)
@@ -655,12 +640,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.4
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -697,22 +679,19 @@ importers:
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       react:
         specifier: 19.2.1
         version: 19.2.1
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
       zod:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -722,9 +701,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
+      tailwindcss:
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -767,22 +746,19 @@ importers:
       lucide-react:
         specifier: ^0.555.0
         version: 0.555.0(react@19.2.1)
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       react:
         specifier: 19.2.1
         version: 19.2.1
       react-dom:
         specifier: 19.2.1
         version: 19.2.1(react@19.2.1)
-      tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
       zod:
         specifier: 4.1.13
         version: 4.1.13
     devDependencies:
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -792,9 +768,9 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
+      tailwindcss:
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -844,6 +820,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/d3-scale':
         specifier: ^4.0.9
         version: 4.0.9
@@ -859,9 +838,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -874,12 +850,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -926,6 +899,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/d3-scale':
         specifier: ^4.0.9
         version: 4.0.9
@@ -941,9 +917,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -956,12 +929,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1020,6 +990,9 @@ importers:
       '@eslint/js':
         specifier: ^9.28.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1029,9 +1002,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.5.2
         version: 4.7.0(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.28.0
         version: 9.39.1(jiti@2.6.1)
@@ -1044,12 +1014,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.4
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1102,6 +1069,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1111,9 +1081,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1126,12 +1093,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1187,6 +1151,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1196,9 +1163,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1211,12 +1175,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1251,6 +1212,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1260,9 +1224,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1275,12 +1236,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1336,6 +1294,9 @@ importers:
       '@eslint/js':
         specifier: ^9.17.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1345,9 +1306,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^4.3.4
         version: 4.7.0(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.4.22(postcss@8.5.6)
       esbuild-plugin-react-virtualized:
         specifier: ^1.0.4
         version: 1.0.5(esbuild@0.25.12)
@@ -1363,12 +1321,9 @@ importers:
       globals:
         specifier: ^15.14.0
         version: 15.15.0
-      postcss:
-        specifier: ^8
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1400,6 +1355,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1409,9 +1367,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1424,12 +1379,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1464,6 +1416,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1473,9 +1428,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1488,12 +1440,9 @@ importers:
       globals:
         specifier: ^15.15.0
         version: 15.15.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1563,7 +1512,7 @@ importers:
     dependencies:
       '@sqlrooms/dropzone':
         specifier: ^0.16.4
-        version: 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))
+        version: 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@4.1.18)
       '@sqlrooms/room-shell':
         specifier: workspace:*
         version: link:../../packages/room-shell
@@ -1586,6 +1535,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1595,9 +1547,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1610,12 +1559,9 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1659,6 +1605,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1668,9 +1617,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1683,12 +1629,9 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1709,7 +1652,7 @@ importers:
         version: 1.31.0
       '@sqlrooms/dropzone':
         specifier: ^0.16.4
-        version: 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))
+        version: 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@4.1.18)
       '@sqlrooms/duckdb':
         specifier: workspace:*
         version: link:../../packages/duckdb
@@ -1747,6 +1690,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1756,9 +1702,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1771,12 +1714,9 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -1826,6 +1766,9 @@ importers:
       '@eslint/js':
         specifier: ^9.36.0
         version: 9.39.1
+      '@tailwindcss/vite':
+        specifier: ^4.1.18
+        version: 4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
       '@types/react':
         specifier: 19.2.7
         version: 19.2.7
@@ -1835,9 +1778,6 @@ importers:
       '@vitejs/plugin-react':
         specifier: ^5.0.3
         version: 5.1.1(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.21
-        version: 10.4.22(postcss@8.5.6)
       eslint:
         specifier: ^9.36.0
         version: 9.39.1(jiti@2.6.1)
@@ -1850,12 +1790,9 @@ importers:
       globals:
         specifier: ^16.4.0
         version: 16.5.0
-      postcss:
-        specifier: ^8.5.6
-        version: 8.5.6
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       typescript:
         specifier: 5.9.3
         version: 5.9.3
@@ -3002,10 +2939,7 @@ importers:
         version: 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@tailwindcss/typography':
         specifier: ^0.5.18
-        version: 0.5.19(tailwindcss@3.4.18(yaml@2.8.2))
-      autoprefixer:
-        specifier: ^10.4.20
-        version: 10.4.22(postcss@8.5.6)
+        version: 0.5.19(tailwindcss@4.1.18)
       class-variance-authority:
         specifier: ^0.7.1
         version: 0.7.1
@@ -3034,11 +2968,11 @@ importers:
         specifier: ^2.6.0
         version: 2.6.0
       tailwindcss:
-        specifier: ^3.4.17
-        version: 3.4.18(yaml@2.8.2)
+        specifier: ^4.1.18
+        version: 4.1.18
       tailwindcss-animate:
         specifier: ^1.0.7
-        version: 1.0.7(tailwindcss@3.4.18(yaml@2.8.2))
+        version: 1.0.7(tailwindcss@4.1.18)
       usehooks-ts:
         specifier: ^3.1.1
         version: 3.1.1(react@19.2.1)
@@ -7337,8 +7271,17 @@ packages:
   '@tailwindcss/node@4.1.17':
     resolution: {integrity: sha512-csIkHIgLb3JisEFQ0vxr2Y57GUNYh447C8xzwj89U/8fdW8LhProdxvnVH6U8M2Y73QKiTIH+LWbK3V2BBZsAg==}
 
+  '@tailwindcss/node@4.1.18':
+    resolution: {integrity: sha512-DoR7U1P7iYhw16qJ49fgXUlry1t4CpXeErJHnQ44JgTSKMaZUdf17cfn5mHchfJ4KRBZRFA/Coo+MUF5+gOaCQ==}
+
   '@tailwindcss/oxide-android-arm64@4.1.17':
     resolution: {integrity: sha512-BMqpkJHgOZ5z78qqiGE6ZIRExyaHyuxjgrJ6eBO5+hfrfGkuya0lYfw8fRHG77gdTjWkNWEEm+qeG2cDMxArLQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [android]
+
+  '@tailwindcss/oxide-android-arm64@4.1.18':
+    resolution: {integrity: sha512-dJHz7+Ugr9U/diKJA0W6N/6/cjI+ZTAoxPf9Iz9BFRF2GzEX8IvXxFIi/dZBloVJX/MZGvRuFA9rqwdiIEZQ0Q==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [android]
@@ -7349,8 +7292,20 @@ packages:
     cpu: [arm64]
     os: [darwin]
 
+  '@tailwindcss/oxide-darwin-arm64@4.1.18':
+    resolution: {integrity: sha512-Gc2q4Qhs660bhjyBSKgq6BYvwDz4G+BuyJ5H1xfhmDR3D8HnHCmT/BSkvSL0vQLy/nkMLY20PQ2OoYMO15Jd0A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [darwin]
+
   '@tailwindcss/oxide-darwin-x64@4.1.17':
     resolution: {integrity: sha512-gdhEPLzke2Pog8s12oADwYu0IAw04Y2tlmgVzIN0+046ytcgx8uZmCzEg4VcQh+AHKiS7xaL8kGo/QTiNEGRog==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [darwin]
+
+  '@tailwindcss/oxide-darwin-x64@4.1.18':
+    resolution: {integrity: sha512-FL5oxr2xQsFrc3X9o1fjHKBYBMD1QZNyc1Xzw/h5Qu4XnEBi3dZn96HcHm41c/euGV+GRiXFfh2hUCyKi/e+yw==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [darwin]
@@ -7361,8 +7316,20 @@ packages:
     cpu: [x64]
     os: [freebsd]
 
+  '@tailwindcss/oxide-freebsd-x64@4.1.18':
+    resolution: {integrity: sha512-Fj+RHgu5bDodmV1dM9yAxlfJwkkWvLiRjbhuO2LEtwtlYlBgiAT4x/j5wQr1tC3SANAgD+0YcmWVrj8R9trVMA==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [freebsd]
+
   '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.17':
     resolution: {integrity: sha512-k7jWk5E3ldAdw0cNglhjSgv501u7yrMf8oeZ0cElhxU6Y2o7f8yqelOp3fhf7evjIS6ujTI3U8pKUXV2I4iXHQ==}
+    engines: {node: '>= 10'}
+    cpu: [arm]
+    os: [linux]
+
+  '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.18':
+    resolution: {integrity: sha512-Fp+Wzk/Ws4dZn+LV2Nqx3IilnhH51YZoRaYHQsVq3RQvEl+71VGKFpkfHrLM/Li+kt5c0DJe/bHXK1eHgDmdiA==}
     engines: {node: '>= 10'}
     cpu: [arm]
     os: [linux]
@@ -7373,8 +7340,20 @@ packages:
     cpu: [arm64]
     os: [linux]
 
+  '@tailwindcss/oxide-linux-arm64-gnu@4.1.18':
+    resolution: {integrity: sha512-S0n3jboLysNbh55Vrt7pk9wgpyTTPD0fdQeh7wQfMqLPM/Hrxi+dVsLsPrycQjGKEQk85Kgbx+6+QnYNiHalnw==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
   '@tailwindcss/oxide-linux-arm64-musl@4.1.17':
     resolution: {integrity: sha512-HvZLfGr42i5anKtIeQzxdkw/wPqIbpeZqe7vd3V9vI3RQxe3xU1fLjss0TjyhxWcBaipk7NYwSrwTwK1hJARMg==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [linux]
+
+  '@tailwindcss/oxide-linux-arm64-musl@4.1.18':
+    resolution: {integrity: sha512-1px92582HkPQlaaCkdRcio71p8bc8i/ap5807tPRDK/uw953cauQBT8c5tVGkOwrHMfc2Yh6UuxaH4vtTjGvHg==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [linux]
@@ -7385,8 +7364,20 @@ packages:
     cpu: [x64]
     os: [linux]
 
+  '@tailwindcss/oxide-linux-x64-gnu@4.1.18':
+    resolution: {integrity: sha512-v3gyT0ivkfBLoZGF9LyHmts0Isc8jHZyVcbzio6Wpzifg/+5ZJpDiRiUhDLkcr7f/r38SWNe7ucxmGW3j3Kb/g==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
   '@tailwindcss/oxide-linux-x64-musl@4.1.17':
     resolution: {integrity: sha512-k7f+pf9eXLEey4pBlw+8dgfJHY4PZ5qOUFDyNf7SI6lHjQ9Zt7+NcscjpwdCEbYi6FI5c2KDTDWyf2iHcCSyyQ==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [linux]
+
+  '@tailwindcss/oxide-linux-x64-musl@4.1.18':
+    resolution: {integrity: sha512-bhJ2y2OQNlcRwwgOAGMY0xTFStt4/wyU6pvI6LSuZpRgKQwxTec0/3Scu91O8ir7qCR3AuepQKLU/kX99FouqQ==}
     engines: {node: '>= 10'}
     cpu: [x64]
     os: [linux]
@@ -7403,8 +7394,26 @@ packages:
       - '@emnapi/wasi-threads'
       - tslib
 
+  '@tailwindcss/oxide-wasm32-wasi@4.1.18':
+    resolution: {integrity: sha512-LffYTvPjODiP6PT16oNeUQJzNVyJl1cjIebq/rWWBF+3eDst5JGEFSc5cWxyRCJ0Mxl+KyIkqRxk1XPEs9x8TA==}
+    engines: {node: '>=14.0.0'}
+    cpu: [wasm32]
+    bundledDependencies:
+      - '@napi-rs/wasm-runtime'
+      - '@emnapi/core'
+      - '@emnapi/runtime'
+      - '@tybys/wasm-util'
+      - '@emnapi/wasi-threads'
+      - tslib
+
   '@tailwindcss/oxide-win32-arm64-msvc@4.1.17':
     resolution: {integrity: sha512-JU5AHr7gKbZlOGvMdb4722/0aYbU+tN6lv1kONx0JK2cGsh7g148zVWLM0IKR3NeKLv+L90chBVYcJ8uJWbC9A==}
+    engines: {node: '>= 10'}
+    cpu: [arm64]
+    os: [win32]
+
+  '@tailwindcss/oxide-win32-arm64-msvc@4.1.18':
+    resolution: {integrity: sha512-HjSA7mr9HmC8fu6bdsZvZ+dhjyGCLdotjVOgLA2vEqxEBZaQo9YTX4kwgEvPCpRh8o4uWc4J/wEoFzhEmjvPbA==}
     engines: {node: '>= 10'}
     cpu: [arm64]
     os: [win32]
@@ -7415,8 +7424,18 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@tailwindcss/oxide-win32-x64-msvc@4.1.18':
+    resolution: {integrity: sha512-bJWbyYpUlqamC8dpR7pfjA0I7vdF6t5VpUGMWRkXVE3AXgIZjYUYAK7II1GNaxR8J1SSrSrppRar8G++JekE3Q==}
+    engines: {node: '>= 10'}
+    cpu: [x64]
+    os: [win32]
+
   '@tailwindcss/oxide@4.1.17':
     resolution: {integrity: sha512-F0F7d01fmkQhsTjXezGBLdrl1KresJTcI3DB8EkScCldyKp3Msz4hub4uyYaVnk88BAS1g5DQjjF6F5qczheLA==}
+    engines: {node: '>= 10'}
+
+  '@tailwindcss/oxide@4.1.18':
+    resolution: {integrity: sha512-EgCR5tTS5bUSKQgzeMClT6iCY3ToqE1y+ZB0AKldj809QXk1Y+3jB0upOYZrn9aGIzPtUsP7sX4QQ4XtjBB95A==}
     engines: {node: '>= 10'}
 
   '@tailwindcss/postcss@4.1.17':
@@ -7426,6 +7445,11 @@ packages:
     resolution: {integrity: sha512-w31dd8HOx3k9vPtcQh5QHP9GwKcgbMp87j58qi6xgiBnFFtKEAgCWnDw4qUT8aHwkCp8bKvb/KGKWWHedP0AAg==}
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders || >=4.0.0-alpha.20 || >=4.0.0-beta.1'
+
+  '@tailwindcss/vite@4.1.18':
+    resolution: {integrity: sha512-jVA+/UpKL1vRLg6Hkao5jldawNmRo7mQYrZtNHMIVpLfLhDml5nMRUo/8MwoX2vNXvnaXNNMedrMfMugAVX1nA==}
+    peerDependencies:
+      vite: ^5.2.0 || ^6 || ^7
 
   '@tanstack/react-table@8.21.3':
     resolution: {integrity: sha512-5nNMTSETP4ykGegmVkhjcS8tTLW6Vl4axfEGQN3v0zdHYbK4UfoqfPChclTrJ4EoK9QynqAu9oUf8VEmrpZ5Ww==}
@@ -8459,9 +8483,6 @@ packages:
     resolution: {integrity: sha512-4Dj6M28JB+oAH8kFkTLUo+a2jwOFkuqb3yucU0CANcRRUbxS0cP0nZYCGjcc3BNXwRIsUVmDGgzawme7zvJHvg==}
     engines: {node: '>=12'}
 
-  any-promise@1.3.0:
-    resolution: {integrity: sha512-7UvmKalWRt1wgjL1RrGxoSJW/0QZFIegpeGvZG9kjp8vrRu55XTHbwnqq2GpXm9uLbcuhxm3IqX9OB4MZR1b2A==}
-
   anymatch@3.1.3:
     resolution: {integrity: sha512-KMReFUr0B4t+D+OBkjR3KYqvocp2XaSzO55UcB6mgQMd3KbcE+mWTyvVV7D/zsdEbNnV6acZUutkiHQXvTr1Rw==}
     engines: {node: '>= 8'}
@@ -8476,9 +8497,6 @@ packages:
 
   aproba@2.1.0:
     resolution: {integrity: sha512-tLIEcj5GuR2RSTnxNKdkK0dJ/GrC7P38sUkiDmDuHfsHmbagTFAxDVIBltoklXEVIQ/f14IL8IMJ5pn9Hez1Ew==}
-
-  arg@5.0.2:
-    resolution: {integrity: sha512-PYjyFOLKQ9y57JvQ6QLo8dAgNqswh8M1RMJYdQduT6xbWSgK36P/Z/v+p888pM69jMMfS8Xd8F6I1kQ/I9HUGg==}
 
   argparse@1.0.10:
     resolution: {integrity: sha512-o5Roy6tNG4SL/FOkCAN6RzjiakZS25RLYFrcMttJqbdd8BWrnA+fGz57iN5Pb06pvBGvl5gQ0B48dJlslXvoTg==}
@@ -8671,10 +8689,6 @@ packages:
     resolution: {integrity: sha512-X4CiKlcV2GjnCMwnKAfbVWpHa++65th9TuzAEYtZoATiOE2DQKhSp4CJlyLoTqdhBKlXjpXjCTYPNNFS33Fi6w==}
     engines: {node: ^20.17.0 || >=22.9.0}
 
-  binary-extensions@2.3.0:
-    resolution: {integrity: sha512-Ceh+7ox5qe7LJuLHoY0feh3pHuUDHAcRUeyL2VYghZwfpkNIy/+8Ocg0a3UuSoYzavmylwuLWQOf3hl0jjMMIw==}
-    engines: {node: '>=8'}
-
   binary-search-bounds@2.0.5:
     resolution: {integrity: sha512-H0ea4Fd3lS1+sTEB2TgcLoK21lLhwEJzlQv3IN47pJS976Gx4zoWe0ak3q+uYh60ppQxg9F16Ri4tS1sfD4+jA==}
 
@@ -8780,10 +8794,6 @@ packages:
     resolution: {integrity: sha512-P8BjAsXvZS+VIDUI11hHCQEv74YT67YUi5JJFNWIqL235sBmjX4+qx9Muvls5ivyNENctx46xQLQ3aTuE7ssaQ==}
     engines: {node: '>=6'}
 
-  camelcase-css@2.0.1:
-    resolution: {integrity: sha512-QOSvevhslijgYwRx6Rv7zKdMF8lbRmx+uQGx2+vDc+KI/eBnsy9kit5aj23AgGu3pa4t9AgwbnXWqS+iOY+2aA==}
-    engines: {node: '>= 6'}
-
   camelcase-keys@6.2.2:
     resolution: {integrity: sha512-YrwaA0vEKazPBkn0ipTiMpSajYDSe+KjQfrjhcBMxJt/znbvlHd8Pw/Vamaz5EB4Wfhs3SUR3Z9mwRu/P3s3Yg==}
     engines: {node: '>=8'}
@@ -8853,10 +8863,6 @@ packages:
   cheerio@1.1.2:
     resolution: {integrity: sha512-IkxPpb5rS/d1IiLbHMgfPuS0FgiWTtFIm/Nj+2woXDLTZ7fOT2eqzgYbdMlLweqlHbsZjxEChoVK+7iph7jyQg==}
     engines: {node: '>=20.18.1'}
-
-  chokidar@3.6.0:
-    resolution: {integrity: sha512-7VT13fmjotKpGipCW9JEQAusEPE+Ei8nl6/g4FBAmIm0GOOLMua9NDDo/DWp0ZAxCr3cPq5ZpBqmPAQgDda2Pw==}
-    engines: {node: '>= 8.10.0'}
 
   chownr@3.0.0:
     resolution: {integrity: sha512-+IxzY9BZOQd/XuYPRmrvEVjF/nqj5kgT4kEq7VofrDoM1MxoRjEWkrCC3EtLi59TVawxTAn+orJwFQcrqEN1+g==}
@@ -9006,10 +9012,6 @@ packages:
 
   commander@2.20.3:
     resolution: {integrity: sha512-GpVkmM8vF2vQUkj2LvZmD35JxeJOLCwJ9cUkugyk2nuhbv3+mJvpLYYt+0+USMxE+oj+ey/lJEnhZw75x/OMcQ==}
-
-  commander@4.1.1:
-    resolution: {integrity: sha512-NOKm8xhkzAjzFx8B2v5OAHT+u5pRQc2UCa2Vq9jYL/31o2wi9mxBA7LIFs3sV5VSC49z6pEhfbMULvShKj26WA==}
-    engines: {node: '>= 6'}
 
   commander@7.2.0:
     resolution: {integrity: sha512-QrWXB+ZQSVPmIWIhtEO9H+gwHaMGYiF5ChvoJ+K9ZGHG/sVsa6yiesAD1GC/x46sET00Xlwo1u49RVVVzvcSkw==}
@@ -9562,18 +9564,12 @@ packages:
   dfa@1.2.0:
     resolution: {integrity: sha512-ED3jP8saaweFTjeGX8HQPjeC1YYyZs98jGNZx6IiBvxW7JG5v492kamAQB3m2wop07CvU/RQmzcKr6bgcC5D/Q==}
 
-  didyoumean@1.2.2:
-    resolution: {integrity: sha512-gxtyfqMg7GKyhQmb056K7M3xszy/myH8w+B4RT+QXBQsvAOdc3XymqDDPHx1BgPgsdAA5SIifona89YtRATDzw==}
-
   dir-glob@3.0.1:
     resolution: {integrity: sha512-WkrWp9GR4KXfKGYzOLmTuGVi1UWFfws377n9cc55/tb6DuqyF6pcQ5AbiHEshaDpY9v6oaSr2XCDidGmMwdzIA==}
     engines: {node: '>=8'}
 
   discontinuous-range@1.0.0:
     resolution: {integrity: sha512-c68LpLbO+7kP/b1Hr1qs8/BJ09F5khZGTxqxZuhzxpmwJKOgRFHJWIb9/KmqnqHhLdO55aOxFH/EGBvUQbL/RQ==}
-
-  dlv@1.1.3:
-    resolution: {integrity: sha512-+HlytyjlPKnIG8XuRG8WvmBP8xs8P71y+SKKS6ZXWoEgLuePxtDoUEiH7WkdePWrQ5JBpE6aoVqfZfJUQkjXwA==}
 
   dnd-core@16.0.1:
     resolution: {integrity: sha512-HK294sl7tbw6F6IeuK16YSBUoorvHpY8RHO+9yFfaJyCDVb6n7PRcezrOEOa2SBCqiYpemh5Jx20ZcjKdFAVng==}
@@ -10663,10 +10659,6 @@ packages:
     resolution: {integrity: sha512-n4ZT37wG78iz03xPRKJrHTdZbe3IicyucEtdRsV5yglwc3GyUfbAfpSeD0FJ41NbUNSt5wbhqfp1fS+BgnvDFQ==}
     engines: {node: '>= 0.4'}
 
-  is-binary-path@2.1.0:
-    resolution: {integrity: sha512-ZMERYes6pDydyuGidse7OsHxtbI7WVeUEozgR/g7rd0xUimYNlvZRE/K2MgZTjWy725IfelLeVcEM97mmtRGXw==}
-    engines: {node: '>=8'}
-
   is-boolean-object@1.2.2:
     resolution: {integrity: sha512-wa56o2/ElJMYqjCjGkXri7it5FbebW5usLw/nPmCMs5DeZ7eziSYZhSmPRn0txqeW4LnAmQQU7FgqLpsEFKM4A==}
     engines: {node: '>= 0.4'}
@@ -11047,10 +11039,6 @@ packages:
     peerDependenciesMeta:
       node-notifier:
         optional: true
-
-  jiti@1.21.7:
-    resolution: {integrity: sha512-/imKNG4EbWNrVjoNC/1H5/9GFy+tqjGBHCaSsN+P2RnPqjsLmv6UD3Ej+Kj8nBWaRAwyk7kK5ZUc+OEatnTR3A==}
-    hasBin: true
 
   jiti@2.6.1:
     resolution: {integrity: sha512-ekilCSN1jwRvIbgeg/57YFh8qQDNbwDb9xT/qu2DAHbFFZUicIl4ygVaAvzveMhMVr3LnpSKTNnwt8PoOfmKhQ==}
@@ -11856,9 +11844,6 @@ packages:
     resolution: {integrity: sha512-WWdIxpyjEn+FhQJQQv9aQAYlHoNVdzIzUySNV1gHUPDSdZJ3yZn7pAAbQcV7B56Mvu881q9FZV+0Vx2xC44VWA==}
     engines: {node: ^18.17.0 || >=20.5.0}
 
-  mz@2.7.0:
-    resolution: {integrity: sha512-z81GNO7nnYMEhrGh9LeymoE4+Yr0Wn5McHIZMK5cfQCl+NDX08sCZgUc9/6MHni9IWuFLm1Z3HTCXu2z9fN62Q==}
-
   nano-spawn@2.0.0:
     resolution: {integrity: sha512-tacvGzUY5o2D8CBh2rrwxyNojUsZNU2zjNTzKQrkgGJQTbGAfArVWXSKMBokBeeg6C7OLRGUEyoFlYbfeWQIqw==}
     engines: {node: '>=20.17'}
@@ -12016,10 +12001,6 @@ packages:
   object-assign@4.1.1:
     resolution: {integrity: sha512-rJgTQnkUnH1sFw8yT6VSU3zD3sWmu6sZhIseY8VX+GRu3P6F7Fu+JNDoXfklElbLJSnc3FUQHVe4cU5hj+BcUg==}
     engines: {node: '>=0.10.0'}
-
-  object-hash@3.0.0:
-    resolution: {integrity: sha512-RSn9F68PjH9HqtltsSnqYC1XXoWe9Bju5+213R98cNGttag9q9yAOTzdbsqvIa7aNm5WffBZFpWYr2aWrklWAw==}
-    engines: {node: '>= 6'}
 
   object-inspect@1.13.4:
     resolution: {integrity: sha512-W67iLl4J2EXEGTbfeHCffrjDfitvLANg0UlX3wFUUSTx92KXRFegMHUVgSqE+wvhAbi4WqjGg9czysTV2Epbew==}
@@ -12268,10 +12249,6 @@ packages:
     engines: {node: '>=0.10'}
     hasBin: true
 
-  pify@2.3.0:
-    resolution: {integrity: sha512-udgsAY+fTnvv7kI7aaxbqwWNb0AHiB0qBO89PZKPkoTmGOgdbrHDKD+0B2X4uTfJ/FT1R09r9gTsjUjNJotuog==}
-    engines: {node: '>=0.10.0'}
-
   pify@6.1.0:
     resolution: {integrity: sha512-KocF8ve28eFjjuBKKGvzOBGzG8ew2OqOOSxTTZhirkzH7h3BI1vyzqlR0qbfcDBve1Yzo3FVlWUAtCRrbVN8Fw==}
     engines: {node: '>=14.16'}
@@ -12303,48 +12280,8 @@ packages:
     resolution: {integrity: sha512-/+5VFTchJDoVj3bhoqi6UeymcD00DAwb1nJwamzPvHEszJ4FpF6SNNbUbOS8yI56qHzdV8eK0qEfOSiodkTdxg==}
     engines: {node: '>= 0.4'}
 
-  postcss-import@15.1.0:
-    resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
-    engines: {node: '>=14.0.0'}
-    peerDependencies:
-      postcss: ^8.0.0
-
-  postcss-js@4.1.0:
-    resolution: {integrity: sha512-oIAOTqgIo7q2EOwbhb8UalYePMvYoIeRY2YKntdpFQXNosSu3vLrniGgmH9OKs/qAkfoj5oB3le/7mINW1LCfw==}
-    engines: {node: ^12 || ^14 || >= 16}
-    peerDependencies:
-      postcss: ^8.4.21
-
-  postcss-load-config@6.0.1:
-    resolution: {integrity: sha512-oPtTM4oerL+UXmx+93ytZVN82RrlY/wPUV8IeDxFrzIjXOLF1pN+EmKPLbubvKHT2HC20xXsCAH2Z+CKV6Oz/g==}
-    engines: {node: '>= 18'}
-    peerDependencies:
-      jiti: '>=1.21.0'
-      postcss: '>=8.0.9'
-      tsx: ^4.8.1
-      yaml: ^2.4.2
-    peerDependenciesMeta:
-      jiti:
-        optional: true
-      postcss:
-        optional: true
-      tsx:
-        optional: true
-      yaml:
-        optional: true
-
-  postcss-nested@6.2.0:
-    resolution: {integrity: sha512-HQbt28KulC5AJzG+cZtj9kvKB93CFCdLvog1WFLf1D+xmMvPGlBstkpTEZfK5+AN9hfJocyBFCNiqyS48bpgzQ==}
-    engines: {node: '>=12.0'}
-    peerDependencies:
-      postcss: ^8.2.14
-
   postcss-selector-parser@6.0.10:
     resolution: {integrity: sha512-IQ7TZdoaqbT+LCpShg46jnZVlhWD2w6iQYAcYXfHARZ7X1t/UGhhceQDs5X0cGqKvYlHNOuv7Oa1xmb0oQuA3w==}
-    engines: {node: '>=4'}
-
-  postcss-selector-parser@6.1.2:
-    resolution: {integrity: sha512-Q8qQfPiZ+THO/3ZrOrO0cJJKfpYCagtMUkXbnEfmgUjwXg6z/WBeOyS9APBBPCTSiDV+s4SwQGu8yFsiMRIudg==}
     engines: {node: '>=4'}
 
   postcss-selector-parser@7.1.1:
@@ -12924,9 +12861,6 @@ packages:
     peerDependencies:
       react: 19.2.1
 
-  read-cache@1.0.0:
-    resolution: {integrity: sha512-Owdv/Ft7IjOgm/i0xvNDZ1LrRANRfew4b2prF3OWMQLxLfu3bS8FVhCsrSCMK4lR56Y9ya+AThoTpDCTxCmpRA==}
-
   read-cmd-shim@6.0.0:
     resolution: {integrity: sha512-1zM5HuOfagXCBWMN83fuFI/x+T/UhZ7k+KIzhrHXcQoeX5+7gmaDYjELQHmmzIodumBHeByBJT4QYS7ufAgs7A==}
     engines: {node: ^20.17.0 || >=22.9.0}
@@ -12945,10 +12879,6 @@ packages:
 
   readable-stream@2.3.8:
     resolution: {integrity: sha512-8p0AUk4XODgIewSi0l8Epjs+EVnWiK7NoDIEGU0HhE7+ZyY8D1IMY7odu5lRrFXGg71L15KG8QrPmum45RTtdA==}
-
-  readdirp@3.6.0:
-    resolution: {integrity: sha512-hOS089on8RduqdbhvQ5Z37A0ESjsqz6qnRcffsMU3495FuTdqSm+7bhJ29JvIOsBDEEnan5DPu9t3To9VRlMzA==}
-    engines: {node: '>=8.10.0'}
 
   recharts-scale@0.4.5:
     resolution: {integrity: sha512-kivNFO+0OcUNu7jQquLXAxz1FIwZj8nrj+YkOKc5694NbjCvcT6aSZiIzNzd2Kul4o4rTto8QVR9lMNtxD4G1w==}
@@ -13570,11 +13500,6 @@ packages:
   stylis@4.3.1:
     resolution: {integrity: sha512-EQepAV+wMsIaGVGX1RECzgrcqRRU/0sYOHkeLsZ3fzHaHXZy4DaOOX0vOlGQdlsjkh3mFHAIlVimpwAs4dslyQ==}
 
-  sucrase@3.35.0:
-    resolution: {integrity: sha512-8EbVDiu9iN/nESwxeSxDKe0dunta1GOlHufmSSXxMD2z2/tMZpDMpvXQGsc+ajGo8y2uYUmixaSRUc/QPoQ0GA==}
-    engines: {node: '>=16 || 14 >=14.17'}
-    hasBin: true
-
   suncalc@1.9.0:
     resolution: {integrity: sha512-vMJ8Byp1uIPoj+wb9c1AdK4jpkSKVAywgHX0lqY7zt6+EWRRC3Z+0Ucfjy/0yxTVO1hwwchZe4uoFNqrIC24+A==}
 
@@ -13636,13 +13561,11 @@ packages:
     peerDependencies:
       tailwindcss: '>=3.0.0 || insiders'
 
-  tailwindcss@3.4.18:
-    resolution: {integrity: sha512-6A2rnmW5xZMdw11LYjhcI5846rt9pbLSabY5XPxo+XWdxwZaFEn47Go4NzFiHu9sNNmr/kXivP1vStfvMaK1GQ==}
-    engines: {node: '>=14.0.0'}
-    hasBin: true
-
   tailwindcss@4.1.17:
     resolution: {integrity: sha512-j9Ee2YjuQqYT9bbRTfTZht9W/ytp5H+jJpZKiYdP/bpnXARAuELt9ofP0lPnmHjbga7SNQIxdTAXCmtKVYjN+Q==}
+
+  tailwindcss@4.1.18:
+    resolution: {integrity: sha512-4+Z+0yiYyEtUVCScyfHCxOYP06L5Ne+JiHhY2IjR2KWMIWhJOYZKLSGZaP5HkZ8+bY0cxfzwDE5uOmzFXyIwxw==}
 
   tapable@2.3.0:
     resolution: {integrity: sha512-g9ljZiwki/LfxmQADO3dEY1CbpmXT5Hm2fJ+QaGKwSXUylMybePR7/67YW7jOrrvjEgL1Fmz5kzyAjWVWLlucg==}
@@ -13651,6 +13574,7 @@ packages:
   tar@7.5.2:
     resolution: {integrity: sha512-7NyxrTE4Anh8km8iEy7o0QYPs+0JKBTj5ZaqHg6B39erLg0qYXN3BijtShwbsNSvQ+LN75+KV+C4QR/f6Gwnpg==}
     engines: {node: '>=18'}
+    deprecated: Old versions of tar are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exhorbitant rates) by contacting i@izs.me
 
   temp-dir@2.0.0:
     resolution: {integrity: sha512-aoBAniQmmwtcKp/7BzsH8Cxzv8OL736p7v1ihGb5e9DJ9kTwGWHrQrVB5+lfVDzfGrdRzXch+ig7LHaY1JTOrg==}
@@ -13672,13 +13596,6 @@ packages:
   texture-compressor@1.0.2:
     resolution: {integrity: sha512-dStVgoaQ11mA5htJ+RzZ51ZxIZqNOgWKAIvtjLrW1AliQQLCmrDqNzQZ8Jh91YealQ95DXt4MEduLzJmbs6lig==}
     hasBin: true
-
-  thenify-all@1.6.0:
-    resolution: {integrity: sha512-RNxQH/qI8/t3thXJDwcstUO4zeqo64+Uy/+sNVRBx4Xn2OX+OZ9oP+iJnNFqplFra2ZUVeKCSa2oVWi3T4uVmA==}
-    engines: {node: '>=0.8'}
-
-  thenify@3.3.1:
-    resolution: {integrity: sha512-RVZSIV5IG10Hk3enotrhvz0T9em6cyHBLkH/YAZuKqd8hRkKhSfCGIcP2KUY0EPxndzANBmNllzWPwak+bheSw==}
 
   threads@1.7.0:
     resolution: {integrity: sha512-Mx5NBSHX3sQYR6iI9VYbgHKBLisyB+xROCBGjjWm1O9wb9vfLxdaGtmT/KCjUqMsSNW6nERzCW3T6H43LqjDZQ==}
@@ -13808,9 +13725,6 @@ packages:
     engines: {node: '>=18.12'}
     peerDependencies:
       typescript: 5.9.3
-
-  ts-interface-checker@0.1.13:
-    resolution: {integrity: sha512-Y/arvbn+rrz3JCKl9C4kVNfTfSm2/mEp5FSz5EsZSANGPSlQrpRI5M4PKF+mJnE52jOO90PnPSc3Ur3bTQw0gA==}
 
   ts-jest@29.4.6:
     resolution: {integrity: sha512-fSpWtOO/1AjSNQguk43hb/JCo16oJDnMJf3CdEGNkqsEX3t0KX96xvyX1D7PfLCpVoKu4MfVrqUkFyblYoY4lA==}
@@ -17255,11 +17169,6 @@ snapshots:
 
   '@esbuild/win32-x64@0.25.12':
     optional: true
-
-  '@eslint-community/eslint-utils@4.9.0(eslint@9.39.1(jiti@1.21.7))':
-    dependencies:
-      eslint: 9.39.1(jiti@1.21.7)
-      eslint-visitor-keys: 3.4.3
 
   '@eslint-community/eslint-utils@4.9.0(eslint@9.39.1(jiti@2.6.1))':
     dependencies:
@@ -21470,9 +21379,9 @@ snapshots:
     dependencies:
       tslib: 2.8.1
 
-  '@sqlrooms/dropzone@0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))':
+  '@sqlrooms/dropzone@0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@4.1.18)':
     dependencies:
-      '@sqlrooms/ui': 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))
+      '@sqlrooms/ui': 0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@4.1.18)
       lucide-react: 0.474.0(react@19.2.1)
       react-dropzone: 14.3.8(react@19.2.1)
     transitivePeerDependencies:
@@ -21483,7 +21392,7 @@ snapshots:
       - react-dom
       - tailwindcss
 
-  '@sqlrooms/ui@0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@3.4.18(yaml@2.8.2))':
+  '@sqlrooms/ui@0.16.4(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(autoprefixer@10.4.22(postcss@8.5.6))(react-dom@19.2.1(react@19.2.1))(react@19.2.1)(tailwindcss@4.1.18)':
     dependencies:
       '@hookform/resolvers': 3.10.0(react-hook-form@7.68.0(react@19.2.1))
       '@radix-ui/react-accordion': 1.2.12(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
@@ -21509,7 +21418,7 @@ snapshots:
       '@radix-ui/react-toggle': 1.1.10(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@radix-ui/react-toggle-group': 1.1.11(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       '@radix-ui/react-tooltip': 1.2.8(@types/react-dom@19.2.3(@types/react@19.2.7))(@types/react@19.2.7)(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
-      '@tailwindcss/typography': 0.5.19(tailwindcss@3.4.18(yaml@2.8.2))
+      '@tailwindcss/typography': 0.5.19(tailwindcss@4.1.18)
       autoprefixer: 10.4.22(postcss@8.5.6)
       class-variance-authority: 0.7.1
       clsx: 2.1.1
@@ -21520,8 +21429,8 @@ snapshots:
       react-hook-form: 7.68.0(react@19.2.1)
       react-resizable-panels: 2.1.9(react-dom@19.2.1(react@19.2.1))(react@19.2.1)
       tailwind-merge: 2.6.0
-      tailwindcss: 3.4.18(yaml@2.8.2)
-      tailwindcss-animate: 1.0.7(tailwindcss@3.4.18(yaml@2.8.2))
+      tailwindcss: 4.1.18
+      tailwindcss-animate: 1.0.7(tailwindcss@4.1.18)
       usehooks-ts: 3.1.1(react@19.2.1)
       zod: 4.1.13
     transitivePeerDependencies:
@@ -21622,40 +21531,86 @@ snapshots:
       source-map-js: 1.2.1
       tailwindcss: 4.1.17
 
+  '@tailwindcss/node@4.1.18':
+    dependencies:
+      '@jridgewell/remapping': 2.3.5
+      enhanced-resolve: 5.18.3
+      jiti: 2.6.1
+      lightningcss: 1.30.2
+      magic-string: 0.30.21
+      source-map-js: 1.2.1
+      tailwindcss: 4.1.18
+
   '@tailwindcss/oxide-android-arm64@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-android-arm64@4.1.18':
     optional: true
 
   '@tailwindcss/oxide-darwin-arm64@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-darwin-arm64@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-darwin-x64@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-darwin-x64@4.1.18':
     optional: true
 
   '@tailwindcss/oxide-freebsd-x64@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-freebsd-x64@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-linux-arm-gnueabihf@4.1.18':
     optional: true
 
   '@tailwindcss/oxide-linux-arm64-gnu@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-linux-arm64-gnu@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-linux-arm64-musl@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-linux-arm64-musl@4.1.18':
     optional: true
 
   '@tailwindcss/oxide-linux-x64-gnu@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-linux-x64-gnu@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-linux-x64-musl@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-linux-x64-musl@4.1.18':
     optional: true
 
   '@tailwindcss/oxide-wasm32-wasi@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-wasm32-wasi@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-win32-arm64-msvc@4.1.17':
     optional: true
 
+  '@tailwindcss/oxide-win32-arm64-msvc@4.1.18':
+    optional: true
+
   '@tailwindcss/oxide-win32-x64-msvc@4.1.17':
+    optional: true
+
+  '@tailwindcss/oxide-win32-x64-msvc@4.1.18':
     optional: true
 
   '@tailwindcss/oxide@4.1.17':
@@ -21673,6 +21628,21 @@ snapshots:
       '@tailwindcss/oxide-win32-arm64-msvc': 4.1.17
       '@tailwindcss/oxide-win32-x64-msvc': 4.1.17
 
+  '@tailwindcss/oxide@4.1.18':
+    optionalDependencies:
+      '@tailwindcss/oxide-android-arm64': 4.1.18
+      '@tailwindcss/oxide-darwin-arm64': 4.1.18
+      '@tailwindcss/oxide-darwin-x64': 4.1.18
+      '@tailwindcss/oxide-freebsd-x64': 4.1.18
+      '@tailwindcss/oxide-linux-arm-gnueabihf': 4.1.18
+      '@tailwindcss/oxide-linux-arm64-gnu': 4.1.18
+      '@tailwindcss/oxide-linux-arm64-musl': 4.1.18
+      '@tailwindcss/oxide-linux-x64-gnu': 4.1.18
+      '@tailwindcss/oxide-linux-x64-musl': 4.1.18
+      '@tailwindcss/oxide-wasm32-wasi': 4.1.18
+      '@tailwindcss/oxide-win32-arm64-msvc': 4.1.18
+      '@tailwindcss/oxide-win32-x64-msvc': 4.1.18
+
   '@tailwindcss/postcss@4.1.17':
     dependencies:
       '@alloc/quick-lru': 5.2.0
@@ -21681,10 +21651,17 @@ snapshots:
       postcss: 8.5.6
       tailwindcss: 4.1.17
 
-  '@tailwindcss/typography@0.5.19(tailwindcss@3.4.18(yaml@2.8.2))':
+  '@tailwindcss/typography@0.5.19(tailwindcss@4.1.18)':
     dependencies:
       postcss-selector-parser: 6.0.10
-      tailwindcss: 3.4.18(yaml@2.8.2)
+      tailwindcss: 4.1.18
+
+  '@tailwindcss/vite@4.1.18(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
+    dependencies:
+      '@tailwindcss/node': 4.1.18
+      '@tailwindcss/oxide': 4.1.18
+      tailwindcss: 4.1.18
+      vite: 7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
 
   '@tanstack/react-table@8.21.3(react-dom@19.2.1(react@19.2.1))(react@19.2.1)':
     dependencies:
@@ -22855,18 +22832,6 @@ snapshots:
     transitivePeerDependencies:
       - supports-color
 
-  '@vitejs/plugin-react@5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
-    dependencies:
-      '@babel/core': 7.28.5
-      '@babel/plugin-transform-react-jsx-self': 7.27.1(@babel/core@7.28.5)
-      '@babel/plugin-transform-react-jsx-source': 7.27.1(@babel/core@7.28.5)
-      '@rolldown/pluginutils': 1.0.0-beta.53
-      '@types/babel__core': 7.20.5
-      react-refresh: 0.18.0
-      vite: 7.2.2(@types/node@24.10.8)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2)
-    transitivePeerDependencies:
-      - supports-color
-
   '@vitejs/plugin-react@5.1.2(vite@7.2.2(@types/node@24.10.8)(jiti@2.6.1)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2))':
     dependencies:
       '@babel/core': 7.28.5
@@ -23103,8 +23068,6 @@ snapshots:
 
   ansi-styles@6.2.3: {}
 
-  any-promise@1.3.0: {}
-
   anymatch@3.1.3:
     dependencies:
       normalize-path: 3.0.0
@@ -23137,8 +23100,6 @@ snapshots:
       - '@75lb/nature'
 
   aproba@2.1.0: {}
-
-  arg@5.0.2: {}
 
   argparse@1.0.10:
     dependencies:
@@ -23264,8 +23225,8 @@ snapshots:
 
   autoprefixer@10.4.22(postcss@8.5.6):
     dependencies:
-      browserslist: 4.28.0
-      caniuse-lite: 1.0.30001754
+      browserslist: 4.28.1
+      caniuse-lite: 1.0.30001764
       fraction.js: 5.3.4
       normalize-range: 0.1.2
       picocolors: 1.1.1
@@ -23377,8 +23338,6 @@ snapshots:
       proc-log: 6.1.0
       read-cmd-shim: 6.0.0
       write-file-atomic: 7.0.0
-
-  binary-extensions@2.3.0: {}
 
   binary-search-bounds@2.0.5: {}
 
@@ -23505,8 +23464,6 @@ snapshots:
 
   callsites@3.1.0: {}
 
-  camelcase-css@2.0.1: {}
-
   camelcase-keys@6.2.2:
     dependencies:
       camelcase: 5.3.1
@@ -23581,18 +23538,6 @@ snapshots:
       parse5-parser-stream: 7.1.2
       undici: 7.18.2
       whatwg-mimetype: 4.0.0
-
-  chokidar@3.6.0:
-    dependencies:
-      anymatch: 3.1.3
-      braces: 3.0.3
-      glob-parent: 5.1.2
-      is-binary-path: 2.1.0
-      is-glob: 4.0.3
-      normalize-path: 3.0.0
-      readdirp: 3.6.0
-    optionalDependencies:
-      fsevents: 2.3.3
 
   chownr@3.0.0: {}
 
@@ -23729,8 +23674,6 @@ snapshots:
   commander@14.0.2: {}
 
   commander@2.20.3: {}
-
-  commander@4.1.1: {}
 
   commander@7.2.0: {}
 
@@ -24341,15 +24284,11 @@ snapshots:
 
   dfa@1.2.0: {}
 
-  didyoumean@1.2.2: {}
-
   dir-glob@3.0.1:
     dependencies:
       path-type: 4.0.0
 
   discontinuous-range@1.0.0: {}
-
-  dlv@1.1.3: {}
 
   dnd-core@16.0.1:
     dependencies:
@@ -24808,47 +24747,6 @@ snapshots:
   eslint-visitor-keys@3.4.3: {}
 
   eslint-visitor-keys@4.2.1: {}
-
-  eslint@9.39.1(jiti@1.21.7):
-    dependencies:
-      '@eslint-community/eslint-utils': 4.9.0(eslint@9.39.1(jiti@1.21.7))
-      '@eslint-community/regexpp': 4.12.2
-      '@eslint/config-array': 0.21.1
-      '@eslint/config-helpers': 0.4.2
-      '@eslint/core': 0.17.0
-      '@eslint/eslintrc': 3.3.1
-      '@eslint/js': 9.39.1
-      '@eslint/plugin-kit': 0.4.1
-      '@humanfs/node': 0.16.7
-      '@humanwhocodes/module-importer': 1.0.1
-      '@humanwhocodes/retry': 0.4.3
-      '@types/estree': 1.0.8
-      ajv: 6.12.6
-      chalk: 4.1.2
-      cross-spawn: 7.0.6
-      debug: 4.4.3
-      escape-string-regexp: 4.0.0
-      eslint-scope: 8.4.0
-      eslint-visitor-keys: 4.2.1
-      espree: 10.4.0
-      esquery: 1.6.0
-      esutils: 2.0.3
-      fast-deep-equal: 3.1.3
-      file-entry-cache: 8.0.0
-      find-up: 5.0.0
-      glob-parent: 6.0.2
-      ignore: 5.3.2
-      imurmurhash: 0.1.4
-      is-glob: 4.0.3
-      json-stable-stringify-without-jsonify: 1.0.1
-      lodash.merge: 4.6.2
-      minimatch: 3.1.2
-      natural-compare: 1.4.0
-      optionator: 0.9.4
-    optionalDependencies:
-      jiti: 1.21.7
-    transitivePeerDependencies:
-      - supports-color
 
   eslint@9.39.1(jiti@2.6.1):
     dependencies:
@@ -25772,10 +25670,6 @@ snapshots:
     dependencies:
       has-bigints: 1.1.0
 
-  is-binary-path@2.1.0:
-    dependencies:
-      binary-extensions: 2.3.0
-
   is-boolean-object@1.2.2:
     dependencies:
       call-bound: 1.0.4
@@ -26355,8 +26249,6 @@ snapshots:
       - esbuild-register
       - supports-color
       - ts-node
-
-  jiti@1.21.7: {}
 
   jiti@2.6.1: {}
 
@@ -27467,12 +27359,6 @@ snapshots:
 
   mute-stream@2.0.0: {}
 
-  mz@2.7.0:
-    dependencies:
-      any-promise: 1.3.0
-      object-assign: 4.1.1
-      thenify-all: 1.6.0
-
   nano-spawn@2.0.0: {}
 
   nanoid@3.3.11: {}
@@ -27647,8 +27533,6 @@ snapshots:
   nwsapi@2.2.22: {}
 
   object-assign@4.1.1: {}
-
-  object-hash@3.0.0: {}
 
   object-inspect@1.13.4: {}
 
@@ -27933,8 +27817,6 @@ snapshots:
 
   pidtree@0.6.0: {}
 
-  pify@2.3.0: {}
-
   pify@6.1.0: {}
 
   pirates@4.0.7: {}
@@ -27965,37 +27847,7 @@ snapshots:
 
   possible-typed-array-names@1.1.0: {}
 
-  postcss-import@15.1.0(postcss@8.5.6):
-    dependencies:
-      postcss: 8.5.6
-      postcss-value-parser: 4.2.0
-      read-cache: 1.0.0
-      resolve: 1.22.11
-
-  postcss-js@4.1.0(postcss@8.5.6):
-    dependencies:
-      camelcase-css: 2.0.1
-      postcss: 8.5.6
-
-  postcss-load-config@6.0.1(jiti@1.21.7)(postcss@8.5.6)(yaml@2.8.2):
-    dependencies:
-      lilconfig: 3.1.3
-    optionalDependencies:
-      jiti: 1.21.7
-      postcss: 8.5.6
-      yaml: 2.8.2
-
-  postcss-nested@6.2.0(postcss@8.5.6):
-    dependencies:
-      postcss: 8.5.6
-      postcss-selector-parser: 6.1.2
-
   postcss-selector-parser@6.0.10:
-    dependencies:
-      cssesc: 3.0.0
-      util-deprecate: 1.0.2
-
-  postcss-selector-parser@6.1.2:
     dependencies:
       cssesc: 3.0.0
       util-deprecate: 1.0.2
@@ -28584,10 +28436,6 @@ snapshots:
       lodash: 4.17.21
       react: 19.2.1
 
-  read-cache@1.0.0:
-    dependencies:
-      pify: 2.3.0
-
   read-cmd-shim@6.0.0: {}
 
   read-pkg-up@7.0.1:
@@ -28620,10 +28468,6 @@ snapshots:
       safe-buffer: 5.1.2
       string_decoder: 1.1.1
       util-deprecate: 1.0.2
-
-  readdirp@3.6.0:
-    dependencies:
-      picomatch: 2.3.1
 
   recharts-scale@0.4.5:
     dependencies:
@@ -29385,16 +29229,6 @@ snapshots:
 
   stylis@4.3.1: {}
 
-  sucrase@3.35.0:
-    dependencies:
-      '@jridgewell/gen-mapping': 0.3.13
-      commander: 4.1.1
-      glob: 10.5.0
-      lines-and-columns: 1.2.4
-      mz: 2.7.0
-      pirates: 4.0.7
-      ts-interface-checker: 0.1.13
-
   suncalc@1.9.0: {}
 
   supercluster@7.1.5:
@@ -29448,39 +29282,13 @@ snapshots:
 
   tailwind-merge@2.6.0: {}
 
-  tailwindcss-animate@1.0.7(tailwindcss@3.4.18(yaml@2.8.2)):
+  tailwindcss-animate@1.0.7(tailwindcss@4.1.18):
     dependencies:
-      tailwindcss: 3.4.18(yaml@2.8.2)
-
-  tailwindcss@3.4.18(yaml@2.8.2):
-    dependencies:
-      '@alloc/quick-lru': 5.2.0
-      arg: 5.0.2
-      chokidar: 3.6.0
-      didyoumean: 1.2.2
-      dlv: 1.1.3
-      fast-glob: 3.3.3
-      glob-parent: 6.0.2
-      is-glob: 4.0.3
-      jiti: 1.21.7
-      lilconfig: 3.1.3
-      micromatch: 4.0.8
-      normalize-path: 3.0.0
-      object-hash: 3.0.0
-      picocolors: 1.1.1
-      postcss: 8.5.6
-      postcss-import: 15.1.0(postcss@8.5.6)
-      postcss-js: 4.1.0(postcss@8.5.6)
-      postcss-load-config: 6.0.1(jiti@1.21.7)(postcss@8.5.6)(yaml@2.8.2)
-      postcss-nested: 6.2.0(postcss@8.5.6)
-      postcss-selector-parser: 6.1.2
-      resolve: 1.22.11
-      sucrase: 3.35.0
-    transitivePeerDependencies:
-      - tsx
-      - yaml
+      tailwindcss: 4.1.18
 
   tailwindcss@4.1.17: {}
+
+  tailwindcss@4.1.18: {}
 
   tapable@2.3.0: {}
 
@@ -29518,14 +29326,6 @@ snapshots:
     dependencies:
       argparse: 1.0.10
       image-size: 0.7.5
-
-  thenify-all@1.6.0:
-    dependencies:
-      thenify: 3.3.1
-
-  thenify@3.3.1:
-    dependencies:
-      any-promise: 1.3.0
 
   threads@1.7.0:
     dependencies:
@@ -29651,8 +29451,6 @@ snapshots:
   ts-api-utils@2.1.0(typescript@5.9.3):
     dependencies:
       typescript: 5.9.3
-
-  ts-interface-checker@0.1.13: {}
 
   ts-jest@29.4.6(@babel/core@7.28.5)(@jest/transform@30.2.0)(@jest/types@30.2.0)(babel-jest@30.2.0(@babel/core@7.28.5))(jest-util@30.2.0)(jest@30.2.0(@types/node@24.10.2))(typescript@5.9.3):
     dependencies:
@@ -30456,22 +30254,6 @@ snapshots:
       '@types/node': 22.19.2
       fsevents: 2.3.3
       jiti: 2.6.1
-      lightningcss: 1.30.2
-      terser: 5.44.1
-      yaml: 2.8.2
-
-  vite@7.2.2(@types/node@24.10.8)(jiti@1.21.7)(lightningcss@1.30.2)(terser@5.44.1)(yaml@2.8.2):
-    dependencies:
-      esbuild: 0.25.12
-      fdir: 6.5.0(picomatch@4.0.3)
-      picomatch: 4.0.3
-      postcss: 8.5.6
-      rollup: 4.53.2
-      tinyglobby: 0.2.15
-    optionalDependencies:
-      '@types/node': 24.10.8
-      fsevents: 2.3.3
-      jiti: 1.21.7
       lightningcss: 1.30.2
       terser: 5.44.1
       yaml: 2.8.2

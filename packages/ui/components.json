@@ -4,7 +4,7 @@
   "rsc": false,
   "tsx": true,
   "tailwind": {
-    "config": "src/tailwind-preset.ts",
+    "config": "tailwind-preset.css",
     "css": "src/index.css",
     "baseColor": "zinc",
     "cssVariables": true,

@@ -33,8 +33,8 @@ export const MainView = () => {
 
   return (
     <div className="flex h-full w-full flex-row">
-      <MapView className="w-[70%] flex-grow" />
-      <FiltersPanel className="w-[30%] max-w-[400px]" />
+      <MapView className="w-[70%] grow" />
+      <FiltersPanel className="w-[30%] max-w-100" />
     </div>
   );
 };

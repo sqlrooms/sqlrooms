@@ -420,7 +420,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
 
           {form.formState.errors.root && (
             <Alert variant="destructive">
-              <AlertDescription className="whitespace-pre-wrap font-mono text-xs">
+              <AlertDescription className="font-mono text-xs whitespace-pre-wrap">
                 {form.formState.errors.root.message}
               </AlertDescription>
             </Alert>
@@ -432,7 +432,7 @@ const CreateTableForm: FC<CreateTableFormProps> = ({
               control={form.control}
               name="tableName"
               render={({field}) => (
-                <FormItem className="min-w-0 flex-[2]">
+                <FormItem className="min-w-0 flex-2">
                   <FormLabel className="text-xs">
                     {watchView ? 'View name' : 'Table name'}
                   </FormLabel>

@@ -67,7 +67,7 @@ export const QueryEditorPanelEditor: React.FC<{
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
-      className={cn('h-full w-full flex-grow', className)}
+      className={cn('h-full w-full grow', className)}
       options={MONACO_OPTIONS}
       onMount={handleEditorMount}
       tableSchemas={tableSchemas}

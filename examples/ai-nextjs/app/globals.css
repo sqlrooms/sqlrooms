@@ -1,9 +1,13 @@
 @import 'tailwindcss';
 @import 'tw-animate-css';
 
-@source '../node_modules/@sqlrooms/*/dist/*.js';
+@import '@sqlrooms/ui/tailwind-preset.css';
 
-@custom-variant dark (&:is(.dark *));
+@source './**/*.{ts,tsx,js,jsx,mdx}';
+@source '../components/**/*.{ts,tsx,js,jsx,mdx}';
+@source '../../../packages/*/src/**/*.{ts,tsx}';
+@source '{./,../../../}node_modules/@sqlrooms/*/dist/**/*.{js,mjs}';
+@source '{./,../../../}node_modules/.pnpm/node_modules/@sqlrooms/*/dist/**/*.{js,mjs}';
 
 :root {
   --radius: 0.625rem;
@@ -120,4 +124,3 @@
     @apply bg-background text-foreground;
   }
 }
-

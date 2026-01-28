@@ -54,7 +54,7 @@ export const CanvasAssistantDrawer: FC = () => {
                 </Button>
               </DrawerClose>
             </DrawerHeader>
-            <Chat.Messages className="flex-grow overflow-auto px-4" />
+            <Chat.Messages className="grow overflow-auto px-4" />
             <DrawerFooter>
               <Chat.Composer placeholder="What would you like to do?" />
             </DrawerFooter>

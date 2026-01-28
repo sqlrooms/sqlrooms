@@ -419,7 +419,7 @@ export function S3CredentialsForm({
                   control={form.control}
                   name="saveCredential"
                   render={({field}) => (
-                    <FormItem className="flex items-center space-x-2 space-y-0">
+                    <FormItem className="flex items-center space-y-0 space-x-2">
                       <FormControl>
                         <Checkbox
                           onCheckedChange={field.onChange}
@@ -436,7 +436,7 @@ export function S3CredentialsForm({
                           />
                         </TooltipTrigger>
                         <TooltipContent side="bottom">
-                          <pre className="w-[300px] text-wrap break-words text-xs">
+                          <pre className="w-[300px] text-xs text-wrap wrap-break-word">
                             Save this credential securely on your computer for
                             future use. Credentials will be encrypted and stored
                             locally
@@ -470,7 +470,7 @@ export function S3CredentialsForm({
               <div className="flex flex-col gap-4">
                 {/* Auto-fill Section */}
                 <div className="space-y-2">
-                  <label className="text-sm font-medium leading-none">
+                  <label className="text-sm leading-none font-medium">
                     Auto-fill Credentials
                   </label>
                   <Textarea
@@ -537,7 +537,7 @@ export function S3CredentialsForm({
                               handleInputChange();
                             }}
                           />
-                          <div className="text-muted-foreground absolute right-3 top-0 flex h-9 gap-1">
+                          <div className="text-muted-foreground absolute top-0 right-3 flex h-9 gap-1">
                             <button
                               type="button"
                               onClick={() =>
@@ -581,7 +581,7 @@ export function S3CredentialsForm({
                               handleInputChange();
                             }}
                           />
-                          <div className="text-muted-foreground absolute right-3 top-0 flex h-9 gap-1">
+                          <div className="text-muted-foreground absolute top-0 right-3 flex h-9 gap-1">
                             <button
                               type="button"
                               onClick={() => toggleVisibility('sessionToken')}
