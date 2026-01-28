@@ -127,6 +127,22 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     options,
   });
 
+  const dimensions = useAspectRatioDimensions({
+    containerRef,
+    width,
+    height,
+    aspectRatio,
+  });
+  const changeDimensions = useCallback(
+    (width: number, height: number) => {
+      embed?.view.width(width).height(height).runAsync();
+    },
+    [embed],
+  );
+  useEffect(() => {
+    changeDimensions(dimensions.width, dimensions.height);
+  }, [changeDimensions, dimensions.width, dimensions.height]);
+
   return (
     <VegaChartContextProvider value={{embed}}>
       <div
@@ -149,12 +165,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
               className="overflow-visible"
               asChild
             >
-              <div
-                ref={ref}
-                // Ensure the Vega SVG title isn't clipped when it shifts upward
-                // on small container widths.
-                className="[&_svg]:overflow-visible"
-              />
+              <div ref={ref} className="[&_svg]:overflow-visible" />
             </AspectRatio>
           )
         )}
