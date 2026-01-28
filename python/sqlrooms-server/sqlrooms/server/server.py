@@ -15,6 +15,7 @@ from .crdt.ws import CrdtWs
 
 logger = logging.getLogger(__name__)
 
+
 def _build_arrow_frame(query_id: str, arrow_bytes: bytes) -> bytes:
     header_obj = {"type": "arrow", "queryId": query_id}
     header_bytes = json.dumps(header_obj).encode("utf-8")
@@ -50,16 +51,26 @@ async def handle_query_ws(send, cache, query):
                 payload = _build_arrow_frame(query_id, data)  # bytes
                 send(payload, OpCode.BINARY)
         elif rtype == "json":
-            send({"type": "json", "queryId": query_id, "data": result["data"]}, OpCode.TEXT)
+            send(
+                {"type": "json", "queryId": query_id, "data": result["data"]},
+                OpCode.TEXT,
+            )
         elif rtype == "ok":
             send({"type": "ok", "queryId": query_id}, OpCode.TEXT)
         else:
             send(
-                {"type": "error", "queryId": query_id, "error": "Unexpected result type"},
+                {
+                    "type": "error",
+                    "queryId": query_id,
+                    "error": "Unexpected result type",
+                },
                 OpCode.TEXT,
             )
     except concurrent.futures.CancelledError:
-        send({"type": "error", "queryId": query_id, "error": "Query was cancelled"}, OpCode.TEXT)
+        send(
+            {"type": "error", "queryId": query_id, "error": "Query was cancelled"},
+            OpCode.TEXT,
+        )
     except Exception as e:
         logger.exception("Error executing query")
         send({"type": "error", "queryId": query_id, "error": str(e)}, OpCode.TEXT)
@@ -147,7 +158,9 @@ def server(
         if crdt_ws is not None:
             crdt_ws.register_conn(conn_id)
         try:
-            res.upgrade(key or "", protocol or "", extensions or "", socket_context, conn_id)
+            res.upgrade(
+                key or "", protocol or "", extensions or "", socket_context, conn_id
+            )
         except Exception:
             # Best-effort; if upgrade fails, socketify will close
             try:
@@ -172,7 +185,9 @@ def server(
                 conn_id = int(ws.get_user_data())  # type: ignore[attr-defined]
             except Exception:
                 conn_id = -1
-            handled = await crdt_ws.maybe_handle_json(ws, conn_id=conn_id, message=query)
+            handled = await crdt_ws.maybe_handle_json(
+                ws, conn_id=conn_id, message=query
+            )
             if handled:
                 return
 
@@ -234,7 +249,9 @@ def server(
                     channel = f"__conn:{conn_id}" if conn_id is not None else None
                     if channel is None:
                         return False
-                    if opcode == OpCode.TEXT and not isinstance(payload, (str, bytes, bytearray)):
+                    if opcode == OpCode.TEXT and not isinstance(
+                        payload, (str, bytes, bytearray)
+                    ):
                         try:
                             payload = ujson.dumps(payload)
                         except Exception:
@@ -270,7 +287,9 @@ def server(
                 except Exception:
                     conn_id = -1
                 try:
-                    await crdt_ws.handle_binary_update(ws, conn_id=conn_id, payload=message_bytes)
+                    await crdt_ws.handle_binary_update(
+                        ws, conn_id=conn_id, payload=message_bytes
+                    )
                 except Exception as exc:
                     logger.exception("Failed to process CRDT binary message")
                     ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
@@ -288,10 +307,14 @@ def server(
                     await crdt_ws.handle_binary_update(
                         ws,
                         conn_id=conn_id,
-                        payload=message.tobytes() if isinstance(message, memoryview) else bytes(message),
+                        payload=message.tobytes()
+                        if isinstance(message, memoryview)
+                        else bytes(message),
                     )
                 except Exception as exc:
-                    logger.exception("Failed to process CRDT binary payload (bytes-like)")
+                    logger.exception(
+                        "Failed to process CRDT binary payload (bytes-like)"
+                    )
                     ws.send({"type": "error", "error": str(exc)}, OpCode.TEXT)
                 return
             if crdt_enabled:

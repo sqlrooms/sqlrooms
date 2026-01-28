@@ -103,6 +103,66 @@ function MapView() {
 
 For more details, see the [Mosaic API documentation](/api/mosaic/) and the [DeckGL + Mosaic example](https://github.com/sqlrooms/examples/tree/main/deckgl-mosaic).
 
+### @sqlrooms/ai
+
+#### Per-session chat + analysis state
+
+AI chat state is now **scoped per session** (instead of a single global chat instance). This enables multiple sessions to stream concurrently without overwriting each other when you switch sessions.
+
+- **Removed global state**: `state.ai.prompt`, `state.ai.isRunning` (now per-session)
+- **Breaking method signature changes**:
+  - `startAnalysis(sendMessage)` → `startAnalysis(sessionId)`
+  - `cancelAnalysis()` → `cancelAnalysis(sessionId)`
+- **New per-session accessors**:
+  - `getPrompt(sessionId)` / `setPrompt(sessionId, prompt)`
+  - `getIsRunning(sessionId)` / `setIsRunning(sessionId, isRunning)`
+- **New hook**: `useSessionChat(sessionId)` for session-scoped chat (replaces legacy single-instance patterns)
+- **Mounting requirement**: if you render AI primitives directly (e.g. `QueryControls`, `AnalysisResultsContainer`) you must mount chat providers once via `Chat.Root` (it mounts `SessionChatManager`).
+
+#### Before
+
+```tsx
+const prompt = useRoomStore((s) => s.ai.prompt);
+const isRunning = useRoomStore((s) => s.ai.isRunning);
+
+// startAnalysis used to take a sendMessage fn (global chat instance)
+await useRoomStore.getState().ai.startAnalysis(sendMessage);
+```
+
+#### After
+
+```tsx
+const currentSession = useRoomStore((s) => s.ai.getCurrentSession());
+const sessionId = currentSession?.id;
+
+const prompt = useRoomStore((s) => (sessionId ? s.ai.getPrompt(sessionId) : ''));
+const isRunning = useRoomStore((s) =>
+  sessionId ? s.ai.getIsRunning(sessionId) : false,
+);
+
+if (sessionId) {
+  await useRoomStore.getState().ai.startAnalysis(sessionId);
+}
+```
+
+#### Recommended UI composition
+
+Use `Chat.Root` once at the top of your AI UI tree (it mounts `SessionChatManager`):
+
+```tsx
+import {Chat} from '@sqlrooms/ai';
+
+export function MyAiPanel() {
+  return (
+    <Chat.Root>
+      <Chat.Sessions />
+      <Chat.Messages />
+      <Chat.Composer />
+    </Chat.Root>
+  );
+}
+```
+
 ## 0.26.0-rc.5
 
 - There's no combined config in the store anymore. We decided to split the config into individual slices' configs to avoid confusion and simplify the store typing.

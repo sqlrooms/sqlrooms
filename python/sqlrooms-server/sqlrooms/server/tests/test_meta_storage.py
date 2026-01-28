@@ -73,5 +73,3 @@ def test_meta_storage_attached_db(tmp_path):
         assert row2 is not None and row2[0] == b"\xaa\xbb"
     finally:
         db_async.force_checkpoint_and_close()
-
-

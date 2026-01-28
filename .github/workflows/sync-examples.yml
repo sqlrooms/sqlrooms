@@ -8,9 +8,20 @@ on:
   #     - 'docs/media/examples/**'
   #     - '.github/workflows/sync-examples.yml'
   workflow_dispatch:
+    inputs:
+      build_examples:
+        description: Run the examples build workflow before syncing
+        type: boolean
+        default: false
 
 jobs:
+  build-examples:
+    if: ${{ inputs.build_examples }}
+    uses: ./.github/workflows/build-examples.yml
+
   sync:
+    needs: [build-examples]
+    if: ${{ always() && (!inputs.build_examples || needs.build-examples.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source

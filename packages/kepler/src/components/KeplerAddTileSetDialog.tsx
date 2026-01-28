@@ -1,4 +1,4 @@
-import {useCallback} from 'react';
+import {useCallback, useMemo} from 'react';
 
 import {
   Dialog,
@@ -11,11 +11,12 @@ import {
 
 import {LoadTileSetFactory} from '@kepler.gl/components';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useIntl} from 'react-intl';
 
-const LoadTileSet = KeplerInjector.get(LoadTileSetFactory);
+const LoadTileSet = getKeplerFactory(LoadTileSetFactory);
+
 export type LoadTileSet = (args: {
   tileset: {name: string; type: string; metadata: Record<string, any>};
   metadata?: Record<string, any>;
@@ -39,7 +40,15 @@ function LoadTileSetContent({
     },
     [loadTileSet, onClose],
   );
-  return <LoadTileSet intl={intl} onTilesetAdded={onTilesetAdded} />;
+  const meta = useMemo(() => ({}), []); // TODO: add metadata
+  return (
+    <LoadTileSet
+      meta={meta}
+      isAddingDatasets={false}
+      intl={intl}
+      onTilesetAdded={onTilesetAdded}
+    />
+  );
 }
 
 export function KeplerAddTileSetDialog({

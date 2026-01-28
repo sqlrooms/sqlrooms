@@ -13,6 +13,7 @@ import {FC} from 'react';
 import QueryDataTable from './QueryDataTable';
 import * as arrow from 'apache-arrow';
 import {DataTableArrowPaginated} from './DataTableArrowPaginated';
+import {ArrowDataTableValueFormatter} from './useArrowDataTable';
 
 /**
  * A modal component for displaying a table with data from a SQL query.
@@ -40,21 +41,25 @@ import {DataTableArrowPaginated} from './DataTableArrowPaginated';
  * };
  * ```
  */
-const DataTableModal: FC<
-  {
-    className?: string;
-    title: string | undefined;
-    tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
-  } & (
-    | {
-        query: string | undefined;
-      }
-    | {
-        arrowTable: arrow.Table | undefined;
-      }
-  )
-> = (props) => {
-  const {className, title, tableModal} = props;
+export type DataTableModalProps = {
+  className?: string;
+  title: string | undefined;
+  tableModal: Pick<UseDisclosureReturnValue, 'isOpen' | 'onClose'>;
+  /** Optional custom value formatter for binary/geometry data */
+  formatValue?: ArrowDataTableValueFormatter;
+} & (
+  | {
+      query: string | undefined;
+      arrowTable?: never;
+    }
+  | {
+      arrowTable: arrow.Table | undefined;
+      query?: never;
+    }
+);
+
+const DataTableModal: FC<DataTableModalProps> = (props) => {
+  const {className, title, tableModal, formatValue} = props;
   return (
     <Dialog
       open={tableModal.isOpen}
@@ -73,9 +78,12 @@ const DataTableModal: FC<
           {tableModal.isOpen && (
             <>
               {'query' in props && props.query ? (
-                <QueryDataTable query={props.query} />
+                <QueryDataTable query={props.query} formatValue={formatValue} />
               ) : 'arrowTable' in props && props.arrowTable ? (
-                <DataTableArrowPaginated table={props.arrowTable} />
+                <DataTableArrowPaginated
+                  table={props.arrowTable}
+                  formatValue={formatValue}
+                />
               ) : (
                 <div className="p-4 text-xs">No data</div>
               )}

@@ -10,5 +10,3 @@ from .state import CrdtState, RoomDoc
 from .ws import CrdtWs
 
 __all__ = ["CrdtState", "RoomDoc", "CrdtWs"]
-
-

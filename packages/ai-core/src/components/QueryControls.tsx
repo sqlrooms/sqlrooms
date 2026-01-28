@@ -1,14 +1,7 @@
 import {Button, cn, Textarea} from '@sqlrooms/ui';
 import {ArrowUpIcon, OctagonXIcon} from 'lucide-react';
-import {
-  PropsWithChildren,
-  useCallback,
-  useRef,
-  useEffect,
-  ReactNode,
-} from 'react';
+import {PropsWithChildren, useCallback, useRef, useEffect} from 'react';
 import {useStoreWithAi} from '../AiSlice';
-import {useAiChat} from '../hooks/useAiChat';
 
 type QueryControlsProps = PropsWithChildren<{
   className?: string;
@@ -25,16 +18,19 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   onCancel,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const isRunningAnalysis = useStoreWithAi((s) => s.ai.isRunningAnalysis);
-  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
-  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
-  const analysisPrompt = useStoreWithAi((s) => s.ai.analysisPrompt);
-  const setAnalysisPrompt = useStoreWithAi((s) => s.ai.setAnalysisPrompt);
   const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
+  const sessionId = currentSession?.id;
   const model = currentSession?.model;
 
-  // Use the custom hook for chat functionality
-  const {sendMessage} = useAiChat();
+  const isRunning = useStoreWithAi((s) =>
+    sessionId ? s.ai.getIsRunning(sessionId) : false,
+  );
+  const prompt = useStoreWithAi((s) =>
+    sessionId ? s.ai.getPrompt(sessionId) : '',
+  );
+  const setPrompt = useStoreWithAi((s) => s.ai.setPrompt);
+  const runAnalysis = useStoreWithAi((s) => s.ai.startAnalysis);
+  const cancelAnalysis = useStoreWithAi((s) => s.ai.cancelAnalysis);
 
   useEffect(() => {
     // Focus the textarea when the component mounts
@@ -60,32 +56,26 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
         !e.metaKey
       ) {
         e.preventDefault();
-        if (!isRunningAnalysis && model && analysisPrompt.trim().length) {
-          runAnalysis(sendMessage);
+        if (!isRunning && sessionId && model && prompt.trim().length) {
+          runAnalysis(sessionId);
         }
       }
     },
-    [isRunningAnalysis, model, analysisPrompt, runAnalysis, sendMessage],
+    [isRunning, sessionId, model, prompt, runAnalysis],
   );
 
-  const canStart = Boolean(model && analysisPrompt.trim().length);
+  const canStart = Boolean(sessionId && model && prompt.trim().length);
 
   const handleClickRunOrCancel = useCallback(() => {
-    if (isRunningAnalysis) {
-      cancelAnalysis();
+    if (!sessionId) return;
+    if (isRunning) {
+      cancelAnalysis(sessionId);
       onCancel?.();
     } else {
-      runAnalysis(sendMessage);
+      runAnalysis(sessionId);
       onRun?.();
     }
-  }, [
-    isRunningAnalysis,
-    cancelAnalysis,
-    onCancel,
-    runAnalysis,
-    sendMessage,
-    onRun,
-  ]);
+  }, [isRunning, sessionId, cancelAnalysis, onCancel, runAnalysis, onRun]);
 
   return (
     <div
@@ -100,8 +90,12 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
             ref={textareaRef}
             className="max-h-[min(300px,40vh)] min-h-[30px] resize-none border-none p-2 text-sm outline-none focus-visible:ring-0"
             autoResize
-            value={analysisPrompt}
-            onChange={(e) => setAnalysisPrompt(e.target.value)}
+            value={prompt}
+            onChange={(e) => {
+              if (sessionId) {
+                setPrompt(sessionId, e.target.value);
+              }
+            }}
             onKeyDown={handleKeyDown}
             placeholder={placeholder}
             autoFocus
@@ -113,15 +107,15 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
                   {children}
                 </div>
               </div>
-              <div className="ml-auto shrink-0 gap-2 pr-2">
+              <div className="ml-auto shrink-0 gap-2 p-2">
                 <Button
                   className="h-8 w-8 rounded-full"
                   variant="default"
                   size="icon"
                   onClick={handleClickRunOrCancel}
-                  disabled={!isRunningAnalysis && !canStart}
+                  disabled={!isRunning && !canStart}
                 >
-                  {isRunningAnalysis ? <OctagonXIcon /> : <ArrowUpIcon />}
+                  {isRunning ? <OctagonXIcon /> : <ArrowUpIcon />}
                 </Button>
               </div>
             </div>

@@ -27,6 +27,7 @@ import React, {
   createContext,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -74,7 +75,7 @@ interface TabStripContextValue {
   search: string;
   scrollContainerRef: React.RefObject<HTMLDivElement>;
   selectedTabId?: string | null;
-  openTabs: string[];
+  openTabs?: string[];
   preventCloseLastTab: boolean;
 
   // Callbacks
@@ -84,6 +85,7 @@ interface TabStripContextValue {
   onRename?: (tabId: string, newName: string) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 
   // Internal handlers
   setSearch: (value: string) => void;
@@ -123,6 +125,7 @@ interface SortableTabProps {
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -138,6 +141,7 @@ function SortableTab({
   onStopEditing,
   onInlineRename,
   renderTabMenu,
+  renderTabLabel,
 }: SortableTabProps) {
   const {attributes, listeners, setNodeRef, transform, transition, isDragging} =
     useSortable({id: tab.id});
@@ -158,6 +162,7 @@ function SortableTab({
       ref={setNodeRef}
       className="h-full flex-shrink-0"
       style={style}
+      data-tab-id={tab.id}
       {...attributes}
       {...listeners}
     >
@@ -176,7 +181,9 @@ function SortableTab({
           onDoubleClick={() => onStartEditing(tab.id)}
         >
           {editingTabId !== tab.id ? (
-            <div className="truncate text-sm">{tab.name}</div>
+            <div className="truncate text-sm">
+              {renderTabLabel ? renderTabLabel(tab) : tab.name}
+            </div>
           ) : (
             <EditableText
               value={tab.name}
@@ -338,6 +345,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     scrollContainerRef,
     onOpenTabsChange,
     renderTabMenu,
+    renderTabLabel,
     preventCloseLastTab,
     handleStartEditing,
     handleStopEditing,
@@ -394,14 +402,13 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               tab={tab}
               tabClassName={tabClassName}
               editingTabId={editingTabId}
-              hideCloseButton={
-                preventCloseLastTab && openTabItems.length === 1
-              }
+              hideCloseButton={preventCloseLastTab && openTabItems.length === 1}
               onClose={handleClose}
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
               onInlineRename={handleInlineRename}
               renderTabMenu={renderTabMenu}
+              renderTabLabel={renderTabLabel}
             />
           ))}
         </div>
@@ -458,7 +465,7 @@ function TabStripSearchDropdown({
   const handleTabClick = (tabId: string) => {
     if (closedTabIds.has(tabId)) {
       // Opening a closed tab: add to openTabs and select it
-      onOpenTabsChange?.([...openTabs, tabId]);
+      onOpenTabsChange?.([...(openTabs ?? []), tabId]);
       onSelect?.(tabId);
     } else {
       // Already open: just select it
@@ -642,7 +649,7 @@ export interface TabStripProps {
   /** All available tabs. */
   tabs: TabDescriptor[];
   /** IDs of tabs that are currently open. */
-  openTabs: string[];
+  openTabs?: string[];
   /** ID of the currently selected tab. */
   selectedTabId?: string | null;
   /** If true, hides the close button when only one tab remains open. */
@@ -661,6 +668,8 @@ export interface TabStripProps {
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
+  /** Render function for custom tab content. Receives the tab and returns the content to display. */
+  renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
 
 /**
@@ -699,18 +708,20 @@ function TabStripRoot({
   onRename,
   renderTabMenu,
   renderSearchItemActions,
+  renderTabLabel,
 }: TabStripProps) {
   const [search, setSearch] = useState('');
   const [editingTabId, setEditingTabId] = useState<string | null>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null!);
   const prevSelectedIdRef = useRef<string | null>(null);
+  const prevOpenTabIdsRef = useRef<Set<string>>(new Set());
 
   const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
 
   // Build openTabItems in the order of openTabs (for drag-to-reorder)
   const openTabItems = useMemo(() => {
     const tabsById = new Map(tabs.map((tab) => [tab.id, tab]));
-    return openTabs
+    return (openTabs ?? [])
       .map((id) => tabsById.get(id))
       .filter((tab): tab is TabDescriptor => tab !== undefined);
   }, [tabs, openTabs]);
@@ -736,7 +747,7 @@ function TabStripRoot({
   );
 
   // Auto-scroll to selected tab
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (!selectedTabId) return;
     if (prevSelectedIdRef.current === selectedTabId) return;
     prevSelectedIdRef.current = selectedTabId;
@@ -747,7 +758,8 @@ function TabStripRoot({
     const isOpen = openTabItems.some((tab) => tab.id === selectedTabId);
     if (!isOpen) return;
 
-    const frameId = requestAnimationFrame(() => {
+    // Use queueMicrotask to defer scroll until after Radix UI updates the DOM
+    queueMicrotask(() => {
       const activeTab = container.querySelector<HTMLElement>(
         '[data-state="active"]',
       );
@@ -759,11 +771,42 @@ function TabStripRoot({
         inline: 'nearest',
       });
     });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedTabId]);
 
-    return () => {
-      cancelAnimationFrame(frameId);
-    };
-  }, [selectedTabId, openTabItems]);
+  // Auto-scroll to newly added tab
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Find newly added tabs (in openTabs but not in prevOpenTabIdsRef)
+    const newTabIds = (openTabs ?? []).filter(
+      (id) => !prevOpenTabIdsRef.current.has(id),
+    );
+
+    // Update ref for next comparison
+    prevOpenTabIdsRef.current = new Set(openTabs);
+
+    // Skip scroll on initial render (when ref was empty, all tabs appear "new")
+    if (newTabIds.length === (openTabs?.length ?? 0)) return;
+
+    // If there are new tabs, scroll to the last one added
+    if (newTabIds.length === 0) return;
+    const newTabId = newTabIds[newTabIds.length - 1];
+
+    queueMicrotask(() => {
+      const newTabElement = container.querySelector<HTMLElement>(
+        `[data-tab-id="${newTabId}"]`,
+      );
+      if (!newTabElement) return;
+
+      newTabElement.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      });
+    });
+  }, [openTabs]);
 
   const handleInlineRename = (tabId: string, newName: string) => {
     if (!onRename) return;
@@ -817,6 +860,7 @@ function TabStripRoot({
     onRename,
     renderTabMenu,
     renderSearchItemActions,
+    renderTabLabel,
     setSearch,
     handleStartEditing,
     handleStopEditing,

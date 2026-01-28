@@ -49,7 +49,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
           {/* ) : ( */}
           <XCircleIcon className="h-3 w-3 text-red-500" />
           {/* )} */}
-          {type}
+          {type ? type.replace(/^\w/, (c) => c.toUpperCase()) : ''}
         </Badge>
       )}
 

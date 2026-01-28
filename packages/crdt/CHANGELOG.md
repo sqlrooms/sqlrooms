@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Features
+
+* Prepare sqlrooms-server for publishing ([#305](https://github.com/sqlrooms/sqlrooms/issues/305)) ([d120996](https://github.com/sqlrooms/sqlrooms/commit/d120996cb3c5a02c36df048b5e79947c55140aa1))
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+**Note:** Version bump only for package @sqlrooms/crdt
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features

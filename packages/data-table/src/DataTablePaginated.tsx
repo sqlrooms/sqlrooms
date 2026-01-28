@@ -24,6 +24,7 @@ import {
   cn,
   ScrollArea,
   ScrollBar,
+  resolveFontSizeClass,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
@@ -90,6 +91,7 @@ export default function DataTablePaginated<Data extends object>({
   onRowDoubleClick,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const fontSizeClass = resolveFontSizeClass(fontSize);
   const pageCount =
     pagination && numRows !== undefined
       ? Math.ceil(numRows / pagination.pageSize)
@@ -151,7 +153,7 @@ export default function DataTablePaginated<Data extends object>({
                           'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2',
                           pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
-                          fontSize,
+                          fontSizeClass,
                         )}
                         onClick={header.column.getToggleSortingHandler()}
                       >
@@ -201,7 +203,7 @@ export default function DataTablePaginated<Data extends object>({
                   }}
                 >
                   <TableCell
-                    className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSize}`}
+                    className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSizeClass}`}
                   >
                     {pagination
                       ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
@@ -214,7 +216,7 @@ export default function DataTablePaginated<Data extends object>({
                         key={cell.id}
                         className={cn(
                           'max-w-[500px] overflow-hidden truncate border-r px-7',
-                          fontSize,
+                          fontSizeClass,
                           meta?.isNumeric ? 'text-right' : 'text-left',
                         )}
                       >
@@ -255,7 +257,9 @@ export default function DataTablePaginated<Data extends object>({
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </Button>
-                <div className={`ml-1 flex items-center gap-1 ${fontSize}`}>
+                <div
+                  className={`ml-1 flex items-center gap-1 ${fontSizeClass}`}
+                >
                   <div>Page</div>
                   <Input
                     type="number"
@@ -319,7 +323,7 @@ export default function DataTablePaginated<Data extends object>({
 
           <>
             {numRows !== undefined && isFinite(numRows) ? (
-              <div className={`font-normal ${fontSize}`}>
+              <div className={`font-normal ${fontSizeClass}`}>
                 {`${formatCount(numRows)} rows`}
               </div>
             ) : null}

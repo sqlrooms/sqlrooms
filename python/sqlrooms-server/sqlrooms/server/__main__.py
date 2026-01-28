@@ -122,6 +122,7 @@ def serve(
         allow_client_snapshots=bool(sync_enabled and db_path == ":memory:"),
     )
 
+
 def main(argv: list[str] | None = None) -> int:
     """
     CLI entrypoint for the WS-only SQLRooms server.

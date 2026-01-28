@@ -87,8 +87,11 @@ export const ToolResult: React.FC<ToolData> = ({
         <ToolCallErrorBoundary>
           {typeof ToolComponent === 'function' ? (
             <ToolComponent
-              {...(llmResult as Record<string, unknown>)}
-              {...(additionalData as Record<string, unknown>)}
+              {...({
+                ...(llmResult as Record<string, unknown>),
+                ...(additionalData as Record<string, unknown>),
+                toolCallId: toolData.toolCallId,
+              } as Record<string, unknown>)}
             />
           ) : (
             ToolComponent

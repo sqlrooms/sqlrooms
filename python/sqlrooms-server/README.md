@@ -34,7 +34,7 @@ Alternatively, you can install the server with `pip install sqlrooms-server`. Th
 
 Compatibility:
 
-- `sqlrooms-duckdb-server` is provided as an alias console script for backward compatibility.
+- `sqlrooms-server` is provided as an alias console script for backward compatibility.
 
 ### Command-line arguments
 

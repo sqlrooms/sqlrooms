@@ -16,12 +16,14 @@ import {useRoomStore} from './store';
 
 export const MainView: FC = () => {
   const createTableModal = useDisclosure();
-  const lastQuery = useRoomStore(({sqlEditor: {queryResult: qr}}) =>
-    qr?.status === 'success' && qr?.type === 'select' ? qr.query : '',
-  );
+  const lastQuery = useRoomStore((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    const qr = s.sqlEditor.queryResultsById[selectedId];
+    return qr?.status === 'success' && qr?.type === 'select' ? qr.query : '';
+  });
   return (
     <>
-      <div className="bg-muted flex h-full flex-col">
+      <div className="flex h-full flex-col bg-muted">
         <ResizablePanelGroup direction="vertical">
           <ResizablePanel defaultSize={50}>
             <QueryEditorPanel />

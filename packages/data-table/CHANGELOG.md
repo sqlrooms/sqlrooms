@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* Date and decimal types display incorrectly in data table ([#289](https://github.com/sqlrooms/sqlrooms/issues/289)) ([41a5750](https://github.com/sqlrooms/sqlrooms/commit/41a575076874eccb04e2e4f787136bbe43ae7b6d))
+* dynamic font class resolver ([#291](https://github.com/sqlrooms/sqlrooms/issues/291)) ([7b11d21](https://github.com/sqlrooms/sqlrooms/commit/7b11d212e2ac930920c0779abe48899ebbd2a78b))
+* query data table popover content format ([#288](https://github.com/sqlrooms/sqlrooms/issues/288)) ([b1cd872](https://github.com/sqlrooms/sqlrooms/commit/b1cd872bb8839aa4631765824e4385762f589c57))
+
+### Features
+
+* add custom value rendered for arrow table ([#292](https://github.com/sqlrooms/sqlrooms/issues/292)) ([9e86149](https://github.com/sqlrooms/sqlrooms/commit/9e86149106cb8371739d5acaa88b943c7a3d06c9))
+* propagate the change to the arrow table to parent components ([#299](https://github.com/sqlrooms/sqlrooms/issues/299)) ([0d6a335](https://github.com/sqlrooms/sqlrooms/commit/0d6a335fd770a90fa454d7f5d3a5f21aedb0e5d1))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features

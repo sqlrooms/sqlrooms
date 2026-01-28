@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* show chart as inline component in the sidebar ([#303](https://github.com/sqlrooms/sqlrooms/issues/303)) ([a201c46](https://github.com/sqlrooms/sqlrooms/commit/a201c46e7504ef0fd0390f58ae5728dad8847b88))
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* **deps:** update dependency react-vega to v8 ([#255](https://github.com/sqlrooms/sqlrooms/issues/255)) ([fa352f4](https://github.com/sqlrooms/sqlrooms/commit/fa352f43b1ed32afce7ca9a8575ecd1205001d45))
+
+### Features
+
+* Vega actions toolbar ([#301](https://github.com/sqlrooms/sqlrooms/issues/301)) ([ef68f2e](https://github.com/sqlrooms/sqlrooms/commit/ef68f2ef0b6c36855dbe247261cd7e4beb345d7f))
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
 # [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
 
 ### Features

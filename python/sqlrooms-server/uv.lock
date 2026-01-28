@@ -1258,7 +1258,7 @@ wheels = [
 ]
 
 [[package]]
-name = "sqlrooms-duckdb-server"
+name = "sqlrooms-server"
 source = { editable = "." }
 dependencies = [
     { name = "diskcache" },
