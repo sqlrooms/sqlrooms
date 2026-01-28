@@ -61,59 +61,6 @@ export function makeDefaultVegaLiteOptions(
   };
 }
 
-type FontSizePreset = {
-  maxWidth: number;
-  axisLabel: number;
-  axisTitle: number;
-  legendLabel: number;
-  legendTitle: number;
-  title: number;
-};
-
-const RESPONSIVE_FONT_SIZE_PRESETS: readonly FontSizePreset[] = [
-  {
-    maxWidth: 320,
-    axisLabel: 8,
-    axisTitle: 9,
-    legendLabel: 8,
-    legendTitle: 9,
-    title: 10,
-  },
-  {
-    maxWidth: 420,
-    axisLabel: 9,
-    axisTitle: 10,
-    legendLabel: 9,
-    legendTitle: 10,
-    title: 11,
-  },
-  {
-    maxWidth: 520,
-    axisLabel: 10,
-    axisTitle: 11,
-    legendLabel: 10,
-    legendTitle: 11,
-    title: 12,
-  },
-];
-
-function getResponsiveFontSizeConfig(containerWidth: number): Partial<Config> {
-  const w = Number.isFinite(containerWidth) ? containerWidth : 0;
-  const preset = RESPONSIVE_FONT_SIZE_PRESETS.find(
-    (p) => w > 0 && w < p.maxWidth,
-  );
-  if (!preset) return {};
-
-  return {
-    axis: {labelFontSize: preset.axisLabel, titleFontSize: preset.axisTitle},
-    legend: {
-      labelFontSize: preset.legendLabel,
-      titleFontSize: preset.legendTitle,
-    },
-    title: {fontSize: preset.title},
-  };
-}
-
 const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   className,
   aspectRatio = 16 / 9,
@@ -144,18 +91,6 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
   const containerRef = useRef<HTMLDivElement>(null);
   const [chartError, setChartError] = useState<Error | null>(null);
 
-  const dimensions = useAspectRatioDimensions({
-    containerRef,
-    width,
-    height,
-    aspectRatio,
-  });
-
-  const responsiveFontConfig = useMemo(
-    () => getResponsiveFontSizeConfig(dimensions.width),
-    [dimensions.width],
-  );
-
   const data = useMemo(() => {
     if (!arrowTable) return null;
     return {values: arrowTableToJson(arrowTable)};
@@ -171,17 +106,13 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
       padding: 10,
       background: 'transparent',
       ...parsed,
-      config: {
-        ...responsiveFontConfig,
-        ...((parsed as any)?.config ?? {}),
-      },
       data: data,
       // Override the following props to ensure the chart is responsive
       width: 'container',
       height: 'container',
       autosize: {contains: 'padding'},
     } as VisualizationSpec;
-  }, [spec, data, responsiveFontConfig]);
+  }, [spec, data]);
 
   // Reset chart error whenever spec or data changes
   useEffect(() => {
@@ -195,16 +126,6 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     onError: () => setChartError,
     options,
   });
-
-  const changeDimensions = useCallback(
-    (width: number, height: number) => {
-      embed?.view.width(width).height(height).runAsync();
-    },
-    [embed],
-  );
-  useEffect(() => {
-    changeDimensions(dimensions.width, dimensions.height);
-  }, [changeDimensions, dimensions.width, dimensions.height]);
 
   return (
     <VegaChartContextProvider value={{embed}}>
