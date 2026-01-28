@@ -60,7 +60,7 @@ const AgentProgressRenderer: React.FC<{
               </div>
 
               {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="mt-1 ml-6">
+                <div className="ml-6 mt-1">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />

@@ -30,7 +30,7 @@ export const CanvasAssistantDrawer: FC = () => {
       <DrawerTrigger asChild>
         <Button
           variant="default"
-          className="absolute top-4 right-4 z-10 h-8 w-8 rounded-full"
+          className="absolute right-4 top-4 z-10 h-8 w-8 rounded-full"
         >
           <SparklesIcon className="h-4 w-4" />
         </Button>
@@ -48,7 +48,7 @@ export const CanvasAssistantDrawer: FC = () => {
           <Chat>
             <DrawerHeader>
               <DrawerTitle>Assistant</DrawerTitle>
-              <DrawerClose asChild className="absolute top-2 right-2">
+              <DrawerClose asChild className="absolute right-2 top-2">
                 <Button variant="ghost" size="xs">
                   <XIcon className="h-4 w-4" />
                 </Button>

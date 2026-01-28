@@ -1,0 +1,1221 @@
+"""Core flowmap processing logic."""
+
+import math
+from typing import Optional
+
+import duckdb
+
+
+class FlowmapProcessor:
+    """Process origin-destination data into hierarchical clusters for tiling."""
+
+    def __init__(
+        self,
+        locations_file: str,
+        flows_file: str,
+        cluster_radius: float = 40.0,
+        min_zoom: int = 0,
+        max_zoom: int = 20,
+        time_bucket: Optional[str] = None,
+        time_zone: str = "UTC",
+    ):
+        """
+        Initialize the flowmap processor.
+
+        Args:
+            locations_file: Path to locations data (CSV or Parquet)
+            flows_file: Path to flows data (CSV or Parquet)
+            cluster_radius: Clustering radius in pixels (default: 40)
+            min_zoom: Minimum zoom level for clustering
+            max_zoom: Maximum zoom level to start from
+            time_bucket: Optional temporal aggregation (e.g., 'hour', 'day', 'week', 'month')
+            time_zone: Time zone for temporal aggregation (default: 'UTC')
+        """
+        self.locations_file = locations_file
+        self.flows_file = flows_file
+        self.cluster_radius_pixels = cluster_radius
+        self.min_zoom = min_zoom
+        self.max_zoom = max_zoom
+        self.time_bucket = time_bucket
+        self.time_zone = time_zone
+        self.conn = None
+        self.extent = None  # Global spatial extent for Hilbert indexing
+
+    def process(
+        self, output_file: str, flows_output_file: Optional[str] = None
+    ) -> None:
+        """
+        Process the flowmap data and generate hierarchical clusters.
+
+        Args:
+            output_file: Path to output Parquet file for clusters
+            flows_output_file: Optional path to output Parquet file for tiled flows
+        """
+        self.conn = duckdb.connect(":memory:")
+
+        # Install and load spatial extension
+        self.conn.execute("INSTALL spatial")
+        self.conn.execute("LOAD spatial")
+
+        # Load input data
+        self._load_data()
+
+        # Project locations to Web Mercator and calculate Hilbert index
+        self._project_locations()
+
+        # Calculate flow weights
+        self._calculate_weights()
+
+        # Perform hierarchical clustering
+        # (flow statistics are calculated inside, before deduplication)
+        self._hierarchical_clustering()
+
+        # Export cluster results
+        self._export_results(output_file)
+
+        # Process and export flows if output file specified
+        if flows_output_file:
+            self._process_flows()
+            self._export_flows(flows_output_file)
+
+        self.conn.close()
+
+    def _load_data(self) -> None:
+        """Load locations and flows data into DuckDB."""
+        # Load locations
+        self.conn.execute(
+            f"""
+            CREATE TABLE locations_raw AS
+            SELECT * FROM read_csv_auto('{self.locations_file}', 
+                                        all_varchar=false)
+            """
+            if self.locations_file.endswith(".csv")
+            else f"CREATE TABLE locations_raw AS SELECT * FROM '{self.locations_file}'"
+        )
+
+        # Load flows
+        self.conn.execute(
+            f"""
+            CREATE TABLE flows_raw AS
+            SELECT * FROM read_csv_auto('{self.flows_file}',
+                                        all_varchar=false)
+            """
+            if self.flows_file.endswith(".csv")
+            else f"CREATE TABLE flows_raw AS SELECT * FROM '{self.flows_file}'"
+        )
+
+    def _project_locations(self) -> None:
+        """Project locations to Web Mercator and calculate Hilbert index."""
+        # First, calculate extent for Hilbert index
+        extent_result = self.conn.execute(
+            """
+            SELECT 
+                MIN(ST_X(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                ))) as min_x,
+                MAX(ST_X(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                ))) as max_x,
+                MIN(ST_Y(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                ))) as min_y,
+                MAX(ST_Y(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                ))) as max_y
+            FROM locations_raw
+            """
+        ).fetchone()
+
+        min_x, max_x, min_y, max_y = extent_result
+
+        # Store extent as geometry for use in flows processing
+        self.conn.execute(
+            f"""
+            CREATE TABLE spatial_extent AS
+            SELECT ST_MakeBox2D(
+                ST_Point({min_x}, {min_y}),
+                ST_Point({max_x}, {max_y})
+            ) as extent
+            """
+        )
+
+        # Create projected locations table with Hilbert index
+        self.conn.execute(
+            f"""
+            CREATE TABLE locations_projected AS
+            SELECT 
+                id,
+                COALESCE(name, CAST(id AS VARCHAR)) as name,
+                lat as lat,
+                lon as lon,
+                ST_X(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                )) as x,
+                ST_Y(ST_Transform(
+                    ST_Point(lon, lat),
+                    'EPSG:4326', 'EPSG:3857', always_xy := true
+                )) as y,
+                ST_Hilbert(
+                    ST_X(ST_Transform(
+                        ST_Point(lon, lat),
+                        'EPSG:4326', 'EPSG:3857', always_xy := true
+                    )),
+                    ST_Y(ST_Transform(
+                        ST_Point(lon, lat),
+                        'EPSG:4326', 'EPSG:3857', always_xy := true
+                    )),
+                    ST_MakeBox2D(
+                        ST_Point({min_x}, {min_y}),
+                        ST_Point({max_x}, {max_y})
+                    )
+                ) as h_index
+            FROM locations_raw
+            """
+        )
+
+    def _calculate_weights(self) -> None:
+        """Calculate location weights based on max of in/out flows."""
+        self.conn.execute(
+            """
+            CREATE TABLE location_weights AS
+            WITH out_flows AS (
+                SELECT 
+                    origin as id,
+                    SUM(count) as out_weight
+                FROM flows_raw
+                GROUP BY origin
+            ),
+            in_flows AS (
+                SELECT 
+                    dest as id,
+                    SUM(count) as in_weight
+                FROM flows_raw
+                GROUP BY dest
+            )
+            SELECT 
+                l.id,
+                l.name,
+                l.lat,
+                l.lon,
+                l.x,
+                l.y,
+                l.h_index,
+                GREATEST(
+                    COALESCE(o.out_weight, 0),
+                    COALESCE(i.in_weight, 0)
+                ) as weight
+            FROM locations_projected l
+            LEFT JOIN out_flows o ON l.id = o.id
+            LEFT JOIN in_flows i ON l.id = i.id
+            """
+        )
+
+    def _hierarchical_clustering(self) -> None:
+        """Perform hierarchical clustering across zoom levels."""
+        # Create initial table with all locations at max zoom + 1
+        num_locations = self.conn.execute(
+            "SELECT COUNT(*) FROM location_weights"
+        ).fetchone()[0]
+
+        print(
+            f"\nClustering {num_locations} locations from z={self.max_zoom} down to z={self.min_zoom}:"
+        )
+
+        self.conn.execute(
+            f"""
+            CREATE TABLE clusters AS
+            SELECT 
+                {self.max_zoom + 1} as z,
+                h_index,
+                id,
+                name,
+                id as parent_id,  -- Self-reference for top-level items
+                lat,
+                lon,
+                x,
+                y,
+                weight,
+                1 as size,
+                id as top_id,
+                NULL::DOUBLE as total_in,
+                NULL::DOUBLE as total_out,
+                NULL::DOUBLE as total_self
+            FROM location_weights
+            """
+        )
+
+        # Cluster from max_zoom down to min_zoom
+        for z in range(self.max_zoom, self.min_zoom - 1, -1):
+            self._cluster_at_zoom(z)
+
+        # Calculate flow statistics BEFORE deduplication (so parent links are intact)
+        self._calculate_cluster_flow_stats()
+
+        # Remove zoom levels with no actual clustering
+        print("\nRemoving duplicate zoom levels...")
+        self._remove_duplicate_zoom_levels()
+
+        # Fix parent_id links that point to deleted zoom levels
+        print("Fixing parent links after deduplication...")
+        self._fix_parents_after_deduplication()
+
+        # Validate flow statistics AFTER deduplication
+        self._validate_cluster_flow_stats()
+
+        # Show final zoom level distribution
+        zoom_dist = self.conn.execute(
+            """
+            SELECT z, COUNT(*) as count
+            FROM clusters
+            WHERE parent_id = id  -- Self-reference = top-level
+            GROUP BY z
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        print("\nFinal distribution:")
+        for z, count in zoom_dist:
+            print(f"  z={z}: {count} clusters")
+
+    def _get_cluster_radius_for_zoom(self, z: int) -> float:
+        """
+        Calculate cluster radius in meters for a given zoom level.
+
+        At zoom level z, the resolution at the equator is:
+        resolution = (2 * π * 6378137) / (256 * 2^z) meters per pixel
+
+        Args:
+            z: Zoom level
+
+        Returns:
+            Cluster radius in Web Mercator meters
+        """
+        # Earth's radius in meters (Web Mercator uses WGS84)
+        earth_radius = 6378137.0
+        # Meters per pixel at this zoom level (at equator)
+        resolution = (2 * math.pi * earth_radius) / (256 * (2**z))
+        # Convert pixel radius to meters
+        return self.cluster_radius_pixels * resolution
+
+    def _cluster_at_zoom(self, z: int) -> None:
+        """
+        Cluster locations at a specific zoom level.
+
+        Args:
+            z: Zoom level to cluster at
+        """
+        # Get locations/clusters from z+1 that haven't been clustered yet
+        unclustered = self.conn.execute(
+            f"""
+            SELECT id, name, x, y, weight, h_index, lat, lon, size, top_id
+            FROM clusters
+            WHERE z = {z + 1}
+            ORDER BY weight DESC
+            """
+        ).fetchall()
+
+        if not unclustered:
+            return
+
+        clustered_ids = set()
+        new_cluster_id = 0
+        cluster_radius = self._get_cluster_radius_for_zoom(z)
+
+        print(
+            f"  z={z}: radius={cluster_radius:.0f}m, {len(unclustered)} locations",
+            end="",
+        )
+
+        while len(clustered_ids) < len(unclustered):
+            # Find next unclustered location with highest weight
+            seed = None
+            for loc in unclustered:
+                if loc[0] not in clustered_ids:
+                    seed = loc
+                    break
+
+            if seed is None:
+                break
+
+            (
+                seed_id,
+                seed_label,
+                seed_x,
+                seed_y,
+                seed_weight,
+                seed_h,
+                seed_lat,
+                seed_lon,
+                seed_size,
+                seed_top_id,
+            ) = seed
+
+            # Find all locations within cluster radius
+            cluster_members = []
+            for loc in unclustered:
+                (
+                    loc_id,
+                    loc_label,
+                    loc_x,
+                    loc_y,
+                    loc_weight,
+                    loc_h,
+                    loc_lat,
+                    loc_lon,
+                    loc_size,
+                    loc_top_id,
+                ) = loc
+                if loc_id not in clustered_ids:
+                    dist = math.sqrt((loc_x - seed_x) ** 2 + (loc_y - seed_y) ** 2)
+                    if dist <= cluster_radius:
+                        cluster_members.append(loc)
+                        clustered_ids.add(loc_id)
+
+            if len(cluster_members) == 1:
+                # Single location - just copy to this zoom level (self-reference = top-level)
+                member_id = cluster_members[0][0]
+                self.conn.execute(
+                    f"""
+                    INSERT INTO clusters
+                    SELECT 
+                        {z} as z,
+                        h_index,
+                        id,
+                        name,
+                        id as parent_id,  -- Self-reference for top-level
+                        lat,
+                        lon,
+                        x,
+                        y,
+                        weight,
+                        size,
+                        top_id,
+                        total_in,
+                        total_out,
+                        total_self
+                    FROM clusters
+                    WHERE z = {z + 1} AND id = '{member_id}'
+                    """
+                )
+            else:
+                # Create cluster
+                cluster_id = f"cluster_z{z}_{new_cluster_id}"
+                new_cluster_id += 1
+
+                # Calculate center of mass
+                total_weight = sum(m[4] for m in cluster_members)
+                center_x = sum(m[2] * m[4] for m in cluster_members) / total_weight
+                center_y = sum(m[3] * m[4] for m in cluster_members) / total_weight
+
+                # Convert back to lat/lon
+                center_lat_lon = self.conn.execute(
+                    f"""
+                    SELECT 
+                        ST_Y(ST_Transform(
+                            ST_Point({center_x}, {center_y}),
+                            'EPSG:3857', 'EPSG:4326', always_xy := true
+                        )) as lat,
+                        ST_X(ST_Transform(
+                            ST_Point({center_x}, {center_y}),
+                            'EPSG:3857', 'EPSG:4326', always_xy := true
+                        )) as lon
+                    """
+                ).fetchone()
+
+                center_lat, center_lon = center_lat_lon
+
+                # Calculate Hilbert index for cluster center
+                cluster_h = self.conn.execute(
+                    f"""
+                    SELECT ST_Hilbert({center_x}, {center_y}, 
+                        (SELECT ST_MakeBox2D(
+                            ST_Point(MIN(x), MIN(y)),
+                            ST_Point(MAX(x), MAX(y))
+                        ) FROM location_weights)
+                    ) as h_index
+                    """
+                ).fetchone()[0]
+
+                # Calculate total leaves and find top leaf
+                total_leaves = sum(m[8] for m in cluster_members)  # size is index 8
+
+                # Find the member with highest weight to determine top_id
+                top_member = max(
+                    cluster_members, key=lambda m: m[4]
+                )  # weight is index 4
+                top_id = top_member[9]  # top_id is index 9
+
+                # Get the name of the top leaf location
+                top_leaf_name = self.conn.execute(
+                    f"""
+                    SELECT name 
+                    FROM location_weights 
+                    WHERE id = '{top_id}'
+                    """
+                ).fetchone()[0]
+
+                # Create cluster name
+                if total_leaves == 1:
+                    cluster_label = top_leaf_name
+                else:
+                    cluster_label = f"{top_leaf_name} + {total_leaves - 1}"
+
+                # Insert cluster (self-reference = top-level)
+                self.conn.execute(
+                    f"""
+                    INSERT INTO clusters (z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id, total_in, total_out, total_self)
+                    VALUES (
+                        {z},
+                        {cluster_h},
+                        '{cluster_id}',
+                        '{cluster_label.replace("'", "''")}',
+                        '{cluster_id}',  -- Self-reference for top-level
+                        {center_lat},
+                        {center_lon},
+                        {center_x},
+                        {center_y},
+                        {total_weight},
+                        {total_leaves},
+                        '{top_id}',
+                        NULL,
+                        NULL,
+                        NULL
+                    )
+                    """
+                )
+
+                # Update parent_id for cluster members
+                member_ids = [m[0] for m in cluster_members]
+                member_ids_str = "', '".join(member_ids)
+                self.conn.execute(
+                    f"""
+                    UPDATE clusters
+                    SET parent_id = '{cluster_id}'
+                    WHERE z = {z + 1} AND id IN ('{member_ids_str}')
+                    """
+                )
+
+        # Count how many actual clusters were created (self-reference = top-level)
+        num_clusters = self.conn.execute(
+            f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND parent_id = id"
+        ).fetchone()[0]
+        print(f" → {num_clusters} clusters")
+
+    def _fix_parents_after_deduplication(self) -> None:
+        """
+        Fix parent_id values that point to clusters at deleted zoom levels.
+        After deduplication, some parent_id values may reference clusters that no longer exist.
+        We need to update them to point to the next available parent in the hierarchy.
+        """
+        # Find all rows with broken parent links (parent doesn't exist and isn't self-reference)
+        broken_count = self.conn.execute(
+            """
+            SELECT COUNT(*)
+            FROM clusters c
+            LEFT JOIN clusters p ON p.id = c.parent_id
+            WHERE c.parent_id != c.id 
+              AND p.id IS NULL
+            """
+        ).fetchone()[0]
+
+        if broken_count == 0:
+            print("  No broken parent links found")
+            return
+
+        print(f"  Found {broken_count} broken parent links, fixing...")
+
+        # Strategy: For items at high zoom levels that lost their parent links due to
+        # deduplication, find what cluster contains them at lower zoom levels.
+        # Since we process high-to-low, fix from lowest zoom up.
+
+        # Get remaining zoom levels after deduplication
+        remaining_zooms = self.conn.execute(
+            "SELECT DISTINCT z FROM clusters ORDER BY z ASC"
+        ).fetchall()
+        remaining_zooms = [z[0] for z in remaining_zooms]
+
+        # For each zoom level (low to high), find items with broken parents
+        # and map them to the appropriate cluster at a lower zoom
+        for current_z in remaining_zooms:
+            if current_z == min(remaining_zooms):
+                continue  # Lowest zoom, nothing to fix
+
+            # Find next lower zoom level that exists
+            next_lower_z = max(
+                [z for z in remaining_zooms if z < current_z], default=None
+            )
+            if next_lower_z is None:
+                continue
+
+            # For each item at current_z with a broken parent, find which cluster
+            # at next_lower_z contains it (by checking the cluster's members)
+            self.conn.execute(
+                f"""
+                UPDATE clusters c
+                SET parent_id = (
+                    SELECT target.id
+                    FROM clusters target
+                    WHERE target.z = {next_lower_z}
+                      AND target.id LIKE 'cluster_%'
+                      AND EXISTS (
+                          -- Check if c.id is a member of this cluster
+                          WITH RECURSIVE find_members AS (
+                              SELECT id, z
+                              FROM clusters
+                              WHERE parent_id = target.id AND id != parent_id
+                              
+                              UNION ALL
+                              
+                              SELECT ch.id, ch.z
+                              FROM clusters ch
+                              JOIN find_members fm ON ch.parent_id = fm.id
+                              WHERE ch.id != ch.parent_id
+                          )
+                          SELECT 1 FROM find_members WHERE id = c.id
+                      )
+                    LIMIT 1
+                )
+                WHERE c.z = {current_z}
+                  AND c.parent_id != c.id
+                  AND NOT EXISTS (SELECT 1 FROM clusters p WHERE p.id = c.parent_id)
+                """
+            )
+
+    def _remove_duplicate_zoom_levels(self) -> None:
+        """Remove zoom levels that have identical clusters to the level above."""
+        # Get all zoom levels
+        zoom_levels = self.conn.execute(
+            "SELECT DISTINCT z FROM clusters ORDER BY z DESC"
+        ).fetchall()
+
+        zoom_levels = [z[0] for z in zoom_levels]
+
+        for i in range(len(zoom_levels) - 1):
+            z_high = zoom_levels[i]
+            z_low = zoom_levels[i + 1]
+
+            # Check if clusters are identical (same number and same positions)
+            # Self-reference = top-level
+            identical = self.conn.execute(
+                f"""
+                WITH high_clusters AS (
+                    SELECT id, x, y FROM clusters WHERE z = {z_high} AND parent_id = id
+                ),
+                low_clusters AS (
+                    SELECT id, x, y FROM clusters WHERE z = {z_low} AND parent_id = id
+                )
+                SELECT 
+                    (SELECT COUNT(*) FROM high_clusters) = (SELECT COUNT(*) FROM low_clusters)
+                    AND NOT EXISTS (
+                        SELECT 1 FROM high_clusters
+                        EXCEPT
+                        SELECT 1 FROM low_clusters
+                    ) as is_identical
+                """
+            ).fetchone()[0]
+
+            if identical:
+                # Remove the higher zoom level
+                self.conn.execute(f"DELETE FROM clusters WHERE z = {z_high}")
+
+    def _calculate_cluster_flow_stats(self) -> None:
+        """Calculate flow statistics (total_in, total_out, total_self) for each cluster at every zoom level."""
+        print("\nCalculating cluster flow statistics...")
+
+        # Get all zoom levels in descending order
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        zoom_levels = [z[0] for z in zoom_levels]
+
+        # Step 1: Calculate flow statistics for all base locations (singletons) at ALL zoom levels
+        # This is needed because singletons are copied down during clustering with NULL stats
+        print("  Calculating for base locations at all zoom levels...")
+        for z in zoom_levels:
+            self.conn.execute(
+                f"""
+                UPDATE clusters c
+                SET 
+                    total_out = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.origin = c.id AND f.origin != f.dest
+                    ), 0),
+                    total_in = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.dest = c.id AND f.origin != f.dest
+                    ), 0),
+                    total_self = COALESCE((
+                        SELECT SUM(count) 
+                        FROM flows_raw f 
+                        WHERE f.origin = c.id AND f.dest = c.id
+                    ), 0)
+                WHERE c.z = {z} AND c.id NOT LIKE 'cluster_%'
+                """
+            )
+
+        # Step 2: Aggregate flow statistics for merged clusters at each zoom level
+        for z in zoom_levels[1:]:
+            # Count merged clusters at this level (not singletons, which already have stats)
+            total_at_z = self.conn.execute(
+                f"SELECT COUNT(*) FROM clusters WHERE z = {z} AND id LIKE 'cluster_%'"
+            ).fetchone()[0]
+
+            if total_at_z == 0:
+                print(
+                    f"  Calculating for z={z} ({total_at_z} merged clusters) - skipping"
+                )
+                continue
+
+            print(f"  Calculating for z={z} ({total_at_z} merged clusters)...")
+
+            # For each cluster at this zoom level, aggregate from child clusters
+            # Note: Calculate for ALL clusters (even those with parents), since they may be referenced by parent clusters
+            clusters_at_z = self.conn.execute(
+                f"""
+                SELECT id 
+                FROM clusters 
+                WHERE z = {z} AND id LIKE 'cluster_%'
+                """
+            ).fetchall()
+
+            for (cluster_id,) in clusters_at_z:
+                # Find all child locations/clusters that belong to this cluster
+                # This includes direct children and needs to recursively find all base locations
+
+                # Drop and recreate the temp table for each cluster
+                self.conn.execute("DROP TABLE IF EXISTS cluster_members")
+
+                # Find all leaf members by recursing through parent_id links
+                # We need to go back to flows_raw to properly account for flows between members
+                self.conn.execute(
+                    f"""
+                    CREATE TEMP TABLE cluster_members AS
+                    WITH RECURSIVE find_members AS (
+                        -- Start with all direct children (not self-references)
+                        SELECT id, z
+                        FROM clusters
+                        WHERE parent_id = '{cluster_id}' AND id != parent_id
+                        
+                        UNION ALL
+                        
+                        -- Recursively find their children (not self-references)
+                        SELECT c.id, c.z
+                        FROM clusters c
+                        JOIN find_members fm ON c.parent_id = fm.id
+                        WHERE c.id != c.parent_id
+                    )
+                    SELECT DISTINCT id FROM find_members WHERE id NOT LIKE 'cluster_%'
+                    """
+                )
+
+                # Calculate flow statistics from flows_raw using the member list
+                self.conn.execute(
+                    f"""
+                    WITH members AS (
+                        SELECT id FROM cluster_members
+                    )
+                    UPDATE clusters c
+                    SET
+                        total_out = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE f.origin IN (SELECT id FROM members)
+                              AND f.dest NOT IN (SELECT id FROM members)
+                        ),
+                        total_in = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE f.dest IN (SELECT id FROM members)
+                              AND f.origin NOT IN (SELECT id FROM members)
+                        ),
+                        total_self = (
+                            SELECT COALESCE(SUM(f.count), 0)
+                            FROM flows_raw f
+                            WHERE (
+                                -- Original self-loops
+                                (f.origin = f.dest AND f.origin IN (SELECT id FROM members))
+                                OR
+                                -- Flows between members (becomes internal flow)
+                                (f.origin IN (SELECT id FROM members) AND f.dest IN (SELECT id FROM members) AND f.origin != f.dest)
+                            )
+                        )
+                    WHERE c.id = '{cluster_id}' AND c.z = {z}
+                    """
+                )
+
+        # Clean up temp table
+        self.conn.execute("DROP TABLE IF EXISTS cluster_members")
+
+    def _validate_cluster_flow_stats(self) -> None:
+        """Validate that flow statistics are consistent across all zoom levels."""
+        print("\nValidating cluster flow statistics...")
+
+        # Calculate total from original flows
+        flow_totals = self.conn.execute(
+            """
+            SELECT 
+                SUM(CASE WHEN origin != dest THEN count ELSE 0 END) as non_self_total,
+                SUM(CASE WHEN origin = dest THEN count ELSE 0 END) as self_total,
+                SUM(count) as grand_total
+            FROM flows_raw
+            """
+        ).fetchone()
+
+        non_self_total = flow_totals[0] or 0
+        self_total = flow_totals[1] or 0
+        grand_total = flow_totals[2] or 0
+
+        print(
+            f"  Original flows: non-self={non_self_total:,.0f}, self={self_total:,.0f}, total={grand_total:,.0f}"
+        )
+
+        # Get all zoom levels
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+
+        all_valid = True
+
+        # Check each zoom level
+        for (z,) in zoom_levels:
+            stats = self.conn.execute(
+                f"""
+                SELECT 
+                    SUM(total_out) as sum_out,
+                    SUM(total_in) as sum_in,
+                    SUM(total_self) as sum_self
+                FROM clusters
+                WHERE z = {z}
+                """
+            ).fetchone()
+
+            sum_out = stats[0] or 0
+            sum_in = stats[1] or 0
+            sum_self = stats[2] or 0
+
+            # Key invariant: At each zoom level, ALL flows must be accounted for.
+            # As locations cluster together, flows between them transition from
+            # "external" (total_out/total_in) to "internal" (total_self).
+            # sum_out + sum_self should equal grand_total (each flow counted once)
+            # sum_in + sum_self should equal grand_total (each flow counted once)
+
+            total_from_out = sum_out + sum_self
+            total_from_in = sum_in + sum_self
+
+            out_diff = abs(total_from_out - grand_total)
+            in_diff = abs(total_from_in - grand_total)
+
+            # Additionally, total_self should be at least the original self-loops
+            self_diff = 0 if sum_self >= self_total else (self_total - sum_self)
+
+            status_out = "✓" if out_diff <= 0.01 else "⚠️"
+            status_in = "✓" if in_diff <= 0.01 else "⚠️"
+            status_self = "✓" if self_diff <= 0.01 else "⚠️"
+
+            print(f"  z={z:2d}:")
+            print(
+                f"    out+self:   {total_from_out:>12,.0f}  (expected: {grand_total:,.0f}, diff: {out_diff:>8,.0f})  {status_out}"
+            )
+            print(
+                f"    in+self:    {total_from_in:>12,.0f}  (expected: {grand_total:,.0f}, diff: {in_diff:>8,.0f})  {status_in}"
+            )
+            print(
+                f"    self >= orig: {sum_self:>12,.0f} >= {self_total:,.0f}  {status_self}"
+            )
+
+            if out_diff > 0.01 or in_diff > 0.01 or self_diff > 0.01:
+                all_valid = False
+
+        print()
+        if all_valid:
+            print("  ✓ All zoom levels have consistent flow statistics")
+        else:
+            print("  ⚠️  Warning: Some zoom levels have inconsistent flow statistics!")
+
+    def _process_flows(self) -> None:
+        """Process flows with nested Hilbert indexing for all zoom levels."""
+        print("\nProcessing flows with nested Hilbert indexing...")
+
+        # Step 1: Compute location Hilbert indices
+        print("  Computing location Hilbert indices...")
+        self.conn.execute(
+            """
+            CREATE TABLE location_h AS
+            SELECT 
+                id, 
+                x, 
+                y,
+                ST_Hilbert(x, y, (SELECT extent FROM spatial_extent)) AS h
+            FROM location_weights
+            """
+        )
+
+        # Step 2: Join flows with location Hilbert indices
+        print("  Joining flows with location indices...")
+
+        # Check if time column exists
+        has_time = (
+            self.conn.execute(
+                """
+            SELECT COUNT(*) 
+            FROM information_schema.columns 
+            WHERE table_name = 'flows_raw' AND column_name = 'time'
+            """
+            ).fetchone()[0]
+            > 0
+        )
+
+        time_select = ""
+        time_group = ""
+        if has_time and self.time_bucket:
+            time_select = f", date_trunc('{self.time_bucket}', time AT TIME ZONE '{self.time_zone}') AS time_bucket"
+            time_group = ", time_bucket"
+        elif has_time:
+            time_select = ", time"
+            time_group = ", time"
+
+        # Create base flows with Hilbert indices
+        self.conn.execute(
+            f"""
+            CREATE TABLE flows_with_h AS
+            SELECT 
+                f.origin,
+                f.dest,
+                f.count,
+                o.h AS origin_h,
+                d.h AS dest_h
+                {time_select}
+            FROM flows_raw f
+            JOIN location_h o ON f.origin = o.id
+            JOIN location_h d ON f.dest = d.id
+            """
+        )
+
+        # Step 3: Compute extent over (origin_h, dest_h) for nested Hilbert
+        print("  Computing OD extent for nested Hilbert...")
+        self.conn.execute(
+            """
+            CREATE TABLE od_extent AS
+            SELECT ST_MakeBox2D(
+                ST_Point(MIN(origin_h), MIN(dest_h)),
+                ST_Point(MAX(origin_h), MAX(dest_h))
+            ) AS extent
+            FROM flows_with_h
+            """
+        )
+
+        # Step 4: Compute nested Hilbert index (flow_h)
+        print("  Computing nested Hilbert index for flows...")
+        self.conn.execute(
+            """
+            ALTER TABLE flows_with_h ADD COLUMN flow_h BIGINT
+            """
+        )
+        self.conn.execute(
+            """
+            UPDATE flows_with_h
+            SET flow_h = ST_Hilbert(
+                CAST(origin_h AS DOUBLE), 
+                CAST(dest_h AS DOUBLE), 
+                (SELECT extent FROM od_extent)
+            )
+            """
+        )
+
+        # Step 5: Get actual zoom levels that exist in clusters (after deduplication)
+        # Self-reference = top-level
+        existing_zooms = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM clusters 
+            WHERE parent_id = id
+            ORDER BY z DESC
+            """
+        ).fetchall()
+        existing_zooms = [z[0] for z in existing_zooms]
+
+        print(
+            f"  Aggregating flows for {len(existing_zooms)} zoom levels: {existing_zooms}"
+        )
+
+        # Step 6: Create empty tiled_flows table
+        time_col_def = ""
+        if has_time and self.time_bucket:
+            time_col_def = ", time_bucket TIMESTAMP"
+        elif has_time:
+            time_col_def = ", time TIMESTAMP"
+
+        self.conn.execute(
+            f"""
+            CREATE TABLE tiled_flows (
+                z INTEGER,
+                flow_h BIGINT,
+                origin VARCHAR,
+                dest VARCHAR,
+                count DOUBLE
+                {time_col_def}
+            )
+            """
+        )
+
+        # Step 7: Aggregate flows for each zoom level using cluster hierarchy
+        highest_zoom = existing_zooms[0] if existing_zooms else self.max_zoom + 1
+
+        for i, z in enumerate(existing_zooms):
+            print(f"  Aggregating flows at z={z}...")
+
+            # For the highest zoom level, use base flows directly (includes self-loops)
+            if i == 0:
+                # Use base flows directly
+                self.conn.execute(
+                    f"""
+                    INSERT INTO tiled_flows
+                    SELECT 
+                        {z} as z,
+                        flow_h,
+                        origin,
+                        dest,
+                        count
+                        {time_group and ", time_bucket" or (has_time and ", time" or "")}
+                    FROM flows_with_h
+                    """
+                )
+                continue
+
+            # Get cluster assignments for this zoom level
+            # Need to map each original location to its cluster at this zoom
+            self.conn.execute(
+                f"""
+                CREATE TEMP TABLE cluster_map_z{z} AS
+                WITH RECURSIVE find_cluster AS (
+                    -- Base: locations at highest zoom
+                    SELECT id, id as cluster_id, {highest_zoom} as z
+                    FROM location_weights
+                    
+                    UNION ALL
+                    
+                    -- Recursive: follow parent links down to level z
+                    SELECT fc.id, c.parent_id as cluster_id, c.z - 1 as z
+                    FROM find_cluster fc
+                    JOIN clusters c ON fc.cluster_id = c.id AND c.z = fc.z
+                    WHERE c.z > {z}  -- Continue until we reach target zoom level
+                )
+                SELECT 
+                    lw.id,
+                    COALESCE(
+                        (SELECT cluster_id FROM find_cluster WHERE id = lw.id AND z = {z}),
+                        -- Fallback: if no mapping found, use the only cluster at this zoom (for z=0)
+                        (SELECT id FROM clusters WHERE z = {z} LIMIT 1)
+                    ) as cluster_id
+                FROM location_weights lw
+                """
+            )
+
+            # Aggregate flows using cluster mapping
+            # This includes both flows between different clusters AND cluster self-loops
+            self.conn.execute(
+                f"""
+                CREATE TEMP TABLE flows_z{z} AS
+                SELECT
+                    COALESCE(co.cluster_id, f.origin) as origin,
+                    COALESCE(cd.cluster_id, f.dest) as dest,
+                    SUM(f.count) as count
+                    {time_group and ", f.time_bucket" or (has_time and ", f.time" or "")}
+                FROM flows_with_h f
+                LEFT JOIN cluster_map_z{z} co ON f.origin = co.id
+                LEFT JOIN cluster_map_z{z} cd ON f.dest = cd.id
+                GROUP BY COALESCE(co.cluster_id, f.origin), COALESCE(cd.cluster_id, f.dest){time_group or (has_time and ", f.time" or "")}
+                """
+            )
+
+            # Compute flow_h for aggregated flows using cluster coordinates
+            self.conn.execute(
+                f"""
+                INSERT INTO tiled_flows
+                SELECT
+                    {z} as z,
+                    ST_Hilbert(
+                        CAST(
+                            COALESCE(
+                                (SELECT ST_Hilbert(x, y, (SELECT extent FROM spatial_extent))
+                                 FROM clusters WHERE id = f.origin AND z = {z} LIMIT 1),
+                                (SELECT h FROM location_h WHERE id = f.origin)
+                            ) AS DOUBLE
+                        ),
+                        CAST(
+                            COALESCE(
+                                (SELECT ST_Hilbert(x, y, (SELECT extent FROM spatial_extent))
+                                 FROM clusters WHERE id = f.dest AND z = {z} LIMIT 1),
+                                (SELECT h FROM location_h WHERE id = f.dest)
+                            ) AS DOUBLE
+                        ),
+                        (SELECT extent FROM od_extent)
+                    ) as flow_h,
+                    f.origin,
+                    f.dest,
+                    f.count
+                    {time_group and ", f.time_bucket" or (has_time and ", f.time" or "")}
+                FROM flows_z{z} f
+                """
+            )
+
+            # Clean up temp tables
+            self.conn.execute(f"DROP TABLE flows_z{z}")
+            self.conn.execute(f"DROP TABLE cluster_map_z{z}")
+
+        print(
+            f"  Total flows: {self.conn.execute('SELECT COUNT(*) FROM tiled_flows').fetchone()[0]:,}"
+        )
+
+        # Validate flow totals
+        self._validate_flow_totals()
+
+    def _validate_flow_totals(self) -> None:
+        """
+        Validate that total flow counts match between original and aggregated data at all zoom levels.
+        """
+        print("\nValidating flow totals...")
+
+        # Calculate total from original flows (including self-loops)
+        original_total = self.conn.execute(
+            """
+            SELECT SUM(count) 
+            FROM flows_raw
+            """
+        ).fetchone()[0]
+
+        if original_total is None:
+            original_total = 0
+
+        print(f"  Original total: {original_total:,.0f}")
+        print()
+
+        # Get all zoom levels
+        zoom_levels = self.conn.execute(
+            """
+            SELECT DISTINCT z 
+            FROM tiled_flows 
+            ORDER BY z DESC
+            """
+        ).fetchall()
+
+        all_valid = True
+
+        # Check each zoom level with breakdown
+        for (z,) in zoom_levels:
+            stats = self.conn.execute(
+                f"""
+                SELECT 
+                    SUM(CASE WHEN origin != dest THEN count ELSE 0 END) as non_self,
+                    SUM(CASE WHEN origin = dest THEN count ELSE 0 END) as self_loops,
+                    SUM(count) as total
+                FROM tiled_flows 
+                WHERE z = {z}
+                """
+            ).fetchone()
+
+            non_self = stats[0] or 0
+            self_loops = stats[1] or 0
+            total = stats[2] or 0
+
+            # At highest zoom, should match original total
+            if z == zoom_levels[0][0]:
+                diff = abs(original_total - total)
+                status = "✓" if diff <= 0.01 else "⚠️"
+                print(
+                    f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}  {status}"
+                )
+                if diff > 0.01:
+                    all_valid = False
+            else:
+                print(
+                    f"  z={z:2d}: out={non_self:>10,.0f}  self={self_loops:>10,.0f}  total={total:>10,.0f}"
+                )
+
+        print()
+        if all_valid:
+            print("  ✓ Flow totals validated at highest zoom level")
+            print(
+                "  Note: Lower zoom levels have fewer flows as locations cluster together"
+            )
+        else:
+            print("  ⚠️  Warning: Highest zoom level doesn't match original total!")
+
+    def _export_flows(self, output_file: str) -> None:
+        """
+        Export tiled flows to Parquet file.
+
+        Args:
+            output_file: Path to output Parquet file for flows
+        """
+        print(f"\nExporting flows to {output_file}...")
+
+        # Determine if we have time column
+        has_time = (
+            self.conn.execute(
+                """
+            SELECT COUNT(*) 
+            FROM information_schema.columns 
+            WHERE table_name = 'tiled_flows' AND column_name IN ('time', 'time_bucket')
+            """
+            ).fetchone()[0]
+            > 0
+        )
+
+        time_col = "time_bucket" if self.time_bucket else "time"
+        order_clause = f"z DESC, flow_h, {time_col}" if has_time else "z DESC, flow_h"
+
+        self.conn.execute(
+            f"""
+            COPY (
+                SELECT * FROM tiled_flows
+                ORDER BY {order_clause}
+            ) TO '{output_file}' (FORMAT PARQUET)
+            """
+        )
+
+        # Export metadata with extents for Hilbert range computation
+
+        metadata_file = output_file.replace(".parquet", "-metadata.parquet")
+        print(f"Exporting metadata to {metadata_file}...")
+
+        self.conn.execute(
+            f"""
+            COPY (
+                SELECT 
+                    (SELECT extent FROM spatial_extent) as location_extent,
+                    (SELECT extent FROM od_extent) as od_extent
+            ) TO '{metadata_file}' (FORMAT PARQUET)
+            """
+        )
+
+    def _export_results(self, output_file: str) -> None:
+        """
+        Export clustered results to Parquet file.
+
+        Args:
+            output_file: Path to output Parquet file
+        """
+        self.conn.execute(
+            f"""
+            COPY (
+                SELECT z, h_index, id, name, parent_id, lat, lon, x, y, weight, size, top_id, total_in, total_out, total_self
+                FROM clusters
+                ORDER BY z DESC, h_index
+            ) TO '{output_file}' (FORMAT PARQUET)
+            """
+        )

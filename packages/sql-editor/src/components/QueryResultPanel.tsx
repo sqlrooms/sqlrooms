@@ -138,7 +138,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           <Button
             variant="ghost"
             size="icon"
-            className="absolute top-2 right-2 h-8 w-8"
+            className="absolute right-2 top-2 h-8 w-8"
             onClick={handleAskAiAboutError}
             title="Ask AI for help"
           >
@@ -147,7 +147,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
         )}
         <pre
           className={cn(
-            'text-xs leading-tight whitespace-pre-wrap text-red-500',
+            'whitespace-pre-wrap text-xs leading-tight text-red-500',
             onAskAiAboutError && 'pr-12',
           )}
         >
@@ -168,7 +168,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       return (
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col overflow-hidden">
-            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight break-words whitespace-pre-wrap">
+            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-tight">
               {explainText}
             </pre>
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">

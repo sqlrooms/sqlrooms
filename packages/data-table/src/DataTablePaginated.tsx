@@ -136,7 +136,7 @@ export default function DataTablePaginated<Data extends object>({
               {table.getHeaderGroups().map((headerGroup) => (
                 <TableRow key={headerGroup.id}>
                   <TableHead
-                    className={`bg-background sticky top-[-1px] left-0 z-10 w-auto border-r py-2 text-center whitespace-nowrap`}
+                    className={`bg-background sticky left-0 top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2 text-center`}
                   >
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
@@ -150,7 +150,7 @@ export default function DataTablePaginated<Data extends object>({
                         key={header.id}
                         colSpan={header.colSpan}
                         className={cn(
-                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto border-r py-2 whitespace-nowrap',
+                          'bg-background hover:bg-muted sticky top-[-1px] z-10 w-auto whitespace-nowrap border-r py-2',
                           pagination ? 'cursor-pointer' : '',
                           meta?.isNumeric ? 'text-right' : 'text-left',
                           fontSizeClass,
@@ -184,7 +184,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full border-t border-r py-2 whitespace-nowrap" />
+                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -215,7 +215,7 @@ export default function DataTablePaginated<Data extends object>({
                       <TableCell
                         key={cell.id}
                         className={cn(
-                          'max-w-[500px] truncate overflow-hidden border-r px-7',
+                          'max-w-[500px] overflow-hidden truncate border-r px-7',
                           fontSizeClass,
                           meta?.isNumeric ? 'text-right' : 'text-left',
                         )}
