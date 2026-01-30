@@ -33,10 +33,10 @@ export type TreeNodeActionsMenuProps = PropsWithChildren<{
 export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
   const {children} = props;
   return (
-    <div className="absolute top-px right-0 h-full opacity-0 outline-none group-hover:opacity-100">
+    <div className="absolute top-px right-0 h-full opacity-0 outline-hidden group-hover:opacity-100">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="hover:bg-foreground/30 flex h-full w-7 items-center justify-center p-0 transition-colors outline-none">
+          <div className="hover:bg-foreground/30 flex h-full w-7 items-center justify-center p-0 transition-colors outline-hidden">
             <EllipsisVerticalIcon size="15px" className="relative -top-px" />
           </div>
         </DropdownMenuTrigger>
