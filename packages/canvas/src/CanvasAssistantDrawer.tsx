@@ -36,7 +36,7 @@ export const CanvasAssistantDrawer: FC = () => {
         </Button>
       </DrawerTrigger>
       <DrawerContent
-        className="border-none bg-transparent p-4 outline-none"
+        className="border-none bg-transparent p-4 outline-hidden"
         style={{
           width: 500,
           maxWidth: '50%',
