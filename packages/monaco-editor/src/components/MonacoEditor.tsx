@@ -81,10 +81,17 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
   options?: Monaco.editor.IStandaloneEditorConstructionOptions;
 }
 
-function setupMonacoThemes(monaco: typeof Monaco, isDark: boolean) {
+// Module-level singleton to track theme state
+let lastDefinedForDarkMode: boolean | null = null;
+
+function defineMonacoThemes(monaco: typeof Monaco, isDark: boolean) {
   suppressMonacoTextareaFlash();
 
-  // Define themes based on current theme state
+  // Only redefine if the theme mode has changed or themes haven't been defined yet
+  if (lastDefinedForDarkMode === isDark) return;
+  lastDefinedForDarkMode = isDark;
+
+  // Define both light and dark themes with current CSS variable values
   // Light theme
   monaco.editor.defineTheme('sqlrooms-light', {
     base: 'vs',
@@ -126,10 +133,6 @@ function setupMonacoThemes(monaco: typeof Monaco, isDark: boolean) {
   });
 
   monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
-
-  // Apply the current theme
-  const monacoTheme = isDark ? 'sqlrooms-dark' : 'sqlrooms-light';
-  monaco.editor.setTheme(monacoTheme);
 }
 
 const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions =
@@ -200,8 +203,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monaco,
   ) => {
     monacoRef.current = monaco;
-    suppressMonacoTextareaFlash();
-    setupMonacoThemes(monaco, isDark);
+    defineMonacoThemes(monaco, isDark);
     beforeMount?.(monaco);
   };
 
@@ -210,20 +212,20 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monacoRef.current = monaco;
 
     // Safety: in case beforeMount didn't run for any reason.
-    setupMonacoThemes(monaco, isDark);
+    defineMonacoThemes(monaco, isDark);
 
     if (onMount) {
       onMount(editor, monaco);
     }
   };
 
-  // Update Monaco theme when app theme changes
+  // Redefine themes globally (once) when theme mode changes, then switch
   useEffect(() => {
     if (monacoRef.current) {
-      // Redefine themes with current CSS variable values
-      setupMonacoThemes(monacoRef.current, isDark);
+      defineMonacoThemes(monacoRef.current, isDark);
+      monacoRef.current.editor.setTheme(monacoTheme);
     }
-  }, [isDark]);
+  }, [isDark, monacoTheme]);
 
   // Apply readOnly option
   useEffect(() => {
