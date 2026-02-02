@@ -159,7 +159,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   if (queryResult?.status === 'success') {
     const contentWrapperClassName = cn(
-      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      'relative flex h-full w-full grow flex-col overflow-hidden',
       className,
     );
 
@@ -168,7 +168,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       return (
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col overflow-hidden">
-            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight break-words whitespace-pre-wrap">
+            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight wrap-break-word whitespace-pre-wrap">
               {explainText}
             </pre>
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
@@ -190,7 +190,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
               {...arrowTableData}
-              className="flex-grow overflow-hidden"
+              className="grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}

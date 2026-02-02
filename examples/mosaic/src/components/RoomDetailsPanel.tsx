@@ -20,8 +20,8 @@ export default function RoomDetailsPanel() {
 
   return (
     <RoomPanel type={RoomPanelTypes.enum['room-details']}>
-      <div className="flex flex-grow flex-col gap-3">
-        <div className="flex flex-grow flex-col gap-3">
+      <div className="flex grow flex-col gap-3">
+        <div className="flex grow flex-col gap-3">
           <div className="flex flex-col gap-1.5">
             <Label className="text-muted-foreground text-xs font-bold uppercase">
               Title
@@ -35,7 +35,7 @@ export default function RoomDetailsPanel() {
             </div>
           </div>
 
-          <div className="flex flex-grow flex-col gap-1.5">
+          <div className="flex grow flex-col gap-1.5">
             <Label className="text-muted-foreground text-xs font-bold uppercase">
               Description
             </Label>
@@ -44,7 +44,7 @@ export default function RoomDetailsPanel() {
               value={description || ''}
               onChange={(e) => setDescription(e.target.value)}
               className={cn(
-                'bg-secondary text-secondary-foreground flex-grow resize-none text-xs',
+                'bg-secondary text-secondary-foreground grow resize-none text-xs',
                 'placeholder:text-muted-foreground min-h-0 border-none',
               )}
               placeholder="A story behind this room, what it represents"

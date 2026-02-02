@@ -123,7 +123,7 @@ const MapStyleDropdown: React.FC<{
             <ChevronDown className="h-4 w-4 text-gray-500 dark:text-gray-400" />
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuContent className="max-h-64 w-[var(--radix-dropdown-menu-trigger-width)] overflow-y-auto bg-white dark:bg-gray-700">
+        <DropdownMenuContent className="max-h-64 w-(--radix-dropdown-menu-trigger-width) overflow-y-auto bg-white dark:bg-gray-700">
           {Object.values(mapStyles).map((style: any) => (
             <DropdownMenuCheckboxItem
               key={style.id}
@@ -133,7 +133,7 @@ const MapStyleDropdown: React.FC<{
               <img
                 src={style.icon || ''}
                 alt={style.label || 'Untitled'}
-                className="h-6 w-6 flex-shrink-0 rounded-sm object-cover"
+                className="h-6 w-6 shrink-0 rounded-sm object-cover"
               />
               <span className="flex-1 truncate text-sm">
                 {style.label || 'Untitled'}

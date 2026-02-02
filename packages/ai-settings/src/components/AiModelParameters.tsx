@@ -187,7 +187,7 @@ export const AiModelParameters: FC = () => {
       {/* Full Instructions Modal */}
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className="flex h-[80vh] max-w-4xl flex-col">
-          <DialogHeader className="flex-shrink-0">
+          <DialogHeader className="shrink-0">
             <DialogTitle>Full System Instructions</DialogTitle>
             <DialogDescription>
               Complete system instructions that will be sent to the AI model,
@@ -197,7 +197,7 @@ export const AiModelParameters: FC = () => {
           </DialogHeader>
           <div className="mt-4 min-h-0 flex-1 overflow-hidden">
             <div className="bg-muted/50 h-full overflow-auto rounded-lg p-4">
-              <pre className="overflow-wrap-anywhere w-full max-w-full break-words font-mono text-sm leading-relaxed">
+              <pre className="overflow-wrap-anywhere w-full max-w-full font-mono text-sm leading-relaxed wrap-break-word">
                 {getFullInstructions()}
               </pre>
             </div>

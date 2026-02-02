@@ -10,10 +10,16 @@
     "examples/app-builder/app-scaffolds/**",
     "submodules/**"
   ],
-  "exclude": ["exports", "types", "duplicates"],
+  "exclude": [
+    "exports",
+    "types",
+    "duplicates"
+  ],
   "workspaces": {
     ".": {
-      "entry": ["scripts/*.mjs"],
+      "entry": [
+        "scripts/*.mjs"
+      ],
       "ignoreDependencies": [
         "@types/*",
         "@lerna-lite/*",
@@ -22,13 +28,20 @@
         "vitepress-plugin-llms",
         "typescript-language-server"
       ],
-      "ignoreBinaries": ["madge", "uv"]
+      "ignoreBinaries": [
+        "madge",
+        "uv"
+      ]
     },
     "packages/*": {
-      "entry": ["src/index.{ts,tsx}"]
+      "entry": [
+        "src/index.{ts,tsx}"
+      ]
     },
     "packages/preset-jest": {
-      "entry": ["*.js"],
+      "entry": [
+        "*.js"
+      ],
       "ignoreDependencies": [
         "@testing-library/*",
         "identity-obj-proxy",
@@ -36,24 +49,56 @@
       ]
     },
     "packages/preset-eslint": {
-      "entry": ["*.js"]
+      "entry": [
+        "*.js"
+      ]
     },
     "packages/preset-typedoc": {
-      "entry": ["*.js"]
+      "entry": [
+        "*.js"
+      ]
     },
     "packages/preset-typescript": {
-      "entry": ["*.json"]
+      "entry": [
+        "*.json"
+      ]
     },
     "examples/*nextjs*": {
-      "entry": ["app/page.tsx", "app/api/**/*.ts", "postcss.config.mjs"]
+      "entry": [
+        "app/page.tsx",
+        "app/api/**/*.ts",
+        "postcss.config.mjs"
+      ],
+      "ignore": [
+        "app/globals.css"
+      ]
     },
     "examples/canvas": {
-      "entry": ["src/main.tsx"],
-      "ignoreDependencies": []
+      "entry": [
+        "src/main.tsx"
+      ],
+      "ignoreDependencies": [],
+      "ignore": [
+        "src/index.css"
+      ]
     },
     "examples/*": {
-      "entry": ["src/main.{ts,tsx}"],
-      "ignoreDependencies": []
+      "entry": [
+        "src/main.{ts,tsx}"
+      ],
+      "ignoreDependencies": [],
+      "ignore": [
+        "src/index.css"
+      ]
+    },
+    "apps/*": {
+      "entry": [
+        "src/main.tsx"
+      ],
+      "ignoreDependencies": [],
+      "ignore": [
+        "src/style.css"
+      ]
     }
   }
 }

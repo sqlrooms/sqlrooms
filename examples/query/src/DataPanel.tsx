@@ -15,7 +15,7 @@ export const DataPanel = () => {
   return (
     <RoomPanel type={RoomPanelTypes.enum['data']}>
       <FileDropzone
-        className="h-[200px] p-5"
+        className="h-50 p-5"
         acceptedFormats={{
           'text/csv': ['.csv'],
           'text/tsv': ['.tsv'],

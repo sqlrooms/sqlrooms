@@ -3,10 +3,11 @@ import fixReactVirtualized from 'esbuild-plugin-react-virtualized';
 import fs from 'fs';
 import path from 'path';
 import {defineConfig} from 'vite';
+import tailwindcss from '@tailwindcss/vite';
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [react(), tailwindcss()],
   resolve: {
     alias: (() => {
       const aliases: any[] = [];

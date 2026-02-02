@@ -95,7 +95,7 @@ export const LayoutComposer: FC<{
   return (
     <div
       className={cn(
-        'flex h-full w-full flex-grow flex-col items-stretch',
+        'flex h-full w-full grow flex-col items-stretch',
         className,
       )}
     >

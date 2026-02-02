@@ -1,3 +1,5 @@
+export PATH="$HOME/.volta/bin:$PATH"
+
 pnpm knip
 pnpm typecheck
 pnpm test

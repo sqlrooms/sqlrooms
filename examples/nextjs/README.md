@@ -13,7 +13,7 @@
 A minimalistic [Next.js](https://nextjs.org/) app example featuring:
 
 - [Recharts module](/api/recharts) for data visualization
-- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling (experimental)
+- [Tailwind 4](https://tailwindcss.com/blog/tailwindcss-v4) for styling
 
 To create a new project from the Next.js example run this:
 
