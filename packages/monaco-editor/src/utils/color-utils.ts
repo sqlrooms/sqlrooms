@@ -78,107 +78,6 @@ function normalizeCssColorValue(
 }
 
 /**
- * Recursively walks CSSRuleList to find a CSS variable value for a given selector.
- * Handles nested rules like @layer, @media, @supports.
- * Returns the last matching value found (respecting CSS cascade rules).
- *
- * @param rules - The CSS rules to walk
- * @param selector - The CSS selector to match (e.g., ':root', '.dark')
- * @param variableName - The CSS variable name to find (e.g., '--background')
- * @param currentMatch - The last match found so far (used internally for recursion to accumulate results across nested rules)
- * @returns The last matching CSS variable value, or undefined if not found
- */
-function walkCssRulesForVariable(
-  rules: CSSRuleList,
-  selector: string,
-  variableName: string,
-  currentMatch?: string,
-): string | undefined {
-  let lastMatch = currentMatch;
-
-  for (const rule of Array.from(rules)) {
-    // Check if this is a style rule with the selector we're looking for
-    const styleRule = rule as CSSStyleRule;
-    if (styleRule.selectorText && styleRule.style) {
-      if (
-        styleRule.selectorText
-          .split(',')
-          .map((s) => s.trim())
-          .includes(selector)
-      ) {
-        const raw = styleRule.style.getPropertyValue(variableName);
-        if (raw) lastMatch = raw.trim();
-      }
-    }
-
-    // Check if this rule has nested rules (CSSGroupingRule includes @layer, @media, @supports)
-    if ('cssRules' in rule && (rule as CSSGroupingRule).cssRules) {
-      lastMatch = walkCssRulesForVariable(
-        (rule as CSSGroupingRule).cssRules,
-        selector,
-        variableName,
-        lastMatch,
-      );
-    }
-  }
-
-  return lastMatch;
-}
-
-function getRawCssVarFromStylesheets(
-  selector: string,
-  variableName: string,
-): string | undefined {
-  if (typeof document === 'undefined') return undefined;
-  const sheets = Array.from(document.styleSheets ?? []);
-
-  let lastMatch: string | undefined = undefined;
-
-  for (const sheet of sheets) {
-    let rules: CSSRuleList | undefined;
-    try {
-      rules = (sheet as CSSStyleSheet).cssRules;
-    } catch {
-      // Cross-origin stylesheet, ignore
-      continue;
-    }
-    if (!rules) continue;
-
-    lastMatch = walkCssRulesForVariable(
-      rules,
-      selector,
-      variableName,
-      lastMatch,
-    );
-  }
-
-  return lastMatch;
-}
-
-/**
- * Reads a CSS variable for a specific theme mode without mutating `<html>` classes.
- * Works with the project's theme CSS that defines light vars under `:root` and
- * dark overrides under `.dark`.
- */
-export function getCssColorFromThemeMode(
-  themeMode: 'light' | 'dark',
-  variableName: string,
-  fallbackColor: string,
-): string {
-  if (typeof document === 'undefined') return fallbackColor;
-  try {
-    const selector = themeMode === 'dark' ? '.dark' : ':root';
-    const raw = getRawCssVarFromStylesheets(selector, variableName);
-    if (raw) return normalizeCssColorValue(raw, fallbackColor);
-  } catch {
-    // ignore; fall back below
-  }
-
-  // Fallback: best-effort from current DOM state
-  return getCssColor(variableName, fallbackColor);
-}
-
-/**
  * Safely gets a CSS variable and ensures it's in a format Monaco can use
  * @param variableName CSS variable name (e.g. '--background')
  * @param fallbackColor Fallback color if the variable isn't found
@@ -189,25 +88,9 @@ export function getCssColor(
   fallbackColor: string,
 ): string {
   if (typeof document === 'undefined') return fallbackColor;
-  return getCssColorFromElement(
-    document.documentElement,
-    variableName,
-    fallbackColor,
-  );
-}
-
-/**
- * Safely gets a CSS variable from a specific element and ensures it's in a format Monaco can use.
- * Useful when you need to read theme-scoped variables without mutating `<html>` classes.
- */
-export function getCssColorFromElement(
-  element: Element,
-  variableName: string,
-  fallbackColor: string,
-): string {
   try {
-    // Get CSS variable value
-    const cssValue = getComputedStyle(element)
+    // Get CSS variable value from current DOM
+    const cssValue = getComputedStyle(document.documentElement)
       .getPropertyValue(variableName)
       .trim();
 
@@ -241,17 +124,7 @@ export function getMonospaceFont(): string {
  * @param isDarkTheme Whether the current theme is dark or light
  * @returns Object with menu-related color settings for Monaco editor
  */
-export function getMenuColors(
-  isDarkTheme: boolean,
-  elementOrMode?: Element | 'light' | 'dark',
-): Record<string, string> {
-  const resolvedElementOrMode =
-    elementOrMode ??
-    (typeof document === 'undefined'
-      ? isDarkTheme
-        ? 'dark'
-        : 'light'
-      : document.documentElement);
+export function getMenuColors(isDarkTheme: boolean): Record<string, string> {
   const defaultDarkColors = {
     'editorWidget.background': '#1f1f1f',
     'editorWidget.foreground': '#cccccc',
@@ -290,121 +163,120 @@ export function getMenuColors(
   const defaults = isDarkTheme ? defaultDarkColors : defaultLightColors;
   const result: Record<string, string> = {};
 
-  const get = (varName: string, fallback: string) => {
-    if (typeof resolvedElementOrMode === 'string') {
-      return getCssColorFromThemeMode(resolvedElementOrMode, varName, fallback);
-    }
-    return getCssColorFromElement(resolvedElementOrMode, varName, fallback);
-  };
-
   // Map Tailwind variables to Monaco color settings
   if (isDarkTheme) {
     // Dark theme mappings
-    result['editorWidget.background'] = get(
+    result['editorWidget.background'] = getCssColor(
       '--popover',
       defaults['editorWidget.background'],
     );
-    result['editorWidget.foreground'] = get(
+    result['editorWidget.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['editorWidget.foreground'],
     );
-    result['editorWidget.border'] = get(
+    result['editorWidget.border'] = getCssColor(
       '--border',
       defaults['editorWidget.border'],
     );
-    result['editorSuggestWidget.background'] = get(
+    result['editorSuggestWidget.background'] = getCssColor(
       '--popover',
       defaults['editorSuggestWidget.background'],
     );
-    result['list.hoverBackground'] = get(
+    result['list.hoverBackground'] = getCssColor(
       '--accent',
       defaults['list.hoverBackground'],
     );
-    result['list.highlightForeground'] = get(
+    result['list.highlightForeground'] = getCssColor(
       '--primary',
       defaults['list.highlightForeground'],
     );
-    result['menu.background'] = get('--popover', defaults['menu.background']);
-    result['menu.foreground'] = get(
+    result['menu.background'] = getCssColor(
+      '--popover',
+      defaults['menu.background'],
+    );
+    result['menu.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['menu.foreground'],
     );
-    result['menu.selectionBackground'] = get(
+    result['menu.selectionBackground'] = getCssColor(
       '--accent',
       defaults['menu.selectionBackground'],
     );
-    result['menu.selectionForeground'] = get(
+    result['menu.selectionForeground'] = getCssColor(
       '--accent-foreground',
       defaults['menu.selectionForeground'],
     );
-    result['quickInput.background'] = get(
+    result['quickInput.background'] = getCssColor(
       '--popover',
       defaults['quickInput.background'],
     );
-    result['quickInput.foreground'] = get(
+    result['quickInput.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['quickInput.foreground'],
     );
-    result['dropdown.background'] = get(
+    result['dropdown.background'] = getCssColor(
       '--popover',
       defaults['dropdown.background'],
     );
-    result['dropdown.foreground'] = get(
+    result['dropdown.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['dropdown.foreground'],
     );
   } else {
     // Light theme mappings
-    result['editorWidget.background'] = get(
+    result['editorWidget.background'] = getCssColor(
       '--popover',
       defaults['editorWidget.background'],
     );
-    result['editorWidget.foreground'] = get(
+    result['editorWidget.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['editorWidget.foreground'],
     );
-    result['editorWidget.border'] = get(
+    result['editorWidget.border'] = getCssColor(
       '--border',
       defaults['editorWidget.border'],
     );
-    result['editorSuggestWidget.background'] = get(
+    result['editorSuggestWidget.background'] = getCssColor(
       '--popover',
       defaults['editorSuggestWidget.background'],
     );
-    result['list.hoverBackground'] = get(
+    result['list.hoverBackground'] = getCssColor(
       '--accent',
       defaults['list.hoverBackground'],
     );
-    result['list.highlightForeground'] = get(
+    result['list.highlightForeground'] = getCssColor(
       '--primary',
       defaults['list.highlightForeground'],
     );
-    result['menu.background'] = get('--popover', defaults['menu.background']);
-    result['menu.foreground'] = get(
+    result['menu.background'] = getCssColor(
+      '--popover',
+      defaults['menu.background'],
+    );
+    result['menu.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['menu.foreground'],
     );
-    result['menu.selectionBackground'] = get(
+    result['menu.selectionBackground'] = getCssColor(
       '--accent',
       defaults['menu.selectionBackground'],
     );
-    result['menu.selectionForeground'] = get(
+    result['menu.selectionForeground'] = getCssColor(
       '--accent-foreground',
       defaults['menu.selectionForeground'],
     );
-    result['quickInput.background'] = get(
+    result['quickInput.background'] = getCssColor(
       '--popover',
       defaults['quickInput.background'],
     );
-    result['quickInput.foreground'] = get(
+    result['quickInput.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['quickInput.foreground'],
     );
-    result['dropdown.background'] = get(
+    result['dropdown.background'] = getCssColor(
       '--popover',
       defaults['dropdown.background'],
     );
-    result['dropdown.foreground'] = get(
+    result['dropdown.foreground'] = getCssColor(
       '--popover-foreground',
       defaults['dropdown.foreground'],
     );
@@ -418,17 +290,7 @@ export function getMenuColors(
  * @param isDarkTheme Whether the current theme is dark or light
  * @returns A complete Monaco editor theme data object for JSON editing
  */
-export function getJsonEditorTheme(
-  isDarkTheme: boolean,
-  elementOrMode?: Element | 'light' | 'dark',
-): any {
-  const resolvedElementOrMode =
-    elementOrMode ??
-    (typeof document === 'undefined'
-      ? isDarkTheme
-        ? 'dark'
-        : 'light'
-      : document.documentElement);
+export function getJsonEditorTheme(isDarkTheme: boolean): any {
   // Predefined pastel colors for syntax highlighting
   // Light theme colors
   const lightThemeColors = {
@@ -451,31 +313,42 @@ export function getJsonEditorTheme(
   // Select the appropriate color set based on theme
   const colors = isDarkTheme ? darkThemeColors : lightThemeColors;
 
-  // Theme background and UI colors - still using CSS variables for the editor itself
-  const get = (varName: string, fallback: string) => {
-    if (typeof resolvedElementOrMode === 'string') {
-      return getCssColorFromThemeMode(resolvedElementOrMode, varName, fallback);
-    }
-    return getCssColorFromElement(resolvedElementOrMode, varName, fallback);
-  };
-
-  const background = get('--background', isDarkTheme ? '#1E1E1E' : '#FFFFFF');
-  const foreground = get('--foreground', isDarkTheme ? '#D4D4D4' : '#000000');
-  const selection = get('--accent', isDarkTheme ? '#264F78' : '#ADD6FF');
-  const lineHighlight = get('--muted', isDarkTheme ? '#2A2A2A' : '#F5F5F5');
-  const lineNumbers = get(
+  // Theme background and UI colors - read from current DOM
+  const background = getCssColor(
+    '--background',
+    isDarkTheme ? '#1E1E1E' : '#FFFFFF',
+  );
+  const foreground = getCssColor(
+    '--foreground',
+    isDarkTheme ? '#D4D4D4' : '#000000',
+  );
+  const selection = getCssColor(
+    '--accent',
+    isDarkTheme ? '#264F78' : '#ADD6FF',
+  );
+  const lineHighlight = getCssColor(
+    '--muted',
+    isDarkTheme ? '#2A2A2A' : '#F5F5F5',
+  );
+  const lineNumbers = getCssColor(
     '--muted-foreground',
     isDarkTheme ? '#858585' : '#888888',
   );
-  const cursor = get('--primary', isDarkTheme ? '#FFFFFF' : '#000000');
+  const cursor = getCssColor('--primary', isDarkTheme ? '#FFFFFF' : '#000000');
 
   // Menu colors
-  const menuBackground = get('--popover', isDarkTheme ? '#1C2233' : '#F3F3F3');
-  const menuForeground = get(
+  const menuBackground = getCssColor(
+    '--popover',
+    isDarkTheme ? '#1C2233' : '#F3F3F3',
+  );
+  const menuForeground = getCssColor(
     '--popover-foreground',
     isDarkTheme ? '#FFFFFF' : '#616161',
   );
-  const menuSeparator = get('--border', isDarkTheme ? '#39435E' : '#C8C8C8');
+  const menuSeparator = getCssColor(
+    '--border',
+    isDarkTheme ? '#39435E' : '#C8C8C8',
+  );
 
   return {
     base: isDarkTheme ? 'vs-dark' : 'vs',
