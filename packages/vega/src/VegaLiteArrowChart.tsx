@@ -147,10 +147,7 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     <VegaChartContextProvider value={{embed}}>
       <div
         ref={containerRef}
-        className={cn(
-          'relative flex h-full w-full flex-col gap-2 overflow-hidden',
-          className,
-        )}
+        className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
         {chartError ? (
           <ToolErrorMessage
@@ -163,8 +160,12 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
         ) : (
           specWithData &&
           data && (
-            <AspectRatio ratio={aspectRatio} className="overflow-auto" asChild>
-              <div ref={ref} />
+            <AspectRatio
+              ratio={aspectRatio}
+              className="overflow-visible"
+              asChild
+            >
+              <div ref={ref} className="[&_svg]:overflow-visible" />
             </AspectRatio>
           )
         )}
