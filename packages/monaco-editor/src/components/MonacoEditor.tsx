@@ -84,7 +84,11 @@ export interface MonacoEditorProps extends Omit<EditorProps, 'onMount'> {
 // Module-level singleton to track theme state
 let lastDefinedForDarkMode: boolean | null = null;
 
-function defineMonacoThemes(monaco: typeof Monaco, isDark: boolean) {
+function defineMonacoThemes(
+  monaco: typeof Monaco,
+  isDark: boolean,
+  currentTheme: string,
+) {
   suppressMonacoTextareaFlash();
 
   // Only redefine if the theme mode has changed or themes haven't been defined yet
@@ -133,6 +137,9 @@ function defineMonacoThemes(monaco: typeof Monaco, isDark: boolean) {
   });
 
   monaco.editor.defineTheme('sqlrooms-json-dark', getJsonEditorTheme(true));
+
+  // Apply the correct theme variant (respects JSON-specific themes)
+  monaco.editor.setTheme(currentTheme);
 }
 
 const DEFAULT_MONACO_OPTIONS: Monaco.editor.IStandaloneEditorConstructionOptions =
@@ -203,7 +210,7 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monaco,
   ) => {
     monacoRef.current = monaco;
-    defineMonacoThemes(monaco, isDark);
+    defineMonacoThemes(monaco, isDark, monacoTheme);
     beforeMount?.(monaco);
   };
 
@@ -212,20 +219,19 @@ export const MonacoEditor: React.FC<MonacoEditorProps> = ({
     monacoRef.current = monaco;
 
     // Safety: in case beforeMount didn't run for any reason.
-    defineMonacoThemes(monaco, isDark);
+    defineMonacoThemes(monaco, isDark, monacoTheme);
 
     if (onMount) {
       onMount(editor, monaco);
     }
   };
 
-  // Redefine themes globally (once) when theme mode changes, then switch
+  // Redefine themes globally (once) when theme mode changes, then apply correct variant
   useEffect(() => {
     if (monacoRef.current) {
-      defineMonacoThemes(monacoRef.current, isDark);
-      monacoRef.current.editor.setTheme(monacoTheme);
+      defineMonacoThemes(monacoRef.current, isDark, monacoTheme);
     }
-  }, [isDark, monacoTheme]);
+  }, [isDark, monacoTheme, language]);
 
   // Apply readOnly option
   useEffect(() => {
