@@ -84,13 +84,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
 
   return (
     <TooltipProvider>
-      <div
-        className={cn(
-          'relative w-full py-1',
-          isVisible ? 'h-20' : 'h-0',
-          className,
-        )}
-      >
+      <div className={cn('relative w-full py-1', className)}>
         {/* Container with scrollable suggestions and hide button */}
         <div className="flex h-full w-full gap-2">
           {/* Left scroll arrow */}
@@ -98,7 +92,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
             onClick={() => scrollBy('left')}
             disabled={!canScrollLeft}
             className={cn(
-              'absolute left-0 top-0 z-10 flex h-full w-8 items-center justify-start pl-1',
+              'absolute top-0 left-0 z-10 flex h-full w-8 items-center justify-start pl-1',
               'from-background/80 bg-gradient-to-r to-transparent',
               'opacity-0 transition-opacity hover:opacity-100',
               !canScrollLeft && 'pointer-events-none',
@@ -126,7 +120,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
                         'relative',
                         'flex items-center justify-center',
                         'px-4 py-2',
-                        'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
+                        'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
                       )}
                       type="button"
                     >
@@ -142,7 +136,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
             onClick={() => scrollBy('right')}
             disabled={!canScrollRight}
             className={cn(
-              'absolute right-8 top-0 z-10 flex h-full w-8 items-center justify-end pr-1',
+              'absolute top-0 right-8 z-10 flex h-full w-8 items-center justify-end pr-1',
               'from-background/80 bg-gradient-to-l to-transparent',
               'opacity-0 transition-opacity hover:opacity-100',
               !canScrollRight && 'pointer-events-none',
@@ -219,14 +213,14 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
               'flex items-start justify-start',
               'text-left',
               'overflow-hidden',
-              'py-2 pl-8 pr-4',
-              'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
+              'py-2 pr-4 pl-8',
+              'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
               className,
             )}
             type="button"
             title={text}
           >
-            <span className="absolute left-2 top-3 opacity-60">
+            <span className="absolute top-3 left-2 opacity-60">
               {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
             </span>
             <span className="line-clamp-2 text-wrap break-words">
