@@ -217,6 +217,8 @@ function SortableTab({
               onChange={(newName) => onInlineRename(tab.id, newName)}
               className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
               isEditing
+              autoFocus
+              selectOnFocus
               onEditingChange={(isEditing) => {
                 if (!isEditing) {
                   onStopEditing();

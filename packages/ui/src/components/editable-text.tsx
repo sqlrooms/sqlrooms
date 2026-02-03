@@ -42,6 +42,8 @@ export const EditableText: FC<{
   value: string;
   placeholder?: string;
   onChange: (text: string) => void;
+  autoFocus?: boolean;
+  selectOnFocus?: boolean;
 
   /**
    * The editing state when it is initially rendered. Use when you do not need to control its editing state
@@ -63,6 +65,8 @@ export const EditableText: FC<{
   value,
   onChange,
   onEditingChange,
+  autoFocus,
+  selectOnFocus = false,
 }) => {
   const [isInternalEditing, setInternalIsEditing] = useState(defaultEditing);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -88,10 +92,12 @@ export const EditableText: FC<{
       setInternalIsEditing(Boolean(isEditing));
       if (isEditing) {
         // When enabling editing from a dropdown menu, there will be a blur event when the dropdown closes,
-        // so we need to wait a bit before making sure the input is focused and selected
+        // so we need to wait a bit before making sure the input is focused and selected.
         const timeoutId = setTimeout(() => {
-          inputRef.current?.select();
           inputRef.current?.focus();
+          if (selectOnFocus) {
+            inputRef.current?.select();
+          }
         }, 200);
         return () => clearTimeout(timeoutId);
       }
@@ -131,6 +137,27 @@ export const EditableText: FC<{
       handleSetEditing(true);
     }
   }, [isInternalEditing, handleSetEditing]);
+
+  const handleFocus = useCallback(() => {
+    if (selectOnFocus && isInternalEditing) {
+      inputRef.current?.select();
+    }
+  }, [isInternalEditing, selectOnFocus]);
+
+  useEffect(() => {
+    if (!isInternalEditing) return;
+    let rafId = requestAnimationFrame(() => {
+      rafId = requestAnimationFrame(() => {
+        inputRef.current?.focus();
+        if (selectOnFocus) {
+          inputRef.current?.select();
+        }
+      });
+    });
+    return () => {
+      cancelAnimationFrame(rafId);
+    };
+  }, [isInternalEditing, selectOnFocus]);
 
   // Add keydown event listener to handle enter key
   useEffect(() => {
@@ -173,7 +200,9 @@ export const EditableText: FC<{
         caretColor: isInternalEditing ? undefined : 'transparent',
       }}
       value={internalValue}
+      autoFocus={autoFocus}
       onChange={handleSetValue}
+      onFocus={handleFocus}
       onBlur={handleBlur}
       disabled={isReadOnly}
       onClick={handleClick}
