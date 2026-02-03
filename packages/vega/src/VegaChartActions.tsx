@@ -36,7 +36,7 @@ export const VegaChartActions: React.FC<VegaChartActionsProps> = ({
   return (
     <div
       className={cn(
-        'bg-background pointer-events-none absolute right-0 top-1 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover:pointer-events-auto group-hover:opacity-100',
+        'vega-actions bg-background pointer-coarse:pointer-events-auto pointer-coarse:opacity-100 pointer-events-none absolute right-0 top-1 z-10 flex items-center gap-1 opacity-0 transition-opacity peer-focus-within:pointer-events-auto peer-focus-within:opacity-100 peer-hover:pointer-events-auto peer-hover:opacity-100',
         className,
       )}
     >

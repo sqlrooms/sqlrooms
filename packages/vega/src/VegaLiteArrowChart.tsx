@@ -147,31 +147,30 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     <VegaChartContextProvider value={{embed}}>
       <div
         ref={containerRef}
-        className={cn(
-          'group relative flex h-full w-full flex-col gap-2',
-          className,
-        )}
+        className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
-        {chartError ? (
-          <ToolErrorMessage
-            error={chartError}
-            triggerLabel="Chart rendering failed"
-            title="Chart error"
-            align="start"
-            details={spec}
-          />
-        ) : (
-          specWithData &&
-          data && (
-            <AspectRatio
-              ratio={aspectRatio}
-              className="overflow-visible"
-              asChild
-            >
-              <div ref={ref} className="[&_svg]:overflow-visible" />
-            </AspectRatio>
-          )
-        )}
+        <div className="peer relative">
+          {chartError ? (
+            <ToolErrorMessage
+              error={chartError}
+              triggerLabel="Chart rendering failed"
+              title="Chart error"
+              align="start"
+              details={spec}
+            />
+          ) : (
+            specWithData &&
+            data && (
+              <AspectRatio
+                ratio={aspectRatio}
+                className="overflow-visible"
+                asChild
+              >
+                <div ref={ref} className="[&_svg]:overflow-visible" />
+              </AspectRatio>
+            )
+          )}
+        </div>
         {children}
       </div>
     </VegaChartContextProvider>
