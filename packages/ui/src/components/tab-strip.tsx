@@ -433,6 +433,8 @@ interface TabStripSearchDropdownProps {
   emptyMessage?: React.ReactNode;
   /** Message shown when searching and there are no matching tabs. */
   searchEmptyMessage?: React.ReactNode;
+  /** Label for the closed tabs group. */
+  closedTabsLabel?: React.ReactNode;
 }
 
 /**
@@ -447,6 +449,7 @@ function TabStripSearchDropdown({
   triggerIcon,
   emptyMessage = 'No tabs',
   searchEmptyMessage = 'No matching tabs',
+  closedTabsLabel = 'Closed tabs',
 }: TabStripSearchDropdownProps) {
   const {
     openTabItems,
@@ -571,14 +574,20 @@ function TabStripSearchDropdown({
                   onTabClick={handleTabClick}
                   renderActions={renderSearchItemActions}
                 />
-                {filteredOpenTabs.length > 0 &&
-                  filteredClosedTabs.length > 0 && <DropdownMenuSeparator />}
-                <DropdownTabItems
-                  tabs={filteredClosedTabs}
-                  onTabClick={handleTabClick}
-                  renderActions={renderSearchItemActions}
-                  getItemClassName={() => 'text-muted-foreground'}
-                />
+                {filteredClosedTabs.length > 0 && (
+                  <>
+                    {filteredOpenTabs.length > 0 && <DropdownMenuSeparator />}
+                    <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                      {closedTabsLabel}
+                    </DropdownMenuLabel>
+                    <DropdownTabItems
+                      tabs={filteredClosedTabs}
+                      onTabClick={handleTabClick}
+                      renderActions={renderSearchItemActions}
+                      getItemClassName={() => 'text-muted-foreground'}
+                    />
+                  </>
+                )}
               </>
             )
           ) : (
@@ -590,15 +599,20 @@ function TabStripSearchDropdown({
                     onTabClick={handleTabClick}
                     renderActions={renderSearchItemActions}
                   />
-                  {openTabsList.length > 0 && closedTabsList.length > 0 && (
-                    <DropdownMenuSeparator />
+                  {closedTabsList.length > 0 && (
+                    <>
+                      {openTabsList.length > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                        {closedTabsLabel}
+                      </DropdownMenuLabel>
+                      <DropdownTabItems
+                        tabs={closedTabsList}
+                        onTabClick={handleTabClick}
+                        renderActions={renderSearchItemActions}
+                        getItemClassName={() => 'text-muted-foreground'}
+                      />
+                    </>
                   )}
-                  <DropdownTabItems
-                    tabs={closedTabsList}
-                    onTabClick={handleTabClick}
-                    renderActions={renderSearchItemActions}
-                    getItemClassName={() => 'text-muted-foreground'}
-                  />
                 </>
               ) : (
                 <DropdownTabItems
