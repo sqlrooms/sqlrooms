@@ -6,15 +6,10 @@ import {
   TooltipProvider,
   TooltipTrigger,
   Spinner,
+  ScrollableRow,
 } from '@sqlrooms/ui';
-import {ChevronLeft, ChevronRight, Lightbulb, X} from 'lucide-react';
-import {
-  PropsWithChildren,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from 'react';
+import {Lightbulb, X} from 'lucide-react';
+import {PropsWithChildren, useCallback, useRef} from 'react';
 import {useStoreWithAi} from '../AiSlice';
 import {truncate} from '@sqlrooms/utils';
 
@@ -34,49 +29,10 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
 }) => {
   const isVisible = useStoreWithAi((s) => s.ai.promptSuggestionsVisible);
   const setIsVisible = useStoreWithAi((s) => s.ai.setPromptSuggestionsVisible);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
 
   const toggleVisibility = useCallback(() => {
     setIsVisible(!isVisible);
   }, [isVisible, setIsVisible]);
-
-  const updateScrollState = useCallback(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const {scrollLeft, scrollWidth, clientWidth} = container;
-    setCanScrollLeft(scrollLeft > 0);
-    setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
-  }, []);
-
-  const scrollBy = useCallback((direction: 'left' | 'right') => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    const scrollAmount = 200; // Scroll by roughly one item width
-    container.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth',
-    });
-  }, []);
-
-  useEffect(() => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-
-    updateScrollState();
-
-    container.addEventListener('scroll', updateScrollState);
-    const resizeObserver = new ResizeObserver(updateScrollState);
-    resizeObserver.observe(container);
-
-    return () => {
-      container.removeEventListener('scroll', updateScrollState);
-      resizeObserver.disconnect();
-    };
-  }, [updateScrollState, children]);
 
   if (!isVisible) {
     return null;
@@ -84,28 +40,14 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
 
   return (
     <TooltipProvider>
-      <div className={cn('relative w-full py-1', className)}>
+      <div className={cn('w-full py-1', className)}>
         {/* Container with scrollable suggestions and hide button */}
         <div className="flex h-full w-full gap-2">
-          {/* Left scroll arrow */}
-          <button
-            onClick={() => scrollBy('left')}
-            disabled={!canScrollLeft}
-            className={cn(
-              'absolute top-0 left-0 z-10 flex h-full w-8 items-center justify-start pl-1',
-              'from-background/80 bg-gradient-to-r to-transparent',
-              'opacity-0 transition-opacity hover:opacity-100',
-              !canScrollLeft && 'pointer-events-none',
-            )}
-            title="Scroll left"
-          >
-            <ChevronLeft className="text-muted-foreground h-5 w-5" />
-          </button>
-
-          {/* Scrollable suggestions container */}
-          <div
-            ref={scrollContainerRef}
-            className="flex flex-1 snap-x snap-mandatory scroll-pl-1 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          <ScrollableRow
+            className="min-w-0 flex-1"
+            scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-1 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            arrowVisibility="always"
+            arrowIconClassName="h-4 w-4 opacity-80"
           >
             {isLoading
               ? // Show placeholder buttons with spinners while loading
@@ -120,7 +62,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
                         'relative',
                         'flex items-center justify-center',
                         'px-4 py-2',
-                        'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
+                        'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
                       )}
                       type="button"
                     >
@@ -129,22 +71,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
                   </div>
                 ))
               : children}
-          </div>
-
-          {/* Right scroll arrow */}
-          <button
-            onClick={() => scrollBy('right')}
-            disabled={!canScrollRight}
-            className={cn(
-              'absolute top-0 right-8 z-10 flex h-full w-8 items-center justify-end pr-1',
-              'from-background/80 bg-gradient-to-l to-transparent',
-              'opacity-0 transition-opacity hover:opacity-100',
-              !canScrollRight && 'pointer-events-none',
-            )}
-            title="Scroll right"
-          >
-            <ChevronRight className="text-muted-foreground h-5 w-5" />
-          </button>
+          </ScrollableRow>
 
           <div className="flex shrink-0 items-center pr-1">
             <Button
@@ -213,14 +140,14 @@ const Item: React.FC<PromptSuggestionsItemProps> = ({
               'flex items-start justify-start',
               'text-left',
               'overflow-hidden',
-              'py-2 pr-4 pl-8',
-              'h-18 max-h-18 min-h-18 w-48 max-w-48 min-w-48',
+              'py-2 pl-8 pr-4',
+              'h-18 max-h-18 min-h-18 w-48 min-w-48 max-w-48',
               className,
             )}
             type="button"
             title={text}
           >
-            <span className="absolute top-3 left-2 opacity-60">
+            <span className="absolute left-2 top-3 opacity-60">
               {icon ?? <Lightbulb className="h-3.5 w-3.5" />}
             </span>
             <span className="line-clamp-2 text-wrap break-words">

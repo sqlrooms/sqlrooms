@@ -47,6 +47,7 @@ import {
 } from './dropdown-menu';
 import {EditableText} from './editable-text';
 import {Input} from './input';
+import {ScrollableRow} from './scrollable-row';
 import {Tabs, TabsList, TabsTrigger} from './tabs';
 import {
   Tooltip,
@@ -177,7 +178,7 @@ function SortableTab({
         )}
       >
         <div
-          className="flex min-w-0 items-center"
+          className="flex min-w-0 max-w-full items-center overflow-hidden"
           onDoubleClick={() => onStartEditing(tab.id)}
         >
           {editingTabId !== tab.id ? (
@@ -389,12 +390,16 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
-        <div
-          ref={scrollContainerRef}
-          className={cn(
+        <ScrollableRow
+          className="h-full min-w-0 flex-1"
+          scrollRef={scrollContainerRef}
+          scrollClassName={cn(
             'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 [&::-webkit-scrollbar]:hidden',
             className,
           )}
+          arrowVisibility="always"
+          arrowClassName="w-7"
+          arrowIconClassName="h-4 w-4 opacity-60"
         >
           {openTabItems.map((tab) => (
             <SortableTab
@@ -411,7 +416,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               renderTabLabel={renderTabLabel}
             />
           ))}
-        </div>
+        </ScrollableRow>
       </SortableContext>
     </DndContext>
   );
@@ -426,11 +431,15 @@ interface TabStripSearchDropdownProps {
   tooltip?: React.ReactNode;
   /** Optional custom icon for the trigger button. */
   triggerIcon?: React.ReactNode;
+  /** Message shown when there are no tabs at all. */
+  emptyMessage?: React.ReactNode;
+  /** Message shown when searching and there are no matching tabs. */
+  searchEmptyMessage?: React.ReactNode;
 }
 
 /**
  * Renders the dropdown with search for browsing tabs.
- * By default shows only closed tabs. When searching, shows all matching tabs.
+ * Shows open tabs first and closed tabs second (dimmed). When searching, shows all matching tabs.
  */
 function TabStripSearchDropdown({
   className,
@@ -438,8 +447,11 @@ function TabStripSearchDropdown({
   autoFocus = true,
   tooltip,
   triggerIcon,
+  emptyMessage = 'No tabs',
+  searchEmptyMessage = 'No matching tabs',
 }: TabStripSearchDropdownProps) {
   const {
+    openTabItems,
     search,
     setSearch,
     closedTabs,
@@ -473,6 +485,17 @@ function TabStripSearchDropdown({
     }
     setIsOpen(false);
   };
+
+  const openTabsList = openTabItems;
+  const closedTabsList = closedTabs;
+  const hasAnyTabs = openTabsList.length + closedTabsList.length > 0;
+
+  const filteredOpenTabs = filteredTabs.filter(
+    (tab) => !closedTabIds.has(tab.id),
+  );
+  const filteredClosedTabs = filteredTabs.filter((tab) =>
+    closedTabIds.has(tab.id),
+  );
 
   const triggerButton = (
     <DropdownMenuTrigger asChild>
@@ -536,19 +559,58 @@ function TabStripSearchDropdown({
 
         <div className="overflow-y-auto">
           {isSearching ? (
-            <DropdownTabItems
-              tabs={filteredTabs}
-              emptyMessage="No matching tabs"
-              onTabClick={handleTabClick}
-              renderActions={renderSearchItemActions}
-            />
+            filteredTabs.length === 0 ? (
+              <DropdownTabItems
+                tabs={filteredTabs}
+                emptyMessage={searchEmptyMessage}
+                onTabClick={handleTabClick}
+                renderActions={renderSearchItemActions}
+              />
+            ) : (
+              <>
+                <DropdownTabItems
+                  tabs={filteredOpenTabs}
+                  onTabClick={handleTabClick}
+                  renderActions={renderSearchItemActions}
+                />
+                {filteredOpenTabs.length > 0 &&
+                  filteredClosedTabs.length > 0 && <DropdownMenuSeparator />}
+                <DropdownTabItems
+                  tabs={filteredClosedTabs}
+                  onTabClick={handleTabClick}
+                  renderActions={renderSearchItemActions}
+                  getItemClassName={() => 'text-muted-foreground'}
+                />
+              </>
+            )
           ) : (
-            <DropdownTabItems
-              tabs={closedTabs}
-              emptyMessage="No closed tabs"
-              onTabClick={handleTabClick}
-              renderActions={renderSearchItemActions}
-            />
+            <>
+              {hasAnyTabs ? (
+                <>
+                  <DropdownTabItems
+                    tabs={openTabsList}
+                    onTabClick={handleTabClick}
+                    renderActions={renderSearchItemActions}
+                  />
+                  {openTabsList.length > 0 && closedTabsList.length > 0 && (
+                    <DropdownMenuSeparator />
+                  )}
+                  <DropdownTabItems
+                    tabs={closedTabsList}
+                    onTabClick={handleTabClick}
+                    renderActions={renderSearchItemActions}
+                    getItemClassName={() => 'text-muted-foreground'}
+                  />
+                </>
+              ) : (
+                <DropdownTabItems
+                  tabs={[]}
+                  emptyMessage={emptyMessage}
+                  onTabClick={handleTabClick}
+                  renderActions={renderSearchItemActions}
+                />
+              )}
+            </>
           )}
         </div>
       </DropdownMenuContent>
@@ -558,9 +620,10 @@ function TabStripSearchDropdown({
 
 interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   onTabClick?: (tabId: string) => void;
   renderActions?: (tab: TabDescriptor) => React.ReactNode;
+  getItemClassName?: (tab: TabDescriptor) => string | undefined;
 }
 
 function DropdownTabItems({
@@ -568,6 +631,7 @@ function DropdownTabItems({
   emptyMessage,
   onTabClick,
   renderActions,
+  getItemClassName,
 }: DropdownTabItemsProps) {
   if (tabs.length === 0) {
     if (!emptyMessage) return null;
@@ -584,7 +648,10 @@ function DropdownTabItems({
         <DropdownMenuItem
           key={tab.id}
           onClick={() => onTabClick?.(tab.id)}
-          className="flex h-7 cursor-pointer items-center justify-between truncate"
+          className={cn(
+            'flex h-7 cursor-pointer items-center justify-between truncate',
+            getItemClassName?.(tab),
+          )}
         >
           <span className="xs truncate pl-1">{tab.name}</span>
           {renderActions && (
@@ -881,7 +948,7 @@ function TabStripRoot({
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex w-full min-w-0 justify-start gap-2 bg-transparent p-0',
+            'flex h-9 w-full min-w-0 items-center justify-start gap-2 bg-transparent p-0',
             tabsListClassName,
           )}
         >
