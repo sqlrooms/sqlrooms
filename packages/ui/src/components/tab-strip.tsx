@@ -78,6 +78,7 @@ interface TabStripContextValue {
   selectedTabId?: string | null;
   openTabs?: string[];
   preventCloseLastTab: boolean;
+  getLastOpenedAt: (tabId: string) => number | undefined;
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
@@ -435,6 +436,10 @@ interface TabStripSearchDropdownProps {
   searchEmptyMessage?: React.ReactNode;
   /** Label for the closed tabs group. */
   closedTabsLabel?: React.ReactNode;
+  /** Sorting mode for search dropdown items. */
+  sortSearchItems?: 'none' | 'recent';
+  /** Optional accessor for tab recency timestamps. */
+  getTabLastOpenedAt?: (tab: TabDescriptor) => number | undefined;
 }
 
 /**
@@ -450,6 +455,8 @@ function TabStripSearchDropdown({
   emptyMessage = 'No tabs',
   searchEmptyMessage = 'No matching tabs',
   closedTabsLabel = 'Closed tabs',
+  sortSearchItems = 'recent',
+  getTabLastOpenedAt,
 }: TabStripSearchDropdownProps) {
   const {
     openTabItems,
@@ -462,6 +469,7 @@ function TabStripSearchDropdown({
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
+    getLastOpenedAt,
   } = useTabStripContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -487,15 +495,39 @@ function TabStripSearchDropdown({
     setIsOpen(false);
   };
 
-  const openTabsList = openTabItems;
-  const closedTabsList = closedTabs;
+  const sortByRecency = (tabsToSort: TabDescriptor[]) => {
+    if (sortSearchItems !== 'recent') {
+      return tabsToSort;
+    }
+
+    const withIndex = tabsToSort.map((tab, index) => ({
+      tab,
+      index,
+      ts: getTabLastOpenedAt?.(tab) ?? getLastOpenedAt(tab.id),
+    }));
+
+    return withIndex
+      .slice()
+      .sort((a, b) => {
+        const aTs = a.ts ?? -1;
+        const bTs = b.ts ?? -1;
+        if (aTs === bTs) {
+          return a.index - b.index;
+        }
+        return bTs - aTs;
+      })
+      .map((item) => item.tab);
+  };
+
+  const openTabsList = sortByRecency(openTabItems);
+  const closedTabsList = sortByRecency(closedTabs);
   const hasAnyTabs = openTabsList.length + closedTabsList.length > 0;
 
-  const filteredOpenTabs = filteredTabs.filter(
-    (tab) => !closedTabIds.has(tab.id),
+  const filteredOpenTabs = sortByRecency(
+    filteredTabs.filter((tab) => !closedTabIds.has(tab.id)),
   );
-  const filteredClosedTabs = filteredTabs.filter((tab) =>
-    closedTabIds.has(tab.id),
+  const filteredClosedTabs = sortByRecency(
+    filteredTabs.filter((tab) => closedTabIds.has(tab.id)),
   );
 
   const triggerButton = (
@@ -794,6 +826,7 @@ function TabStripRoot({
   const scrollContainerRef = useRef<HTMLDivElement>(null!);
   const prevSelectedIdRef = useRef<string | null>(null);
   const prevOpenTabIdsRef = useRef<Set<string>>(new Set());
+  const lastOpenedAtRef = useRef<Map<string, number>>(new Map());
 
   const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
 
@@ -824,6 +857,22 @@ function TabStripRoot({
         : [],
     [tabs, trimmedSearch],
   );
+
+  useEffect(() => {
+    if (!selectedTabId) return;
+    lastOpenedAtRef.current.set(selectedTabId, Date.now());
+  }, [selectedTabId]);
+
+  useEffect(() => {
+    const ids = new Set(tabs.map((tab) => tab.id));
+    const next = new Map<string, number>();
+    for (const [id, ts] of lastOpenedAtRef.current.entries()) {
+      if (ids.has(id)) {
+        next.set(id, ts);
+      }
+    }
+    lastOpenedAtRef.current = next;
+  }, [tabs]);
 
   // Auto-scroll to selected tab
   useLayoutEffect(() => {
@@ -865,6 +914,13 @@ function TabStripRoot({
 
     // Update ref for next comparison
     prevOpenTabIdsRef.current = new Set(openTabs);
+
+    if (newTabIds.length > 0) {
+      const now = Date.now();
+      for (const id of newTabIds) {
+        lastOpenedAtRef.current.set(id, now);
+      }
+    }
 
     // Skip scroll on initial render (when ref was empty, all tabs appear "new")
     if (newTabIds.length === (openTabs?.length ?? 0)) return;
@@ -933,6 +989,7 @@ function TabStripRoot({
     selectedTabId,
     openTabs,
     preventCloseLastTab,
+    getLastOpenedAt: (tabId) => lastOpenedAtRef.current.get(tabId),
     onOpenTabsChange,
     onSelect,
     onCreate,
