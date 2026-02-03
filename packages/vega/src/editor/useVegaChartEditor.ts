@@ -1,5 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {VisualizationSpec} from 'vega-embed';
+import {safeJsonParse} from '@sqlrooms/utils';
 import {
   UseVegaChartEditorOptions,
   UseVegaChartEditorReturn,
@@ -29,36 +30,67 @@ export function useVegaChartEditor({
   onSpecChange,
   onSqlChange,
 }: UseVegaChartEditorOptions): UseVegaChartEditorReturn {
+  const normalizeInitialSpec = (spec: VisualizationSpec | string) => {
+    if (typeof spec === 'string') {
+      const parsed = safeJsonParse(spec) as VisualizationSpec | null;
+      if (parsed) {
+        return {
+          parsed,
+          normalized: JSON.stringify(parsed),
+          formatted: JSON.stringify(parsed, null, 2),
+          parseOk: true,
+        };
+      }
+      return {
+        parsed: null,
+        normalized: spec,
+        formatted: spec,
+        parseOk: false,
+      };
+    }
+
+    return {
+      parsed: spec,
+      normalized: JSON.stringify(spec),
+      formatted: JSON.stringify(spec, null, 2),
+      parseOk: true,
+    };
+  };
+
+  const initialSpecState = normalizeInitialSpec(initialSpec);
+
   // Combined editing state to allow atomic updates
   // All values stored in state to avoid ref updates during render
   const [editorState, setEditorState] = useState(() => {
-    const specString = JSON.stringify(initialSpec);
-    const specStringFormatted = JSON.stringify(initialSpec, null, 2);
     return {
-      editedSpecString: specStringFormatted,
+      editedSpecString: initialSpecState.formatted,
       editedSql: initialSql,
-      appliedSpecString: specString,
+      appliedSpecString: initialSpecState.normalized,
       appliedSql: initialSql,
       // Original values for reset functionality
-      originalSpecString: specStringFormatted,
+      originalSpecString: initialSpecState.formatted,
       originalSql: initialSql,
       // Track previous prop values for change detection
-      prevInitialSpecString: specString,
+      prevInitialSpecString: initialSpecState.normalized,
       prevInitialSql: initialSql,
       // Track last successfully parsed spec for fallback during errors
-      lastValidSpec: initialSpec,
+      lastValidSpec:
+        initialSpecState.parsed ?? ({} as unknown as VisualizationSpec),
     };
   });
 
   // Detect prop changes during render (React-recommended pattern)
   // See: https://react.dev/learn/you-might-not-need-an-effect#adjusting-some-state-when-a-prop-changes
-  const currentInitialSpecString = JSON.stringify(initialSpec);
-  if (currentInitialSpecString !== editorState.prevInitialSpecString) {
+  const currentInitialSpec = normalizeInitialSpec(initialSpec);
+  if (currentInitialSpec.normalized !== editorState.prevInitialSpecString) {
     setEditorState((prev) => ({
       ...prev,
-      prevInitialSpecString: currentInitialSpecString,
-      appliedSpecString: currentInitialSpecString,
-      editedSpecString: JSON.stringify(initialSpec, null, 2),
+      prevInitialSpecString: currentInitialSpec.normalized,
+      appliedSpecString: currentInitialSpec.normalized,
+      editedSpecString: currentInitialSpec.formatted,
+      lastValidSpec: currentInitialSpec.parseOk
+        ? (currentInitialSpec.parsed as VisualizationSpec)
+        : prev.lastValidSpec,
     }));
   }
 
