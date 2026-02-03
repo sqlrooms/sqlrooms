@@ -14,10 +14,10 @@ import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {Config} from 'vega-lite';
 import {darkTheme} from './themes/darkTheme';
 import {lightTheme} from './themes/lightTheme';
-import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaChartActions} from './VegaChartActions';
-import {VegaExportAction} from './VegaExportAction';
+import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaEditAction} from './VegaEditAction';
+import {VegaExportAction} from './VegaExportAction';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -147,7 +147,10 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
     <VegaChartContextProvider value={{embed}}>
       <div
         ref={containerRef}
-        className={cn('relative flex h-full w-full flex-col gap-2', className)}
+        className={cn(
+          'group relative flex h-full w-full flex-col gap-2',
+          className,
+        )}
       >
         {chartError ? (
           <ToolErrorMessage
