@@ -98,7 +98,9 @@ export const VegaExportAction: React.FC<VegaExportActionProps> = ({
   };
 
   return (
-    <DropdownMenu>
+    // Non-modal so closing the menu doesn't steal focus from other actions,
+    // which can close other dropdowns right after opening.
+    <DropdownMenu modal={false}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
