@@ -32,10 +32,14 @@ export function useVegaChartEditor({
 }: UseVegaChartEditorOptions): UseVegaChartEditorReturn {
   const normalizeInitialSpec = (spec: VisualizationSpec | string) => {
     if (typeof spec === 'string') {
-      const parsed = safeJsonParse(spec) as VisualizationSpec | null;
-      if (parsed) {
+      const parsed = safeJsonParse(spec) as unknown;
+      if (
+        typeof parsed === 'object' &&
+        parsed !== null &&
+        !Array.isArray(parsed)
+      ) {
         return {
-          parsed,
+          parsed: parsed as VisualizationSpec,
           normalized: JSON.stringify(parsed),
           formatted: JSON.stringify(parsed, null, 2),
           parseOk: true,
