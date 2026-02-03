@@ -162,7 +162,7 @@ export const SessionControls: React.FC<{
     <>
       <div
         className={cn(
-          'flex w-full flex-wrap items-center justify-between gap-2 overflow-hidden',
+          'flex w-full flex-wrap items-center justify-between gap-2 overflow-visible',
           className,
         )}
       >

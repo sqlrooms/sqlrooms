@@ -44,6 +44,8 @@ export const EditableText: FC<{
   onChange: (text: string) => void;
   autoFocus?: boolean;
   selectOnFocus?: boolean;
+  /** When false, the input is removed from tab order while not editing. */
+  allowTabFocusWhenNotEditing?: boolean;
 
   /**
    * The editing state when it is initially rendered. Use when you do not need to control its editing state
@@ -67,6 +69,7 @@ export const EditableText: FC<{
   onEditingChange,
   autoFocus,
   selectOnFocus = false,
+  allowTabFocusWhenNotEditing = true,
 }) => {
   const [isInternalEditing, setInternalIsEditing] = useState(defaultEditing);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -200,6 +203,7 @@ export const EditableText: FC<{
         caretColor: isInternalEditing ? undefined : 'transparent',
       }}
       value={internalValue}
+      tabIndex={isInternalEditing || allowTabFocusWhenNotEditing ? 0 : -1}
       autoFocus={autoFocus}
       onChange={handleSetValue}
       onFocus={handleFocus}

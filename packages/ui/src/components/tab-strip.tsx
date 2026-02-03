@@ -167,15 +167,19 @@ function SortableTab({
       data-tab-id={tab.id}
       {...attributes}
       {...listeners}
+      tabIndex={-1}
     >
       <TabsTrigger
         value={tab.id}
+        tabIndex={editingTabId === tab.id ? -1 : undefined}
+        data-editing={editingTabId === tab.id ? '' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
-          'items-center gap-1 overflow-hidden rounded-b-none',
+          'items-center gap-1 overflow-visible rounded-b-none',
           'py-0 pl-1 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
+          editingTabId === tab.id && 'focus-visible:ring-0',
         )}
       >
         {menuContent && (
@@ -219,6 +223,7 @@ function SortableTab({
               isEditing
               autoFocus
               selectOnFocus
+              allowTabFocusWhenNotEditing={false}
               onEditingChange={(isEditing) => {
                 if (!isEditing) {
                   onStopEditing();
@@ -395,7 +400,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
           className="h-full min-w-0 flex-1"
           scrollRef={scrollContainerRef}
           scrollClassName={cn(
-            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
+            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
           arrowVisibility="always"
@@ -1014,12 +1019,13 @@ function TabStripRoot({
     <Tabs
       value={selectedTabId ?? undefined}
       onValueChange={handleValueChange}
+      activationMode="manual"
       className={cn('bg-muted w-full min-w-0', className)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex h-9 w-full min-w-0 items-center justify-start gap-2 bg-transparent p-0',
+            'flex h-9 w-full min-w-0 items-center justify-start gap-2 overflow-visible bg-transparent p-0',
             tabsListClassName,
           )}
         >
