@@ -172,13 +172,38 @@ function SortableTab({
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
-          'items-center justify-between gap-1 overflow-hidden rounded-b-none',
-          'py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
+          'items-center gap-1 overflow-hidden rounded-b-none',
+          'py-0 pl-1 pr-1 font-normal data-[state=active]:shadow-none',
           tabClassName,
         )}
       >
+        {menuContent && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <span
+                role="button"
+                tabIndex={-1}
+                aria-label="Tab options"
+                className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                }}
+              >
+                <EllipsisVerticalIcon className="h-3 w-3" />
+              </span>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              {menuContent}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
         <div
-          className="flex min-w-0 max-w-full items-center overflow-hidden"
+          className="flex min-w-0 max-w-full flex-1 items-center overflow-hidden"
           onDoubleClick={() => onStartEditing(tab.id)}
         >
           {editingTabId !== tab.id ? (
@@ -200,52 +225,25 @@ function SortableTab({
           )}
         </div>
 
-        <div className="flex flex-shrink-0 items-center">
-          {menuContent && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <span
-                  role="button"
-                  tabIndex={-1}
-                  aria-label="Tab options"
-                  className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-                  onMouseDown={(event) => {
-                    event.stopPropagation();
-                    event.preventDefault();
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                  }}
-                >
-                  <EllipsisVerticalIcon className="h-3 w-3" />
-                </span>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {menuContent}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {!hideCloseButton && (
-            <span
-              role="button"
-              tabIndex={-1}
-              aria-label="Close tab"
-              className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1"
-              onMouseDown={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-                onClose(tab.id);
-              }}
-            >
-              <XIcon className="h-4 w-4" />
-            </span>
-          )}
-        </div>
+        {!hideCloseButton && (
+          <span
+            role="button"
+            tabIndex={-1}
+            aria-label="Close tab"
+            className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100"
+            onMouseDown={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              event.preventDefault();
+              onClose(tab.id);
+            }}
+          >
+            <XIcon className="h-4 w-4" />
+          </span>
+        )}
       </TabsTrigger>
     </div>
   );
@@ -394,7 +392,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
           className="h-full min-w-0 flex-1"
           scrollRef={scrollContainerRef}
           scrollClassName={cn(
-            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 [&::-webkit-scrollbar]:hidden',
+            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
           arrowVisibility="always"

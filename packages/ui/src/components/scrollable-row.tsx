@@ -64,7 +64,7 @@ export function ScrollableRow({
   }, [children, containerRef]);
 
   const arrowBaseClass = cn(
-    'absolute top-0 z-10 flex h-full w-8 items-center backdrop-blur-sm bg-background/50',
+    'absolute top-0 z-10 flex h-full w-8 items-center backdrop-blur-md bg-background/50',
     arrowVisibility === 'hover'
       ? 'opacity-0 transition-opacity hover:opacity-100'
       : 'opacity-100',
@@ -79,7 +79,7 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'left-0 justify-start pl-1',
-          'from-background/80 bg-gradient-to-r to-transparent',
+          'from-background/90 via-background/60 bg-gradient-to-r to-transparent',
           !canScrollLeft && 'pointer-events-none opacity-0',
         )}
         title="Scroll left"
@@ -99,7 +99,7 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'right-0 justify-end pr-1',
-          'from-background/80 bg-gradient-to-l to-transparent',
+          'from-background/90 via-background/60 bg-gradient-to-l to-transparent',
           !canScrollRight && 'pointer-events-none opacity-0',
         )}
         title="Scroll right"

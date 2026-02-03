@@ -45,7 +45,7 @@ const Container: React.FC<PromptSuggestionsContainerProps> = ({
         <div className="flex h-full w-full gap-2">
           <ScrollableRow
             className="min-w-0 flex-1"
-            scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-1 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            scrollClassName="flex flex-1 snap-x snap-mandatory scroll-pl-7 scroll-pr-7 gap-2 overflow-x-auto overflow-y-hidden px-1 py-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             arrowVisibility="always"
             arrowIconClassName="h-4 w-4 opacity-80"
           >
