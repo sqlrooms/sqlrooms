@@ -74,6 +74,7 @@ export function ScrollableRow({
   return (
     <div className={cn('relative', className)}>
       <button
+        type="button"
         onClick={() => scrollBy('left')}
         disabled={!canScrollLeft}
         className={cn(
@@ -82,6 +83,7 @@ export function ScrollableRow({
           'from-background/90 via-background/60 bg-gradient-to-r to-transparent',
           !canScrollLeft && 'pointer-events-none opacity-0',
         )}
+        aria-label="Scroll left"
         title="Scroll left"
       >
         <ChevronLeft
@@ -94,6 +96,7 @@ export function ScrollableRow({
       </div>
 
       <button
+        type="button"
         onClick={() => scrollBy('right')}
         disabled={!canScrollRight}
         className={cn(
@@ -102,6 +105,7 @@ export function ScrollableRow({
           'from-background/90 via-background/60 bg-gradient-to-l to-transparent',
           !canScrollRight && 'pointer-events-none opacity-0',
         )}
+        aria-label="Scroll right"
         title="Scroll right"
       >
         <ChevronRight
