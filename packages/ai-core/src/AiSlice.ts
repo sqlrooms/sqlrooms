@@ -501,6 +501,7 @@ export function createAiSlice(
 
           set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               // Add to AI sessions with per-session state
               draft.ai.config.sessions.unshift({
                 id: newSessionId,
@@ -517,6 +518,7 @@ export function createAiSlice(
                 messagesRevision: 0,
                 prompt: '',
                 isRunning: false,
+                lastOpenedAt: now,
               });
               draft.ai.config.currentSessionId = newSessionId;
               // Add new session to open tabs
@@ -534,6 +536,7 @@ export function createAiSlice(
         switchSession: (sessionId: string) => {
           set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               draft.ai.config.currentSessionId = sessionId;
               // Ensure current session is always in openSessionTabs
               if (!draft.ai.config.openSessionTabs) {
@@ -541,6 +544,12 @@ export function createAiSlice(
               }
               if (!draft.ai.config.openSessionTabs.includes(sessionId)) {
                 draft.ai.config.openSessionTabs.push(sessionId);
+              }
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.lastOpenedAt = now;
               }
             }),
           );
@@ -616,6 +625,7 @@ export function createAiSlice(
                       const firstSession = draft.ai.config.sessions[0];
                       if (firstSession) {
                         draft.ai.config.currentSessionId = firstSession.id;
+                        firstSession.lastOpenedAt = Date.now();
                       }
                     }
                   }

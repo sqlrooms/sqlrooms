@@ -185,6 +185,10 @@ export const SessionControls: React.FC<{
             <TabStrip.SearchDropdown
               triggerIcon={<HistoryIcon className="h-4 w-4" />}
               tooltip="Session history"
+              sortSearchItems="recent"
+              getTabLastOpenedAt={(tab) =>
+                tab.lastOpenedAt as number | undefined
+              }
             />
             <TabStrip.Tabs tabClassName="rounded-md data-[state=active]:bg-muted" />
             <TabStrip.NewButton tooltip="New session" />

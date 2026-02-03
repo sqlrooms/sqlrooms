@@ -93,6 +93,7 @@ export function createDefaultKeplerConfig(
         id: mapId,
         name: 'Untitled Map',
         config: undefined,
+        lastOpenedAt: Date.now(),
       },
     ],
     currentMapId: mapId,
@@ -353,17 +354,25 @@ export function createKeplerSlice({
           return set((state) =>
             produce(state, (draft) => {
               draft.kepler.config.currentMapId = mapId;
+              const map = draft.kepler.config.maps.find(
+                (item) => item.id === mapId,
+              );
+              if (map) {
+                map.lastOpenedAt = Date.now();
+              }
             }),
           );
         },
 
         createMap: (name) => {
           const mapId = createId();
+          const now = Date.now();
           set((state) =>
             produce(state, (draft) => {
               draft.kepler.config.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
+                lastOpenedAt: now,
               });
               draft.kepler.config.openTabs.push(mapId);
               draft.kepler.map = keplerReducer(
@@ -427,6 +436,12 @@ export function createKeplerSlice({
                   const newSelectedId = newOpenTabs[newIndex];
                   if (newSelectedId) {
                     draft.kepler.config.currentMapId = newSelectedId;
+                    const selectedMap = draft.kepler.config.maps.find(
+                      (map) => map.id === newSelectedId,
+                    );
+                    if (selectedMap) {
+                      selectedMap.lastOpenedAt = Date.now();
+                    }
                   }
                 } else if (remainingMaps.length > 0) {
                   // No open tabs left, open a closed map
@@ -434,6 +449,7 @@ export function createKeplerSlice({
                   if (mapToOpen) {
                     draft.kepler.config.openTabs.push(mapToOpen.id);
                     draft.kepler.config.currentMapId = mapToOpen.id;
+                    mapToOpen.lastOpenedAt = Date.now();
                   }
                 }
               }
