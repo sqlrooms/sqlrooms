@@ -4,7 +4,15 @@ import {
   ArrowDataTableValueFormatter,
 } from '@sqlrooms/data-table';
 import type {Row} from '@tanstack/react-table';
-import {cn, SpinnerPane, Button} from '@sqlrooms/ui';
+import {
+  cn,
+  SpinnerPane,
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
@@ -59,7 +67,10 @@ export interface QueryResultPanelProps {
     row: Row<any>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /** Custom content to render in the error state (e.g., QueryResultPanel.AskAi) */
+  children?: React.ReactNode;
   /**
+   * @deprecated Use children with QueryResultPanel.AskAi instead
    * Called when the "Ask AI" button is clicked on an error message.
    * Receives the current query and error text.
    */
@@ -68,12 +79,13 @@ export interface QueryResultPanelProps {
   formatValue?: ArrowDataTableValueFormatter;
 }
 
-export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
+const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   className,
   renderActions,
   fontSize = 'text-xs',
   onRowClick,
   onRowDoubleClick,
+  children,
   onAskAiAboutError,
   formatValue,
 }) => {
@@ -112,7 +124,7 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     if (queryResult?.status === 'error' && onAskAiAboutError) {
       const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
-      onAskAiAboutError(currentQuery, errorText);
+      onAskAiAboutError?.(currentQuery, errorText);
     }
   }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
@@ -132,23 +144,30 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     );
   }
   if (queryResult?.status === 'error') {
+    // Backward compat: if no children but onAskAiAboutError is provided, render default button
+    const errorActions = children ?? (onAskAiAboutError && (
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={handleAskAiAboutError}
+        title="Ask AI for help"
+      >
+        <MessageCircleQuestion className="h-4 w-4" />
+      </Button>
+    ));
+
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {onAskAiAboutError && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 h-8 w-8"
-            onClick={handleAskAiAboutError}
-            title="Ask AI for help"
-          >
-            <MessageCircleQuestion className="h-4 w-4" />
-          </Button>
+        {errorActions && (
+          <div className="absolute top-2 right-2">
+            {errorActions}
+          </div>
         )}
         <pre
           className={cn(
             'text-xs leading-tight whitespace-pre-wrap text-red-500',
-            onAskAiAboutError && 'pr-12',
+            errorActions && 'pr-12',
           )}
         >
           {queryResult.error}
@@ -234,3 +253,60 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
 
   return null;
 };
+
+export interface QueryResultPanelAskAiProps {
+  /** Called when clicked with the current query and error message */
+  onClick?: (query: string, error: string) => void;
+  /** Custom icon (defaults to MessageCircleQuestion) */
+  icon?: React.ReactNode;
+  /** Custom className */
+  className?: string;
+  /** Tooltip text to display on hover */
+  tooltipContent?: string;
+}
+
+const QueryResultPanelAskAi = React.forwardRef<
+  HTMLButtonElement,
+  QueryResultPanelAskAiProps
+>(({onClick, icon, className, tooltipContent = 'Ask AI for help'}, ref) => {
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
+
+  // Only render in error state
+  if (queryResult?.status !== 'error') return null;
+
+  const handleClick = () => {
+    onClick?.(getCurrentQuery(), queryResult.error);
+  };
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="icon"
+            className={cn('h-8 w-8', className)}
+            onClick={handleClick}
+          >
+            {icon ?? <MessageCircleQuestion className="h-4 w-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+});
+QueryResultPanelAskAi.displayName = 'QueryResultPanel.AskAi';
+
+export const QueryResultPanel = Object.assign(QueryResultPanelRoot, {
+  AskAi: QueryResultPanelAskAi,
+});
