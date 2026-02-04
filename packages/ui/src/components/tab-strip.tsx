@@ -482,10 +482,12 @@ function TabStripSearchDropdown({
     filteredTabs,
     closedTabIds,
     openTabs,
+    preventCloseLastTab,
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
     getLastOpenedAt,
+    handleClose,
   } = useTabStripContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -545,6 +547,21 @@ function TabStripSearchDropdown({
   const filteredClosedTabs = sortByRecency(
     filteredTabs.filter((tab) => closedTabIds.has(tab.id)),
   );
+
+  const renderOpenTabActions = (tab: TabDescriptor) => {
+    const disableClose = preventCloseLastTab && (openTabsList.length ?? 0) <= 1;
+    return (
+      <>
+        {renderSearchItemActions?.(tab)}
+        <TabStripSearchItemAction
+          icon={<XIcon className="h-3 w-3" />}
+          aria-label={`Close ${tab.name}`}
+          onClick={disableClose ? undefined : () => handleClose(tab.id)}
+          className={cn(disableClose && 'pointer-events-none opacity-40')}
+        />
+      </>
+    );
+  };
 
   const triggerButton = (
     <DropdownMenuTrigger asChild>
@@ -620,7 +637,7 @@ function TabStripSearchDropdown({
                 <DropdownTabItems
                   tabs={filteredOpenTabs}
                   onTabClick={handleTabClick}
-                  renderActions={renderSearchItemActions}
+                  renderActions={renderOpenTabActions}
                 />
                 {filteredClosedTabs.length > 0 && (
                   <>
@@ -645,7 +662,7 @@ function TabStripSearchDropdown({
                   <DropdownTabItems
                     tabs={openTabsList}
                     onTabClick={handleTabClick}
-                    renderActions={renderSearchItemActions}
+                    renderActions={renderOpenTabActions}
                   />
                   {closedTabsList.length > 0 && (
                     <>
