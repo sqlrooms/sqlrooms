@@ -14,10 +14,10 @@ import {EmbedOptions, VisualizationSpec} from 'vega-embed';
 import {Config} from 'vega-lite';
 import {darkTheme} from './themes/darkTheme';
 import {lightTheme} from './themes/lightTheme';
-import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaChartActions} from './VegaChartActions';
-import {VegaExportAction} from './VegaExportAction';
+import {VegaChartContextProvider} from './VegaChartContext';
 import {VegaEditAction} from './VegaEditAction';
+import {VegaExportAction} from './VegaExportAction';
 
 export type VegaLiteArrowChartProps = {
   className?: string;
@@ -149,26 +149,28 @@ const VegaLiteArrowChartBase: React.FC<VegaLiteArrowChartProps> = ({
         ref={containerRef}
         className={cn('relative flex h-full w-full flex-col gap-2', className)}
       >
-        {chartError ? (
-          <ToolErrorMessage
-            error={chartError}
-            triggerLabel="Chart rendering failed"
-            title="Chart error"
-            align="start"
-            details={spec}
-          />
-        ) : (
-          specWithData &&
-          data && (
-            <AspectRatio
-              ratio={aspectRatio}
-              className="overflow-visible"
-              asChild
-            >
-              <div ref={ref} className="[&_svg]:overflow-visible" />
-            </AspectRatio>
-          )
-        )}
+        <div className="peer relative">
+          {chartError ? (
+            <ToolErrorMessage
+              error={chartError}
+              triggerLabel="Chart rendering failed"
+              title="Chart error"
+              align="start"
+              details={spec}
+            />
+          ) : (
+            specWithData &&
+            data && (
+              <AspectRatio
+                ratio={aspectRatio}
+                className="overflow-visible"
+                asChild
+              >
+                <div ref={ref} className="[&_svg]:overflow-visible" />
+              </AspectRatio>
+            )
+          )}
+        </div>
         {children}
       </div>
     </VegaChartContextProvider>
