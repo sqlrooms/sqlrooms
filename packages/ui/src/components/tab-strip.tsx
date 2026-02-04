@@ -186,7 +186,7 @@ function SortableTab({
               <button
                 type="button"
                 aria-label="Tab options"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary -ml-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -210,9 +210,9 @@ function SortableTab({
           data-editing={editingTabId === tab.id ? '' : undefined}
           className={cn(
             'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
-            'overflow-hidden px-2 py-1 font-normal',
+            'hover:bg-primary/10 overflow-hidden px-2 py-1 font-normal',
             'min-h-7',
-            'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none',
+            'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
             'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
             editingTabId === tab.id && 'focus-visible:ring-0',
           )}
@@ -244,7 +244,7 @@ function SortableTab({
           <button
             type="button"
             aria-label="Close tab"
-            className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
+            className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary -mr-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
             onMouseDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
