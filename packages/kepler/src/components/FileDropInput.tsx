@@ -7,13 +7,11 @@ const inputStyle = {display: 'none'};
 
 type FileDropInputProps = {
   onFileDrop: (files: FileList) => void;
-  acceptedFormats?: string[];
   children?: React.ReactNode;
   className?: string;
 };
 export const FileDropInput: React.FC<FileDropInputProps> = ({
   onFileDrop,
-  acceptedFormats,
   children,
   className,
 }) => {
@@ -73,11 +71,6 @@ export const FileDropInput: React.FC<FileDropInputProps> = ({
               type="file"
               ref={fileInput}
               style={inputStyle}
-              accept={
-                acceptedFormats?.length
-                  ? acceptedFormats.map((ext) => `.${ext}`).join(',')
-                  : undefined
-              }
               onChange={onChangeInput}
               className="upload-button-input"
             />
