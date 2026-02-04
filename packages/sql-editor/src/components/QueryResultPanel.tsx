@@ -141,10 +141,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       </div>
     );
   }
-  if (true) {
+  if (queryResult?.status === 'error') {
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {true && (
+        {onAskAiAboutError && (
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>
