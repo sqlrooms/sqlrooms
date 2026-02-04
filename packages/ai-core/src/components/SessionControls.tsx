@@ -37,7 +37,12 @@ export const SessionControls: React.FC<{
 
   // Convert sessions to TabDescriptor format
   const tabs = useMemo(
-    () => sessions.map((s) => ({id: s.id, name: s.name})),
+    () =>
+      sessions.map((s) => ({
+        id: s.id,
+        name: s.name,
+        lastOpenedAt: s.lastOpenedAt,
+      })),
     [sessions],
   );
 
