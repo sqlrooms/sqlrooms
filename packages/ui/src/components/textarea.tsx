@@ -17,7 +17,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       () => localRef.current as HTMLTextAreaElement,
     );
 
-  const resizeToFitContent = React.useCallback(() => {
+    const resizeToFitContent = React.useCallback(() => {
       const el = localRef.current;
       if (!el || !autoResize) return;
       el.style.height = 'auto';
