@@ -175,89 +175,91 @@ function SortableTab({
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
           'items-center gap-0.5 overflow-visible rounded-b-none',
-          'py-0 pl-0.5 pr-0.5 font-normal data-[state=active]:shadow-none',
+          'py-0 pl-0 pr-0 font-normal data-[state=active]:shadow-none',
           tabClassName,
           editingTabId === tab.id && 'focus-visible:ring-0',
         )}
       >
-        {menuContent && (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <button
-                type="button"
-                aria-label="Tab options"
-                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary -ml-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-                onMouseDown={(event) => {
-                  event.stopPropagation();
-                  event.preventDefault();
-                }}
-                onClick={(event) => {
-                  event.stopPropagation();
-                }}
-              >
-                <EllipsisVerticalIcon className="h-3 w-3" />
-              </button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="start">
-              {menuContent}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-
-        <TabsTrigger
-          value={tab.id}
-          tabIndex={editingTabId === tab.id ? -1 : undefined}
-          data-editing={editingTabId === tab.id ? '' : undefined}
-          className={cn(
-            'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
-            'hover:bg-primary/10 overflow-hidden px-2 py-1 font-normal',
-            'min-h-7',
-            'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
-            'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
-            editingTabId === tab.id && 'focus-visible:ring-0',
-          )}
-          onDoubleClick={() => onStartEditing(tab.id)}
-        >
-          {editingTabId !== tab.id ? (
-            <div className="truncate text-sm">
-              {renderTabLabel ? renderTabLabel(tab) : tab.name}
-            </div>
-          ) : (
-            <EditableText
-              value={tab.name}
-              onChange={(newName) => onInlineRename(tab.id, newName)}
-              className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
-              isEditing
-              autoFocus
-              selectOnFocus
-              allowTabFocusWhenNotEditing={false}
-              onEditingChange={(isEditing) => {
-                if (!isEditing) {
-                  onStopEditing();
-                }
-              }}
-            />
-          )}
-        </TabsTrigger>
-
-        {!hideCloseButton && (
-          <button
-            type="button"
-            aria-label="Close tab"
-            className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary -mr-1 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
-            onMouseDown={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-            }}
-            onClick={(event) => {
-              event.stopPropagation();
-              event.preventDefault();
-              onClose(tab.id);
-            }}
+        <div className="relative flex h-full min-w-0 flex-1 items-center">
+          <TabsTrigger
+            value={tab.id}
+            tabIndex={editingTabId === tab.id ? -1 : undefined}
+            data-editing={editingTabId === tab.id ? '' : undefined}
+            className={cn(
+              'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
+              'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
+              'min-h-7',
+              'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
+              'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
+              editingTabId === tab.id && 'focus-visible:ring-0',
+            )}
+            onDoubleClick={() => onStartEditing(tab.id)}
           >
-            <XIcon className="h-4 w-4" />
-          </button>
-        )}
+            {editingTabId !== tab.id ? (
+              <div className="truncate text-sm">
+                {renderTabLabel ? renderTabLabel(tab) : tab.name}
+              </div>
+            ) : (
+              <EditableText
+                value={tab.name}
+                onChange={(newName) => onInlineRename(tab.id, newName)}
+                className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
+                isEditing
+                autoFocus
+                selectOnFocus
+                allowTabFocusWhenNotEditing={false}
+                onEditingChange={(isEditing) => {
+                  if (!isEditing) {
+                    onStopEditing();
+                  }
+                }}
+              />
+            )}
+          </TabsTrigger>
+
+          {menuContent && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  type="button"
+                  aria-label="Tab options"
+                  className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute left-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  onMouseDown={(event) => {
+                    event.stopPropagation();
+                    event.preventDefault();
+                  }}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                  }}
+                >
+                  <EllipsisVerticalIcon className="h-3 w-3" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start">
+                {menuContent}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          {!hideCloseButton && (
+            <button
+              type="button"
+              aria-label="Close tab"
+              className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
+              onMouseDown={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+              }}
+              onClick={(event) => {
+                event.stopPropagation();
+                event.preventDefault();
+                onClose(tab.id);
+              }}
+            >
+              <XIcon className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -406,7 +408,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
           className="h-full min-w-0 flex-1"
           scrollRef={scrollContainerRef}
           scrollClassName={cn(
-            'flex h-full min-w-0 items-center gap-0 overflow-x-auto overflow-y-visible',
+            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible',
             'py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
