@@ -117,13 +117,14 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }, [queryResult]);
 
   const handleAskAiAboutError = React.useCallback(() => {
-    if (queryResult?.status === 'error' && onAskAiAboutError) {
-      const currentQuery = getCurrentQuery();
-      const errorText = queryResult.error;
+
+    // if (queryResult?.status === 'error' && onAskAiAboutError) {
+      // const currentQuery = getCurrentQuery();
+      // const errorText = queryResult.error;
       const testQuery = 'SELECT 1;';
-      const testError = 'This is some error that will be displayed on the AI prompt.';
-      onAskAiAboutError(testQuery, testError);
-    }
+      const testError = 'This is some error that will be displayed on the AI prompt.\n Something to test \n new lines. This is some error that will be displayed on the AI prompt.\n Something to test \n new lines. ';
+      onAskAiAboutError?.(testQuery, testError);
+    // }
   }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
   if (!queryResult) {
@@ -141,10 +142,10 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       </div>
     );
   }
-  if (queryResult?.status === 'error') {
+  if (true) {
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {onAskAiAboutError && (
+        {true && (
           <TooltipProvider delayDuration={200}>
             <Tooltip>
               <TooltipTrigger asChild>

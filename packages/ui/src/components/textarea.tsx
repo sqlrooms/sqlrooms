@@ -17,11 +17,23 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       () => localRef.current as HTMLTextAreaElement,
     );
 
+    const [hasOverflow, setHasOverflow] = React.useState(false);
+
     const resizeToFitContent = React.useCallback(() => {
       const el = localRef.current;
       if (!el || !autoResize) return;
       el.style.height = 'auto';
       el.style.height = `${el.scrollHeight}px`;
+      
+      // Check if content exceeds the max-height constraint
+      const computedStyle = window.getComputedStyle(el);
+      const maxHeight = computedStyle.maxHeight;
+      if (maxHeight && maxHeight !== 'none') {
+        const maxHeightValue = parseFloat(maxHeight);
+        setHasOverflow(el.scrollHeight > maxHeightValue);
+      } else {
+        setHasOverflow(false);
+      }
     }, [autoResize]);
 
     React.useEffect(() => {
@@ -38,7 +50,7 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       <textarea
         className={cn(
           'border-input placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[60px] w-full rounded-md border bg-transparent px-3 py-2 text-base shadow-sm focus-visible:outline-none focus-visible:ring-1 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm',
-          autoResize ? 'overflow-y-hidden' : undefined,
+          autoResize ? (hasOverflow ? 'overflow-y-auto' : 'overflow-y-hidden') : undefined,
           className,
         )}
         ref={localRef}
