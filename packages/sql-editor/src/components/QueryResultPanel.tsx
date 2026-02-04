@@ -117,11 +117,9 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }, [queryResult]);
 
   const handleAskAiAboutError = React.useCallback(() => {
-
     if (queryResult?.status === 'error' && onAskAiAboutError) {
       const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
-
       onAskAiAboutError?.(currentQuery, errorText);
     }
   }, [queryResult, getCurrentQuery, onAskAiAboutError]);
