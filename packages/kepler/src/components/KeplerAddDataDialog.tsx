@@ -158,7 +158,10 @@ export const KeplerAddDataDialog = ({
               className="h-full w-full data-[state=inactive]:hidden"
             >
               <div className="h-min-[200px] flex h-full w-full items-center justify-center">
-                <FileDropInput onFileDrop={onFileDrop}>
+                <FileDropInput
+                  onFileDrop={onFileDrop}
+                  acceptedFormats={acceptedFormats}
+                >
                   {acceptedFormats ? (
                     <div className="text-muted-foreground flex flex-wrap justify-center gap-2 opacity-80">
                       {acceptedFormats.map((ext) => (
