@@ -169,15 +169,13 @@ function SortableTab({
       {...listeners}
       tabIndex={-1}
     >
-      <TabsTrigger
-        value={tab.id}
-        tabIndex={editingTabId === tab.id ? -1 : undefined}
-        data-editing={editingTabId === tab.id ? '' : undefined}
+      <div
+        data-state={editingTabId === tab.id ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
-          'items-center gap-1 overflow-visible rounded-b-none',
-          'py-0 pl-1 pr-1 font-normal data-[state=active]:shadow-none',
+          'items-center gap-0.5 overflow-visible rounded-b-none',
+          'py-0 pl-0.5 pr-0.5 font-normal data-[state=active]:shadow-none',
           tabClassName,
           editingTabId === tab.id && 'focus-visible:ring-0',
         )}
@@ -185,11 +183,10 @@ function SortableTab({
         {menuContent && (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <span
-                role="button"
-                tabIndex={-1}
+              <button
+                type="button"
                 aria-label="Tab options"
-                className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
                 onMouseDown={(event) => {
                   event.stopPropagation();
                   event.preventDefault();
@@ -199,7 +196,7 @@ function SortableTab({
                 }}
               >
                 <EllipsisVerticalIcon className="h-3 w-3" />
-              </span>
+              </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               {menuContent}
@@ -207,8 +204,18 @@ function SortableTab({
           </DropdownMenu>
         )}
 
-        <div
-          className="flex min-w-0 max-w-full flex-1 items-center overflow-hidden"
+        <TabsTrigger
+          value={tab.id}
+          tabIndex={editingTabId === tab.id ? -1 : undefined}
+          data-editing={editingTabId === tab.id ? '' : undefined}
+          className={cn(
+            'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
+            'overflow-hidden px-2 py-1 font-normal',
+            'min-h-7',
+            'data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-none',
+            'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
+            editingTabId === tab.id && 'focus-visible:ring-0',
+          )}
           onDoubleClick={() => onStartEditing(tab.id)}
         >
           {editingTabId !== tab.id ? (
@@ -231,14 +238,13 @@ function SortableTab({
               }}
             />
           )}
-        </div>
+        </TabsTrigger>
 
         {!hideCloseButton && (
-          <span
-            role="button"
-            tabIndex={-1}
+          <button
+            type="button"
             aria-label="Close tab"
-            className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100"
+            className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
             onMouseDown={(event) => {
               event.stopPropagation();
               event.preventDefault();
@@ -250,9 +256,9 @@ function SortableTab({
             }}
           >
             <XIcon className="h-4 w-4" />
-          </span>
+          </button>
         )}
-      </TabsTrigger>
+      </div>
     </div>
   );
 }
@@ -400,7 +406,8 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
           className="h-full min-w-0 flex-1"
           scrollRef={scrollContainerRef}
           scrollClassName={cn(
-            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
+            'flex h-full min-w-0 items-center gap-0 overflow-x-auto overflow-y-visible',
+            'py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
           arrowVisibility="always"
