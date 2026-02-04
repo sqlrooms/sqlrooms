@@ -65,7 +65,6 @@ export const QueryEditorPanelEditor: React.FC<{
   return (
     <SqlMonacoEditor
       connector={connector}
-      path={`sqlrooms:query:${queryId}`}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
       className={cn('h-full w-full flex-grow', className)}
