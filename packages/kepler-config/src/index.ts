@@ -8,6 +8,7 @@ import z from 'zod';
 export const KeplerMapSchema = z.object({
   id: z.string(),
   name: z.string(),
+  lastOpenedAt: z.number().optional(),
   config: z
     .object({
       version: z.literal('v1'),

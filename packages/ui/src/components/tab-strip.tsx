@@ -47,6 +47,7 @@ import {
 } from './dropdown-menu';
 import {EditableText} from './editable-text';
 import {Input} from './input';
+import {ScrollableRow} from './scrollable-row';
 import {Tabs, TabsList, TabsTrigger} from './tabs';
 import {
   Tooltip,
@@ -77,6 +78,7 @@ interface TabStripContextValue {
   selectedTabId?: string | null;
   openTabs?: string[];
   preventCloseLastTab: boolean;
+  getLastOpenedAt: (tabId: string) => number | undefined;
 
   // Callbacks
   onOpenTabsChange?: (tabIds: string[]) => void;
@@ -165,49 +167,63 @@ function SortableTab({
       data-tab-id={tab.id}
       {...attributes}
       {...listeners}
+      tabIndex={-1}
     >
-      <TabsTrigger
-        value={tab.id}
+      <div
+        data-state={editingTabId === tab.id ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
           'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
-          'items-center justify-between gap-1 overflow-hidden rounded-b-none',
-          'py-0 pl-4 pr-1 font-normal data-[state=active]:shadow-none',
+          'items-center gap-0.5 overflow-visible rounded-b-none',
+          'py-0 pl-0 pr-0 font-normal data-[state=active]:shadow-none',
           tabClassName,
+          editingTabId === tab.id && 'focus-visible:ring-0',
         )}
       >
-        <div
-          className="flex min-w-0 items-center"
-          onDoubleClick={() => onStartEditing(tab.id)}
-        >
-          {editingTabId !== tab.id ? (
-            <div className="truncate text-sm">
-              {renderTabLabel ? renderTabLabel(tab) : tab.name}
-            </div>
-          ) : (
-            <EditableText
-              value={tab.name}
-              onChange={(newName) => onInlineRename(tab.id, newName)}
-              className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
-              isEditing
-              onEditingChange={(isEditing) => {
-                if (!isEditing) {
-                  onStopEditing();
-                }
-              }}
-            />
-          )}
-        </div>
+        <div className="relative flex h-full min-w-0 flex-1 items-center">
+          <TabsTrigger
+            value={tab.id}
+            tabIndex={editingTabId === tab.id ? -1 : undefined}
+            data-editing={editingTabId === tab.id ? '' : undefined}
+            className={cn(
+              'flex h-full min-w-0 flex-1 items-center justify-start gap-1',
+              'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
+              'min-h-7',
+              'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
+              'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
+              editingTabId === tab.id && 'focus-visible:ring-0',
+            )}
+            onDoubleClick={() => onStartEditing(tab.id)}
+          >
+            {editingTabId !== tab.id ? (
+              <div className="truncate text-sm">
+                {renderTabLabel ? renderTabLabel(tab) : tab.name}
+              </div>
+            ) : (
+              <EditableText
+                value={tab.name}
+                onChange={(newName) => onInlineRename(tab.id, newName)}
+                className="h-6 min-w-0 flex-1 truncate text-sm shadow-none"
+                isEditing
+                autoFocus
+                selectOnFocus
+                allowTabFocusWhenNotEditing={false}
+                onEditingChange={(isEditing) => {
+                  if (!isEditing) {
+                    onStopEditing();
+                  }
+                }}
+              />
+            )}
+          </TabsTrigger>
 
-        <div className="flex flex-shrink-0 items-center">
           {menuContent && (
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <span
-                  role="button"
-                  tabIndex={-1}
+                <button
+                  type="button"
                   aria-label="Tab options"
-                  className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100"
+                  className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute left-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
                   onMouseDown={(event) => {
                     event.stopPropagation();
                     event.preventDefault();
@@ -217,7 +233,7 @@ function SortableTab({
                   }}
                 >
                   <EllipsisVerticalIcon className="h-3 w-3" />
-                </span>
+                </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 {menuContent}
@@ -226,11 +242,10 @@ function SortableTab({
           )}
 
           {!hideCloseButton && (
-            <span
-              role="button"
-              tabIndex={-1}
+            <button
+              type="button"
               aria-label="Close tab"
-              className="hover:bg-primary/10 flex h-5 w-5 cursor-pointer items-center justify-center rounded p-1"
+              className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
               onMouseDown={(event) => {
                 event.stopPropagation();
                 event.preventDefault();
@@ -242,10 +257,10 @@ function SortableTab({
               }}
             >
               <XIcon className="h-4 w-4" />
-            </span>
+            </button>
           )}
         </div>
-      </TabsTrigger>
+      </div>
     </div>
   );
 }
@@ -389,12 +404,17 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
       onDragEnd={handleDragEnd}
     >
       <SortableContext items={tabIds} strategy={horizontalListSortingStrategy}>
-        <div
-          ref={scrollContainerRef}
-          className={cn(
-            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-hidden pr-1 [&::-webkit-scrollbar]:hidden',
+        <ScrollableRow
+          className="h-full min-w-0 flex-1"
+          scrollRef={scrollContainerRef}
+          scrollClassName={cn(
+            'flex h-full min-w-0 items-center gap-1 overflow-x-auto overflow-y-visible',
+            'py-1 pl-1 pr-1 scroll-pl-7 scroll-pr-7 [&::-webkit-scrollbar]:hidden',
             className,
           )}
+          arrowVisibility="always"
+          arrowClassName="w-7"
+          arrowIconClassName="h-4 w-4 opacity-60"
         >
           {openTabItems.map((tab) => (
             <SortableTab
@@ -411,7 +431,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               renderTabLabel={renderTabLabel}
             />
           ))}
-        </div>
+        </ScrollableRow>
       </SortableContext>
     </DndContext>
   );
@@ -426,11 +446,21 @@ interface TabStripSearchDropdownProps {
   tooltip?: React.ReactNode;
   /** Optional custom icon for the trigger button. */
   triggerIcon?: React.ReactNode;
+  /** Message shown when there are no tabs at all. */
+  emptyMessage?: React.ReactNode;
+  /** Message shown when searching and there are no matching tabs. */
+  searchEmptyMessage?: React.ReactNode;
+  /** Label for the closed tabs group. */
+  closedTabsLabel?: React.ReactNode;
+  /** Sorting mode for search dropdown items. */
+  sortSearchItems?: 'none' | 'recent';
+  /** Optional accessor for tab recency timestamps. */
+  getTabLastOpenedAt?: (tab: TabDescriptor) => number | undefined;
 }
 
 /**
  * Renders the dropdown with search for browsing tabs.
- * By default shows only closed tabs. When searching, shows all matching tabs.
+ * Shows open tabs first and closed tabs second (dimmed). When searching, shows all matching tabs.
  */
 function TabStripSearchDropdown({
   className,
@@ -438,17 +468,26 @@ function TabStripSearchDropdown({
   autoFocus = true,
   tooltip,
   triggerIcon,
+  emptyMessage = 'No tabs',
+  searchEmptyMessage = 'No matching tabs',
+  closedTabsLabel = 'Recently closed',
+  sortSearchItems = 'recent',
+  getTabLastOpenedAt,
 }: TabStripSearchDropdownProps) {
   const {
+    openTabItems,
     search,
     setSearch,
     closedTabs,
     filteredTabs,
     closedTabIds,
     openTabs,
+    preventCloseLastTab,
     onOpenTabsChange,
     onSelect,
     renderSearchItemActions,
+    getLastOpenedAt,
+    handleClose,
   } = useTabStripContext();
 
   const [isOpen, setIsOpen] = useState(false);
@@ -472,6 +511,56 @@ function TabStripSearchDropdown({
       onSelect?.(tabId);
     }
     setIsOpen(false);
+  };
+
+  const sortByRecency = (tabsToSort: TabDescriptor[]) => {
+    if (sortSearchItems !== 'recent') {
+      return tabsToSort;
+    }
+
+    const withIndex = tabsToSort.map((tab, index) => ({
+      tab,
+      index,
+      ts: getTabLastOpenedAt?.(tab) ?? getLastOpenedAt(tab.id),
+    }));
+
+    return withIndex
+      .slice()
+      .sort((a, b) => {
+        const aTs = a.ts ?? -1;
+        const bTs = b.ts ?? -1;
+        if (aTs === bTs) {
+          return a.index - b.index;
+        }
+        return bTs - aTs;
+      })
+      .map((item) => item.tab);
+  };
+
+  const openTabsList = sortByRecency(openTabItems);
+  const closedTabsList = sortByRecency(closedTabs);
+  const hasAnyTabs = openTabsList.length + closedTabsList.length > 0;
+
+  const filteredOpenTabs = sortByRecency(
+    filteredTabs.filter((tab) => !closedTabIds.has(tab.id)),
+  );
+  const filteredClosedTabs = sortByRecency(
+    filteredTabs.filter((tab) => closedTabIds.has(tab.id)),
+  );
+
+  const renderOpenTabActions = (tab: TabDescriptor) => {
+    const disableClose = preventCloseLastTab && (openTabsList.length ?? 0) <= 1;
+    return (
+      <>
+        {renderSearchItemActions?.(tab)}
+        <TabStripSearchItemAction
+          icon={<XIcon className="h-3 w-3" />}
+          aria-label={`Close ${tab.name}`}
+          onClick={disableClose ? undefined : () => handleClose(tab.id)}
+          className={cn(disableClose && 'pointer-events-none opacity-40')}
+        />
+      </>
+    );
   };
 
   const triggerButton = (
@@ -536,19 +625,69 @@ function TabStripSearchDropdown({
 
         <div className="overflow-y-auto">
           {isSearching ? (
-            <DropdownTabItems
-              tabs={filteredTabs}
-              emptyMessage="No matching tabs"
-              onTabClick={handleTabClick}
-              renderActions={renderSearchItemActions}
-            />
+            filteredTabs.length === 0 ? (
+              <DropdownTabItems
+                tabs={filteredTabs}
+                emptyMessage={searchEmptyMessage}
+                onTabClick={handleTabClick}
+                renderActions={renderSearchItemActions}
+              />
+            ) : (
+              <>
+                <DropdownTabItems
+                  tabs={filteredOpenTabs}
+                  onTabClick={handleTabClick}
+                  renderActions={renderOpenTabActions}
+                />
+                {filteredClosedTabs.length > 0 && (
+                  <>
+                    {filteredOpenTabs.length > 0 && <DropdownMenuSeparator />}
+                    <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                      {closedTabsLabel}
+                    </DropdownMenuLabel>
+                    <DropdownTabItems
+                      tabs={filteredClosedTabs}
+                      onTabClick={handleTabClick}
+                      renderActions={renderSearchItemActions}
+                      getItemClassName={() => 'text-muted-foreground'}
+                    />
+                  </>
+                )}
+              </>
+            )
           ) : (
-            <DropdownTabItems
-              tabs={closedTabs}
-              emptyMessage="No closed tabs"
-              onTabClick={handleTabClick}
-              renderActions={renderSearchItemActions}
-            />
+            <>
+              {hasAnyTabs ? (
+                <>
+                  <DropdownTabItems
+                    tabs={openTabsList}
+                    onTabClick={handleTabClick}
+                    renderActions={renderOpenTabActions}
+                  />
+                  {closedTabsList.length > 0 && (
+                    <>
+                      {openTabsList.length > 0 && <DropdownMenuSeparator />}
+                      <DropdownMenuLabel className="text-muted-foreground py-1 text-xs font-medium">
+                        {closedTabsLabel}
+                      </DropdownMenuLabel>
+                      <DropdownTabItems
+                        tabs={closedTabsList}
+                        onTabClick={handleTabClick}
+                        renderActions={renderSearchItemActions}
+                        getItemClassName={() => 'text-muted-foreground'}
+                      />
+                    </>
+                  )}
+                </>
+              ) : (
+                <DropdownTabItems
+                  tabs={[]}
+                  emptyMessage={emptyMessage}
+                  onTabClick={handleTabClick}
+                  renderActions={renderSearchItemActions}
+                />
+              )}
+            </>
           )}
         </div>
       </DropdownMenuContent>
@@ -558,9 +697,10 @@ function TabStripSearchDropdown({
 
 interface DropdownTabItemsProps {
   tabs: TabDescriptor[];
-  emptyMessage?: string;
+  emptyMessage?: React.ReactNode;
   onTabClick?: (tabId: string) => void;
   renderActions?: (tab: TabDescriptor) => React.ReactNode;
+  getItemClassName?: (tab: TabDescriptor) => string | undefined;
 }
 
 function DropdownTabItems({
@@ -568,6 +708,7 @@ function DropdownTabItems({
   emptyMessage,
   onTabClick,
   renderActions,
+  getItemClassName,
 }: DropdownTabItemsProps) {
   if (tabs.length === 0) {
     if (!emptyMessage) return null;
@@ -584,7 +725,10 @@ function DropdownTabItems({
         <DropdownMenuItem
           key={tab.id}
           onClick={() => onTabClick?.(tab.id)}
-          className="flex h-7 cursor-pointer items-center justify-between truncate"
+          className={cn(
+            'flex h-7 cursor-pointer items-center justify-between truncate',
+            getItemClassName?.(tab),
+          )}
         >
           <span className="xs truncate pl-1">{tab.name}</span>
           {renderActions && (
@@ -715,6 +859,7 @@ function TabStripRoot({
   const scrollContainerRef = useRef<HTMLDivElement>(null!);
   const prevSelectedIdRef = useRef<string | null>(null);
   const prevOpenTabIdsRef = useRef<Set<string>>(new Set());
+  const lastOpenedAtRef = useRef<Map<string, number>>(new Map());
 
   const openTabsSet = useMemo(() => new Set(openTabs), [openTabs]);
 
@@ -745,6 +890,22 @@ function TabStripRoot({
         : [],
     [tabs, trimmedSearch],
   );
+
+  useEffect(() => {
+    if (!selectedTabId) return;
+    lastOpenedAtRef.current.set(selectedTabId, Date.now());
+  }, [selectedTabId]);
+
+  useEffect(() => {
+    const ids = new Set(tabs.map((tab) => tab.id));
+    const next = new Map<string, number>();
+    for (const [id, ts] of lastOpenedAtRef.current.entries()) {
+      if (ids.has(id)) {
+        next.set(id, ts);
+      }
+    }
+    lastOpenedAtRef.current = next;
+  }, [tabs]);
 
   // Auto-scroll to selected tab
   useLayoutEffect(() => {
@@ -786,6 +947,13 @@ function TabStripRoot({
 
     // Update ref for next comparison
     prevOpenTabIdsRef.current = new Set(openTabs);
+
+    if (newTabIds.length > 0) {
+      const now = Date.now();
+      for (const id of newTabIds) {
+        lastOpenedAtRef.current.set(id, now);
+      }
+    }
 
     // Skip scroll on initial render (when ref was empty, all tabs appear "new")
     if (newTabIds.length === (openTabs?.length ?? 0)) return;
@@ -854,6 +1022,7 @@ function TabStripRoot({
     selectedTabId,
     openTabs,
     preventCloseLastTab,
+    getLastOpenedAt: (tabId) => lastOpenedAtRef.current.get(tabId),
     onOpenTabsChange,
     onSelect,
     onCreate,
@@ -876,12 +1045,13 @@ function TabStripRoot({
     <Tabs
       value={selectedTabId ?? undefined}
       onValueChange={handleValueChange}
+      activationMode="manual"
       className={cn('bg-muted w-full min-w-0', className)}
     >
       <TabStripContext.Provider value={contextValue}>
         <TabsList
           className={cn(
-            'flex w-full min-w-0 justify-start gap-2 bg-transparent p-0',
+            'flex h-9 w-full min-w-0 items-center justify-start gap-2 overflow-visible bg-transparent p-0',
             tabsListClassName,
           )}
         >

@@ -110,7 +110,7 @@ export const KeplerMapsContainer: FC<{
     <>
       <div className="flex h-full w-full flex-col">
         <TabStrip
-          className="bg-muted items-center pt-1"
+          className="items-center bg-muted pt-1"
           tabs={maps}
           preventCloseLastTab
           openTabs={openTabs}
@@ -162,7 +162,10 @@ export const KeplerMapsContainer: FC<{
             </>
           )}
         >
-          <TabStrip.SearchDropdown />
+          <TabStrip.SearchDropdown
+            sortSearchItems="recent"
+            getTabLastOpenedAt={(tab) => tab.lastOpenedAt as number | undefined}
+          />
           <TabStrip.Tabs />
           <TabStrip.NewButton tooltip="Create new map" />
         </TabStrip>

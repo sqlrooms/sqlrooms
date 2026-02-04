@@ -43,6 +43,8 @@ const AnalysisSessionBaseSchema = z.object({
   prompt: z.string().default(''),
   /** Per-session flag indicating if analysis is running */
   isRunning: z.boolean().default(false),
+  /** Last time the session was opened/selected (epoch ms) */
+  lastOpenedAt: z.number().optional(),
 });
 
 /**

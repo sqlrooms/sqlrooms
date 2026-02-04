@@ -200,6 +200,8 @@ export {
   type TabStripProps,
 } from './components/tab-strip';
 
+export {ScrollableRow} from './components/scrollable-row';
+
 export {
   Select,
   SelectGroup,

@@ -35,6 +35,8 @@ Additionally, `"sideEffects": false` was added to all packages. This signals to 
 
 A composable tab strip with drag-to-reorder, inline renaming, and a search dropdown for reopening closed tabs. Supports custom tab menus and flexible layouts via subcomponents (`TabStrip.Tabs`, `TabStrip.SearchDropdown`, `TabStrip.NewButton`).
 
+New: the search dropdown can optionally sort items by recent usage via `sortSearchItems="recent"` and an optional `getTabLastOpenedAt` accessor.
+
 <video src="/media/whats-new/tab-strip-component.mp4" alt="SQLRooms TabStrip component" width="450" loop muted controls autoplay></video>
 
 ### Kepler integration
