@@ -601,6 +601,7 @@ export function createAiSlice(
           sessionChatStops.delete(sessionId);
           sessionChatSendMessages.delete(sessionId);
           sessionAddToolResults.delete(sessionId);
+          const now = Date.now();
 
           set((state) =>
             produce(state, (draft) => {
@@ -625,7 +626,7 @@ export function createAiSlice(
                       const firstSession = draft.ai.config.sessions[0];
                       if (firstSession) {
                         draft.ai.config.currentSessionId = firstSession.id;
-                        firstSession.lastOpenedAt = Date.now();
+                        firstSession.lastOpenedAt = now;
                       }
                     }
                   }

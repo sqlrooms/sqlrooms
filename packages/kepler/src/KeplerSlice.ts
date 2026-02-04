@@ -213,6 +213,16 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
+  const updateMapLastOpenedAt = (
+    maps: KeplerSliceConfig['maps'],
+    mapId: string,
+    now: number = Date.now(),
+  ) => {
+    const map = maps.find((item) => item.id === mapId);
+    if (map) {
+      map.lastOpenedAt = now;
+    }
+  };
   return createSlice<
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
@@ -353,13 +363,9 @@ export function createKeplerSlice({
         setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               draft.kepler.config.currentMapId = mapId;
-              const map = draft.kepler.config.maps.find(
-                (item) => item.id === mapId,
-              );
-              if (map) {
-                map.lastOpenedAt = Date.now();
-              }
+              updateMapLastOpenedAt(draft.kepler.config.maps, mapId, now);
             }),
           );
         },
@@ -436,12 +442,11 @@ export function createKeplerSlice({
                   const newSelectedId = newOpenTabs[newIndex];
                   if (newSelectedId) {
                     draft.kepler.config.currentMapId = newSelectedId;
-                    const selectedMap = draft.kepler.config.maps.find(
-                      (map) => map.id === newSelectedId,
+                    updateMapLastOpenedAt(
+                      draft.kepler.config.maps,
+                      newSelectedId,
+                      Date.now(),
                     );
-                    if (selectedMap) {
-                      selectedMap.lastOpenedAt = Date.now();
-                    }
                   }
                 } else if (remainingMaps.length > 0) {
                   // No open tabs left, open a closed map
@@ -449,7 +454,11 @@ export function createKeplerSlice({
                   if (mapToOpen) {
                     draft.kepler.config.openTabs.push(mapToOpen.id);
                     draft.kepler.config.currentMapId = mapToOpen.id;
-                    mapToOpen.lastOpenedAt = Date.now();
+                    updateMapLastOpenedAt(
+                      draft.kepler.config.maps,
+                      mapToOpen.id,
+                      Date.now(),
+                    );
                   }
                 }
               }
