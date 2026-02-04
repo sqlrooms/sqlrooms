@@ -470,7 +470,7 @@ function TabStripSearchDropdown({
   triggerIcon,
   emptyMessage = 'No tabs',
   searchEmptyMessage = 'No matching tabs',
-  closedTabsLabel = 'Closed tabs',
+  closedTabsLabel = 'Recently closed',
   sortSearchItems = 'recent',
   getTabLastOpenedAt,
 }: TabStripSearchDropdownProps) {

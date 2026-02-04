@@ -64,7 +64,7 @@ export function ScrollableRow({
   }, [children, containerRef]);
 
   const arrowBaseClass = cn(
-    'absolute top-0 z-10 flex h-full w-8 items-center backdrop-blur-md bg-background/50',
+    'absolute top-0 z-10 flex h-full w-8 items-center backdrop-blur-md bg-background/50 transition-colors',
     arrowVisibility === 'hover'
       ? 'opacity-0 transition-opacity hover:opacity-100'
       : 'opacity-100',
@@ -80,14 +80,17 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'left-0 justify-start pl-1',
-          'from-background/90 via-background/60 bg-gradient-to-r to-transparent',
+          'from-background/90 via-background/60 group bg-gradient-to-r to-transparent',
           !canScrollLeft && 'pointer-events-none opacity-0',
         )}
         aria-label="Scroll left"
         title="Scroll left"
       >
         <ChevronLeft
-          className={cn('text-muted-foreground h-5 w-5', arrowIconClassName)}
+          className={cn(
+            'text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors',
+            arrowIconClassName,
+          )}
         />
       </button>
 
@@ -102,14 +105,17 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'right-0 justify-end pr-1',
-          'from-background/90 via-background/60 bg-gradient-to-l to-transparent',
+          'from-background/90 via-background/60 group bg-gradient-to-l to-transparent',
           !canScrollRight && 'pointer-events-none opacity-0',
         )}
         aria-label="Scroll right"
         title="Scroll right"
       >
         <ChevronRight
-          className={cn('text-muted-foreground h-5 w-5', arrowIconClassName)}
+          className={cn(
+            'text-muted-foreground group-hover:text-foreground h-5 w-5 transition-colors',
+            arrowIconClassName,
+          )}
         />
       </button>
     </div>
