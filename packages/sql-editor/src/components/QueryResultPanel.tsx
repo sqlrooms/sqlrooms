@@ -4,11 +4,19 @@ import {
   ArrowDataTableValueFormatter,
 } from '@sqlrooms/data-table';
 import type {Row} from '@tanstack/react-table';
-import {cn, SpinnerPane, Button} from '@sqlrooms/ui';
+import {
+  cn,
+  SpinnerPane,
+  Button,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {MessageCircleQuestion} from 'lucide-react';
+import {SparklesIcon} from 'lucide-react';
 import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
 /**
@@ -112,7 +120,9 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     if (queryResult?.status === 'error' && onAskAiAboutError) {
       const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
-      onAskAiAboutError(currentQuery, errorText);
+      const testQuery = 'SELECT 1;';
+      const testError = 'This is some error that will be displayed on the AI prompt.';
+      onAskAiAboutError(testQuery, testError);
     }
   }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
@@ -131,19 +141,29 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
       </div>
     );
   }
-  if (queryResult?.status === 'error') {
+  if (true) {
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {onAskAiAboutError && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute top-2 right-2 h-8 w-8"
-            onClick={handleAskAiAboutError}
-            title="Ask AI for help"
-          >
-            <MessageCircleQuestion className="h-4 w-4" />
-          </Button>
+        {true && (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute top-2 right-2 h-8 w-8"
+                  onClick={handleAskAiAboutError}
+                >
+                  <SparklesIcon className="h-4 w-4 !text-primary" />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">
+                  Send query and error to AI agent for debugging assistance
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
         <pre
           className={cn(
