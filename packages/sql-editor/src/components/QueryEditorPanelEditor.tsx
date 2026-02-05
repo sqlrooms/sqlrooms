@@ -64,6 +64,9 @@ export const QueryEditorPanelEditor: React.FC<{
 
   return (
     <SqlMonacoEditor
+      // Stable model identity per tab/query so @monaco-editor/react can swap models
+      // instead of reusing/discarding a single shared model.
+      path={`sqlrooms://query/${queryId}.sql`}
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
