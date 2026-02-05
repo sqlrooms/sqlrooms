@@ -65,6 +65,10 @@ export const QueryEditorPanelEditor: React.FC<{
   return (
     <SqlMonacoEditor
       path={`sqlrooms://query/${queryId}.sql`}
+      // Preserve per-tab cursor/scroll state when switching tabs (models).
+      saveViewState
+      // Keep the previous model alive when switching `path` so per-tab undo/redo isn't lost.
+      keepCurrentModel
       connector={connector}
       value={queryText ?? ''}
       onChange={handleUpdateQuery}
