@@ -594,7 +594,10 @@ function TabStripSearchDropdown({
       <DropdownMenuContent
         align="start"
         onCloseAutoFocus={(event) => event.preventDefault()}
-        className={cn('flex max-h-[400px] max-w-[240px] flex-col', className)}
+        className={cn(
+          'flex max-h-[400px] max-w-[240px] flex-col overflow-x-hidden',
+          className,
+        )}
       >
         <div className="flex flex-shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
@@ -623,7 +626,7 @@ function TabStripSearchDropdown({
         </div>
         <DropdownMenuSeparator className="flex-shrink-0" />
 
-        <div className="overflow-y-auto">
+        <div className="overflow-y-auto overflow-x-hidden">
           {isSearching ? (
             filteredTabs.length === 0 ? (
               <DropdownTabItems
