@@ -3,6 +3,23 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* color utils get css color from theme mode ([#331](https://github.com/sqlrooms/sqlrooms/issues/331)) ([caa4db9](https://github.com/sqlrooms/sqlrooms/commit/caa4db9def2c9c790905500940a03bbd95b60e1f))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* fix tab reordering ([#340](https://github.com/sqlrooms/sqlrooms/issues/340)) ([338b880](https://github.com/sqlrooms/sqlrooms/commit/338b880d5808d5df7e5b4fbac5fd41f73626dd51))
+* monaco editor flashing ([#306](https://github.com/sqlrooms/sqlrooms/issues/306)) ([35e4420](https://github.com/sqlrooms/sqlrooms/commit/35e4420f21360460ed4950043e0628ef82f5ff93)), closes [#313](https://github.com/sqlrooms/sqlrooms/issues/313)
+* Prevent type errors in React 18 which don't have `inert` ([#323](https://github.com/sqlrooms/sqlrooms/issues/323)) ([505498b](https://github.com/sqlrooms/sqlrooms/commit/505498b3b021bd72f4b278b95b3d986c0e73f708))
+* rollback query panel ([#339](https://github.com/sqlrooms/sqlrooms/issues/339)) ([f9efcd5](https://github.com/sqlrooms/sqlrooms/commit/f9efcd5cd319eb41cd3c75ea48da355b8304376b))
+
+### Features
+
+* Abort query in CreateTableForm ([#321](https://github.com/sqlrooms/sqlrooms/issues/321)) ([ff16aad](https://github.com/sqlrooms/sqlrooms/commit/ff16aada806e60dc0f23e69d64668046d98ec087))
+* improve explain query output in sqleditor ([#308](https://github.com/sqlrooms/sqlrooms/issues/308)) ([1557c4b](https://github.com/sqlrooms/sqlrooms/commit/1557c4be52c7198b55f28132cba1f10a31fa148b))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 ### Bug Fixes

@@ -3,6 +3,17 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* chart label position and add responsive font size ([#328](https://github.com/sqlrooms/sqlrooms/issues/328)) ([99c5099](https://github.com/sqlrooms/sqlrooms/commit/99c509950f48f0d3e8128f9704939e247fbc8f90))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+
+### Features
+
+* Charts actions: only show on hover ([#336](https://github.com/sqlrooms/sqlrooms/issues/336)) ([87a21ce](https://github.com/sqlrooms/sqlrooms/commit/87a21ce58bc15b09b790456bd8d1719416c3ae44))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 ### Bug Fixes

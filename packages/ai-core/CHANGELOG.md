@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* Ai suggestions div height ([24c2909](https://github.com/sqlrooms/sqlrooms/commit/24c290995519cecd17f6dab45f2229d059b720a5))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* TabStrip scroll into view ([#312](https://github.com/sqlrooms/sqlrooms/issues/312)) ([271efcf](https://github.com/sqlrooms/sqlrooms/commit/271efcfea8c095703d4e05150d75b59144d62930))
+
+### Features
+
+* AI open session tabs now saved in AI slice config ([#315](https://github.com/sqlrooms/sqlrooms/issues/315)) ([34a33cb](https://github.com/sqlrooms/sqlrooms/commit/34a33cb1819275e3365aaf7c4607405ec6a2d663))
+* enhance ErrorMessage component with customizable Markdown components ([#333](https://github.com/sqlrooms/sqlrooms/issues/333)) ([ffe618a](https://github.com/sqlrooms/sqlrooms/commit/ffe618a9de8655de4bf18fcdf6df1c8f53cd8622))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+* Prompt suggestion improvements ([#316](https://github.com/sqlrooms/sqlrooms/issues/316)) ([55eba6c](https://github.com/sqlrooms/sqlrooms/commit/55eba6cf7fcf449c9c88d9e058478c63959f7ec1))
+* render reasoning in agent tool ([#322](https://github.com/sqlrooms/sqlrooms/issues/322)) ([ffca82e](https://github.com/sqlrooms/sqlrooms/commit/ffca82eef19eb6d617a48ce3ee376e64987f747e))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 ### Bug Fixes
