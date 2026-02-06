@@ -313,8 +313,8 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
       ensureSqlLanguageConfigured(monaco);
       ensureSqlCompletionProvider(monaco);
 
-      const model = editor.getModel?.();
-      if (model) {
+      const setContextForModel = (model: any) => {
+        if (!model) return;
         modelRef.current = model;
         sqlCompletionContextByModel.set(model, {
           connector,
@@ -323,14 +323,24 @@ export const SqlMonacoEditor: React.FC<SqlMonacoEditorProps> = ({
           customKeywords,
           customFunctions,
         });
-      }
+      };
+
+      // Initial model context
+      setContextForModel(editor.getModel?.());
+
+      // IMPORTANT: when callers pass `path`, @monaco-editor/react swaps the underlying
+      // Monaco model without re-mounting the editor. Keep the completion context in sync
+      // with the active model so suggestions remain database-aware.
+      const modelChangeDisposable = editor.onDidChangeModel?.(() => {
+        setContextForModel(editor.getModel?.());
+      });
 
       // Cleanup on dispose
-      if (model) {
-        editor.onDidDispose(() => {
-          sqlCompletionContextByModel.delete(model);
-        });
-      }
+      editor.onDidDispose(() => {
+        modelChangeDisposable?.dispose?.();
+        const model = modelRef.current;
+        if (model) sqlCompletionContextByModel.delete(model);
+      });
 
       // Call the original onMount if provided
       if (onMount) {
