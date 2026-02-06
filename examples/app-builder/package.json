@@ -11,20 +11,20 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@openassistant/utils": "1.0.0-alpha.0",
     "@sqlrooms/ai-config": "workspace:*",
     "@sqlrooms/ai-core": "workspace:*",
     "@sqlrooms/ai-settings": "workspace:*",
-    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@openassistant/utils": "1.0.0-alpha.0",
     "@webcontainer/api": "^1.6.1",
+    "@xterm/xterm": "^5.5.0",
     "immer": "^11.0.1",
     "lucide-react": "^0.544.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@xterm/xterm": "^5.5.0",
     "zod": "^4.1.8",
     "zustand": "^5.0.5"
   },

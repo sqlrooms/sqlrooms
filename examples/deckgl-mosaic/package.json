@@ -10,18 +10,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "apache-arrow": "17.0.0",
+    "@deck.gl/react": "^9.2.5",
+    "@geoarrow/deck.gl-layers": "^0.3.1",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@geoarrow/deck.gl-layers": "^0.3.1",
-    "@deck.gl/react": "^9.2.5",
+    "apache-arrow": "17.0.0",
+    "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "maplibre-gl": "^5.12.0",
     "react-map-gl": "^8.1.0",
-    "immer": "^11.0.1",
     "zod": "^4.1.8"
   },
   "devDependencies": {
