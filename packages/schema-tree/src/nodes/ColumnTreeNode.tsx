@@ -2,6 +2,7 @@
 
 import {ColumnTypeBadge} from '@sqlrooms/data-table';
 import {ColumnNodeObject} from '@sqlrooms/duckdb';
+import {cn} from '@sqlrooms/ui';
 import {CopyIcon} from 'lucide-react';
 import {FC} from 'react';
 import {BaseTreeNode} from './BaseTreeNode';
@@ -9,7 +10,6 @@ import {
   TreeNodeActionsMenu,
   TreeNodeActionsMenuItem,
 } from './TreeNodeActionsMenu';
-import {cn} from '@sqlrooms/ui';
 
 export const ColumnTreeNode: FC<{
   className?: string;

@@ -251,6 +251,7 @@ type CreateDuckDbSliceProps = {
 export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
+  let refreshPromise: Promise<DataTable[]> | null = null;
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
     (set, get) => {
       return {
@@ -435,72 +436,88 @@ export function createDuckDbSlice({
             filter?: SchemaAndDatabase & {table?: string},
           ): Promise<DataTable[]> {
             const {schema, database, table} = filter || {};
-            const sql = `WITH tables_and_views AS (
-              FROM duckdb_tables() SELECT
-                database_name AS database,
-                schema_name AS schema,
-                table_name AS name,
-                sql,
-                comment,
-                estimated_size,
-                FALSE AS isView
-              UNION
-              FROM duckdb_views() SELECT
-                database_name AS database,
-                schema_name AS schema,
-                view_name AS name,
-                sql,
-                comment,
-                NULL estimated_size,
-                TRUE AS isView
-            )
-            SELECT
-                isView,
-                database, schema,
-                name, column_names, column_types,
-                sql, comment,
-                estimated_size
-            FROM (DESCRIBE)
-            LEFT OUTER JOIN tables_and_views USING (database, schema, name)
+            const connector = await get().db.getConnector();
+            const defaultDatabaseFilter = database
+              ? `database = ${escapeVal(database)}`
+              : `database != 'system'`;
+            const tableSql = `FROM duckdb_tables() SELECT
+              database_name AS database,
+              schema_name AS schema,
+              table_name AS name,
+              sql,
+              comment,
+              estimated_size,
+              FALSE AS isView
             ${
               schema || database || table
                 ? `WHERE ${[
+                    defaultDatabaseFilter,
                     schema ? `schema = ${escapeVal(schema)}` : '',
-                    database ? `database = ${escapeVal(database)}` : '',
                     table ? `name = ${escapeVal(table)}` : '',
                   ]
                     .filter(Boolean)
                     .join(' AND ')}`
-                : ''
+                : `WHERE ${defaultDatabaseFilter}`
             }`;
-            const describeResults = await connector.query(sql);
-
+            const viewSql = `FROM duckdb_views() SELECT
+              database_name AS database,
+              schema_name AS schema,
+              view_name AS name,
+              sql,
+              comment,
+              NULL estimated_size,
+              TRUE AS isView
+            ${
+              schema || database || table
+                ? `WHERE ${[
+                    defaultDatabaseFilter,
+                    schema ? `schema = ${escapeVal(schema)}` : '',
+                    table ? `name = ${escapeVal(table)}` : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' AND ')}`
+                : `WHERE ${defaultDatabaseFilter}`
+            }`;
+            const tableResults = await connector.query(tableSql);
+            const viewResults = await connector.query(viewSql);
             const newTables: DataTable[] = [];
-            for (let i = 0; i < describeResults.numRows; i++) {
-              const isView = describeResults.getChild('isView')?.get(i);
-              const database = describeResults.getChild('database')?.get(i);
-              const schema = describeResults.getChild('schema')?.get(i);
-              const table = describeResults.getChild('name')?.get(i);
-              const sql = describeResults.getChild('sql')?.get(i);
-              const comment = describeResults.getChild('comment')?.get(i);
-              const estimatedSize = describeResults
-                .getChild('estimated_size')
-                ?.get(i);
-              const columnNames = describeResults
-                .getChild('column_names')
-                ?.get(i);
-              const columnTypes = describeResults
-                .getChild('column_types')
-                ?.get(i);
+            const results = [tableResults, viewResults];
+            for (const describeResults of results) {
+              for (let i = 0; i < describeResults.numRows; i++) {
+                const isView = describeResults.getChild('isView')?.get(i);
+                const database = describeResults.getChild('database')?.get(i);
+                const schema = describeResults.getChild('schema')?.get(i);
+                const table = describeResults.getChild('name')?.get(i);
+                const sql = describeResults.getChild('sql')?.get(i);
+                const comment = describeResults.getChild('comment')?.get(i);
+                const estimatedSize = describeResults
+                  .getChild('estimated_size')
+                  ?.get(i);
               const columns: TableColumn[] = [];
-              for (let di = 0; di < columnNames.length; di++) {
-                columns.push({
-                  name: columnNames.get(di),
-                  type: columnTypes.get(di),
-                });
+              const qualifiedTable = makeQualifiedTableName({
+                database,
+                schema,
+                table,
+              });
+              try {
+                const tableInfo = await connector.query(
+                  `PRAGMA table_info(${escapeVal(qualifiedTable.toString())})`,
+                );
+                const columnNames = tableInfo.getChild('name');
+                const columnTypes = tableInfo.getChild('type');
+                for (let di = 0; di < tableInfo.numRows; di++) {
+                  columns.push({
+                    name: columnNames?.get(di),
+                    type: columnTypes?.get(di),
+                  });
+                }
+              } catch (error) {
+                if (!isView) {
+                  get().room.captureException(error);
+                }
               }
               newTables.push({
-                table: makeQualifiedTableName({database, schema, table}),
+                table: qualifiedTable,
                 database,
                 schema,
                 tableName: table,
@@ -515,6 +532,7 @@ export function createDuckDbSlice({
                       ? undefined
                       : estimatedSize,
               });
+              }
             }
             return newTables;
           },
@@ -598,45 +616,52 @@ export function createDuckDbSlice({
           },
 
           async refreshTableSchemas(): Promise<DataTable[]> {
+            if (refreshPromise) {
+              return get().db.tables;
+            }
             set((state) =>
               produce(state, (draft) => {
                 draft.db.isRefreshingTableSchemas = true;
               }),
             );
-            try {
-              const connector = await get().db.getConnector();
-              const result = await connector.query(
-                `SELECT current_schema() AS schema, current_database() AS database`,
-              );
-              set((state) =>
-                produce(state, (draft) => {
-                  draft.db.currentSchema = result.getChild('schema')?.get(0);
-                  draft.db.currentDatabase = result
-                    .getChild('database')
-                    ?.get(0);
-                }),
-              );
-              const newTables = await get().db.loadTableSchemas();
-              // Only update if there's an actual change in the schemas
-              if (!deepEquals(newTables, get().db.tables)) {
+            refreshPromise = (async () => {
+              try {
+                const connector = await get().db.getConnector();
+                const result = await connector.query(
+                  `SELECT current_schema() AS schema, current_database() AS database`,
+                );
                 set((state) =>
                   produce(state, (draft) => {
-                    draft.db.tables = newTables;
-                    draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                    draft.db.currentSchema = result.getChild('schema')?.get(0);
+                    draft.db.currentDatabase = result
+                      .getChild('database')
+                      ?.get(0);
+                  }),
+                );
+                const newTables = await get().db.loadTableSchemas();
+                // Only update if there's an actual change in the schemas
+                if (!deepEquals(newTables, get().db.tables)) {
+                  set((state) =>
+                    produce(state, (draft) => {
+                      draft.db.tables = newTables;
+                      draft.db.schemaTrees = createDbSchemaTrees(newTables);
+                    }),
+                  );
+                }
+                return newTables;
+              } catch (err) {
+                get().room.captureException(err);
+                return [];
+              } finally {
+                refreshPromise = null;
+                set((state) =>
+                  produce(state, (draft) => {
+                    draft.db.isRefreshingTableSchemas = false;
                   }),
                 );
               }
-              return newTables;
-            } catch (err) {
-              get().room.captureException(err);
-              return [];
-            } finally {
-              set((state) =>
-                produce(state, (draft) => {
-                  draft.db.isRefreshingTableSchemas = false;
-                }),
-              );
-            }
+            })();
+            return get().db.tables;
           },
 
           async sqlSelectToJson(sql: string) {
