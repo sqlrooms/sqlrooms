@@ -1,23 +1,22 @@
 import {useCallback, useMemo, useState} from 'react';
 
+import {Icons, LoadTileSetFactory} from '@kepler.gl/components';
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  UseDisclosureReturnValue,
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
+  UseDisclosureReturnValue,
 } from '@sqlrooms/ui';
-import {LoadTileSetFactory, Icons} from '@kepler.gl/components';
 import {FileDropInput} from './FileDropInput';
 import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
-import {KeplerS3Browser} from './KeplerS3Browser';
-import type {KeplerS3BrowserProps} from './KeplerS3Browser';
+// import type {KeplerS3BrowserProps} from './KeplerS3Browser';
 import {useIntl} from 'react-intl';
 
 const DEFAULT_ACCEPTED_FORMATS = [
@@ -92,18 +91,18 @@ export type KeplerAddDataDialogProps = {
   loadFiles: (files: FileList | string[]) => Promise<void>;
   method?: AddDataMethods;
   acceptedFormats?: string[];
-} & KeplerS3BrowserProps;
+}; //& KeplerS3BrowserProps;
 
 export const KeplerAddDataDialog = ({
   addDataModal,
   loadTileSet,
   loadFiles,
-  listS3Files,
-  loadS3Files,
-  saveS3Credentials,
-  loadS3Credentials,
-  deleteS3Credentials,
-  s3Browser,
+  // listS3Files,
+  // loadS3Files,
+  // saveS3Credentials,
+  // loadS3Credentials,
+  // deleteS3Credentials,
+  // s3Browser,
   method = AddDataMethods.Upload,
   acceptedFormats = DEFAULT_ACCEPTED_FORMATS,
 }: KeplerAddDataDialogProps) => {
@@ -115,13 +114,13 @@ export const KeplerAddDataDialog = ({
     },
     [loadFiles, addDataModal],
   );
-  const onLoadS3Files = useCallback(
-    async (...args: Parameters<KeplerS3BrowserProps['loadS3Files']>) => {
-      await loadS3Files(...args);
-      addDataModal.onClose();
-    },
-    [loadS3Files, addDataModal],
-  );
+  // const onLoadS3Files = useCallback(
+  //   async (...args: Parameters<KeplerS3BrowserProps['loadS3Files']>) => {
+  //     await loadS3Files(...args);
+  //     addDataModal.onClose();
+  //   },
+  //   [loadS3Files, addDataModal],
+  // );
   return (
     <KeplerProvider mapId={''}>
       <Dialog
@@ -186,7 +185,7 @@ export const KeplerAddDataDialog = ({
               />
             </TabsContent>
             {/** S3 */}
-            <TabsContent
+            {/* <TabsContent
               value={AddDataMethods.S3}
               className="h-full w-full data-[state=inactive]:hidden"
             >
@@ -198,7 +197,7 @@ export const KeplerAddDataDialog = ({
                 loadS3Credentials={loadS3Credentials}
                 deleteS3Credentials={deleteS3Credentials}
               />
-            </TabsContent>
+            </TabsContent> */}
           </Tabs>
         </DialogContent>
       </Dialog>

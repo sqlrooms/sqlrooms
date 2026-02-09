@@ -500,6 +500,10 @@ export function createRoomShellSlice(
       const {tables} = get().db;
       const {dataSourceStates} = get().room;
       const {config} = get().room;
+      console.log('updateReadyDataSources', {config});
+      if (!config) {
+        return;
+      }
       const {dataSources} = config;
       set((state) =>
         produce(state, (draft) => {
