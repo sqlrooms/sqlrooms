@@ -1,14 +1,17 @@
 import {
   AddDataButtonFactory,
-  appInjector,
+  ContainerFactory,
+  injector as createInjector,
   DndContextFactory,
   Factory,
   FilterPanelHeaderFactory,
+  flattenDeps,
   MapControlTooltipFactory,
   MapLegendFactory,
   MapLegendPanelFactory,
   PanelTitleFactory,
-  provideRecipesToInjector,
+  typeCheckRecipe,
+  type InjectorType,
 } from '@kepler.gl/components';
 import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
@@ -17,11 +20,11 @@ import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
 import {CustomMapLegendFactory} from './CustomMapLegend';
 import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
 
-const CustomAddDataButtonFactory = () => {
+export const CustomAddDataButtonFactory = () => {
   return () => null;
 };
 
-const CustomPanelTitleFactory = () => {
+export const CustomPanelTitleFactory = () => {
   const PanelTitle: React.FC<PropsWithChildren> = ({children}) => (
     <div className="flex items-center justify-end">{children}</div>
   );
@@ -45,10 +48,91 @@ const defaultRecipes: KeplerFactoryRecipe[] = [
 let customRecipes: KeplerFactoryRecipe[] = [];
 let injector = createKeplerInjector();
 
+function createBaseInjector() {
+  const allDependencies = flattenDeps(
+    [],
+    ContainerFactory as unknown as Factory,
+  );
+  return allDependencies.reduce(
+    (current, factory) => current.provide(factory, factory),
+    createInjector(),
+  );
+}
+
+/**
+ * Applies factory replacement recipes on top of a fresh Kepler injector while
+ * preserving explicit replacement targets.
+ *
+ * Kepler's default `provideRecipesToInjector` pre-provides all replacement
+ * dependencies as identity mappings (`dep -> dep`) before applying each recipe.
+ * That can unintentionally override factories that were already replaced by
+ * earlier recipes, and emits noisy "already injected" warnings.
+ *
+ * This helper keeps the same high-level flow (process recipes in order and then
+ * eagerly resolve the configured factories), but skips identity-providing any
+ * dependency that is itself an explicit replacement target in the current
+ * recipe set. As a result:
+ * - earlier explicit replacements are not overwritten by later dependency setup
+ * - replacement ordering remains deterministic
+ * - configured factories are still warmed via `get(factoryToReplace)`
+ */
+function provideRecipesToInjectorSafely(
+  recipes: KeplerFactoryRecipe[],
+  baseInjector: InjectorType,
+) {
+  const replacementTargets = new Set(
+    recipes
+      .filter((recipe) =>
+        typeCheckRecipe(recipe as unknown as [Factory, Factory]),
+      )
+      .map((recipe) => recipe[0]),
+  );
+
+  const provided = new Map();
+
+  const injectorWithRecipes = recipes.reduce((currentInjector, recipe) => {
+    if (!typeCheckRecipe(recipe as unknown as [Factory, Factory])) {
+      return currentInjector;
+    }
+
+    const [factoryToReplace, replacementFactory] = recipe;
+    const customDependencies = flattenDeps(
+      [],
+      replacementFactory as unknown as Factory,
+    );
+
+    const injectorWithDependencies = customDependencies.reduce(
+      (dependencyInjector, dependencyFactory) => {
+        // If a dependency has an explicit replacement recipe, skip self-injecting it.
+        // This avoids overriding previous replacements and warning noise.
+        if (
+          replacementTargets.has(dependencyFactory as unknown as KeplerFactory)
+        ) {
+          return dependencyInjector;
+        }
+        return dependencyInjector.provide(dependencyFactory, dependencyFactory);
+      },
+      currentInjector,
+    );
+
+    provided.set(factoryToReplace, replacementFactory);
+    return injectorWithDependencies.provide(
+      factoryToReplace,
+      replacementFactory,
+    );
+  }, baseInjector);
+
+  provided.forEach((_, factoryToReplace) => {
+    injectorWithRecipes.get(factoryToReplace);
+  });
+
+  return injectorWithRecipes;
+}
+
 function createKeplerInjector(recipes: KeplerFactoryRecipe[] = []) {
-  return provideRecipesToInjector(
-    [...defaultRecipes, ...recipes] as unknown as [Factory, Factory][],
-    appInjector,
+  return provideRecipesToInjectorSafely(
+    [...defaultRecipes, ...recipes],
+    createBaseInjector(),
   );
 }
 
