@@ -13,7 +13,7 @@ export const ColumnTypeBadge: FC<{
   <div
     title={String(columnType)}
     className={cn(
-      'h-5 items-center justify-center',
+      'flex h-5 items-center justify-center',
       'py-0.25 w-[55px] flex-shrink-0 overflow-hidden text-ellipsis rounded-sm px-1 text-center text-[9px]',
       'cursor-default whitespace-nowrap lowercase',
       {
