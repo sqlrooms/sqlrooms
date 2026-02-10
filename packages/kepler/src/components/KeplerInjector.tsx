@@ -1,14 +1,17 @@
 import {
   AddDataButtonFactory,
-  appInjector,
+  ContainerFactory,
+  injector as createInjector,
   DndContextFactory,
   Factory,
   FilterPanelHeaderFactory,
+  flattenDeps,
   MapControlTooltipFactory,
   MapLegendFactory,
   MapLegendPanelFactory,
   PanelTitleFactory,
-  provideRecipesToInjector,
+  typeCheckRecipe,
+  type InjectorType,
 } from '@kepler.gl/components';
 import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
@@ -17,11 +20,11 @@ import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
 import {CustomMapLegendFactory} from './CustomMapLegend';
 import {CustomMapLegendPanelFactory} from './CustomMapLegendPanel';
 
-const CustomAddDataButtonFactory = () => {
+export const CustomAddDataButtonFactory = () => {
   return () => null;
 };
 
-const CustomPanelTitleFactory = () => {
+export const CustomPanelTitleFactory = () => {
   const PanelTitle: React.FC<PropsWithChildren> = ({children}) => (
     <div className="flex items-center justify-end">{children}</div>
   );
@@ -45,10 +48,74 @@ const defaultRecipes: KeplerFactoryRecipe[] = [
 let customRecipes: KeplerFactoryRecipe[] = [];
 let injector = createKeplerInjector();
 
+function createBaseInjector() {
+  const allDependencies = flattenDeps(
+    [],
+    ContainerFactory as unknown as Factory,
+  );
+  return allDependencies.reduce(
+    (current, factory) => current.provide(factory, factory),
+    createInjector(),
+  );
+}
+
+function provideRecipesToInjectorSafely(
+  recipes: KeplerFactoryRecipe[],
+  baseInjector: InjectorType,
+) {
+  const replacementTargets = new Set(
+    recipes
+      .filter((recipe) =>
+        typeCheckRecipe(recipe as unknown as [Factory, Factory]),
+      )
+      .map((recipe) => recipe[0]),
+  );
+
+  const provided = new Map();
+
+  const injectorWithRecipes = recipes.reduce((currentInjector, recipe) => {
+    if (!typeCheckRecipe(recipe as unknown as [Factory, Factory])) {
+      return currentInjector;
+    }
+
+    const [factoryToReplace, replacementFactory] = recipe;
+    const customDependencies = flattenDeps(
+      [],
+      replacementFactory as unknown as Factory,
+    );
+
+    const injectorWithDependencies = customDependencies.reduce(
+      (dependencyInjector, dependencyFactory) => {
+        // If a dependency has an explicit replacement recipe, skip self-injecting it.
+        // This avoids overriding previous replacements and warning noise.
+        if (
+          replacementTargets.has(dependencyFactory as unknown as KeplerFactory)
+        ) {
+          return dependencyInjector;
+        }
+        return dependencyInjector.provide(dependencyFactory, dependencyFactory);
+      },
+      currentInjector,
+    );
+
+    provided.set(factoryToReplace, replacementFactory);
+    return injectorWithDependencies.provide(
+      factoryToReplace,
+      replacementFactory,
+    );
+  }, baseInjector);
+
+  provided.forEach((replacementFactory) => {
+    injectorWithRecipes.get(replacementFactory);
+  });
+
+  return injectorWithRecipes;
+}
+
 function createKeplerInjector(recipes: KeplerFactoryRecipe[] = []) {
-  return provideRecipesToInjector(
-    [...defaultRecipes, ...recipes] as unknown as [Factory, Factory][],
-    appInjector,
+  return provideRecipesToInjectorSafely(
+    [...defaultRecipes, ...recipes],
+    createBaseInjector(),
   );
 }
 
