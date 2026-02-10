@@ -21,7 +21,7 @@ export const ColumnTreeNode: FC<{
     <BaseTreeNode asChild className={cn(className)} nodeObject={nodeObject}>
       <div className="relative flex w-full items-center space-x-2">
         <ColumnTypeBadge
-          className="h-8 opacity-50"
+          className="flex opacity-60"
           columnType={nodeObject.columnType}
           typeCategory={nodeObject.columnTypeCategory}
         />
