@@ -155,7 +155,7 @@ export function getKeplerInjector() {
   return injector;
 }
 
-// Cache resolved components per (injector, factory) so we keep a stable component
+// Cache wrapped components per (injector, factory) so we keep a stable component
 // reference across re-renders. Invalidated when injector is replaced (configure/reset).
 const injectorToFactoryCache = new WeakMap<
   object,
@@ -167,23 +167,21 @@ export function getKeplerFactory<TFactory extends KeplerFactory>(
 ): ReturnType<TFactory> {
   // Resolve at top level of render (not inside useMemo) so injector.get() running
   // the factory chain does not run hooks (e.g. styled-components useRef) inside a hook.
-  const Wrapped = ((props: Record<string, unknown>) => {
-    const injectorInstance = getKeplerInjector();
-    let byFactory = injectorToFactoryCache.get(injectorInstance as object);
-    if (byFactory === undefined) {
-      byFactory = new Map();
-      injectorToFactoryCache.set(injectorInstance as object, byFactory);
-    }
-    let Component = byFactory.get(factory);
-    if (Component === undefined) {
-      Component = injectorInstance.get(
-        factory as unknown as Factory,
-      ) as React.ComponentType<Record<string, unknown>>;
-      byFactory.set(factory, Component);
-    }
-    return <Component {...props} />;
-  }) as unknown as ReturnType<TFactory>;
-  return Wrapped;
+  const injectorInstance = getKeplerInjector();
+  let byFactory = injectorToFactoryCache.get(injectorInstance as object);
+  if (byFactory === undefined) {
+    byFactory = new Map();
+    injectorToFactoryCache.set(injectorInstance as object, byFactory);
+  }
+  let Wrapped = byFactory.get(factory);
+  if (Wrapped === undefined) {
+    const Component = injectorInstance.get(
+      factory as unknown as Factory,
+    ) as React.ComponentType<Record<string, unknown>>;
+    Wrapped = (props: Record<string, unknown>) => <Component {...props} />;
+    byFactory.set(factory, Wrapped);
+  }
+  return Wrapped as unknown as ReturnType<TFactory>;
 }
 
 export const KeplerInjector = {
