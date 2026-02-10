@@ -13,7 +13,7 @@ import {
   typeCheckRecipe,
   type InjectorType,
 } from '@kepler.gl/components';
-import React, {PropsWithChildren, useMemo} from 'react';
+import React, {PropsWithChildren} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
 import {CustomFilterPanelHeaderFactory} from './CustomFilterPanelHeader';
 import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
@@ -31,7 +31,8 @@ export const CustomPanelTitleFactory = () => {
 
   return PanelTitle;
 };
-export type KeplerFactory<TReturn = unknown> = (...args: any[]) => TReturn;
+
+export type KeplerFactory<TReturn = unknown> = (..._args: any[]) => TReturn;
 export type KeplerFactoryRecipe = [KeplerFactory, KeplerFactory];
 export type KeplerFactoryRecipeMode = 'append' | 'replace';
 
@@ -155,26 +156,58 @@ export function getKeplerInjector() {
   return injector;
 }
 
+// Cache resolved components per injector so we keep a stable component
+// reference across re-renders. Invalidated when injector is replaced (configure/reset).
+const injectorToFactoryCache = new WeakMap<
+  object,
+  Map<KeplerFactory, React.ComponentType<Record<string, unknown>>>
+>();
+
+// Cache wrapper components per factory so callers always get a stable component type.
+const factoryToWrapperCache = new Map<
+  KeplerFactory,
+  React.ComponentType<Record<string, unknown>>
+>();
+
 export function getKeplerFactory<TFactory extends KeplerFactory>(
   factory: TFactory,
 ): ReturnType<TFactory> {
-  // Resolve from the injector at render time so late configuration works.
-  // Memoize the resolved component per injector instance so React sees a
-  // stable component type and does not unmount/remount on every parent re-render.
-  const Wrapped = ((props: Record<string, unknown>) => {
-    const injectorInstance = getKeplerInjector();
-    const Component = useMemo(
-      () =>
-        injectorInstance.get(
+  let Wrapped = factoryToWrapperCache.get(factory);
+  if (Wrapped === undefined) {
+    const WrappedComponent = function KeplerFactoryWrapper(
+      props: Record<string, unknown>,
+    ) {
+      // Resolve at top level of render (not inside useMemo) so injector.get()
+      // running the factory chain does not run hooks inside a hook.
+      const injectorInstance = getKeplerInjector();
+      let byFactory = injectorToFactoryCache.get(injectorInstance as object);
+      if (byFactory === undefined) {
+        byFactory = new Map();
+        injectorToFactoryCache.set(injectorInstance as object, byFactory);
+      }
+      let Component = byFactory.get(factory);
+      if (Component === undefined) {
+        Component = injectorInstance.get(
           factory as unknown as Factory,
-        ) as React.ComponentType<Record<string, unknown>>,
-      [injectorInstance],
-    );
-    return <Component {...props} />;
-  }) as unknown as ReturnType<TFactory>;
-  return Wrapped;
+        ) as React.ComponentType<Record<string, unknown>>;
+        byFactory.set(factory, Component);
+      }
+      // eslint-disable-next-line react-hooks/static-components -- Kepler factory components resolved at render by design
+      return <Component {...props} />;
+    };
+
+    const factoryName = factory.name || 'Anonymous';
+    WrappedComponent.displayName = `KeplerFactory(${factoryName})`;
+    Wrapped = WrappedComponent;
+    factoryToWrapperCache.set(factory, WrappedComponent);
+  }
+  return Wrapped as unknown as ReturnType<TFactory>;
 }
 
+/**
+ * Stable access to Kepler factories. Prefer calling `get()` at module scope
+ * (or in a constant initializer) so the returned component type is reused.
+ */
 export const KeplerInjector = {
   get<TFactory extends KeplerFactory>(factory: TFactory) {
     return getKeplerFactory(factory);
