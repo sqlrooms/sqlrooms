@@ -13,7 +13,7 @@ import {
   typeCheckRecipe,
   type InjectorType,
 } from '@kepler.gl/components';
-import React, {PropsWithChildren} from 'react';
+import React, {PropsWithChildren, useMemo} from 'react';
 import {CustomDndContextFactory} from './CustomDndContext';
 import {CustomFilterPanelHeaderFactory} from './CustomFilterPanelHeader';
 import {CustomMapControlTooltipFactory} from './CustomMapControlTooltipFactory';
@@ -158,12 +158,18 @@ export function getKeplerInjector() {
 export function getKeplerFactory<TFactory extends KeplerFactory>(
   factory: TFactory,
 ): ReturnType<TFactory> {
-  // Resolve from the injector at render time so late configuration works,
-  // while keeping a stable component definition outside render.
+  // Resolve from the injector at render time so late configuration works.
+  // Memoize the resolved component per injector instance so React sees a
+  // stable component type and does not unmount/remount on every parent re-render.
   const Wrapped = ((props: Record<string, unknown>) => {
-    const Component = getKeplerInjector().get(
-      factory as unknown as Factory,
-    ) as React.ComponentType<Record<string, unknown>>;
+    const injectorInstance = getKeplerInjector();
+    const Component = useMemo(
+      () =>
+        injectorInstance.get(
+          factory as unknown as Factory,
+        ) as React.ComponentType<Record<string, unknown>>,
+      [injectorInstance],
+    );
     return <Component {...props} />;
   }) as unknown as ReturnType<TFactory>;
   return Wrapped;
