@@ -59,6 +59,23 @@ function createBaseInjector() {
   );
 }
 
+/**
+ * Applies factory replacement recipes on top of a fresh Kepler injector while
+ * preserving explicit replacement targets.
+ *
+ * Kepler's default `provideRecipesToInjector` pre-provides all replacement
+ * dependencies as identity mappings (`dep -> dep`) before applying each recipe.
+ * That can unintentionally override factories that were already replaced by
+ * earlier recipes, and emits noisy "already injected" warnings.
+ *
+ * This helper keeps the same high-level flow (process recipes in order and then
+ * eagerly resolve the configured factories), but skips identity-providing any
+ * dependency that is itself an explicit replacement target in the current
+ * recipe set. As a result:
+ * - earlier explicit replacements are not overwritten by later dependency setup
+ * - replacement ordering remains deterministic
+ * - configured factories are still warmed via `get(factoryToReplace)`
+ */
 function provideRecipesToInjectorSafely(
   recipes: KeplerFactoryRecipe[],
   baseInjector: InjectorType,
@@ -105,8 +122,8 @@ function provideRecipesToInjectorSafely(
     );
   }, baseInjector);
 
-  provided.forEach((replacementFactory) => {
-    injectorWithRecipes.get(replacementFactory);
+  provided.forEach((_, factoryToReplace) => {
+    injectorWithRecipes.get(factoryToReplace);
   });
 
   return injectorWithRecipes;
