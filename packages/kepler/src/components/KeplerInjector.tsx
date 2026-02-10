@@ -174,7 +174,9 @@ export function getKeplerFactory<TFactory extends KeplerFactory>(
 ): ReturnType<TFactory> {
   let Wrapped = factoryToWrapperCache.get(factory);
   if (Wrapped === undefined) {
-    Wrapped = (props: Record<string, unknown>) => {
+    const WrappedComponent = function KeplerFactoryWrapper(
+      props: Record<string, unknown>,
+    ) {
       // Resolve at top level of render (not inside useMemo) so injector.get()
       // running the factory chain does not run hooks inside a hook.
       const injectorInstance = getKeplerInjector();
@@ -194,8 +196,9 @@ export function getKeplerFactory<TFactory extends KeplerFactory>(
     };
 
     const factoryName = factory.name || 'Anonymous';
-    Wrapped.displayName = `KeplerFactory(${factoryName})`;
-    factoryToWrapperCache.set(factory, Wrapped);
+    WrappedComponent.displayName = `KeplerFactory(${factoryName})`;
+    Wrapped = WrappedComponent;
+    factoryToWrapperCache.set(factory, WrappedComponent);
   }
   return Wrapped as unknown as ReturnType<TFactory>;
 }
