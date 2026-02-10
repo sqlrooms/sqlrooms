@@ -31,7 +31,8 @@ export const CustomPanelTitleFactory = () => {
 
   return PanelTitle;
 };
-export type KeplerFactory<TReturn = unknown> = (...args: any[]) => TReturn;
+
+export type KeplerFactory<TReturn = unknown> = (..._args: any[]) => TReturn;
 export type KeplerFactoryRecipe = [KeplerFactory, KeplerFactory];
 export type KeplerFactoryRecipeMode = 'append' | 'replace';
 
@@ -179,11 +180,18 @@ export function getKeplerFactory<TFactory extends KeplerFactory>(
       factory as unknown as Factory,
     ) as React.ComponentType<Record<string, unknown>>;
     Wrapped = (props: Record<string, unknown>) => <Component {...props} />;
+    Wrapped.displayName = `KeplerFactory(${
+      Component.displayName ?? Component.name ?? 'Anonymous'
+    })`;
     byFactory.set(factory, Wrapped);
   }
   return Wrapped as unknown as ReturnType<TFactory>;
 }
 
+/**
+ * Stable access to Kepler factories. Prefer calling `get()` at module scope
+ * (or in a constant initializer) so the returned component type is reused.
+ */
 export const KeplerInjector = {
   get<TFactory extends KeplerFactory>(factory: TFactory) {
     return getKeplerFactory(factory);

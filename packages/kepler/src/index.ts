@@ -21,6 +21,7 @@ export type {LoadTileSet} from './components/KeplerAddTileSetDialog';
 export {KeplerImageExport} from './components/KeplerImageExport';
 export {
   configureKeplerInjector,
+  KeplerInjector,
   getKeplerFactory,
   getKeplerInjector,
   resetKeplerInjectorRecipes,
