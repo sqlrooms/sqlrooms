@@ -1,12 +1,13 @@
 // Copyright 2022 Foursquare Labs, Inc. All Rights Reserved.
 
 import {
+  cn,
   DropdownMenu,
-  DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-  cn,
+  DropdownMenuTrigger,
 } from '@sqlrooms/ui';
+import {EllipsisVerticalIcon} from 'lucide-react';
 import {
   ComponentPropsWithoutRef,
   ElementRef,
@@ -14,7 +15,6 @@ import {
   forwardRef,
   PropsWithChildren,
 } from 'react';
-import {EllipsisVerticalIcon} from 'lucide-react';
 
 export type TreeNodeActionsMenuProps = PropsWithChildren<{
   className?: string;
@@ -36,7 +36,7 @@ export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
     <div className="absolute right-0 top-[1px] h-full opacity-0 outline-none group-hover:opacity-100">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <div className="hover:bg-foreground/30 flex h-full w-7 items-center justify-center p-0 outline-none transition-colors">
+          <div className="bg-muted fg-muted-foreground hover:fg-foreground flex h-full w-7 items-center justify-center p-0 outline-none transition-colors">
             <EllipsisVerticalIcon size="15px" className="relative top-[-1px]" />
           </div>
         </DropdownMenuTrigger>
