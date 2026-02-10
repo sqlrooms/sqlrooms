@@ -192,6 +192,7 @@ export function getKeplerFactory<TFactory extends KeplerFactory>(
         ) as React.ComponentType<Record<string, unknown>>;
         byFactory.set(factory, Component);
       }
+      // eslint-disable-next-line react-hooks/static-components -- Kepler factory components resolved at render by design
       return <Component {...props} />;
     };
 
