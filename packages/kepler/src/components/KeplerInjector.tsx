@@ -156,34 +156,46 @@ export function getKeplerInjector() {
   return injector;
 }
 
-// Cache wrapped components per (injector, factory) so we keep a stable component
+// Cache resolved components per injector so we keep a stable component
 // reference across re-renders. Invalidated when injector is replaced (configure/reset).
 const injectorToFactoryCache = new WeakMap<
   object,
   Map<KeplerFactory, React.ComponentType<Record<string, unknown>>>
 >();
 
+// Cache wrapper components per factory so callers always get a stable component type.
+const factoryToWrapperCache = new Map<
+  KeplerFactory,
+  React.ComponentType<Record<string, unknown>>
+>();
+
 export function getKeplerFactory<TFactory extends KeplerFactory>(
   factory: TFactory,
 ): ReturnType<TFactory> {
-  // Resolve at top level of render (not inside useMemo) so injector.get() running
-  // the factory chain does not run hooks (e.g. styled-components useRef) inside a hook.
-  const injectorInstance = getKeplerInjector();
-  let byFactory = injectorToFactoryCache.get(injectorInstance as object);
-  if (byFactory === undefined) {
-    byFactory = new Map();
-    injectorToFactoryCache.set(injectorInstance as object, byFactory);
-  }
-  let Wrapped = byFactory.get(factory);
+  let Wrapped = factoryToWrapperCache.get(factory);
   if (Wrapped === undefined) {
-    const Component = injectorInstance.get(
-      factory as unknown as Factory,
-    ) as React.ComponentType<Record<string, unknown>>;
-    Wrapped = (props: Record<string, unknown>) => <Component {...props} />;
-    Wrapped.displayName = `KeplerFactory(${
-      Component.displayName ?? Component.name ?? 'Anonymous'
-    })`;
-    byFactory.set(factory, Wrapped);
+    Wrapped = (props: Record<string, unknown>) => {
+      // Resolve at top level of render (not inside useMemo) so injector.get()
+      // running the factory chain does not run hooks inside a hook.
+      const injectorInstance = getKeplerInjector();
+      let byFactory = injectorToFactoryCache.get(injectorInstance as object);
+      if (byFactory === undefined) {
+        byFactory = new Map();
+        injectorToFactoryCache.set(injectorInstance as object, byFactory);
+      }
+      let Component = byFactory.get(factory);
+      if (Component === undefined) {
+        Component = injectorInstance.get(
+          factory as unknown as Factory,
+        ) as React.ComponentType<Record<string, unknown>>;
+        byFactory.set(factory, Component);
+      }
+      return <Component {...props} />;
+    };
+
+    const factoryName = factory.name || 'Anonymous';
+    Wrapped.displayName = `KeplerFactory(${factoryName})`;
+    factoryToWrapperCache.set(factory, Wrapped);
   }
   return Wrapped as unknown as ReturnType<TFactory>;
 }
