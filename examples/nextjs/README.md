@@ -18,7 +18,7 @@ A minimalistic [Next.js](https://nextjs.org/) app example featuring:
 To create a new project from the Next.js example run this:
 
 ```bash
-npx degit sqlrooms/examples/nextjs my-new-app/
+npx giget gh:sqlrooms/examples/nextjs my-new-app/
 ```
 
 #### Running locally

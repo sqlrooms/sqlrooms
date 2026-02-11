@@ -17,7 +17,7 @@ Features:
 To create a new project from this example:
 
 ```bash
-npx degit sqlrooms/examples/app-builder my-new-app/
+npx giget gh:sqlrooms/examples/app-builder my-new-app/
 ```
 
 #### Running locally

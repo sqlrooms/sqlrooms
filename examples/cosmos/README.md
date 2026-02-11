@@ -21,7 +21,7 @@ An example demonstrating integration with the [Cosmos](https://github.com/cosmog
 To create a new project from the cosmos example run this:
 
 ```bash
-npx degit sqlrooms/examples/cosmos my-new-app/
+npx giget gh:sqlrooms/examples/cosmos my-new-app/
 ```
 
 #### Running locally

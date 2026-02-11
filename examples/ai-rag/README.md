@@ -15,7 +15,7 @@ An example demonstrating Retrieval Augmented Generation (RAG) using SQLRooms and
 To create a new project from the ai-rag example run this:
 
 ```bash
-npx degit sqlrooms/examples/ai-rag my-new-app/
+npx giget gh:sqlrooms/examples/ai-rag my-new-app/
 ```
 
 #### Setup
@@ -26,7 +26,7 @@ First, generate vector embeddings of the DuckDB documentation using the [sqlroom
 
 ```bash
 # Download DuckDB docs
-npx degit duckdb/duckdb-web/docs ./duckdb-docs
+npx giget gh:duckdb/duckdb-web/docs ./duckdb-docs
 
 # Generate embeddings with OpenAI (requires OPENAI_API_KEY env var)
 OPENAI_API_KEY=your-key uvx --from sqlrooms-rag prepare-embeddings ./duckdb-docs -o public/rag/duckdb_docs.duckdb --provider openai
