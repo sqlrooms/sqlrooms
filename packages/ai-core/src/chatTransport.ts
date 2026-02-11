@@ -1,29 +1,29 @@
-import {
-  DefaultChatTransport,
-  UIMessage,
-  convertToModelMessages,
-  streamText,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
-import {produce} from 'immer';
-import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
-import {AddToolResult} from './types';
-import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
+import {getErrorMessageForDisplay} from '@sqlrooms/utils';
+import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {
-  mergeAbortSignals,
-  ToolAbortError,
-  fixIncompleteToolCalls,
-} from './utils';
+  convertToModelMessages,
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  streamText,
+  UIMessage,
+} from 'ai';
+import {produce} from 'immer';
 import {
   AI_DEFAULT_TEMPERATURE,
   ANALYSIS_PENDING_ID,
   TOOL_CALL_CANCELLED,
 } from './constants';
+import type {AiSliceStateForTransport} from './types';
+import {AddToolResult} from './types';
+import {
+  fixIncompleteToolCalls,
+  mergeAbortSignals,
+  ToolAbortError,
+} from './utils';
 
 export type ToolCall = {
   input: string;
@@ -163,7 +163,7 @@ export function createLocalChatTransportFactory({
         const openai = createOpenAICompatible({
           apiKey,
           name: provider,
-          baseURL: baseUrl ?? '',
+          baseURL: baseUrl ?? 'https://api.openai.com/v1',
           headers,
         });
         model = openai.chatModel(modelId);
