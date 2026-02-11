@@ -23,7 +23,7 @@ Features include:
 To create a new project from the mosaic example run this:
 
 ```bash
-npx degit sqlrooms/examples/mosaic my-new-app/
+npx giget gh:sqlrooms/examples/mosaic my-new-app/
 ```
 
 #### Running locally

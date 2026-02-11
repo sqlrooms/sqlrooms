@@ -17,7 +17,7 @@ The architecture uses Mosaic’s global Coordinator to manage state between link
 To create a new project from the deckgl-mosaic example run this:
 
 ```bash
-npx degit sqlrooms/examples/deckgl-mosaic my-new-app/
+npx giget gh:sqlrooms/examples/deckgl-mosaic my-new-app/
 ```
 
 #### Running locally

@@ -20,5 +20,5 @@ A browser-based SQL query editor that connects directly to MotherDuck's cloud-ho
 To create a new project from the query-motherduck example run this:
 
 ```bash
-npx degit sqlrooms/examples/query-motherduck my-new-app/
+npx giget gh:sqlrooms/examples/query-motherduck my-new-app/
 ```
