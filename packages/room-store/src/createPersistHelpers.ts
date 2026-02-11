@@ -50,10 +50,24 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
     merge: (persistedState: any, currentState: any) => {
       const merged = {...currentState};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
+        const persistedConfig = persistedState?.[key];
+
+        if (persistedConfig === undefined || persistedConfig === null) {
+          continue;
+        }
+
         try {
+          const config =
+            key === 'aiSettings'
+              ? schema.parse({
+                  defaults: currentState[key]?.config,
+                  persisted: persistedConfig,
+                })
+              : schema.parse(persistedConfig);
+
           merged[key] = {
             ...currentState[key],
-            config: schema.parse(persistedState[key]),
+            config,
           };
         } catch (error) {
           throw new Error(`Error parsing config key "${key}"`, {

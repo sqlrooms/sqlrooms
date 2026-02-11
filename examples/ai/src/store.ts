@@ -6,6 +6,7 @@ import {
   createAiSettingsSlice,
   createAiSlice,
   createDefaultAiInstructions,
+  createDefaultAiSettingsConfig,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
 import {
@@ -56,9 +57,30 @@ export type RoomState = RoomShellSliceState &
  * Create a customized room store
  */
 export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
-  persistSliceConfigs(
+  persistSliceConfigs<RoomState>(
     {
       name: 'ai-example-app-state-storage',
+      version: 1,
+      migrate: ((persistedState: unknown) => {
+        if (
+          typeof persistedState !== 'object' ||
+          persistedState === null ||
+          !('aiSettings' in persistedState)
+        ) {
+          return persistedState;
+        }
+
+        const defaults = createDefaultAiSettingsConfig(AI_SETTINGS);
+        const state = persistedState as Record<string, unknown>;
+
+        return {
+          ...state,
+          aiSettings: AiSettingsSliceConfig.parse({
+            defaults,
+            persisted: state.aiSettings,
+          }),
+        };
+      }) as any,
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
