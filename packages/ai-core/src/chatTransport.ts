@@ -37,8 +37,6 @@ export type ChatTransportConfig = {
   store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
-  apiKey: string;
-  baseUrl?: string;
   headers?: Record<string, string>;
   getInstructions: () => string;
   /**
@@ -131,8 +129,6 @@ export function createLocalChatTransportFactory({
   store,
   defaultProvider,
   defaultModel,
-  apiKey,
-  baseUrl,
   headers,
   getInstructions,
   getCustomModel,
@@ -149,11 +145,15 @@ export function createLocalChatTransportFactory({
       }
       const parsedObj = (parsed as {messages?: unknown}) || {};
 
-      // Resolve provider/model and client at call time to pick up latest settings.
+      // Resolve provider/model/apiKey/baseUrl at call time to pick up latest settings.
       const state = store.getState();
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
+
+      // Fetch API key and base URL dynamically to pick up settings changes
+      const apiKey = state.ai.getApiKeyFromSettings();
+      const baseUrl = state.ai.getBaseUrlFromSettings();
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();

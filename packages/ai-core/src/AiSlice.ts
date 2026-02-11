@@ -1077,13 +1077,10 @@ export function createAiSlice(
         chatHeaders,
 
         getLocalChatTransport: (sessionId: string) => {
-          const state = get();
           return createLocalChatTransportFactory({
             store,
             defaultProvider: defaultProvider,
             defaultModel: defaultModel,
-            apiKey: state.ai.getApiKeyFromSettings(),
-            baseUrl: state.ai.getBaseUrlFromSettings(),
             getInstructions: () => store.getState().ai.getFullInstructions(),
             getCustomModel,
             sessionId,
