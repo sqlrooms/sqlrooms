@@ -71,6 +71,8 @@ export interface AiStateForTransport {
   getApiKeyFromSettings: () => string;
   /** Get base URL from settings for the current session's provider */
   getBaseUrlFromSettings: () => string | undefined;
+  /** Set API key error flag for a provider */
+  setApiKeyError: (provider: string, hasError: boolean) => void;
 }
 
 /**

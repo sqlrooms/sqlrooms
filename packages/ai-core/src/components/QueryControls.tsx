@@ -68,13 +68,17 @@ export const QueryControls: React.FC<QueryControlsProps> = ({
   const model = currentSession?.model;
 
   const apiKey = useStoreWithAi((s) => s.ai.getApiKeyFromSettings());
+  const hasApiKeyError = useStoreWithAi((s) => s.ai.hasApiKeyError());
 
   // Extract InlineApiKeyInput from children
   const {inlineApiKeyInput, otherChildren} = extractInlineApiKeyInput(children);
 
-  // Show API key input if InlineApiKeyInput is provided and no API key is set
+  // Show API key input if InlineApiKeyInput is provided and either:
+  // - No API key is set, OR
+  // - There's an API key error (invalid key)
   const showApiKeyInput =
-    inlineApiKeyInput !== null && (!apiKey || apiKey.trim().length === 0);
+    inlineApiKeyInput !== null &&
+    (!apiKey || apiKey.trim().length === 0 || hasApiKeyError);
 
   const isRunning = useStoreWithAi((s) =>
     sessionId ? s.ai.getIsRunning(sessionId) : false,
@@ -211,6 +215,7 @@ const InlineApiKeyInputRenderer: React.FC<{
   const modelProvider = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.modelProvider || 'openai',
   );
+  const setApiKeyError = useStoreWithAi((s) => s.ai.setApiKeyError);
 
   const {onSaveApiKey} = inlineApiKeyInput.props;
 
@@ -220,6 +225,15 @@ const InlineApiKeyInputRenderer: React.FC<{
     }, 500);
     return () => clearTimeout(timer);
   }, []);
+
+  const handleSaveKey = useCallback(
+    (provider: string, apiKey: string) => {
+      // Clear the API key error for this provider when saving a new key
+      setApiKeyError(provider, false);
+      onSaveApiKey(provider, apiKey);
+    },
+    [onSaveApiKey, setApiKeyError],
+  );
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -232,20 +246,20 @@ const InlineApiKeyInputRenderer: React.FC<{
       ) {
         e.preventDefault();
         if (apiKeyInput.trim() && modelProvider) {
-          onSaveApiKey(modelProvider, apiKeyInput.trim());
+          handleSaveKey(modelProvider, apiKeyInput.trim());
           setApiKeyInput('');
         }
       }
     },
-    [apiKeyInput, modelProvider, onSaveApiKey],
+    [apiKeyInput, modelProvider, handleSaveKey],
   );
 
   const handleSave = useCallback(() => {
     if (apiKeyInput.trim() && modelProvider) {
-      onSaveApiKey(modelProvider, apiKeyInput.trim());
+      handleSaveKey(modelProvider, apiKeyInput.trim());
       setApiKeyInput('');
     }
-  }, [apiKeyInput, modelProvider, onSaveApiKey]);
+  }, [apiKeyInput, modelProvider, handleSaveKey]);
 
   const canSave = Boolean(apiKeyInput.trim().length && modelProvider);
 

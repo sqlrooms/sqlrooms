@@ -51,10 +51,16 @@ export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /** Tracks API key errors per provider (e.g., 401/403 responses) */
+    apiKeyErrors: Record<string, boolean>;
     tools: OpenAssistantToolSet;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Set API key error flag for a provider */
+    setApiKeyError: (provider: string, hasError: boolean) => void;
+    /** Check if there's an API key error for the current provider */
+    hasApiKeyError: () => boolean;
     getAbortController: (sessionId: string) => AbortController | undefined;
     setAbortController: (
       sessionId: string,
@@ -261,6 +267,7 @@ export function createAiSlice(
       ai: {
         config: baseConfig,
         promptSuggestionsVisible: true,
+        apiKeyErrors: {},
         tools,
         getProviderOptions,
         waitForToolResult: (
@@ -403,6 +410,25 @@ export function createAiSlice(
               draft.ai.promptSuggestionsVisible = visible;
             }),
           );
+        },
+
+        setApiKeyError: (provider: string, hasError: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (hasError) {
+                draft.ai.apiKeyErrors[provider] = true;
+              } else {
+                delete draft.ai.apiKeyErrors[provider];
+              }
+            }),
+          );
+        },
+
+        hasApiKeyError: () => {
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          const provider = currentSession?.modelProvider || defaultProvider;
+          return Boolean(state.ai.apiKeyErrors[provider]);
         },
 
         setPrompt: (sessionId: string, prompt: string) => {

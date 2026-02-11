@@ -548,6 +548,15 @@ export function createChatHandlers({
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
+
+        // Detect API key errors (401/403 or common error messages)
+        const isApiKeyError = isAuthenticationError(error, errMsg);
+        if (isApiKeyError) {
+          const session = getSessionById(store, sessionId);
+          const provider = session?.modelProvider || 'openai';
+          store.getState().ai.setApiKeyError(provider, true);
+        }
+
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!sessionId) return;
@@ -613,4 +622,41 @@ export function createChatHandlers({
       }
     },
   };
+}
+
+/**
+ * Detects if an error is related to API key authentication issues.
+ * Checks for HTTP 401/403 status codes and common error message patterns.
+ */
+function isAuthenticationError(error: unknown, errorMessage: string): boolean {
+  // Check for HTTP status codes in the error object
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    const status =
+      err.status ??
+      err.statusCode ??
+      (err.response as Record<string, unknown>)?.status;
+    if (status === 401 || status === 403) {
+      return true;
+    }
+  }
+
+  // Check for common authentication error patterns in the message
+  const lowerMsg = errorMessage.toLowerCase();
+  const authPatterns = [
+    'invalid api key',
+    'incorrect api key',
+    'invalid_api_key',
+    'unauthorized',
+    'authentication failed',
+    'api key is invalid',
+    'api key not found',
+    'invalid authorization',
+    'invalid credentials',
+    'access denied',
+    '401',
+    '403',
+  ];
+
+  return authPatterns.some((pattern) => lowerMsg.includes(pattern));
 }
