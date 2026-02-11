@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Features
+
+* make View Instructions optional ([#353](https://github.com/sqlrooms/sqlrooms/issues/353)) ([7782c36](https://github.com/sqlrooms/sqlrooms/commit/7782c363951a72fdf1c158cd85f50cb4f36f6d9f))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

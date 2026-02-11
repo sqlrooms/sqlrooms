@@ -3,6 +3,16 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* AI settings changes are only applied in new sessions ([#356](https://github.com/sqlrooms/sqlrooms/issues/356)) ([d1799d0](https://github.com/sqlrooms/sqlrooms/commit/d1799d0ab503be3a872a8cda948fe50bac0bc60c))
+
+### Features
+
+* AI: Ask for API key inline in chat input ([#357](https://github.com/sqlrooms/sqlrooms/issues/357)) ([f256021](https://github.com/sqlrooms/sqlrooms/commit/f256021abb0b7f981d392f5e6d8c61e71e5eed09))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

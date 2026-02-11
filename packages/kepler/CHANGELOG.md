@@ -3,6 +3,15 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* Avoid deckgl v8 type errors ([#351](https://github.com/sqlrooms/sqlrooms/issues/351)) ([b3d5b88](https://github.com/sqlrooms/sqlrooms/commit/b3d5b887b27e12f83f0340294758cf23cc7f23bc))
+* getKeplerFactory causing constant remounting ([#352](https://github.com/sqlrooms/sqlrooms/issues/352)) ([bd2fbf0](https://github.com/sqlrooms/sqlrooms/commit/bd2fbf07485ae1ab1b545b36c82ee6f0c2467a5b))
+* getKeplerFactory number of hook calls errors ([#354](https://github.com/sqlrooms/sqlrooms/issues/354)) ([c52fa70](https://github.com/sqlrooms/sqlrooms/commit/c52fa70f15667959b72e63a065ac513f5084403b))
+* Kepler injector improvements ([#349](https://github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](https://github.com/sqlrooms/sqlrooms/commit/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

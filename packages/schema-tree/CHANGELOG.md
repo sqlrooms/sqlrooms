@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* ColumnTypeBadge styling ([#350](https://github.com/sqlrooms/sqlrooms/issues/350)) ([25dcd19](https://github.com/sqlrooms/sqlrooms/commit/25dcd194806c5ace4f5b30b2f562070131a79639))
+* Kepler injector improvements ([#349](https://github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](https://github.com/sqlrooms/sqlrooms/commit/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
 # [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes

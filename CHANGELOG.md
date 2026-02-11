@@ -3,6 +3,22 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.4](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* AI settings changes are only applied in new sessions ([#356](/github.com/sqlrooms/sqlrooms/issues/356)) ([d1799d0](github.com/sqlrooms/sqlrooms/commits/d1799d0ab503be3a872a8cda948fe50bac0bc60c))
+* Avoid deckgl v8 type errors ([#351](/github.com/sqlrooms/sqlrooms/issues/351)) ([b3d5b88](github.com/sqlrooms/sqlrooms/commits/b3d5b887b27e12f83f0340294758cf23cc7f23bc))
+* ColumnTypeBadge styling ([#350](/github.com/sqlrooms/sqlrooms/issues/350)) ([25dcd19](github.com/sqlrooms/sqlrooms/commits/25dcd194806c5ace4f5b30b2f562070131a79639))
+* getKeplerFactory causing constant remounting ([#352](/github.com/sqlrooms/sqlrooms/issues/352)) ([bd2fbf0](github.com/sqlrooms/sqlrooms/commits/bd2fbf07485ae1ab1b545b36c82ee6f0c2467a5b))
+* getKeplerFactory number of hook calls errors ([#354](/github.com/sqlrooms/sqlrooms/issues/354)) ([c52fa70](github.com/sqlrooms/sqlrooms/commits/c52fa70f15667959b72e63a065ac513f5084403b))
+* Kepler injector improvements ([#349](/github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](github.com/sqlrooms/sqlrooms/commits/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
+### Features
+
+* AI: Ask for API key inline in chat input ([#357](/github.com/sqlrooms/sqlrooms/issues/357)) ([f256021](github.com/sqlrooms/sqlrooms/commits/f256021abb0b7f981d392f5e6d8c61e71e5eed09))
+* make View Instructions optional ([#353](/github.com/sqlrooms/sqlrooms/issues/353)) ([7782c36](github.com/sqlrooms/sqlrooms/commits/7782c363951a72fdf1c158cd85f50cb4f36f6d9f))
+
 # [0.27.0-rc.3](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
 
 ### Bug Fixes
