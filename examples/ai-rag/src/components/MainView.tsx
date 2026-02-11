@@ -1,4 +1,4 @@
-import {AiSettingsPanel, Chat} from '@sqlrooms/ai';
+import {AiSettingsPanel, Chat, useStoreWithAiSettings} from '@sqlrooms/ai';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -10,6 +10,9 @@ export const MainView: React.FC = () => {
   const isDataAvailable = useRoomStore((state) => state.room.initialized);
 
   const settingsPanelOpen = useDisclosure();
+  const updateProvider = useStoreWithAiSettings(
+    (s) => s.aiSettings.updateProvider,
+  );
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -61,6 +64,11 @@ export const MainView: React.FC = () => {
             </Chat.PromptSuggestions>
 
             <Chat.Composer placeholder="What would you like to learn about the data?">
+              <Chat.InlineApiKeyInput
+                onSaveApiKey={(provider, apiKey) => {
+                  updateProvider(provider, {apiKey});
+                }}
+              />
               <div className="flex items-center justify-end gap-2">
                 <Chat.PromptSuggestions.VisibilityToggle />
                 <Chat.ModelSelector />
