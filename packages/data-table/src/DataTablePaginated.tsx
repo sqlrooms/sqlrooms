@@ -1,15 +1,11 @@
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ChevronsLeftIcon as ChevronDoubleLeftIcon,
-  ChevronsRightIcon as ChevronDoubleRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from 'lucide-react';
-import {
+  Badge,
   Button,
   Checkbox,
+  cn,
   Input,
+  ScrollArea,
+  ScrollBar,
   Select,
   SelectContent,
   SelectItem,
@@ -21,23 +17,27 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Badge,
-  cn,
-  ScrollArea,
-  ScrollBar,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
-  PaginationState,
-  RowSelectionState,
-  SortingState,
-  Row,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  PaginationState,
+  Row,
+  RowSelectionState,
+  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
+import {
+  ChevronsLeftIcon as ChevronDoubleLeftIcon,
+  ChevronsRightIcon as ChevronDoubleRightIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+} from 'lucide-react';
 import {useCallback, useEffect, useMemo, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
 
