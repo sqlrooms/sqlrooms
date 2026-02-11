@@ -1,5 +1,5 @@
 import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
-import type {Row} from '@tanstack/react-table';
+import type {Row, RowSelectionState} from '@tanstack/react-table';
 import {
   cn,
   Select,
@@ -40,6 +40,18 @@ export interface QueryResultPanelProps {
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
+  /**
+   * Enables row selection with checkboxes.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
 }
 
 export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
@@ -49,6 +61,9 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   onRowClick,
   onRowDoubleClick,
   onAskAiAboutError,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
   const getCurrentQuery = useStoreWithSqlEditor(
@@ -134,12 +149,16 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
         {isQueryWithResult(queryResult) ? (
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
-              {...arrowTableData}
+              data={arrowTableData?.data}
+              columns={arrowTableData?.columns}
               className="flex-grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}
               onRowDoubleClick={onRowDoubleClick}
+              enableRowSelection={enableRowSelection}
+              rowSelection={rowSelection}
+              onRowSelectionChange={onRowSelectionChange}
             />
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
               {queryResult.result ? (

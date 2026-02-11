@@ -13,3 +13,6 @@ export {ColumnTypeBadge} from './ColumnTypeBadge';
 export {DataTableArrowPaginated} from './DataTableArrowPaginated';
 export {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
 export {makePagedQuery} from './utils';
+
+// Re-export useful types from @tanstack/react-table
+export type {RowSelectionState} from '@tanstack/react-table';

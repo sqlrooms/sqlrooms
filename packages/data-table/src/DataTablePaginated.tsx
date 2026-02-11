@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import {
   Button,
+  Checkbox,
   Input,
   Select,
   SelectContent,
@@ -29,6 +30,7 @@ import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
   PaginationState,
+  RowSelectionState,
   SortingState,
   Row,
   flexRender,
@@ -36,7 +38,7 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table';
-import {useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
 
 export type DataTablePaginatedProps<Data extends object> = {
@@ -67,12 +69,22 @@ export type DataTablePaginatedProps<Data extends object> = {
     row: Row<Data>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /**
+   * Enables row selection with checkboxes. When true, a checkbox column is added.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
 };
 
 /**
- * Data table with pagination, sorting, and custom actions.
- * @param props
- * @returns
+ * Data table with pagination, sorting, row selection, and custom actions.
  */
 export default function DataTablePaginated<Data extends object>({
   className,
@@ -88,8 +100,35 @@ export default function DataTablePaginated<Data extends object>({
   isFetching,
   onRowClick,
   onRowDoubleClick,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
+
+  // Use controlled or uncontrolled row selection
+  const currentRowSelection = rowSelection ?? internalRowSelection;
+  const handleRowSelectionChange = useCallback(
+    (
+      updaterOrValue:
+        | RowSelectionState
+        | ((old: RowSelectionState) => RowSelectionState),
+    ) => {
+      const newValue =
+        typeof updaterOrValue === 'function'
+          ? updaterOrValue(currentRowSelection)
+          : updaterOrValue;
+      if (onRowSelectionChange) {
+        onRowSelectionChange(newValue);
+      } else {
+        setInternalRowSelection(newValue);
+      }
+    },
+    [currentRowSelection, onRowSelectionChange],
+  );
+
   const pageCount =
     pagination && numRows !== undefined
       ? Math.ceil(numRows / pagination.pageSize)
@@ -100,6 +139,14 @@ export default function DataTablePaginated<Data extends object>({
     columns: columns ?? [],
     pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: enableRowSelection ?? false,
+    onRowSelectionChange: (update) => {
+      if (typeof update === 'function') {
+        handleRowSelectionChange(update);
+      } else {
+        handleRowSelectionChange(update);
+      }
+    },
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {
         onSortingChange(update(sorting));
@@ -115,6 +162,7 @@ export default function DataTablePaginated<Data extends object>({
     state: {
       pagination,
       sorting,
+      rowSelection: currentRowSelection,
     },
   });
 
@@ -138,6 +186,17 @@ export default function DataTablePaginated<Data extends object>({
                   >
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                    ) : enableRowSelection ? (
+                      <Checkbox
+                        checked={
+                          table.getIsAllPageRowsSelected() ||
+                          (table.getIsSomePageRowsSelected() && 'indeterminate')
+                        }
+                        onCheckedChange={(value) =>
+                          table.toggleAllPageRowsSelected(!!value)
+                        }
+                        aria-label="Select all"
+                      />
                     ) : null}
                   </TableHead>
                   {headerGroup.headers.map((header) => {
@@ -190,22 +249,42 @@ export default function DataTablePaginated<Data extends object>({
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-muted bg-background"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    onRowClick?.({row: row as Row<Data>, event});
-                  }}
-                  onDoubleClick={(event) => {
-                    event.preventDefault();
-                    onRowDoubleClick?.({row: row as Row<Data>, event});
-                  }}
+                  data-state={row.getIsSelected() ? 'selected' : undefined}
+                  className={cn(
+                    'hover:bg-muted bg-background',
+                    row.getIsSelected() && 'bg-muted',
+                  )}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
+                  onDoubleClick={
+                    onRowDoubleClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowDoubleClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
                 >
                   <TableCell
                     className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSize}`}
                   >
-                    {pagination
-                      ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
-                      : `${i + 1}`}
+                    {enableRowSelection ? (
+                      <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        aria-label="Select row"
+                      />
+                    ) : pagination ? (
+                      `${pagination.pageIndex * pagination.pageSize + i + 1}`
+                    ) : (
+                      `${i + 1}`
+                    )}
                   </TableCell>
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as ArrowColumnMeta;

@@ -55,6 +55,7 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   return (
     <DataTablePaginated
       {...arrowTableData}
+      enableRowSelection={true}
       className={className}
       fontSize={fontSize}
       numRows={numRows}
