@@ -1,7 +1,7 @@
+import type {OpenAssistantToolSet} from '@openassistant/utils';
+import type {AiSliceConfig, AnalysisSessionSchema} from '@sqlrooms/ai-config';
 import type {UIMessage} from 'ai';
 import {streamText} from 'ai';
-import type {AnalysisSessionSchema, AiSliceConfig} from '@sqlrooms/ai-config';
-import type {OpenAssistantToolSet} from '@openassistant/utils';
 
 export type ProviderOptions = NonNullable<
   Parameters<typeof streamText>[0]['providerOptions']
