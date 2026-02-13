@@ -1,6 +1,9 @@
 name: Build examples
 
 on:
+  pull_request:
+    paths:
+      - 'examples/**'
   workflow_dispatch:
   workflow_call:
 
