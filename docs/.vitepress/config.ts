@@ -1,6 +1,6 @@
 import {defineConfig} from 'vitepress';
-import {apiSidebarConfig} from './gen-api-sidebar';
 import llmstxt from 'vitepress-plugin-llms';
+import {apiSidebarConfig} from './gen-api-sidebar';
 
 const PACKAGE_CATEGORIES = {
   'Core Packages': [
@@ -95,6 +95,10 @@ export default defineConfig({
           {
             text: 'Overview',
             link: '/overview',
+          },
+          {
+            text: 'Deployment Scenarios',
+            link: '/deployment-scenarios',
           },
           {
             text: 'Key Concepts',
