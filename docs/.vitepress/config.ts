@@ -97,6 +97,10 @@ export default defineConfig({
             link: '/overview',
           },
           {
+            text: 'Deployment Scenarios',
+            link: '/deployment-scenarios',
+          },
+          {
             text: 'Key Concepts',
             link: '/key-concepts',
           },
@@ -120,10 +124,6 @@ export default defineConfig({
           {
             text: 'Getting Started',
             link: '/getting-started',
-          },
-          {
-            text: 'Deployment Scenarios',
-            link: '/deployment-scenarios',
           },
           {
             text: 'State Management',
