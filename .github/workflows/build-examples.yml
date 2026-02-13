@@ -1,6 +1,9 @@
 name: Build examples
 
 on:
+  pull_request:
+    paths:
+      - 'examples/**'
   workflow_dispatch:
   workflow_call:
 
@@ -32,4 +35,4 @@ jobs:
         run: pnpm build
 
       - name: Build examples
-        run: pnpm build:examples
+        run: pnpm build:examples:ci
