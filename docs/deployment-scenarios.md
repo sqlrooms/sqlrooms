@@ -30,6 +30,7 @@ Use this scenario when teams need shared writable datasets with stronger governa
 - **How it works:** Browser clients query and update shared datasets via a managed DuckDB backend (for example MotherDuck) or catalog-managed table formats such as Iceberg.
 - **Data storage:** MotherDuck-managed DuckDB storage, or Iceberg tables in object storage with a catalog layer.
 - **App state storage:** Browser local state and optionally backend metadata storage.
+- **Platform choice:** See [Backend platform options](#backend-platform-options-for-scenarios-2-and-3) for trade-offs between MotherDuck, Modal, Cloudflare, and Plane.
 - **Best fit:** Teams that need managed table lifecycle, concurrent writes, and shared editable data assets.
 - **At a glance:** Moderate infra complexity; medium collaboration through shared writable tables; limited offline.
 
@@ -49,6 +50,7 @@ Use server-backed sessions when many users need to see and edit the same analyti
 - **Data storage:** Server DuckDB database (with optional remote sources/extensions).
 - **Alternative persistence:** MotherDuck can be used as a managed central DuckDB backend when you prefer hosted durability over self-managed database files.
 - **App state storage:** Server-side metadata in the default meta schema or dedicated `--meta-db`, plus optional browser persistence.
+- **Platform choice:** See [Backend platform options](#backend-platform-options-for-scenarios-2-and-3) for trade-offs between managed persistence and per-room runtime platforms.
 - **Best fit:** Team collaboration in a shared room, coordinated analysis, and synchronized state.
 - **At a glance:** Highest collaboration; backend required; low offline for shared sessions.
 
@@ -59,6 +61,19 @@ Examples and references:
 - [Sync example](https://github.com/sqlrooms/examples/tree/main/sync)
 - [`sqlrooms-server` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-server)
 - [Build your own data warehouse with DuckDB, DBT, and Modal](https://modal.com/docs/examples/dbt_duckdb)
+
+
+
+## Backend platform options for Scenarios 2 and 3
+
+In practice, teams can choose between managed data persistence (MotherDuck) and per-room compute runtimes (Modal/Cloudflare/Plane), or combine them.
+
+- **Use MotherDuck when:** You have a business/enterprise budget and want managed DuckDB persistence, sharing, and operational simplicity. It is best as the durable data layer rather than the room runtime itself.
+- **Use Modal when:** You want fast developer velocity for per-room isolated environments with persistent volumes and straightforward programmatic provisioning.
+- **Use Cloudflare Containers when:** You prioritize low baseline cost and edge proximity, and are comfortable implementing extra persistence orchestration (for example with R2) for sleeping/ephemeral instances.
+- **Use Plane when:** You want an open-source, self-hostable system for stateful per-session WebSocket backends with full control over infrastructure behavior.
+
+Pricing and limits can change frequently, so treat platform economics as a regularly reviewed decision input.
 
 ## 4) Offline-capable PWA
 
