@@ -1,7 +1,10 @@
 import {describe, expect, it} from '@jest/globals';
 import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {z} from 'zod';
-import {createPersistHelpers} from '../src/createPersistHelpers';
+import {
+  createPersistHelpers,
+  PersistMergeInputSymbol,
+} from '../src/createPersistHelpers';
 
 const defaults = {
   providers: {
@@ -78,10 +81,58 @@ describe('createPersistHelpers.merge', () => {
       'anthropic',
     ]);
     expect(
-      merged.aiSettings.config.providers.openai.models.map((m) => m.modelName),
+      merged.aiSettings.config.providers.openai.models.map(
+        (m: {modelName: string}) => m.modelName,
+      ),
     ).toEqual(['gpt-5', 'gpt-4.1']);
     expect(merged.aiSettings.config.providers.openai.baseUrl).toBe(
       'https://custom-openai.example/v1',
     );
+  });
+
+  it('supports schema-driven defaults merge without key coupling', () => {
+    const ToggleConfig = Object.assign(
+      z.object({
+        enabled: z.boolean(),
+        limit: z.number(),
+      }),
+      {
+        [PersistMergeInputSymbol]: ({
+          defaults,
+          persisted,
+        }: {
+          defaults: unknown;
+          persisted: unknown;
+        }) => ({
+          ...(defaults as Record<string, unknown>),
+          ...(persisted as Record<string, unknown>),
+        }),
+      },
+    );
+
+    const helpers = createPersistHelpers({
+      featureToggle: ToggleConfig,
+    });
+
+    const merged = helpers.merge(
+      {
+        featureToggle: {
+          enabled: false,
+        },
+      },
+      {
+        featureToggle: {
+          config: {
+            enabled: true,
+            limit: 10,
+          },
+        },
+      },
+    );
+
+    expect(merged.featureToggle.config).toEqual({
+      enabled: false,
+      limit: 10,
+    });
   });
 });
