@@ -19,6 +19,7 @@
     "build": "tsc",
     "dev": "tsc -w",
     "lint": "eslint .",
+    "test": "jest",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
   },
