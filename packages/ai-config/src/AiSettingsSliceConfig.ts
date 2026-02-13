@@ -43,7 +43,7 @@ type AiSettingsProviderConfig = z.infer<typeof AiProviderSchema>;
 export type AiSettingsSliceConfig = z.infer<typeof AiSettingsSliceConfigSchema>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null;
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
 function mergeProviderModels(
