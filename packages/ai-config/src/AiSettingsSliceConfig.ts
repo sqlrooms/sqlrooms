@@ -1,5 +1,13 @@
 import {z} from 'zod';
 
+/**
+ * Shared symbol contract with `@sqlrooms/room-store`'s `createPersistHelpers`.
+ *
+ * `Symbol.for(...)` keeps this package aligned with `room-store` at runtime
+ * without introducing a direct runtime dependency.
+ */
+const PersistMergeInputSymbol = Symbol.for('sqlrooms.persist.mergeInput');
+
 const AiProviderModelSchema = z.object({
   modelName: z.string(),
 });
@@ -147,3 +155,22 @@ export const AiSettingsSliceConfig = z.preprocess((data) => {
 
   return data;
 }, AiSettingsSliceConfigSchema);
+
+Object.assign(AiSettingsSliceConfig, {
+  /**
+   * Opt this schema into defaults-aware rehydrate input.
+   *
+   * `createPersistHelpers.merge` reads this marker and passes the returned
+   * object into this schema's `preprocess`, which handles the merge.
+   */
+  [PersistMergeInputSymbol]: ({
+    defaults,
+    persisted,
+  }: {
+    defaults: unknown;
+    persisted: unknown;
+  }) => ({
+    defaults,
+    persisted,
+  }),
+});
