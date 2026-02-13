@@ -61,13 +61,14 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     {
       name: 'ai-example-app-state-storage',
       version: 1,
-      migrate: ((persistedState: unknown) => {
+      migrate: (persistedState: unknown, version: number): RoomState => {
+        if (version >= 1) return persistedState as RoomState;
         if (
           typeof persistedState !== 'object' ||
           persistedState === null ||
           !('aiSettings' in persistedState)
         ) {
-          return persistedState;
+          return persistedState as RoomState;
         }
 
         const defaults = createDefaultAiSettingsConfig(AI_SETTINGS);
@@ -79,8 +80,8 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             defaults,
             persisted: state.aiSettings,
           }),
-        };
-      }) as any,
+        } as unknown as RoomState;
+      },
       sliceConfigSchemas: {
         room: BaseRoomConfig,
         layout: LayoutConfig,
