@@ -7,6 +7,7 @@ export {
   RoomStateContext,
   RoomStateProvider,
   useBaseRoomStore,
+  useRoomStoreApi,
 } from './RoomStateProvider';
 export type {RoomStateProviderProps} from './RoomStateProvider';
 
@@ -24,12 +25,13 @@ export type {
   BaseRoomStore,
   BaseRoomStoreState,
   CreateBaseRoomSliceProps,
+  UseRoomStore,
 } from './BaseRoomStore';
 
 export type {StateCreator, StoreApi} from 'zustand';
 export {
-  PersistMergeInputSymbol,
   createPersistHelpers,
+  PersistMergeInputSymbol,
   persistSliceConfigs,
 } from './createPersistHelpers';
 
@@ -38,11 +40,18 @@ export {
 export {
   BaseDataSource,
   BaseRoomConfig,
-  DEFAULT_MOSAIC_LAYOUT,
-  DEFAULT_ROOM_TITLE,
+  createDefaultBaseRoomConfig,
+  createDefaultMosaicLayout,
   DataSource,
   DataSourceTypes,
+  DEFAULT_MOSAIC_LAYOUT,
+  DEFAULT_ROOM_TITLE,
   FileDataSource,
+  isFileDataSource,
+  isMosaicLayoutParent,
+  isSpatialLoadFileOptions,
+  isSqlQueryDataSource,
+  isUrlDataSource,
   LayoutConfig,
   LayoutTypes,
   LoadFile,
@@ -59,11 +68,4 @@ export {
   StandardLoadFileOptions,
   StandardLoadOptions,
   UrlDataSource,
-  createDefaultBaseRoomConfig,
-  createDefaultMosaicLayout,
-  isFileDataSource,
-  isMosaicLayoutParent,
-  isSpatialLoadFileOptions,
-  isSqlQueryDataSource,
-  isUrlDataSource,
 } from '@sqlrooms/room-config';

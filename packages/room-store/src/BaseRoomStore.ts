@@ -20,6 +20,13 @@ export type BaseRoomStoreState = {
 };
 
 export type BaseRoomStore<RS extends BaseRoomStoreState> = StoreApi<RS>;
+type RoomStoreApiMethods<RS extends BaseRoomStoreState> = Pick<
+  StoreApi<RS>,
+  'getState' | 'setState' | 'subscribe' | 'getInitialState'
+>;
+export type UseRoomStore<RS extends BaseRoomStoreState> = {
+  <T>(selector: (state: RS) => T): T;
+} & RoomStoreApiMethods<RS>;
 
 export type CreateBaseRoomSliceProps = {
   captureException?: BaseRoomStoreState['room']['captureException'];
@@ -102,9 +109,10 @@ export function createRoomStore<RS extends BaseRoomStoreState>(
   const storeCreator = factory(() => stateCreator);
   const roomStore = storeCreator.createRoomStore();
 
-  function useRoomStore<T>(selector: (state: RS) => T): T {
+  function useRoomStoreHook<T>(selector: (state: RS) => T): T {
     return storeCreator.useRoomStore(selector);
   }
+  const useRoomStore = withRoomStoreApi<RS>(useRoomStoreHook, () => roomStore);
 
   return {roomStore, useRoomStore};
 }
@@ -127,7 +135,7 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
     stateCreatorFactory: TFactory,
   ): {
     createRoomStore: (...args: CreateRoomStoreArgs<TFactory>) => StoreApi<RS>;
-    useRoomStore: <T>(selector: (state: RS) => T) => T;
+    useRoomStore: UseRoomStore<RS>;
   } {
     const defaultStoreKey = DEV_HMR?.nextId();
     let store: StoreApi<RS> | undefined;
@@ -204,16 +212,52 @@ export function createRoomStoreCreator<RS extends BaseRoomStoreState>() {
       return store;
     }
 
-    function useRoomStore<T>(selector: (state: RS) => T): T {
+    function useRoomStoreHook<T>(selector: (state: RS) => T): T {
       if (!store)
         throw new Error(
           'Room store not initialized. Call createRoomStore first.',
         );
       return useStore(store, selector);
     }
+    const useRoomStore = withRoomStoreApi<RS>(useRoomStoreHook, () => store);
 
     return {createRoomStore, useRoomStore};
   };
+}
+
+function withRoomStoreApi<RS extends BaseRoomStoreState>(
+  useRoomStore: <T>(selector: (state: RS) => T) => T,
+  getStore: () => StoreApi<RS> | undefined,
+): UseRoomStore<RS> {
+  const getState: StoreApi<RS>['getState'] = () =>
+    getStoreOrThrow(getStore).getState();
+  const setState = ((...args: unknown[]) =>
+    (getStoreOrThrow(getStore).setState as (...args: unknown[]) => void)(
+      ...args,
+    )) as StoreApi<RS>['setState'];
+  const subscribe = ((...args: unknown[]) =>
+    (getStoreOrThrow(getStore).subscribe as (...args: unknown[]) => unknown)(
+      ...args,
+    )) as StoreApi<RS>['subscribe'];
+  const getInitialState: StoreApi<RS>['getInitialState'] = () =>
+    getStoreOrThrow(getStore).getInitialState();
+
+  return Object.assign(useRoomStore, {
+    getState,
+    setState,
+    subscribe,
+    getInitialState,
+  });
+}
+
+function getStoreOrThrow<RS extends BaseRoomStoreState>(
+  getStore: () => StoreApi<RS> | undefined,
+): StoreApi<RS> {
+  const store = getStore();
+  if (!store) {
+    throw new Error('Room store not initialized. Call createRoomStore first.');
+  }
+  return store;
 }
 
 export function isRoomSliceWithInitialize(

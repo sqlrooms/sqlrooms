@@ -6,7 +6,13 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
-## 0.27.0-rc.0
+## 0.27.0-rc.5
+
+### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`
+
+`useRoomStore` now exposes imperative Zustand store methods (`getState`, `setState`, `subscribe`, `getInitialState`) in addition to selector usage. This makes event handlers and async callbacks more ergonomic while preserving existing reactive selector patterns.
+
+For context-based access, use the new `useRoomStoreApi()` hook to read/write state imperatively from components wrapped in `RoomStateProvider`.
 
 ### Introducing MosaicSlice
 
