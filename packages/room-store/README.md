@@ -90,7 +90,7 @@ import {roomStore} from './my-room-store';
 
 function App() {
   return (
-    <RoomStateProvider value={roomStore}>
+    <RoomStateProvider roomStore={roomStore}>
       {/* Your room components go here */}
     </RoomStateProvider>
   );
@@ -117,6 +117,48 @@ function RoomTitle() {
         Activate Chart
       </button>
     </div>
+  );
+}
+```
+
+## Imperative Access
+
+Use selectors in render paths, and use store API methods for event handlers, timers, and other imperative code.
+
+`useRoomStoreApi()` is non-reactive. It returns the raw `StoreApi` from context and does not subscribe to state changes, so components using it will not rerender on every store update. For reactive reads that should drive rerenders, use `useRoomStore((state) => ...)` selectors.
+
+### Module-level imperative access
+
+```tsx
+import {roomStore, useRoomStore} from './my-room-store';
+
+async function runAnalysis() {
+  const sessionId = roomStore.getState().ai.config.currentSessionId;
+  if (sessionId) {
+    await useRoomStore.getState().ai.startAnalysis(sessionId);
+  }
+}
+```
+
+### Context-based imperative access inside components
+
+```tsx
+import {useRoomStoreApi} from '@sqlrooms/room-store';
+
+function StartButton() {
+  const store = useRoomStoreApi();
+
+  return (
+    <button
+      onClick={async () => {
+        const sessionId = store.getState().ai.config.currentSessionId;
+        if (sessionId) {
+          await store.getState().ai.startAnalysis(sessionId);
+        }
+      }}
+    >
+      Start
+    </button>
   );
 }
 ```

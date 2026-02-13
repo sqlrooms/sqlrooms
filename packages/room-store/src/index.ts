@@ -7,6 +7,7 @@ export {
   RoomStateContext,
   RoomStateProvider,
   useBaseRoomStore,
+  useRoomStoreApi,
 } from './RoomStateProvider';
 export type {RoomStateProviderProps} from './RoomStateProvider';
 
@@ -24,6 +25,7 @@ export type {
   BaseRoomStoreState,
   CreateBaseRoomSliceProps,
   BaseRoomStore,
+  UseRoomStore,
 } from './BaseRoomStore';
 
 export {
