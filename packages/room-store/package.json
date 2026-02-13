@@ -31,6 +31,7 @@
     "zustand": "^5.0.8"
   },
   "devDependencies": {
+    "@sqlrooms/ai-config": "workspace:*",
     "@jest/globals": "^30.2.0",
     "@sqlrooms/preset-jest": "workspace:*",
     "@types/jest": "^30.0.0",

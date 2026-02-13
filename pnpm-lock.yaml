@@ -3879,6 +3879,9 @@ importers:
       '@jest/globals':
         specifier: ^30.2.0
         version: 30.4.1
+      '@sqlrooms/ai-config':
+        specifier: workspace:*
+        version: link:../ai-config
       '@sqlrooms/preset-jest':
         specifier: workspace:*
         version: link:../preset-jest

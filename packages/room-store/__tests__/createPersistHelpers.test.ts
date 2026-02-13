@@ -1,6 +1,6 @@
 import {describe, expect, it} from '@jest/globals';
+import {AiSettingsSliceConfig} from '@sqlrooms/ai-config';
 import {z} from 'zod';
-import {AiSettingsSliceConfig} from '../../ai-config/src/AiSettingsSliceConfig';
 import {createPersistHelpers} from '../src/createPersistHelpers';
 
 const defaults = {
