@@ -35,4 +35,4 @@ jobs:
         run: pnpm build
 
       - name: Build examples
-        run: pnpm build:examples
+        run: pnpm build:examples:ci
