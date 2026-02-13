@@ -30,6 +30,7 @@
   },
   "scripts": {
     "dev": "tsc -w",
+    "test": "jest",
     "build": "tsc",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",

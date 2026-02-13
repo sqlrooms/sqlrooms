@@ -37,6 +37,7 @@
   "scripts": {
     "dev": "tsc -w",
     "build": "tsc",
+    "test": "jest",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "typedoc": "typedoc"
