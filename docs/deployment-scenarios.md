@@ -63,7 +63,6 @@ Examples and references:
 - [Build your own data warehouse with DuckDB, DBT, and Modal](https://modal.com/docs/examples/dbt_duckdb)
 
 
-
 ## Backend platform options for Scenarios 2 and 3
 
 In practice, teams can choose between managed data persistence (MotherDuck) and per-room compute runtimes (Modal/Cloudflare/Plane), or combine them.
@@ -75,7 +74,25 @@ In practice, teams can choose between managed data persistence (MotherDuck) and 
 
 Pricing and limits can change frequently, so treat platform economics as a regularly reviewed decision input.
 
-## 4) Offline-capable PWA
+
+
+
+## 4) Local session backend from CLI
+
+This scenario is for single-user local workflows, similar to how Jupyter is often used: run a local backend process and connect from your browser.
+
+- **How it works:** Start `sqlrooms-cli` from CLI on your laptop, then point a local SQLRooms app to that local server endpoint.
+- **Data storage:** Local DuckDB file (or `:memory:`), with optional remote sources/extensions.
+- **App state storage:** Primarily local browser state, with optional server-side metadata tables.
+- **Best fit:** Power users and developers who want local control, reproducibility, and a backend runtime without deploying shared infrastructure.
+- **At a glance:** Simple local setup; strong privacy; no built-in team collaboration unless you later promote it to shared deployment.
+
+Reference:
+
+- [`sqlrooms-cli` README](https://github.com/sqlrooms/sqlrooms/tree/main/python/sqlrooms-cli)
+
+
+## 5) Offline-capable PWA
 
 Choose this for local-first experiences where users must continue working without network access.
 
@@ -90,7 +107,7 @@ Examples and references:
 - [Offline Use](https://sqlrooms.org/offline-use)
 - [Query PWA example](https://github.com/sqlrooms/examples/tree/HEAD/query-pwa)
 
-## 5) Desktop packaging (Electron/Tauri)
+## 6) Desktop packaging (Electron/Tauri)
 
 SQLRooms can be packaged as a desktop app using Electron or Tauri.
 
