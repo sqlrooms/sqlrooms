@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+### Features
+
+* room-store: expose bound useRoomStore API and add useRoomStoreApi hook ([#360](/github.com/sqlrooms/sqlrooms/issues/360)) ([c5b68a3](github.com/sqlrooms/sqlrooms/commits/c5b68a329c7134c1937927b53a7c39b0ac4f06ea))
+
 # [0.27.0-rc.4](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
 
 ### Bug Fixes

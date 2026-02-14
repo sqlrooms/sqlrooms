@@ -3,6 +3,10 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/preset-jest
+
 # [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
 
 **Note:** Version bump only for package @sqlrooms/preset-jest
