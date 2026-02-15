@@ -7,8 +7,8 @@
     "default": "./typedoc-base-config.js"
   },
   "peerDependencies": {
-    "typedoc": "0.28.15",
-    "typedoc-plugin-markdown": "4.9.0",
+    "typedoc": "0.28.17",
+    "typedoc-plugin-markdown": "4.10.0",
     "typedoc-plugin-zod": "1.4.3",
     "typedoc-vitepress-theme": "1.1.2"
   }
