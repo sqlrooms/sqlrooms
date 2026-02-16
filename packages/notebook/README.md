@@ -48,3 +48,10 @@ const {Notebook} = createNotebookComponents(useRoomStore);
 ```
 
 Tabs use `EditableText` for renaming, with a + Add button. SQL, Text, Markdown, Vega (stub), and Input cells are supported out of the box.
+
+## Stable vs internal imports
+
+Use root imports from `@sqlrooms/notebook` as the stable API surface.
+
+- stable: `createNotebookSlice`, `createDefaultNotebookConfig`, `Notebook`, `useStoreWithNotebook`, exported schema types
+- internal: direct imports from implementation files under `src/` are not semver-stable and may change without notice
