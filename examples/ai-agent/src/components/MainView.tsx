@@ -1,5 +1,5 @@
 import {Chat} from '@sqlrooms/ai-core';
-import {AiSettingsPanel} from '@sqlrooms/ai-settings';
+import {AiSettingsPanel, useStoreWithAiSettings} from '@sqlrooms/ai-settings';
 import {Button, SkeletonPane, useDisclosure} from '@sqlrooms/ui';
 import {Settings} from 'lucide-react';
 import {useRoomStore} from '../store';
@@ -10,6 +10,9 @@ export const MainView: React.FC = () => {
   );
 
   const settingsPanelOpen = useDisclosure();
+  const updateProvider = useStoreWithAiSettings(
+    (s) => s.aiSettings.updateProvider,
+  );
 
   return (
     <div className="flex h-full w-full flex-col gap-0 overflow-hidden p-4">
@@ -51,6 +54,11 @@ export const MainView: React.FC = () => {
             </div>
 
             <Chat.Composer placeholder="Type here what would you like to learn about the data? Something like 'What is the max magnitude of the earthquakes by year?'">
+              <Chat.InlineApiKeyInput
+                onSaveApiKey={(provider, apiKey) => {
+                  updateProvider(provider, {apiKey});
+                }}
+              />
               <div className="flex items-center justify-end gap-2">
                 <Chat.ModelSelector />
               </div>

@@ -292,8 +292,8 @@ function generateToolGroupTitle(
 
     const truncatedReasoning =
       reasoning && reasoning.length > maxReasoningLength
-        ? `${reasoning.substring(0, maxReasoningLength).toLowerCase()}...`
-        : reasoning?.toLowerCase();
+        ? `${reasoning.substring(0, maxReasoningLength)}...`
+        : reasoning;
 
     const titleText = truncatedReasoning
       ? `${baseTitle} ${truncatedReasoning}`

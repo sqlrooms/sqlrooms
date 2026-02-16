@@ -47,7 +47,7 @@ fi
 if [ ! -d "$DOCS_DIR" ]; then
     echo "Downloading DuckDB documentation from GitHub..."
     echo "Repository: $DOCS_REPO"
-    npx degit "$DOCS_REPO" "$DOCS_DIR"
+    npx giget gh:"$DOCS_REPO" "$DOCS_DIR"
     echo "✓ Downloaded documentation to $DOCS_DIR"
 fi
 

@@ -1,6 +1,6 @@
 import React, {createContext, ReactNode, useContext} from 'react';
 import {StoreApi, useStore} from 'zustand';
-import {BaseRoomStoreState, BaseRoomStore} from './BaseRoomStore';
+import {BaseRoomStore, BaseRoomStoreState} from './BaseRoomStore';
 
 // See https://docs.pmnd.rs/zustand/guides/initialize-state-with-props
 
@@ -23,15 +23,24 @@ export function RoomStateProvider<RS extends BaseRoomStoreState>({
   );
 }
 
-export function useBaseRoomStore<RS extends object, T>(
-  selector: (state: RS & BaseRoomStoreState) => T,
-): T {
+/**
+ * Returns the raw Zustand store API from room context for imperative usage.
+ *
+ * This hook is non-reactive: it does not subscribe to store updates and does not
+ * trigger rerenders for normal state changes. For reactive UI reads, prefer
+ * `useBaseRoomStore` / `useRoomStore` selectors.
+ */
+export function useRoomStoreApi<RS extends BaseRoomStoreState>(): StoreApi<RS> {
   const store = useContext(RoomStateContext);
   if (!store) {
     throw new Error('Missing RoomStateProvider in the tree');
   }
-  return useStore(
-    store as unknown as StoreApi<RS & BaseRoomStoreState>,
-    selector,
-  );
+  return store as unknown as StoreApi<RS>;
+}
+
+export function useBaseRoomStore<RS extends object, T>(
+  selector: (state: RS & BaseRoomStoreState) => T,
+): T {
+  const store = useRoomStoreApi<RS & BaseRoomStoreState>();
+  return useStore(store, selector);
 }

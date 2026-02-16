@@ -18,7 +18,10 @@ export type {SqlMonacoEditorProps} from './SqlMonacoEditor';
 export {TableStructurePanel} from './components/TableStructurePanel';
 export type {TableStructurePanelProps} from './components/TableStructurePanel';
 export {QueryResultPanel} from './components/QueryResultPanel';
-export type {QueryResultPanelProps} from './components/QueryResultPanel';
+export type {
+  QueryResultPanelProps,
+  QueryResultPanelAskAiProps,
+} from './components/QueryResultPanel';
 export {SqlEditorHeader} from './components/SqlEditorHeader';
 export type {SqlEditorHeaderProps} from './components/SqlEditorHeader';
 export {

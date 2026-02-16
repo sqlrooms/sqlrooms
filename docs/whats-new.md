@@ -6,7 +6,13 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
-## 0.27.0-rc.0
+## 0.27.0-rc.5
+
+### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`
+
+`useRoomStore` now exposes imperative Zustand store methods (`getState`, `setState`, `subscribe`, `getInitialState`) in addition to selector usage. This makes event handlers and async callbacks more ergonomic while preserving existing reactive selector patterns.
+
+For context-based access, use the new `useRoomStoreApi()` hook to read/write state imperatively from components wrapped in `RoomStateProvider`.
 
 ### Introducing MosaicSlice
 
@@ -34,6 +40,8 @@ Additionally, `"sideEffects": false` was added to all packages. This signals to 
 ### TabStrip component in `@sqlrooms/ui`
 
 A composable tab strip with drag-to-reorder, inline renaming, and a search dropdown for reopening closed tabs. Supports custom tab menus and flexible layouts via subcomponents (`TabStrip.Tabs`, `TabStrip.SearchDropdown`, `TabStrip.NewButton`).
+
+New: the search dropdown can optionally sort items by recent usage via `sortSearchItems="recent"` and an optional `getTabLastOpenedAt` accessor.
 
 <video src="/media/whats-new/tab-strip-component.mp4" alt="SQLRooms TabStrip component" width="450" loop muted controls autoplay></video>
 

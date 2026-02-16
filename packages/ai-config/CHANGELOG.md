@@ -3,6 +3,25 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/ai-config
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+**Note:** Version bump only for package @sqlrooms/ai-config
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+
+### Features
+
+* AI open session tabs now saved in AI slice config ([#315](https://github.com/sqlrooms/sqlrooms/issues/315)) ([34a33cb](https://github.com/sqlrooms/sqlrooms/commit/34a33cb1819275e3365aaf7c4607405ec6a2d663))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 **Note:** Version bump only for package @sqlrooms/ai-config

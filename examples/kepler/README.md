@@ -20,7 +20,7 @@ An example demonstrating [Kepler.gl](https://kepler.gl/) integration for geospat
 To create a new project from the kepler example run this:
 
 ```sh
-npx degit sqlrooms/examples/kepler my-new-app/
+npx giget gh:sqlrooms/examples/kepler my-new-app/
 ```
 
 #### Running locally

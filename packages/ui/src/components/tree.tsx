@@ -1,11 +1,11 @@
 'use client';
 
 import {Collapsible, CollapsibleContent} from '@radix-ui/react-collapsible';
-import React, {useEffect, useState} from 'react';
+import React, {useState} from 'react';
 
-import {CollapsibleTrigger} from './collapsible';
-import {cn} from '../lib/utils';
 import {ChevronRightIcon} from 'lucide-react';
+import {cn} from '../lib/utils';
+import {CollapsibleTrigger} from './collapsible';
 
 export type TreeNodeData<T> = {
   key: string;
@@ -45,9 +45,10 @@ type TreeNodeProps<T> = {
 function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
   const {treeData, renderNode} = props;
   const {children} = treeData;
+  const hasChildren = Boolean(children?.length);
   const [isOpen, setIsOpen] = useState(Boolean(treeData.isInitialOpen));
-  if (!children) {
-    return <>{renderNode(treeData, isOpen)}</>;
+  if (!hasChildren) {
+    return <div className="pl-4">{renderNode(treeData, isOpen)}</div>;
   }
   return (
     <Collapsible open={isOpen} onOpenChange={setIsOpen}>
@@ -64,7 +65,7 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
       </CollapsibleTrigger>
       <CollapsibleContent className="pl-4">
         {isOpen
-          ? children.map((child) => (
+          ? children?.map((child) => (
               <TreeNode<T>
                 key={child.key}
                 treeData={child}

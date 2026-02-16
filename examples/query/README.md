@@ -23,7 +23,7 @@ A comprehensive SQL query editor demonstrating SQLRooms' DuckDB integration. Fea
 To create a new project from the query example run this:
 
 ```bash
-npx degit sqlrooms/examples/query my-new-app/
+npx giget gh:sqlrooms/examples/query my-new-app/
 ```
 
 #### Running locally

@@ -51,10 +51,16 @@ export type AiSliceState = {
   ai: {
     config: AiSliceConfig;
     promptSuggestionsVisible: boolean;
+    /** Tracks API key errors per provider (e.g., 401/403 responses) */
+    apiKeyErrors: Record<string, boolean>;
     tools: OpenAssistantToolSet;
     getProviderOptions?: GetProviderOptions;
     setConfig: (config: AiSliceConfig) => void;
     setPromptSuggestionsVisible: (visible: boolean) => void;
+    /** Set API key error flag for a provider */
+    setApiKeyError: (provider: string, hasError: boolean) => void;
+    /** Check if there's an API key error for the current provider */
+    hasApiKeyError: () => boolean;
     getAbortController: (sessionId: string) => AbortController | undefined;
     setAbortController: (
       sessionId: string,
@@ -261,6 +267,7 @@ export function createAiSlice(
       ai: {
         config: baseConfig,
         promptSuggestionsVisible: true,
+        apiKeyErrors: {},
         tools,
         getProviderOptions,
         waitForToolResult: (
@@ -405,6 +412,25 @@ export function createAiSlice(
           );
         },
 
+        setApiKeyError: (provider: string, hasError: boolean) => {
+          set((state) =>
+            produce(state, (draft) => {
+              if (hasError) {
+                draft.ai.apiKeyErrors[provider] = true;
+              } else {
+                delete draft.ai.apiKeyErrors[provider];
+              }
+            }),
+          );
+        },
+
+        hasApiKeyError: () => {
+          const state = get();
+          const currentSession = state.ai.getCurrentSession();
+          const provider = currentSession?.modelProvider || defaultProvider;
+          return Boolean(state.ai.apiKeyErrors[provider]);
+        },
+
         setPrompt: (sessionId: string, prompt: string) => {
           set((state) =>
             produce(state, (draft) => {
@@ -501,6 +527,7 @@ export function createAiSlice(
 
           set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               // Add to AI sessions with per-session state
               draft.ai.config.sessions.unshift({
                 id: newSessionId,
@@ -517,6 +544,7 @@ export function createAiSlice(
                 messagesRevision: 0,
                 prompt: '',
                 isRunning: false,
+                lastOpenedAt: now,
               });
               draft.ai.config.currentSessionId = newSessionId;
               // Add new session to open tabs
@@ -534,6 +562,7 @@ export function createAiSlice(
         switchSession: (sessionId: string) => {
           set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               draft.ai.config.currentSessionId = sessionId;
               // Ensure current session is always in openSessionTabs
               if (!draft.ai.config.openSessionTabs) {
@@ -541,6 +570,12 @@ export function createAiSlice(
               }
               if (!draft.ai.config.openSessionTabs.includes(sessionId)) {
                 draft.ai.config.openSessionTabs.push(sessionId);
+              }
+              const session = draft.ai.config.sessions.find(
+                (s: AnalysisSessionSchema) => s.id === sessionId,
+              );
+              if (session) {
+                session.lastOpenedAt = now;
               }
             }),
           );
@@ -592,6 +627,7 @@ export function createAiSlice(
           sessionChatStops.delete(sessionId);
           sessionChatSendMessages.delete(sessionId);
           sessionAddToolResults.delete(sessionId);
+          const now = Date.now();
 
           set((state) =>
             produce(state, (draft) => {
@@ -616,6 +652,7 @@ export function createAiSlice(
                       const firstSession = draft.ai.config.sessions[0];
                       if (firstSession) {
                         draft.ai.config.currentSessionId = firstSession.id;
+                        firstSession.lastOpenedAt = now;
                       }
                     }
                   }
@@ -1066,13 +1103,10 @@ export function createAiSlice(
         chatHeaders,
 
         getLocalChatTransport: (sessionId: string) => {
-          const state = get();
           return createLocalChatTransportFactory({
             store,
             defaultProvider: defaultProvider,
             defaultModel: defaultModel,
-            apiKey: state.ai.getApiKeyFromSettings(),
-            baseUrl: state.ai.getBaseUrlFromSettings(),
             getInstructions: () => store.getState().ai.getFullInstructions(),
             getCustomModel,
             sessionId,

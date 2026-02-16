@@ -73,7 +73,7 @@ features:
 To create a new project from the minimal example, run:
 
 ```sh
-npx degit sqlrooms/examples/minimal my-minimal-app/
+npx giget gh:sqlrooms/examples/minimal my-minimal-app/
 cd my-minimal-app
 npm install
 npm run dev

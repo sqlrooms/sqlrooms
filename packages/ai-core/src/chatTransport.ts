@@ -1,29 +1,29 @@
-import {
-  DefaultChatTransport,
-  UIMessage,
-  convertToModelMessages,
-  streamText,
-  lastAssistantMessageIsCompleteWithToolCalls,
-} from 'ai';
-import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {createOpenAICompatible} from '@ai-sdk/openai-compatible';
 import {convertToVercelAiToolV5, OpenAssistantTool} from '@openassistant/utils';
-import {produce} from 'immer';
-import {getErrorMessageForDisplay} from '@sqlrooms/utils';
 import type {AnalysisSessionSchema} from '@sqlrooms/ai-config';
-import {AddToolResult} from './types';
-import type {AiSliceStateForTransport} from './types';
 import type {StoreApi} from '@sqlrooms/room-store';
+import {getErrorMessageForDisplay} from '@sqlrooms/utils';
+import type {DataUIPart, LanguageModel, ToolSet, UIDataTypes} from 'ai';
 import {
-  mergeAbortSignals,
-  ToolAbortError,
-  fixIncompleteToolCalls,
-} from './utils';
+  convertToModelMessages,
+  DefaultChatTransport,
+  lastAssistantMessageIsCompleteWithToolCalls,
+  streamText,
+  UIMessage,
+} from 'ai';
+import {produce} from 'immer';
 import {
   AI_DEFAULT_TEMPERATURE,
   ANALYSIS_PENDING_ID,
   TOOL_CALL_CANCELLED,
 } from './constants';
+import type {AiSliceStateForTransport} from './types';
+import {AddToolResult} from './types';
+import {
+  fixIncompleteToolCalls,
+  mergeAbortSignals,
+  ToolAbortError,
+} from './utils';
 
 export type ToolCall = {
   input: string;
@@ -37,8 +37,6 @@ export type ChatTransportConfig = {
   store: StoreApi<AiSliceStateForTransport>;
   defaultProvider: string;
   defaultModel: string;
-  apiKey: string;
-  baseUrl?: string;
   headers?: Record<string, string>;
   getInstructions: () => string;
   /**
@@ -131,8 +129,6 @@ export function createLocalChatTransportFactory({
   store,
   defaultProvider,
   defaultModel,
-  apiKey,
-  baseUrl,
   headers,
   getInstructions,
   getCustomModel,
@@ -149,11 +145,15 @@ export function createLocalChatTransportFactory({
       }
       const parsedObj = (parsed as {messages?: unknown}) || {};
 
-      // Resolve provider/model and client at call time to pick up latest settings.
+      // Resolve provider/model/apiKey/baseUrl at call time to pick up latest settings.
       const state = store.getState();
       const sessionFromBody = getSessionById(store, sessionId);
       const provider = sessionFromBody?.modelProvider || defaultProvider;
       const modelId = sessionFromBody?.model || defaultModel;
+
+      // Fetch API key and base URL dynamically to pick up settings changes
+      const apiKey = state.ai.getApiKeyFromSettings();
+      const baseUrl = state.ai.getBaseUrlFromSettings();
 
       // Prefer a user-supplied model if available
       let model: LanguageModel | undefined = getCustomModel?.();
@@ -163,7 +163,7 @@ export function createLocalChatTransportFactory({
         const openai = createOpenAICompatible({
           apiKey,
           name: provider,
-          baseURL: baseUrl ?? '',
+          baseURL: baseUrl ?? 'https://api.openai.com/v1',
           headers,
         });
         model = openai.chatModel(modelId);
@@ -548,6 +548,15 @@ export function createChatHandlers({
         if (!errMsg || errMsg.trim().length === 0) {
           errMsg = 'Unknown error';
         }
+
+        // Detect API key errors (401/403 or common error messages)
+        const isApiKeyError = isAuthenticationError(error, errMsg);
+        if (isApiKeyError) {
+          const session = getSessionById(store, sessionId);
+          const provider = session?.modelProvider || 'openai';
+          store.getState().ai.setApiKeyError(provider, true);
+        }
+
         store.setState((state: AiSliceStateForTransport) =>
           produce(state, (draft: AiSliceStateForTransport) => {
             if (!sessionId) return;
@@ -613,4 +622,41 @@ export function createChatHandlers({
       }
     },
   };
+}
+
+/**
+ * Detects if an error is related to API key authentication issues.
+ * Checks for HTTP 401/403 status codes and common error message patterns.
+ */
+function isAuthenticationError(error: unknown, errorMessage: string): boolean {
+  // Check for HTTP status codes in the error object
+  if (error && typeof error === 'object') {
+    const err = error as Record<string, unknown>;
+    const status =
+      err.status ??
+      err.statusCode ??
+      (err.response as Record<string, unknown>)?.status;
+    if (status === 401 || status === 403) {
+      return true;
+    }
+  }
+
+  // Check for common authentication error patterns in the message
+  const lowerMsg = errorMessage.toLowerCase();
+  const authPatterns = [
+    'invalid api key',
+    'incorrect api key',
+    'invalid_api_key',
+    'unauthorized',
+    'authentication failed',
+    'api key is invalid',
+    'api key not found',
+    'invalid authorization',
+    'invalid credentials',
+    'access denied',
+    '401',
+    '403',
+  ];
+
+  return authPatterns.some((pattern) => lowerMsg.includes(pattern));
 }

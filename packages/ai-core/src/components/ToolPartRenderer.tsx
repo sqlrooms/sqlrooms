@@ -1,4 +1,6 @@
 import React from 'react';
+import Markdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import type {UIMessagePart} from '@sqlrooms/ai-config';
 import {useStoreWithAi} from '../AiSlice';
 import {isDynamicToolPart, isToolPart} from '../utils';
@@ -24,7 +26,9 @@ const AgentProgressRenderer: React.FC<{
   return (
     <div className="mt-2 px-5 text-[0.9em]">
       {reasoning ? (
-        <div className="mb-2 text-sm text-gray-500">{reasoning}</div>
+        <div className="prose prose-sm dark:prose-invert mb-2 max-w-none text-sm text-gray-500">
+          <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
+        </div>
       ) : null}
       <div className="ml-3">
         {agentToolCalls.map((toolCall) => {
@@ -72,7 +76,9 @@ const AgentProgressRenderer: React.FC<{
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
-          <div className="text-gray-600">{finalOutput}</div>
+          <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600">
+            <Markdown remarkPlugins={[remarkGfm]}>{finalOutput}</Markdown>
+          </div>
         </div>
       )}
     </div>

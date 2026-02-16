@@ -13,7 +13,7 @@ The [Minimal Example](https://github.com/sqlrooms/examples/tree/main/minimal) is
 To create a new project from the minimal example, run:
 
 ```bash
-npx degit sqlrooms/examples/minimal my-minimal-app/
+npx giget gh:sqlrooms/examples/minimal my-minimal-app/
 cd my-minimal-app
 npm install
 npm run dev
@@ -28,7 +28,7 @@ The [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-sta
 To create a new project from the get-started example, run:
 
 ```bash
-npx degit sqlrooms/examples/get-started myapp/
+npx giget gh:sqlrooms/examples/get-started myapp/
 cd myapp
 npm install
 npm run dev

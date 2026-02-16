@@ -33,7 +33,7 @@ SQLRooms is designed to empower developers and users with a modern, modular anal
 
 ## Why Single-Node?
 
-SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed.
+SQLRooms is designed for single-node analytics: all computation happens on your device, whether in the browser or a desktop app (e.g. via [Electron](https://www.electronjs.org/)), with no backend required. Data can remain local if you choose, or be loaded from external sources like S3—always giving you full control over how and where your data is processed. If you are evaluating architecture options for your organization, see [Deployment Scenarios](http://sqlrooms.org/deployment-scenarios).
 
 - **Privacy:** All data remains on your device for simplified compliance and peace of mind—nothing leaves your browser unless you choose.
 - **Own Your Data:** You control your files and data, with no vendor lock-in or forced cloud storage. Your work is portable and future-proof.
@@ -55,6 +55,8 @@ While SQLRooms does not yet implement sync or collaboration, it is already capab
 
 - **Check the [Example Applications](http://sqlrooms.org/examples)** to see what can be built with the framework.
 
+- **Compare [Deployment Scenarios](http://sqlrooms.org/deployment-scenarios)** to choose the right setup for your team.
+
 <!-- - **Quick start the [Getting Started Guide](http://sqlrooms.org/getting-started)** to set up your first room.
 
 - **Read the [API reference](http://sqlrooms.org/packages/)** for deeper integration. -->
@@ -74,7 +76,7 @@ The [Minimal Example](https://github.com/sqlrooms/examples/tree/main/minimal) is
 To create a new project from the minimal example, run:
 
 ```bash
-npx degit sqlrooms/examples/minimal my-minimal-app/
+npx giget gh:sqlrooms/examples/minimal my-minimal-app/
 cd my-minimal-app
 npm install
 npm run dev
@@ -89,7 +91,7 @@ The [Get Started Example](https://github.com/sqlrooms/examples/tree/main/get-sta
 To create a new project from the get-started example, run:
 
 ```bash
-npx degit sqlrooms/examples/get-started myapp/
+npx giget gh:sqlrooms/examples/get-started myapp/
 cd myapp
 npm install
 npm run dev

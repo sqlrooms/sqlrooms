@@ -3,6 +3,33 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/kepler
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* Avoid deckgl v8 type errors ([#351](https://github.com/sqlrooms/sqlrooms/issues/351)) ([b3d5b88](https://github.com/sqlrooms/sqlrooms/commit/b3d5b887b27e12f83f0340294758cf23cc7f23bc))
+* getKeplerFactory causing constant remounting ([#352](https://github.com/sqlrooms/sqlrooms/issues/352)) ([bd2fbf0](https://github.com/sqlrooms/sqlrooms/commit/bd2fbf07485ae1ab1b545b36c82ee6f0c2467a5b))
+* getKeplerFactory number of hook calls errors ([#354](https://github.com/sqlrooms/sqlrooms/issues/354)) ([c52fa70](https://github.com/sqlrooms/sqlrooms/commit/c52fa70f15667959b72e63a065ac513f5084403b))
+* Kepler injector improvements ([#349](https://github.com/sqlrooms/sqlrooms/issues/349)) ([4a7295b](https://github.com/sqlrooms/sqlrooms/commit/4a7295b5120b2278422c04ce878520dfa8cfaaa4))
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* configureKeplerInjector factory resolving was happening early ([#326](https://github.com/sqlrooms/sqlrooms/issues/326)) ([19b3b14](https://github.com/sqlrooms/sqlrooms/commit/19b3b1470462aa93e315bbc3619bf8a52a0e744f))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* Vector tiles creating layers ([#325](https://github.com/sqlrooms/sqlrooms/issues/325)) ([132ee22](https://github.com/sqlrooms/sqlrooms/commit/132ee229c4349679c3b681c9ce9e50d8d8aed851))
+
+### Features
+
+* Configurable Kepler injector with custom recipe support ([#318](https://github.com/sqlrooms/sqlrooms/issues/318)) ([2337ff4](https://github.com/sqlrooms/sqlrooms/commit/2337ff4c189dd6d2c9827edae4717e89fe7a30ea))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+* render reasoning in agent tool ([#322](https://github.com/sqlrooms/sqlrooms/issues/322)) ([ffca82e](https://github.com/sqlrooms/sqlrooms/commit/ffca82eef19eb6d617a48ce3ee376e64987f747e))
+
 # [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
 
 **Note:** Version bump only for package @sqlrooms/kepler

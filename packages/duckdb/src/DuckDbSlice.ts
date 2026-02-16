@@ -3,7 +3,14 @@ import {
   DataTable,
   DbSchemaNode,
   DuckDbConnector,
+  escapeVal,
+  getColValAsNumber,
+  isQualifiedTableName,
+  joinStatements,
+  makeQualifiedTableName,
+  QualifiedTableName,
   QueryHandle,
+  separateLastStatement,
   TableColumn,
 } from '@sqlrooms/duckdb-core';
 import {
@@ -16,15 +23,13 @@ import deepEquals from 'fast-deep-equal';
 import {produce} from 'immer';
 import {StateCreator} from 'zustand';
 import {createWasmDuckDbConnector} from './connectors/createDuckDbConnector';
-import {
-  escapeVal,
-  getColValAsNumber,
-  isQualifiedTableName,
-  joinStatements,
-  makeQualifiedTableName,
-  QualifiedTableName,
-  separateLastStatement,
-} from '@sqlrooms/duckdb-core';
+
+function isDuckDbPlaceholderViewColumn(
+  columnName: string,
+  columnType: string,
+): boolean {
+  return columnName === '__' && columnType.toUpperCase() === 'UNKNOWN';
+}
 
 export type SchemaAndDatabase = {
   schema?: string;
@@ -496,10 +501,15 @@ export function createDuckDbSlice({
                 .getChild('column_types')
                 ?.get(i);
               const columns: TableColumn[] = [];
-              for (let di = 0; di < columnNames.length; di++) {
+              for (let di = 0; di < (columnNames?.length ?? 0); di++) {
+                const columnName = String(columnNames.get(di));
+                const columnType = String(columnTypes?.get(di));
+                if (isDuckDbPlaceholderViewColumn(columnName, columnType)) {
+                  continue;
+                }
                 columns.push({
-                  name: columnNames.get(di),
-                  type: columnTypes.get(di),
+                  name: columnName,
+                  type: columnType,
                 });
               }
               newTables.push({

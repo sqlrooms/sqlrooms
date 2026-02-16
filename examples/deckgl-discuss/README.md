@@ -19,7 +19,7 @@ An example showcasing integration with [deck.gl](https://deck.gl/) for geospatia
 To create a new project from the deckgl-discuss example run this:
 
 ```bash
-npx degit sqlrooms/examples/deckgl-discuss my-new-app/
+npx giget gh:sqlrooms/examples/deckgl-discuss my-new-app/
 ```
 
 #### Running locally

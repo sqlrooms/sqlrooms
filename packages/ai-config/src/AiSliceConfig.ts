@@ -28,6 +28,7 @@ export function createDefaultAiConfig(
         messagesRevision: 0,
         prompt: '',
         isRunning: false,
+        lastOpenedAt: Date.now(),
       },
     ],
     currentSessionId: defaultSessionId,

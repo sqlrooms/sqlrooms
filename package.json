@@ -19,7 +19,7 @@
     "build:all": "pnpm clean && turbo build",
     "build:apps": "turbo build --filter=./apps/*",
     "build:examples": "turbo build --filter=./examples/*",
-    "build:examples:ci": "turbo build --filter=./examples/* --concurrency=1",
+    "build:examples:ci": "turbo build --filter=./examples/* --concurrency=3",
     "test": "turbo test",
     "test:watch": "turbo test:watch",
     "prepare": "husky",

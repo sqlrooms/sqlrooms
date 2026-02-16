@@ -20,7 +20,7 @@ An example demonstrating [deck.gl](https://deck.gl/) integration for geospatial 
 To create a new project from the deckgl example run this:
 
 ```sh
-npx degit sqlrooms/examples/deckgl my-new-app/
+npx giget gh:sqlrooms/examples/deckgl my-new-app/
 ```
 
 #### Running Locally

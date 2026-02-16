@@ -162,7 +162,10 @@ export const KeplerMapsContainer: FC<{
             </>
           )}
         >
-          <TabStrip.SearchDropdown />
+          <TabStrip.SearchDropdown
+            sortSearchItems="recent"
+            getTabLastOpenedAt={(tab) => tab.lastOpenedAt as number | undefined}
+          />
           <TabStrip.Tabs />
           <TabStrip.NewButton tooltip="Create new map" />
         </TabStrip>

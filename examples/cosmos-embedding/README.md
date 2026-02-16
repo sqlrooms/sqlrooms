@@ -21,7 +21,7 @@ An example showcasing integration with Cosmos for visualizing high-dimensional d
 To create a new project from the cosmos-embedding example run this:
 
 ```bash
-npx degit sqlrooms/examples/cosmos-embedding my-new-app/
+npx giget gh:sqlrooms/examples/cosmos-embedding my-new-app/
 ```
 
 #### Running locally

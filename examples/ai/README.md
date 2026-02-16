@@ -19,7 +19,7 @@ An advanced example showing how to build an AI-powered analytics application wit
 To create a new project from the AI example run this:
 
 ```bash
-npx degit sqlrooms/examples/ai my-new-app/
+npx giget gh:sqlrooms/examples/ai my-new-app/
 ```
 
 #### Running locally

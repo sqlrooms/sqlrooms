@@ -208,6 +208,7 @@ export function createSqlEditorSlice({
 
         createQueryTab: (initialQuery = '') => {
           const sqlEditorConfig = get().sqlEditor.config;
+          const now = Date.now();
           const newQuery = {
             id: createId(),
             name: generateUniqueName(
@@ -216,6 +217,7 @@ export function createSqlEditorSlice({
               ' ',
             ),
             query: initialQuery,
+            lastOpenedAt: now,
           };
 
           set((state) =>
@@ -267,6 +269,13 @@ export function createSqlEditorSlice({
                   const newSelectedId = newOpenTabs[newIndex];
                   if (newSelectedId) {
                     draft.sqlEditor.config.selectedQueryId = newSelectedId;
+                    const newSelectedQuery =
+                      draft.sqlEditor.config.queries.find(
+                        (q) => q.id === newSelectedId,
+                      );
+                    if (newSelectedQuery) {
+                      newSelectedQuery.lastOpenedAt = Date.now();
+                    }
                   }
                 } else if (remainingQueries.length > 0) {
                   // No open tabs left, open a closed query
@@ -274,6 +283,7 @@ export function createSqlEditorSlice({
                   if (queryToOpen) {
                     draft.sqlEditor.config.openTabs.push(queryToOpen.id);
                     draft.sqlEditor.config.selectedQueryId = queryToOpen.id;
+                    queryToOpen.lastOpenedAt = Date.now();
                   }
                 }
               }
@@ -310,6 +320,12 @@ export function createSqlEditorSlice({
                 draft.sqlEditor.config.openTabs.push(queryId);
               }
               draft.sqlEditor.config.selectedQueryId = queryId;
+              const query = draft.sqlEditor.config.queries.find(
+                (q) => q.id === queryId,
+              );
+              if (query) {
+                query.lastOpenedAt = Date.now();
+              }
             }),
           );
         },
@@ -339,6 +355,12 @@ export function createSqlEditorSlice({
           set((state) =>
             produce(state, (draft) => {
               draft.sqlEditor.config.selectedQueryId = queryId;
+              const query = draft.sqlEditor.config.queries.find(
+                (q) => q.id === queryId,
+              );
+              if (query) {
+                query.lastOpenedAt = Date.now();
+              }
             }),
           );
         },
