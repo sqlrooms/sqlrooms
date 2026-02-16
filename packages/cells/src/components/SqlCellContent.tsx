@@ -3,6 +3,7 @@ import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Input} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
 import {isValidSqlIdentifier, getEffectiveResultName} from '../utils';
@@ -21,6 +22,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   cell,
   renderContainer,
 }) => {
+  const storeApi = useRoomStoreApi();
   const updateCell = useCellsStore((s) => s.cells.updateCell);
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
@@ -110,6 +112,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           state: cellStatus.status,
           message: cellStatus.lastError,
           resultName: cellStatus.resultView || cellStatus.resultName,
+          lastRunTime: cellStatus.lastRunTime,
         }
       : undefined;
 
@@ -124,10 +127,24 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
       // Add keyboard shortcut for running query
       editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
+        // Flush the current editor value directly to the store
+        // synchronously before running. Monaco's onChange may not have
+        // fired yet for the latest content, so we read the editor model
+        // directly and write it to the Zustand store in a single
+        // synchronous call, bypassing the async updateCell path.
+        const currentSql = editor.getValue();
+        storeApi.setState(
+          produce(storeApi.getState(), (draft: any) => {
+            const c = draft.cells?.config?.data?.[id];
+            if (c && c.type === 'sql') {
+              c.data.sql = currentSql;
+            }
+          }),
+        );
         handleRunRef.current();
       });
     },
-    [],
+    [id, storeApi],
   );
 
   const content = (
@@ -160,6 +177,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           <QueryDataTable
             className="absolute inset-0 h-full w-full"
             query={`SELECT * FROM ${resultName}`}
+            lastRunTime={status?.lastRunTime}
             fontSize="text-xs"
             pageSize={10}
             isLoading={status?.state === 'running'}

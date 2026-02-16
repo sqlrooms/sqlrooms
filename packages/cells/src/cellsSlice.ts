@@ -161,6 +161,16 @@ export function createCellsSlice(props?: CellsSliceOptions) {
             existingStatus.status === 'success' &&
             existingStatus.resultView;
 
+          // Apply cell data to the store immediately so that other
+          // actions (e.g. runCell triggered via Cmd+Enter) always see
+          // the latest value. Edge/dependency updates follow
+          // asynchronously below.
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.config.data[id] = updatedCell as any;
+            }),
+          );
+
           // Pre-compute dependencies outside produce() to support async
           const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
             | SqlSelectToJsonFn
@@ -175,8 +185,6 @@ export function createCellsSlice(props?: CellsSliceOptions) {
 
           set((state) =>
             produce(state, (draft) => {
-              draft.cells.config.data[id] = updatedCell as any;
-
               // Update edges in all sheets this cell belongs to
               for (const sheet of Object.values(draft.cells.config.sheets)) {
                 if (sheet.cellIds.includes(id)) {
