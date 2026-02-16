@@ -68,6 +68,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         status: {},
         activeAbortControllers: {},
         resultVersion: {},
+        pageVersion: {},
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
@@ -134,6 +135,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
               delete draft.cells.config.data[id];
               delete draft.cells.status[id];
               delete draft.cells.resultVersion[id];
+              delete draft.cells.pageVersion[id];
               const controller = draft.cells.activeAbortControllers[id];
               if (controller) {
                 controller.abort();
@@ -463,6 +465,16 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           );
         },
 
+        setCellResultPage: (id: string, data: CellResultData) => {
+          cellResultCache.set(id, data);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.pageVersion[id] =
+                (draft.cells.pageVersion[id] ?? 0) + 1;
+            }),
+          );
+        },
+
         getCellResult: (id: string) => {
           return cellResultCache.get(id);
         },
@@ -472,6 +484,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           set((state) =>
             produce(state, (draft) => {
               delete draft.cells.resultVersion[id];
+              delete draft.cells.pageVersion[id];
             }),
           );
         },
@@ -499,7 +512,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           );
           const totalRows = countResult.toArray()[0]?.count ?? 0;
 
-          get().cells.setCellResult(id, {arrowTable, totalRows});
+          get().cells.setCellResultPage(id, {arrowTable, totalRows});
         },
 
         // DAG methods (sync versions for UI usage)

@@ -256,7 +256,10 @@ export type CellsSliceState = {
     activeAbortControllers: Record<string, AbortController>;
     cellRegistry: CellRegistry;
     supportedSheetTypes: SheetType[];
+    /** Monotonic counter per cell, incremented when a new execution result arrives. Used to trigger pagination reset and re-render. */
     resultVersion: Record<string, number>;
+    /** Monotonic counter per cell, incremented when a pagination/sorting fetch completes. Used to trigger re-render without resetting pagination. */
+    pageVersion: Record<string, number>;
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;
@@ -291,6 +294,7 @@ export type CellsSliceState = {
 
     // Cell result cache
     setCellResult: (id: string, data: CellResultData) => void;
+    setCellResultPage: (id: string, data: CellResultData) => void;
     getCellResult: (id: string) => CellResultData | undefined;
     clearCellResult: (id: string) => void;
     fetchCellResultPage: (

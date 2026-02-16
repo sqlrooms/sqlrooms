@@ -1,20 +1,20 @@
-import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
   DataTablePaginated,
   QueryDataTableActionsMenu,
   useArrowDataTable,
 } from '@sqlrooms/data-table';
-import type {PaginationState, SortingState} from '@tanstack/react-table';
+import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Input} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
-import {useRoomStoreApi} from '@sqlrooms/room-store';
-import {useCellsStore} from '../hooks';
-import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
-import {isValidSqlIdentifier, getEffectiveResultName} from '../utils';
-import {SqlCellRunButton} from './SqlCellRunButton';
+import type {PaginationState, SortingState} from '@tanstack/react-table';
 import {produce} from 'immer';
 import type * as Monaco from 'monaco-editor';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import {useCellsStore} from '../hooks';
+import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
+import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
+import {SqlCellRunButton} from './SqlCellRunButton';
 
 export type SqlCellContentProps = {
   id: string;
@@ -33,14 +33,20 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
   const resultVersion = useCellsStore((s) => s.cells.resultVersion?.[id] ?? 0);
+  const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
   const getCellResult = useCellsStore((s) => s.cells.getCellResult);
   const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
 
-  const cellResult = getCellResult(id);
+  // Re-read the cache whenever resultVersion or pageVersion changes
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const cellResult = useMemo(
+    () => getCellResult(id),
+    [getCellResult, id, resultVersion, pageVersion],
+  );
   const arrowTableData = useArrowDataTable(cellResult?.arrowTable);
 
   const handleSqlChange = useCallback(
-    (v: string) => {
+    (v: string | undefined) => {
       updateCell(id, (c) =>
         produce(c, (draft) => {
           if (draft.type === 'sql') {
@@ -154,8 +160,10 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   useEffect(() => {
     if (resultVersion !== prevResultVersion.current) {
       prevResultVersion.current = resultVersion;
-      setPagination((prev) => ({...prev, pageIndex: 0}));
-      setSorting([]);
+      setPagination((prev) =>
+        prev.pageIndex === 0 ? prev : {...prev, pageIndex: 0},
+      );
+      setSorting((prev) => (prev.length === 0 ? prev : []));
     }
   }, [resultVersion]);
 
@@ -166,23 +174,30 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
 
   const handleSqlEditorMount = useCallback(
     (editor: Monaco.editor.IStandaloneCodeEditor, monaco: typeof Monaco) => {
-      // Add keyboard shortcut for running query
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        // Flush the current editor value directly to the store
-        // synchronously before running. Monaco's onChange may not have
-        // fired yet for the latest content, so we read the editor model
-        // directly and write it to the Zustand store in a single
-        // synchronous call, bypassing the async updateCell path.
-        const currentSql = editor.getValue();
-        storeApi.setState(
-          produce(storeApi.getState(), (draft: any) => {
-            const c = draft.cells?.config?.data?.[id];
-            if (c && c.type === 'sql') {
-              c.data.sql = currentSql;
-            }
-          }),
-        );
-        handleRunRef.current();
+      // Use onKeyDown instead of addCommand to scope the shortcut
+      // to THIS specific editor instance. Monaco's addCommand registers
+      // globally, so the last editor mounted wins -- breaking multi-cell
+      // notebooks.
+      editor.onKeyDown((e) => {
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
+          e.preventDefault();
+          e.stopPropagation();
+          // Flush the current editor value directly to the store
+          // synchronously before running. Monaco's onChange may not have
+          // fired yet for the latest content, so we read the editor model
+          // directly and write it to the Zustand store in a single
+          // synchronous call, bypassing the async updateCell path.
+          const currentSql = editor.getValue();
+          storeApi.setState(
+            produce(storeApi.getState(), (draft: any) => {
+              const c = draft.cells?.config?.data?.[id];
+              if (c && c.type === 'sql') {
+                c.data.sql = currentSql;
+              }
+            }),
+          );
+          handleRunRef.current();
+        }
       });
     },
     [id, storeApi],
@@ -195,7 +210,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
           <SqlMonacoEditor
             className="absolute inset-0 h-full w-full"
             value={cell.data.sql}
-            onChange={(v) => handleSqlChange(v || '')}
+            onChange={handleSqlChange}
             onMount={handleSqlEditorMount}
             options={{
               minimap: {enabled: false},
