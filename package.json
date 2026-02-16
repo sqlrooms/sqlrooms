@@ -12,7 +12,7 @@
   ],
   "type": "module",
   "scripts": {
-    "dev": "turbo dev --concurrency=100 --filter=@sqlrooms/*",
+    "dev": "node scripts/dev.mjs",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
     "build": "turbo build --filter=@sqlrooms/*",

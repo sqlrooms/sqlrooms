@@ -397,9 +397,22 @@ The `useSql` hook automatically re-runs queries when the database state changes 
 
 ## Develop locally
 
-    pnpm install
-    pnpm build
-    pnpm dev
+```bash
+pnpm install
+pnpm build
+```
+
+Start all core packages in dev/watch mode:
+
+```bash
+pnpm dev
+```
+
+Start a specific workspace (plus all of its dependencies), for example an example app:
+
+```bash
+pnpm dev notebook-example
+```
 
 ## Develop documentation locally
 
