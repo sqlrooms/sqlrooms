@@ -59,7 +59,10 @@ export function CustomMapLegendFactory(
     };
 
     return (
-      <div className="map-legend" style={{width: containerW}}>
+      <div
+        className="map-legend border-border border"
+        style={{width: containerW}}
+      >
         <div className="relative flex flex-col">
           <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
             <div className="text-xs font-medium">Map Layers</div>

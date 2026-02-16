@@ -1,13 +1,14 @@
 import {Canvas, CanvasSliceState, createCanvasSlice} from '@sqlrooms/canvas';
 import {createCanvasCrdtMirror} from '@sqlrooms/canvas/crdt';
 import {
+  CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
-  CellsSliceState,
 } from '@sqlrooms/cells';
 import {
   CrdtSliceState,
   createCrdtSlice,
+  createIndexedDbDocStorage,
   // createIndexedDbDocStorage,
   createWebSocketSyncConnector,
 } from '@sqlrooms/crdt';
@@ -78,15 +79,10 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
 
-      ...createCanvasSlice({
-        ai: {
-          getApiKey: () => get().app.config.apiKey,
-          defaultModel: 'gpt-4.1-mini',
-        },
-      })(set, get, store),
+      ...createCanvasSlice({})(set, get, store),
 
       ...createCrdtSlice({
-        // storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
+        storage: createIndexedDbDocStorage({key: 'sqlrooms-canvas-sync'}),
         sync: createWebSocketSyncConnector({
           url: SERVER_URL,
           roomId: ROOM_ID,

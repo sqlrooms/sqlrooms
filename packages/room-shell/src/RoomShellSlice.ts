@@ -37,7 +37,7 @@ import {
   convertToValidColumnOrTableName,
   downloadFile,
 } from '@sqlrooms/utils';
-import {castDraft, produce} from 'immer';
+import {produce} from 'immer';
 import {ReactNode} from 'react';
 import {StateCreator, StoreApi} from 'zustand';
 import {
@@ -118,6 +118,7 @@ export type RoomShellSliceState = {
       tableName: string,
       query: string,
       oldTableName?: string,
+      abortSignal?: AbortSignal,
     ): Promise<void>;
     areDatasetsReady(): boolean;
 
@@ -319,7 +320,12 @@ export function createRoomShellSlice(
           await maybeDownloadDataSources();
         },
 
-        async addOrUpdateSqlQueryDataSource(tableName, query, oldTableName) {
+        async addOrUpdateSqlQueryDataSource(
+          tableName,
+          query,
+          oldTableName,
+          abortSignal,
+        ) {
           const {schema} = get().db;
           const {db} = get();
           const newTableName =
@@ -329,7 +335,13 @@ export function createRoomShellSlice(
                   await db.getTables(schema),
                 )
               : tableName;
-          const {rowCount} = await db.createTableFromQuery(newTableName, query);
+          const {rowCount} = await db.createTableFromQuery(
+            newTableName,
+            query,
+            {
+              abortSignal,
+            },
+          );
           if (rowCount !== undefined) {
             get().db.setTableRowCount(newTableName, rowCount);
           }
