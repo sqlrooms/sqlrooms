@@ -26,6 +26,8 @@ export const CellContainer: React.FC<{
   if (!cell) return null;
   return (
     <div
+      id={`cell-${id}`}
+      data-cell-container-id={id}
       className={cn(
         'bg-card group rounded border',
         {

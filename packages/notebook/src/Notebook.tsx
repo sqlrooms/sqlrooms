@@ -1,11 +1,11 @@
 import {Button} from '@sqlrooms/ui';
 import React, {useEffect, useMemo} from 'react';
 
-import {useStoreWithNotebook} from './useStoreWithNotebook';
 import {AddNewCellDropdown} from './cellOperations/AddNewCellDropdown';
 import {AddNewCellTabs} from './cellOperations/AddNewCellTabs';
-import {InputBar, ShowInputBarToggle} from './cells/InputBar';
 import {CellView} from './cells/CellView';
+import {InputBar, ShowInputBarToggle} from './cells/InputBar';
+import {useStoreWithNotebook} from './useStoreWithNotebook';
 
 export const Notebook: React.FC = () => {
   const currentTabId = useStoreWithNotebook(

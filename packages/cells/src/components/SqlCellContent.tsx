@@ -5,10 +5,22 @@ import {
 } from '@sqlrooms/data-table';
 import {useRoomStoreApi} from '@sqlrooms/room-store';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
-import {Input} from '@sqlrooms/ui';
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+  EditableText,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import type {PaginationState, SortingState} from '@tanstack/react-table';
 import {produce} from 'immer';
+import {CornerDownRightIcon} from 'lucide-react';
 import type * as Monaco from 'monaco-editor';
 import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {useCellsStore} from '../hooks';
@@ -31,6 +43,10 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const updateCell = useCellsStore((s) => s.cells.updateCell);
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
+  const getDownstream = useCellsStore((s) => s.cells.getDownstream);
+  const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
+  const cellsData = useCellsStore((s) => s.cells.config.data);
+  const sheets = useCellsStore((s) => s.cells.config.sheets);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
   const resultVersion = useCellsStore((s) => s.cells.resultVersion?.[id] ?? 0);
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
@@ -66,19 +82,36 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     cancelCell(id);
   }, [id, cancelCell]);
 
+  const validateResultName = useCallback((value: string) => {
+    const nextValue = value.trim();
+    return Boolean(nextValue) && isValidSqlIdentifier(nextValue);
+  }, []);
+
+  const handleResultNameInputChange = useCallback(
+    (value: string) => {
+      setIsResultNameInvalid(!validateResultName(value));
+    },
+    [validateResultName],
+  );
+
   const handleResultNameChange = useCallback(
     (value: string) => {
-      if (value === '' || isValidSqlIdentifier(value)) {
-        updateCell(id, (c) =>
-          produce(c, (draft) => {
-            if (draft.type === 'sql') {
-              draft.data.resultName = value || undefined;
-            }
-          }),
-        );
+      const nextValue = value.trim();
+      if (!validateResultName(nextValue)) {
+        setIsResultNameInvalid(true);
+        return;
       }
+
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'sql') {
+            draft.data.resultName = nextValue;
+          }
+        }),
+      );
+      setIsResultNameInvalid(false);
     },
-    [id, updateCell],
+    [id, updateCell, validateResultName],
   );
 
   const effectiveResultName = getEffectiveResultName(
@@ -86,42 +119,42 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     convertToValidColumnOrTableName,
   );
   const explicitResultName = (cell.data as SqlCellData).resultName || '';
-  const [resultNameDraft, setResultNameDraft] = useState(explicitResultName);
+  const [dependentsMenuOpen, setDependentsMenuOpen] = useState(false);
+  const [isResultNameInvalid, setIsResultNameInvalid] = useState(false);
 
-  useEffect(() => {
-    setResultNameDraft(explicitResultName);
-  }, [explicitResultName]);
+  const downstreamCellIds = useMemo(() => {
+    if (!currentSheetId) return [];
+    return getDownstream(currentSheetId, id);
+  }, [currentSheetId, getDownstream, id, cellsData, sheets]);
 
-  const commitResultName = useCallback(() => {
-    if (resultNameDraft === '' || isValidSqlIdentifier(resultNameDraft)) {
-      if (resultNameDraft !== explicitResultName) {
-        handleResultNameChange(resultNameDraft);
-      }
-      return;
-    }
-
-    setResultNameDraft(explicitResultName);
-  }, [explicitResultName, handleResultNameChange, resultNameDraft]);
-
-  const handleResultNameKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLInputElement>) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        commitResultName();
-        e.currentTarget.blur();
-        return;
-      }
-
-      if (e.key === 'Escape') {
-        e.preventDefault();
-        setResultNameDraft(explicitResultName);
-        e.currentTarget.blur();
-      }
-    },
-    [commitResultName, explicitResultName],
+  const downstreamCells = useMemo(
+    () =>
+      downstreamCellIds.map((cellId) => {
+        const downstreamCell = cellsData[cellId];
+        return {
+          id: cellId,
+          label:
+            (
+              downstreamCell?.data as {title?: string} | undefined
+            )?.title?.trim() || 'Untitled',
+        };
+      }),
+    [cellsData, downstreamCellIds],
   );
 
-  const hasExplicitResultName = Boolean((cell.data as SqlCellData).resultName);
+  const scrollToDependentCell = useCallback((targetCellId: string) => {
+    const selectorTargets = [
+      `[data-cell-container-id="${targetCellId}"]`,
+      `#cell-${targetCellId}`,
+    ];
+    const el =
+      selectorTargets
+        .map((selector) => document.querySelector<HTMLElement>(selector))
+        .find(Boolean) ?? null;
+    if (el) {
+      el.scrollIntoView({behavior: 'smooth', block: 'center'});
+    }
+  }, []);
 
   const status =
     cellStatus?.type === 'sql'
@@ -253,19 +286,66 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   );
 
   const footer = (
-    <div className="text-muted-foreground flex items-center gap-2 px-2 py-1 text-xs">
-      <span className="font-medium">Result:</span>
-      <Input
-        value={resultNameDraft}
-        placeholder={effectiveResultName}
-        onChange={(e) => setResultNameDraft(e.target.value)}
-        onBlur={commitResultName}
-        onKeyDown={handleResultNameKeyDown}
-        className="h-6 w-40 font-mono text-xs"
-      />
-      {!hasExplicitResultName && (
-        <span className="text-[10px] italic opacity-50">(auto)</span>
-      )}
+    <div className="text-muted-foreground flex items-center gap-1 px-2 py-1 text-xs">
+      <CornerDownRightIcon className="h-3 w-3" />
+      {downstreamCells.length > 0 ? (
+        <DropdownMenu
+          open={dependentsMenuOpen}
+          onOpenChange={setDependentsMenuOpen}
+        >
+          <DropdownMenuTrigger asChild>
+            <Button
+              className="h-5"
+              size="xs"
+              variant="secondary"
+              aria-label={`${downstreamCells.length} dependent cells`}
+              onMouseEnter={() => setDependentsMenuOpen(true)}
+            >
+              {downstreamCells.length}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="start"
+            onCloseAutoFocus={(e) => e.preventDefault()}
+            onMouseLeave={() => setDependentsMenuOpen(false)}
+          >
+            <DropdownMenuLabel className="text-xs">
+              Referenced in
+            </DropdownMenuLabel>
+            {downstreamCells.map((dependentCell) => (
+              <DropdownMenuItem
+                key={dependentCell.id}
+                className="cursor-pointer text-xs"
+                onSelect={(e) => {
+                  e.preventDefault();
+                  scrollToDependentCell(dependentCell.id);
+                }}
+              >
+                {dependentCell.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
+      <Tooltip open={isResultNameInvalid}>
+        <TooltipTrigger asChild>
+          <div>
+            <EditableText
+              className={`h-6 w-40 font-mono text-xs text-green-500 shadow-none ${
+                isResultNameInvalid
+                  ? 'border-red-500 ring-1 ring-red-500 focus:border-red-500 focus:ring-red-500'
+                  : ''
+              }`}
+              value={explicitResultName || effectiveResultName}
+              onInputChange={handleResultNameInputChange}
+              onChange={handleResultNameChange}
+            />
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top">
+          <span className="text-xs">Invalid result name</span>
+        </TooltipContent>
+      </Tooltip>
     </div>
   );
 

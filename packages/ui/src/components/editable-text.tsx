@@ -2,8 +2,8 @@
 
 import {ChangeEvent, FC, useCallback, useEffect, useRef, useState} from 'react';
 
-import {Input} from './input';
 import {cn} from '../lib/utils';
+import {Input} from './input';
 
 /**
  * Component that allows the user to edit a string.
@@ -43,6 +43,8 @@ export const EditableText: FC<{
   value: string;
   placeholder?: string;
   onChange: (text: string) => void;
+  /** Called on each keystroke while editing. */
+  onInputChange?: (text: string) => void;
   autoFocus?: boolean;
   selectOnFocus?: boolean;
   /** When false, the input is removed from tab order while not editing. */
@@ -68,6 +70,7 @@ export const EditableText: FC<{
   placeholder,
   value,
   onChange,
+  onInputChange,
   onEditingChange,
   autoFocus,
   selectOnFocus = false,
@@ -116,9 +119,11 @@ export const EditableText: FC<{
       if (isReadOnly || !isInternalEditing) {
         return;
       }
-      return setInternalValue(e.target.value);
+      const nextValue = e.target.value;
+      onInputChange?.(nextValue);
+      return setInternalValue(nextValue);
     },
-    [isInternalEditing, isReadOnly],
+    [isInternalEditing, isReadOnly, onInputChange],
   );
 
   const handleSetEditing = useCallback(
