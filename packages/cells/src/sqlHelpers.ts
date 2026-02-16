@@ -7,7 +7,7 @@ import type {
   SqlRunCallbacks,
   SqlRunResult,
 } from './types';
-import {getEffectiveResultName} from './types';
+import {getEffectiveResultName} from './utils';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 
 export function deriveEdgesFromSql(

@@ -19,7 +19,7 @@ import {SettingsIcon} from 'lucide-react';
 
 import {TextConfig} from './TextConfig';
 import {DropdownConfig} from './DropdownConfig';
-import {initializeInput} from '../../../utils';
+import {initializeInput} from '../helpers';
 import {InputTypes, InputUnion} from '../../../types';
 import {SliderConfig} from './SliderConfig';
 

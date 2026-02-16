@@ -5,7 +5,7 @@ import {Input} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {useCellsStore} from '../hooks';
 import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
-import {isValidSqlIdentifier, getEffectiveResultName} from '../types';
+import {isValidSqlIdentifier, getEffectiveResultName} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
 import {produce} from 'immer';
 import type * as Monaco from 'monaco-editor';

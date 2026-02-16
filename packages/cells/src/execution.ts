@@ -5,7 +5,7 @@ import type {CellsRootState} from './cellsSlice';
 import {findSheetIdForCell} from './helpers';
 import {findSqlDependencies, renderSqlWithInputs} from './sqlHelpers';
 import type {SqlCellData, SqlCellStatus} from './types';
-import {getEffectiveResultName} from './types';
+import {getEffectiveResultName} from './utils';
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;

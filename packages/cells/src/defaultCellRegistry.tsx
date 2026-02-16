@@ -9,7 +9,7 @@ import type {
   VegaCell,
   InputCell,
 } from './types';
-import {getEffectiveResultName} from './types';
+import {getEffectiveResultName} from './utils';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';

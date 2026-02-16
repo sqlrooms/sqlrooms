@@ -52,28 +52,6 @@ export const SqlCellData = z.object({
 });
 export type SqlCellData = z.infer<typeof SqlCellData>;
 
-/**
- * Validates that a string is a valid SQL identifier.
- * Must start with a letter or underscore, followed by letters, digits, or underscores.
- */
-export function isValidSqlIdentifier(name: string): boolean {
-  return /^[a-zA-Z_][a-zA-Z0-9_]*$/.test(name);
-}
-
-/**
- * Gets the effective result name for a SQL cell.
- * Returns explicit resultName if valid, otherwise auto-generates from title.
- */
-export function getEffectiveResultName(
-  data: SqlCellData,
-  convertToValidName: (name: string) => string,
-): string {
-  if (data.resultName && isValidSqlIdentifier(data.resultName)) {
-    return data.resultName;
-  }
-  return convertToValidName(data.title);
-}
-
 /** Text Cell */
 export const TextCellData = z.object({
   title: z.string().default('Text'),
