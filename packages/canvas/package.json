@@ -38,7 +38,6 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "@sqlrooms/vega": "workspace:*",
     "@xyflow/react": "^12.8.5",
     "immer": "^11.0.1",
     "loro-mirror": "^1.1.2",

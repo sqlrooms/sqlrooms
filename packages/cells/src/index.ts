@@ -1,11 +1,17 @@
-import {SqlCellContent} from './components/SqlCellContent';
-import {SqlCellRunButton} from './components/SqlCellRunButton';
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
+import {SqlCellContent as SqlCellContentComponent} from './components/SqlCellContent';
+import {SqlCellRunButton as SqlCellRunButtonComponent} from './components/SqlCellRunButton';
 
 export {createCellsSlice, type CellsRootState} from './cellsSlice';
+export {initializeInput} from './components/Input/helpers';
 export {InputCellContent} from './components/InputCellContent';
 export {SheetsTabBar} from './components/SheetsTabBar';
-export {SqlCellContent} from './components/SqlCellContent';
-export {SqlCellRunButton} from './components/SqlCellRunButton';
+export {SqlCellContentComponent as SqlCellContent};
+export {SqlCellRunButtonComponent as SqlCellRunButton};
 export {TextCellContent} from './components/TextCellContent';
 export {VegaCellContent} from './components/VegaCellContent';
 export {createDefaultCellRegistry} from './defaultCellRegistry';
@@ -21,6 +27,6 @@ export * from './types';
 export {getEffectiveResultName, isValidSqlIdentifier} from './utils';
 
 export const SqlCell = {
-  RunButton: SqlCellRunButton,
-  Content: SqlCellContent,
+  RunButton: SqlCellRunButtonComponent,
+  Content: SqlCellContentComponent,
 };

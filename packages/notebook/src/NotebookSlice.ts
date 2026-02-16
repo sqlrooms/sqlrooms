@@ -146,10 +146,16 @@ export function createNotebookSlice(props?: {
 
             // Assign a readable unique name using shared utility
             const allCells = Object.values(get().cells.config.data);
-            const usedNames = allCells.map((c) => (c.data as any).title);
+            const usedNames = allCells
+              .map((c) => {
+                const title = (c.data as Record<string, unknown>).title;
+                return typeof title === 'string' ? title : undefined;
+              })
+              .filter((v): v is string => Boolean(v));
             const baseLabel = getCellTypeLabel(cell.type);
             if (baseLabel) {
-              (cell.data as any).title = generateUniqueName(
+              const current = cell.data as Record<string, unknown>;
+              current.title = generateUniqueName(
                 `${baseLabel} 1`,
                 usedNames,
                 ' ',
@@ -159,11 +165,18 @@ export function createNotebookSlice(props?: {
             if (type === 'input') {
               const usedInputNames = allCells
                 .filter((c) => c.type === 'input')
-                .map((c) => (c as any).data.input.varName);
-              (cell as any).data.input.varName = generateUniqueName(
-                (cell as any).data.input.varName,
-                usedInputNames,
-              );
+                .map(
+                  (c) =>
+                    (c.data as {input?: {varName?: string}}).input?.varName ??
+                    '',
+                )
+                .filter((name) => Boolean(name));
+              if (cell.type === 'input') {
+                cell.data.input.varName = generateUniqueName(
+                  cell.data.input.varName,
+                  usedInputNames,
+                );
+              }
             }
 
             await get().cells.addCell(tabId, cell, index);

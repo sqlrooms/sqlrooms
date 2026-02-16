@@ -18,11 +18,17 @@ import {InputCellContent} from './components/InputCellContent';
 import {
   findSqlDependencies,
   findSqlDependenciesFromAst,
+  qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
 import {executeSqlCell} from './execution';
-import {findSheetIdForCell} from './helpers';
+import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {isInputCell} from './types';
+
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
 
 export function createDefaultCellRegistry(): CellRegistry {
   return {
@@ -122,7 +128,7 @@ export function createDefaultCellRegistry(): CellRegistry {
 
         const sheetId = findSheetIdForCell(state, id);
         const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
-        const schemaName = sheet?.title || 'main';
+        const schemaName = sheet ? resolveSheetSchemaName(sheet) : 'main';
 
         const effectiveResultName = getEffectiveResultName(
           cell.data as SqlCellData,
@@ -137,18 +143,42 @@ export function createDefaultCellRegistry(): CellRegistry {
         // Create new view from same SQL, drop old view
         const connector = await state.db.getConnector();
         const sql = (cell.data as SqlCellData).sql;
+        const scopedCellIds =
+          sheet?.cellIds ?? Object.keys(state.cells.config.data);
+        const scopedCells = Object.fromEntries(
+          scopedCellIds
+            .map((cellId) => state.cells.config.data[cellId])
+            .filter(isDefined)
+            .map((candidate) => [candidate.id, candidate]),
+        ) as Record<string, Cell>;
 
         // Gather inputs for SQL rendering
-        const inputs = Object.values(state.cells.config.data)
-          .filter((c) => c.type === 'input')
+        const inputs = Object.values(scopedCells)
+          .filter((c) => isInputCell(c))
           .map((c) => ({
-            varName: (c.data as any).input.varName as string,
-            value: (c.data as any).input.value as string | number,
+            varName: c.data.input.varName,
+            value: c.data.input.value as string | number,
           }));
         const renderedSql = renderSqlWithInputs(sql, inputs);
+        const rewrittenSql = qualifySheetLocalResultNames({
+          sql: renderedSql,
+          sheetSchema: schemaName,
+          sheetCellIds: scopedCellIds,
+          cells: state.cells.config.data,
+          getSqlResultName: (cellId) => {
+            const c = state.cells.config.data[cellId];
+            if (c?.type === 'sql') {
+              return getEffectiveResultName(
+                c.data as SqlCellData,
+                convertToValidColumnOrTableName,
+              );
+            }
+            return undefined;
+          },
+        });
 
         await connector.query(
-          `CREATE OR REPLACE VIEW ${newTableName} AS ${renderedSql}`,
+          `CREATE OR REPLACE VIEW ${newTableName} AS ${rewrittenSql}`,
         );
         await connector.query(`DROP VIEW IF EXISTS ${oldResultView}`);
 

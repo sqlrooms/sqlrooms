@@ -16,30 +16,45 @@ import {useStoreWithCanvas} from './CanvasSlice';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
 
+const RegistryNodeRenderer: React.FC<{
+  id: string;
+  renderCell: (args: {
+    id: string;
+    cell: import('@sqlrooms/cells').Cell;
+    renderContainer: (props: {
+      header?: React.ReactNode;
+      content: React.ReactNode;
+      footer?: React.ReactNode;
+    }) => React.ReactElement;
+  }) => React.ReactElement;
+}> = ({id, renderCell}) => {
+  const cell = useStoreWithCanvas((s) => s.cells.config.data[id]);
+  if (!cell) return null;
+
+  return renderCell({
+    id,
+    cell,
+    renderContainer: ({header, content, footer}) => (
+      <CanvasNodeContainer id={id} headerRight={header}>
+        {content}
+        {footer}
+      </CanvasNodeContainer>
+    ),
+  });
+};
+
 export const Canvas: React.FC = () => {
   const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
-  const cellData = useStoreWithCanvas((s) => s.cells.config.data);
   const nodeTypes = useMemo(() => {
     return Object.fromEntries(
       Object.entries(registry).map(([type, reg]) => [
         type,
-        ({id}: {id: string}) => {
-          const cell = cellData[id];
-          if (!cell) return null;
-          return reg.renderCell({
-            id,
-            cell,
-            renderContainer: ({header, content, footer}) => (
-              <CanvasNodeContainer id={id} headerRight={header}>
-                {content}
-                {footer}
-              </CanvasNodeContainer>
-            ),
-          });
-        },
+        ({id}: {id: string}) => (
+          <RegistryNodeRenderer id={id} renderCell={reg.renderCell} />
+        ),
       ]),
     );
-  }, [registry, cellData]);
+  }, [registry]);
 
   const currentSheetId = useStoreWithCanvas(
     (s) => s.cells.config.currentSheetId,

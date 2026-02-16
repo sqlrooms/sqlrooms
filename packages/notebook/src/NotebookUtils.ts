@@ -1,12 +1,6 @@
 import {useEffect, useMemo, useState} from 'react';
 import {formatTimeRelative} from '@sqlrooms/utils';
-import {
-  InputTypes,
-  InputUnion,
-  NotebookSliceConfig,
-  NotebookTab,
-  NotebookSheet,
-} from './cellSchemas';
+import {NotebookSliceConfig, NotebookTab, NotebookSheet} from './cellSchemas';
 import type {CellsRootState, CellRegistry} from '@sqlrooms/cells';
 
 export const findTab = (
@@ -46,37 +40,6 @@ export const getCellTypeLabel = (type: string, registry?: CellRegistry) => {
     input: 'Input',
   };
   return typeToLabel[type] || type.charAt(0).toUpperCase() + type.slice(1);
-};
-
-export const initializeInput = (
-  type: InputTypes,
-  oldInput: InputUnion,
-): InputUnion => {
-  const name = oldInput.varName;
-  switch (type) {
-    case 'text':
-      return {
-        kind: 'text',
-        varName: name,
-        value: '',
-      };
-    case 'slider':
-      return {
-        kind: 'slider',
-        varName: name,
-        min: 0,
-        max: 100,
-        step: 1,
-        value: 0,
-      };
-    case 'dropdown':
-      return {
-        kind: 'dropdown',
-        varName: name,
-        options: [],
-        value: '',
-      };
-  }
 };
 
 export function useRelativeTimeDisplay(pastDate: number | null): string {

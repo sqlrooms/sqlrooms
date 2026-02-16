@@ -94,6 +94,26 @@ function getSheet(config: CanvasSliceConfig, sheetId: string) {
   return config.sheets[sheetId];
 }
 
+function ensureCanvasSheetMeta(
+  config: CanvasSliceConfig,
+  sheetId: string,
+  viewport: Viewport = {x: 0, y: 0, zoom: 1},
+) {
+  let sheet = config.sheets[sheetId];
+  if (!sheet) {
+    sheet = {
+      id: sheetId,
+      nodes: {},
+      meta: {
+        viewport,
+        nodeOrder: [],
+      },
+    };
+    config.sheets[sheetId] = sheet;
+  }
+  return sheet;
+}
+
 function isSameViewport(a: Viewport, b: Viewport) {
   return (
     Math.abs(a.x - b.x) < VIEWPORT_EPSILON &&
@@ -163,9 +183,12 @@ export function createCanvasSlice(props: {
           const cell = reg.createCell(newId) as Cell;
 
           const existingTitles = Object.values(get().cells.config.data).map(
-            (c) => (c.data as any).title,
+            (c) => {
+              const title = (c.data as Record<string, unknown>).title;
+              return typeof title === 'string' ? title : '';
+            },
           );
-          (cell.data as any).title = generateUniqueName(
+          (cell.data as Record<string, unknown>).title = generateUniqueName(
             `${reg.title} 1`,
             existingTitles,
             ' ',
@@ -182,18 +205,7 @@ export function createCanvasSlice(props: {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
               let sheet = getSheet(draft.canvas.config, sheetId);
-              if (!sheet) {
-                // Initialize metadata for this sheet if it doesn't exist
-                sheet = {
-                  id: sheetId,
-                  nodes: {},
-                  meta: {
-                    viewport: {x: 0, y: 0, zoom: 1},
-                    nodeOrder: [],
-                  },
-                };
-                draft.canvas.config.sheets[sheetId] = sheet;
-              }
+              sheet = ensureCanvasSheetMeta(draft.canvas.config, sheetId);
 
               const parentNode = parentId ? sheet.nodes[parentId] : undefined;
               const position: XYPosition = initialPosition
@@ -224,7 +236,7 @@ export function createCanvasSlice(props: {
         renameNode: async (nodeId: string, newTitle: string) => {
           await get().cells.updateCell(nodeId, (c) =>
             produce(c, (draft) => {
-              (draft.data as any).title = newTitle;
+              (draft.data as Record<string, unknown>).title = newTitle;
             }),
           );
         },
@@ -252,19 +264,7 @@ export function createCanvasSlice(props: {
             produce(state, (draft: CanvasRootState) => {
               const sheetId = draft.cells.config.currentSheetId;
               if (!sheetId) return;
-              let sheet = getSheet(draft.canvas.config, sheetId);
-              if (!sheet) {
-                // Initialize metadata for this sheet if it doesn't exist
-                sheet = {
-                  id: sheetId,
-                  nodes: {},
-                  meta: {
-                    viewport: {x: 0, y: 0, zoom: 1},
-                    nodeOrder: [],
-                  },
-                };
-                draft.canvas.config.sheets[sheetId] = sheet;
-              }
+              const sheet = ensureCanvasSheetMeta(draft.canvas.config, sheetId);
 
               // Ensure all cells from CellsSlice have a node entry in CanvasSlice
               const cellsSheet = draft.cells.config.sheets[sheetId];
@@ -330,20 +330,12 @@ export function createCanvasSlice(props: {
           set((state: CanvasRootState) =>
             produce(state, (draft: CanvasRootState) => {
               let sheet = getSheet(draft.canvas.config, sheetId);
-              if (!sheet) {
-                // Initialize metadata if needed
-                sheet = {
-                  id: sheetId,
-                  nodes: {},
-                  meta: {
-                    viewport,
-                    nodeOrder: [],
-                  },
-                };
-                draft.canvas.config.sheets[sheetId] = sheet;
-              } else {
-                sheet.meta.viewport = viewport;
-              }
+              sheet = ensureCanvasSheetMeta(
+                draft.canvas.config,
+                sheetId,
+                viewport,
+              );
+              sheet.meta.viewport = viewport;
             }),
           );
         },

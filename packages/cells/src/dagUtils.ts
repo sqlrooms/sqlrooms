@@ -5,6 +5,10 @@ export type DependencyGraph = {
   dependents: Record<string, string[]>;
 };
 
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
+
 export function buildDependencyGraph(
   sheetId: string,
   state: CellsRootState,
@@ -17,6 +21,13 @@ export function buildDependencyGraph(
 
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
+  const sheetCellIds = new Set(sheet.cellIds);
+  const scopedCells = Object.fromEntries(
+    sheet.cellIds
+      .map((id) => state.cells.config.data[id])
+      .filter(isDefined)
+      .map((cell) => [cell.id, cell]),
+  ) as Record<string, Cell>;
 
   for (const cellId of sheet.cellIds) {
     const cell = state.cells.config.data[cellId];
@@ -26,11 +37,11 @@ export function buildDependencyGraph(
       new Set(
         registry[cell.type]?.findDependencies({
           cell,
-          cells: state.cells.config.data as Record<string, Cell>,
+          cells: scopedCells,
           sheetId,
         }) ?? [],
       ),
-    );
+    ).filter((depId) => sheetCellIds.has(depId));
     dependencies[cellId] = deps;
     for (const dep of deps) {
       const list = dependents[dep] || (dependents[dep] = []);
@@ -118,6 +129,13 @@ export async function buildDependencyGraphAsync(
 
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
+  const sheetCellIds = new Set(sheet.cellIds);
+  const scopedCells = Object.fromEntries(
+    sheet.cellIds
+      .map((id) => state.cells.config.data[id])
+      .filter(isDefined)
+      .map((cell) => [cell.id, cell]),
+  ) as Record<string, Cell>;
 
   // Process all cells in parallel
   const cellDeps = await Promise.all(
@@ -132,19 +150,24 @@ export async function buildDependencyGraphAsync(
       if (registryItem.findDependenciesAsync && sqlSelectToJson) {
         deps = await registryItem.findDependenciesAsync({
           cell,
-          cells: state.cells.config.data as Record<string, Cell>,
+          cells: scopedCells,
           sheetId,
           sqlSelectToJson,
         });
       } else {
         deps = registryItem.findDependencies({
           cell,
-          cells: state.cells.config.data as Record<string, Cell>,
+          cells: scopedCells,
           sheetId,
         });
       }
 
-      return {cellId, deps: Array.from(new Set(deps))};
+      return {
+        cellId,
+        deps: Array.from(new Set(deps)).filter((depId) =>
+          sheetCellIds.has(depId),
+        ),
+      };
     }),
   );
 

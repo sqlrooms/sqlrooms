@@ -2,12 +2,26 @@ import {escapeId, makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import type {CellsRootState} from './cellsSlice';
-import {findSheetIdForCell} from './helpers';
-import {findSqlDependencies, renderSqlWithInputs} from './sqlHelpers';
-import type {CellResultData, SqlCellData, SqlCellStatus} from './types';
+import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
+import {
+  findSqlDependencies,
+  qualifySheetLocalResultNames,
+  renderSqlWithInputs,
+} from './sqlHelpers';
+import {
+  isInputCell,
+  isSqlCell,
+  type CellResultData,
+  type SqlCellData,
+  type SqlCellStatus,
+} from './types';
 import {getEffectiveResultName} from './utils';
 
 const DEFAULT_PAGE_SIZE = 10;
+
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;
@@ -27,17 +41,40 @@ export async function executeSqlCell(
   if (!cell || cell.type !== 'sql') return;
 
   const {schemaName, cascade = true, signal, setCellResult} = options;
-  const sqlRaw = (cell.data as any).sql || '';
+  const sqlRaw = cell.data.sql || '';
+  const sheetId = findSheetIdForCell(state, cellId);
+  const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
+  const finalSchemaName = sheet ? resolveSheetSchemaName(sheet) : schemaName;
+  const sheetCellIds = sheet?.cellIds ?? [];
 
   // 1. Gather inputs for SQL rendering
-  const inputs = Object.values(state.cells.config.data)
-    .filter((c) => c.type === 'input')
+  const cellsInScope = (
+    sheetCellIds.length ? sheetCellIds : Object.keys(state.cells.config.data)
+  )
+    .map((id) => state.cells.config.data[id])
+    .filter(isDefined);
+  const inputs = cellsInScope
+    .filter((c) => isInputCell(c))
     .map((c) => ({
-      varName: (c.data as any).input.varName as string,
-      value: (c.data as any).input.value as string | number,
+      varName: c.data.input.varName,
+      value: c.data.input.value,
     }));
 
-  const sql = renderSqlWithInputs(sqlRaw, inputs);
+  const renderedSql = renderSqlWithInputs(sqlRaw, inputs);
+  const sql = qualifySheetLocalResultNames({
+    sql: renderedSql,
+    sheetSchema: finalSchemaName,
+    sheetCellIds,
+    cells: state.cells.config.data,
+    getSqlResultName: (id) => {
+      const target = state.cells.config.data[id];
+      if (!target || target.type !== 'sql') return undefined;
+      return getEffectiveResultName(
+        target.data as SqlCellData,
+        convertToValidColumnOrTableName,
+      );
+    },
+  });
 
   // 2. Update status to running
   set((s) =>
@@ -64,10 +101,6 @@ export async function executeSqlCell(
     if (signal?.aborted) throw new Error('Query cancelled');
 
     const connector = await db.getConnector();
-    const sheetId = findSheetIdForCell(state, cellId);
-    const sheet = sheetId ? state.cells.config.sheets[sheetId] : undefined;
-    const finalSchemaName = sheet?.title || schemaName;
-
     await connector.query(
       `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
     );
@@ -93,10 +126,10 @@ export async function executeSqlCell(
     // Find dependencies for referenced tables
     const referenced = findSqlDependencies({
       targetCell: cell,
-      cells: state.cells.config.data,
-      getSqlText: (c) => (c.type === 'sql' ? (c.data as any).sql : undefined),
+      cells: Object.fromEntries(cellsInScope.map((c) => [c.id, c])),
+      getSqlText: (c) => (isSqlCell(c) ? c.data.sql : undefined),
       getInputVarName: (c) =>
-        c.type === 'input' ? (c.data as any).input.varName : undefined,
+        isInputCell(c) ? c.data.input.varName : undefined,
       getSqlResultName: (id) => {
         const s = getState().cells.status[id];
         return s?.type === 'sql' ? s.resultName : undefined;
@@ -137,9 +170,9 @@ export async function executeSqlCell(
 
     // 5. Cascade if needed
     if (cascade) {
-      const currentSheetId = state.cells.config.currentSheetId;
-      if (currentSheetId) {
-        await state.cells.runDownstreamCascade(currentSheetId, cellId);
+      const ownerSheetId = findSheetIdForCell(getState(), cellId);
+      if (ownerSheetId) {
+        await state.cells.runDownstreamCascade(ownerSheetId, cellId);
       }
     }
   } catch (e) {

@@ -1,11 +1,11 @@
 import {z} from 'zod';
 import {
   CellType,
+  InputCellData,
   InputTypes,
   SqlCellData,
   TextCellData,
   VegaCellData,
-  InputCellData,
 } from '@sqlrooms/cells';
 
 export {InputTypes};

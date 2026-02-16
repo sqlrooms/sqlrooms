@@ -11,16 +11,17 @@ import {
 import {Trash2Icon} from 'lucide-react';
 import {FC, useState} from 'react';
 
-import {NotebookCell} from '../cellSchemas';
+import type {NotebookCell as NotebookCellType} from '../cellSchemas';
 import {useStoreWithNotebook} from '../useStoreWithNotebook';
 
 type Props = {
-  cell: NotebookCell;
+  cell: NotebookCellType;
 };
 
 export const DeleteCellDialog: FC<Props> = ({cell}) => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const onRemove = useStoreWithNotebook((s) => s.notebook.removeCell);
+  const title = (cell.data as Record<string, unknown>).title;
 
   return (
     <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
@@ -37,7 +38,8 @@ export const DeleteCellDialog: FC<Props> = ({cell}) => {
         <DialogHeader>
           <DialogTitle>Confirm Delete</DialogTitle>
           <DialogDescription>
-            Are you sure you want to delete this {(cell.data as any).title}?
+            Are you sure you want to delete this{' '}
+            {typeof title === 'string' ? title : 'cell'}?
             <br /> This operation can not be undone.
           </DialogDescription>
         </DialogHeader>

@@ -79,23 +79,50 @@ export type InputCellData = z.infer<typeof InputCellData>;
 /** Unified Cell Data */
 export const CellData = z.object({
   type: CellType,
-  data: z.record(z.string(), z.unknown()),
+  data: z.record(z.string(), z.any()),
 });
 export type CellData = {
   type: CellType;
   data: Record<string, any>;
 };
 
-export type SqlCell = {id: string; type: 'sql'; data: SqlCellData};
-export type TextCell = {id: string; type: 'text'; data: TextCellData};
-export type VegaCell = {id: string; type: 'vega'; data: VegaCellData};
-export type InputCell = {id: string; type: 'input'; data: InputCellData};
+export const SqlCell = z.object({
+  id: z.string(),
+  type: z.literal('sql'),
+  data: SqlCellData,
+});
+export type SqlCell = z.infer<typeof SqlCell>;
+
+export const TextCell = z.object({
+  id: z.string(),
+  type: z.literal('text'),
+  data: TextCellData,
+});
+export type TextCell = z.infer<typeof TextCell>;
+
+export const VegaCell = z.object({
+  id: z.string(),
+  type: z.literal('vega'),
+  data: VegaCellData,
+});
+export type VegaCell = z.infer<typeof VegaCell>;
+
+export const InputCell = z.object({
+  id: z.string(),
+  type: z.literal('input'),
+  data: InputCellData,
+});
+export type InputCell = z.infer<typeof InputCell>;
+export const SqlCellSchema = SqlCell;
+export const TextCellSchema = TextCell;
+export const VegaCellSchema = VegaCell;
+export const InputCellSchema = InputCell;
 
 /** Canonical Cell */
 export const Cell = z.object({
   id: z.string(),
   type: CellType,
-  data: z.record(z.string(), z.unknown()),
+  data: z.record(z.string(), z.any()),
 });
 export type Cell = {
   id: string;
@@ -172,6 +199,7 @@ export const Sheet = z.object({
   id: z.string(),
   type: SheetType,
   title: z.string(),
+  schemaName: z.string().optional(),
   cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
   edges: z.array(Edge).default([]), // Dependencies
 });
@@ -317,3 +345,19 @@ export type CellsSliceState = {
 export type CellsRootState = BaseRoomStoreState &
   DuckDbSliceState &
   CellsSliceState;
+
+export function isSqlCell(cell: Cell): cell is SqlCell {
+  return cell.type === 'sql';
+}
+
+export function isTextCell(cell: Cell): cell is TextCell {
+  return cell.type === 'text';
+}
+
+export function isVegaCell(cell: Cell): cell is VegaCell {
+  return cell.type === 'vega';
+}
+
+export function isInputCell(cell: Cell): cell is InputCell {
+  return cell.type === 'input';
+}

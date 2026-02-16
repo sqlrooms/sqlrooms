@@ -2,9 +2,11 @@ import {
   Cell,
   CellRegistry,
   CellsRootState,
+  Sheet,
   SheetType,
   SqlSelectToJsonFn,
 } from './types';
+import {getSheetSchemaName} from './utils';
 
 /**
  * Helper to resolve dependencies using async method if available, falling back to sync.
@@ -54,4 +56,22 @@ export function getSheetsByType(
     }
   }
   return sheets;
+}
+
+/**
+ * Accessor used by cells internals to avoid repeating unsafe casts.
+ */
+export function getSqlSelectToJson(
+  state: CellsRootState,
+): SqlSelectToJsonFn | undefined {
+  return state.db?.sqlSelectToJson;
+}
+
+/**
+ * Resolves the schema name for a sheet, falling back to a stable id-based name.
+ */
+export function resolveSheetSchemaName(
+  sheet: Pick<Sheet, 'id' | 'schemaName'>,
+) {
+  return sheet.schemaName || getSheetSchemaName(sheet.id);
 }

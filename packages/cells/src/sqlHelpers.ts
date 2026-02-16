@@ -7,6 +7,7 @@ import type {
   SqlRunCallbacks,
   SqlRunResult,
 } from './types';
+import {isInputCell, isSqlCell} from './types';
 import {getEffectiveResultName} from './utils';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 
@@ -23,10 +24,10 @@ export function deriveEdgesFromSql(
     cells: allCells,
     getSqlText: () => sql,
     getInputVarName: (cell) =>
-      cell.type === 'input' ? cell.data.input.varName : undefined,
+      isInputCell(cell) ? cell.data.input.varName : undefined,
     getSqlResultName: (cid) => {
       const cell = allCells[cid];
-      if (cell?.type === 'sql') {
+      if (cell && isSqlCell(cell)) {
         return getEffectiveResultName(
           cell.data as SqlCellData,
           convertToValidColumnOrTableName,
@@ -98,16 +99,33 @@ export function findSqlDependencies<
       }
     } else if (sqlTypes.includes(other.type)) {
       const resultName = getSqlResultName(other.id);
-      const title = (other as any).data?.title;
-      // Match on title (case-insensitive)
-      const titleMatch = title && sqlLower.includes(title.toLowerCase());
+      const title =
+        typeof (other as {data?: {title?: unknown}}).data?.title === 'string'
+          ? ((other as {data?: {title?: string}}).data?.title as string)
+          : undefined;
+      // Match on title (case-insensitive) with identifier boundaries
+      const titleMatch =
+        title && containsIdentifier(sqlLower, title.toLowerCase());
       // Match on effective result name (case-insensitive)
       const resultMatch =
-        resultName && sqlLower.includes(resultName.toLowerCase());
+        resultName && containsIdentifier(sqlLower, resultName.toLowerCase());
       if (titleMatch || resultMatch) deps.push(other.id);
     }
   }
   return Array.from(new Set(deps));
+}
+
+function escapeRegExp(input: string): string {
+  return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function containsIdentifier(sqlLower: string, candidateLower: string): boolean {
+  if (!candidateLower.trim()) return false;
+  const pattern = new RegExp(
+    `(?<![a-zA-Z0-9_.])${escapeRegExp(candidateLower)}(?![a-zA-Z0-9_])`,
+    'i',
+  );
+  return pattern.test(sqlLower);
 }
 
 export async function runSqlWithCallbacks(
@@ -207,4 +225,45 @@ export async function findSqlDependenciesFromAst(opts: {
   } catch {
     return [];
   }
+}
+
+/**
+ * Rewrites unqualified references to known sheet-local result names as
+ * schema-qualified references. This keeps SQL ergonomic without mutable
+ * connector-level current schema state.
+ */
+export function qualifySheetLocalResultNames(opts: {
+  sql: string;
+  sheetSchema: string;
+  sheetCellIds: string[];
+  cells: Record<string, Cell>;
+  getSqlResultName: (cellId: string) => string | undefined;
+}): string {
+  const {sql, sheetSchema, sheetCellIds, cells, getSqlResultName} = opts;
+  let rewritten = sql;
+
+  const names = Array.from(
+    new Set(
+      sheetCellIds
+        .map((cellId) => {
+          const cell = cells[cellId];
+          if (!cell || cell.type !== 'sql') return undefined;
+          const resultName = getSqlResultName(cellId);
+          if (!resultName || resultName.includes('.')) return undefined;
+          return resultName;
+        })
+        .filter((v): v is string => Boolean(v)),
+    ),
+  ).sort((a, b) => b.length - a.length);
+
+  for (const name of names) {
+    const qualified = `${sheetSchema}.${name}`;
+    const pattern = new RegExp(
+      `(?<![a-zA-Z0-9_.])${escapeRegExp(name)}(?![a-zA-Z0-9_])`,
+      'g',
+    );
+    rewritten = rewritten.replace(pattern, qualified);
+  }
+
+  return rewritten;
 }

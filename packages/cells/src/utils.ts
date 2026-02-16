@@ -31,3 +31,11 @@ export function getEffectiveResultName(
 
   return normalizedTitle;
 }
+
+/**
+ * Generates a stable SQL schema name for a sheet id.
+ */
+export function getSheetSchemaName(sheetId: string): string {
+  const normalized = sheetId.replace(/[^a-zA-Z0-9_]/g, '_').toLowerCase();
+  return `sheet_${normalized}`;
+}

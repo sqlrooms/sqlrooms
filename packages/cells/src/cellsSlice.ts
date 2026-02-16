@@ -1,18 +1,19 @@
 import {createId} from '@paralleldrive/cuid2';
-import {createSlice} from '@sqlrooms/room-store';
 import {makePagedQuery} from '@sqlrooms/data-table';
 import {sanitizeQuery} from '@sqlrooms/duckdb';
-import {produce} from 'immer';
+import {createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
+import {produce} from 'immer';
 import {
   buildDependencyGraph,
   buildDependencyGraphAsync,
   collectReachable,
   topologicalOrder,
 } from './dagUtils';
+import {createDefaultCellRegistry} from './defaultCellRegistry';
+import {getSqlSelectToJson, resolveDependencies} from './helpers';
 import type {
   Cell,
-  CellRegistry,
   CellResultData,
   CellsRootState,
   CellsSliceConfig,
@@ -20,15 +21,18 @@ import type {
   CellsSliceState,
   Edge,
   SheetType,
-  SqlSelectToJsonFn,
 } from './types';
-import {createDefaultCellRegistry} from './defaultCellRegistry';
-import {resolveDependencies} from './helpers';
+import {isInputCell, isSqlCell} from './types';
+import {getSheetSchemaName} from './utils';
 
 export type {CellsRootState} from './types';
 
 /** Module-level cache for Arrow result data (outside Immer to avoid freezing) */
 const cellResultCache = new Map<string, CellResultData>();
+
+function isDefined<T>(value: T | undefined): value is T {
+  return value !== undefined;
+}
 
 function createDefaultCellsConfig(
   config: Partial<CellsSliceConfig> | undefined,
@@ -38,14 +42,15 @@ function createDefaultCellsConfig(
     data: {},
     sheets: {
       [sheetId]: {
-        id: createId(),
+        id: sheetId,
         type: 'notebook',
         title: 'Sheet',
+        schemaName: getSheetSchemaName(sheetId),
         cellIds: [],
         edges: [],
       },
     },
-    sheetOrder: [],
+    sheetOrder: [sheetId],
     currentSheetId: sheetId,
     ...config,
   };
@@ -72,12 +77,18 @@ export function createCellsSlice(props?: CellsSliceOptions) {
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
-            | SqlSelectToJsonFn
-            | undefined;
+          const sqlSelectToJson = getSqlSelectToJson(get());
+          const targetSheet = get().cells.config.sheets[sheetId];
+          const scopedCells = Object.fromEntries(
+            (targetSheet?.cellIds ?? [])
+              .map((id) => get().cells.config.data[id])
+              .filter(isDefined)
+              .map((candidate) => [candidate.id, candidate]),
+          ) as Record<string, Cell>;
+          scopedCells[cell.id] = cell;
           const deps = await resolveDependencies(
             cell,
-            get().cells.config.data,
+            scopedCells,
             sheetId,
             cellRegistry,
             sqlSelectToJson,
@@ -85,7 +96,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
 
           set((state) =>
             produce(state, (draft) => {
-              draft.cells.config.data[cell.id] = cell as any;
+              draft.cells.config.data[cell.id] = cell;
               if (cell.type === 'sql') {
                 draft.cells.status[cell.id] = {
                   type: 'sql',
@@ -96,17 +107,33 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 draft.cells.status[cell.id] = {type: 'other'};
               }
 
+              // Single-owner invariant: a cell can belong to one sheet only.
+              for (const [existingSheetId, existingSheet] of Object.entries(
+                draft.cells.config.sheets,
+              )) {
+                if (existingSheetId === sheetId) continue;
+                existingSheet.cellIds = existingSheet.cellIds.filter(
+                  (cid) => cid !== cell.id,
+                );
+                existingSheet.edges = existingSheet.edges.filter(
+                  (e) => e.source !== cell.id && e.target !== cell.id,
+                );
+              }
+
               let sheet = draft.cells.config.sheets[sheetId];
               if (!sheet) {
                 sheet = {
                   id: sheetId,
                   type: 'notebook',
                   title: 'Sheet',
+                  schemaName: getSheetSchemaName(sheetId),
                   cellIds: [],
                   edges: [],
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
-                draft.cells.config.sheetOrder.push(sheetId);
+                if (!draft.cells.config.sheetOrder.includes(sheetId)) {
+                  draft.cells.config.sheetOrder.push(sheetId);
+                }
                 if (!draft.cells.config.currentSheetId) {
                   draft.cells.config.currentSheetId = sheetId;
                 }
@@ -114,10 +141,13 @@ export function createCellsSlice(props?: CellsSliceOptions) {
 
               const newIndex =
                 index !== undefined ? index : sheet.cellIds.length;
+              sheet.cellIds = sheet.cellIds.filter((cid) => cid !== cell.id);
               sheet.cellIds.splice(newIndex, 0, cell.id);
 
               // Add edges from pre-computed dependencies
+              const localCellIds = new Set(sheet.cellIds);
               for (const depId of deps) {
+                if (!localCellIds.has(depId) || depId === cell.id) continue;
                 sheet.edges.push({
                   id: `${depId}-${cell.id}`,
                   source: depId,
@@ -160,13 +190,27 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         ) => {
           const cell = get().cells.config.data[id];
           if (!cell) return;
+          const ownerSheetId = Object.entries(get().cells.config.sheets).find(
+            ([, sheet]) => sheet.cellIds.includes(id),
+          )?.[0];
+          const scopedCells = Object.fromEntries(
+            (
+              (ownerSheetId &&
+                get().cells.config.sheets[ownerSheetId]?.cellIds) ||
+              []
+            )
+              .map((cellId) => get().cells.config.data[cellId])
+              .filter(isDefined)
+              .map((candidate) => [candidate.id, candidate]),
+          ) as Record<string, Cell>;
 
           const updatedCell = updater(cell);
+          scopedCells[id] = updatedCell;
 
           // Check if resultName changed for SQL cells with successful execution
           const resultNameChanged =
-            cell.type === 'sql' &&
-            updatedCell.type === 'sql' &&
+            isSqlCell(cell) &&
+            isSqlCell(updatedCell) &&
             cell.data.resultName !== updatedCell.data.resultName;
 
           const existingStatus = get().cells.status[id];
@@ -176,43 +220,53 @@ export function createCellsSlice(props?: CellsSliceOptions) {
             existingStatus.status === 'success' &&
             existingStatus.resultView;
 
+          const semanticInputChanged =
+            isInputCell(cell) &&
+            isInputCell(updatedCell) &&
+            (cell.data.input.varName !== updatedCell.data.input.varName ||
+              cell.data.input.value !== updatedCell.data.input.value);
+          const semanticSqlChanged =
+            isSqlCell(cell) &&
+            isSqlCell(updatedCell) &&
+            cell.data.sql !== updatedCell.data.sql;
+
           // Apply cell data to the store immediately so that other
           // actions (e.g. runCell triggered via Cmd+Enter) always see
           // the latest value. Edge/dependency updates follow
           // asynchronously below.
           set((state) =>
             produce(state, (draft) => {
-              draft.cells.config.data[id] = updatedCell as any;
+              draft.cells.config.data[id] = updatedCell;
             }),
           );
 
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
-            | SqlSelectToJsonFn
-            | undefined;
+          const sqlSelectToJson = getSqlSelectToJson(get());
           const newDeps = await resolveDependencies(
             updatedCell,
-            get().cells.config.data,
-            '', // sheetId not needed for dependency derivation
+            scopedCells,
+            ownerSheetId || '',
             cellRegistry,
             sqlSelectToJson,
           );
 
           set((state) =>
             produce(state, (draft) => {
-              // Update edges in all sheets this cell belongs to
-              for (const sheet of Object.values(draft.cells.config.sheets)) {
-                if (sheet.cellIds.includes(id)) {
-                  // Remove old edges for this target
-                  sheet.edges = sheet.edges.filter((e) => e.target !== id);
-                  // Add new ones
-                  for (const depId of newDeps) {
-                    sheet.edges.push({
-                      id: `${depId}-${id}`,
-                      source: depId,
-                      target: id,
-                    });
-                  }
+              const ownerSheet = Object.values(draft.cells.config.sheets).find(
+                (sheet) => sheet.cellIds.includes(id),
+              );
+              if (ownerSheet) {
+                const localCellIds = new Set(ownerSheet.cellIds);
+                ownerSheet.edges = ownerSheet.edges.filter(
+                  (e) => e.target !== id,
+                );
+                for (const depId of newDeps) {
+                  if (!localCellIds.has(depId) || depId === id) continue;
+                  ownerSheet.edges.push({
+                    id: `${depId}-${id}`,
+                    source: depId,
+                    target: id,
+                  });
                 }
               }
             }),
@@ -232,14 +286,15 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           }
 
           // After update, trigger cascade only if explicitly requested
-          // or if resultName changed (normal edits like typing SQL should not cascade)
-          const shouldCascade = opts?.cascade || resultNameChanged;
+          // or if semantic execution inputs changed.
+          const shouldCascade =
+            opts?.cascade ||
+            resultNameChanged ||
+            semanticSqlChanged ||
+            semanticInputChanged;
           if (shouldCascade) {
-            for (const sheetId of get().cells.config.sheetOrder) {
-              const sheet = get().cells.config.sheets[sheetId];
-              if (sheet?.cellIds.includes(id)) {
-                void get().cells.runDownstreamCascade(sheetId, id);
-              }
+            if (ownerSheetId) {
+              void get().cells.runDownstreamCascade(ownerSheetId, id);
             }
           }
         },
@@ -262,6 +317,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 id,
                 type,
                 title: title || defaultTitle,
+                schemaName: getSheetSchemaName(id),
                 cellIds: [],
                 edges: [],
               };
@@ -273,8 +329,37 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         },
 
         removeSheet: (sheetId: string) => {
+          const sheet = get().cells.config.sheets[sheetId];
+          if (!sheet) return;
+          const ownedCellIds = [...sheet.cellIds];
           set((state) =>
             produce(state, (draft) => {
+              for (const cellId of ownedCellIds) {
+                cellResultCache.delete(cellId);
+                delete draft.cells.config.data[cellId];
+                delete draft.cells.status[cellId];
+                delete draft.cells.resultVersion[cellId];
+                delete draft.cells.pageVersion[cellId];
+                const controller = draft.cells.activeAbortControllers[cellId];
+                if (controller) {
+                  controller.abort();
+                }
+                delete draft.cells.activeAbortControllers[cellId];
+              }
+
+              for (const existingSheet of Object.values(
+                draft.cells.config.sheets,
+              )) {
+                existingSheet.cellIds = existingSheet.cellIds.filter(
+                  (cid) => !ownedCellIds.includes(cid),
+                );
+                existingSheet.edges = existingSheet.edges.filter(
+                  (e) =>
+                    !ownedCellIds.includes(e.source) &&
+                    !ownedCellIds.includes(e.target),
+                );
+              }
+
               delete draft.cells.config.sheets[sheetId];
               draft.cells.config.sheetOrder =
                 draft.cells.config.sheetOrder.filter((id) => id !== sheetId);
@@ -348,14 +433,23 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                   id: sheetId,
                   type: 'notebook',
                   title: 'Sheet',
+                  schemaName: getSheetSchemaName(sheetId),
                   cellIds: [],
                   edges: [],
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
-                draft.cells.config.sheetOrder.push(sheetId);
+                if (!draft.cells.config.sheetOrder.includes(sheetId)) {
+                  draft.cells.config.sheetOrder.push(sheetId);
+                }
                 if (!draft.cells.config.currentSheetId) {
                   draft.cells.config.currentSheetId = sheetId;
                 }
+              }
+              if (
+                !sheet.cellIds.includes(edge.source) ||
+                !sheet.cellIds.includes(edge.target)
+              ) {
+                return;
               }
               const id = `${edge.source}-${edge.target}`;
               if (!sheet.edges.find((e) => e.id === id)) {
@@ -382,12 +476,16 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           if (!cell || !sheet) return;
 
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
-            | SqlSelectToJsonFn
-            | undefined;
+          const sqlSelectToJson = getSqlSelectToJson(get());
+          const scopedCells = Object.fromEntries(
+            sheet.cellIds
+              .map((id) => get().cells.config.data[id])
+              .filter(isDefined)
+              .map((candidate) => [candidate.id, candidate]),
+          ) as Record<string, Cell>;
           const deps = await resolveDependencies(
             cell,
-            get().cells.config.data,
+            scopedCells,
             sheetId,
             cellRegistry,
             sqlSelectToJson,
@@ -400,7 +498,9 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 draftSheet.edges = draftSheet.edges.filter(
                   (e) => e.target !== cellId,
                 );
+                const localCellIds = new Set(draftSheet.cellIds);
                 for (const depId of deps) {
+                  if (!localCellIds.has(depId) || depId === cellId) continue;
                   draftSheet.edges.push({
                     id: `${depId}-${cellId}`,
                     source: depId,
@@ -542,9 +642,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         },
         // Async cascade execution using AST-based dependency resolution
         runAllCellsCascade: async (sheetId: string) => {
-          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
-            | SqlSelectToJsonFn
-            | undefined;
+          const sqlSelectToJson = getSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),
@@ -559,9 +657,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           }
         },
         runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
-          const sqlSelectToJson = (get() as any).db?.sqlSelectToJson as
-            | SqlSelectToJsonFn
-            | undefined;
+          const sqlSelectToJson = getSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),

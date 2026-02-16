@@ -1,3 +1,8 @@
+/**
+ * {@include ../README.md}
+ * @packageDocumentation
+ */
+
 export {
   createDefaultNotebookConfig,
   createNotebookSlice,
