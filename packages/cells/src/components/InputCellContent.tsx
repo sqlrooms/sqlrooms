@@ -82,12 +82,16 @@ export const InputCellContent: React.FC<InputCellContentProps> = ({
 
   const updateInput = useCallback(
     (patch: Partial<InputUnion>) => {
-      updateCell(id, (c: Cell) =>
-        produce(c, (draft) => {
-          if (draft.type === 'input') {
-            draft.data.input = {...draft.data.input, ...patch} as any;
-          }
-        }),
+      const isValueChange = 'value' in patch;
+      updateCell(
+        id,
+        (c: Cell) =>
+          produce(c, (draft) => {
+            if (draft.type === 'input') {
+              draft.data.input = {...draft.data.input, ...patch} as any;
+            }
+          }),
+        isValueChange ? {cascade: true} : undefined,
       );
     },
     [id, updateCell],

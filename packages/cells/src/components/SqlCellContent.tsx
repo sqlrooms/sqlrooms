@@ -1,5 +1,10 @@
 import React, {useCallback, useEffect, useRef, useState} from 'react';
-import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
+import {
+  DataTablePaginated,
+  QueryDataTableActionsMenu,
+  useArrowDataTable,
+} from '@sqlrooms/data-table';
+import type {PaginationState, SortingState} from '@tanstack/react-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Input} from '@sqlrooms/ui';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
@@ -27,6 +32,12 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const runCell = useCellsStore((s) => s.cells.runCell);
   const cancelCell = useCellsStore((s) => s.cells.cancelCell);
   const cellStatus = useCellsStore((s) => s.cells.status[id]);
+  const resultVersion = useCellsStore((s) => s.cells.resultVersion?.[id] ?? 0);
+  const getCellResult = useCellsStore((s) => s.cells.getCellResult);
+  const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
+
+  const cellResult = getCellResult(id);
+  const arrowTableData = useArrowDataTable(cellResult?.arrowTable);
 
   const handleSqlChange = useCallback(
     (v: string) => {
@@ -118,6 +129,36 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
 
   const resultName = status?.resultName;
 
+  // Pagination and sorting state for the result table
+  const [sorting, setSorting] = useState<SortingState>([]);
+  const [pagination, setPagination] = useState<PaginationState>({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+
+  // Fetch new page when pagination or sorting changes (not on initial render
+  // since executeSqlCell already fetches the first page)
+  const isFirstRender = useRef(true);
+  useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
+    }
+    if (resultName) {
+      fetchCellResultPage(id, pagination, sorting);
+    }
+  }, [pagination, sorting, id, resultName, fetchCellResultPage]);
+
+  // Reset pagination when a new result arrives (new run)
+  const prevResultVersion = useRef(resultVersion);
+  useEffect(() => {
+    if (resultVersion !== prevResultVersion.current) {
+      prevResultVersion.current = resultVersion;
+      setPagination((prev) => ({...prev, pageIndex: 0}));
+      setSorting([]);
+    }
+  }, [resultVersion]);
+
   const handleRunRef = useRef(handleRun);
   useEffect(() => {
     handleRunRef.current = handleRun;
@@ -172,20 +213,24 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
             {status.message}
           </span>
         </div>
-      ) : resultName ? (
+      ) : resultName && arrowTableData ? (
         <div className="relative min-h-[200px] overflow-hidden">
-          <QueryDataTable
+          <DataTablePaginated
             className="absolute inset-0 h-full w-full"
-            query={`SELECT * FROM ${resultName}`}
-            lastRunTime={status?.lastRunTime}
             fontSize="text-xs"
-            pageSize={10}
-            isLoading={status?.state === 'running'}
-            renderActions={() => (
+            data={arrowTableData.data}
+            columns={arrowTableData.columns}
+            numRows={cellResult?.totalRows}
+            pagination={pagination}
+            onPaginationChange={setPagination}
+            sorting={sorting}
+            onSortingChange={setSorting}
+            isFetching={status?.state === 'running'}
+            footerActions={
               <QueryDataTableActionsMenu
                 query={`SELECT * FROM ${resultName}`}
               />
-            )}
+            }
           />
         </div>
       ) : null}

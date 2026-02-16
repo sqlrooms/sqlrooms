@@ -1,3 +1,4 @@
+import type * as arrow from 'apache-arrow';
 import type {DuckDbSliceState} from '@sqlrooms/duckdb';
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
 import type React from 'react';
@@ -242,6 +243,12 @@ export type CellsSliceOptions = {
   supportedSheetTypes?: SheetType[];
 };
 
+/** Data stored for a cell's query result */
+export type CellResultData = {
+  arrowTable: arrow.Table;
+  totalRows: number;
+};
+
 export type CellsSliceState = {
   cells: {
     config: CellsSliceConfig;
@@ -249,11 +256,16 @@ export type CellsSliceState = {
     activeAbortControllers: Record<string, AbortController>;
     cellRegistry: CellRegistry;
     supportedSheetTypes: SheetType[];
+    resultVersion: Record<string, number>;
 
     // Cell CRUD
     addCell: (sheetId: string, cell: Cell, index?: number) => Promise<void>;
     removeCell: (id: string) => void;
-    updateCell: (id: string, updater: (cell: Cell) => Cell) => Promise<void>;
+    updateCell: (
+      id: string,
+      updater: (cell: Cell) => Cell,
+      opts?: {cascade?: boolean},
+    ) => Promise<void>;
 
     // Sheet CRUD
     addSheet: (title?: string, type?: SheetType) => string;
@@ -276,6 +288,16 @@ export type CellsSliceState = {
     ) => Promise<void>;
     cancelCell: (id: string) => void;
     invalidateCellStatus: (id: string) => void;
+
+    // Cell result cache
+    setCellResult: (id: string, data: CellResultData) => void;
+    getCellResult: (id: string) => CellResultData | undefined;
+    clearCellResult: (id: string) => void;
+    fetchCellResultPage: (
+      id: string,
+      pagination: {pageIndex: number; pageSize: number},
+      sorting?: {id: string; desc: boolean}[],
+    ) => Promise<void>;
 
     // DAG methods
     getDownstream: (sheetId: string, sourceCellId: string) => string[];

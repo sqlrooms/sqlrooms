@@ -1,5 +1,7 @@
 import {createId} from '@paralleldrive/cuid2';
 import {createSlice} from '@sqlrooms/room-store';
+import {makePagedQuery} from '@sqlrooms/data-table';
+import {sanitizeQuery} from '@sqlrooms/duckdb';
 import {produce} from 'immer';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {
@@ -11,6 +13,7 @@ import {
 import type {
   Cell,
   CellRegistry,
+  CellResultData,
   CellsRootState,
   CellsSliceConfig,
   CellsSliceOptions,
@@ -23,6 +26,9 @@ import {createDefaultCellRegistry} from './defaultCellRegistry';
 import {resolveDependencies} from './helpers';
 
 export type {CellsRootState} from './types';
+
+/** Module-level cache for Arrow result data (outside Immer to avoid freezing) */
+const cellResultCache = new Map<string, CellResultData>();
 
 function createDefaultCellsConfig(
   config: Partial<CellsSliceConfig> | undefined,
@@ -61,6 +67,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         config: initialConfig,
         status: {},
         activeAbortControllers: {},
+        resultVersion: {},
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
@@ -121,10 +128,12 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         },
 
         removeCell: (id: string) => {
+          cellResultCache.delete(id);
           set((state) =>
             produce(state, (draft) => {
               delete draft.cells.config.data[id];
               delete draft.cells.status[id];
+              delete draft.cells.resultVersion[id];
               const controller = draft.cells.activeAbortControllers[id];
               if (controller) {
                 controller.abort();
@@ -142,7 +151,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           );
         },
 
-        updateCell: async (id: string, updater: (cell: Cell) => Cell) => {
+        updateCell: async (
+          id: string,
+          updater: (cell: Cell) => Cell,
+          opts?: {cascade?: boolean},
+        ) => {
           const cell = get().cells.config.data[id];
           if (!cell) return;
 
@@ -216,11 +229,15 @@ export function createCellsSlice(props?: CellsSliceOptions) {
             }
           }
 
-          // After update, trigger cascade
-          for (const sheetId of get().cells.config.sheetOrder) {
-            const sheet = get().cells.config.sheets[sheetId];
-            if (sheet?.cellIds.includes(id)) {
-              void get().cells.runDownstreamCascade(sheetId, id);
+          // After update, trigger cascade only if explicitly requested
+          // or if resultName changed (normal edits like typing SQL should not cascade)
+          const shouldCascade = opts?.cascade || resultNameChanged;
+          if (shouldCascade) {
+            for (const sheetId of get().cells.config.sheetOrder) {
+              const sheet = get().cells.config.sheets[sheetId];
+              if (sheet?.cellIds.includes(id)) {
+                void get().cells.runDownstreamCascade(sheetId, id);
+              }
             }
           }
         },
@@ -433,6 +450,56 @@ export function createCellsSlice(props?: CellsSliceOptions) {
               }
             }),
           );
+        },
+
+        // Cell result cache actions
+        setCellResult: (id: string, data: CellResultData) => {
+          cellResultCache.set(id, data);
+          set((state) =>
+            produce(state, (draft) => {
+              draft.cells.resultVersion[id] =
+                (draft.cells.resultVersion[id] ?? 0) + 1;
+            }),
+          );
+        },
+
+        getCellResult: (id: string) => {
+          return cellResultCache.get(id);
+        },
+
+        clearCellResult: (id: string) => {
+          cellResultCache.delete(id);
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.cells.resultVersion[id];
+            }),
+          );
+        },
+
+        fetchCellResultPage: async (
+          id: string,
+          pagination: {pageIndex: number; pageSize: number},
+          sorting?: {id: string; desc: boolean}[],
+        ) => {
+          const state = get();
+          const status = state.cells.status[id];
+          if (status?.type !== 'sql' || !status.resultView) return;
+
+          const connector = await state.db.getConnector();
+          const baseQuery = sanitizeQuery(`SELECT * FROM ${status.resultView}`);
+          const pagedQuery = makePagedQuery(
+            baseQuery,
+            sorting ?? [],
+            pagination,
+          );
+
+          const arrowTable = await connector.query(pagedQuery);
+          const countResult = await connector.query(
+            `SELECT COUNT(*)::int AS count FROM ${status.resultView}`,
+          );
+          const totalRows = countResult.toArray()[0]?.count ?? 0;
+
+          get().cells.setCellResult(id, {arrowTable, totalRows});
         },
 
         // DAG methods (sync versions for UI usage)

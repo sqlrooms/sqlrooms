@@ -109,6 +109,7 @@ export function createDefaultCellRegistry(): CellRegistry {
           schemaName: opts?.schemaName || 'main',
           cascade: opts?.cascade,
           signal: controller.signal,
+          setCellResult: get().cells.setCellResult,
         });
 
         // Refresh table schemas after execution (fire and forget)

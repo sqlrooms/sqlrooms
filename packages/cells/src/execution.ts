@@ -4,13 +4,16 @@ import {produce} from 'immer';
 import type {CellsRootState} from './cellsSlice';
 import {findSheetIdForCell} from './helpers';
 import {findSqlDependencies, renderSqlWithInputs} from './sqlHelpers';
-import type {SqlCellData, SqlCellStatus} from './types';
+import type {CellResultData, SqlCellData, SqlCellStatus} from './types';
 import {getEffectiveResultName} from './utils';
+
+const DEFAULT_PAGE_SIZE = 10;
 
 export type ExecuteSqlCellOptions = {
   schemaName: string;
   cascade?: boolean;
   signal?: AbortSignal;
+  setCellResult?: (id: string, data: CellResultData) => void;
 };
 
 export async function executeSqlCell(
@@ -23,7 +26,7 @@ export async function executeSqlCell(
   const cell = state.cells.config.data[cellId];
   if (!cell || cell.type !== 'sql') return;
 
-  const {schemaName, cascade = true, signal} = options;
+  const {schemaName, cascade = true, signal, setCellResult} = options;
   const sqlRaw = (cell.data as any).sql || '';
 
   // 1. Gather inputs for SQL rendering
@@ -114,7 +117,25 @@ export async function executeSqlCell(
       }),
     );
 
-    // 4. Cascade if needed
+    // 4. Fetch count + first page and store result
+    if (setCellResult) {
+      if (signal?.aborted) throw new Error('Query cancelled');
+
+      const countResult = await connector.query(
+        `SELECT COUNT(*)::int AS count FROM ${tableName}`,
+      );
+      const totalRows = countResult.toArray()[0]?.count ?? 0;
+
+      if (signal?.aborted) throw new Error('Query cancelled');
+
+      const pageResult = await connector.query(
+        `SELECT * FROM ${tableName} LIMIT ${DEFAULT_PAGE_SIZE}`,
+      );
+
+      setCellResult(cellId, {arrowTable: pageResult, totalRows});
+    }
+
+    // 5. Cascade if needed
     if (cascade) {
       const currentSheetId = state.cells.config.currentSheetId;
       if (currentSheetId) {
