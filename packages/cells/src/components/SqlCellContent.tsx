@@ -1,4 +1,4 @@
-import React, {useCallback, useEffect, useRef} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {QueryDataTable, QueryDataTableActionsMenu} from '@sqlrooms/data-table';
 import {SqlMonacoEditor} from '@sqlrooms/sql-editor';
 import {Input} from '@sqlrooms/ui';
@@ -49,7 +49,6 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
 
   const handleResultNameChange = useCallback(
     (value: string) => {
-      // Allow empty string or valid SQL identifiers
       if (value === '' || isValidSqlIdentifier(value)) {
         updateCell(id, (c) =>
           produce(c, (draft) => {
@@ -58,7 +57,6 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
             }
           }),
         );
-        // Status is automatically invalidated by the slice when resultName changes
       }
     },
     [id, updateCell],
@@ -68,6 +66,42 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     cell.data as SqlCellData,
     convertToValidColumnOrTableName,
   );
+  const explicitResultName = (cell.data as SqlCellData).resultName || '';
+  const [resultNameDraft, setResultNameDraft] = useState(explicitResultName);
+
+  useEffect(() => {
+    setResultNameDraft(explicitResultName);
+  }, [explicitResultName]);
+
+  const commitResultName = useCallback(() => {
+    if (resultNameDraft === '' || isValidSqlIdentifier(resultNameDraft)) {
+      if (resultNameDraft !== explicitResultName) {
+        handleResultNameChange(resultNameDraft);
+      }
+      return;
+    }
+
+    setResultNameDraft(explicitResultName);
+  }, [explicitResultName, handleResultNameChange, resultNameDraft]);
+
+  const handleResultNameKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        commitResultName();
+        e.currentTarget.blur();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setResultNameDraft(explicitResultName);
+        e.currentTarget.blur();
+      }
+    },
+    [commitResultName, explicitResultName],
+  );
+
   const hasExplicitResultName = Boolean((cell.data as SqlCellData).resultName);
 
   const status =
@@ -144,9 +178,11 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     <div className="text-muted-foreground flex items-center gap-2 px-2 py-1 text-xs">
       <span className="font-medium">Result:</span>
       <Input
-        value={(cell.data as SqlCellData).resultName || ''}
+        value={resultNameDraft}
         placeholder={effectiveResultName}
-        onChange={(e) => handleResultNameChange(e.target.value)}
+        onChange={(e) => setResultNameDraft(e.target.value)}
+        onBlur={commitResultName}
+        onKeyDown={handleResultNameKeyDown}
         className="h-6 w-40 font-mono text-xs"
       />
       {!hasExplicitResultName && (
