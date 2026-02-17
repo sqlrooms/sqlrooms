@@ -11,8 +11,8 @@
     "postinstall": "node scripts/download-extensions.mjs"
   },
   "dependencies": {
-    "@duckdb/duckdb-wasm": "1.31.0",
-    "@sqlrooms/dropzone": "^0.16.4",
+    "@duckdb/duckdb-wasm": "1.32.0",
+    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
@@ -43,6 +43,6 @@
     "vite-plugin-pwa": "^1.0.3"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0"
+    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }

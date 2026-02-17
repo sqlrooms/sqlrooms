@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "SQLRooms Contributors",
   "private": true,
-  "packageManager": "pnpm@10.25.0",
+  "packageManager": "pnpm@10.29.3",
   "workspaces": [
     "packages/*",
     "examples/*",
@@ -96,7 +96,7 @@
       "react-dom": "19.2.1",
       "@types/react": "19.2.7",
       "@types/react-dom": "19.2.3",
-      "@duckdb/duckdb-wasm": "1.31.0",
+      "@duckdb/duckdb-wasm": "1.32.0",
       "zod": "4.1.13",
       "d3-sankey": "0.12.3",
       "monaco-editor": "0.55.1",
