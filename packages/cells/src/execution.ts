@@ -79,11 +79,18 @@ export async function executeSqlCell(
   // 2. Update status to running
   set((s) =>
     produce(s, (draft) => {
+      const previousStatus = draft.cells.status[cellId] as
+        | SqlCellStatus
+        | undefined;
       draft.cells.status[cellId] = {
         type: 'sql',
         status: 'running',
-        referencedTables:
-          (draft.cells.status[cellId] as SqlCellStatus)?.referencedTables || [],
+        // Keep previous result metadata so the table remains mounted while
+        // a fresh query is running.
+        resultName: previousStatus?.resultName,
+        resultView: previousStatus?.resultView,
+        lastRunTime: previousStatus?.lastRunTime,
+        referencedTables: previousStatus?.referencedTables || [],
       };
     }),
   );

@@ -1,30 +1,29 @@
-import React from 'react';
-import {produce} from 'immer';
-import type {
-  CellRegistry,
-  Cell,
-  SqlCell,
-  SqlCellData,
-  TextCell,
-  VegaCell,
-  InputCell,
-} from './types';
-import {getEffectiveResultName} from './utils';
+import {makeQualifiedTableName} from '@sqlrooms/duckdb';
 import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
+import {produce} from 'immer';
+import {InputCellContent} from './components/InputCellContent';
 import {SqlCellContent} from './components/SqlCellContent';
 import {TextCellContent} from './components/TextCellContent';
 import {VegaCellContent} from './components/VegaCellContent';
-import {InputCellContent} from './components/InputCellContent';
+import {executeSqlCell} from './execution';
+import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
 import {
   findSqlDependencies,
   findSqlDependenciesFromAst,
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
 } from './sqlHelpers';
-import {executeSqlCell} from './execution';
-import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import type {
+  Cell,
+  CellRegistry,
+  InputCell,
+  SqlCell,
+  SqlCellData,
+  TextCell,
+  VegaCell,
+} from './types';
 import {isInputCell} from './types';
+import {getEffectiveResultName} from './utils';
 
 function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;

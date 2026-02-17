@@ -167,6 +167,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
       : undefined;
 
   const resultName = status?.resultName;
+  const isRunning = status?.state === 'running';
 
   // Pagination and sorting state for the result table
   const [sorting, setSorting] = useState<SortingState>([]);
@@ -273,12 +274,18 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
             onPaginationChange={setPagination}
             sorting={sorting}
             onSortingChange={setSorting}
-            isFetching={status?.state === 'running'}
+            isFetching={isRunning}
             footerActions={
               <QueryDataTableActionsMenu
                 query={`SELECT * FROM ${resultName}`}
               />
             }
+          />
+          <div
+            aria-hidden={!isRunning}
+            className={`bg-background/45 pointer-events-none absolute inset-0 z-10 transition-opacity duration-200 ${
+              isRunning ? 'animate-pulse opacity-100' : 'opacity-0'
+            }`}
           />
         </div>
       ) : null}

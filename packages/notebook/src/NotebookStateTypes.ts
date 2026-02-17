@@ -1,5 +1,3 @@
-import type React from 'react';
-import type {CellStatus} from '@sqlrooms/cells';
 import type {NotebookCell, NotebookSliceConfig} from './cellSchemas';
 
 export type NotebookSliceState = {
