@@ -23,6 +23,10 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
+const THINK_TAGS_REGEX = /<think>[\s\S]*?<\/think>/g;
+
+const sanitizeThinkTags = (value: string): string =>
+  value.replace(THINK_TAGS_REGEX, '');
 
 /**
  * Processes content and extracts think content in one pass
@@ -132,7 +136,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const hasMarkdownContent = content.trim().length > 0;
+  const hasTextContent = content.trim().length > 0;
 
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
@@ -151,9 +155,9 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     () => processContent(content),
     [content],
   );
-  const footerActions = hasMarkdownContent ? (
+  const footerActions = hasTextContent ? (
     <CopyButton
-      text={content}
+      text={() => sanitizeThinkTags(content)}
       variant="ghost"
       size="icon"
       className="h-6 w-6"

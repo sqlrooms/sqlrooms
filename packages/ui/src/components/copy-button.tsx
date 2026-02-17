@@ -6,7 +6,7 @@ import {ClipboardIcon, CheckIcon} from 'lucide-react';
 import {cn} from '../lib/utils';
 
 export interface CopyButtonProps {
-  text: string;
+  text: string | (() => string);
   variant?: ButtonProps['variant'];
   size?: ButtonProps['size'];
   className?: string;
@@ -39,7 +39,8 @@ export const CopyButton: React.FC<CopyButtonProps> = ({
 
   const handleClick = async () => {
     try {
-      await navigator.clipboard.writeText(text);
+      const textToCopy = typeof text === 'function' ? text() : text;
+      await navigator.clipboard.writeText(textToCopy);
       setCopied(true);
       if (typeof onCopied === 'function') onCopied();
       timeoutRef.current = window.setTimeout(
