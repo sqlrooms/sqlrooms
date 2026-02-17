@@ -151,6 +151,19 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     () => processContent(content),
     [content],
   );
+  const footerActions = hasMarkdownContent ? (
+    <CopyButton
+      text={content}
+      variant="ghost"
+      size="icon"
+      className="h-6 w-6"
+      ariaLabel={
+        isAnswer
+          ? 'Copy AI response as Markdown'
+          : 'Copy AI message as Markdown'
+      }
+    />
+  ) : null;
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
@@ -182,42 +195,26 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   );
 
   return (
-    <div className="group/assistant-message relative flex flex-col gap-5">
-      {hasMarkdownContent && (
-        <div className="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover/assistant-message:opacity-100">
-          <CopyButton
-            text={content}
-            variant="ghost"
-            size="icon"
-            className="h-6 w-6"
-            ariaLabel={
-              isAnswer
-                ? 'Copy AI response as Markdown'
-                : 'Copy AI message as Markdown'
-            }
-          />
-        </div>
-      )}
-      <MessageContainer
-        isSuccess={true}
-        type={isAnswer ? 'answer' : 'thinking'}
-        content={{content, isAnswer}}
-      >
-        <div className="prose dark:prose-invert max-w-none text-sm">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={
-              {
-                'think-block': thinkBlockComponent,
-                ...customMarkdownComponents,
-              } as Partial<Components>
-            }
-          >
-            {processedContent}
-          </Markdown>
-        </div>
-      </MessageContainer>
-    </div>
+    <MessageContainer
+      isSuccess={true}
+      type={isAnswer ? 'answer' : 'thinking'}
+      content={{content, isAnswer}}
+      footerActions={footerActions}
+    >
+      <div className="prose dark:prose-invert max-w-none text-sm">
+        <Markdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
+          components={
+            {
+              'think-block': thinkBlockComponent,
+              ...customMarkdownComponents,
+            } as Partial<Components>
+          }
+        >
+          {processedContent}
+        </Markdown>
+      </div>
+    </MessageContainer>
   );
 });

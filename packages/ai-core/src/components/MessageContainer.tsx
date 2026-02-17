@@ -16,6 +16,8 @@ type MessageContainerProps = {
   type: string;
   content: object;
   children: React.ReactNode;
+  footerActions?: React.ReactNode;
+  footerActionsClassName?: string;
 };
 
 export const MessageContainer: React.FC<MessageContainerProps> = ({
@@ -24,6 +26,8 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   // borderColor,
   content,
   children,
+  footerActions,
+  footerActionsClassName,
 }) => {
   return (
     <div
@@ -54,6 +58,16 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
       )}
 
       <div className="flex flex-col gap-5">{children}</div>
+      {footerActions && (
+        <div
+          className={cn(
+            'border-border/50 mt-2 flex items-center justify-end gap-1 border-t pt-1 opacity-0 transition-opacity group-hover:opacity-100',
+            footerActionsClassName,
+          )}
+        >
+          {footerActions}
+        </div>
+      )}
     </div>
   );
 };
