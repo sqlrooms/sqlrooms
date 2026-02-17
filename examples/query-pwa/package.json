@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@duckdb/duckdb-wasm": "1.32.0",
-    "@sqlrooms/dropzone": "^0.16.4",
+    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
