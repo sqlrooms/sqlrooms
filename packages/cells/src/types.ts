@@ -189,6 +189,13 @@ export const Edge = z.object({
 });
 export type Edge = z.infer<typeof Edge>;
 
+export const SheetGraphCache = z.object({
+  dependencies: z.record(z.string(), z.array(z.string())).default({}),
+  dependents: z.record(z.string(), z.array(z.string())).default({}),
+  contentHashByCell: z.record(z.string(), z.string()).optional(),
+});
+export type SheetGraphCache = z.infer<typeof SheetGraphCache>;
+
 export const Sheet = z.object({
   id: z.string(),
   type: SheetType,
@@ -196,6 +203,7 @@ export const Sheet = z.object({
   schemaName: z.string().optional(),
   cellIds: z.array(z.string()).default([]), // Which cells belong to this sheet
   edges: z.array(Edge).default([]), // Dependencies
+  graphCache: SheetGraphCache.optional(),
 });
 export type Sheet = z.infer<typeof Sheet>;
 

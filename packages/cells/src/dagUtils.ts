@@ -1,4 +1,10 @@
-import type {Cell, CellsRootState, SqlSelectToJsonFn} from './types';
+import type {
+  Cell,
+  CellsRootState,
+  Sheet,
+  SheetGraphCache,
+  SqlSelectToJsonFn,
+} from './types';
 
 export type DependencyGraph = {
   dependencies: Record<string, string[]>;
@@ -9,36 +15,117 @@ function isDefined<T>(value: T | undefined): value is T {
   return value !== undefined;
 }
 
-export function buildDependencyGraph(
-  sheetId: string,
-  state: CellsRootState,
-): DependencyGraph {
-  const sheet = state.cells.config.sheets[sheetId];
-  if (!sheet) {
-    return {dependencies: {}, dependents: {}};
-  }
+function dedupe(values: string[]): string[] {
+  return Array.from(new Set(values));
+}
 
+function isGraphCacheComplete(
+  cache: SheetGraphCache | undefined,
+  sheet: Sheet,
+): boolean {
+  if (!cache) return false;
+  return sheet.cellIds.every((cellId) =>
+    Array.isArray(cache.dependencies[cellId]),
+  );
+}
+
+export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
-  const sheetCellIds = new Set(sheet.cellIds);
+  const localCellIds = new Set(sheet.cellIds);
 
   for (const cellId of sheet.cellIds) {
     dependencies[cellId] = [];
   }
 
   for (const edge of sheet.edges) {
-    if (!sheetCellIds.has(edge.source) || !sheetCellIds.has(edge.target))
+    if (!localCellIds.has(edge.source) || !localCellIds.has(edge.target))
       continue;
+
     const deps = dependencies[edge.target] || (dependencies[edge.target] = []);
-    if (!deps.includes(edge.source)) {
-      deps.push(edge.source);
-    }
-    const list = dependents[edge.source] || (dependents[edge.source] = []);
-    if (!list.includes(edge.target)) {
-      list.push(edge.target);
-    }
+    if (!deps.includes(edge.source)) deps.push(edge.source);
+
+    const children = dependents[edge.source] || (dependents[edge.source] = []);
+    if (!children.includes(edge.target)) children.push(edge.target);
   }
-  return {dependencies, dependents};
+
+  return {
+    dependencies,
+    dependents,
+    contentHashByCell: sheet.graphCache?.contentHashByCell || {},
+  };
+}
+
+export function ensureGraphCache(sheet: Sheet): SheetGraphCache {
+  if (!sheet.graphCache || !isGraphCacheComplete(sheet.graphCache, sheet)) {
+    sheet.graphCache = buildGraphCacheFromEdges(sheet);
+  }
+  return sheet.graphCache;
+}
+
+export function replaceCellDependenciesInCache(
+  sheet: Sheet,
+  cellId: string,
+  deps: string[],
+) {
+  const cache = ensureGraphCache(sheet);
+  const localCellIds = new Set(sheet.cellIds);
+  const nextDeps = dedupe(deps).filter(
+    (depId) => localCellIds.has(depId) && depId !== cellId,
+  );
+  const previousDeps = cache.dependencies[cellId] || [];
+
+  for (const oldDep of previousDeps) {
+    if (nextDeps.includes(oldDep)) continue;
+    const currentDependents = cache.dependents[oldDep] || [];
+    cache.dependents[oldDep] = currentDependents.filter((id) => id !== cellId);
+  }
+
+  cache.dependencies[cellId] = nextDeps;
+
+  for (const depId of nextDeps) {
+    const children = cache.dependents[depId] || (cache.dependents[depId] = []);
+    if (!children.includes(cellId)) children.push(cellId);
+  }
+}
+
+export function removeCellFromCache(sheet: Sheet, cellId: string) {
+  const cache = ensureGraphCache(sheet);
+  const previousDeps = cache.dependencies[cellId] || [];
+
+  for (const depId of previousDeps) {
+    const children = cache.dependents[depId] || [];
+    cache.dependents[depId] = children.filter((id) => id !== cellId);
+  }
+
+  const downstream = cache.dependents[cellId] || [];
+  for (const dependentId of downstream) {
+    const deps = cache.dependencies[dependentId] || [];
+    cache.dependencies[dependentId] = deps.filter((id) => id !== cellId);
+  }
+
+  delete cache.dependencies[cellId];
+  delete cache.dependents[cellId];
+  if (cache.contentHashByCell) {
+    delete cache.contentHashByCell[cellId];
+  }
+}
+
+export function buildDependencyGraph(
+  sheetId: string,
+  state: CellsRootState,
+): DependencyGraph {
+  const sheet = state.cells.config.sheets[sheetId];
+  if (!sheet) return {dependencies: {}, dependents: {}};
+
+  const cache = isGraphCacheComplete(sheet.graphCache, sheet)
+    ? (sheet.graphCache as SheetGraphCache)
+    : buildGraphCacheFromEdges(sheet);
+
+  return {
+    dependencies: {...cache.dependencies},
+    dependents: {...cache.dependents},
+  };
 }
 
 export function topologicalOrder(
@@ -114,6 +201,14 @@ export async function buildDependencyGraphAsync(
   const registry = state.cells.cellRegistry;
   if (!sheet) {
     return {dependencies: {}, dependents: {}};
+  }
+
+  if (isGraphCacheComplete(sheet.graphCache, sheet)) {
+    const cache = sheet.graphCache as SheetGraphCache;
+    return {
+      dependencies: {...cache.dependencies},
+      dependents: {...cache.dependents},
+    };
   }
 
   const dependencies: Record<string, string[]> = {};

@@ -42,6 +42,13 @@ describe('cells slice local dependency policy', () => {
     // Cross-sheet SQL text reference should not create DAG edges across sheets.
     await state.cells.addCell(sheetB, sqlCell('b1', 'B1', 'select * from A1'));
 
+    const graphCacheA =
+      store.getState().cells.config.sheets[sheetA]?.graphCache;
+    const graphCacheB =
+      store.getState().cells.config.sheets[sheetB]?.graphCache;
+    expect(graphCacheA?.dependencies.a2).toEqual(['a1']);
+    expect(graphCacheB?.dependencies.b1).toEqual([]);
+
     const downstreamInA = store.getState().cells.getDownstream(sheetA, 'a1');
     const downstreamInB = store.getState().cells.getDownstream(sheetB, 'a1');
 
@@ -72,5 +79,22 @@ describe('cells slice local dependency policy', () => {
 
     const downstream = store.getState().cells.getDownstream(sheetId, 'a1');
     expect(downstream).toEqual([]);
+  });
+
+  it('invalidates graph cache on manual edge removal', async () => {
+    const store = createTestStore();
+    const state = store.getState();
+    const sheetId = state.cells.config.currentSheetId as string;
+
+    await state.cells.addCell(sheetId, sqlCell('a1', 'A1', 'select 1'));
+    await state.cells.addCell(sheetId, sqlCell('a2', 'A2', 'select * from A1'));
+    expect(
+      store.getState().cells.config.sheets[sheetId]?.graphCache,
+    ).toBeDefined();
+
+    state.cells.removeEdge(sheetId, 'a1-a2');
+    expect(
+      store.getState().cells.config.sheets[sheetId]?.graphCache,
+    ).toBeUndefined();
   });
 });

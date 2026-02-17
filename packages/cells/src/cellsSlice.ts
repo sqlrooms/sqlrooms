@@ -5,9 +5,13 @@ import {createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {
+  buildGraphCacheFromEdges,
   buildDependencyGraph,
   buildDependencyGraphAsync,
   collectReachable,
+  ensureGraphCache,
+  removeCellFromCache,
+  replaceCellDependenciesInCache,
   topologicalOrder,
 } from './dagUtils';
 import {createDefaultCellRegistry} from './defaultCellRegistry';
@@ -48,6 +52,11 @@ function createDefaultCellsConfig(
         schemaName: getSheetSchemaName(sheetId),
         cellIds: [],
         edges: [],
+        graphCache: {
+          dependencies: {},
+          dependents: {},
+          contentHashByCell: {},
+        },
       },
     },
     sheetOrder: [sheetId],
@@ -118,6 +127,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 existingSheet.edges = existingSheet.edges.filter(
                   (e) => e.source !== cell.id && e.target !== cell.id,
                 );
+                removeCellFromCache(existingSheet, cell.id);
               }
 
               let sheet = draft.cells.config.sheets[sheetId];
@@ -129,6 +139,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                   schemaName: getSheetSchemaName(sheetId),
                   cellIds: [],
                   edges: [],
+                  graphCache: {
+                    dependencies: {},
+                    dependents: {},
+                    contentHashByCell: {},
+                  },
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
                 if (!draft.cells.config.sheetOrder.includes(sheetId)) {
@@ -154,6 +169,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                   target: cell.id,
                 });
               }
+              replaceCellDependenciesInCache(
+                sheet,
+                cell.id,
+                deps.filter((depId) => localCellIds.has(depId)),
+              );
             }),
           );
         },
@@ -178,6 +198,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 sheet.edges = sheet.edges.filter(
                   (e) => e.source !== id && e.target !== id,
                 );
+                removeCellFromCache(sheet, id);
               }
             }),
           );
@@ -268,6 +289,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                     target: id,
                   });
                 }
+                replaceCellDependenciesInCache(
+                  ownerSheet,
+                  id,
+                  newDeps.filter((depId) => localCellIds.has(depId)),
+                );
               }
             }),
           );
@@ -320,6 +346,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                 schemaName: getSheetSchemaName(id),
                 cellIds: [],
                 edges: [],
+                graphCache: {
+                  dependencies: {},
+                  dependents: {},
+                  contentHashByCell: {},
+                },
               };
               draft.cells.config.sheetOrder.push(id);
               draft.cells.config.currentSheetId = id;
@@ -358,6 +389,9 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                     !ownedCellIds.includes(e.source) &&
                     !ownedCellIds.includes(e.target),
                 );
+                for (const cellId of ownedCellIds) {
+                  removeCellFromCache(existingSheet, cellId);
+                }
               }
 
               delete draft.cells.config.sheets[sheetId];
@@ -436,6 +470,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                   schemaName: getSheetSchemaName(sheetId),
                   cellIds: [],
                   edges: [],
+                  graphCache: {
+                    dependencies: {},
+                    dependents: {},
+                    contentHashByCell: {},
+                  },
                 };
                 draft.cells.config.sheets[sheetId] = sheet;
                 if (!draft.cells.config.sheetOrder.includes(sheetId)) {
@@ -454,6 +493,12 @@ export function createCellsSlice(props?: CellsSliceOptions) {
               const id = `${edge.source}-${edge.target}`;
               if (!sheet.edges.find((e) => e.id === id)) {
                 sheet.edges.push({...edge, id});
+                ensureGraphCache(sheet);
+                const deps = sheet.graphCache?.dependencies[edge.target] || [];
+                replaceCellDependenciesInCache(sheet, edge.target, [
+                  ...deps,
+                  edge.source,
+                ]);
               }
             }),
           );
@@ -465,6 +510,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
               const sheet = draft.cells.config.sheets[sheetId];
               if (sheet) {
                 sheet.edges = sheet.edges.filter((e) => e.id !== edgeId);
+                delete sheet.graphCache;
               }
             }),
           );
@@ -507,6 +553,11 @@ export function createCellsSlice(props?: CellsSliceOptions) {
                     target: cellId,
                   });
                 }
+                replaceCellDependenciesInCache(
+                  draftSheet,
+                  cellId,
+                  deps.filter((depId) => localCellIds.has(depId)),
+                );
               }
             }),
           );
@@ -642,6 +693,18 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         },
         // Async cascade execution using AST-based dependency resolution
         runAllCellsCascade: async (sheetId: string) => {
+          const cached = buildDependencyGraph(sheetId, get());
+          const hasCachedNodes = Object.keys(cached.dependencies).length > 0;
+          if (!hasCachedNodes) {
+            set((state) =>
+              produce(state, (draft) => {
+                const sheet = draft.cells.config.sheets[sheetId];
+                if (sheet) {
+                  sheet.graphCache = buildGraphCacheFromEdges(sheet);
+                }
+              }),
+            );
+          }
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
@@ -657,6 +720,18 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           }
         },
         runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
+          const cached = buildDependencyGraph(sheetId, get());
+          const hasCachedNodes = Object.keys(cached.dependencies).length > 0;
+          if (!hasCachedNodes) {
+            set((state) =>
+              produce(state, (draft) => {
+                const sheet = draft.cells.config.sheets[sheetId];
+                if (sheet) {
+                  sheet.graphCache = buildGraphCacheFromEdges(sheet);
+                }
+              }),
+            );
+          }
           const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,

@@ -9,7 +9,14 @@ function createTestStore() {
   return createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: async () => ({error: false, statements: []}),
+      sqlSelectToJson: async (sql: string) => {
+        const fromMatch = sql.match(/from\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+        const table = fromMatch?.[1];
+        return {
+          error: false,
+          statements: table ? [{node: {table_name: table}}] : [{node: {}}],
+        };
+      },
       getConnector: async () => {
         throw new Error('Not needed in this test');
       },
@@ -83,6 +90,27 @@ describe('cells slice sheet ownership semantics', () => {
     expect(after.cells.config.data.c2).toBeUndefined();
     expect(after.cells.status.c1).toBeUndefined();
     expect(after.cells.status.c2).toBeUndefined();
+  });
+
+  it('removes cell from graph cache on removeCell', async () => {
+    const state = store.getState();
+    const sheetId = state.cells.config.currentSheetId as string;
+    await state.cells.addCell(sheetId, makeSqlCell('c1', 'Cell 1', 'select 1'));
+    await state.cells.addCell(
+      sheetId,
+      makeSqlCell('c2', 'Cell 2', 'select * from cell_1'),
+    );
+
+    expect(
+      store.getState().cells.config.sheets[sheetId]?.graphCache?.dependencies
+        .c2,
+    ).toEqual(['c1']);
+
+    state.cells.removeCell('c2');
+
+    const cache = store.getState().cells.config.sheets[sheetId]?.graphCache;
+    expect(cache?.dependencies.c2).toBeUndefined();
+    expect(cache?.dependents.c1 || []).not.toContain('c2');
   });
 
   it('throws a clear invariant error when parser is unavailable', async () => {
