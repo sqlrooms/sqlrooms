@@ -4,7 +4,7 @@
   "repository": "git@github.com:sqlrooms/sqlrooms.git",
   "author": "SQLRooms Contributors",
   "private": true,
-  "packageManager": "pnpm@10.25.0",
+  "packageManager": "pnpm@10.29.3",
   "workspaces": [
     "packages/*",
     "examples/*",
