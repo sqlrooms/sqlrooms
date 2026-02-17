@@ -5,7 +5,7 @@ import rehypeRaw from 'rehype-raw';
 import {truncate} from '@sqlrooms/utils';
 import {MessageContainer} from './MessageContainer';
 import {BrainIcon} from 'lucide-react';
-import {cn} from '@sqlrooms/ui';
+import {cn, CopyButton} from '@sqlrooms/ui';
 
 type AnalysisAnswerProps = {
   content: string;
@@ -132,6 +132,7 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
+  const hasMarkdownContent = content.trim().length > 0;
 
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
@@ -181,7 +182,22 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   );
 
   return (
-    <div className="flex flex-col gap-5">
+    <div className="group/assistant-message relative flex flex-col gap-5">
+      {hasMarkdownContent && (
+        <div className="absolute top-2 right-2 z-10 opacity-0 transition-opacity group-hover/assistant-message:opacity-100">
+          <CopyButton
+            text={content}
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6"
+            ariaLabel={
+              isAnswer
+                ? 'Copy AI response as Markdown'
+                : 'Copy AI message as Markdown'
+            }
+          />
+        </div>
+      )}
       <MessageContainer
         isSuccess={true}
         type={isAnswer ? 'answer' : 'thinking'}

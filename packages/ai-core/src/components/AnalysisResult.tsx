@@ -2,12 +2,11 @@ import {AnalysisResultSchema} from '@sqlrooms/ai-config';
 import {CopyButton} from '@sqlrooms/ui';
 import type {UIMessage} from 'ai';
 import {SquareTerminalIcon} from 'lucide-react';
-import {useEffect, useMemo, useRef, useState} from 'react';
+import {useEffect, useRef, useState} from 'react';
 import {Components} from 'react-markdown';
 import {useStoreWithAi} from '../AiSlice';
 import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
 import {useToolGrouping} from '../hooks/useToolGrouping';
-import {isTextPart} from '../utils';
 import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
@@ -57,15 +56,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
     uiMessages,
     analysisResult.id,
   );
-  const assistantMarkdown = useMemo(
-    () =>
-      uiMessageParts
-        .filter(isTextPart)
-        .map((part) => part.text)
-        .join(''),
-    [uiMessageParts],
-  );
-  const hasAssistantMarkdown = assistantMarkdown.trim().length > 0;
 
   // Measure div width using ResizeObserver
   useEffect(() => {
@@ -114,15 +104,6 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
               className="h-6 w-6"
               ariaLabel="Copy prompt"
             />
-            {hasAssistantMarkdown && (
-              <CopyButton
-                text={assistantMarkdown}
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                ariaLabel="Copy AI response as Markdown"
-              />
-            )}
           </div>
         </div>
       </div>
