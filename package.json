@@ -15,7 +15,7 @@
     "dev": "node scripts/dev.mjs",
     "clean": "shx rm -rf packages/**/dist && shx rm -rf .turbo && shx rm -rf packages/**/.turbo",
     "docs:clean": "shx rm -rf docs/.vitepress/dist",
-    "build": "turbo build --filter=@sqlrooms/*",
+    "build": "sh scripts/build.sh",
     "build:all": "pnpm clean && turbo build",
     "build:apps": "turbo build --filter=./apps/*",
     "build:examples": "turbo build --filter=./examples/*",
