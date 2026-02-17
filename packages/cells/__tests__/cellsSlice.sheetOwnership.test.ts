@@ -9,7 +9,7 @@ function createTestStore() {
   return createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: undefined,
+      sqlSelectToJson: async () => ({error: false, statements: []}),
       getConnector: async () => {
         throw new Error('Not needed in this test');
       },
@@ -83,5 +83,26 @@ describe('cells slice sheet ownership semantics', () => {
     expect(after.cells.config.data.c2).toBeUndefined();
     expect(after.cells.status.c1).toBeUndefined();
     expect(after.cells.status.c2).toBeUndefined();
+  });
+
+  it('throws a clear invariant error when parser is unavailable', async () => {
+    const storeWithoutParser = createStore<CellsRootState>()((...args) => ({
+      ...createBaseRoomSlice()(...args),
+      db: {
+        sqlSelectToJson: undefined,
+        getConnector: async () => {
+          throw new Error('Not needed in this test');
+        },
+        refreshTableSchemas: async () => {},
+        currentDatabase: 'main',
+      },
+      ...createCellsSlice()(...args),
+    }));
+    const state = storeWithoutParser.getState();
+    const sheetId = state.cells.config.currentSheetId as string;
+
+    await expect(
+      state.cells.addCell(sheetId, makeSqlCell('x', 'X', 'select 1')),
+    ).rejects.toThrow(/requires db\.sqlSelectToJson/);
   });
 });

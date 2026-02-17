@@ -153,18 +153,12 @@ export type CellRegistryItem<TCell extends Cell = Cell> = {
     cell: TCell;
     renderContainer: (props: CellContainerProps) => React.ReactElement;
   }) => React.ReactElement;
-  /** Find dependencies for DAG - each cell type defines its own logic (sync version) */
+  /** Find dependencies for DAG using AST-enabled async resolution. */
   findDependencies: (args: {
     cell: TCell;
     cells: Record<string, Cell>;
     sheetId: string;
-  }) => string[];
-  /** Optional async version that can use SQL AST parsing for more accurate detection */
-  findDependenciesAsync?: (args: {
-    cell: TCell;
-    cells: Record<string, Cell>;
-    sheetId: string;
-    sqlSelectToJson?: SqlSelectToJsonFn;
+    sqlSelectToJson: SqlSelectToJsonFn;
   }) => Promise<string[]>;
   /** Optional: custom execution logic (defaults to SQL execution for sql type) */
   runCell?: (args: {

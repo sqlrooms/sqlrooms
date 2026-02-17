@@ -9,22 +9,18 @@ import {
 import {getSheetSchemaName} from './utils';
 
 /**
- * Helper to resolve dependencies using async method if available, falling back to sync.
+ * Helper to resolve dependencies using the registry's async AST-based resolver.
  */
 export async function resolveDependencies(
   cell: Cell,
   cells: Record<string, Cell>,
   sheetId: string,
   registry: CellRegistry,
-  sqlSelectToJson?: SqlSelectToJsonFn,
+  sqlSelectToJson: SqlSelectToJsonFn,
 ): Promise<string[]> {
   const item = registry[cell.type];
   if (!item) return [];
-
-  if (item.findDependenciesAsync && sqlSelectToJson) {
-    return item.findDependenciesAsync({cell, cells, sheetId, sqlSelectToJson});
-  }
-  return item.findDependencies({cell, cells, sheetId});
+  return item.findDependencies({cell, cells, sheetId, sqlSelectToJson});
 }
 
 /**
@@ -59,12 +55,18 @@ export function getSheetsByType(
 }
 
 /**
- * Accessor used by cells internals to avoid repeating unsafe casts.
+ * Required accessor for SQL AST parser used in dependency derivation.
  */
-export function getSqlSelectToJson(
+export function getRequiredSqlSelectToJson(
   state: CellsRootState,
-): SqlSelectToJsonFn | undefined {
-  return state.db?.sqlSelectToJson;
+): SqlSelectToJsonFn {
+  const parser = state.db?.sqlSelectToJson;
+  if (!parser) {
+    throw new Error(
+      'cells dependency derivation requires db.sqlSelectToJson. Ensure the DuckDB slice is mounted and initialized before running cell dependency operations.',
+    );
+  }
+  return parser;
 }
 
 /**

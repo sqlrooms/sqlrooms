@@ -8,7 +8,6 @@ import {VegaCellContent} from './components/VegaCellContent';
 import {executeSqlCell} from './execution';
 import {findSheetIdForCell, resolveSheetSchemaName} from './helpers';
 import {
-  findSqlDependencies,
   findSqlDependenciesFromAst,
   qualifySheetLocalResultNames,
   renderSqlWithInputs,
@@ -46,60 +45,11 @@ export function createDefaultCellRegistry(): CellRegistry {
           renderContainer={renderContainer}
         />
       ),
-      findDependencies: ({cell, cells}) => {
-        return findSqlDependencies({
-          targetCell: cell,
+      findDependencies: async ({cell, cells, sqlSelectToJson}) => {
+        return findSqlDependenciesFromAst({
+          sql: (cell as SqlCell).data.sql,
           cells,
-          getSqlText: (c) => (c as SqlCell).data.sql,
-          getInputVarName: (c) =>
-            c.type === 'input'
-              ? (c as InputCell).data.input.varName
-              : undefined,
-          getSqlResultName: (cid) => {
-            const c = cells[cid];
-            if (c?.type === 'sql') {
-              return getEffectiveResultName(
-                c.data as SqlCellData,
-                convertToValidColumnOrTableName,
-              );
-            }
-            return undefined;
-          },
-        });
-      },
-      findDependenciesAsync: async ({cell, cells, sqlSelectToJson}) => {
-        // Use AST-based detection if sqlSelectToJson is available
-        if (sqlSelectToJson) {
-          const astDeps = await findSqlDependenciesFromAst({
-            sql: (cell as SqlCell).data.sql,
-            cells,
-            sqlSelectToJson,
-          });
-          // If AST parsing succeeded and found deps, use them
-          // Otherwise fall back to text-based detection
-          if (astDeps.length > 0) {
-            return astDeps;
-          }
-        }
-        // Fall back to sync text-based detection
-        return findSqlDependencies({
-          targetCell: cell,
-          cells,
-          getSqlText: (c) => (c as SqlCell).data.sql,
-          getInputVarName: (c) =>
-            c.type === 'input'
-              ? (c as InputCell).data.input.varName
-              : undefined,
-          getSqlResultName: (cid) => {
-            const c = cells[cid];
-            if (c?.type === 'sql') {
-              return getEffectiveResultName(
-                c.data as SqlCellData,
-                convertToValidColumnOrTableName,
-              );
-            }
-            return undefined;
-          },
+          sqlSelectToJson,
         });
       },
       runCell: async ({id, opts, get, set}) => {
@@ -211,7 +161,7 @@ export function createDefaultCellRegistry(): CellRegistry {
           renderContainer={renderContainer}
         />
       ),
-      findDependencies: () => [],
+      findDependencies: async () => [],
     },
     vega: {
       type: 'vega',
@@ -235,7 +185,7 @@ export function createDefaultCellRegistry(): CellRegistry {
           renderContainer={renderContainer}
         />
       ),
-      findDependencies: ({cell}) => {
+      findDependencies: async ({cell}) => {
         const sqlId = (cell as VegaCell).data.sqlId;
         return sqlId ? [sqlId] : [];
       },
@@ -262,7 +212,7 @@ export function createDefaultCellRegistry(): CellRegistry {
           renderContainer={renderContainer}
         />
       ),
-      findDependencies: () => [],
+      findDependencies: async () => [],
     },
   };
 }

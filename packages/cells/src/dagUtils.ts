@@ -14,7 +14,6 @@ export function buildDependencyGraph(
   state: CellsRootState,
 ): DependencyGraph {
   const sheet = state.cells.config.sheets[sheetId];
-  const registry = state.cells.cellRegistry;
   if (!sheet) {
     return {dependencies: {}, dependents: {}};
   }
@@ -22,32 +21,21 @@ export function buildDependencyGraph(
   const dependencies: Record<string, string[]> = {};
   const dependents: Record<string, string[]> = {};
   const sheetCellIds = new Set(sheet.cellIds);
-  const scopedCells = Object.fromEntries(
-    sheet.cellIds
-      .map((id) => state.cells.config.data[id])
-      .filter(isDefined)
-      .map((cell) => [cell.id, cell]),
-  ) as Record<string, Cell>;
 
   for (const cellId of sheet.cellIds) {
-    const cell = state.cells.config.data[cellId];
-    if (!cell) continue;
+    dependencies[cellId] = [];
+  }
 
-    const deps = Array.from(
-      new Set(
-        registry[cell.type]?.findDependencies({
-          cell,
-          cells: scopedCells,
-          sheetId,
-        }) ?? [],
-      ),
-    ).filter((depId) => sheetCellIds.has(depId));
-    dependencies[cellId] = deps;
-    for (const dep of deps) {
-      const list = dependents[dep] || (dependents[dep] = []);
-      if (!list.includes(cellId)) {
-        list.push(cellId);
-      }
+  for (const edge of sheet.edges) {
+    if (!sheetCellIds.has(edge.source) || !sheetCellIds.has(edge.target))
+      continue;
+    const deps = dependencies[edge.target] || (dependencies[edge.target] = []);
+    if (!deps.includes(edge.source)) {
+      deps.push(edge.source);
+    }
+    const list = dependents[edge.source] || (dependents[edge.source] = []);
+    if (!list.includes(edge.target)) {
+      list.push(edge.target);
     }
   }
   return {dependencies, dependents};
@@ -114,12 +102,13 @@ export function collectReachable(
 }
 
 /**
- * Async version of buildDependencyGraph that uses findDependenciesAsync when available.
+ * Async version of dependency graph build that always uses AST-enabled
+ * registry dependency derivation.
  */
 export async function buildDependencyGraphAsync(
   sheetId: string,
   state: CellsRootState,
-  sqlSelectToJson?: SqlSelectToJsonFn,
+  sqlSelectToJson: SqlSelectToJsonFn,
 ): Promise<DependencyGraph> {
   const sheet = state.cells.config.sheets[sheetId];
   const registry = state.cells.cellRegistry;
@@ -146,21 +135,12 @@ export async function buildDependencyGraphAsync(
       const registryItem = registry[cell.type];
       if (!registryItem) return {cellId, deps: []};
 
-      let deps: string[];
-      if (registryItem.findDependenciesAsync && sqlSelectToJson) {
-        deps = await registryItem.findDependenciesAsync({
-          cell,
-          cells: scopedCells,
-          sheetId,
-          sqlSelectToJson,
-        });
-      } else {
-        deps = registryItem.findDependencies({
-          cell,
-          cells: scopedCells,
-          sheetId,
-        });
-      }
+      const deps = await registryItem.findDependencies({
+        cell,
+        cells: scopedCells,
+        sheetId,
+        sqlSelectToJson,
+      });
 
       return {
         cellId,

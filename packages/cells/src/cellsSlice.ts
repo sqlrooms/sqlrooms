@@ -11,7 +11,7 @@ import {
   topologicalOrder,
 } from './dagUtils';
 import {createDefaultCellRegistry} from './defaultCellRegistry';
-import {getSqlSelectToJson, resolveDependencies} from './helpers';
+import {getRequiredSqlSelectToJson, resolveDependencies} from './helpers';
 import type {
   Cell,
   CellResultData,
@@ -77,7 +77,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
 
         addCell: async (sheetId: string, cell: Cell, index?: number) => {
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = getSqlSelectToJson(get());
+          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const targetSheet = get().cells.config.sheets[sheetId];
           const scopedCells = Object.fromEntries(
             (targetSheet?.cellIds ?? [])
@@ -241,7 +241,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           );
 
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = getSqlSelectToJson(get());
+          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const newDeps = await resolveDependencies(
             updatedCell,
             scopedCells,
@@ -476,7 +476,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           if (!cell || !sheet) return;
 
           // Pre-compute dependencies outside produce() to support async
-          const sqlSelectToJson = getSqlSelectToJson(get());
+          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const scopedCells = Object.fromEntries(
             sheet.cellIds
               .map((id) => get().cells.config.data[id])
@@ -642,7 +642,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
         },
         // Async cascade execution using AST-based dependency resolution
         runAllCellsCascade: async (sheetId: string) => {
-          const sqlSelectToJson = getSqlSelectToJson(get());
+          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),
@@ -657,7 +657,7 @@ export function createCellsSlice(props?: CellsSliceOptions) {
           }
         },
         runDownstreamCascade: async (sheetId: string, sourceCellId: string) => {
-          const sqlSelectToJson = getSqlSelectToJson(get());
+          const sqlSelectToJson = getRequiredSqlSelectToJson(get());
           const {dependencies, dependents} = await buildDependencyGraphAsync(
             sheetId,
             get(),

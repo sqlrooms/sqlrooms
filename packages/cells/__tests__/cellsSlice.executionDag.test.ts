@@ -17,7 +17,7 @@ function createMockRegistry(executed: string[]): CellRegistry {
         data: {title: id, dependsOn: [] as string[]},
       }),
       renderCell: () => React.createElement('div'),
-      findDependencies: ({cell}) => {
+      findDependencies: async ({cell}) => {
         const deps = (cell.data as {dependsOn?: string[]}).dependsOn;
         return deps ?? [];
       },
@@ -35,7 +35,7 @@ function createTestStore() {
   const store = createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: undefined,
+      sqlSelectToJson: async () => ({error: false, statements: []}),
       getConnector: async () => {
         throw new Error('Not needed in DAG tests');
       },

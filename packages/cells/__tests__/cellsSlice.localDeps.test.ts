@@ -7,7 +7,14 @@ function createTestStore() {
   return createStore<CellsRootState>()((...args) => ({
     ...createBaseRoomSlice()(...args),
     db: {
-      sqlSelectToJson: undefined,
+      sqlSelectToJson: async (sql: string) => {
+        const fromMatch = sql.match(/from\s+([a-zA-Z_][a-zA-Z0-9_]*)/i);
+        const table = fromMatch?.[1];
+        return {
+          error: false,
+          statements: table ? [{node: {table_name: table}}] : [{node: {}}],
+        };
+      },
       getConnector: async () => {
         throw new Error('Not needed in this test');
       },
@@ -41,5 +48,29 @@ describe('cells slice local dependency policy', () => {
     expect(downstreamInA).toEqual(['a2']);
     expect(downstreamInA).not.toContain('b1');
     expect(downstreamInB).toEqual([]);
+  });
+
+  it('does not use text fallback when AST parsing returns no table refs', async () => {
+    const store = createStore<CellsRootState>()((...args) => ({
+      ...createBaseRoomSlice()(...args),
+      db: {
+        sqlSelectToJson: async () => ({error: false, statements: [{node: {}}]}),
+        getConnector: async () => {
+          throw new Error('Not needed in this test');
+        },
+        refreshTableSchemas: async () => {},
+        currentDatabase: 'main',
+      },
+      ...createCellsSlice()(...args),
+    }));
+    const state = store.getState();
+    const sheetId = state.cells.config.currentSheetId as string;
+
+    await state.cells.addCell(sheetId, sqlCell('a1', 'A1', 'select 1'));
+    // Text reference exists, but AST parser yields no table_name nodes.
+    await state.cells.addCell(sheetId, sqlCell('a2', 'A2', 'select * from A1'));
+
+    const downstream = store.getState().cells.getDownstream(sheetId, 'a1');
+    expect(downstream).toEqual([]);
   });
 });
