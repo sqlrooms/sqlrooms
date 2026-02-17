@@ -77,13 +77,15 @@ export const VegaChartDisplay: React.FC<VegaChartDisplayProps> = ({
   // Show error state
   if (sqlQuery && !arrowTable && sqlResult.error) {
     return (
-      <ToolErrorMessage
-        error={sqlResult.error}
-        triggerLabel="SQL query failed"
-        title="Query error"
-        align="start"
-        details={sqlQuery}
-      />
+      <div className={className}>
+        <ToolErrorMessage
+          error={sqlResult.error}
+          triggerLabel="SQL query failed"
+          title="Query error"
+          align="start"
+          details={sqlQuery}
+        />
+      </div>
     );
   }
 
