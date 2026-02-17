@@ -300,24 +300,15 @@ export function createCanvasSlice(props: {
         },
 
         applyEdgeChanges: (changes: EdgeChange<any>[]) => {
-          const sheetId = get().cells.config.currentSheetId;
-          if (!sheetId) return;
-
-          for (const change of changes) {
-            if (change.type === 'remove') {
-              get().cells.removeEdge(sheetId, change.id);
-            }
-          }
+          // Canvas edge editing is intentionally disabled for now.
+          // Compatibility no-op: keep API stable until edge kinds are introduced.
+          void changes;
         },
 
         addEdge: (connection: Connection) => {
-          const sheetId = get().cells.config.currentSheetId;
-          if (sheetId && connection.source && connection.target) {
-            get().cells.addEdge(sheetId, {
-              source: connection.source,
-              target: connection.target,
-            });
-          }
+          // Canvas edge editing is intentionally disabled for now.
+          // Compatibility no-op: dependency edges are derived from graph cache.
+          void connection;
         },
 
         setViewport: (viewport: Viewport) => {

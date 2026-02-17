@@ -1,3 +1,4 @@
+import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 import type {
   Cell,
   Edge,
@@ -9,7 +10,6 @@ import type {
 } from './types';
 import {isInputCell, isSqlCell} from './types';
 import {getEffectiveResultName} from './utils';
-import {convertToValidColumnOrTableName} from '@sqlrooms/utils';
 
 export function deriveEdgesFromSql(
   cellId: string,

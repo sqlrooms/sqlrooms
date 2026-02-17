@@ -13,6 +13,7 @@ import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
 import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {useStoreWithCanvas} from './CanvasSlice';
+import {getRenderableEdges} from './edgeUtils';
 import {AddNodePopover} from './nodes/AddNodePopover';
 import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
 
@@ -98,13 +99,11 @@ export const Canvas: React.FC = () => {
   }, [canvasSheet, cellsSheet, cellsData]);
 
   const edges = useMemo(
-    () => (cellsSheet?.edges ?? []) as Edge[],
+    () => getRenderableEdges(cellsSheet) as Edge[],
     [cellsSheet],
   );
   const viewport = canvasSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
-  const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
-  const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
   const [internalViewport, setInternalViewport] = useState<Viewport>(viewport);
 
@@ -150,10 +149,11 @@ export const Canvas: React.FC = () => {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={applyNodeChanges}
-          onEdgesChange={applyEdgeChanges}
           viewport={internalViewport}
           onViewportChange={debouncedSetViewport}
-          onConnect={addEdge}
+          nodesConnectable={false}
+          edgesReconnectable={false}
+          connectOnClick={false}
           // fitView
         >
           <MiniMap />

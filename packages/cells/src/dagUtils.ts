@@ -1,6 +1,8 @@
 import type {
   Cell,
   CellsRootState,
+  Edge,
+  EdgeKind,
   Sheet,
   SheetGraphCache,
   SqlSelectToJsonFn,
@@ -17,6 +19,10 @@ function isDefined<T>(value: T | undefined): value is T {
 
 function dedupe(values: string[]): string[] {
   return Array.from(new Set(values));
+}
+
+function getEdgeKind(edge: Edge): EdgeKind {
+  return edge.kind ?? 'dependency';
 }
 
 function isGraphCacheComplete(
@@ -39,6 +45,8 @@ export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
   }
 
   for (const edge of sheet.edges) {
+    // Cascades only consume dependency edges.
+    if (getEdgeKind(edge) !== 'dependency') continue;
     if (!localCellIds.has(edge.source) || !localCellIds.has(edge.target))
       continue;
 
@@ -54,6 +62,40 @@ export function buildGraphCacheFromEdges(sheet: Sheet): SheetGraphCache {
     dependents,
     contentHashByCell: sheet.graphCache?.contentHashByCell || {},
   };
+}
+
+export function dependencyEdgesFromGraphCache(sheet: Sheet): Edge[] {
+  if (!isGraphCacheComplete(sheet.graphCache, sheet)) return [];
+
+  const cache = sheet.graphCache as SheetGraphCache;
+  const localCellIds = new Set(sheet.cellIds);
+  const edges: Edge[] = [];
+
+  for (const target of sheet.cellIds) {
+    const deps = dedupe(cache.dependencies[target] || []);
+    for (const source of deps) {
+      if (!localCellIds.has(source) || source === target) continue;
+      edges.push({
+        id: `${source}-${target}`,
+        source,
+        target,
+        kind: 'dependency',
+      });
+    }
+  }
+
+  return edges;
+}
+
+export function getRenderableDependencyEdges(sheet: Sheet): Edge[] {
+  const cacheEdges = dependencyEdgesFromGraphCache(sheet);
+  if (cacheEdges.length > 0 || isGraphCacheComplete(sheet.graphCache, sheet)) {
+    return cacheEdges;
+  }
+
+  // Compatibility fallback while legacy edge persistence still exists.
+  // TODO(edge-kinds): merge sheet-local manual edges here once manual editing is enabled.
+  return sheet.edges.filter((edge) => getEdgeKind(edge) === 'dependency');
 }
 
 export function ensureGraphCache(sheet: Sheet): SheetGraphCache {

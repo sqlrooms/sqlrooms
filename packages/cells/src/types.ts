@@ -182,10 +182,14 @@ export type CellRegistry = Record<string, CellRegistryItem<any>>;
 export const SheetType = z.enum(['notebook', 'canvas']);
 export type SheetType = z.infer<typeof SheetType>;
 
+export const EdgeKind = z.enum(['dependency', 'manual']);
+export type EdgeKind = z.infer<typeof EdgeKind>;
+
 export const Edge = z.object({
   id: z.string(),
   source: z.string(), // cellId
   target: z.string(), // cellId
+  kind: EdgeKind.optional(),
 });
 export type Edge = z.infer<typeof Edge>;
 
