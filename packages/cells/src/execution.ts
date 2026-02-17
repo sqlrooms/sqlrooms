@@ -97,38 +97,72 @@ export async function executeSqlCell(
 
   try {
     const db = state.db;
+    const dbx = (state as any).dbx as
+      | {
+          runQuery?: (args: {
+            connectionId?: string;
+            sql: string;
+            queryType?: 'arrow' | 'json' | 'exec';
+            materialize?: boolean;
+            materializedName?: string;
+            signal?: AbortSignal;
+          }) => Promise<{
+            relationName?: string;
+            arrowTable?: CellResultData['arrowTable'];
+          }>;
+        }
+      | undefined;
 
     if (signal?.aborted) throw new Error('Query cancelled');
-
-    const parsed = await db.sqlSelectToJson(sql);
-    if (parsed.error) {
-      throw new Error(parsed.error_message || 'Not a valid SELECT statement');
-    }
-
-    if (signal?.aborted) throw new Error('Query cancelled');
-
-    const connector = await db.getConnector();
-    await connector.query(
-      `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
-    );
 
     const effectiveResultName = getEffectiveResultName(
       cell.data as SqlCellData,
       convertToValidColumnOrTableName,
     );
-    const tableName = makeQualifiedTableName({
-      table: effectiveResultName,
-      schema: finalSchemaName,
-      database: db.currentDatabase,
-    }).toString();
+    const selectedConnectorId = (cell.data as SqlCellData).connectorId;
+    let tableName = '';
+    const connector = await db.getConnector();
+    if (
+      selectedConnectorId &&
+      selectedConnectorId !== 'duckdb-core' &&
+      dbx?.runQuery
+    ) {
+      const routed = await dbx.runQuery({
+        connectionId: selectedConnectorId,
+        sql,
+        queryType: 'arrow',
+        materialize: true,
+        materializedName: effectiveResultName,
+        signal,
+      });
+      if (!routed.relationName) {
+        throw new Error('External query did not return materialized relation');
+      }
+      tableName = routed.relationName;
+    } else {
+      const parsed = await db.sqlSelectToJson(sql);
+      if (parsed.error) {
+        throw new Error(parsed.error_message || 'Not a valid SELECT statement');
+      }
 
-    if (signal?.aborted) throw new Error('Query cancelled');
+      if (signal?.aborted) throw new Error('Query cancelled');
 
-    await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
-      signal,
-    });
+      await connector.query(
+        `CREATE SCHEMA IF NOT EXISTS ${escapeId(finalSchemaName)}`,
+      );
 
-    if (signal?.aborted) throw new Error('Query cancelled');
+      tableName = makeQualifiedTableName({
+        table: effectiveResultName,
+        schema: finalSchemaName,
+        database: db.currentDatabase,
+      }).toString();
+
+      if (signal?.aborted) throw new Error('Query cancelled');
+
+      await connector.query(`CREATE OR REPLACE VIEW ${tableName} AS ${sql}`, {
+        signal,
+      });
+    }
 
     // Find dependencies for referenced tables
     const referenced = findSqlDependencies({

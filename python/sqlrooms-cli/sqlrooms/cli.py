@@ -54,6 +54,12 @@ def main(
         envvar="SQLROOMS_API_KEY",
         help="API key for the chosen LLM provider.",
     ),
+    postgres_dsn: str = typer.Option(
+        None,
+        "--postgres-dsn",
+        envvar="SQLROOMS_POSTGRES_DSN",
+        help="Optional Postgres DSN to enable backend connector bridge testing in CLI mode.",
+    ),
     no_open_browser: bool = typer.Option(
         False, "--no-open-browser", help="Skip automatically opening the browser."
     ),
@@ -95,6 +101,7 @@ def main(
         llm_provider=llm_provider,
         llm_model=llm_model,
         api_key=api_key,
+        postgres_dsn=postgres_dsn,
         open_browser=not no_open_browser,
         ui_dir=ui,
     )

@@ -5,6 +5,7 @@ import {
   LoadFileOptions,
   createDuckDbSlice,
 } from '@sqlrooms/duckdb';
+import {DbSliceState, createDbSlice} from '@sqlrooms/db';
 import {
   CreateLayoutSliceProps,
   LayoutSliceState,
@@ -149,6 +150,7 @@ export type RoomShellSliceState = {
     ) => Promise<void>;
   };
 } & DuckDbSliceState &
+  DbSliceState &
   LayoutSliceState;
 
 /**
@@ -200,6 +202,7 @@ export function createRoomShellSlice(
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
       ...createDuckDbSlice({connector})(set, get, store),
+      ...createDbSlice()(set as any, get as any, store as any),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
       room: {
         ...roomSliceState.room,
@@ -328,6 +331,17 @@ export function createRoomShellSlice(
         ) {
           const {schema} = get().db;
           const {db} = get();
+          const dbx = (get() as any).dbx as
+            | {
+                runQuery?: (args: {
+                  sql: string;
+                  queryType?: 'arrow' | 'json' | 'exec';
+                  materialize?: boolean;
+                  materializedName?: string;
+                  signal?: AbortSignal;
+                }) => Promise<{relationName?: string}>;
+              }
+            | undefined;
           const newTableName =
             tableName !== oldTableName
               ? convertToUniqueColumnOrTableName(
@@ -335,13 +349,23 @@ export function createRoomShellSlice(
                   await db.getTables(schema),
                 )
               : tableName;
-          const {rowCount} = await db.createTableFromQuery(
-            newTableName,
-            query,
-            {
+          let rowCount: number | undefined;
+          if (dbx?.runQuery) {
+            const routed = await dbx.runQuery({
+              sql: query,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: newTableName,
+              signal: abortSignal,
+            });
+            const relation = routed.relationName || newTableName;
+            rowCount = await db.getTableRowCount(relation as string, schema);
+          } else {
+            const created = await db.createTableFromQuery(newTableName, query, {
               abortSignal,
-            },
-          );
+            });
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(newTableName, rowCount);
           }
@@ -658,6 +682,16 @@ export function createRoomShellSlice(
     }
 
     async function runDataSourceQueries(queries: SqlQueryDataSource[]) {
+      const dbx = (get() as any).dbx as
+        | {
+            runQuery?: (args: {
+              sql: string;
+              queryType?: 'arrow' | 'json' | 'exec';
+              materialize?: boolean;
+              materializedName?: string;
+            }) => Promise<{relationName?: string}>;
+          }
+        | undefined;
       for (const ds of queries) {
         try {
           const {tableName, sqlQuery} = ds;
@@ -668,10 +702,23 @@ export function createRoomShellSlice(
               };
             }),
           );
-          const {rowCount} = await get().db.createTableFromQuery(
-            tableName,
-            sqlQuery,
-          );
+          let rowCount: number | undefined;
+          if (dbx?.runQuery) {
+            const routed = await dbx.runQuery({
+              sql: sqlQuery,
+              queryType: 'arrow',
+              materialize: true,
+              materializedName: tableName,
+            });
+            const relation = routed.relationName || tableName;
+            rowCount = await get().db.getTableRowCount(relation as string);
+          } else {
+            const created = await get().db.createTableFromQuery(
+              tableName,
+              sqlQuery,
+            );
+            rowCount = created.rowCount;
+          }
           if (rowCount !== undefined) {
             get().db.setTableRowCount(tableName, rowCount);
           }

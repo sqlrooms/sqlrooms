@@ -1,4 +1,5 @@
 import {createId} from '@paralleldrive/cuid2';
+import type {DbSliceState} from '@sqlrooms/db';
 import {
   DuckDbSliceState,
   getSqlErrorWithPointer,
@@ -179,7 +180,7 @@ export function createSqlEditorSlice({
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<
     SqlEditorSliceState,
-    BaseRoomStoreState & DuckDbSliceState & SqlEditorSliceState
+    BaseRoomStoreState & DuckDbSliceState & DbSliceState & SqlEditorSliceState
   >((set, get) => {
     return {
       sqlEditor: {
@@ -448,6 +449,7 @@ export function createSqlEditorSlice({
 
           let queryResult: QueryResult;
           try {
+            const dbx = get().dbx;
             const connector = await get().db.getConnector();
             const signal = queryController.signal;
 
@@ -478,7 +480,15 @@ export function createSqlEditorSlice({
                 precedingStatements,
                 limitedLastStatement,
               );
-              const result = await connector.query(queryWithLimit, {signal});
+              const result = dbx?.runQuery
+                ? (
+                    await dbx.runQuery({
+                      sql: queryWithLimit,
+                      queryType: 'arrow',
+                      signal,
+                    })
+                  )?.arrowTable
+                : await connector.query(queryWithLimit, {signal});
               queryResult = {
                 status: 'success',
                 type: 'select',
@@ -498,7 +508,17 @@ export function createSqlEditorSlice({
                 );
               }
 
-              const result = await connector.query(query, {signal});
+              const result = dbx?.runQuery
+                ? (
+                    await dbx.runQuery({
+                      sql: query,
+                      queryType: /^(EXPLAIN|PRAGMA)/i.test(lastQueryStatement)
+                        ? 'arrow'
+                        : 'exec',
+                      signal,
+                    })
+                  )?.arrowTable
+                : await connector.query(query, {signal});
               // EXPLAIN and PRAGMA are not detected as select queries
               // and we cannot wrap them in a SELECT * FROM,
               // but we can still execute them and return the result

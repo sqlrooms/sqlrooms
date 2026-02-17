@@ -50,6 +50,7 @@ export const SqlCellData = z.object({
   title: z.string().default('Untitled'),
   sql: z.string().default(''),
   resultName: z.string().optional(), // SQL-friendly identifier for the result view
+  connectorId: z.string().optional(),
 });
 export type SqlCellData = z.infer<typeof SqlCellData>;
 

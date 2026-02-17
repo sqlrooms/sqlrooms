@@ -27,6 +27,7 @@ import {useCellsStore} from '../hooks';
 import type {CellContainerProps, SqlCell, SqlCellData} from '../types';
 import {getEffectiveResultName, isValidSqlIdentifier} from '../utils';
 import {SqlCellRunButton} from './SqlCellRunButton';
+import type {DbConnection} from '@sqlrooms/db';
 
 export type SqlCellContentProps = {
   id: string;
@@ -52,6 +53,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
   const getCellResult = useCellsStore((s) => s.cells.getCellResult);
   const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
+  const dbConnections = useCellsStore((s) => s.dbx.config.connections);
 
   // Re-read the cache whenever resultVersion or pageVersion changes
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -77,6 +79,19 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const handleRun = useCallback(() => {
     runCell(id);
   }, [id, runCell]);
+
+  const handleConnectorChange = useCallback(
+    (connectorId: string) => {
+      updateCell(id, (c) =>
+        produce(c, (draft) => {
+          if (draft.type === 'sql') {
+            (draft.data as SqlCellData).connectorId = connectorId || undefined;
+          }
+        }),
+      );
+    },
+    [id, updateCell],
+  );
 
   const handleCancel = useCallback(() => {
     cancelCell(id);
@@ -119,6 +134,18 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
     convertToValidColumnOrTableName,
   );
   const explicitResultName = (cell.data as SqlCellData).resultName || '';
+  const selectedConnectorId =
+    (cell.data as SqlCellData).connectorId || 'duckdb-core';
+  const connectionOptions = useMemo(() => {
+    const entries = Object.values(dbConnections);
+    if (!entries.length) {
+      return [{id: 'duckdb-core', title: 'Core DuckDB'}];
+    }
+    return entries.map((conn: DbConnection) => ({
+      id: conn.id,
+      title: conn.title || conn.id,
+    }));
+  }, [dbConnections]);
   const [dependentsMenuOpen, setDependentsMenuOpen] = useState(false);
   const [isResultNameInvalid, setIsResultNameInvalid] = useState(false);
 
@@ -359,7 +386,19 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   return renderContainer({
     header: (
       <div className="flex w-full items-center gap-2">
-        <div className="flex-1" />
+        <div className="flex-1">
+          <select
+            className="border-input bg-background text-foreground h-7 rounded border px-2 text-xs"
+            value={selectedConnectorId}
+            onChange={(e) => handleConnectorChange(e.target.value)}
+          >
+            {connectionOptions.map((connection) => (
+              <option key={connection.id} value={connection.id}>
+                {connection.title}
+              </option>
+            ))}
+          </select>
+        </div>
         <SqlCellRunButton
           onRun={handleRun}
           onCancel={handleCancel}
