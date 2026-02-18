@@ -1,6 +1,41 @@
-import {persist, PersistOptions} from 'zustand/middleware';
 import z from 'zod';
+import {persist, PersistOptions} from 'zustand/middleware';
 import {StateCreator} from './BaseRoomStore';
+
+/**
+ * Symbol-based extension point for schema-specific rehydrate merge input.
+ *
+ * If a Zod schema sets a function under this symbol, `createPersistHelpers().merge`
+ * will call it with `{defaults, persisted}` and parse the returned value instead of
+ * parsing `persisted` directly.
+ *
+ * This allows slices to opt into defaults-aware merging without hard-coding slice keys.
+ */
+export const PersistMergeInputSymbol = Symbol.for(
+  'sqlrooms.persist.mergeInput',
+);
+
+/**
+ * Builds the value passed to `schema.parse(...)` during rehydrate merge.
+ */
+type PersistMergeInputBuilder = (params: {
+  persisted: unknown;
+  defaults: unknown;
+}) => unknown;
+
+function getPersistMergeInputBuilder(
+  schema: z.ZodType,
+): PersistMergeInputBuilder | undefined {
+  // Schemas can optionally expose a merge-input builder under this symbol.
+  // This lets slices define custom rehydrate behavior without key-based branching.
+  const marker = (
+    schema as z.ZodType & {
+      [PersistMergeInputSymbol]?: PersistMergeInputBuilder;
+    }
+  )[PersistMergeInputSymbol];
+
+  return typeof marker === 'function' ? marker : undefined;
+}
 
 /**
  * Creates partialize and merge functions for Zustand persist middleware.
@@ -8,6 +43,12 @@ import {StateCreator} from './BaseRoomStore';
  *
  * @param sliceConfigs - Map of slice names to their Zod config schemas
  * @returns Object with partialize and merge functions
+ *   - `partialize`: serializes `state[slice].config` for each configured slice
+ *   - `merge`: rehydrates each slice config from persisted storage
+ *
+ * `merge` supports schema-level customization via `PersistMergeInputSymbol`.
+ * When present on a schema, the marker function receives the current defaults and
+ * persisted value and can return custom parse input for `schema.parse(...)`.
  *
  * @example
  * ```ts
@@ -50,10 +91,28 @@ export function createPersistHelpers<T extends Record<string, z.ZodType>>(
     merge: (persistedState: any, currentState: any) => {
       const merged = {...currentState};
       for (const [key, schema] of Object.entries(sliceConfigs)) {
+        const persistedConfig = persistedState?.[key];
+
+        if (persistedConfig === undefined || persistedConfig === null) {
+          continue;
+        }
+
         try {
+          // Default behavior parses persisted config as-is.
+          // If a schema declares a merge-input builder, we pass both persisted
+          // and current defaults so that schema can merge before validation.
+          const parseMergeInput = getPersistMergeInputBuilder(schema);
+          const mergeInput = parseMergeInput
+            ? parseMergeInput({
+                defaults: currentState[key]?.config,
+                persisted: persistedConfig,
+              })
+            : persistedConfig;
+          const config = schema.parse(mergeInput);
+
           merged[key] = {
             ...currentState[key],
-            config: schema.parse(persistedState[key]),
+            config,
           };
         } catch (error) {
           throw new Error(`Error parsing config key "${key}"`, {
