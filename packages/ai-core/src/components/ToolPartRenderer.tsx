@@ -26,8 +26,10 @@ const AgentProgressRenderer: React.FC<{
   return (
     <div className="mt-2 px-5 text-[0.9em]">
       {reasoning ? (
-        <div className="prose prose-sm dark:prose-invert mb-2 max-w-none text-sm text-gray-500">
-          <Markdown remarkPlugins={[remarkGfm]}>{reasoning}</Markdown>
+        <div className="mb-2 text-sm text-gray-500 prose prose-sm dark:prose-invert max-w-none">
+          <Markdown remarkPlugins={[remarkGfm]}>
+            {reasoning}
+          </Markdown>
         </div>
       ) : null}
       <div className="ml-3">
@@ -64,7 +66,7 @@ const AgentProgressRenderer: React.FC<{
               </div>
 
               {isSuccess && hasComponent && hasObjectOutput ? (
-                <div className="ml-6 mt-1">
+                <div className="mt-1 ml-6">
                   <ToolComponent
                     {...(toolCall.output as Record<string, unknown>)}
                   />
@@ -76,8 +78,10 @@ const AgentProgressRenderer: React.FC<{
       </div>
       {finalOutput && (
         <div className="mt-3 pt-2">
-          <div className="prose prose-sm dark:prose-invert max-w-none text-gray-600">
-            <Markdown remarkPlugins={[remarkGfm]}>{finalOutput}</Markdown>
+          <div className="text-gray-600 prose prose-sm dark:prose-invert max-w-none">
+            <Markdown remarkPlugins={[remarkGfm]}>
+              {finalOutput}
+            </Markdown>
           </div>
         </div>
       )}

@@ -65,7 +65,9 @@ export const AnalysisResultsContainer: React.FC<{
             ErrorMessageComponent={ErrorMessageComponent}
           />
         ))}
-        {isRunning && <AiThinkingDots className="text-muted-foreground p-4" />}
+        {isRunning && (
+          <AiThinkingDots className="text-muted-foreground p-4" />
+        )}
         <div ref={endRef} className="h-10 w-full shrink-0" />
         <ScrollBar orientation="vertical" />
         <ScrollBar orientation="horizontal" />
