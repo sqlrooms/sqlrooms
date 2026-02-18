@@ -25,11 +25,11 @@ export const CopyButton: React.FC<CopyButtonProps> = (props) => {
     size = 'icon',
     className,
     tooltipLabel = 'Copy to clipboard',
-    ariaLabel = props.tooltipLabel,
     durationMs = 1500,
     disabled = false,
     onCopied,
   } = props;
+  const ariaLabel = props.ariaLabel ?? tooltipLabel;
   const [copied, setCopied] = React.useState(false);
   const timeoutRef = React.useRef<number | null>(null);
 
