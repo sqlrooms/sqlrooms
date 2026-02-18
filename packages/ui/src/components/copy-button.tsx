@@ -18,18 +18,18 @@ export interface CopyButtonProps {
   onCopied?: () => void;
 }
 
-export const CopyButton: React.FC<CopyButtonProps> = (props) => {
-  const {
-    text,
-    variant = 'ghost',
-    size = 'icon',
-    className,
-    tooltipLabel = 'Copy to clipboard',
-    durationMs = 1500,
-    disabled = false,
-    onCopied,
-  } = props;
-  const ariaLabel = props.ariaLabel ?? tooltipLabel;
+export const CopyButton: React.FC<CopyButtonProps> = ({
+  text,
+  variant = 'ghost',
+  size = 'icon',
+  className,
+  tooltipLabel = 'Copy to clipboard',
+  ariaLabel: ariaLabelProp,
+  durationMs = 1500,
+  disabled = false,
+  onCopied,
+}) => {
+  const ariaLabel = ariaLabelProp ?? tooltipLabel;
   const [copied, setCopied] = React.useState(false);
   const timeoutRef = React.useRef<number | null>(null);
 
