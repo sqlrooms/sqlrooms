@@ -78,12 +78,7 @@ export function useToolGrouping(
             type: 'tool-group',
             parts: [part],
             startIndex: i,
-            title: generateToolGroupTitle(
-              [part],
-              false,
-              containerWidth,
-              toolAdditionalData,
-            ),
+            title: generateToolGroupTitle([part], false, containerWidth),
             defaultExpanded: true, // Excluded tools are expanded by default
           });
           i++;
@@ -156,7 +151,6 @@ export function useToolGrouping(
           toolParts,
           hasMoreToolsAfter,
           containerWidth,
-          toolAdditionalData,
         );
 
         groups.push({
@@ -172,7 +166,7 @@ export function useToolGrouping(
     }
 
     return groups;
-  }, [uiMessageParts, containerWidth, exclude, toolAdditionalData]);
+  }, [uiMessageParts, containerWidth, exclude]);
 }
 
 /**
@@ -208,13 +202,11 @@ function getToolIcon(toolName: string): React.ReactNode | null {
  * @param toolParts - The tool parts in this group
  * @param hasMoreToolsAfter - Whether there are more tool calls after this group
  * @param containerWidth - Width of the container in pixels (for calculating truncation)
- * @param toolAdditionalData - Additional data for tool calls (e.g., agent tool execution details)
  */
 function generateToolGroupTitle(
   toolParts: UIMessagePart[],
   hasMoreToolsAfter: boolean,
   containerWidth: number,
-  toolAdditionalData: Record<string, unknown> = {},
 ): React.ReactNode {
   // Filter to only tool parts
   const actualToolParts = toolParts.filter(
@@ -239,11 +231,6 @@ function generateToolGroupTitle(
     actualToolParts
       .map((p) => getToolName(p))
       .filter((name) => name !== 'unknown'),
-  );
-
-  // Check if any of the tools are agent tools
-  const hasAgentTool = Array.from(toolNames).some((name) =>
-    name.startsWith('agent-'),
   );
 
   // Check if we have both 'createMapLayer' and 'chart' tools
@@ -284,48 +271,8 @@ function generateToolGroupTitle(
       ? ((lastToolPart as any).input?.reasoning as string | undefined)
       : undefined;
 
-    // Use different base title for agent tools
-    let baseTitle: string;
-    if (hasAgentTool) {
-      // Extract agent tool names from toolAdditionalData
-      const agentToolNames: string[] = [];
-      for (const toolPart of actualToolParts) {
-        const toolCallId = (toolPart as any).toolCallId;
-        if (toolCallId && toolAdditionalData[toolCallId]) {
-          const agentData = toolAdditionalData[toolCallId] as {
-            agentToolCalls?: Array<{toolName: string; state: string}>;
-          };
-          if (agentData?.agentToolCalls) {
-            // Get currently executing or pending agent tools
-            const executingTools = agentData.agentToolCalls
-              .filter(
-                (call) => call.state === 'pending' || call.state === 'success',
-              )
-              .map((call) => call.toolName);
-            agentToolNames.push(...executingTools);
-          }
-        }
-      }
-
-      // Remove duplicates
-      const uniqueToolNames = Array.from(new Set(agentToolNames));
-
-      if (uniqueToolNames.length > 0) {
-        const toolNamesList = uniqueToolNames.join(', ');
-        baseTitle =
-          uniqueToolNames.length === 1
-            ? `Agent is calling: ${toolNamesList}...`
-            : `Agent is calling: ${toolNamesList}...`;
-      } else {
-        baseTitle =
-          toolCount === 1
-            ? 'Agent tool is executing...'
-            : `Agent tools are executing... (${toolCount} tools)`;
-      }
-    } else {
-      baseTitle =
-        toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
-    }
+    const baseTitle =
+      toolCount === 1 ? 'Thinking...' : `Thinking... (${toolCount} tools)`;
 
     // Calculate max reasoning length based on container width
     // Estimate: average character width ~7px, reserve space for icon (~24px), padding (~16px), and base text
@@ -345,8 +292,8 @@ function generateToolGroupTitle(
 
     const truncatedReasoning =
       reasoning && reasoning.length > maxReasoningLength
-        ? `${reasoning.substring(0, maxReasoningLength).toLowerCase()}...`
-        : reasoning?.toLowerCase();
+        ? `${reasoning.substring(0, maxReasoningLength)}...`
+        : reasoning;
 
     const titleText = truncatedReasoning
       ? `${baseTitle} ${truncatedReasoning}`

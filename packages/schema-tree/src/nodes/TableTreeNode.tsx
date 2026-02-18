@@ -2,7 +2,7 @@
 
 import {DataTableModal} from '@sqlrooms/data-table';
 import {makeQualifiedTableName, TableNodeObject} from '@sqlrooms/duckdb';
-import {useDisclosure} from '@sqlrooms/ui';
+import {cn, useDisclosure} from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {CopyIcon, EyeIcon, TableIcon, ViewIcon} from 'lucide-react';
 import {FC} from 'react';
@@ -108,15 +108,18 @@ export const TableTreeNode: FC<{
           ) : (
             <TableIcon size="16px" className="shrink-0 text-blue-500" />
           )}
-          <div className="flex w-full items-center justify-between gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
             <span
-              className="min-w-[50px] max-w-[50%] truncate whitespace-nowrap"
+              className={cn(
+                'shrink-0 truncate',
+                rowCount !== undefined && rowCount > 0 && 'max-w-[70%]',
+              )}
               title={name}
             >
               {name}
             </span>
             {rowCount !== undefined && rowCount > 0 && (
-              <span className="text-muted-foreground/50 ml-1 max-w-[50%] truncate whitespace-nowrap pr-8 text-xs">
+              <span className="text-muted-foreground/50 ml-auto mr-1 truncate whitespace-nowrap text-xs">
                 {formatCount(rowCount)} {rowCount === 1 ? 'row' : 'rows'}
               </span>
             )}

@@ -1,0 +1,42 @@
+{
+  "name": "sqlrooms-cli-app",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@sqlrooms/ai": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/vega": "workspace:*",
+    "lucide-react": "^0.555.0",
+    "zod": "^4.1.8",
+    "zustand": "^5.0.8",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.7",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.2",
+    "autoprefixer": "^10.4.21",
+    "eslint": "^9.36.0",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.9.2",
+    "vite": "^7.1.9"
+  },
+  "overrides": {
+    "@duckdb/duckdb-wasm": "1.32.0"
+  }
+}

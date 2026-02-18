@@ -1,11 +1,11 @@
-import React, {useState, useCallback, useMemo} from 'react';
-import Markdown, {Components} from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
+import {cn, CopyButton} from '@sqlrooms/ui';
 import {truncate} from '@sqlrooms/utils';
-import {MessageContainer} from './MessageContainer';
 import {BrainIcon} from 'lucide-react';
-import {cn} from '@sqlrooms/ui';
+import React, {useCallback, useMemo, useState} from 'react';
+import Markdown, {Components} from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
   content: string;
@@ -23,6 +23,9 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
+
+const sanitizeThinkTags = (value: string): string =>
+  value.replace(COMPLETE_THINK_REGEX, '').replace(INCOMPLETE_THINK_REGEX, '');
 
 /**
  * Processes content and extracts think content in one pass
@@ -132,6 +135,8 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
+  const copyableText = useMemo(() => sanitizeThinkTags(content), [content]);
+  const hasTextContent = copyableText.trim().length > 0;
 
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
@@ -150,6 +155,12 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
     () => processContent(content),
     [content],
   );
+  const footerActions = hasTextContent ? (
+    <CopyButton
+      text={copyableText}
+      tooltipLabel={isAnswer ? 'Copy response' : 'Copy message'}
+    />
+  ) : null;
 
   // Memoize the think-block component to prevent unnecessary re-renders
   const thinkBlockComponent = useCallback(
@@ -181,26 +192,26 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <MessageContainer
-        isSuccess={true}
-        type={isAnswer ? 'answer' : 'thinking'}
-        content={{content, isAnswer}}
-      >
-        <div className="prose dark:prose-invert max-w-none text-sm">
-          <Markdown
-            remarkPlugins={[remarkGfm]}
-            rehypePlugins={[rehypeRaw]}
-            components={{
-              // @ts-expect-error - Custom HTML element not in react-markdown types
+    <MessageContainer
+      isSuccess={true}
+      type={isAnswer ? 'answer' : 'thinking'}
+      content={{content, isAnswer}}
+      footerActions={footerActions}
+    >
+      <div className="prose dark:prose-invert max-w-none text-sm">
+        <Markdown
+          remarkPlugins={[remarkGfm]}
+          rehypePlugins={[rehypeRaw]}
+          components={
+            {
               'think-block': thinkBlockComponent,
               ...customMarkdownComponents,
-            }}
-          >
-            {processedContent}
-          </Markdown>
-        </div>
-      </MessageContainer>
-    </div>
+            } as Partial<Components>
+          }
+        >
+          {processedContent}
+        </Markdown>
+      </div>
+    </MessageContainer>
   );
 });

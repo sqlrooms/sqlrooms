@@ -3,6 +3,90 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* chart label position and add responsive font size ([#328](https://github.com/sqlrooms/sqlrooms/issues/328)) ([99c5099](https://github.com/sqlrooms/sqlrooms/commit/99c509950f48f0d3e8128f9704939e247fbc8f90))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+
+### Features
+
+* Charts actions: only show on hover ([#336](https://github.com/sqlrooms/sqlrooms/issues/336)) ([87a21ce](https://github.com/sqlrooms/sqlrooms/commit/87a21ce58bc15b09b790456bd8d1719416c3ae44))
+
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* show chart as inline component in the sidebar ([#303](https://github.com/sqlrooms/sqlrooms/issues/303)) ([a201c46](https://github.com/sqlrooms/sqlrooms/commit/a201c46e7504ef0fd0390f58ae5728dad8847b88))
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* **deps:** update dependency react-vega to v8 ([#255](https://github.com/sqlrooms/sqlrooms/issues/255)) ([fa352f4](https://github.com/sqlrooms/sqlrooms/commit/fa352f43b1ed32afce7ca9a8575ecd1205001d45))
+
+### Features
+
+* Vega actions toolbar ([#301](https://github.com/sqlrooms/sqlrooms/issues/301)) ([ef68f2e](https://github.com/sqlrooms/sqlrooms/commit/ef68f2ef0b6c36855dbe247261cd7e4beb345d7f))
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Features
+
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](https://github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](https://github.com/sqlrooms/sqlrooms/commit/f21318636d8151b942db6a15480731e86c00f5d4))
+
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](https://github.com/sqlrooms/sqlrooms/commit/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
+## 0.26.1-rc.6 (2025-12-05)
+
+### Bug Fixes
+
+* Add missing dep @dnd-kit/modifiers ([78859e2](https://github.com/sqlrooms/sqlrooms/commit/78859e2b9ac0dad17209ac100d40e36f81da6c27))
+
+## 0.26.1-rc.5 (2025-12-05)
+
+**Note:** Version bump only for package @sqlrooms/vega
+
 ## 0.26.1-rc.4 (2025-12-01)
 
 ### Bug Fixes

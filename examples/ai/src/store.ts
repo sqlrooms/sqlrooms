@@ -28,9 +28,16 @@ import {DatabaseIcon} from 'lucide-react';
 import {z} from 'zod';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import EchoToolResult from './components/EchoToolResult';
-import {MainView} from './components/MainView';
+
 import {AI_SETTINGS} from './config';
 import exampleSessions from './example-sessions.json';
+import {createElement, lazy, Suspense} from 'react';
+import {SpinnerPane} from '@sqlrooms/ui';
+
+// Lazy loading example to enable code splitting
+const LazyMainView = lazy(() =>
+  import('./components/MainView').then((m) => ({default: m.MainView})),
+);
 
 export const RoomPanelTypes = z.enum([
   'room-details',
@@ -92,40 +99,19 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             main: {
               title: 'Main view',
               icon: () => null,
-              component: MainView,
+              // Wrap in function to prevent immer from freezing the lazy component (which causes errors)
+              component: () =>
+                createElement(Suspense, {
+                  fallback: createElement(SpinnerPane, {
+                    className: 'h-full w-full',
+                  }),
+                  children: createElement(LazyMainView),
+                }),
               placement: 'main',
             },
           },
         },
       })(set, get, store),
-
-      // ...createDuckDbSlice()(set, get, store),
-
-      // ...createLayoutSlice({
-      //   config: {
-      //     type: LayoutTypes.enum.mosaic,
-      //     nodes: {
-      //       direction: 'row',
-      //       first: RoomPanelTypes.enum['data-sources'],
-      //       second: MAIN_VIEW,
-      //       splitPercentage: 30,
-      //     },
-      //   },
-      //   panels: {
-      //     [RoomPanelTypes.enum['data-sources']]: {
-      //       title: 'Data Sources',
-      //       icon: DatabaseIcon,
-      //       component: DataSourcesPanel,
-      //       placement: 'sidebar',
-      //     },
-      //     main: {
-      //       title: 'Main view',
-      //       icon: () => null,
-      //       component: MainView,
-      //       placement: 'main',
-      //     },
-      //   },
-      // })(set, get, store),
 
       // Sql editor slice
       ...createSqlEditorSlice()(set, get, store),
@@ -140,6 +126,15 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getInstructions: () => {
           return createDefaultAiInstructions(store);
         },
+
+        // Add providerOptions here, e.g. to set reasoningEffort for GPT reasoning models GPT-5.1 GPT-5.2
+        // getProviderOptions: () => {
+        //   return {
+        //     openai: {
+        //       reasoningEffort: 'high',
+        //     },
+        //   };
+        // },
 
         // Add custom tools
         tools: {

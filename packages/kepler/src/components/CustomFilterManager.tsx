@@ -14,16 +14,11 @@ import {Layer} from '@kepler.gl/layers';
 import {isSideFilter} from '@kepler.gl/utils';
 import {Datasets} from '@kepler.gl/table';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {
   KeplerActions,
   useKeplerStateActions,
 } from '../hooks/useKeplerStateActions';
-
-// Get the kepler.gl components through the injector
-const FilterPanel = KeplerInjector.get(FilterPanelFactory);
-const PanelTitle = KeplerInjector.get(PanelTitleFactory);
-const AddFilterButton = KeplerInjector.get(AddFilterButtonFactory);
 
 const filterPanelMetadata = SIDEBAR_PANELS.find((p) => p.id === 'filter');
 
@@ -70,11 +65,16 @@ type FilterPanelCallbacks = Record<
   string,
   {
     removeFilter: () => void;
-    setFilterView: (view: string) => void;
+    setFilterView: (_view: string) => void;
     toggleAnimation: () => void;
     toggleFilterFeature: () => void;
   }
 >;
+
+// Get the kepler.gl components through the injector
+const FilterPanel = getKeplerFactory(FilterPanelFactory);
+const PanelTitle = getKeplerFactory(PanelTitleFactory);
+const AddFilterButton = getKeplerFactory(AddFilterButtonFactory);
 
 // Filter List Component
 const FilterList: React.FC<FilterListProps> = ({
@@ -98,7 +98,7 @@ const FilterList: React.FC<FilterListProps> = ({
         ...accu,
         [filter.id]: {
           removeFilter: () => removeFilter(idx),
-          setFilterView: (view: string) =>
+          setFilterView: (_view: string) =>
             setFilterView(
               idx,
               isSideFilter(filter)
@@ -164,22 +164,28 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
 
   const {onClickAddFilter} = useCustomFilterActions(keplerActions);
 
+  const visState = keplerState?.visState;
+  const filters = useMemo(() => visState?.filters ?? [], [visState?.filters]);
+  const datasets = useMemo(
+    () => (visState?.datasets ?? []) as Datasets,
+    [visState?.datasets],
+  );
+  const layers = useMemo(() => visState?.layers ?? [], [visState?.layers]);
+  const filtersByIndex = useMemo(
+    () =>
+      filters?.map((f, idx) => ({
+        filter: f,
+        idx,
+      })) ?? [],
+    [filters],
+  );
+
   if (!keplerState || !keplerActions) {
     return null;
   }
 
-  const {filters, datasets, layers} = keplerState.visState;
   const isAnyFilterAnimating = Object.values(filters).some(
     (f) => f.isAnimating,
-  );
-
-  const filtersByIndex = useMemo(
-    () =>
-      filters.map((f, idx) => ({
-        filter: f,
-        idx,
-      })),
-    [filters],
   );
 
   return (
@@ -210,5 +216,3 @@ export const CustomFilterManager: React.FC<CustomFilterManagerProps> = ({
     </CustomFilterManagerContainer>
   );
 };
-
-export default CustomFilterManager;

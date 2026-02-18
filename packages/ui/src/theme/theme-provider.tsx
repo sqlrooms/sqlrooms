@@ -1,4 +1,10 @@
-import {createContext, useContext, useEffect, useState} from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useLayoutEffect,
+  useState,
+} from 'react';
 
 /**
  * Available theme options
@@ -68,11 +74,22 @@ export function ThemeProvider({
   storageKey = 'sqlrooms-ui-theme',
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
-  );
+  const [theme, setTheme] = useState<Theme>(() => {
+    if (typeof window === 'undefined') return defaultTheme;
+    try {
+      return (window.localStorage.getItem(storageKey) as Theme) || defaultTheme;
+    } catch {
+      return defaultTheme;
+    }
+  });
 
-  useEffect(() => {
+  // Apply theme class before paint to avoid a light-theme flash on initial load.
+  // (useLayoutEffect on the client, fall back to useEffect in non-DOM environments)
+  const useIsomorphicLayoutEffect =
+    typeof window !== 'undefined' ? useLayoutEffect : useEffect;
+
+  useIsomorphicLayoutEffect(() => {
+    if (typeof window === 'undefined') return;
     const root = window.document.documentElement;
 
     root.classList.remove('light', 'dark');
@@ -93,7 +110,13 @@ export function ThemeProvider({
   const value = {
     theme,
     setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
+      if (typeof window !== 'undefined') {
+        try {
+          window.localStorage.setItem(storageKey, theme);
+        } catch {
+          // ignore (e.g. SSR, private mode, blocked storage)
+        }
+      }
       setTheme(theme);
     },
   };

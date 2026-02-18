@@ -1,10 +1,12 @@
-### [Kepler.gl Geospatial Visualization](https://sqlrooms-kepler.netlify.app/)
+### [Kepler.gl Geospatial Visualization](https://kepler.sqlrooms.org/)
 
-[Try live](https://sqlrooms-kepler.netlify.app/)
+[Try live](https://kepler.sqlrooms.org/)
 | [Github repo](https://github.com/sqlrooms/examples/tree/main/kepler)
 | [Open in StackBlitz](https://stackblitz.com/github/sqlrooms/examples/tree/main/kepler?embed=1&file=src/app.tsx)
 
-<a href="https://sqlrooms-kepler.netlify.app/" target="_blank">
+[![Netlify Status](https://api.netlify.com/api/v1/badges/888420a3-33e4-4142-a3b5-03a61c44e09a/deploy-status)](https://app.netlify.com/projects/sqlrooms-kepler/deploys)
+
+<a href="https://kepler.sqlrooms.org/" target="_blank">
   <img src="/media/examples/kepler.webp" alt="SQLRooms Kepler.gl geospatial visualization example" width=450>
 </a>
 
@@ -18,7 +20,7 @@ An example demonstrating [Kepler.gl](https://kepler.gl/) integration for geospat
 To create a new project from the kepler example run this:
 
 ```sh
-npx degit sqlrooms/examples/kepler my-new-app/
+npx giget gh:sqlrooms/examples/kepler my-new-app/
 ```
 
 #### Running locally

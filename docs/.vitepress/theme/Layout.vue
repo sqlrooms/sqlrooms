@@ -9,6 +9,7 @@ const SHOW_BANNER = false; // Set to false to hide banner and margin everywhere
 
 const BANNER_ID = 'sqlrooms-launch-2025';
 const open = ref(true);
+const currentYear = new Date().getFullYear();
 
 onMounted(() => {
   if (localStorage.getItem(`sqlrooms-banner-${BANNER_ID}`) === 'true') {
@@ -71,21 +72,46 @@ function dismiss() {
 
       <template #layout-bottom>
         <CaseStudiesCarousel v-if="frontmatter.layout === 'home'" />
-        <div class="foursquare-footer">
-          Supported by
-          <a
-            href="https://location.foursquare.com"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <img
-              width="100"
-              height="32"
-              src="/public/foursquare-logo.svg"
-              alt="Foursquare Logo"
-              decoding="async"
-            />
-          </a>
+        <div class="sponsors-footer">
+          <div class="sponsor-item">
+            Supported by
+            <a
+              href="https://location.foursquare.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                width="100"
+                height="32"
+                src="/public/foursquare-logo.svg"
+                alt="Foursquare Logo"
+                decoding="async"
+                class="foursquare-logo"
+              />
+            </a>
+          </div>
+          <div class="sponsor-item horizontal">
+            Deploys by
+            <a
+              href="https://www.netlify.com"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <img
+                src="https://www.netlify.com/v3/img/components/netlify-light.svg"
+                alt="Deploys by Netlify"
+                class="netlify-logo netlify-light"
+              />
+              <img
+                src="https://www.netlify.com/v3/img/components/netlify-dark.svg"
+                alt="Deploys by Netlify"
+                class="netlify-logo netlify-dark"
+              />
+            </a>
+          </div>
+        </div>
+        <div class="copyright-row">
+          Copyright © {{ currentYear }} SQLRooms contributors
         </div>
       </template>
     </DefaultTheme.Layout>
@@ -104,6 +130,18 @@ function dismiss() {
 .with-banner-margin .VPLocalNav,
 .with-banner-margin .VPContent {
   margin-top: var(--vt-banner-height);
+}
+
+html:not(.dark) .foursquare-logo {
+  filter: invert(1);
+}
+
+html:not(.dark) .netlify-dark {
+  display: none;
+}
+
+.dark .netlify-light {
+  display: none;
 }
 </style>
 
@@ -126,10 +164,10 @@ html:not(.dark) .video.dark {
 }
 */
 
-.foursquare-footer {
+.sponsors-footer {
   display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  flex-direction: row;
+  gap: 3rem;
   align-items: center;
   justify-content: center;
   text-align: center;
@@ -140,24 +178,39 @@ html:not(.dark) .video.dark {
   margin-top: 2rem;
 }
 
-.foursquare-footer p {
-  margin: 0;
-  color: var(--vp-c-text-2);
-  font-size: 0.9rem;
+.sponsor-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: center;
 }
 
-.foursquare-footer a {
+.sponsor-item.horizontal {
+  flex-direction: row;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.copyright-row {
+  text-align: center;
+  font-size: 0.75rem;
+  color: var(--vp-c-text-2);
+  margin-top: 1rem;
+  padding-bottom: 2rem;
+}
+
+.sponsors-footer a {
   color: var(--vp-c-brand-1);
   text-decoration: none;
   font-weight: 500;
 }
 
-.foursquare-footer a:hover {
+.sponsors-footer a:hover {
   text-decoration: underline;
 }
 
-html:not(.dark) .foursquare-footer img {
-  filter: invert(1);
+.netlify-logo {
+  height: 32px;
 }
 
 .video {

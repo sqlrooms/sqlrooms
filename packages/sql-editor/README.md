@@ -90,8 +90,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
-        // ... other room config
-        ...createDefaultSqlEditorConfig(),
       },
     })(set, get, store),
 
@@ -204,8 +202,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomConfig, RoomState>(
     ...createRoomShellSlice<RoomConfig>({
       config: {
         title: 'SQL Workspace',
-        // ... other room config
-        ...createDefaultSqlEditorConfig(),
       },
     })(set, get, store),
 

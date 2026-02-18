@@ -1,0 +1,72 @@
+[project]
+name = "sqlrooms-server"
+description = "SQLRooms DuckDB websocket server runtime"
+dynamic = ["version"]
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.10"
+authors = [
+  { name = "SQLRooms Contributors" }
+]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+  "diskcache",
+  "duckdb>=1.4.0,<1.5.0",
+  "pandas",
+  "pyarrow",
+  "socketify",
+  "ujson",
+  "loro>=1.10.0"
+]
+
+[project.scripts]
+sqlrooms-server = "sqlrooms.server.__main__:main"
+sqlrooms-duckdb-server = "sqlrooms.server.__main__:main"
+
+[project.urls]
+homepage = "https://sqlrooms.com"
+repository = "https://github.com/sqlrooms/sqlrooms"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[dependency-groups]
+dev = [
+  "mypy",
+  "pytest-cov",
+  "pytest",
+  "pytest-asyncio",
+  "ruff",
+  "types-ujson",
+  "watchdog",
+  "aiohttp",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["sqlrooms"]
+
+[tool.hatch.build.targets.sdist]
+include = ["README.md", "LICENSE", "sqlrooms"]
+
+[tool.hatch.version]
+path = "package.json"
+pattern = "\"version\": \"(?P<version>.+?)\""
+
+# https://mypy.readthedocs.io/en/stable/config_file.html
+[tool.mypy]
+files = "sqlrooms/server/**/*.py"
+strict = false
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(name)s: %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"

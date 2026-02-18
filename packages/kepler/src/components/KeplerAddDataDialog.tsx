@@ -1,4 +1,4 @@
-import {useCallback, useState} from 'react';
+import {useCallback, useMemo, useState} from 'react';
 
 import {
   Dialog,
@@ -14,10 +14,10 @@ import {
 } from '@sqlrooms/ui';
 import {LoadTileSetFactory, Icons} from '@kepler.gl/components';
 import {FileDropInput} from './FileDropInput';
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {KeplerS3Browser} from './KeplerS3Browser';
-import type {KeplerS3BrowserProps} from '../index';
+import type {KeplerS3BrowserProps} from './KeplerS3Browser';
 import {useIntl} from 'react-intl';
 
 const DEFAULT_ACCEPTED_FORMATS = [
@@ -30,7 +30,8 @@ const DEFAULT_ACCEPTED_FORMATS = [
   'kml',
 ];
 
-const LoadTileSet = KeplerInjector.get(LoadTileSetFactory);
+const LoadTileSet = getKeplerFactory(LoadTileSetFactory);
+
 export type LoadTileSet = (args: {
   tileset: {name: string; type: string; metadata: Record<string, any>};
   metadata?: Record<string, any>;
@@ -54,7 +55,15 @@ function LoadTileSetContent({
     },
     [loadTileSet, onClose],
   );
-  return <LoadTileSet intl={intl} onTilesetAdded={onTilesetAdded} />;
+  const meta = useMemo(() => ({}), []); // TODO: add metadata
+  return (
+    <LoadTileSet
+      meta={meta}
+      isAddingDatasets={false}
+      intl={intl}
+      onTilesetAdded={onTilesetAdded}
+    />
+  );
 }
 
 export enum AddDataMethods {

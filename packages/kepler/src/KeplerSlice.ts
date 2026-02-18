@@ -1,12 +1,12 @@
 import {
   addDataToMap,
+  addLayer as addLayerAction,
   deleteEntry,
   ActionTypes as KeplerActionTypes,
   registerEntry,
   removeDataset,
   requestMapStyles,
   wrapTo,
-  addLayer as addLayerAction,
 } from '@kepler.gl/actions';
 import {ALL_FIELD_TYPES, VectorTileDatasetMetadata} from '@kepler.gl/constants';
 import {
@@ -44,7 +44,6 @@ import {
 } from '@sqlrooms/room-shell';
 import * as arrow from 'apache-arrow';
 import {produce, setAutoFreeze} from 'immer';
-setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 import {taskMiddleware} from 'react-palm/tasks';
 import type {
   Action,
@@ -54,6 +53,7 @@ import type {
 } from 'redux';
 import {compose, Dispatch, Middleware} from 'redux';
 import {createLogger, ReduxLoggerOptions} from 'redux-logger';
+setAutoFreeze(false); // Kepler attempts to mutate redux state, so we need to disable immer's auto freeze to avoid errors
 
 const KeplerGLSchemaManager = new KeplerGLSchemaClass();
 
@@ -93,9 +93,11 @@ export function createDefaultKeplerConfig(
         id: mapId,
         name: 'Untitled Map',
         config: undefined,
+        lastOpenedAt: Date.now(),
       },
     ],
     currentMapId: mapId,
+    openTabs: [mapId],
     ...props,
   };
 }
@@ -150,6 +152,7 @@ export type KeplerSliceState = {
         metadata: VectorTileDatasetMetadata;
       },
       tileMetadata: Record<string, any>,
+      autoCreateLayers: boolean,
     ) => void;
     addConfigToMap: (mapId: string, config: KeplerMapSchema) => void;
     removeDatasetFromMaps: (datasetId: string) => void;
@@ -163,6 +166,8 @@ export type KeplerSliceState = {
     createMap: (name?: string) => string;
     deleteMap: (mapId: string) => void;
     renameMap: (mapId: string, name: string) => void;
+    closeMap: (mapId: string) => void;
+    setOpenTabs: (tabIds: string[]) => void;
     getCurrentMap: () => KeplerMapSchema | undefined;
     registerKeplerMapIfNotExists: (mapId: string) => void;
     __reduxProviderStore: ReduxStore<KeplerGlReduxState, AnyAction> | undefined;
@@ -174,6 +179,7 @@ export type KeplerSliceState = {
 const SKIP_AUTO_SAVE_ACTIONS: string[] = [
   KeplerActionTypes.LAYER_HOVER,
   KeplerActionTypes.UPDATE_MAP,
+  KeplerActionTypes.MOUSE_MOVE,
 ];
 
 export function createKeplerSlice({
@@ -207,6 +213,16 @@ export function createKeplerSlice({
     table: DesktopKeplerTable,
     ...applicationConfig,
   });
+  const updateMapLastOpenedAt = (
+    maps: KeplerSliceConfig['maps'],
+    mapId: string,
+    now: number = Date.now(),
+  ) => {
+    const map = maps.find((item) => item.id === mapId);
+    if (map) {
+      map.lastOpenedAt = now;
+    }
+  };
   return createSlice<
     KeplerSliceState,
     BaseRoomStoreState & KeplerSliceState & DuckDbSliceState
@@ -287,7 +303,7 @@ export function createKeplerSlice({
                 getState: () => get().kepler.map || {},
                 subscribe: () => () => {},
                 replaceReducer: () => {},
-                // @ts-ignore
+                // @ts-expect-error - Symbol.observable is not defined in the Redux type definitions
                 [Symbol.observable]: () => {},
               },
             },
@@ -347,19 +363,24 @@ export function createKeplerSlice({
         setCurrentMapId: (mapId) => {
           return set((state) =>
             produce(state, (draft) => {
+              const now = Date.now();
               draft.kepler.config.currentMapId = mapId;
+              updateMapLastOpenedAt(draft.kepler.config.maps, mapId, now);
             }),
           );
         },
 
         createMap: (name) => {
           const mapId = createId();
+          const now = Date.now();
           set((state) =>
             produce(state, (draft) => {
               draft.kepler.config.maps.push({
                 id: mapId,
                 name: name ?? 'Untitled Map',
+                lastOpenedAt: now,
               });
+              draft.kepler.config.openTabs.push(mapId);
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
                 registerEntry({id: mapId}),
@@ -396,9 +417,52 @@ export function createKeplerSlice({
         deleteMap: (mapId) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.kepler.config.maps = draft.kepler.config.maps.filter(
-                (map) => map.id !== mapId,
+              const openTabs = draft.kepler.config.openTabs;
+              const maps = draft.kepler.config.maps;
+              const wasCurrentMap = draft.kepler.config.currentMapId === mapId;
+              const deletingIndex = openTabs.indexOf(mapId);
+
+              // Remove from maps and openTabs
+              draft.kepler.config.maps = maps.filter((map) => map.id !== mapId);
+              draft.kepler.config.openTabs = openTabs.filter(
+                (id) => id !== mapId,
               );
+
+              // If we deleted the current map, select another one
+              if (wasCurrentMap) {
+                const newOpenTabs = draft.kepler.config.openTabs;
+                const remainingMaps = draft.kepler.config.maps;
+
+                if (newOpenTabs.length > 0) {
+                  // Select from remaining open tabs
+                  const newIndex =
+                    deletingIndex === 0
+                      ? 0
+                      : Math.min(deletingIndex - 1, newOpenTabs.length - 1);
+                  const newSelectedId = newOpenTabs[newIndex];
+                  if (newSelectedId) {
+                    draft.kepler.config.currentMapId = newSelectedId;
+                    updateMapLastOpenedAt(
+                      draft.kepler.config.maps,
+                      newSelectedId,
+                      Date.now(),
+                    );
+                  }
+                } else if (remainingMaps.length > 0) {
+                  // No open tabs left, open a closed map
+                  const mapToOpen = remainingMaps[0];
+                  if (mapToOpen) {
+                    draft.kepler.config.openTabs.push(mapToOpen.id);
+                    draft.kepler.config.currentMapId = mapToOpen.id;
+                    updateMapLastOpenedAt(
+                      draft.kepler.config.maps,
+                      mapToOpen.id,
+                      Date.now(),
+                    );
+                  }
+                }
+              }
+
               draft.kepler.map = keplerReducer(
                 draft.kepler.map,
                 deleteEntry(mapId),
@@ -422,12 +486,42 @@ export function createKeplerSlice({
           );
         },
 
+        closeMap: (mapId) => {
+          set((state) =>
+            produce(state, (draft) => {
+              const openTabs = draft.kepler.config.openTabs;
+
+              // Don't close if it's the last open tab (defensive check, TabStrip also prevents this)
+              if (openTabs.length <= 1) return;
+
+              // Just remove from openTabs - TabStrip handles selection via onSelect before calling onClose
+              draft.kepler.config.openTabs = openTabs.filter(
+                (id) => id !== mapId,
+              );
+            }),
+          );
+        },
+
+        setOpenTabs: (tabIds) => {
+          set((state) =>
+            produce(state, (draft) => {
+              draft.kepler.config.openTabs = tabIds;
+            }),
+          );
+        },
+
         addDataToMap: (mapId: string, data: any) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           get().kepler.dispatchAction(mapId, addDataToMap(data));
         },
 
-        addTileSetToMap: (mapId, tableName, tileset, tileMetadata) => {
+        addTileSetToMap: (
+          mapId,
+          tableName,
+          tileset,
+          tileMetadata,
+          autoCreateLayers = true,
+        ) => {
           get().kepler.registerKeplerMapIfNotExists(mapId);
           const dataset = {
             info: {
@@ -459,7 +553,7 @@ export function createKeplerSlice({
             addDataToMap({
               datasets: dataset,
               options: {
-                autoCreateLayers: true,
+                autoCreateLayers,
                 centerMap: true,
               },
             }),

@@ -1,13 +1,5 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {
-  Badge,
-  Button,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@sqlrooms/ui';
-import {CodeIcon, XCircleIcon} from 'lucide-react';
+import {Badge, cn} from '@sqlrooms/ui';
+import {XCircleIcon} from 'lucide-react';
 
 type MessageContainerProps = {
   className?: string;
@@ -16,6 +8,8 @@ type MessageContainerProps = {
   type: string;
   content: object;
   children: React.ReactNode;
+  footerActions?: React.ReactNode;
+  footerActionsClassName?: string;
 };
 
 export const MessageContainer: React.FC<MessageContainerProps> = ({
@@ -24,6 +18,8 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
   // borderColor,
   content,
   children,
+  footerActions,
+  footerActionsClassName,
 }) => {
   return (
     <div
@@ -49,11 +45,21 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
           {/* ) : ( */}
           <XCircleIcon className="h-3 w-3 text-red-500" />
           {/* )} */}
-          {type}
+          {type ? type.replace(/^\w/, (c) => c.toUpperCase()) : ''}
         </Badge>
       )}
 
       <div className="flex flex-col gap-5">{children}</div>
+      {footerActions && (
+        <div
+          className={cn(
+            'mt-2 flex items-center justify-end gap-1 pt-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
+            footerActionsClassName,
+          )}
+        >
+          {footerActions}
+        </div>
+      )}
     </div>
   );
 };

@@ -11,27 +11,26 @@
     "postinstall": "node scripts/download-extensions.mjs"
   },
   "dependencies": {
-    "@sqlrooms/dropzone": "^0.16.4",
+    "@duckdb/duckdb-wasm": "1.32.0",
+    "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/monaco-editor": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "class-variance-authority": "0.7.1",
-    "clsx": "2.1.1",
     "lucide-react": "0.544.0",
     "monaco-editor": "^0.52.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^4.1.8",
-    "zustand": "5.0.8"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
     "@types/react": "^19.1.13",
     "@types/react-dom": "^19.1.9",
     "@vitejs/plugin-react": "^5.0.3",
+    "autoprefixer": "^10.4.21",
     "eslint": "^9.36.0",
     "eslint-plugin-react-hooks": "^5.2.0",
     "eslint-plugin-react-refresh": "^0.4.21",
@@ -44,6 +43,6 @@
     "vite-plugin-pwa": "^1.0.3"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0"
+    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }

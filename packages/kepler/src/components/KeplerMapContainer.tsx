@@ -1,4 +1,4 @@
-import {FC, useMemo, useRef, useEffect} from 'react';
+import {FC, useMemo, useRef, useEffect, useState} from 'react';
 
 import {
   MapContainerFactory,
@@ -12,18 +12,18 @@ import {
   RootContext,
   ModalContainerFactory,
 } from '@kepler.gl/components';
-import {useDimensions} from '@kepler.gl/utils';
+import {useDimensions, getAnimatableVisibleLayers} from '@kepler.gl/utils';
 import styled, {useTheme} from 'styled-components';
 
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
 import {useStoreWithKepler} from '../KeplerSlice';
 
-const MapContainer = KeplerInjector.get(MapContainerFactory);
-const BottomWidget = KeplerInjector.get(BottomWidgetFactory);
-const GeoCoderPanel = KeplerInjector.get(GeocoderPanelFactory);
-const ModalContainer = KeplerInjector.get(ModalContainerFactory);
+const MapContainer = getKeplerFactory(MapContainerFactory);
+const BottomWidget = getKeplerFactory(BottomWidgetFactory);
+const GeoCoderPanel = getKeplerFactory(GeocoderPanelFactory);
+const ModalContainer = getKeplerFactory(ModalContainerFactory);
 
 const DEFAULT_DIMENSIONS = {
   width: 0,
@@ -43,6 +43,12 @@ const CustomWidgetcontainer = styled.div`
   .map-popover {
     z-index: 50;
   }
+
+  /* Remove top margin from Trip layer timeline */
+  .kepler-gl .bottom-widget--container .animation-control-container,
+  .bottom-widget--container .animation-control-container {
+    margin-top: 0 !important;
+  }
 `;
 
 type KeplerGLProps = Parameters<typeof geoCoderPanelSelector>[0];
@@ -52,6 +58,7 @@ const KeplerGl: FC<{
 }> = ({mapId}) => {
   const bottomWidgetRef = useRef(null);
   const [containerRef, size] = useDimensions<HTMLDivElement>();
+  const [containerNode, setContainerNode] = useState<HTMLElement | null>(null);
   const theme = useTheme();
   const basicKeplerProps = useStoreWithKepler(
     (state) => state.kepler.basicKeplerProps,
@@ -59,6 +66,11 @@ const KeplerGl: FC<{
 
   const {keplerActions, keplerState} = useKeplerStateActions({mapId});
   const interactionConfig = keplerState?.visState?.interactionConfig;
+
+  // Capture the current container DOM node outside of render logic
+  useEffect(() => {
+    setContainerNode(containerRef.current);
+  }, [containerRef]);
 
   // Update export image settings when size changes
   useEffect(() => {
@@ -90,12 +102,20 @@ const KeplerGl: FC<{
     [keplerState, mergedKeplerProps],
   );
 
-  const bottomWidgetFields = keplerState?.visState.filters?.length
-    ? bottomWidgetSelector(mergedKeplerProps, theme)
-    : null;
+  // Check if there are filters or animatable layers (e.g., Trip layers)
+  const hasFilters = Boolean(keplerState?.visState.filters?.length);
+  const hasAnimatableLayers = useMemo(() => {
+    const layers = keplerState?.visState?.layers || [];
+    return getAnimatableVisibleLayers(layers).length > 0;
+  }, [keplerState?.visState?.layers]);
+
+  const bottomWidgetFields =
+    hasFilters || hasAnimatableLayers
+      ? bottomWidgetSelector(mergedKeplerProps, theme)
+      : null;
 
   const modalContainerFields = keplerState?.visState
-    ? modalContainerSelector(mergedKeplerProps, containerRef.current)
+    ? modalContainerSelector(mergedKeplerProps, containerNode)
     : null;
 
   const mapboxApiAccessToken =
@@ -115,19 +135,19 @@ const KeplerGl: FC<{
               key={0}
               index={0}
               {...mapFields}
-              mapboxApiAccessToken={mapboxApiAccessToken}
+              mapboxApiAccessToken={mapboxApiAccessToken || ''}
             />
           </MapViewStateContextProvider>
         ) : null}
-        {interactionConfig?.geocoder?.enabled ? (
+        {geoCoderPanelFields && interactionConfig?.geocoder?.enabled ? (
           <GeoCoderPanel
             {...geoCoderPanelFields}
             index={0}
             unsyncedViewports={false}
-            mapboxApiAccessToken={mapboxApiAccessToken}
+            mapboxApiAccessToken={mapboxApiAccessToken || ''}
           />
         ) : null}
-        {bottomWidgetFields ? (
+        {size && bottomWidgetFields ? (
           <BottomWidget
             rootRef={bottomWidgetRef}
             {...bottomWidgetFields}
@@ -135,7 +155,7 @@ const KeplerGl: FC<{
             containerW={size?.width}
           />
         ) : null}
-        {modalContainerFields ? (
+        {size && size.width && size.height && modalContainerFields ? (
           <ModalContainer
             {...modalContainerFields}
             containerW={size?.width}

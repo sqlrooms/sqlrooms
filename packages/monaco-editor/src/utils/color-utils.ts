@@ -53,6 +53,30 @@ export function hslToHex(h: number, s: number, l: number): string {
   return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
 }
 
+function normalizeCssColorValue(
+  cssValue: string,
+  fallbackColor: string,
+): string {
+  const trimmed = cssValue.trim();
+  if (!trimmed) return fallbackColor;
+
+  // If already a hex color, return it
+  if (trimmed.startsWith('#')) return trimmed;
+
+  // Check if value is in HSL format (e.g. "210 40% 98%" or "222.2 84% 4.9%")
+  const hslMatch = trimmed.match(
+    /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
+  );
+  if (hslMatch && hslMatch[1] && hslMatch[2] && hslMatch[3]) {
+    const h = parseFloat(hslMatch[1]);
+    const s = parseFloat(hslMatch[2]);
+    const l = parseFloat(hslMatch[3]);
+    return hslToHex(h, s, l);
+  }
+
+  return fallbackColor;
+}
+
 /**
  * Safely gets a CSS variable and ensures it's in a format Monaco can use
  * @param variableName CSS variable name (e.g. '--background')
@@ -63,30 +87,15 @@ export function getCssColor(
   variableName: string,
   fallbackColor: string,
 ): string {
+  if (typeof document === 'undefined') return fallbackColor;
   try {
-    // Get CSS variable value
+    // Get CSS variable value from current DOM
     const cssValue = getComputedStyle(document.documentElement)
       .getPropertyValue(variableName)
       .trim();
 
     if (!cssValue) return fallbackColor;
-
-    // If already a hex color, return it
-    if (cssValue.startsWith('#')) return cssValue;
-
-    // Check if value is in HSL format (e.g. "210 40% 98%" or "222.2 84% 4.9%")
-    const hslMatch = cssValue.match(
-      /^(\d+(?:\.\d+)?)\s+(\d+(?:\.\d+)?)%\s+(\d+(?:\.\d+)?)%$/,
-    );
-    if (hslMatch && hslMatch[1] && hslMatch[2] && hslMatch[3]) {
-      const h = parseFloat(hslMatch[1]);
-      const s = parseFloat(hslMatch[2]);
-      const l = parseFloat(hslMatch[3]);
-      return hslToHex(h, s, l);
-    }
-
-    // Try to parse other formats or return fallback
-    return fallbackColor;
+    return normalizeCssColorValue(cssValue, fallbackColor);
   } catch (error) {
     console.error(`Error getting CSS variable ${variableName}:`, error);
     return fallbackColor;
@@ -98,6 +107,9 @@ export function getCssColor(
  * @returns Monospace font family string suitable for code editors
  */
 export function getMonospaceFont(): string {
+  if (typeof document === 'undefined') {
+    return 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace';
+  }
   return (
     getComputedStyle(document.documentElement)
       .getPropertyValue('--font-mono')
@@ -301,7 +313,7 @@ export function getJsonEditorTheme(isDarkTheme: boolean): any {
   // Select the appropriate color set based on theme
   const colors = isDarkTheme ? darkThemeColors : lightThemeColors;
 
-  // Theme background and UI colors - still using CSS variables for the editor itself
+  // Theme background and UI colors - read from current DOM
   const background = getCssColor(
     '--background',
     isDarkTheme ? '#1E1E1E' : '#FFFFFF',

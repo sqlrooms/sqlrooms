@@ -5,10 +5,11 @@ import {
   plotContainerSelector,
 } from '@kepler.gl/components';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {KeplerProvider} from './KeplerProvider';
 
-const PlotContainer = KeplerInjector.get(PlotContainerFactory);
+const PlotContainer = getKeplerFactory(PlotContainerFactory);
+
 const KEPLER_PROPS = {
   mapboxApiUrl: 'https://api.mapbox.com',
   appName: 'kepler.gl',
@@ -42,8 +43,8 @@ export const KeplerPlotContainer: FC<{
 
   const plotContainerFields = useMemo(
     () => (mergedKeplerProps ? plotContainerSelector(mergedKeplerProps) : null),
-    // include filters in deps to trigger refresh when filters change from bottom time widget
-    [mergedKeplerProps, keplerState?.visState?.filters],
+    // mergedKeplerProps already changes when filters change via keplerState
+    [mergedKeplerProps],
   );
 
   return isExportingImage && plotContainerFields ? (

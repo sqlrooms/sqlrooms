@@ -44,6 +44,9 @@
  *   }>,
  *   uiMessages: Array<UIMessageSchema>, //<-- NEW FIELD
  *   toolAdditionalData: Record<string, unknown>, //<-- NEW FIELD
+ *   messagesRevision?: number, //<-- NEW FIELD
+ *   prompt: string, //<-- NEW FIELD
+ *   isRunning: boolean, //<-- NEW FIELD
  * }
  */
 
@@ -146,7 +149,7 @@ function migrateFromV0_26_0(data: unknown) {
   // Remove deprecated streamMessage field from analysisResults
   const cleanedAnalysisResults = analysisResults.map((result) => {
     if (!isObject(result)) return result;
-    // eslint-disable-line @typescript-eslint/no-unused-vars
+
     const {streamMessage, ...rest} = result as UnknownRecord & {
       streamMessage?: unknown;
     };
@@ -158,6 +161,8 @@ function migrateFromV0_26_0(data: unknown) {
     analysisResults: cleanedAnalysisResults,
     uiMessages: [...existingUiMessages, ...synthesizedMessages],
     toolAdditionalData,
+    prompt: '',
+    isRunning: false,
   };
 }
 

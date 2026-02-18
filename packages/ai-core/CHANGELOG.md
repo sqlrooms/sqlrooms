@@ -3,6 +3,112 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* AI settings changes are only applied in new sessions ([#356](https://github.com/sqlrooms/sqlrooms/issues/356)) ([d1799d0](https://github.com/sqlrooms/sqlrooms/commit/d1799d0ab503be3a872a8cda948fe50bac0bc60c))
+
+### Features
+
+* AI: Ask for API key inline in chat input ([#357](https://github.com/sqlrooms/sqlrooms/issues/357)) ([f256021](https://github.com/sqlrooms/sqlrooms/commit/f256021abb0b7f981d392f5e6d8c61e71e5eed09))
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* Ai suggestions div height ([24c2909](https://github.com/sqlrooms/sqlrooms/commit/24c290995519cecd17f6dab45f2229d059b720a5))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* TabStrip scroll into view ([#312](https://github.com/sqlrooms/sqlrooms/issues/312)) ([271efcf](https://github.com/sqlrooms/sqlrooms/commit/271efcfea8c095703d4e05150d75b59144d62930))
+
+### Features
+
+* AI open session tabs now saved in AI slice config ([#315](https://github.com/sqlrooms/sqlrooms/issues/315)) ([34a33cb](https://github.com/sqlrooms/sqlrooms/commit/34a33cb1819275e3365aaf7c4607405ec6a2d663))
+* enhance ErrorMessage component with customizable Markdown components ([#333](https://github.com/sqlrooms/sqlrooms/issues/333)) ([ffe618a](https://github.com/sqlrooms/sqlrooms/commit/ffe618a9de8655de4bf18fcdf6df1c8f53cd8622))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+* Prompt suggestion improvements ([#316](https://github.com/sqlrooms/sqlrooms/issues/316)) ([55eba6c](https://github.com/sqlrooms/sqlrooms/commit/55eba6cf7fcf449c9c88d9e058478c63959f7ec1))
+* render reasoning in agent tool ([#322](https://github.com/sqlrooms/sqlrooms/issues/322)) ([ffca82e](https://github.com/sqlrooms/sqlrooms/commit/ffca82eef19eb6d617a48ce3ee376e64987f747e))
+
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* show chart as inline component in the sidebar ([#303](https://github.com/sqlrooms/sqlrooms/issues/303)) ([a201c46](https://github.com/sqlrooms/sqlrooms/commit/a201c46e7504ef0fd0390f58ae5728dad8847b88))
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* AI Fix tool error message layout ([#287](https://github.com/sqlrooms/sqlrooms/issues/287)) ([660a7df](https://github.com/sqlrooms/sqlrooms/commit/660a7df8dfcd8a39e007ad8eb7e4e8d6e2bbeaff))
+
+### Features
+
+* add provider options to AiSlice ([#275](https://github.com/sqlrooms/sqlrooms/issues/275)) ([f23a72b](https://github.com/sqlrooms/sqlrooms/commit/f23a72beef0008a410813861da50a2347355d144))
+* AI: Support parallel sessions ([#284](https://github.com/sqlrooms/sqlrooms/issues/284)) ([d5c6402](https://github.com/sqlrooms/sqlrooms/commit/d5c6402981341da9dec73d2b6da738a7d430f598))
+* Remove delete chat message button ([#298](https://github.com/sqlrooms/sqlrooms/issues/298)) ([b955820](https://github.com/sqlrooms/sqlrooms/commit/b9558201b6190e4802943eecc142e40550f8face))
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Bug Fixes
+
+* agent rendering and add abortSignal to query tool ([#267](https://github.com/sqlrooms/sqlrooms/issues/267)) ([088bb4d](https://github.com/sqlrooms/sqlrooms/commit/088bb4dc1763bcaaa1ef62fb54fbb142974a4134))
+
+### Features
+
+* allow custom error component in AnalysisResult ([#269](https://github.com/sqlrooms/sqlrooms/issues/269)) ([ab1d6c1](https://github.com/sqlrooms/sqlrooms/commit/ab1d6c1af0e74666c421c0b9a4a1eddb64f3adf1))
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+### Bug Fixes
+
+* Prevent infinite rerender in AI AnalysisResultsContainer ([#262](https://github.com/sqlrooms/sqlrooms/issues/262)) ([1e46230](https://github.com/sqlrooms/sqlrooms/commit/1e46230bdab9b073b4e142b5c04850f802e10e8e))
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+### Bug Fixes
+
+* **deps:** update dependency @paralleldrive/cuid2 to v3 ([#250](https://github.com/sqlrooms/sqlrooms/issues/250)) ([ad0c539](https://github.com/sqlrooms/sqlrooms/commit/ad0c539a7664b2cee60184674c4c27c67c90514e))
+
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](https://github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](https://github.com/sqlrooms/sqlrooms/commit/f21318636d8151b942db6a15480731e86c00f5d4))
+
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](https://github.com/sqlrooms/sqlrooms/commit/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
+## 0.26.1-rc.6 (2025-12-05)
+
+### Bug Fixes
+
+* Add missing dep @dnd-kit/modifiers ([78859e2](https://github.com/sqlrooms/sqlrooms/commit/78859e2b9ac0dad17209ac100d40e36f81da6c27))
+
+## 0.26.1-rc.5 (2025-12-05)
+
+**Note:** Version bump only for package @sqlrooms/ai-core
+
 ## 0.26.1-rc.4 (2025-12-01)
 
 ### Bug Fixes

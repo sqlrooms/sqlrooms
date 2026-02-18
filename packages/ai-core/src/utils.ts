@@ -8,7 +8,64 @@ import {
   AnalysisSessionSchema,
   UIMessagePart,
 } from '@sqlrooms/ai-config';
-import {TextUIPart, ToolUIPart} from 'ai';
+import {DynamicToolUIPart, TextUIPart, ToolUIPart, UIMessage} from 'ai';
+import {
+  ABORT_EVENT,
+  ANALYSIS_PENDING_ID,
+  TOOL_CALL_CANCELLED,
+} from './constants';
+
+/**
+ * Merge multiple AbortSignals into a single signal.
+ *
+ * Why this exists:
+ * - `@ai-sdk/react` (`useChat`) provides a request-level abort signal (e.g. when calling `stop()`).
+ * - This app also has a per-session AbortController a.k.a the Stop button (e.g. `cancelAnalysis(sessionId)`).
+ *
+ * When either of those sources abort, we want downstream work (streaming / tools / fetch)
+ * to see a *single* abort signal.
+ *
+ * Notes:
+ * - If 0 signals are provided, returns `undefined` (callers can omit abort handling).
+ * - If 1 signal is provided, returns it directly (no wrapping controller).
+ * - If 2+ signals are provided, creates a new AbortController and aborts it when any input aborts.
+ * - (not currently used) use native `AbortSignal.any()` to avoid per-request listener accumulation on long-lived signals.
+ * -`{once: true}` listeners if `AbortSignal.any()` is unavailable.
+ */
+export function mergeAbortSignals(
+  signals: Array<AbortSignal | undefined>,
+): AbortSignal | undefined {
+  const present = signals.filter(Boolean) as AbortSignal[];
+  if (present.length === 0) return undefined;
+  if (present.length === 1) return present[0];
+
+  // Prefer the platform implementation when available.
+  // It avoids attaching JS event listeners to long-lived signals (e.g. per-session AbortController),
+  // which would otherwise accumulate one listener per request if requests usually complete normally.
+  //
+  // Node >=22 and modern browsers support this.
+  // We intentionally use an `any` cast to keep compatibility with older TS lib typings.
+  // const anyFn = (AbortSignal as unknown as {any?: (signals: AbortSignal[]) => AbortSignal})
+  //   .any;
+  // if (typeof anyFn === 'function') {
+  //   return anyFn(present);
+  // }
+
+  const controller = new AbortController();
+  const abort = () => {
+    if (!controller.signal.aborted) controller.abort();
+  };
+
+  for (const s of present) {
+    if (s.aborted) {
+      abort();
+      break;
+    }
+    s.addEventListener(ABORT_EVENT, abort, {once: true});
+  }
+
+  return controller.signal;
+}
 
 /**
  * Custom error class for operation abort errors.
@@ -117,6 +174,12 @@ export function isToolPart(part: UIMessagePart): part is ToolUIPart {
   return typeof part.type === 'string' && part.type.startsWith('tool-');
 }
 
+export function isDynamicToolPart(
+  part: UIMessagePart,
+): part is DynamicToolUIPart {
+  return part.type === 'dynamic-tool';
+}
+
 /**
  * Cleans up pending analysis results from interrupted conversations and restores them
  * with proper IDs from actual user messages. This handles the case where a page refresh
@@ -138,7 +201,7 @@ export function cleanupPendingAnalysisResults(
 
   // Remove all pending results
   const nonPendingResults = analysisResults.filter(
-    (result) => result.id !== '__pending__',
+    (result) => result.id !== ANALYSIS_PENDING_ID,
   );
 
   // Find all user messages that don't have a corresponding assistant response
@@ -184,4 +247,86 @@ export function cleanupPendingAnalysisResults(
     ...session,
     analysisResults: [...nonPendingResults, ...restoredResults],
   };
+}
+
+/**
+ * Validates and completes UIMessages to ensure all tool-call parts have corresponding tool-result parts.
+ * This is important when canceling with AbortController, which may leave incomplete tool-calls.
+ * Assumes sequential tool execution (only one tool runs at a time).
+ *
+ * @param messages - The messages to validate and complete
+ * @returns Cleaned messages with completed tool-call/result pairs
+ */
+export function fixIncompleteToolCalls(messages: UIMessage[]): UIMessage[] {
+  return messages.map((message) => {
+    if (message.role !== 'assistant' || !message.parts) {
+      return message;
+    }
+
+    // Walk backward and complete any TRAILING tool parts that lack output.
+    // This covers multi-tool-step aborts where several tool calls were started
+    // but the stream was cancelled before the outputs were emitted.
+    type ToolPart = {
+      type: string;
+      toolCallId: string;
+      toolName?: string;
+      input?: unknown;
+      state?: string;
+    };
+    const isToolPart = (part: unknown): part is ToolPart => {
+      if (typeof part !== 'object' || part === null) return false;
+      const p = part as Record<string, unknown> & {type?: unknown};
+      const typeVal =
+        typeof p.type === 'string' ? (p.type as string) : undefined;
+      return (
+        !!typeVal &&
+        'toolCallId' in p &&
+        (typeVal === 'dynamic-tool' || typeVal.startsWith('tool-'))
+      );
+    };
+
+    const updatedParts = [...message.parts];
+    let sawAnyTool = false;
+    for (let i = updatedParts.length - 1; i >= 0; i--) {
+      const current = updatedParts[i] as unknown;
+      if (!isToolPart(current)) {
+        // Stop once we exit the trailing tool region
+        if (sawAnyTool) break;
+        continue;
+      }
+      sawAnyTool = true;
+      const toolPart = current as ToolPart;
+      const hasOutput = toolPart.state?.startsWith('output');
+      if (hasOutput) {
+        // Completed tool; continue checking earlier parts just in case
+        continue;
+      }
+
+      // Synthesize a completed error result for the incomplete tool call
+      const base = {
+        toolCallId: toolPart.toolCallId,
+        state: 'output-error' as const,
+        input: toolPart.input ?? {},
+        errorText: TOOL_CALL_CANCELLED,
+        providerExecuted: false,
+      };
+
+      const syntheticPart =
+        toolPart.type === 'dynamic-tool'
+          ? {
+              type: 'dynamic-tool' as const,
+              toolName: toolPart.toolName || 'unknown',
+              ...base,
+            }
+          : {type: toolPart.type as string, ...base};
+
+      updatedParts[i] =
+        syntheticPart as unknown as (typeof message.parts)[number];
+    }
+
+    return {
+      ...message,
+      parts: updatedParts,
+    };
+  });
 }

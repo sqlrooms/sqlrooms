@@ -4,10 +4,13 @@ const QuerySchema = z.object({
   id: z.string().describe('Query identifier.'),
   name: z.string().describe('Query name.'),
   query: z.string().describe('SQL query to execute.'),
+  lastOpenedAt: z
+    .number()
+    .optional()
+    .describe('Last time this query tab was opened/selected (epoch ms).'),
 });
 
-// Saved state (persisted)
-export const SqlEditorSliceConfig = z.object({
+const SqlEditorSliceConfigSchema = z.object({
   queries: z.array(QuerySchema),
   selectedQueryId: z
     .string()
@@ -16,12 +19,11 @@ export const SqlEditorSliceConfig = z.object({
   openTabs: z.array(z.string()).describe('IDs of open tabs'),
 });
 
-export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfig>;
-
 /**
- * Migrates legacy config with closedTabIds to new format with openTabs.
+ * Config schema for the SQL editor slice.
+ * Automatically migrates legacy closedTabIds to openTabs format.
  */
-export const SqlEditorSliceConfigMigration = z.preprocess((data) => {
+export const SqlEditorSliceConfig = z.preprocess((data) => {
   if (typeof data !== 'object' || data === null) return data;
   const obj = data as Record<string, unknown>;
 
@@ -40,12 +42,17 @@ export const SqlEditorSliceConfigMigration = z.preprocess((data) => {
     return {...rest, openTabs};
   }
 
-  return data;
-}, SqlEditorSliceConfig);
+  // Fallback to empty openTabs if no openTabs or closedTabIds are present
+  return {...data, openTabs: []};
+}, SqlEditorSliceConfigSchema);
+
+export type SqlEditorSliceConfig = z.infer<typeof SqlEditorSliceConfigSchema>;
 
 export function createDefaultSqlEditorConfig(): SqlEditorSliceConfig {
   return {
-    queries: [{id: 'default', name: 'SQL', query: ''}],
+    queries: [
+      {id: 'default', name: 'SQL', query: '', lastOpenedAt: Date.now()},
+    ],
     selectedQueryId: 'default',
     openTabs: ['default'],
   };

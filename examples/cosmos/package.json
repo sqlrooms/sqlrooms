@@ -14,19 +14,13 @@
     "@cosmograph/cosmos": "2.0.0-beta.22",
     "@sqlrooms/cosmos": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
-    "d3-scale": "^4.0.2",
-    "d3-scale-chromatic": "^3.1.0",
-    "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -47,6 +41,6 @@
     "vite": "^7.1.9"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0"
+    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }

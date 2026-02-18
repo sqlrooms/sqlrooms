@@ -14,7 +14,13 @@ import {
 } from '@sqlrooms/ui';
 import {useStoreWithAiSettings} from '../AiSettingsSlice';
 
-export const AiModelParameters: FC = () => {
+export interface AiModelParametersProps {
+  showViewInstructions?: boolean;
+}
+
+export const AiModelParameters: FC<AiModelParametersProps> = ({
+  showViewInstructions = false,
+}) => {
   const maxSteps = useStoreWithAiSettings(
     (s) => s.aiSettings.config.modelParameters.maxSteps,
   );
@@ -164,15 +170,17 @@ export const AiModelParameters: FC = () => {
               <Upload className="h-4 w-4" />
               Upload File
             </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleViewFullInstructions}
-              className="flex items-center gap-2"
-            >
-              <Eye className="h-4 w-4" />
-              View Instructions
-            </Button>
+            {showViewInstructions && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleViewFullInstructions}
+                className="flex items-center gap-2"
+              >
+                <Eye className="h-4 w-4" />
+                View Instructions
+              </Button>
+            )}
           </div>
           <Input
             ref={fileInputRef}

@@ -5,11 +5,7 @@ import {
   createRoomStore,
   RoomShellSliceState,
 } from '@sqlrooms/room-shell';
-import {
-  createDefaultSqlEditorConfig,
-  createSqlEditorSlice,
-  SqlEditorSliceState,
-} from '@sqlrooms/sql-editor';
+import {createSqlEditorSlice, SqlEditorSliceState} from '@sqlrooms/sql-editor';
 import {MapIcon} from 'lucide-react';
 
 /**
@@ -32,7 +28,6 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
             url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
           },
         ],
-        ...createDefaultSqlEditorConfig(),
       },
       layout: {
         panels: {

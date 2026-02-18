@@ -3,7 +3,12 @@ import {Components} from 'react-markdown';
 import {AnalysisAnswer} from './AnalysisAnswer';
 import {ReasoningBox} from './ReasoningBox';
 import {ToolPartRenderer} from './ToolPartRenderer';
-import {isTextPart, isReasoningPart} from '../utils';
+import {
+  isTextPart,
+  isReasoningPart,
+  isDynamicToolPart,
+  isToolPart,
+} from '../utils';
 import type {ToolGroup} from '../hooks/useToolGrouping';
 
 /**
@@ -14,6 +19,8 @@ type GroupedMessagePartsProps = {
   groupedParts: ToolGroup[];
   /** Total number of message parts (used to determine if a text part is the final answer) */
   totalPartsCount: number;
+  /** Per-session additional data keyed by toolCallId */
+  toolAdditionalData?: Record<string, unknown>;
   /** Optional custom components for markdown rendering */
   customMarkdownComponents?: Partial<Components>;
 };
@@ -29,6 +36,7 @@ type GroupedMessagePartsProps = {
 export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
   groupedParts,
   totalPartsCount,
+  toolAdditionalData,
   customMarkdownComponents,
 }) => {
   return (
@@ -61,18 +69,42 @@ export const GroupedMessageParts: React.FC<GroupedMessagePartsProps> = ({
         }
 
         if (group.type === 'tool-group') {
+          // "Excluded" tools (see `useToolGrouping(exclude=...)`) are marked with
+          // `defaultExpanded: true`. Render them inline as part of the normal flow
+          // (not inside a collapsible ReasoningBox), so charts/maps/etc don't get hidden.
+          if (group.defaultExpanded) {
+            return (
+              <div key={`group-${groupIndex}`} className="flex flex-col gap-2">
+                {group.parts.map((part, partIndex) =>
+                  isToolPart(part) || isDynamicToolPart(part) ? (
+                    <ToolPartRenderer
+                      key={`tool-call-${groupIndex}-${partIndex}`}
+                      part={part}
+                      toolCallId={part.toolCallId}
+                      toolAdditionalData={toolAdditionalData}
+                    />
+                  ) : null,
+                )}
+              </div>
+            );
+          }
+
           return (
             <ReasoningBox
               key={`group-${groupIndex}`}
-              title={group.title ? String(group.title) : undefined}
+              title={group.title}
               defaultOpen={group.defaultExpanded}
             >
-              {group.parts.map((part, partIndex) => (
-                <ToolPartRenderer
-                  key={`tool-call-${groupIndex}-${partIndex}`}
-                  part={part}
-                />
-              ))}
+              {group.parts.map((part, partIndex) =>
+                isToolPart(part) || isDynamicToolPart(part) ? (
+                  <ToolPartRenderer
+                    key={`tool-call-${groupIndex}-${partIndex}`}
+                    part={part}
+                    toolCallId={part.toolCallId}
+                    toolAdditionalData={toolAdditionalData}
+                  />
+                ) : null,
+              )}
             </ReasoningBox>
           );
         }

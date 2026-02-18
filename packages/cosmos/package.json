@@ -1,11 +1,12 @@
 {
   "name": "@sqlrooms/cosmos",
-  "version": "0.26.1-rc.4",
+  "version": "0.27.0-rc.5",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "module": "dist/index.js",
   "type": "module",
-  "author": "Ilya Boyandin <ilya@boyandin.me>",
+  "sideEffects": false,
+  "author": "SQLRooms Contributors",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -18,12 +19,11 @@
     "access": "public"
   },
   "dependencies": {
-    "@cosmograph/cosmos": "2.0.0-beta.22",
-    "@sqlrooms/room-config": "workspace:*",
+    "@cosmograph/cosmos": "2.0.0-beta.26",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "immer": "^11.0.1",
-    "lucide-react": "^0.555.0",
+    "lucide-react": "^0.556.0",
     "zod": "^4.1.8",
     "zustand": "^5.0.8"
   },

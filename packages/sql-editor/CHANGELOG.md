@@ -3,6 +3,94 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* color utils get css color from theme mode ([#331](https://github.com/sqlrooms/sqlrooms/issues/331)) ([caa4db9](https://github.com/sqlrooms/sqlrooms/commit/caa4db9def2c9c790905500940a03bbd95b60e1f))
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+* fix tab reordering ([#340](https://github.com/sqlrooms/sqlrooms/issues/340)) ([338b880](https://github.com/sqlrooms/sqlrooms/commit/338b880d5808d5df7e5b4fbac5fd41f73626dd51))
+* monaco editor flashing ([#306](https://github.com/sqlrooms/sqlrooms/issues/306)) ([35e4420](https://github.com/sqlrooms/sqlrooms/commit/35e4420f21360460ed4950043e0628ef82f5ff93)), closes [#313](https://github.com/sqlrooms/sqlrooms/issues/313)
+* Prevent type errors in React 18 which don't have `inert` ([#323](https://github.com/sqlrooms/sqlrooms/issues/323)) ([505498b](https://github.com/sqlrooms/sqlrooms/commit/505498b3b021bd72f4b278b95b3d986c0e73f708))
+* rollback query panel ([#339](https://github.com/sqlrooms/sqlrooms/issues/339)) ([f9efcd5](https://github.com/sqlrooms/sqlrooms/commit/f9efcd5cd319eb41cd3c75ea48da355b8304376b))
+
+### Features
+
+* Abort query in CreateTableForm ([#321](https://github.com/sqlrooms/sqlrooms/issues/321)) ([ff16aad](https://github.com/sqlrooms/sqlrooms/commit/ff16aada806e60dc0f23e69d64668046d98ec087))
+* improve explain query output in sqleditor ([#308](https://github.com/sqlrooms/sqlrooms/issues/308)) ([1557c4b](https://github.com/sqlrooms/sqlrooms/commit/1557c4be52c7198b55f28132cba1f10a31fa148b))
+* Introduce ScrollableRow ([#337](https://github.com/sqlrooms/sqlrooms/issues/337)) ([d1d90cc](https://github.com/sqlrooms/sqlrooms/commit/d1d90cc9a0b99ef7854b3501f882d4759117f6fe))
+
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+### Bug Fixes
+
+* query result panels are mapped based on query tab id ([#304](https://github.com/sqlrooms/sqlrooms/issues/304)) ([a3c6a83](https://github.com/sqlrooms/sqlrooms/commit/a3c6a83d2b567890496d4409a834e527afb1f89c))
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Features
+
+* propagate the change to the arrow table to parent components ([#299](https://github.com/sqlrooms/sqlrooms/issues/299)) ([0d6a335](https://github.com/sqlrooms/sqlrooms/commit/0d6a335fd770a90fa454d7f5d3a5f21aedb0e5d1))
+* Vega improvements ([#297](https://github.com/sqlrooms/sqlrooms/issues/297)) ([7a1f5f7](https://github.com/sqlrooms/sqlrooms/commit/7a1f5f77763aa54e7f0b0e5b2dd0e24df7ebbebc))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Features
+
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+### Bug Fixes
+
+* **deps:** update dependency @paralleldrive/cuid2 to v3 ([#250](https://github.com/sqlrooms/sqlrooms/issues/250)) ([ad0c539](https://github.com/sqlrooms/sqlrooms/commit/ad0c539a7664b2cee60184674c4c27c67c90514e))
+
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](https://github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](https://github.com/sqlrooms/sqlrooms/commit/f21318636d8151b942db6a15480731e86c00f5d4))
+
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](https://github.com/sqlrooms/sqlrooms/commit/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
+## 0.26.1-rc.6 (2025-12-05)
+
+### Bug Fixes
+
+* Add missing dep @dnd-kit/modifiers ([78859e2](https://github.com/sqlrooms/sqlrooms/commit/78859e2b9ac0dad17209ac100d40e36f81da6c27))
+
+## 0.26.1-rc.5 (2025-12-05)
+
+**Note:** Version bump only for package @sqlrooms/sql-editor
+
 ## 0.26.1-rc.4 (2025-12-01)
 
 ### Bug Fixes

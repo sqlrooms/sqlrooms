@@ -1,16 +1,15 @@
 import {AnalysisResultSchema} from '@sqlrooms/ai-config';
-import {Button, CopyButton} from '@sqlrooms/ui';
-import {SquareTerminalIcon, TrashIcon} from 'lucide-react';
-import {useState, useRef, useEffect} from 'react';
+import {CopyButton} from '@sqlrooms/ui';
+import type {UIMessage} from 'ai';
+import {SquareTerminalIcon} from 'lucide-react';
+import {useEffect, useRef, useState} from 'react';
 import {Components} from 'react-markdown';
-import {ErrorMessage} from './ErrorMessage';
+import {useStoreWithAi} from '../AiSlice';
+import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
+import {useToolGrouping} from '../hooks/useToolGrouping';
+import {ErrorMessage, type ErrorMessageComponentProps} from './ErrorMessage';
 import {GroupedMessageParts} from './GroupedMessageParts';
 import {MessagePartsList} from './MessagePartsList';
-import {useStoreWithAi} from '../AiSlice';
-import {useToolGrouping} from '../hooks/useToolGrouping';
-import {useAssistantMessageParts} from '../hooks/useAssistantMessageParts';
-import type {UIMessage} from 'ai';
-import {DeleteConfirmationDialog} from './DeleteConfirmationDialog';
 
 /**
  * Props for the AnalysisResult component
@@ -23,7 +22,8 @@ type AnalysisResultProps = {
   analysisResult: AnalysisResultSchema;
   enableReasoningBox?: boolean;
   customMarkdownComponents?: Partial<Components>;
-  userTools?: string[];
+  excludeFromGrouping?: string[];
+  ErrorMessageComponent?: React.ComponentType<ErrorMessageComponentProps>;
 };
 
 /**
@@ -40,18 +40,15 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   analysisResult,
   enableReasoningBox = false,
   customMarkdownComponents,
-  userTools,
+  excludeFromGrouping: userTools,
+  ErrorMessageComponent,
 }) => {
-  const currentSession = useStoreWithAi((s) => s.ai.getCurrentSession());
-  const deleteAnalysisResult = useStoreWithAi((s) => s.ai.deleteAnalysisResult);
   const uiMessages = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.uiMessages as UIMessage[] | undefined,
   );
   const toolAdditionalData = useStoreWithAi(
     (s) => s.ai.getCurrentSession()?.toolAdditionalData || {},
   );
-  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
-  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [divWidth, setDivWidth] = useState<number>(0);
   const divRef = useRef<HTMLDivElement>(null);
 
@@ -95,47 +92,14 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
   return (
     <div className="group flex w-full flex-col gap-2 pb-2 text-sm">
       <div className="mb-2 flex items-center gap-2 rounded-md text-gray-700 dark:text-gray-100">
-        <div className="bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
+        <div className="group/prompt bg-muted flex w-full items-center gap-2 rounded-md border p-2 text-sm">
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
           <div className="flex-1">{analysisResult.prompt}</div>
-          <div className="flex gap-2 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="flex gap-2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
             <CopyButton
               text={analysisResult.prompt}
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              ariaLabel="Copy prompt"
-            />
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={() => {
-                setDeleteTargetId(analysisResult.id);
-                setShowDeleteConfirmation(true);
-              }}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </Button>
-
-            <DeleteConfirmationDialog
-              open={showDeleteConfirmation}
-              onOpenChange={(open) => {
-                setShowDeleteConfirmation(open);
-                if (!open) {
-                  setDeleteTargetId(null);
-                }
-              }}
-              onConfirm={() => {
-                if (currentSession?.id && deleteTargetId) {
-                  deleteAnalysisResult(currentSession.id, deleteTargetId);
-                }
-                setShowDeleteConfirmation(false);
-                setDeleteTargetId(null);
-              }}
-              canConfirm={Boolean(currentSession?.id && deleteTargetId)}
-              contentClassName="sm:max-w-[425px]"
+              tooltipLabel="Copy message"
             />
           </div>
         </div>
@@ -145,17 +109,24 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <GroupedMessageParts
             groupedParts={groupedParts}
             totalPartsCount={uiMessageParts.length}
+            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         ) : (
           <MessagePartsList
             parts={uiMessageParts}
+            toolAdditionalData={toolAdditionalData}
             customMarkdownComponents={customMarkdownComponents}
           />
         )}
-        {analysisResult.errorMessage && (
-          <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
-        )}
+        {analysisResult.errorMessage &&
+          (ErrorMessageComponent ? (
+            <ErrorMessageComponent
+              errorMessage={analysisResult.errorMessage.error}
+            />
+          ) : (
+            <ErrorMessage errorMessage={analysisResult.errorMessage.error} />
+          ))}
       </div>
     </div>
   );

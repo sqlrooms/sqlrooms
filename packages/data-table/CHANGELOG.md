@@ -3,6 +3,87 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+# [0.27.0-rc.4](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.3...v0.27.0-rc.4) (2026-02-11)
+
+### Bug Fixes
+
+* ColumnTypeBadge styling ([#350](https://github.com/sqlrooms/sqlrooms/issues/350)) ([25dcd19](https://github.com/sqlrooms/sqlrooms/commit/25dcd194806c5ace4f5b30b2f562070131a79639))
+
+# [0.27.0-rc.3](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.2...v0.27.0-rc.3) (2026-02-05)
+
+### Bug Fixes
+
+* eslint configuration ([#317](https://github.com/sqlrooms/sqlrooms/issues/317)) ([24b8619](https://github.com/sqlrooms/sqlrooms/commit/24b8619f33b784bbe5b853b465cbde350209b8e0))
+
+# [0.27.0-rc.2](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.1...v0.27.0-rc.2) (2026-01-22)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+# [0.27.0-rc.1](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.0...v0.27.0-rc.1) (2026-01-17)
+
+### Bug Fixes
+
+* Date and decimal types display incorrectly in data table ([#289](https://github.com/sqlrooms/sqlrooms/issues/289)) ([41a5750](https://github.com/sqlrooms/sqlrooms/commit/41a575076874eccb04e2e4f787136bbe43ae7b6d))
+* dynamic font class resolver ([#291](https://github.com/sqlrooms/sqlrooms/issues/291)) ([7b11d21](https://github.com/sqlrooms/sqlrooms/commit/7b11d212e2ac930920c0779abe48899ebbd2a78b))
+* query data table popover content format ([#288](https://github.com/sqlrooms/sqlrooms/issues/288)) ([b1cd872](https://github.com/sqlrooms/sqlrooms/commit/b1cd872bb8839aa4631765824e4385762f589c57))
+
+### Features
+
+* add custom value rendered for arrow table ([#292](https://github.com/sqlrooms/sqlrooms/issues/292)) ([9e86149](https://github.com/sqlrooms/sqlrooms/commit/9e86149106cb8371739d5acaa88b943c7a3d06c9))
+* propagate the change to the arrow table to parent components ([#299](https://github.com/sqlrooms/sqlrooms/issues/299)) ([0d6a335](https://github.com/sqlrooms/sqlrooms/commit/0d6a335fd770a90fa454d7f5d3a5f21aedb0e5d1))
+
+# [0.27.0-rc.0](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.13...v0.27.0-rc.0) (2025-12-27)
+
+### Features
+
+* SQLRooms CLI ([#263](https://github.com/sqlrooms/sqlrooms/issues/263)) ([d1937ff](https://github.com/sqlrooms/sqlrooms/commit/d1937ff6b42da12f0737051847d5b397fc97bfb5))
+
+## [0.26.1-rc.13](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.12...v0.26.1-rc.13) (2025-12-12)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+## [0.26.1-rc.12](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.11...v0.26.1-rc.12) (2025-12-11)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+## [0.26.1-rc.11](https://github.com/sqlrooms/sqlrooms/compare/v0.26.1-rc.10...v0.26.1-rc.11) (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+## 0.26.1-rc.10 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+## 0.26.1-rc.9 (2025-12-10)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
+## 0.26.1-rc.8 (2025-12-10)
+
+### Bug Fixes
+
+* SqlEditorSliceConfig openTabs migration ([#256](https://github.com/sqlrooms/sqlrooms/issues/256)) ([f213186](https://github.com/sqlrooms/sqlrooms/commit/f21318636d8151b942db6a15480731e86c00f5d4))
+
+## 0.26.1-rc.7 (2025-12-05)
+
+### Bug Fixes
+
+* Incorrect import ([b194e35](https://github.com/sqlrooms/sqlrooms/commit/b194e35fbc7e99a900d81370d556b6fb1d4948aa))
+
+## 0.26.1-rc.6 (2025-12-05)
+
+### Bug Fixes
+
+* Add missing dep @dnd-kit/modifiers ([78859e2](https://github.com/sqlrooms/sqlrooms/commit/78859e2b9ac0dad17209ac100d40e36f81da6c27))
+
+## 0.26.1-rc.5 (2025-12-05)
+
+**Note:** Version bump only for package @sqlrooms/data-table
+
 ## 0.26.1-rc.4 (2025-12-01)
 
 ### Bug Fixes

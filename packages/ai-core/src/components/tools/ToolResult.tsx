@@ -42,9 +42,10 @@ export const ToolResult: React.FC<ToolData> = ({
   // show reason text before tool call complete
   const text = args.reasoning || '';
 
-  const ToolComponent = useStoreWithAi((state) =>
-    state.ai.findToolComponent(toolName),
-  );
+  // Access tool component directly from tools registry to avoid lint error
+  // about creating components during render
+  const tools = useStoreWithAi((state) => state.ai.tools);
+  const ToolComponent = tools[toolName]?.component as React.ComponentType;
 
   // check if args has a property called 'reason'
   const reason = args.reasoning as string;
@@ -86,8 +87,11 @@ export const ToolResult: React.FC<ToolData> = ({
         <ToolCallErrorBoundary>
           {typeof ToolComponent === 'function' ? (
             <ToolComponent
-              {...(llmResult as Record<string, unknown>)}
-              {...(additionalData as Record<string, unknown>)}
+              {...({
+                ...(llmResult as Record<string, unknown>),
+                ...(additionalData as Record<string, unknown>),
+                toolCallId: toolData.toolCallId,
+              } as Record<string, unknown>)}
             />
           ) : (
             ToolComponent

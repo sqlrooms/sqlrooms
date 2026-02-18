@@ -1,18 +1,50 @@
-import {DataTablePaginated, useArrowDataTable} from '@sqlrooms/data-table';
-import type {Row, RowSelectionState} from '@tanstack/react-table';
 import {
-  cn,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SpinnerPane,
+  ArrowDataTableValueFormatter,
+  DataTablePaginated,
+  useArrowDataTable,
+} from '@sqlrooms/data-table';
+import {
   Button,
+  cn,
+  SpinnerPane,
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
+import type {Row, RowSelectionState} from '@tanstack/react-table';
+import {MessageCircleQuestion} from 'lucide-react';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {MessageCircleQuestion} from 'lucide-react';
+import {QueryResultLimitSelect} from './QueryResultLimitSelect';
+
+/**
+ * Turns DuckDB's EXPLAIN result table into a readable plan string.
+ * Prefer the `explain_value` column (DuckDB default); otherwise fall back
+ * to the first column and join all rows with newlines.
+ */
+function arrowTableToExplainText(result: any): string {
+  if (!result) return '';
+
+  const numRows: number = result.numRows ?? 0;
+  const fields: {name: string}[] = result.schema?.fields ?? [];
+  const fieldNames = fields.map((f) => f.name);
+
+  const hasExplainValueColumn = fieldNames.includes('explain_value');
+  const columnName = hasExplainValueColumn ? 'explain_value' : fieldNames[0];
+  if (!columnName) return '';
+
+  const col = result.getChild?.(columnName);
+  if (!col) return '';
+
+  const lines: string[] = [];
+  for (let i = 0; i < numRows; i++) {
+    const v = col.get(i);
+    if (v != null && String(v).length > 0) lines.push(String(v));
+  }
+  return lines.join('\n');
+}
 
 export interface QueryResultPanelProps {
   /** Custom class name for styling */
@@ -35,7 +67,10 @@ export interface QueryResultPanelProps {
     row: Row<any>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /** Custom content to render in the error state (e.g., QueryResultPanel.AskAi) */
+  children?: React.ReactNode;
   /**
+   * @deprecated Use children with QueryResultPanel.AskAi instead
    * Called when the "Ask AI" button is clicked on an error message.
    * Receives the current query and error text.
    */
@@ -52,20 +87,27 @@ export interface QueryResultPanelProps {
    * Called when row selection changes.
    */
   onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
+  /** Custom value formatter for arrow data */
+  formatValue?: ArrowDataTableValueFormatter;
 }
 
-export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
+const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   className,
   renderActions,
   fontSize = 'text-xs',
   onRowClick,
   onRowDoubleClick,
+  children,
   onAskAiAboutError,
   enableRowSelection,
   rowSelection,
   onRowSelectionChange,
+  formatValue,
 }) => {
-  const queryResult = useStoreWithSqlEditor((s) => s.sqlEditor.queryResult);
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
   const getCurrentQuery = useStoreWithSqlEditor(
     (s) => s.sqlEditor.getCurrentQuery,
   );
@@ -79,21 +121,25 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     (s) => s.sqlEditor.queryResultLimitOptions,
   );
 
-  const limitOptions = React.useMemo(() => {
-    if (!queryResultLimitOptions.includes(queryResultLimit)) {
-      return [queryResultLimit, ...queryResultLimitOptions];
+  const tableForDataTable =
+    isQueryWithResult(queryResult) && queryResult.type !== 'explain'
+      ? queryResult.result
+      : undefined;
+
+  const arrowTableData = useArrowDataTable(tableForDataTable, {formatValue});
+
+  const explainText = React.useMemo(() => {
+    if (queryResult?.status !== 'success' || queryResult.type !== 'explain') {
+      return undefined;
     }
-    return queryResultLimitOptions;
-  }, [queryResultLimitOptions, queryResultLimit]);
-  const arrowTableData = useArrowDataTable(
-    isQueryWithResult(queryResult) ? queryResult.result : undefined,
-  );
+    return arrowTableToExplainText(queryResult.result);
+  }, [queryResult]);
 
   const handleAskAiAboutError = React.useCallback(() => {
     if (queryResult?.status === 'error' && onAskAiAboutError) {
       const currentQuery = getCurrentQuery();
       const errorText = queryResult.error;
-      onAskAiAboutError(currentQuery, errorText);
+      onAskAiAboutError?.(currentQuery, errorText);
     }
   }, [queryResult, getCurrentQuery, onAskAiAboutError]);
 
@@ -113,23 +159,30 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
     );
   }
   if (queryResult?.status === 'error') {
+    // Backward compat: if no children but onAskAiAboutError is provided, render default button
+    const errorActions =
+      children ??
+      (onAskAiAboutError && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleAskAiAboutError}
+          title="Ask AI for help"
+        >
+          <MessageCircleQuestion className="h-4 w-4" />
+        </Button>
+      ));
+
     return (
       <div className="relative h-full w-full overflow-auto p-5">
-        {onAskAiAboutError && (
-          <Button
-            variant="ghost"
-            size="icon"
-            className="absolute right-2 top-2 h-8 w-8"
-            onClick={handleAskAiAboutError}
-            title="Ask AI for help"
-          >
-            <MessageCircleQuestion className="h-4 w-4" />
-          </Button>
+        {errorActions && (
+          <div className="absolute right-2 top-2">{errorActions}</div>
         )}
         <pre
           className={cn(
             'whitespace-pre-wrap text-xs leading-tight text-red-500',
-            onAskAiAboutError && 'pr-12',
+            errorActions && 'pr-12',
           )}
         >
           {queryResult.error}
@@ -139,14 +192,35 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
   }
 
   if (queryResult?.status === 'success') {
-    return (
-      <div
-        className={cn(
-          'relative flex h-full w-full flex-grow flex-col overflow-hidden',
-          className,
-        )}
-      >
-        {isQueryWithResult(queryResult) ? (
+    const contentWrapperClassName = cn(
+      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      className,
+    );
+
+    // Result shows the EXPLAIN schema
+    if (queryResult.type === 'explain') {
+      return (
+        <div className={contentWrapperClassName}>
+          <div className="flex h-full w-full flex-col overflow-hidden">
+            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-tight">
+              {explainText}
+            </pre>
+            <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
+              <div className="font-mono text-xs">EXPLAIN</div>
+              <div className="flex-1" />
+              {renderActions
+                ? renderActions(queryResult.lastQueryStatement)
+                : undefined}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Result shows the SELECT/PRAGMA table
+    if (isQueryWithResult(queryResult)) {
+      return (
+        <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
               data={arrowTableData?.data}
@@ -167,25 +241,13 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                     {`${formatCount(queryResult.result.numRows ?? 0)} rows`}
                   </div>
 
-                  <Select
-                    value={queryResultLimit.toString()}
-                    onValueChange={(value) =>
-                      setQueryResultLimit(parseInt(value))
-                    }
-                  >
-                    <SelectTrigger className="h-6 w-fit">
-                      <div className="text-xs text-gray-500">
-                        {`Limit results to ${formatCount(queryResultLimit)} rows`}
-                      </div>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {limitOptions.map((limit) => (
-                        <SelectItem key={limit} value={limit.toString()}>
-                          {`${formatCount(limit)} rows`}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  {queryResult.type === 'select' ? (
+                    <QueryResultLimitSelect
+                      value={queryResultLimit}
+                      onChange={setQueryResultLimit}
+                      options={queryResultLimitOptions}
+                    />
+                  ) : null}
                 </>
               ) : null}
               <div className="flex-1" />
@@ -194,14 +256,76 @@ export const QueryResultPanel: React.FC<QueryResultPanelProps> = ({
                 : undefined}
             </div>
           </div>
-        ) : (
-          <pre className="p-4 text-xs leading-tight text-green-500">
-            Successfully executed query
-          </pre>
-        )}
+        </div>
+      );
+    }
+
+    // Fallback message to show when the query result is not a SELECT/PRAGMA or EXPLAIN
+    return (
+      <div className={contentWrapperClassName}>
+        <pre className="p-4 text-xs leading-tight text-green-500">
+          Successfully executed query
+        </pre>
       </div>
     );
   }
 
   return null;
 };
+
+export interface QueryResultPanelAskAiProps {
+  /** Called when clicked with the current query and error message */
+  onClick?: (query: string, error: string) => void;
+  /** Custom icon (defaults to MessageCircleQuestion) */
+  icon?: React.ReactNode;
+  /** Custom className */
+  className?: string;
+  /** Tooltip text to display on hover */
+  tooltipContent?: string;
+}
+
+const QueryResultPanelAskAi = React.forwardRef<
+  HTMLButtonElement,
+  QueryResultPanelAskAiProps
+>(({onClick, icon, className, tooltipContent = 'Ask AI for help'}, ref) => {
+  const queryResult = useStoreWithSqlEditor((s) => {
+    const selectedId = s.sqlEditor.config.selectedQueryId;
+    return s.sqlEditor.queryResultsById[selectedId];
+  });
+  const getCurrentQuery = useStoreWithSqlEditor(
+    (s) => s.sqlEditor.getCurrentQuery,
+  );
+
+  // Only render in error state
+  if (queryResult?.status !== 'error') return null;
+
+  const handleClick = () => {
+    onClick?.(getCurrentQuery(), queryResult.error);
+  };
+
+  return (
+    <TooltipProvider delayDuration={200}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            ref={ref}
+            variant="ghost"
+            size="icon"
+            className={cn('h-8 w-8', className)}
+            onClick={handleClick}
+          >
+            {icon ?? <MessageCircleQuestion className="h-4 w-4" />}
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          <p className="text-xs">{tooltipContent}</p>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+});
+QueryResultPanelAskAi.displayName = 'QueryResultPanel.AskAi';
+
+export const QueryResultPanel = Object.assign(QueryResultPanelRoot, {
+  AskAi: QueryResultPanelAskAi,
+});

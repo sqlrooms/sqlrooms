@@ -2,13 +2,13 @@ import React from 'react';
 import {DndContextFactory} from '@kepler.gl/components';
 import {useKeplerStateActions} from '../hooks/useKeplerStateActions';
 import {KeplerProvider} from './KeplerProvider';
-import {KeplerInjector} from './KeplerInjector';
+import {getKeplerFactory} from './KeplerInjector';
 import {CustomLayerManager} from './CustomLayerManager';
 import {CustomFilterManager} from './CustomFilterManager';
 import {CustomMapManager} from './CustomMapManager';
 import {CustomInteractionManager} from './CustomInteractionManager';
 
-const DndContext = KeplerInjector.get(DndContextFactory);
+const DndContext = getKeplerFactory(DndContextFactory);
 
 type KeplerSidePanelProps = {
   mapId: string;
@@ -22,6 +22,9 @@ export const KeplerSidePanels: React.FC<KeplerSidePanelProps> = ({
 }) => {
   const {keplerState} = useKeplerStateActions({mapId});
 
+  if (!keplerState?.visState) {
+    return null;
+  }
   return (
     <KeplerProvider mapId={mapId}>
       <DndContext visState={keplerState?.visState}>

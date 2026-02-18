@@ -11,21 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@sqlrooms/data-table": "workspace:*",
-    "@sqlrooms/dropzone": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/mosaic": "workspace:*",
-    "@sqlrooms/room-config": "workspace:*",
     "@sqlrooms/room-shell": "workspace:*",
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
-    "@sqlrooms/utils": "workspace:*",
-    "immer": "^11.0.1",
     "lucide-react": "^0.555.0",
-    "react-dropzone": "^14.3.8",
-    "react-icons": "^5.5.0",
-    "zod": "^4.1.8",
-    "zustand": "^5.0.8"
+    "zod": "^4.1.8"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",
@@ -44,8 +35,6 @@
     "vite": "^7.1.9"
   },
   "overrides": {
-    "@duckdb/duckdb-wasm": "1.31.0",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "@duckdb/duckdb-wasm": "1.32.0"
   }
 }

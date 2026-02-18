@@ -25,7 +25,7 @@ A minimal Vite application demonstrating the basic usage of SQLRooms. Features i
 To create a new project from the get-started example run this:
 
 ```bash
-npx degit sqlrooms/examples/get-started my-new-app/
+npx giget gh:sqlrooms/examples/get-started my-new-app/
 ```
 
 <!--@include: ../examples/query/README.md-->
@@ -38,11 +38,13 @@ npx degit sqlrooms/examples/get-started my-new-app/
 
 ## Geospatial
 
+<!--@include: ../examples/deckgl-mosaic/README.md-->
+
+<!--@include: ../examples/kepler/README.md-->
+
 <!--@include: ../examples/deckgl/README.md-->
 
 <!--@include: ../examples/deckgl-discuss/README.md-->
-
-<!--@include: ../examples/kepler/README.md-->
 
 ## Graph and embedding visualization
 

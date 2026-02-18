@@ -5,7 +5,7 @@ import {cn} from '@sqlrooms/ui';
 type ReasoningBoxProps = {
   children: React.ReactNode;
   className?: string;
-  title?: string;
+  title?: React.ReactNode;
   defaultOpen?: boolean;
 };
 export const ReasoningBox: React.FC<ReasoningBoxProps> = ({
