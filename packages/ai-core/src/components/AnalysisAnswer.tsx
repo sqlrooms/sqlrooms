@@ -1,11 +1,11 @@
-import React, {useState, useCallback, useMemo} from 'react';
-import Markdown, {Components} from 'react-markdown';
-import remarkGfm from 'remark-gfm';
-import rehypeRaw from 'rehype-raw';
-import {truncate} from '@sqlrooms/utils';
-import {MessageContainer} from './MessageContainer';
-import {BrainIcon} from 'lucide-react';
 import {cn, CopyButton} from '@sqlrooms/ui';
+import {truncate} from '@sqlrooms/utils';
+import {BrainIcon} from 'lucide-react';
+import React, {useCallback, useMemo, useState} from 'react';
+import Markdown, {Components} from 'react-markdown';
+import rehypeRaw from 'rehype-raw';
+import remarkGfm from 'remark-gfm';
+import {MessageContainer} from './MessageContainer';
 
 type AnalysisAnswerProps = {
   content: string;
@@ -23,10 +23,9 @@ type ThinkContent = {
 const THINK_WORD_LIMIT = 10;
 const COMPLETE_THINK_REGEX = /<think>([\s\S]*?)<\/think>/g;
 const INCOMPLETE_THINK_REGEX = /<think>([\s\S]*)$/;
-const THINK_TAGS_REGEX = /<think>[\s\S]*?<\/think>/g;
 
 const sanitizeThinkTags = (value: string): string =>
-  value.replace(THINK_TAGS_REGEX, '');
+  value.replace(COMPLETE_THINK_REGEX, '').replace(INCOMPLETE_THINK_REGEX, '');
 
 /**
  * Processes content and extracts think content in one pass
@@ -136,7 +135,8 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
 ) {
   const {content, isAnswer, customMarkdownComponents} = props;
   const [expandedThink, setExpandedThink] = useState<Set<string>>(new Set());
-  const hasTextContent = content.trim().length > 0;
+  const copyableText = useMemo(() => sanitizeThinkTags(content), [content]);
+  const hasTextContent = copyableText.trim().length > 0;
 
   const toggleThinkExpansion = useCallback((content: string) => {
     setExpandedThink((prev) => {
@@ -157,15 +157,8 @@ export const AnalysisAnswer = React.memo(function AnalysisAnswer(
   );
   const footerActions = hasTextContent ? (
     <CopyButton
-      text={() => sanitizeThinkTags(content)}
-      variant="ghost"
-      size="icon"
-      className="h-6 w-6"
-      ariaLabel={
-        isAnswer
-          ? 'Copy AI response as Markdown'
-          : 'Copy AI message as Markdown'
-      }
+      text={copyableText}
+      tooltipLabel={isAnswer ? 'Copy response' : 'Copy message'}
     />
   ) : null;
 

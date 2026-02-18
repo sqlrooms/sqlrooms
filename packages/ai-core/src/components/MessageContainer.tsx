@@ -1,13 +1,5 @@
-import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
-import {
-  Badge,
-  Button,
-  cn,
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@sqlrooms/ui';
-import {CodeIcon, XCircleIcon} from 'lucide-react';
+import {Badge, cn} from '@sqlrooms/ui';
+import {XCircleIcon} from 'lucide-react';
 
 type MessageContainerProps = {
   className?: string;
@@ -43,7 +35,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
         <Badge
           variant="secondary"
           className={cn(
-            'absolute top-[-12px] left-2 flex items-center gap-1 border text-xs',
+            'absolute left-2 top-[-12px] flex items-center gap-1 border text-xs',
             'border-destructive bg-background',
             // isSuccess ? borderColor : 'border-red-500',
           )}
@@ -61,7 +53,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
       {footerActions && (
         <div
           className={cn(
-            'border-border/50 mt-2 flex items-center justify-end gap-1 border-t pt-1 opacity-0 transition-opacity group-hover:opacity-100',
+            'mt-2 flex items-center justify-end gap-1 pt-1 opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100',
             footerActionsClassName,
           )}
         >
