@@ -96,7 +96,7 @@ export const AnalysisResult: React.FC<AnalysisResultProps> = ({
           <SquareTerminalIcon className="h-4 w-4" />
           {/** render prompt */}
           <div className="flex-1">{analysisResult.prompt}</div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 opacity-0 transition-opacity group-focus-within/prompt:opacity-100 group-hover/prompt:opacity-100">
             <CopyButton
               text={analysisResult.prompt}
               tooltipLabel="Copy message"
