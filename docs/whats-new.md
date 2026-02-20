@@ -6,6 +6,42 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
+## 0.27.0
+
+### `@sqlrooms/data-table`: RowSelection API
+
+`DataTablePaginated` now includes a first-class row selection API with checkbox support.
+
+- `enableRowSelection`: enables the checkbox column
+- `rowSelection`: controlled row selection state
+- `onRowSelectionChange`: callback fired when selection changes
+
+Checkbox clicks are handled independently from row click handlers, so selecting via checkbox does not double-toggle rows.
+
+<img src="/media/whats-new/row-selection.png" alt="SQLRooms DataTable row selection with checkboxes" width=450>
+
+Example:
+
+```tsx
+import {RowSelectionState} from '@sqlrooms/data-table';
+import {useState} from 'react';
+
+const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+<DataTablePaginated
+  {...arrowTableData}
+  enableRowSelection={true}
+  rowSelection={rowSelection}
+  onRowSelectionChange={setRowSelection}
+  onRowClick={({row}) => {
+    setRowSelection((prev) => ({
+      ...prev,
+      [row.index]: !prev[row.index],
+    }));
+  }}
+/>;
+```
+
 ## 0.27.0-rc.5
 
 ### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`

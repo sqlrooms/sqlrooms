@@ -80,7 +80,10 @@ const DataTableModal: FC<DataTableModalProps> = (props) => {
               {'query' in props && props.query ? (
                 <QueryDataTable query={props.query} formatValue={formatValue} />
               ) : 'arrowTable' in props && props.arrowTable ? (
-                <DataTableArrowPaginated table={props.arrowTable} formatValue={formatValue} />
+                <DataTableArrowPaginated
+                  table={props.arrowTable}
+                  formatValue={formatValue}
+                />
               ) : (
                 <div className="p-4 text-xs">No data</div>
               )}
