@@ -11,6 +11,7 @@ export const LoadFile = z.enum([
   'read_csv', // Read CSV files
   'auto', // Auto-detect file format
   'st_read', // Read spatial data files
+  'geojson_xyzm', // Read GeoJSON with XYZM coordinates preserved (for trip data)
 ]);
 export type LoadFile = z.infer<typeof LoadFile>;
 
@@ -77,14 +78,37 @@ export const isSpatialLoadFileOptions = (
 };
 
 /**
- * Standard file loading options excluding spatial methods
+ * Standard file loading options excluding spatial and special methods
  * @interface StandardLoadFileOptions
  * @extends {StandardLoadOptions}
  */
 export const StandardLoadFileOptions = StandardLoadOptions.extend({
-  method: LoadFile.exclude(['st_read']),
+  method: LoadFile.exclude(['st_read', 'geojson_xyzm']),
 });
 export type StandardLoadFileOptions = z.infer<typeof StandardLoadFileOptions>;
+
+/**
+ * Options specific to GeoJSON XYZM loading
+ * @interface GeoJsonXyzmLoadFileOptions
+ * @extends {StandardLoadOptions}
+ */
+export const GeoJsonXyzmLoadFileOptions = StandardLoadOptions.extend({
+  method: z.literal('geojson_xyzm'),
+});
+export type GeoJsonXyzmLoadFileOptions = z.infer<
+  typeof GeoJsonXyzmLoadFileOptions
+>;
+
+/**
+ * Type guard to check if options are GeoJSON XYZM load file options
+ * @param {LoadFileOptions} options - The options to check
+ * @returns {boolean} True if options are GeoJSON XYZM load file options
+ */
+export const isGeoJsonXyzmLoadFileOptions = (
+  options: LoadFileOptions,
+): options is GeoJsonXyzmLoadFileOptions => {
+  return options.method === 'geojson_xyzm';
+};
 
 /**
  * Union type of all possible file loading options
@@ -93,5 +117,6 @@ export type StandardLoadFileOptions = z.infer<typeof StandardLoadFileOptions>;
 export const LoadFileOptions = z.discriminatedUnion('method', [
   StandardLoadFileOptions,
   SpatialLoadFileOptions,
+  GeoJsonXyzmLoadFileOptions,
 ]);
 export type LoadFileOptions = z.infer<typeof LoadFileOptions>;
