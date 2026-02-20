@@ -23,7 +23,7 @@ Checkbox clicks are handled independently from row click handlers, so selecting 
 Example:
 
 ```tsx
-import {RowSelectionState} from '@tanstack/table-core';
+import {RowSelectionState} from '@sqlrooms/data-table';
 import {useState} from 'react';
 
 const [rowSelection, setRowSelection] = useState<RowSelectionState>({});

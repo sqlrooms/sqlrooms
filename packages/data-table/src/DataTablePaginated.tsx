@@ -39,7 +39,7 @@ import {
   ChevronRightIcon,
   ChevronUpIcon,
 } from 'lucide-react';
-import {useCallback, useEffect, useMemo, useState} from 'react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
 
 export type DataTablePaginatedProps<Data extends object> = {
@@ -111,23 +111,29 @@ export default function DataTablePaginated<Data extends object>({
 
   // Use controlled or uncontrolled row selection
   const currentRowSelection = rowSelection ?? internalRowSelection;
+  const currentRowSelectionRef = useRef(currentRowSelection);
+
+  useEffect(() => {
+    currentRowSelectionRef.current = currentRowSelection;
+  }, [currentRowSelection]);
+
   const handleRowSelectionChange = useCallback(
     (
       updaterOrValue:
         | RowSelectionState
         | ((old: RowSelectionState) => RowSelectionState),
     ) => {
-      const newValue =
-        typeof updaterOrValue === 'function'
-          ? updaterOrValue(currentRowSelection)
-          : updaterOrValue;
       if (onRowSelectionChange) {
+        const newValue =
+          typeof updaterOrValue === 'function'
+            ? updaterOrValue(currentRowSelectionRef.current)
+            : updaterOrValue;
         onRowSelectionChange(newValue);
       } else {
-        setInternalRowSelection(newValue);
+        setInternalRowSelection(updaterOrValue);
       }
     },
-    [currentRowSelection, onRowSelectionChange],
+    [onRowSelectionChange, setInternalRowSelection],
   );
 
   const fontSizeClass = resolveFontSizeClass(fontSize);
@@ -143,11 +149,7 @@ export default function DataTablePaginated<Data extends object>({
     getSortedRowModel: getSortedRowModel(),
     enableRowSelection: enableRowSelection ?? false,
     onRowSelectionChange: (update) => {
-      if (typeof update === 'function') {
-        handleRowSelectionChange(update);
-      } else {
-        handleRowSelectionChange(update);
-      }
+      handleRowSelectionChange(update);
     },
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {
