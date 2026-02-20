@@ -164,18 +164,6 @@ export function CustomMapLegendFactory(
           <div className="flex-1" />
           <div className="flex flex-row items-center justify-end gap-1">
             <Button
-              className="h-7 w-7 hidden"
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleVisibility}
-            >
-              {layer.config.isVisible ? (
-                <EyeIcon className="h-4 w-4" />
-              ) : (
-                <EyeOffIcon className="h-4 w-4" />
-              )}
-            </Button>
-            <Button
               className="h-7 w-7"
               variant="ghost"
               size="icon"
