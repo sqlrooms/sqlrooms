@@ -245,7 +245,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full whitespace-nowrap border-r border-t py-2" />
+                  <TableHead className="bg-background sticky top-[-1px] w-full whitespace-nowrap border-r border-t py-2" />
                 </TableRow>
               ))}
             </TableHeader>
