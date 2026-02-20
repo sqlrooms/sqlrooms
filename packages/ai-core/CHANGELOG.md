@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Features
+
+* AI output copy to clipboard ([#368](https://github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](https://github.com/sqlrooms/sqlrooms/commit/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+
 # [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
 
 **Note:** Version bump only for package @sqlrooms/ai-core
