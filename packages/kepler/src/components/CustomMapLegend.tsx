@@ -67,7 +67,7 @@ export function CustomMapLegendFactory(
         <div className="relative flex flex-col">
           {!isExport && (
             <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
-              <div className="text-xs font-medium">Map Layers</div>
+              <div className="text-xs font-medium">Legend</div>
               <Button
                 variant="ghost"
                 size="xs"
