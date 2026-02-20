@@ -1,14 +1,12 @@
 import {
-  ChevronDownIcon,
-  ChevronUpIcon,
-  ChevronsLeftIcon as ChevronDoubleLeftIcon,
-  ChevronsRightIcon as ChevronDoubleRightIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-} from 'lucide-react';
-import {
+  Badge,
   Button,
+  Checkbox,
+  cn,
   Input,
+  resolveFontSizeClass,
+  ScrollArea,
+  ScrollBar,
   Select,
   SelectContent,
   SelectItem,
@@ -20,24 +18,28 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-  Badge,
-  cn,
-  ScrollArea,
-  ScrollBar,
-  resolveFontSizeClass,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
 import {
   ColumnDef,
-  PaginationState,
-  SortingState,
-  Row,
   flexRender,
   getCoreRowModel,
   getSortedRowModel,
+  PaginationState,
+  Row,
+  RowSelectionState,
+  SortingState,
   useReactTable,
 } from '@tanstack/react-table';
-import {useEffect, useMemo, useState} from 'react';
+import {
+  ChevronsLeftIcon as ChevronDoubleLeftIcon,
+  ChevronsRightIcon as ChevronDoubleRightIcon,
+  ChevronDownIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronUpIcon,
+} from 'lucide-react';
+import {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import {ArrowColumnMeta} from './useArrowDataTable';
 
 export type DataTablePaginatedProps<Data extends object> = {
@@ -68,12 +70,22 @@ export type DataTablePaginatedProps<Data extends object> = {
     row: Row<Data>;
     event: React.MouseEvent<HTMLTableRowElement>;
   }) => void;
+  /**
+   * Enables row selection with checkboxes. When true, a checkbox column is added.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
 };
 
 /**
- * Data table with pagination, sorting, and custom actions.
- * @param props
- * @returns
+ * Data table with pagination, sorting, row selection, and custom actions.
  */
 export default function DataTablePaginated<Data extends object>({
   className,
@@ -89,8 +101,41 @@ export default function DataTablePaginated<Data extends object>({
   isFetching,
   onRowClick,
   onRowDoubleClick,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
 }: DataTablePaginatedProps<Data>) {
   const defaultData = useMemo(() => [], []);
+  const [internalRowSelection, setInternalRowSelection] =
+    useState<RowSelectionState>({});
+
+  // Use controlled or uncontrolled row selection
+  const currentRowSelection = rowSelection ?? internalRowSelection;
+  const currentRowSelectionRef = useRef(currentRowSelection);
+
+  useEffect(() => {
+    currentRowSelectionRef.current = currentRowSelection;
+  }, [currentRowSelection]);
+
+  const handleRowSelectionChange = useCallback(
+    (
+      updaterOrValue:
+        | RowSelectionState
+        | ((old: RowSelectionState) => RowSelectionState),
+    ) => {
+      if (onRowSelectionChange) {
+        const newValue =
+          typeof updaterOrValue === 'function'
+            ? updaterOrValue(currentRowSelectionRef.current)
+            : updaterOrValue;
+        onRowSelectionChange(newValue);
+      } else {
+        setInternalRowSelection(updaterOrValue);
+      }
+    },
+    [onRowSelectionChange, setInternalRowSelection],
+  );
+
   const fontSizeClass = resolveFontSizeClass(fontSize);
   const pageCount =
     pagination && numRows !== undefined
@@ -102,6 +147,10 @@ export default function DataTablePaginated<Data extends object>({
     columns: columns ?? [],
     pageCount: pageCount ?? 0,
     getSortedRowModel: getSortedRowModel(),
+    enableRowSelection: enableRowSelection ?? false,
+    onRowSelectionChange: (update) => {
+      handleRowSelectionChange(update);
+    },
     onSortingChange: (update) => {
       if (onSortingChange && sorting && typeof update === 'function') {
         onSortingChange(update(sorting));
@@ -117,6 +166,7 @@ export default function DataTablePaginated<Data extends object>({
     state: {
       pagination,
       sorting,
+      rowSelection: currentRowSelection,
     },
   });
 
@@ -140,6 +190,17 @@ export default function DataTablePaginated<Data extends object>({
                   >
                     {isFetching ? (
                       <div className="border-primary h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" />
+                    ) : enableRowSelection ? (
+                      <Checkbox
+                        checked={
+                          table.getIsAllPageRowsSelected() ||
+                          (table.getIsSomePageRowsSelected() && 'indeterminate')
+                        }
+                        onCheckedChange={(value) =>
+                          table.toggleAllPageRowsSelected(!!value)
+                        }
+                        aria-label="Select all"
+                      />
                     ) : null}
                   </TableHead>
                   {headerGroup.headers.map((header) => {
@@ -184,7 +245,7 @@ export default function DataTablePaginated<Data extends object>({
                       </TableHead>
                     );
                   })}
-                  <TableHead className="bg-background sticky top-0 w-full border-t border-r py-2 whitespace-nowrap" />
+                  <TableHead className="bg-background sticky -top-px w-full border-t border-r py-2 whitespace-nowrap" />
                 </TableRow>
               ))}
             </TableHeader>
@@ -192,22 +253,43 @@ export default function DataTablePaginated<Data extends object>({
               {table.getRowModel().rows.map((row, i) => (
                 <TableRow
                   key={row.id}
-                  className="hover:bg-muted bg-background"
-                  onClick={(event) => {
-                    event.preventDefault();
-                    onRowClick?.({row: row as Row<Data>, event});
-                  }}
-                  onDoubleClick={(event) => {
-                    event.preventDefault();
-                    onRowDoubleClick?.({row: row as Row<Data>, event});
-                  }}
+                  data-state={row.getIsSelected() ? 'selected' : undefined}
+                  className={cn(
+                    'hover:bg-muted bg-background',
+                    row.getIsSelected() && 'bg-muted',
+                  )}
+                  onClick={
+                    onRowClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
+                  onDoubleClick={
+                    onRowDoubleClick
+                      ? (event) => {
+                          event.preventDefault();
+                          onRowDoubleClick({row: row as Row<Data>, event});
+                        }
+                      : undefined
+                  }
                 >
                   <TableCell
                     className={`bg-background text-muted-foreground sticky left-0 border-r text-center ${fontSizeClass}`}
                   >
-                    {pagination
-                      ? `${pagination.pageIndex * pagination.pageSize + i + 1}`
-                      : `${i + 1}`}
+                    {enableRowSelection ? (
+                      <Checkbox
+                        checked={row.getIsSelected()}
+                        onCheckedChange={(value) => row.toggleSelected(!!value)}
+                        onClick={(event) => event.stopPropagation()}
+                        aria-label="Select row"
+                      />
+                    ) : pagination ? (
+                      `${pagination.pageIndex * pagination.pageSize + i + 1}`
+                    ) : (
+                      `${i + 1}`
+                    )}
                   </TableCell>
                   {row.getVisibleCells().map((cell) => {
                     const meta = cell.column.columnDef.meta as ArrowColumnMeta;

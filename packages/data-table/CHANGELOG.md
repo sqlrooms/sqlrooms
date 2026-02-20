@@ -3,6 +3,12 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.27.0](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Features
+
+* Data table row selection ([#358](https://github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](https://github.com/sqlrooms/sqlrooms/commit/3c636899dae81d13b24d501e9752257bced89e30))
+
 # [0.27.0-rc.5](https://github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
 
 **Note:** Version bump only for package @sqlrooms/data-table

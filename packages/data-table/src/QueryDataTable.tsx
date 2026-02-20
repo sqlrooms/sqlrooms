@@ -5,7 +5,9 @@ import DataTablePaginated, {
   DataTablePaginatedProps,
 } from './DataTablePaginated';
 import {QueryDataTableActionsMenu} from './QueryDataTableActionsMenu';
-import useArrowDataTable, {ArrowDataTableValueFormatter} from './useArrowDataTable';
+import useArrowDataTable, {
+  ArrowDataTableValueFormatter,
+} from './useArrowDataTable';
 import {makePagedQuery} from './utils';
 
 export type QueryDataTableProps = {
@@ -39,7 +41,9 @@ const QueryDataTable: FC<QueryDataTableProps> = ({
   const countQueryResult = useSql<{count: number}>({
     query: `SELECT COUNT(*)::int AS count FROM (${sanitizedQuery})`,
   });
-  const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable, {formatValue});
+  const arrowTableData = useArrowDataTable(queryResult.data?.arrowTable, {
+    formatValue,
+  });
 
   if (queryResult.error) {
     return (

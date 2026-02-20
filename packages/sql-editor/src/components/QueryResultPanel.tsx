@@ -1,22 +1,22 @@
 import {
+  ArrowDataTableValueFormatter,
   DataTablePaginated,
   useArrowDataTable,
-  ArrowDataTableValueFormatter,
 } from '@sqlrooms/data-table';
-import type {Row} from '@tanstack/react-table';
 import {
+  Button,
   cn,
   SpinnerPane,
-  Button,
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@sqlrooms/ui';
 import {formatCount} from '@sqlrooms/utils';
+import type {Row, RowSelectionState} from '@tanstack/react-table';
+import {MessageCircleQuestion} from 'lucide-react';
 import React from 'react';
 import {isQueryWithResult, useStoreWithSqlEditor} from '../SqlEditorSlice';
-import {MessageCircleQuestion} from 'lucide-react';
 import {QueryResultLimitSelect} from './QueryResultLimitSelect';
 
 /**
@@ -75,6 +75,18 @@ export interface QueryResultPanelProps {
    * Receives the current query and error text.
    */
   onAskAiAboutError?: (query: string, error: string) => void;
+  /**
+   * Enables row selection with checkboxes.
+   */
+  enableRowSelection?: boolean;
+  /**
+   * Controlled row selection state. Keys are row indices, values are selection status.
+   */
+  rowSelection?: RowSelectionState;
+  /**
+   * Called when row selection changes.
+   */
+  onRowSelectionChange?: (rowSelection: RowSelectionState) => void;
   /** Custom value formatter for arrow data */
   formatValue?: ArrowDataTableValueFormatter;
 }
@@ -87,6 +99,9 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   onRowDoubleClick,
   children,
   onAskAiAboutError,
+  enableRowSelection,
+  rowSelection,
+  onRowSelectionChange,
   formatValue,
 }) => {
   const queryResult = useStoreWithSqlEditor((s) => {
@@ -145,24 +160,24 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
   }
   if (queryResult?.status === 'error') {
     // Backward compat: if no children but onAskAiAboutError is provided, render default button
-    const errorActions = children ?? (onAskAiAboutError && (
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-8 w-8"
-        onClick={handleAskAiAboutError}
-        title="Ask AI for help"
-      >
-        <MessageCircleQuestion className="h-4 w-4" />
-      </Button>
-    ));
+    const errorActions =
+      children ??
+      (onAskAiAboutError && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8"
+          onClick={handleAskAiAboutError}
+          title="Ask AI for help"
+        >
+          <MessageCircleQuestion className="h-4 w-4" />
+        </Button>
+      ));
 
     return (
       <div className="relative h-full w-full overflow-auto p-5">
         {errorActions && (
-          <div className="absolute top-2 right-2">
-            {errorActions}
-          </div>
+          <div className="absolute top-2 right-2">{errorActions}</div>
         )}
         <pre
           className={cn(
@@ -208,12 +223,16 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col">
             <DataTablePaginated
-              {...arrowTableData}
+              data={arrowTableData?.data}
+              columns={arrowTableData?.columns}
               className="grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}
               onRowDoubleClick={onRowDoubleClick}
+              enableRowSelection={enableRowSelection}
+              rowSelection={rowSelection}
+              onRowSelectionChange={onRowSelectionChange}
             />
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
               {queryResult.result ? (

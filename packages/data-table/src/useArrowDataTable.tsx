@@ -7,10 +7,10 @@ import {
   resolveFontSizeClass,
 } from '@sqlrooms/ui';
 import {safeJsonParse, shorten, toDecimalString} from '@sqlrooms/utils';
-import {ClipboardIcon} from 'lucide-react';
 import {createColumnHelper} from '@tanstack/react-table';
 import {ColumnDef} from '@tanstack/table-core';
 import * as arrow from 'apache-arrow';
+import {ClipboardIcon} from 'lucide-react';
 import {useMemo} from 'react';
 
 const columnHelper = createColumnHelper();
