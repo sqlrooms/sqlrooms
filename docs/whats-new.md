@@ -42,7 +42,6 @@ const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
 />;
 ```
 
-## 0.27.0-rc.5
 
 ### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`
 
@@ -64,6 +63,15 @@ Key features:
 - Support for custom visualizations that respond to Mosaic selections
 
 See the [Mosaic API documentation](/api/mosaic/) for details and check out the [DeckGL + Mosaic example](examples#deck-gl-mosaic) for a complete implementation.
+
+### Additional 0.27.0 highlights
+
+- **AI**: parallel sessions, persisted open session tabs, provider options, prompt suggestion improvements, inline API-key prompt in chat, and output copy-to-clipboard.
+- **Vega/Charts**: actions toolbar, chart sizing fixes, improved SQL error display, hover-only chart actions, and responsive chart labels.
+- **Kepler**: configurable injector with custom recipes, legend/timeline fixes, and stability improvements across integration edge cases.
+- **Room/store + persistence**: `storeKey` support in `createRoomStore` and `persistSliceConfigs` helper improvements.
+- **SQL/editor + query UX**: improved explain output, query panel/tab mapping fixes, and query cancellation support in create-table flows.
+
 
 ## 0.26.1-rc.7 (2025-12-05)
 
