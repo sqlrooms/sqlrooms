@@ -132,13 +132,6 @@ export function CustomMapLegendFactory(
 
     const mapId = useContext(KeplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
-    const handleToggleVisibility = (
-      evt: React.MouseEvent<HTMLButtonElement>,
-    ) => {
-      evt.stopPropagation();
-      const nextVisible = !layer.config.isVisible;
-      dispatchAction(mapId, layerConfigChange(layer, {isVisible: nextVisible}));
-    };
 
     if (!layer.isValidToSave() || layer.config.hidden) {
       return null;
