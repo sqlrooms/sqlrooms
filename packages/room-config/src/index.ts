@@ -30,6 +30,8 @@ export {
   isSpatialLoadFileOptions,
   StandardLoadFileOptions,
   LoadFileOptions,
+  GeoJsonXyzmLoadFileOptions,
+  isGeoJsonXyzmLoadFileOptions,
 } from './LoadOptions';
 
 // Re-export from @sqlrooms/layout-config
