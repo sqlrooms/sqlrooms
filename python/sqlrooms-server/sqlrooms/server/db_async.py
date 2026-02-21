@@ -249,14 +249,6 @@ def _ui_state_table_ref() -> str:
     return _meta_table_ref("ui_state")
 
 
-def _artifacts_table_ref() -> str:
-    return _meta_table_ref("artifacts")
-
-
-def _artifact_files_table_ref() -> str:
-    return _meta_table_ref("artifact_files")
-
-
 def attach_crdt_db(path: str) -> None:
     """Attach a separate DuckDB file for CRDT snapshots under the legacy 'crdt' namespace."""
     init_meta_storage(namespace="crdt", attached_db_path=path)
@@ -309,34 +301,6 @@ def init_meta_storage(namespace: str, attached_db_path: Optional[str] = None) ->
         );
         """
     )
-
-    artifacts_ref = _artifacts_table_ref()
-    GLOBAL_CON.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS {artifacts_ref} (
-            artifact_id TEXT PRIMARY KEY,
-            type TEXT NOT NULL,
-            name TEXT NOT NULL,
-            metadata_json JSON,
-            created_at TIMESTAMPTZ DEFAULT now(),
-            updated_at TIMESTAMPTZ DEFAULT now()
-        );
-        """
-    )
-
-    files_ref = _artifact_files_table_ref()
-    GLOBAL_CON.execute(
-        f"""
-        CREATE TABLE IF NOT EXISTS {files_ref} (
-            artifact_id TEXT NOT NULL,
-            path TEXT NOT NULL,
-            content TEXT NOT NULL,
-            updated_at TIMESTAMPTZ DEFAULT now(),
-            PRIMARY KEY(artifact_id, path)
-        );
-        """
-    )
-
 
 def init_crdt_storage(namespace: str, attached_db_path: Optional[str] = None) -> None:
     """Deprecated: use init_meta_storage(). Kept for internal back-compat."""

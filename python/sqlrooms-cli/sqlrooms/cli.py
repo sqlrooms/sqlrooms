@@ -41,38 +41,57 @@ def export_project(
     ),
 ):
     """
-    Export app artifact files from a SQLRooms project file to a directory.
+    Export app-builder files stored in persisted UI state to a directory.
     """
     out = Path(out_dir).expanduser().resolve()
     out.mkdir(parents=True, exist_ok=True)
     con = duckdb.connect(db_path)
     try:
-        artifacts_ref = f'"{meta_namespace}"."artifacts"'
-        files_ref = f'"{meta_namespace}"."artifact_files"'
-        artifacts = con.execute(
-            f"SELECT artifact_id, type, name, metadata_json FROM {artifacts_ref}"
-        ).fetchall()
-        for artifact_id, atype, name, metadata_json in artifacts:
-            safe_name = "".join(ch for ch in str(name) if ch.isalnum() or ch in ("-", "_", " ")).strip()
-            safe_name = safe_name.replace(" ", "-") or artifact_id
-            root = out / f"{safe_name}-{artifact_id[:8]}"
+        ui_ref = f'"{meta_namespace}"."ui_state"'
+        row = con.execute(
+            f"SELECT payload_json FROM {ui_ref} WHERE key = 'default' LIMIT 1"
+        ).fetchone()
+        if not row:
+            typer.echo("No persisted ui_state found; nothing to export.")
+            return
+        payload = row[0]
+        if isinstance(payload, str):
+            payload = json.loads(payload)
+
+        app_project = (payload or {}).get("appProject") or {}
+        config = app_project.get("config") or {}
+        apps_by_sheet = config.get("appsBySheetId") or {}
+        exported = 0
+        for sheet_id, app in apps_by_sheet.items():
+            files = (app or {}).get("files") or {}
+            if not isinstance(files, dict) or len(files) == 0:
+                continue
+            name = str((app or {}).get("name") or sheet_id)
+            safe_name = "".join(
+                ch for ch in name if ch.isalnum() or ch in ("-", "_", " ")
+            ).strip()
+            safe_name = safe_name.replace(" ", "-") or sheet_id
+            root = out / f"{safe_name}-{sheet_id[:8]}"
             root.mkdir(parents=True, exist_ok=True)
             meta = {
-                "artifactId": artifact_id,
-                "type": atype,
+                "sheetId": sheet_id,
                 "name": name,
-                "metadata": metadata_json,
+                "prompt": (app or {}).get("prompt", ""),
+                "template": (app or {}).get("template", ""),
+                "updatedAt": (app or {}).get("updatedAt"),
             }
-            (root / "artifact.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
-            rows = con.execute(
-                f"SELECT path, content FROM {files_ref} WHERE artifact_id = ?",
-                [artifact_id],
-            ).fetchall()
-            for path, content in rows:
+            (root / "app.json").write_text(
+                json.dumps(meta, indent=2), encoding="utf-8"
+            )
+            for path, content in files.items():
                 rel = Path(str(path).lstrip("/"))
                 target = root / rel
                 target.parent.mkdir(parents=True, exist_ok=True)
                 target.write_text(str(content), encoding="utf-8")
+            exported += 1
+        if exported == 0:
+            typer.echo("No app-builder files found in ui_state.")
+            return
         typer.echo(f"Exported artifacts to {out}")
     finally:
         con.close()

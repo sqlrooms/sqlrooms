@@ -2,13 +2,7 @@ import {Button} from '@sqlrooms/ui';
 import type {FileSystemTree} from '@webcontainer/api';
 import React from 'react';
 import {useCellsStore} from '@sqlrooms/cells';
-import {
-  createArtifact,
-  generateAppFromPrompt,
-  readArtifactFiles,
-  writeArtifactFiles,
-} from '../projectApi';
-import {runtimeConfig, useRoomStore} from '../store';
+import {useRoomStore} from '../store';
 
 const TEMPLATE_OPTIONS = [
   {id: 'mosaic-dashboard', label: 'Mosaic dashboard (cross-filtering)'},
@@ -24,12 +18,15 @@ function deriveAppName(prompt: string): string {
 export const AppBuilderSheet: React.FC = () => {
   const currentSheetId = useCellsStore((s) => s.cells.config.currentSheetId);
   const renameSheet = useCellsStore((s) => s.cells.renameSheet);
-  const artifactId = useRoomStore((s) =>
+  const appState = useRoomStore((s) =>
     currentSheetId
-      ? s.appProject.config.sheetArtifactMap[currentSheetId]
+      ? s.appProject.config.appsBySheetId[currentSheetId]
       : undefined,
   );
-  const setSheetArtifact = useRoomStore((s) => s.appProject.setSheetArtifact);
+  const upsertSheetApp = useRoomStore((s) => s.appProject.upsertSheetApp);
+  const updateSheetAppFiles = useRoomStore(
+    (s) => s.appProject.updateSheetAppFiles,
+  );
   const applyFilesTree = useRoomStore((s) => s.webcontainer.applyFilesTree);
   const initializeWebcontainer = useRoomStore((s) => s.webcontainer.initialize);
   const webcontainerStatus = useRoomStore((s) => s.webcontainer.serverStatus);
@@ -41,49 +38,53 @@ export const AppBuilderSheet: React.FC = () => {
   const [busy, setBusy] = React.useState(false);
 
   const loadArtifactRuntime = React.useCallback(
-    async (id: string) => {
-      const loaded = await readArtifactFiles(runtimeConfig, id);
+    async (sheetId: string, filesByPath: Record<string, string>) => {
+      const loaded = Object.entries(filesByPath).map(([path, content]) => ({
+        path,
+        content,
+      }));
       const {files, patched} = ensureRunnableViteScaffold(loaded);
       if (patched.length > 0) {
-        await writeArtifactFiles(runtimeConfig, id, patched);
+        const merged = {...filesByPath};
+        for (const item of patched) merged[item.path] = item.content;
+        updateSheetAppFiles(sheetId, merged);
       }
       const tree = toFileSystemTree(files);
       await applyFilesTree({filesTree: tree, activeFilePath: '/src/App.jsx'});
       await initializeWebcontainer();
     },
-    [applyFilesTree, initializeWebcontainer],
+    [applyFilesTree, initializeWebcontainer, updateSheetAppFiles],
   );
 
   React.useEffect(() => {
-    if (!artifactId) return;
-    void loadArtifactRuntime(artifactId);
-  }, [artifactId, loadArtifactRuntime]);
+    if (!currentSheetId || !appState?.files) return;
+    void loadArtifactRuntime(currentSheetId, appState.files);
+  }, [
+    currentSheetId,
+    appState?.updatedAt,
+    appState?.files,
+    loadArtifactRuntime,
+  ]);
 
   if (!currentSheetId) return null;
 
   const onCreate = async () => {
     const finalName = (name || deriveAppName(prompt)).trim();
     setBusy(true);
-    setStatus('Creating app artifact...');
+    setStatus('Generating app...');
     try {
-      const artifact = await createArtifact(runtimeConfig, {
-        type: 'app',
-        name: finalName,
-        metadata: {template},
-      });
-      setSheetArtifact(currentSheetId, artifact.artifactId);
-      renameSheet(currentSheetId, finalName);
-
-      setStatus('Generating initial app...');
-      const result = await generateAppFromPrompt(
-        runtimeConfig,
-        artifact.artifactId,
-        {
-          prompt,
-          template,
-        },
+      const result = generateAppFromPromptLocal({prompt, template});
+      const filesRecord = Object.fromEntries(
+        result.files.map((f) => [f.path, f.content]),
       );
-      await loadArtifactRuntime(artifact.artifactId);
+      upsertSheetApp(currentSheetId, {
+        name: finalName,
+        prompt,
+        template,
+        files: filesRecord,
+      });
+      renameSheet(currentSheetId, finalName);
+      await loadArtifactRuntime(currentSheetId, filesRecord);
       setStatus(
         result.status === 'ok'
           ? `Generated successfully in ${result.attempts} attempt(s).`
@@ -96,21 +97,24 @@ export const AppBuilderSheet: React.FC = () => {
     }
   };
 
-  if (artifactId) {
+  if (appState) {
     return (
       <div className="flex h-full flex-col gap-2 p-4">
         <h3 className="text-sm font-medium">App Builder</h3>
         <p className="text-muted-foreground text-sm">
-          App artifact is connected to this tab.
+          App state is stored in project UI state and connected to this tab.
         </p>
         <p className="text-muted-foreground text-xs">
-          artifactId: {artifactId}
+          sheetId: {currentSheetId}
         </p>
         <div>
           <Button
             size="sm"
             variant="outline"
-            onClick={() => loadArtifactRuntime(artifactId)}
+            onClick={() =>
+              currentSheetId &&
+              loadArtifactRuntime(currentSheetId, appState.files || {})
+            }
           >
             Run app
           </Button>
@@ -270,4 +274,52 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     })),
     patched,
   };
+}
+
+function generateAppFromPromptLocal(input: {
+  prompt: string;
+  template: string;
+}): {
+  status: 'ok' | 'error';
+  attempts: number;
+  errors: string[];
+  files: Array<{path: string; content: string}>;
+} {
+  const errors: string[] = [];
+  let attempts = 0;
+  let files: Array<{path: string; content: string}> = [];
+  while (attempts < 3) {
+    attempts += 1;
+    const appTitle =
+      input.template === 'basic-dashboard'
+        ? 'Analytics App'
+        : 'Mosaic Analytics App';
+    const appFile = `import React from 'react';
+
+export default function App() {
+  return (
+    <main style={{padding: 16}}>
+      <h1>${appTitle}</h1>
+      <p>Prompt: ${input.prompt.replace(/</g, '&lt;')}</p>
+      <p>Template: ${input.template}</p>
+    </main>
+  );
+}
+`;
+    files = ensureRunnableViteScaffold([
+      {path: '/src/App.jsx', content: appFile},
+    ]).files;
+    const required = new Set(files.map((f) => f.path));
+    const missing = [
+      '/index.html',
+      '/src/main.jsx',
+      '/src/App.jsx',
+      '/package.json',
+    ].filter((p) => !required.has(p));
+    if (missing.length === 0) {
+      return {status: 'ok', attempts, errors, files};
+    }
+    errors.push(...missing.map((m) => `missing required file: ${m}`));
+  }
+  return {status: 'error', attempts, errors, files};
 }

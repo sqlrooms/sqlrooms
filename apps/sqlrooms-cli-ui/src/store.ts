@@ -60,7 +60,18 @@ export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export const AppBuilderProjectConfig = z.object({
-  sheetArtifactMap: z.record(z.string(), z.string()).default({}),
+  appsBySheetId: z
+    .record(
+      z.string(),
+      z.object({
+        name: z.string().default('Untitled App'),
+        prompt: z.string().default(''),
+        template: z.string().default('mosaic-dashboard'),
+        files: z.record(z.string(), z.string()).default({}),
+        updatedAt: z.number().default(0),
+      }),
+    )
+    .default({}),
 });
 export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
 
@@ -74,8 +85,19 @@ export type RoomState = RoomShellSliceState &
   WebContainerSliceState & {
     appProject: {
       config: AppBuilderProjectConfig;
-      setSheetArtifact: (sheetId: string, artifactId: string) => void;
-      getSheetArtifact: (sheetId: string) => string | undefined;
+      upsertSheetApp: (
+        sheetId: string,
+        app: Partial<AppBuilderProjectConfig['appsBySheetId'][string]> & {
+          name: string;
+        },
+      ) => void;
+      updateSheetAppFiles: (
+        sheetId: string,
+        files: Record<string, string>,
+      ) => void;
+      getSheetApp: (
+        sheetId: string,
+      ) => AppBuilderProjectConfig['appsBySheetId'][string] | undefined;
     };
     isAssistantOpen: boolean;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
@@ -120,22 +142,46 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
     (set, get, store) => ({
       appProject: {
         config: AppBuilderProjectConfig.parse({}),
-        setSheetArtifact: (sheetId, artifactId) => {
+        upsertSheetApp: (sheetId, app) => {
           set((state) => ({
             appProject: {
               ...state.appProject,
               config: {
                 ...state.appProject.config,
-                sheetArtifactMap: {
-                  ...state.appProject.config.sheetArtifactMap,
-                  [sheetId]: artifactId,
+                appsBySheetId: {
+                  ...state.appProject.config.appsBySheetId,
+                  [sheetId]: {
+                    ...state.appProject.config.appsBySheetId[sheetId],
+                    ...app,
+                    updatedAt: Date.now(),
+                  },
                 },
               },
             },
           }));
         },
-        getSheetArtifact: (sheetId) =>
-          get().appProject.config.sheetArtifactMap[sheetId],
+        updateSheetAppFiles: (sheetId, files) => {
+          const current = get().appProject.config.appsBySheetId[sheetId];
+          if (!current) return;
+          set((state) => ({
+            appProject: {
+              ...state.appProject,
+              config: {
+                ...state.appProject.config,
+                appsBySheetId: {
+                  ...state.appProject.config.appsBySheetId,
+                  [sheetId]: {
+                    ...current,
+                    files,
+                    updatedAt: Date.now(),
+                  },
+                },
+              },
+            },
+          }));
+        },
+        getSheetApp: (sheetId) =>
+          get().appProject.config.appsBySheetId[sheetId],
       },
       isAssistantOpen: false,
       setAssistantOpen: (isAssistantOpen: boolean) => {
