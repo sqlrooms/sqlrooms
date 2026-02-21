@@ -8,6 +8,7 @@ import {
   TabDescriptor,
 } from '@sqlrooms/ui';
 import {
+  AppWindow,
   FileText,
   LayoutDashboard,
   PencilIcon,
@@ -26,6 +27,7 @@ export type SheetsTabBarProps = {
 const TYPE_ICONS: Record<SheetType, React.ElementType> = {
   notebook: FileText,
   canvas: LayoutDashboard,
+  app: AppWindow,
 };
 
 export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {

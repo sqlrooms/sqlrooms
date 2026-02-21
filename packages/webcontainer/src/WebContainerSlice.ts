@@ -101,6 +101,41 @@ export type WebContainerSliceState = {
     updateFileContent: (path: string, content: string) => void;
     saveAllOpenFiles: () => Promise<void>;
     hasDirtyFiles: () => boolean;
+    applyFilesTree: (args: {
+      filesTree: FileSystemTree;
+      activeFilePath?: string | null;
+    }) => Promise<void>;
+    runCommand: (
+      command: string,
+      args?: string[],
+      opts?: {captureOutput?: boolean},
+    ) => Promise<{
+      exitCode: number;
+      stdout: string;
+      stderr: string;
+      durationMs: number;
+    }>;
+    probeCapabilities: (
+      commands?: string[],
+    ) => Promise<Record<string, boolean>>;
+    capabilities: Record<string, boolean>;
+    commandHistory: Array<{
+      command: string;
+      args: string[];
+      startedAt: number;
+      durationMs: number;
+      exitCode: number;
+    }>;
+    lastCommandStatus:
+      | {type: 'idle'}
+      | {type: 'running'; command: string; args: string[]; startedAt: number}
+      | {
+          type: 'finished';
+          command: string;
+          args: string[];
+          exitCode: number;
+          durationMs: number;
+        };
   };
 };
 
@@ -112,6 +147,9 @@ export function createWebContainerSlice(props?: {
       config: createDefaultWebContainerSliceConfig(props?.config),
       instance: null,
       output: '',
+      capabilities: {},
+      commandHistory: [],
+      lastCommandStatus: {type: 'idle'},
       serverStatus: {type: 'not-initialized'},
       initialize: async () => {
         if (get().webcontainer.serverStatus.type !== 'not-initialized') {
@@ -355,6 +393,116 @@ export function createWebContainerSlice(props?: {
           // Swallow and return empty string
         }
         return '';
+      },
+
+      async applyFilesTree({filesTree, activeFilePath}) {
+        const instance = get().webcontainer.instance;
+        set((s) =>
+          produce(s, (draft) => {
+            draft.webcontainer.config.filesTree = filesTree;
+            draft.webcontainer.config.openedFiles = [];
+            draft.webcontainer.config.activeFilePath =
+              activeFilePath ?? draft.webcontainer.config.activeFilePath;
+          }),
+        );
+
+        if (instance) {
+          await instance.mount(filesTree);
+          const path = activeFilePath ?? '/src/App.jsx';
+          await get().webcontainer.openFile(path);
+          return;
+        }
+      },
+
+      async runCommand(command, args = [], opts) {
+        const instance = get().webcontainer.instance;
+        if (!instance) {
+          throw new Error('WebContainer instance not found');
+        }
+
+        const startedAt = Date.now();
+        let stdout = '';
+        const stderr = ''; // TODO: Implement stderr capture
+        const captureOutput = opts?.captureOutput !== false;
+
+        set((state) =>
+          produce(state, (draft) => {
+            draft.webcontainer.lastCommandStatus = {
+              type: 'running',
+              command,
+              args,
+              startedAt,
+            };
+          }),
+        );
+
+        const proc = await instance.spawn(command, args);
+        if (captureOutput) {
+          await proc.output.pipeTo(
+            new WritableStream({
+              write(data) {
+                const text = String(data ?? '');
+                stdout += text;
+                set((state) => ({
+                  webcontainer: {
+                    ...state.webcontainer,
+                    output: state.webcontainer.output + text,
+                  },
+                }));
+              },
+            }),
+          );
+        }
+
+        const exitCode = await proc.exit;
+        const durationMs = Date.now() - startedAt;
+        set((state) =>
+          produce(state, (draft) => {
+            draft.webcontainer.commandHistory.unshift({
+              command,
+              args,
+              startedAt,
+              durationMs,
+              exitCode,
+            });
+            draft.webcontainer.commandHistory =
+              draft.webcontainer.commandHistory.slice(0, 50);
+            draft.webcontainer.lastCommandStatus = {
+              type: 'finished',
+              command,
+              args,
+              exitCode,
+              durationMs,
+            };
+          }),
+        );
+        return {exitCode, stdout, stderr, durationMs};
+      },
+
+      async probeCapabilities(
+        commands = ['node', 'npm', 'pnpm', 'yarn', 'npx', 'jq', 'grep'],
+      ) {
+        const availability: Record<string, boolean> = {};
+        for (const cmd of commands) {
+          try {
+            const result = await get().webcontainer.runCommand(
+              cmd,
+              ['--version'],
+              {
+                captureOutput: false,
+              },
+            );
+            availability[cmd] = result.exitCode === 0;
+          } catch (_e) {
+            availability[cmd] = false;
+          }
+        }
+        set((state) =>
+          produce(state, (draft) => {
+            draft.webcontainer.capabilities = availability;
+          }),
+        );
+        return availability;
       },
     },
   }));

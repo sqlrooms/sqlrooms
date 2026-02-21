@@ -2,8 +2,11 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import json
+from pathlib import Path
 import sys
 
+import duckdb
 import typer
 
 from .web.launcher import SqlroomsHttpServer
@@ -18,6 +21,61 @@ app = typer.Typer(
     pretty_exceptions_enable=False,
     invoke_without_command=True,
 )
+
+
+@app.command("export")
+def export_project(
+    db_path: str = typer.Argument(
+        ...,
+        help="DuckDB project file to export from.",
+    ),
+    out_dir: str = typer.Option(
+        "./out",
+        "--dir",
+        help="Output directory for exported artifacts.",
+    ),
+    meta_namespace: str = typer.Option(
+        "__sqlrooms",
+        "--meta-namespace",
+        help="Namespace for SQLRooms meta tables.",
+    ),
+):
+    """
+    Export app artifact files from a SQLRooms project file to a directory.
+    """
+    out = Path(out_dir).expanduser().resolve()
+    out.mkdir(parents=True, exist_ok=True)
+    con = duckdb.connect(db_path)
+    try:
+        artifacts_ref = f'"{meta_namespace}"."artifacts"'
+        files_ref = f'"{meta_namespace}"."artifact_files"'
+        artifacts = con.execute(
+            f"SELECT artifact_id, type, name, metadata_json FROM {artifacts_ref}"
+        ).fetchall()
+        for artifact_id, atype, name, metadata_json in artifacts:
+            safe_name = "".join(ch for ch in str(name) if ch.isalnum() or ch in ("-", "_", " ")).strip()
+            safe_name = safe_name.replace(" ", "-") or artifact_id
+            root = out / f"{safe_name}-{artifact_id[:8]}"
+            root.mkdir(parents=True, exist_ok=True)
+            meta = {
+                "artifactId": artifact_id,
+                "type": atype,
+                "name": name,
+                "metadata": metadata_json,
+            }
+            (root / "artifact.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+            rows = con.execute(
+                f"SELECT path, content FROM {files_ref} WHERE artifact_id = ?",
+                [artifact_id],
+            ).fetchall()
+            for path, content in rows:
+                rel = Path(str(path).lstrip("/"))
+                target = root / rel
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_text(str(content), encoding="utf-8")
+        typer.echo(f"Exported artifacts to {out}")
+    finally:
+        con.close()
 
 
 @app.callback(invoke_without_command=True)
