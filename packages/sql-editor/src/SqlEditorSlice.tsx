@@ -5,7 +5,7 @@ import {
   joinStatements,
   makeLimitQuery,
   separateLastStatement,
-} from '@sqlrooms/duckdb';
+} from '@sqlrooms/db';
 import {
   BaseRoomStoreState,
   createSlice,

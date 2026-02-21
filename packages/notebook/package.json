@@ -36,7 +36,7 @@
   "dependencies": {
     "@paralleldrive/cuid2": "^2.2.2",
     "@sqlrooms/cells": "workspace:*",
-    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",

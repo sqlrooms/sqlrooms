@@ -3,12 +3,12 @@
  * @packageDocumentation
  */
 
-export {createDbSlice, useStoreWithDb} from './DbSlice';
+export {createHttpDbBridge} from './bridge';
 export {
   createCoreDuckDbConnection,
   isCoreDuckDbConnection,
 } from './connectors/duckdb';
-export {createHttpDbBridge} from './bridge';
+export {createDbSlice, useStoreWithDb} from './DbSlice';
 export type {
   CatalogColumn,
   CatalogDatabase,
@@ -30,3 +30,6 @@ export type {
   QueryExecutionResult,
   RuntimeSupport,
 } from './types';
+
+export {useSql} from '@sqlrooms/duckdb';
+export * from '@sqlrooms/duckdb-core';

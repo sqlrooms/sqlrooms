@@ -1,5 +1,5 @@
 import {zodResolver} from '@hookform/resolvers/zod';
-import {makeQualifiedTableName} from '@sqlrooms/duckdb';
+import {makeQualifiedTableName} from '@sqlrooms/db';
 import {SqlQueryDataSource} from '@sqlrooms/room-shell';
 import {
   Alert,

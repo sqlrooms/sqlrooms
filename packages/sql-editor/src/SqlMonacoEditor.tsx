@@ -1,5 +1,5 @@
 import type {OnMount} from '@monaco-editor/react';
-import type {DataTable, DuckDbConnector} from '@sqlrooms/duckdb';
+import type {DataTable, DuckDbConnector} from '@sqlrooms/db';
 import type {MonacoEditorProps} from '@sqlrooms/monaco-editor';
 import {MonacoEditor} from '@sqlrooms/monaco-editor';
 import {cn} from '@sqlrooms/ui';
