@@ -1,7 +1,6 @@
 import {createId} from '@paralleldrive/cuid2';
 import type {DbSliceState} from '@sqlrooms/db';
 import {
-  DuckDbSliceState,
   getSqlErrorWithPointer,
   joinStatements,
   makeLimitQuery,
@@ -180,7 +179,7 @@ export function createSqlEditorSlice({
 } = {}): StateCreator<SqlEditorSliceState> {
   return createSlice<
     SqlEditorSliceState,
-    BaseRoomStoreState & DuckDbSliceState & DbSliceState & SqlEditorSliceState
+    BaseRoomStoreState & DbSliceState & SqlEditorSliceState
   >((set, get) => {
     return {
       sqlEditor: {
@@ -449,7 +448,7 @@ export function createSqlEditorSlice({
 
           let queryResult: QueryResult;
           try {
-            const dbx = get().dbx;
+            const dbConnectors = get().db.connectors;
             const connector = await get().db.getConnector();
             const signal = queryController.signal;
 
@@ -480,9 +479,9 @@ export function createSqlEditorSlice({
                 precedingStatements,
                 limitedLastStatement,
               );
-              const result = dbx?.runQuery
+              const result = dbConnectors?.runQuery
                 ? (
-                    await dbx.runQuery({
+                    await dbConnectors.runQuery({
                       sql: queryWithLimit,
                       queryType: 'arrow',
                       signal,
@@ -508,9 +507,9 @@ export function createSqlEditorSlice({
                 );
               }
 
-              const result = dbx?.runQuery
+              const result = dbConnectors?.runQuery
                 ? (
-                    await dbx.runQuery({
+                    await dbConnectors.runQuery({
                       sql: query,
                       queryType: /^(EXPLAIN|PRAGMA)/i.test(lastQueryStatement)
                         ? 'arrow'

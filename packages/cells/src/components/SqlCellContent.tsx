@@ -53,7 +53,7 @@ export const SqlCellContent: React.FC<SqlCellContentProps> = ({
   const pageVersion = useCellsStore((s) => s.cells.pageVersion?.[id] ?? 0);
   const getCellResult = useCellsStore((s) => s.cells.getCellResult);
   const fetchCellResultPage = useCellsStore((s) => s.cells.fetchCellResultPage);
-  const dbConnections = useCellsStore((s) => s.dbx.config.connections);
+  const dbConnections = useCellsStore((s) => s.db.config.connections);
 
   // Re-read the cache whenever resultVersion or pageVersion changes
   // eslint-disable-next-line react-hooks/exhaustive-deps

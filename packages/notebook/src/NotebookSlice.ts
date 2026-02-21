@@ -1,16 +1,16 @@
 import {createId} from '@paralleldrive/cuid2';
 import {
-  type CellsSliceState,
   type Cell,
+  type CellsSliceState,
   getSheetsByType,
 } from '@sqlrooms/cells';
-import {DuckDbSliceState} from '@sqlrooms/duckdb';
+import {DbSliceState} from '@sqlrooms/db';
 import {BaseRoomStoreState, createSlice} from '@sqlrooms/room-store';
 import {generateUniqueName} from '@sqlrooms/utils';
 import {produce} from 'immer';
 import {NotebookCell, NotebookSliceConfig} from './cellSchemas';
-import {getCellTypeLabel} from './NotebookUtils';
 import type {NotebookSliceState} from './NotebookStateTypes';
+import {getCellTypeLabel} from './NotebookUtils';
 
 /**
  * Create default `notebook.config` structure with no cells.
@@ -51,7 +51,7 @@ export function createNotebookSlice(props?: {
   config?: Partial<NotebookSliceConfig>;
 }) {
   type NotebookRootState = BaseRoomStoreState &
-    DuckDbSliceState &
+    DbSliceState &
     NotebookSliceState &
     CellsSliceState;
 

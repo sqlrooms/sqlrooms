@@ -1,3 +1,4 @@
+import {createId} from '@paralleldrive/cuid2';
 import {DuckDbSliceState, isWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
@@ -13,7 +14,6 @@ import {
   wasmConnector,
 } from '@uwdata/mosaic-core';
 import {Query} from '@uwdata/mosaic-sql';
-import {createId} from '@paralleldrive/cuid2';
 import {produce} from 'immer';
 import {z} from 'zod';
 import {SliceFunctions} from '../../room-store/dist/BaseRoomStore';
@@ -90,249 +90,250 @@ export function createDefaultMosaicConfig(
 export function createMosaicSlice(props?: {
   config?: Partial<MosaicSliceConfig>;
 }) {
-  return createSlice<
-    MosaicSliceState,
-    BaseRoomStoreState & DuckDbSliceState & MosaicSliceState
-  >((set, get, store) => ({
-    mosaic: {
-      config: createDefaultMosaicConfig(props?.config),
-      connection: {
-        status: 'idle',
-        connector: undefined,
-      },
-      clients: {},
-      selections: {},
+  return createSlice<MosaicSliceState, BaseRoomStoreState & MosaicSliceState>(
+    (set, get, store) => ({
+      mosaic: {
+        config: createDefaultMosaicConfig(props?.config),
+        connection: {
+          status: 'idle',
+          connector: undefined,
+        },
+        clients: {},
+        selections: {},
 
-      async initialize() {
-        let mosaicConnector: Connector | undefined;
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.connection = {status: 'loading'};
-          }),
-        );
-        try {
-          const dbConnector = await get().db.getConnector();
-          if (!isWasmDuckDbConnector(dbConnector)) {
-            throw new Error('Only WasmDuckDbConnector is currently supported');
+        async initialize() {
+          let mosaicConnector: Connector | undefined;
+          set((state) =>
+            produce(state, (draft) => {
+              draft.mosaic.connection = {status: 'loading'};
+            }),
+          );
+          try {
+            const dbConnector = await get().db.getConnector();
+            if (!isWasmDuckDbConnector(dbConnector)) {
+              throw new Error(
+                'Only WasmDuckDbConnector is currently supported',
+              );
+            }
+            mosaicConnector = await coordinator().databaseConnector(
+              wasmConnector({
+                // @ts-expect-error - We install a different version of duckdb-wasm
+                duckDb: dbConnector.getDb(),
+                connection: dbConnector.getConnection(),
+              }),
+            );
+          } catch (error) {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.mosaic.connection = {status: 'error', error};
+              }),
+            );
+            throw error;
+          } finally {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.mosaic.connection = {
+                  status: 'ready',
+                  connector: mosaicConnector!,
+                  coordinator: coordinator(),
+                };
+              }),
+            );
           }
-          mosaicConnector = await coordinator().databaseConnector(
-            wasmConnector({
-              // @ts-expect-error - We install a different version of duckdb-wasm
-              duckDb: dbConnector.getDb(),
-              connection: dbConnector.getConnection(),
-            }),
-          );
-        } catch (error) {
+        },
+
+        async destroy() {
+          get().mosaic.destroyAllClients();
+        },
+
+        getSelection(
+          name: string,
+          type: 'crossfilter' | 'single' | 'union' = 'crossfilter',
+        ) {
+          const existing = get().mosaic.selections[name];
+          if (existing) return existing;
+
+          const selection =
+            type === 'crossfilter'
+              ? Selection.crossfilter()
+              : type === 'single'
+                ? Selection.single()
+                : Selection.union();
+
           set((state) =>
             produce(state, (draft) => {
-              draft.mosaic.connection = {status: 'error', error};
+              draft.mosaic.selections[name] = selection;
             }),
           );
-          throw error;
-        } finally {
+          return selection;
+        },
+
+        createClient<T>(options: MosaicClientOptions<T>) {
+          const {connection} = get().mosaic;
+          if (connection.status !== 'ready') {
+            throw new Error('Mosaic connection not ready');
+          }
+
+          const id = options.id ?? createId();
+
+          // Determine which selection to use
+          const selection =
+            options.selection ??
+            (options.selectionName
+              ? get().mosaic.getSelection(options.selectionName)
+              : undefined);
+
+          // Wrap queryResult to update store state AND call external callback
+          const wrappedQueryResult = (data: unknown) => {
+            const typedData = data as T;
+            set((state) =>
+              produce(state, (draft) => {
+                const tracked = draft.mosaic.clients[id];
+                if (tracked) {
+                  tracked.data = typedData;
+                  tracked.isLoading = false;
+                }
+              }),
+            );
+            // Call external callback if provided
+            options.queryResult?.(typedData);
+          };
+
+          const client = makeClient({
+            coordinator: connection.coordinator,
+            selection,
+            query: options.query,
+            queryResult: wrappedQueryResult,
+          });
+
           set((state) =>
             produce(state, (draft) => {
-              draft.mosaic.connection = {
-                status: 'ready',
-                connector: mosaicConnector!,
-                coordinator: coordinator(),
+              draft.mosaic.clients[id] = {
+                id,
+                client,
+                createdAt: Date.now(),
+                isLoading: true,
+                data: null,
+                selection,
+                queryResultCallback: options.queryResult
+                  ? (result: unknown) => options.queryResult!(result as T)
+                  : undefined,
               };
             }),
           );
-        }
-      },
 
-      async destroy() {
-        get().mosaic.destroyAllClients();
-      },
-
-      getSelection(
-        name: string,
-        type: 'crossfilter' | 'single' | 'union' = 'crossfilter',
-      ) {
-        const existing = get().mosaic.selections[name];
-        if (existing) return existing;
-
-        const selection =
-          type === 'crossfilter'
-            ? Selection.crossfilter()
-            : type === 'single'
-              ? Selection.single()
-              : Selection.union();
-
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.selections[name] = selection;
-          }),
-        );
-        return selection;
-      },
-
-      createClient<T>(options: MosaicClientOptions<T>) {
-        const {connection} = get().mosaic;
-        if (connection.status !== 'ready') {
-          throw new Error('Mosaic connection not ready');
-        }
-
-        const id = options.id ?? createId();
-
-        // Determine which selection to use
-        const selection =
-          options.selection ??
-          (options.selectionName
-            ? get().mosaic.getSelection(options.selectionName)
-            : undefined);
-
-        // Wrap queryResult to update store state AND call external callback
-        const wrappedQueryResult = (data: unknown) => {
-          const typedData = data as T;
-          set((state) =>
-            produce(state, (draft) => {
-              const tracked = draft.mosaic.clients[id];
-              if (tracked) {
-                tracked.data = typedData;
-                tracked.isLoading = false;
-              }
-            }),
-          );
-          // Call external callback if provided
-          options.queryResult?.(typedData);
-        };
-
-        const client = makeClient({
-          coordinator: connection.coordinator,
-          selection,
-          query: options.query,
-          queryResult: wrappedQueryResult,
-        });
-
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.clients[id] = {
-              id,
-              client,
-              createdAt: Date.now(),
-              isLoading: true,
-              data: null,
-              selection,
-              queryResultCallback: options.queryResult
-                ? (result: unknown) => options.queryResult!(result as T)
-                : undefined,
-            };
-          }),
-        );
-
-        return id;
-      },
-
-      ensureClient<T>(
-        options: MosaicClientOptions<T> & {
-          id: string;
-          onQueryResult?: (result: T) => void;
+          return id;
         },
-      ) {
-        const {connection, clients} = get().mosaic;
-        if (connection.status !== 'ready') {
-          return; // Silently return if not ready - hook will handle retry
-        }
 
-        const existing = clients[options.id];
+        ensureClient<T>(
+          options: MosaicClientOptions<T> & {
+            id: string;
+            onQueryResult?: (result: T) => void;
+          },
+        ) {
+          const {connection, clients} = get().mosaic;
+          if (connection.status !== 'ready') {
+            return; // Silently return if not ready - hook will handle retry
+          }
 
-        // Determine which selection to use
-        const selection =
-          options.selection ??
-          (options.selectionName
-            ? get().mosaic.getSelection(options.selectionName)
-            : undefined);
+          const existing = clients[options.id];
 
-        // Check if client exists and selection matches
-        // Note: If query or callback changes, we recreate the client to ensure
-        // the latest versions are used. This is simpler than trying to update
-        // the bound queryResult callback in makeClient.
-        if (existing && existing.selection === selection) {
-          return; // No-op - client already exists with same selection
-        }
+          // Determine which selection to use
+          const selection =
+            options.selection ??
+            (options.selectionName
+              ? get().mosaic.getSelection(options.selectionName)
+              : undefined);
 
-        // If exists but selection changed, destroy it first
-        if (existing) {
-          get().mosaic.destroyClient(options.id);
-        }
+          // Check if client exists and selection matches
+          // Note: If query or callback changes, we recreate the client to ensure
+          // the latest versions are used. This is simpler than trying to update
+          // the bound queryResult callback in makeClient.
+          if (existing && existing.selection === selection) {
+            return; // No-op - client already exists with same selection
+          }
 
-        // Create new client with wrapped queryResult that calls both store update and external callback
-        const wrappedQueryResult = (data: unknown) => {
-          const typedData = data as T;
+          // If exists but selection changed, destroy it first
+          if (existing) {
+            get().mosaic.destroyClient(options.id);
+          }
+
+          // Create new client with wrapped queryResult that calls both store update and external callback
+          const wrappedQueryResult = (data: unknown) => {
+            const typedData = data as T;
+            set((state) =>
+              produce(state, (draft) => {
+                const tracked = draft.mosaic.clients[options.id];
+                if (tracked) {
+                  tracked.data = typedData;
+                  tracked.isLoading = false;
+                }
+              }),
+            );
+            // Call external callback if provided
+            options.onQueryResult?.(typedData);
+            // Also call original queryResult if provided
+            options.queryResult?.(typedData);
+          };
+
+          const client = makeClient({
+            coordinator: connection.coordinator,
+            selection,
+            query: options.query,
+            queryResult: wrappedQueryResult,
+          });
+
           set((state) =>
             produce(state, (draft) => {
-              const tracked = draft.mosaic.clients[options.id];
-              if (tracked) {
-                tracked.data = typedData;
-                tracked.isLoading = false;
-              }
+              draft.mosaic.clients[options.id] = {
+                id: options.id,
+                client,
+                createdAt: Date.now(),
+                isLoading: true,
+                data: null,
+                selection,
+                queryResultCallback: options.onQueryResult as
+                  | ((result: unknown) => void)
+                  | undefined,
+              };
             }),
           );
-          // Call external callback if provided
-          options.onQueryResult?.(typedData);
-          // Also call original queryResult if provided
-          options.queryResult?.(typedData);
-        };
+        },
 
-        const client = makeClient({
-          coordinator: connection.coordinator,
-          selection,
-          query: options.query,
-          queryResult: wrappedQueryResult,
-        });
+        destroyClient(id: string) {
+          const {connection, clients} = get().mosaic;
+          const tracked = clients[id];
+          if (!tracked) return;
 
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.clients[options.id] = {
-              id: options.id,
-              client,
-              createdAt: Date.now(),
-              isLoading: true,
-              data: null,
-              selection,
-              queryResultCallback: options.onQueryResult as
-                | ((result: unknown) => void)
-                | undefined,
-            };
-          }),
-        );
-      },
-
-      destroyClient(id: string) {
-        const {connection, clients} = get().mosaic;
-        const tracked = clients[id];
-        if (!tracked) return;
-
-        if (connection.status === 'ready') {
-          connection.coordinator.disconnect(tracked.client);
-        }
-
-        set((state) =>
-          produce(state, (draft) => {
-            delete draft.mosaic.clients[id];
-          }),
-        );
-      },
-
-      destroyAllClients() {
-        const {connection, clients} = get().mosaic;
-
-        if (connection.status === 'ready') {
-          Object.values(clients).forEach((tracked) => {
+          if (connection.status === 'ready') {
             connection.coordinator.disconnect(tracked.client);
-          });
-        }
+          }
 
-        set((state) =>
-          produce(state, (draft) => {
-            draft.mosaic.clients = {};
-          }),
-        );
+          set((state) =>
+            produce(state, (draft) => {
+              delete draft.mosaic.clients[id];
+            }),
+          );
+        },
+
+        destroyAllClients() {
+          const {connection, clients} = get().mosaic;
+
+          if (connection.status === 'ready') {
+            Object.values(clients).forEach((tracked) => {
+              connection.coordinator.disconnect(tracked.client);
+            });
+          }
+
+          set((state) =>
+            produce(state, (draft) => {
+              draft.mosaic.clients = {};
+            }),
+          );
+        },
       },
-    },
-  }));
+    }),
+  );
 }
 
 export type DuckDbSliceStateWithMosaic = DuckDbSliceState & MosaicSliceState;

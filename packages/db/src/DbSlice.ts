@@ -68,9 +68,9 @@ export function createDbSlice(props?: {
         );
       }
 
-      const strategy = get().dbx.config.coreMaterialization.strategy;
+      const strategy = get().db.config.coreMaterialization.strategy;
       if (strategy === 'schema') {
-        const schemaName = get().dbx.config.coreMaterialization.schemaName;
+        const schemaName = get().db.config.coreMaterialization.schemaName;
         await core.query(`CREATE SCHEMA IF NOT EXISTS "${schemaName}"`);
         const qualified = makeQualifiedTableName({
           schema: schemaName,
@@ -81,7 +81,7 @@ export function createDbSlice(props?: {
       }
 
       const attachedName =
-        get().dbx.config.coreMaterialization.attachedDatabaseName;
+        get().db.config.coreMaterialization.attachedDatabaseName;
       // Strict ephemeral default: keep external materialized data in an attached
       // in-memory database scoped to runtime process.
       try {
@@ -102,7 +102,7 @@ export function createDbSlice(props?: {
       request: QueryExecutionRequest,
     ): Promise<QueryExecutionResult> => {
       const queryType = request.queryType ?? 'arrow';
-      const config = get().dbx.config;
+      const config = get().db.config;
       const connectionId = request.connectionId ?? config.coreConnectionId;
       const connection = config.connections[connectionId];
       if (!connection) {
@@ -110,7 +110,7 @@ export function createDbSlice(props?: {
       }
 
       const engineId = connection.engineId;
-      const connector = get().dbx.connectors[connectionId];
+      const connector = get().db.connectors.connectors[connectionId];
       const currentRuntime = config.currentRuntime;
       const needsBridge =
         connection.requiresBridge ||
@@ -143,7 +143,7 @@ export function createDbSlice(props?: {
       if (needsBridge) {
         const bridgeId = connection.bridgeId;
         const bridge: DbBridge | undefined = bridgeId
-          ? get().dbx.bridges[bridgeId]
+          ? get().db.connectors.bridges[bridgeId]
           : undefined;
         if (!bridge) {
           throw new Error(
@@ -234,130 +234,134 @@ export function createDbSlice(props?: {
     };
 
     return {
-      ...duckDbSlice,
-      dbx: {
+      db: {
+        ...duckDbSlice.db,
         config: initialConfig,
-        connectors: {},
-        bridges: {},
         setConfig: (config) => {
           set((state) =>
             produce(state, (draft) => {
-              draft.dbx.config = config;
+              draft.db.config = config;
             }),
           );
         },
-        registerConnection: (connection: DbConnection) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dbx.config.connections[connection.id] = connection;
-            }),
-          );
-        },
-        removeConnection: (connectionId: string) => {
-          set((state) =>
-            produce(state, (draft) => {
-              delete draft.dbx.config.connections[connectionId];
-              delete draft.dbx.connectors[connectionId];
-            }),
-          );
-        },
-        registerConnector: (connectionId: string, connector: DbConnector) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dbx.connectors[connectionId] = connector;
-            }),
-          );
-        },
-        registerBridge: (bridge: DbBridge) => {
-          set((state) =>
-            produce(state, (draft) => {
-              draft.dbx.bridges[bridge.id] = bridge;
-            }),
-          );
-        },
-        listConnections: () => Object.values(get().dbx.config.connections),
-        testConnection: async (connectionId: string) => {
-          const connection = get().dbx.config.connections[connectionId];
-          if (!connection) return false;
-          if (connection.id === get().dbx.config.coreConnectionId) return true;
-          const connector = get().dbx.connectors[connectionId];
-          if (connector) {
-            try {
-              await connector.initialize();
-              return true;
-            } catch {
-              return false;
-            }
-          }
-          if (connection.bridgeId) {
-            const bridge = get().dbx.bridges[connection.bridgeId];
-            if (!bridge) return false;
-            return bridge.testConnection(connectionId);
-          }
-          return false;
-        },
-        listCatalog: async (connectionId?: string): Promise<CatalogEntry[]> => {
-          const ids = connectionId
-            ? [connectionId]
-            : Object.keys(get().dbx.config.connections);
-          const entries: CatalogEntry[] = [];
-
-          for (const id of ids) {
-            const connection = get().dbx.config.connections[id];
-            if (!connection) continue;
-            if (id === get().dbx.config.coreConnectionId) {
-              const tables = await get().db.loadTableSchemas();
-              entries.push({
-                connectionId: id,
-                engineId: connection.engineId,
-                databases: [],
-                schemas: [],
-                tables: tables.map((t) => ({
-                  database: t.table.database,
-                  schema: t.table.schema,
-                  table: t.table.table,
-                  isView: t.isView,
-                })),
-              });
-              continue;
-            }
-            const connector = get().dbx.connectors[id];
-            if (
-              connector?.listDatabases ||
-              connector?.listSchemas ||
-              connector?.listTables
-            ) {
-              const [databases, schemas, tables] = await Promise.all([
-                connector.listDatabases?.() ?? Promise.resolve([]),
-                connector.listSchemas?.() ?? Promise.resolve([]),
-                connector.listTables?.() ?? Promise.resolve([]),
-              ]);
-              entries.push({
-                connectionId: id,
-                engineId: connection.engineId,
-                databases,
-                schemas,
-                tables,
-              });
-              continue;
+        connectors: {
+          connectors: {},
+          bridges: {},
+          registerConnection: (connection: DbConnection) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.db.config.connections[connection.id] = connection;
+              }),
+            );
+          },
+          removeConnection: (connectionId: string) => {
+            set((state) =>
+              produce(state, (draft) => {
+                delete draft.db.config.connections[connectionId];
+                delete draft.db.connectors.connectors[connectionId];
+              }),
+            );
+          },
+          registerConnector: (connectionId: string, connector: DbConnector) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.db.connectors.connectors[connectionId] = connector;
+              }),
+            );
+          },
+          registerBridge: (bridge: DbBridge) => {
+            set((state) =>
+              produce(state, (draft) => {
+                draft.db.connectors.bridges[bridge.id] = bridge;
+              }),
+            );
+          },
+          listConnections: () => Object.values(get().db.config.connections),
+          testConnection: async (connectionId: string) => {
+            const connection = get().db.config.connections[connectionId];
+            if (!connection) return false;
+            if (connection.id === get().db.config.coreConnectionId) return true;
+            const connector = get().db.connectors.connectors[connectionId];
+            if (connector) {
+              try {
+                await connector.initialize();
+                return true;
+              } catch {
+                return false;
+              }
             }
             if (connection.bridgeId) {
-              const bridge = get().dbx.bridges[connection.bridgeId];
-              if (bridge) {
-                const catalog = await bridge.listCatalog(id);
+              const bridge = get().db.connectors.bridges[connection.bridgeId];
+              if (!bridge) return false;
+              return bridge.testConnection(connectionId);
+            }
+            return false;
+          },
+          listCatalog: async (
+            connectionId?: string,
+          ): Promise<CatalogEntry[]> => {
+            const ids = connectionId
+              ? [connectionId]
+              : Object.keys(get().db.config.connections);
+            const entries: CatalogEntry[] = [];
+
+            for (const id of ids) {
+              const connection = get().db.config.connections[id];
+              if (!connection) continue;
+              if (id === get().db.config.coreConnectionId) {
+                const tables = await get().db.loadTableSchemas();
                 entries.push({
                   connectionId: id,
                   engineId: connection.engineId,
-                  databases: catalog.databases,
-                  schemas: catalog.schemas,
-                  tables: catalog.tables,
+                  databases: [],
+                  schemas: [],
+                  tables: tables.map((t) => ({
+                    database: t.table.database,
+                    schema: t.table.schema,
+                    table: t.table.table,
+                    isView: t.isView,
+                  })),
                 });
+                continue;
+              }
+              const connector = get().db.connectors.connectors[id];
+              if (
+                connector?.listDatabases ||
+                connector?.listSchemas ||
+                connector?.listTables
+              ) {
+                const [databases, schemas, tables] = await Promise.all([
+                  connector.listDatabases?.() ?? Promise.resolve([]),
+                  connector.listSchemas?.() ?? Promise.resolve([]),
+                  connector.listTables?.() ?? Promise.resolve([]),
+                ]);
+                entries.push({
+                  connectionId: id,
+                  engineId: connection.engineId,
+                  databases,
+                  schemas,
+                  tables,
+                });
+                continue;
+              }
+              if (connection.bridgeId) {
+                const bridge = get().db.connectors.bridges[connection.bridgeId];
+                if (bridge) {
+                  const catalog = await bridge.listCatalog(id);
+                  entries.push({
+                    connectionId: id,
+                    engineId: connection.engineId,
+                    databases: catalog.databases,
+                    schemas: catalog.schemas,
+                    tables: catalog.tables,
+                  });
+                }
               }
             }
-          }
-          return entries;
+            return entries;
+          },
+          runQuery,
         },
-        runQuery,
       },
     };
   });

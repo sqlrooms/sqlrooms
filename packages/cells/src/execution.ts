@@ -97,7 +97,7 @@ export async function executeSqlCell(
 
   try {
     const db = state.db;
-    const dbx = state.dbx;
+    const dbConnectors = state.db.connectors;
 
     if (signal?.aborted) throw new Error('Query cancelled');
 
@@ -111,9 +111,9 @@ export async function executeSqlCell(
     if (
       selectedConnectorId &&
       selectedConnectorId !== 'duckdb-core' &&
-      dbx?.runQuery
+      dbConnectors?.runQuery
     ) {
-      const routed = await dbx.runQuery({
+      const routed = await dbConnectors.runQuery({
         connectionId: selectedConnectorId,
         sql,
         queryType: 'arrow',

@@ -1,10 +1,5 @@
 import {DbSliceState, createDbSlice} from '@sqlrooms/db';
-import {
-  DataTable,
-  DuckDbConnector,
-  DuckDbSliceState,
-  LoadFileOptions,
-} from '@sqlrooms/duckdb';
+import {DataTable, DuckDbConnector, LoadFileOptions} from '@sqlrooms/duckdb';
 import {
   CreateLayoutSliceProps,
   LayoutSliceState,
@@ -148,8 +143,7 @@ export type RoomShellSliceState = {
       status?: DataSourceStatus,
     ) => Promise<void>;
   };
-} & DuckDbSliceState &
-  DbSliceState &
+} & DbSliceState &
   LayoutSliceState;
 
 /**
@@ -329,17 +323,7 @@ export function createRoomShellSlice(
         ) {
           const {schema} = get().db;
           const {db} = get();
-          const dbx = (get() as any).dbx as
-            | {
-                runQuery?: (args: {
-                  sql: string;
-                  queryType?: 'arrow' | 'json' | 'exec';
-                  materialize?: boolean;
-                  materializedName?: string;
-                  signal?: AbortSignal;
-                }) => Promise<{relationName?: string}>;
-              }
-            | undefined;
+          const dbConnectors = get().db.connectors;
           const newTableName =
             tableName !== oldTableName
               ? convertToUniqueColumnOrTableName(
@@ -348,8 +332,8 @@ export function createRoomShellSlice(
                 )
               : tableName;
           let rowCount: number | undefined;
-          if (dbx?.runQuery) {
-            const routed = await dbx.runQuery({
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
               sql: query,
               queryType: 'arrow',
               materialize: true,
@@ -680,7 +664,7 @@ export function createRoomShellSlice(
     }
 
     async function runDataSourceQueries(queries: SqlQueryDataSource[]) {
-      const dbx = (get() as any).dbx as
+      const dbConnectors = (get() as any).db.connectors as
         | {
             runQuery?: (args: {
               sql: string;
@@ -701,8 +685,8 @@ export function createRoomShellSlice(
             }),
           );
           let rowCount: number | undefined;
-          if (dbx?.runQuery) {
-            const routed = await dbx.runQuery({
+          if (dbConnectors?.runQuery) {
+            const routed = await dbConnectors.runQuery({
               sql: sqlQuery,
               queryType: 'arrow',
               materialize: true,
