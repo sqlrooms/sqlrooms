@@ -189,7 +189,7 @@ Treat MCP as **phase 2 adapter**, not MVP foundation.
 - `notebook.`*: `read`, `updateCells`, `runCell`, `export`
 - `app.`*: `readFiles`, `writeFiles`, `generate`, `validate`, `preview`
 - optional `app.shell`: constrained command execution gated by capability map and policy
-- `data.*`: `query` (SELECT-only default, deny `__sqlrooms`)
+- `data.`*: `query` (SELECT-only default, deny `__sqlrooms`)
 - optional `session.*`: `listTabs`, `openArtifactTab`, `focusTab` (UI/session helpers only)
 - Future: add `project.snapshot*` when CRDT-compatible checkpoint semantics are introduced.
 
