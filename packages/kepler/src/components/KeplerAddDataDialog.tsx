@@ -128,7 +128,7 @@ export const KeplerAddDataDialog = ({
         open={addDataModal.isOpen}
         onOpenChange={(isOpen: boolean) => !isOpen && addDataModal.onClose()}
       >
-        <DialogContent className="min-w-md h-[80vh] max-w-4xl grid-rows-[auto,1fr]">
+        <DialogContent className="h-[80vh] max-w-4xl min-w-md grid-rows-[auto_1fr]">
           <DialogHeader>
             <DialogTitle>Add Data</DialogTitle>
             <DialogDescription>Add data to the project.</DialogDescription>

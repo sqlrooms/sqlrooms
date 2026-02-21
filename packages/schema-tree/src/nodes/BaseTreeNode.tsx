@@ -13,7 +13,7 @@ export function BaseTreeNode<T>(
   return (
     <Comp
       className={cn(
-        'hover:bg-foreground/10 h-[22px] w-full flex-grow cursor-pointer select-none rounded-sm p-[1px]',
+        'hover:bg-foreground/10 h-[22px] w-full grow cursor-pointer rounded-sm p-px select-none',
         className,
       )}
     >

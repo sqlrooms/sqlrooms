@@ -173,7 +173,7 @@ const S3FileBrowser: FC<{
   return (
     <div className="relative h-full w-full overflow-hidden">
       {/* Search Box */}
-      <div className="flex w-full justify-end px-[1px] py-2">
+      <div className="flex w-full justify-end px-px py-2">
         {renderFileActions ? renderFileActions() : null}
         <div className="relative w-[240px] shrink-0">
           <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -255,7 +255,7 @@ const S3FileBrowser: FC<{
                   </TableCell>
                 </TableRow>
               ) : null}
-              <TableRow className="bg-accent text-primary-foreground sticky top-0 z-[2]">
+              <TableRow className="bg-accent text-primary-foreground sticky top-0 z-2">
                 <TableHead className="w-[1%]">
                   <Checkbox
                     checked={selectedFiles.length === filesInDirectory.length}

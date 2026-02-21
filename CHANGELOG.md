@@ -3,6 +3,28 @@
 All notable changes to this project will be documented in this file.
 See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+# [0.28.0-rc.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0...v0.28.0-rc.0) (2026-02-21)
+
+### Bug Fixes
+
+* update custom map legend panel when exporting image ([#372](/github.com/sqlrooms/sqlrooms/issues/372)) ([144741e](github.com/sqlrooms/sqlrooms/commits/144741e8e5d1cfef942756809010d162a58e8c8f))
+
+### Features
+
+* tailwind v4 ([#324](/github.com/sqlrooms/sqlrooms/issues/324)) ([1d03e12](github.com/sqlrooms/sqlrooms/commits/1d03e125e0e4eb162cca83ce32d71ec85b74ef54))
+
+# [0.27.0](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.5...v0.27.0) (2026-02-20)
+
+### Bug Fixes
+
+* fix vega chart sizing ([#365](/github.com/sqlrooms/sqlrooms/issues/365)) ([c9ed288](github.com/sqlrooms/sqlrooms/commits/c9ed28845aeae3739070ef3615e843076090f7f7))
+* improve sql error display in vega charts ([#369](/github.com/sqlrooms/sqlrooms/issues/369)) ([0d26265](github.com/sqlrooms/sqlrooms/commits/0d2626512d98d9c4b983d0e8c640a64c20cb08e8))
+
+### Features
+
+* AI output copy to clipboard ([#368](/github.com/sqlrooms/sqlrooms/issues/368)) ([bcc10c1](github.com/sqlrooms/sqlrooms/commits/bcc10c12cac3219f762406fb18e4a4ee04546ada))
+* Data table row selection ([#358](/github.com/sqlrooms/sqlrooms/issues/358)) ([3c63689](github.com/sqlrooms/sqlrooms/commits/3c636899dae81d13b24d501e9752257bced89e30))
+
 # [0.27.0-rc.5](github.com/sqlrooms/sqlrooms/compare/v0.27.0-rc.4...v0.27.0-rc.5) (2026-02-14)
 
 ### Features

@@ -9,7 +9,7 @@ const FileDataSourcesPanel: FC<{isReadOnly?: boolean}> = ({isReadOnly}) => {
   );
 
   return (
-    <div className="flex flex-grow flex-col overflow-auto">
+    <div className="flex grow flex-col overflow-auto">
       {roomFiles.map((fileInfo, i) => (
         <FileDataSourceCard
           key={i}

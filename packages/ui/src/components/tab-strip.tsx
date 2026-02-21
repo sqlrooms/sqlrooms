@@ -165,7 +165,7 @@ function SortableTab({
   return (
     <div
       ref={setNodeRef}
-      className="h-full flex-shrink-0"
+      className="h-full shrink-0"
       style={style}
       data-tab-id={tab.id}
       {...attributes}
@@ -176,9 +176,9 @@ function SortableTab({
         data-state={editingTabId === tab.id ? 'editing' : undefined}
         className={cn(
           'data-[state=inactive]:hover:bg-primary/5',
-          'group flex h-full min-w-[100px] max-w-[200px] flex-shrink-0 cursor-grab',
-          'items-center gap-0.5 overflow-visible rounded-b-none',
-          'py-0 pl-0 pr-0 font-normal data-[state=active]:shadow-none',
+          'group flex h-full max-w-[200px] min-w-[100px] shrink-0 cursor-grab',
+          'items-center justify-between gap-1 overflow-hidden rounded-b-none',
+          'py-0 pr-1 pl-4 font-normal data-[state=active]:shadow-none',
           tabClassName,
           editingTabId === tab.id && 'focus-visible:ring-0',
         )}
@@ -193,7 +193,7 @@ function SortableTab({
               'hover:bg-primary/10 overflow-hidden px-6 py-1 font-normal',
               'min-h-7',
               'data-[state=active]:bg-primary/10 data-[state=active]:text-foreground data-[state=active]:shadow-none',
-              'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-offset-0',
+              'focus-visible:ring-primary focus-visible:ring-2 focus-visible:ring-offset-0 focus-visible:ring-inset',
               editingTabId === tab.id && 'focus-visible:ring-0',
             )}
             onDoubleClick={() => onStartEditing(tab.id)}
@@ -220,48 +220,50 @@ function SortableTab({
             )}
           </TabsTrigger>
 
-          {menuContent && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <button
-                  type="button"
-                  aria-label="Tab options"
-                  className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute left-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100 data-[state=open]:opacity-100"
-                  onMouseDown={(event) => {
-                    event.stopPropagation();
-                    event.preventDefault();
-                  }}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                  }}
-                >
-                  <EllipsisVerticalIcon className="h-3 w-3" />
-                </button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start">
-                {menuContent}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
+          <div className="flex shrink-0 items-center">
+            {menuContent && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    aria-label="Tab options"
+                    className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute top-1/2 left-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 data-[state=open]:opacity-100"
+                    onMouseDown={(event) => {
+                      event.stopPropagation();
+                      event.preventDefault();
+                    }}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                    }}
+                  >
+                    <EllipsisVerticalIcon className="h-3 w-3" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start">
+                  {menuContent}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
 
-          {!hideCloseButton && (
-            <button
-              type="button"
-              aria-label="Close tab"
-              className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute right-1 top-1/2 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-none focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0 group-hover:opacity-100"
-              onMouseDown={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-              }}
-              onClick={(event) => {
-                event.stopPropagation();
-                event.preventDefault();
-                onClose(tab.id);
-              }}
-            >
-              <XIcon className="h-4 w-4" />
-            </button>
-          )}
+            {!hideCloseButton && (
+              <button
+                type="button"
+                aria-label="Close tab"
+                className="hover:bg-primary/10 focus-visible:bg-primary/10 focus-visible:ring-primary absolute top-1/2 right-1 flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded p-1 opacity-0 outline-hidden group-hover:opacity-100 focus-visible:opacity-100 focus-visible:ring-2 focus-visible:ring-offset-0"
+                onMouseDown={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                }}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  event.preventDefault();
+                  onClose(tab.id);
+                }}
+              >
+                <XIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -573,10 +575,7 @@ function TabStripSearchDropdown({
       <Button
         variant="ghost"
         aria-label="Browse tabs"
-        className={cn(
-          'hover:bg-primary/10 h-full flex-shrink-0',
-          triggerClassName,
-        )}
+        className={cn('hover:bg-primary/10 h-full shrink-0', triggerClassName)}
       >
         {triggerIcon ?? <ListCollapseIcon className="h-4 w-4" />}
       </Button>
@@ -604,7 +603,7 @@ function TabStripSearchDropdown({
           className,
         )}
       >
-        <div className="flex flex-shrink-0 items-center gap-1 px-2">
+        <div className="flex shrink-0 items-center gap-1 px-2">
           <SearchIcon className="text-muted-foreground" size={14} />
           <Input
             value={search}
@@ -629,9 +628,9 @@ function TabStripSearchDropdown({
             autoFocus={autoFocus}
           />
         </div>
-        <DropdownMenuSeparator className="flex-shrink-0" />
+        <DropdownMenuSeparator className="shrink-0" />
 
-        <div className="overflow-y-auto overflow-x-hidden">
+        <div className="overflow-x-hidden overflow-y-auto">
           {isSearching ? (
             filteredTabs.length === 0 ? (
               <DropdownTabItems
@@ -770,7 +769,7 @@ function TabStripNewButton({className, tooltip}: TabStripNewButtonProps) {
       variant="ghost"
       aria-label="Create new tab"
       onClick={() => onCreate()}
-      className={cn('hover:bg-primary/10 h-full flex-shrink-0', className)}
+      className={cn('hover:bg-primary/10 h-full shrink-0', className)}
     >
       <PlusIcon className="h-4 w-4" />
     </Button>

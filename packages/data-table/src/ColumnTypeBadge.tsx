@@ -14,7 +14,7 @@ export const ColumnTypeBadge: FC<{
     title={String(columnType)}
     className={cn(
       'flex h-5 items-center justify-center',
-      'py-0.25 w-[55px] flex-shrink-0 overflow-hidden text-ellipsis rounded-sm px-1 text-center text-[9px]',
+      'w-[55px] shrink-0 overflow-hidden rounded-sm px-1 py-0.25 text-center text-[9px] text-ellipsis',
       'cursor-default whitespace-nowrap lowercase',
       {
         'bg-gray-200 text-gray-500 dark:bg-gray-700 dark:text-gray-400':

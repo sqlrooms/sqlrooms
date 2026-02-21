@@ -55,7 +55,7 @@ function TreeNode<T>(props: TreeNodeProps<T>): React.ReactElement | null {
       <CollapsibleTrigger className="w-full" asChild>
         <div className="flex w-full cursor-pointer items-center space-x-1">
           <ChevronRightIcon
-            className={cn('flex-shrink-0 text-gray-500', {
+            className={cn('shrink-0 text-gray-500', {
               'rotate-90 transform': isOpen,
             })}
             size="18px"

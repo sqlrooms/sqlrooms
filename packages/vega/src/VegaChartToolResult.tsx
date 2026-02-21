@@ -86,7 +86,7 @@ export function VegaChartToolResult({
   );
 
   return (
-    <div className={cn('flex flex-col gap-2', className)}>
+    <div className={cn('flex max-w-full flex-col gap-2', className)}>
       <VegaChartContainer
         spec={vegaLiteSpec}
         sqlQuery={sqlQuery}
@@ -96,7 +96,7 @@ export function VegaChartToolResult({
         onSqlChange={handleSqlChange}
       >
         {/* Chart with actions toolbar */}
-        <div className="relative">
+        <div className="relative max-w-full overflow-x-auto">
           <VegaChartDisplay aspectRatio={16 / 9} className="pt-2">
             <VegaLiteArrowChart.Actions className="right-3">
               <VegaExportAction />

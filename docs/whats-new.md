@@ -6,7 +6,42 @@ outline: deep
 
 New features, improvements, and notable changes in each SQLRooms release. For migration steps and breaking changes, see the [Upgrade Guide](/upgrade-guide).
 
-## 0.27.0-rc.5
+## 0.27.0
+
+### `@sqlrooms/data-table`: RowSelection API
+
+`DataTablePaginated` now includes a first-class row selection API with checkbox support.
+
+- `enableRowSelection`: enables the checkbox column
+- `rowSelection`: controlled row selection state
+- `onRowSelectionChange`: callback fired when selection changes
+
+Checkbox clicks are handled independently from row click handlers, so selecting via checkbox does not double-toggle rows.
+
+<img src="/media/whats-new/row-selection.png" alt="SQLRooms DataTable row selection with checkboxes" width=450>
+
+Example:
+
+```tsx
+import {RowSelectionState} from '@sqlrooms/data-table';
+import {useState} from 'react';
+
+const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+<DataTablePaginated
+  {...arrowTableData}
+  enableRowSelection={true}
+  rowSelection={rowSelection}
+  onRowSelectionChange={setRowSelection}
+  onRowClick={({row}) => {
+    setRowSelection((prev) => ({
+      ...prev,
+      [row.index]: !prev[row.index],
+    }));
+  }}
+/>;
+```
+
 
 ### `@sqlrooms/room-store`: bound `useRoomStore` API + `useRoomStoreApi`
 
@@ -28,6 +63,15 @@ Key features:
 - Support for custom visualizations that respond to Mosaic selections
 
 See the [Mosaic API documentation](/api/mosaic/) for details and check out the [DeckGL + Mosaic example](examples#deck-gl-mosaic) for a complete implementation.
+
+### Additional 0.27.0 highlights
+
+- **AI**: parallel sessions, persisted open session tabs, provider options, prompt suggestion improvements, inline API-key prompt in chat, and output copy-to-clipboard.
+- **Vega/Charts**: actions toolbar, chart sizing fixes, improved SQL error display, hover-only chart actions, and responsive chart labels.
+- **Kepler**: configurable injector with custom recipes, legend/timeline fixes, and stability improvements across integration edge cases.
+- **Room/store + persistence**: `storeKey` support in `createRoomStore` and `persistSliceConfigs` helper improvements.
+- **SQL/editor + query UX**: improved explain output, query panel/tab mapping fixes, and query cancellation support in create-table flows.
+
 
 ## 0.26.1-rc.7 (2025-12-05)
 

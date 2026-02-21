@@ -72,7 +72,7 @@ export const ToolCallInfo: React.FC<ToolCallInfoProps> = ({
       {/* Expanded Arguments */}
       {isExpanded && (
         <div className="px-5 py-2">
-          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto whitespace-pre-wrap break-words rounded-md p-2 font-mono text-xs">
+          <pre className="text-muted-foreground bg-muted m-0 max-h-24 overflow-auto rounded-md p-2 font-mono text-xs wrap-break-word whitespace-pre-wrap">
             {JSON.stringify(input, null, 2)}
           </pre>
         </div>

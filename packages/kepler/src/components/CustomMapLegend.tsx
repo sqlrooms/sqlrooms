@@ -46,6 +46,7 @@ export function CustomMapLegendFactory(
   const MapLegend: React.FC<MapLegendProps> = ({
     layers = [],
     width,
+    isExport,
     ...restProps
   }) => {
     const containerW = width || DIMENSIONS.mapControl.width;
@@ -64,28 +65,33 @@ export function CustomMapLegendFactory(
         style={{width: containerW}}
       >
         <div className="relative flex flex-col">
-          <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
-            <div className="text-xs font-medium">Map Layers</div>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="h-6 w-6"
-              onClick={handleClose}
-            >
-              <XIcon className="h-4 w-4" />
-            </Button>
-          </div>
+          {!isExport && (
+            <div className="border-muted bg-background sticky top-0 flex w-full items-center justify-between border-b p-2">
+              <div className="text-xs font-medium">Legend</div>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="h-6 w-6"
+                onClick={handleClose}
+              >
+                <XIcon className="h-4 w-4" />
+              </Button>
+            </div>
+          )}
           <div className="flex w-full flex-1 flex-col items-center">
-            {layers.map((layer, index) => {
-              return (
-                <LayerLegendItem
-                  key={index}
-                  layer={layer}
-                  containerW={containerW}
-                  {...restProps}
-                />
-              );
-            })}
+            {layers
+              .filter((layer) => layer.config.isVisible)
+              .map((layer, index) => {
+                return (
+                  <LayerLegendItem
+                    key={index}
+                    layer={layer}
+                    containerW={containerW}
+                    isExport={isExport}
+                    {...restProps}
+                  />
+                );
+              })}
           </div>
         </div>
       </div>
@@ -126,13 +132,6 @@ export function CustomMapLegendFactory(
 
     const mapId = useContext(KeplerGlContext).id;
     const containerRef = useRef<HTMLDivElement>(null);
-    const handleToggleVisibility = (
-      evt: React.MouseEvent<HTMLButtonElement>,
-    ) => {
-      evt.stopPropagation();
-      const nextVisible = !layer.config.isVisible;
-      dispatchAction(mapId, layerConfigChange(layer, {isVisible: nextVisible}));
-    };
 
     if (!layer.isValidToSave() || layer.config.hidden) {
       return null;
@@ -152,23 +151,11 @@ export function CustomMapLegendFactory(
           className="flex w-full flex-row items-center gap-2"
           onClick={handleToggleExpanded}
         >
-          <div className="cursor-pointer select-none items-center overflow-hidden text-ellipsis whitespace-nowrap p-2 text-xs">
+          <div className="cursor-pointer items-center overflow-hidden p-2 text-xs text-ellipsis whitespace-nowrap select-none">
             {layer.config.label}
           </div>
           <div className="flex-1" />
           <div className="flex flex-row items-center justify-end gap-1">
-            <Button
-              className="h-7 w-7"
-              variant="ghost"
-              size="icon"
-              onClick={handleToggleVisibility}
-            >
-              {layer.config.isVisible ? (
-                <EyeIcon className="h-4 w-4" />
-              ) : (
-                <EyeOffIcon className="h-4 w-4" />
-              )}
-            </Button>
             <Button
               className="h-7 w-7"
               variant="ghost"

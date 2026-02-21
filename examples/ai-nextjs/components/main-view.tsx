@@ -30,7 +30,7 @@ export const MainView: React.FC = () => {
           </div>
 
           {settingsPanelOpen.isOpen ? (
-            <div className="flex-grow overflow-auto">
+            <div className="grow overflow-auto">
               {currentSessionId && (
                 <AiSettingsPanel disclosure={settingsPanelOpen}>
                   <AiSettingsPanel.ModelParametersSettings />
@@ -39,7 +39,7 @@ export const MainView: React.FC = () => {
             </div>
           ) : (
             <>
-              <div className="flex-grow overflow-auto">
+              <div className="grow overflow-auto">
                 <Chat.Messages
                   key={currentSessionId} // will prevent scrolling to bottom after changing current session
                 />

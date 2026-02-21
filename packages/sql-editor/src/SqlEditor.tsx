@@ -67,7 +67,7 @@ const SqlEditor = React.memo<SqlEditorProps>((props) => {
         documentationPanel={documentationPanel}
         onToggleDocs={handleToggleDocs}
       />
-      <div className="bg-muted h-full flex-grow">
+      <div className="bg-muted h-full grow">
         <ResizablePanelGroup direction="horizontal" className="h-full">
           <ResizablePanel defaultSize={showDocs ? 70 : 100}>
             <ResizablePanelGroup direction="vertical" className="h-full">
