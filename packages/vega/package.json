@@ -26,7 +26,7 @@
     "@sqlrooms/sql-editor": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
     "@sqlrooms/utils": "workspace:*",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^0.575.0",
     "react-vega": "^8.0.0",
     "vega": "^6.2.0",
     "vega-embed": "^7.1.0",

@@ -43,7 +43,7 @@
     "@xyflow/react": "^12.8.5",
     "immer": "^11.0.1",
     "loro-mirror": "^1.1.2",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^0.575.0",
     "zod": "^4.1.8"
   },
   "peerDependencies": {

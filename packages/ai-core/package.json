@@ -30,7 +30,7 @@
     "@sqlrooms/utils": "workspace:*",
     "ai": "^5.0.44",
     "immer": "^11.0.1",
-    "lucide-react": "^0.556.0",
+    "lucide-react": "^0.575.0",
     "react-markdown": "^10.1.0",
     "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.0",
