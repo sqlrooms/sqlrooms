@@ -1,9 +1,9 @@
+import {BaseTreeNode} from '@sqlrooms/schema-tree';
 import {cn, Tree, TreeNodeData} from '@sqlrooms/ui';
 import {File as FileIcon} from 'lucide-react';
 import {FC, useMemo} from 'react';
 import {useRoomStore} from '../../store/store';
 import {FileNodeObject, fileSystemTreeToNodes} from './fileSystemTreeToNodes';
-import {BaseTreeNode} from '@sqlrooms/schema-tree';
 
 /**
  * Default renderer for a file tree node.
@@ -13,7 +13,7 @@ export const RenderFileTreeNode = (
   _isOpen: boolean,
 ) => {
   const {object} = node;
-  const openFile = useRoomStore((s) => s.webContainer.openFile);
+  const openFile = useRoomStore((s) => s.webcontainer.openFile);
   return (
     <BaseTreeNode asChild className={cn('h-5.5')} nodeObject={object}>
       {object.type === 'directory' ? (
@@ -47,7 +47,7 @@ export const FileTreeView: FC<{
     isOpen: boolean,
   ) => React.ReactNode;
 }> = ({className, renderNode = RenderFileTreeNode}) => {
-  const filesTree = useRoomStore((s) => s.webContainer.config.filesTree);
+  const filesTree = useRoomStore((s) => s.webcontainer.config.filesTree);
   const rootNode = useMemo(
     () => fileSystemTreeToNodes(filesTree, '/'),
     [filesTree],

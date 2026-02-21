@@ -1,13 +1,13 @@
+import type {OpenAssistantTool} from '@openassistant/utils';
+import {TreeNodeData} from '@sqlrooms/ui';
 import z from 'zod';
 import {StoreApi} from 'zustand';
+import type {WebContainerSliceState} from '../../../../../packages/webcontainer/dist';
 import {
   FileNodeObject,
   fileSystemTreeToNodes,
 } from '../../components/filetree/fileSystemTreeToNodes';
-import {WebContainerSliceState} from '../../store/WebContainerSlice';
 import {ListFilesToolResult} from './ListFilesToolResult';
-import type {OpenAssistantTool} from '@openassistant/utils';
-import {TreeNodeData} from '@sqlrooms/ui';
 
 export const ListFilesToolParameters = z.object({
   basePath: z
@@ -45,7 +45,7 @@ export function createListFilesTool(
         llmResult: {
           success: true,
           details: fileSystemTreeToNodes(
-            store.getState().webContainer.config.filesTree,
+            store.getState().webcontainer.config.filesTree,
             basePath,
           ),
         },

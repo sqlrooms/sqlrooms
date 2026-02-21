@@ -19,6 +19,7 @@
     "@sqlrooms/room-store": "workspace:*",
     "@sqlrooms/schema-tree": "workspace:*",
     "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/webcontainer": "workspace:*",
     "@webcontainer/api": "^1.6.1",
     "@xterm/xterm": "^5.5.0",
     "immer": "^11.0.1",

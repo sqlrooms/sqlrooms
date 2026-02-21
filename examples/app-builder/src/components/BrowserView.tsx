@@ -2,7 +2,7 @@ import {Spinner} from '@sqlrooms/ui';
 import {useRoomStore} from '../store/store';
 
 export const BrowserView = () => {
-  const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
+  const serverStatus = useRoomStore((s) => s.webcontainer.serverStatus);
   return (
     <div className="bg-background h-full w-full">
       {serverStatus.type === 'ready' && serverStatus.url ? (
