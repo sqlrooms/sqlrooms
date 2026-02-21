@@ -5,8 +5,8 @@ import {useEffect, useRef} from 'react';
 import {useRoomStore} from '../store/store';
 
 export const TerminalView = () => {
-  const serverStatus = useRoomStore((s) => s.webContainer.serverStatus);
-  const output = useRoomStore((s) => s.webContainer.output);
+  const serverStatus = useRoomStore((s) => s.webcontainer.serverStatus);
+  const output = useRoomStore((s) => s.webcontainer.output);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -63,7 +63,7 @@ export const TerminalView = () => {
 
   return (
     <div className="relative h-full w-full p-2">
-      <div className="gap-21 flex h-full flex-col overflow-hidden">
+      <div className="flex h-full flex-col gap-21 overflow-hidden">
         <div className="text-foreground flex w-full justify-between text-xs font-bold">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <SquareTerminalIcon className="h-5 w-5 text-gray-500" />

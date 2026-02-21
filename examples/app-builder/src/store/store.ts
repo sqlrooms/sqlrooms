@@ -10,6 +10,11 @@ import {
   createRoomStore,
   persistSliceConfigs,
 } from '@sqlrooms/room-store';
+import {
+  WebContainerSliceConfig,
+  WebContainerSliceState,
+  createWebContainerSlice,
+} from '@sqlrooms/webcontainer';
 import {scaffolds} from '../../app-scaffolds/scaffolds.generated.json';
 import {fileSystemTreeToNodes} from '../components/filetree/fileSystemTreeToNodes';
 import {AI_SETTINGS} from '../config';
@@ -17,11 +22,6 @@ import {LLM_INSTRUCTIONS} from '../instructions';
 import {createGetFileContentTool} from '../tools/getFileContent/getFileContentTool';
 import {createListFilesTool} from '../tools/listFiles/createListFilesTool';
 import {createUpdateFileContentTool} from '../tools/updateFileContent/updateFileContentTool';
-import {
-  createWebContainerSlice,
-  WebContainerSliceConfig,
-  WebContainerSliceState,
-} from './WebContainerSlice';
 
 type RoomState = BaseRoomStoreState &
   AiSliceState &
@@ -38,7 +38,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
       sliceConfigSchemas: {
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
-        webContainer: WebContainerSliceConfig,
+        webcontainer: WebContainerSliceConfig,
       },
     },
     (set, get, store) => ({
@@ -61,7 +61,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         getInstructions: () => {
           const instructions = `${LLM_INSTRUCTIONS} 
             <file_list>
-            ${JSON.stringify(fileSystemTreeToNodes(get().webContainer.config.filesTree, '/'), null, 2)}
+            ${JSON.stringify(fileSystemTreeToNodes(get().webcontainer.config.filesTree, '/'), null, 2)}
             </file_list>`;
           return instructions;
         },

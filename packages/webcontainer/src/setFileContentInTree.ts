@@ -25,13 +25,6 @@ export function isDirectoryNode(
 }
 
 /**
- * Type guard: whether a node is a file entry.
- */
-export function isFileNode(node: unknown): node is {file: {contents: unknown}} {
-  return !!node && typeof node === 'object' && 'file' in (node as any);
-}
-
-/**
  * Create a new FileSystemTree with the given file path set to the provided content.
  * Does not mutate the input tree.
  *
@@ -46,6 +39,9 @@ export function setFileContentInTree(
 
   const update = (subtree: FileSystemTree, index: number): FileSystemTree => {
     const segment = segments[index];
+    if (!segment) {
+      return subtree;
+    }
     const isLast = index === segments.length - 1;
     const existing = (subtree as any)[segment];
 
