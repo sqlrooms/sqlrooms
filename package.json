@@ -119,8 +119,5 @@
     "patchedDependencies": {
       "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
     }
-  },
-  "dependencies": {
-    "tailwindcss": "^4.2.0"
   }
 }
