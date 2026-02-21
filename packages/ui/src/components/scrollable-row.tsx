@@ -80,7 +80,7 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'left-0 justify-start pl-1',
-          'from-background/90 via-background/60 group bg-gradient-to-r to-transparent',
+          'from-background/90 via-background/60 group bg-linear-to-r to-transparent',
           !canScrollLeft && 'pointer-events-none opacity-0',
         )}
         aria-label="Scroll left"
@@ -105,7 +105,7 @@ export function ScrollableRow({
         className={cn(
           arrowBaseClass,
           'right-0 justify-end pr-1',
-          'from-background/90 via-background/60 group bg-gradient-to-l to-transparent',
+          'from-background/90 via-background/60 group bg-linear-to-l to-transparent',
           !canScrollRight && 'pointer-events-none opacity-0',
         )}
         aria-label="Scroll right"

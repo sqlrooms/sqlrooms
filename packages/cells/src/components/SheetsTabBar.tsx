@@ -86,7 +86,7 @@ export const SheetsTabBar: React.FC<SheetsTabBarProps> = ({className}) => {
         const Icon = TYPE_ICONS[tab.type as SheetType] || FileText;
         return (
           <div className="flex min-w-0 items-center gap-2">
-            <Icon className="text-muted-foreground h-3.5 w-3.5 flex-shrink-0" />
+            <Icon className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
             <div className="truncate text-sm">{tab.name}</div>
           </div>
         );

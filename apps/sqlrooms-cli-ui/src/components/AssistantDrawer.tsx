@@ -57,10 +57,10 @@ export const AssistantDrawer: React.FC<{
         data-vaul-drawer-direction="right"
         overlayClassName="bg-transparent"
       >
-        <div className="relative mx-auto flex h-full w-full flex-col gap-0 overflow-hidden rounded-md border border-border bg-background">
+        <div className="border-border bg-background relative mx-auto flex h-full w-full flex-col gap-0 overflow-hidden rounded-md border">
           <DrawerHeader>
             <DrawerTitle>Assistant</DrawerTitle>
-            <DrawerClose asChild className="absolute right-2 top-2">
+            <DrawerClose asChild className="absolute top-2 right-2">
               <Button variant="ghost" size="xs">
                 <XIcon className="h-4 w-4" />
               </Button>
@@ -83,7 +83,7 @@ export const AssistantDrawer: React.FC<{
                   <DialogTrigger asChild>
                     <Button
                       variant="outline"
-                      className="flex items-center justify-center transition-colors hover:bg-accent"
+                      className="hover:bg-accent flex items-center justify-center transition-colors"
                       title="Configuration"
                       size="sm"
                     >
@@ -98,7 +98,7 @@ export const AssistantDrawer: React.FC<{
                       defaultValue="providers"
                       className="flex min-h-0 flex-1 flex-col"
                     >
-                      <TabsList className="grid w-full flex-shrink-0 grid-cols-3">
+                      <TabsList className="grid w-full shrink-0 grid-cols-3">
                         <TabsTrigger value="providers">Providers</TabsTrigger>
                         <TabsTrigger value="models">Models</TabsTrigger>
                         <TabsTrigger value="parameters">Parameters</TabsTrigger>
@@ -126,10 +126,10 @@ export const AssistantDrawer: React.FC<{
                 </Dialog>
               )}
             </div>
-            <div className="print-container flex-grow overflow-auto">
+            <div className="print-container grow overflow-auto">
               {!currentSessionId ? (
                 <div className="flex h-full w-full flex-col items-center justify-center">
-                  <p className="mt-4 text-muted-foreground">
+                  <p className="text-muted-foreground mt-4">
                     No session selected
                   </p>
                 </div>
@@ -138,7 +138,7 @@ export const AssistantDrawer: React.FC<{
               ) : (
                 <div className="flex h-full w-full flex-col items-center justify-center">
                   <SkeletonPane className="p-4" />
-                  <p className="mt-4 text-muted-foreground">
+                  <p className="text-muted-foreground mt-4">
                     Loading database...
                   </p>
                 </div>

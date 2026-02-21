@@ -81,7 +81,7 @@ export const AddNewCellDropdownContent: FC<ContentProps> = ({
     >
       <Command tabIndex={0} loop className="focus-visible:outline-none">
         <CommandList className="focus-visible:outline-none">
-          <CommandGroup className="[&_[cmdk-group-heading]]:text-foreground p-1 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-sm [&_[cmdk-group-heading]]:font-semibold">
+          <CommandGroup className="**:[[cmdk-group-heading]]:text-foreground p-1 **:[[cmdk-group-heading]]:py-1.5 **:[[cmdk-group-heading]]:text-sm **:[[cmdk-group-heading]]:font-semibold">
             {availableTypes.map((type: string) => {
               return (
                 <CommandItem

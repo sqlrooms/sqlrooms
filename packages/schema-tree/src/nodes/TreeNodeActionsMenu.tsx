@@ -37,7 +37,7 @@ export const TreeNodeActionsMenu: FC<TreeNodeActionsMenuProps> = (props) => {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <div className="bg-muted text-muted-foreground hover:text-foreground flex h-full w-7 items-center justify-center p-0 outline-hidden transition-colors">
-            <EllipsisVerticalIcon size="15px" className="relative top-[-1px]" />
+            <EllipsisVerticalIcon size="15px" className="relative -top-px" />
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" side="bottom">

@@ -24,7 +24,9 @@ export function QueryToolResult(props: QueryToolResultProps) {
     <>
       {showSql && (
         <div className="text-muted-foreground group/sql bg-muted relative max-h-[150px] w-full overflow-auto rounded-md p-2 font-mono text-xs">
-          <pre className="pr-8 break-words whitespace-pre-wrap">{sqlQuery}</pre>
+          <pre className="pr-8 wrap-break-word whitespace-pre-wrap">
+            {sqlQuery}
+          </pre>
           <div className="absolute top-1 right-1 opacity-0 transition-opacity group-focus-within/sql:opacity-100 group-hover/sql:opacity-100">
             <CopyButton
               text={sqlQuery}

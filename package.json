@@ -74,7 +74,7 @@
     "knip": "^5.71.0",
     "lint-staged": "^16.2.0",
     "prettier": "^3.6.2",
-    "prettier-plugin-tailwindcss": "^0.7.0",
+    "prettier-plugin-tailwindcss": "^0.7.2",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "remove": "^0.1.5",
@@ -119,5 +119,8 @@
     "patchedDependencies": {
       "typedoc-plugin-markdown@4.9.0": "patches/typedoc-plugin-markdown@4.9.0.patch"
     }
+  },
+  "dependencies": {
+    "tailwindcss": "^4.2.0"
   }
 }
