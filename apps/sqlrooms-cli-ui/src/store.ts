@@ -42,6 +42,11 @@ import {
 } from '@sqlrooms/sql-editor';
 import {SpinnerPane} from '@sqlrooms/ui';
 import {createVegaChartTool} from '@sqlrooms/vega';
+import {
+  createWebContainerSlice,
+  WebContainerSliceConfig,
+  WebContainerSliceState,
+} from '@sqlrooms/webcontainer';
 import {DatabaseIcon} from 'lucide-react';
 import {createElement, Suspense} from 'react';
 import {z} from 'zod';
@@ -54,18 +59,29 @@ import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
+export const AppBuilderProjectConfig = z.object({
+  sheetArtifactMap: z.record(z.string(), z.string()).default({}),
+});
+export type AppBuilderProjectConfig = z.infer<typeof AppBuilderProjectConfig>;
+
 export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
   AiSettingsSliceState &
   CellsSliceState &
   NotebookSliceState &
-  CanvasSliceState & {
+  CanvasSliceState &
+  WebContainerSliceState & {
+    appProject: {
+      config: AppBuilderProjectConfig;
+      setSheetArtifact: (sheetId: string, artifactId: string) => void;
+      getSheetArtifact: (sheetId: string) => string | undefined;
+    };
     isAssistantOpen: boolean;
     setAssistantOpen: (isAssistantOpen: boolean) => void;
   };
 
-const runtimeConfig = await fetchRuntimeConfig();
+export const runtimeConfig = await fetchRuntimeConfig();
 
 const connector = createWebSocketDuckDbConnector({
   wsUrl: runtimeConfig.wsUrl || 'ws://localhost:4000',
@@ -94,12 +110,33 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cells: CellsSliceConfig,
         notebook: NotebookSliceConfig,
         canvas: CanvasSliceConfig,
+        webcontainer: WebContainerSliceConfig,
+        appProject: AppBuilderProjectConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
     },
     (set, get, store) => ({
+      appProject: {
+        config: AppBuilderProjectConfig.parse({}),
+        setSheetArtifact: (sheetId, artifactId) => {
+          set((state) => ({
+            appProject: {
+              ...state.appProject,
+              config: {
+                ...state.appProject.config,
+                sheetArtifactMap: {
+                  ...state.appProject.config.sheetArtifactMap,
+                  [sheetId]: artifactId,
+                },
+              },
+            },
+          }));
+        },
+        getSheetArtifact: (sheetId) =>
+          get().appProject.config.sheetArtifactMap[sheetId],
+      },
       isAssistantOpen: false,
       setAssistantOpen: (isAssistantOpen: boolean) => {
         set({isAssistantOpen});
@@ -151,7 +188,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       ...createCellsSlice({
         cellRegistry: createDefaultCellRegistry(),
-        supportedSheetTypes: ['notebook', 'canvas'],
+        supportedSheetTypes: ['notebook', 'canvas', 'app'],
       })(set, get, store),
 
       ...createNotebookSlice()(set, get, store),
@@ -160,6 +197,13 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         ai: {
           getApiKey: () => runtimeConfig.apiKey || '',
           defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
+        },
+      })(set, get, store),
+
+      ...createWebContainerSlice({
+        config: {
+          filesTree: {},
+          activeFilePath: '/src/App.jsx',
         },
       })(set, get, store),
 

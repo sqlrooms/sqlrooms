@@ -10,6 +10,11 @@ export default defineConfig({
   },
   server: {
     port: 4174,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    },
     proxy: {
       '/api': 'http://localhost:4173',
       '/config.json': 'http://localhost:4173',
@@ -17,5 +22,10 @@ export default defineConfig({
   },
   preview: {
     port: 4175,
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    },
   },
 });
