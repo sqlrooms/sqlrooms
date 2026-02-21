@@ -249,7 +249,7 @@ export type DuckDbSliceState = {
   };
 };
 
-type CreateDuckDbSliceProps = {
+export type CreateDuckDbSliceProps = {
   connector?: DuckDbConnector;
 };
 

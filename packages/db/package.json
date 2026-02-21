@@ -38,6 +38,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/duckdb-core": "workspace:*",
     "@sqlrooms/room-store": "workspace:*",
     "immer": "^11.0.1",

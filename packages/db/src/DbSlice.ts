@@ -1,7 +1,8 @@
-import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
-import {produce} from 'immer';
-import type * as arrow from 'apache-arrow';
+import {createDuckDbSlice, CreateDuckDbSliceProps} from '@sqlrooms/duckdb';
 import {makeQualifiedTableName} from '@sqlrooms/duckdb-core';
+import {createSlice, useBaseRoomStore} from '@sqlrooms/room-store';
+import type * as arrow from 'apache-arrow';
+import {produce} from 'immer';
 import type {
   CatalogEntry,
   DbBridge,
@@ -48,15 +49,13 @@ function isRuntimeCompatible(
   return support === 'both' || current === support;
 }
 
-function isArrowTableResult(
-  result: QueryExecutionResult,
-): result is QueryExecutionResult & {arrowTable: arrow.Table} {
-  return Boolean(result.arrowTable);
-}
-
-export function createDbSlice(props?: {config?: Partial<DbSliceConfig>}) {
+export function createDbSlice(props?: {
+  duckDb?: CreateDuckDbSliceProps;
+  config?: Partial<DbSliceConfig>;
+}) {
   const initialConfig = createDefaultDbConfig(props?.config);
-  return createSlice<DbSliceState, DbRootState>((set, get) => {
+  return createSlice<DbSliceState, DbRootState>((set, get, store) => {
+    const duckDbSlice = createDuckDbSlice(props?.duckDb)(set, get, store);
     const materializeArrowResult = async (args: {
       table: arrow.Table;
       relationName: string;
@@ -235,6 +234,7 @@ export function createDbSlice(props?: {config?: Partial<DbSliceConfig>}) {
     };
 
     return {
+      ...duckDbSlice,
       dbx: {
         config: initialConfig,
         connectors: {},

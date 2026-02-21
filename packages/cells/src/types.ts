@@ -1,6 +1,6 @@
-import type * as arrow from 'apache-arrow';
-import type {DuckDbSliceState} from '@sqlrooms/duckdb';
+import type {DbSliceState} from '@sqlrooms/db';
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
+import type * as arrow from 'apache-arrow';
 import type React from 'react';
 import {z} from 'zod';
 
@@ -350,7 +350,7 @@ export type CellsSliceState = {
 };
 
 export type CellsRootState = BaseRoomStoreState &
-  DuckDbSliceState &
+  DbSliceState &
   CellsSliceState;
 
 export function isSqlCell(cell: Cell): cell is SqlCell {

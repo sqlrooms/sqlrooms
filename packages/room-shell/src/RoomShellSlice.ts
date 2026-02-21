@@ -1,11 +1,10 @@
+import {DbSliceState, createDbSlice} from '@sqlrooms/db';
 import {
   DataTable,
   DuckDbConnector,
   DuckDbSliceState,
   LoadFileOptions,
-  createDuckDbSlice,
 } from '@sqlrooms/duckdb';
-import {DbSliceState, createDbSlice} from '@sqlrooms/db';
 import {
   CreateLayoutSliceProps,
   LayoutSliceState,
@@ -201,8 +200,7 @@ export function createRoomShellSlice(
 
     const sliceState: RoomShellSliceState = {
       ...roomSliceState,
-      ...createDuckDbSlice({connector})(set, get, store),
-      ...createDbSlice()(set as any, get as any, store as any),
+      ...createDbSlice({duckDb: {connector}})(set, get, store),
       ...createLayoutSlice(createLayoutProps)(set, get, store),
       room: {
         ...roomSliceState.room,

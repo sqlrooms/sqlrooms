@@ -1,6 +1,7 @@
-import type * as arrow from 'apache-arrow';
+import {DuckDbSliceState} from '@sqlrooms/duckdb';
 import type {DuckDbConnector, QueryHandle} from '@sqlrooms/duckdb-core';
 import type {BaseRoomStoreState} from '@sqlrooms/room-store';
+import type * as arrow from 'apache-arrow';
 import {z} from 'zod';
 
 export const RuntimeSupport = z.enum(['browser', 'server', 'both']);
@@ -144,6 +145,7 @@ export type DbSliceConfig = {
 };
 
 export type DbSliceState = {
+  db: DuckDbSliceState['db'];
   dbx: {
     config: DbSliceConfig;
     connectors: Record<string, DbConnector>;
@@ -160,18 +162,4 @@ export type DbSliceState = {
   };
 };
 
-export type DbRootState = BaseRoomStoreState & {
-  db: {
-    getConnector: () => Promise<DuckDbConnector>;
-    loadTableSchemas: (filter?: {
-      schema?: string;
-      database?: string;
-      table?: string;
-    }) => Promise<
-      {
-        table: {database?: string; schema?: string; table: string};
-        isView?: boolean;
-      }[]
-    >;
-  };
-} & DbSliceState;
+export type DbRootState = BaseRoomStoreState & DbSliceState;

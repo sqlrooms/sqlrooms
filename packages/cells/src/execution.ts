@@ -97,21 +97,7 @@ export async function executeSqlCell(
 
   try {
     const db = state.db;
-    const dbx = (state as any).dbx as
-      | {
-          runQuery?: (args: {
-            connectionId?: string;
-            sql: string;
-            queryType?: 'arrow' | 'json' | 'exec';
-            materialize?: boolean;
-            materializedName?: string;
-            signal?: AbortSignal;
-          }) => Promise<{
-            relationName?: string;
-            arrowTable?: CellResultData['arrowTable'];
-          }>;
-        }
-      | undefined;
+    const dbx = state.dbx;
 
     if (signal?.aborted) throw new Error('Query cancelled');
 
