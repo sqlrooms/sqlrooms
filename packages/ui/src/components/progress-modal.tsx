@@ -25,7 +25,7 @@ const ProgressModal: FC<{
     <Dialog open={isOpen} onOpenChange={() => {}}>
       <DialogContent
         className={cn(
-          'rounded-md border-none focus:outline-none sm:max-w-[425px]',
+          'rounded-md border-none focus:outline-hidden sm:max-w-[425px]',
           className,
         )}
         showCloseButton={false}

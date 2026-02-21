@@ -36,7 +36,7 @@ export const CanvasAssistantDrawer: FC = () => {
         </Button>
       </DrawerTrigger>
       <DrawerContent
-        className="border-none bg-transparent p-4 outline-none"
+        className="border-none bg-transparent p-4 outline-hidden"
         style={{
           width: 500,
           maxWidth: '50%',
@@ -54,7 +54,7 @@ export const CanvasAssistantDrawer: FC = () => {
                 </Button>
               </DrawerClose>
             </DrawerHeader>
-            <Chat.Messages className="flex-grow overflow-auto px-4" />
+            <Chat.Messages className="grow overflow-auto px-4" />
             <DrawerFooter>
               <Chat.Composer placeholder="What would you like to do?" />
             </DrawerFooter>

@@ -45,10 +45,10 @@ const FileDataSourceCard: FC<{
         <div className="flex-1 overflow-hidden text-ellipsis whitespace-nowrap">
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="break-words text-xs">{filename}</span>
+              <span className="text-xs wrap-break-word">{filename}</span>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              <pre className="w-[300px] text-wrap break-words text-xs">
+              <pre className="w-[300px] text-xs text-wrap wrap-break-word">
                 {pathname}
               </pre>
             </TooltipContent>

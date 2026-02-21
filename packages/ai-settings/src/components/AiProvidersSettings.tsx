@@ -148,7 +148,7 @@ export const AiProvidersSettings: FC = () => {
             <div key={providerKey} className="space-y-0 rounded-lg p-0">
               {/* First row: Provider name, API key input, delete button, and cogwheel button */}
               <div className="flex items-center gap-3">
-                <Label className="w-20 flex-shrink-0 text-sm">
+                <Label className="w-20 shrink-0 text-sm">
                   {providerKey.charAt(0).toUpperCase() + providerKey.slice(1)}
                 </Label>
                 <Input
@@ -173,7 +173,7 @@ export const AiProvidersSettings: FC = () => {
                   variant="ghost"
                   size="icon"
                   onClick={() => toggleProviderExpanded(providerKey)}
-                  className="h-8 w-8 flex-shrink-0"
+                  className="h-8 w-8 shrink-0"
                 >
                   <Settings className="h-4 w-4" />
                 </Button>
@@ -182,12 +182,12 @@ export const AiProvidersSettings: FC = () => {
               {/* Second row: baseUrl input (toggleable) */}
               {isExpanded && (
                 <div className="flex items-center gap-3 pt-1">
-                  <div className="w-20 flex-shrink-0" />{' '}
+                  <div className="w-20 shrink-0" />{' '}
                   {/* Spacer to align with provider name above */}
                   <div className="flex flex-1 items-center gap-3">
                     <Label
                       htmlFor={`${providerKey}-baseUrl`}
-                      className="text-muted-foreground flex-shrink-0 text-xs"
+                      className="text-muted-foreground shrink-0 text-xs"
                     >
                       baseUrl:
                     </Label>
@@ -206,7 +206,7 @@ export const AiProvidersSettings: FC = () => {
                       className="flex-1"
                     />
                   </div>
-                  <div className="w-16 flex-shrink-0" />{' '}
+                  <div className="w-16 shrink-0" />{' '}
                   {/* Spacer to align with delete and cogwheel buttons above */}
                 </div>
               )}
@@ -247,7 +247,7 @@ export const AiProvidersSettings: FC = () => {
                 Key
               </Label>
               <div className="relative flex-1">
-                <Cone className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Cone className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-key"
                   value={newProviderKey}
@@ -263,7 +263,7 @@ export const AiProvidersSettings: FC = () => {
                 API Key
               </Label>
               <div className="relative flex-1">
-                <Key className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Key className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-api-key"
                   type="password"
@@ -280,7 +280,7 @@ export const AiProvidersSettings: FC = () => {
                 baseUrl
               </Label>
               <div className="relative flex-1">
-                <Server className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2" />
+                <Server className="absolute top-1/2 left-2 h-4 w-4 -translate-y-1/2" />
                 <Input
                   id="new-provider-url"
                   type="url"

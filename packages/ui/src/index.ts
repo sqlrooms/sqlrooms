@@ -310,9 +310,6 @@ export {useRelativeCoordinates} from './hooks/useRelativeCoordinates';
 export {cn} from './lib/utils';
 export {resolveFontSizeClass, type FontSizeToken} from './lib/fontSize';
 
-// Tailwind preset
-export {sqlroomsTailwindPreset} from './tailwind-preset';
-
 // Theme
 export {ThemeProvider, useTheme} from './theme/theme-provider';
 

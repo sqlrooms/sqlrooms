@@ -177,11 +177,11 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
     return (
       <div className="relative h-full w-full overflow-auto p-5">
         {errorActions && (
-          <div className="absolute right-2 top-2">{errorActions}</div>
+          <div className="absolute top-2 right-2">{errorActions}</div>
         )}
         <pre
           className={cn(
-            'whitespace-pre-wrap text-xs leading-tight text-red-500',
+            'text-xs leading-tight whitespace-pre-wrap text-red-500',
             errorActions && 'pr-12',
           )}
         >
@@ -193,7 +193,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
 
   if (queryResult?.status === 'success') {
     const contentWrapperClassName = cn(
-      'relative flex h-full w-full flex-grow flex-col overflow-hidden',
+      'relative flex h-full w-full grow flex-col overflow-hidden',
       className,
     );
 
@@ -202,7 +202,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
       return (
         <div className={contentWrapperClassName}>
           <div className="flex h-full w-full flex-col overflow-hidden">
-            <pre className="flex-1 overflow-auto whitespace-pre-wrap break-words p-4 font-mono text-xs leading-tight">
+            <pre className="flex-1 overflow-auto p-4 font-mono text-xs leading-tight wrap-break-word whitespace-pre-wrap">
               {explainText}
             </pre>
             <div className="bg-background flex w-full items-center gap-2 px-4 py-1">
@@ -225,7 +225,7 @@ const QueryResultPanelRoot: React.FC<QueryResultPanelProps> = ({
             <DataTablePaginated
               data={arrowTableData?.data}
               columns={arrowTableData?.columns}
-              className="flex-grow overflow-hidden"
+              className="grow overflow-hidden"
               fontSize={fontSize}
               isFetching={false}
               onRowClick={onRowClick}
