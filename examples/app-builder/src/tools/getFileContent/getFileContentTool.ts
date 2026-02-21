@@ -1,7 +1,7 @@
-import {StoreApi} from 'zustand';
-import {WebContainerSliceState} from '../../store/WebContainerSlice';
-import z from 'zod';
 import type {OpenAssistantTool} from '@openassistant/utils';
+import z from 'zod';
+import {StoreApi} from 'zustand';
+import type {WebContainerSliceState} from '../../../../../packages/webcontainer/dist';
 import {GetFileContentToolResult} from './GetFileContentToolResult';
 
 export const GetFileContentToolParameters = z.object({
@@ -35,7 +35,7 @@ export function createGetFileContentTool(
     description: 'Get the content of a file',
     parameters: GetFileContentToolParameters,
     execute: async ({path}: GetFileContentToolParameters) => {
-      const content = await store.getState().webContainer.getFileContent(path);
+      const content = await store.getState().webcontainer.getFileContent(path);
       return {
         llmResult: {
           success: true,
