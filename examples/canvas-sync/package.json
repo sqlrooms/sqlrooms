@@ -1,5 +1,5 @@
 {
-  "name": "sqlrooms-canvas-sync",
+  "name": "canvas-sync-example",
   "private": true,
   "version": "0.24.14",
   "type": "module",
@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@sqlrooms/canvas": "workspace:*",
+    "@sqlrooms/cells": "workspace:*",
     "@sqlrooms/crdt": "workspace:*",
     "@sqlrooms/dropzone": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",

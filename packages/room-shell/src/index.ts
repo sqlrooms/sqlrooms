@@ -58,6 +58,10 @@ export type {
 
 export {useShallow} from 'zustand/react/shallow';
 
+// Re-export from @sqlrooms/db
+export {createDbSlice} from '@sqlrooms/db';
+export type {DbSliceState} from '@sqlrooms/db';
+
 // Re-export from @sqlrooms/room-config (via room-store)
 // Values also export their corresponding types automatically (Zod pattern)
 export {

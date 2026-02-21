@@ -7,40 +7,131 @@ import {
   MiniMap,
   Node,
   ReactFlow,
+  Viewport,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import {PlusIcon} from 'lucide-react';
-import React from 'react';
-import {CanvasAssistantDrawer} from './CanvasAssistantDrawer';
-import type {CanvasNodeData} from './CanvasSlice';
+import React, {useCallback, useMemo, useRef, useState} from 'react';
 import {useStoreWithCanvas} from './CanvasSlice';
+import {getRenderableEdges} from './edgeUtils';
 import {AddNodePopover} from './nodes/AddNodePopover';
-import {SqlNode} from './nodes/SqlNode';
-import {VegaNode} from './nodes/VegaNode';
+import {CanvasNodeContainer} from './nodes/CanvasNodeContainer';
 
-const nodeTypes = {
-  sql: SqlNode,
-  vega: VegaNode,
+const RegistryNodeRenderer: React.FC<{
+  id: string;
+  renderCell: (args: {
+    id: string;
+    cell: import('@sqlrooms/cells').Cell;
+    renderContainer: (props: {
+      header?: React.ReactNode;
+      content: React.ReactNode;
+      footer?: React.ReactNode;
+    }) => React.ReactElement;
+  }) => React.ReactElement;
+}> = ({id, renderCell}) => {
+  const cell = useStoreWithCanvas((s) => s.cells.config.data[id]);
+  if (!cell) return null;
+
+  return renderCell({
+    id,
+    cell,
+    renderContainer: ({header, content, footer}) => (
+      <CanvasNodeContainer id={id} headerRight={header}>
+        {content}
+        {footer}
+      </CanvasNodeContainer>
+    ),
+  });
 };
 
 export const Canvas: React.FC = () => {
-  const nodes = useStoreWithCanvas(
-    (s) => s.canvas.config.nodes,
-  ) as unknown as Node<CanvasNodeData>[];
-  const edges = useStoreWithCanvas((s) => s.canvas.config.edges) as Edge[];
-  const addEdge = useStoreWithCanvas((s) => s.canvas.addEdge);
+  const registry = useStoreWithCanvas((s) => s.cells.cellRegistry);
+  const nodeTypes = useMemo(() => {
+    return Object.fromEntries(
+      Object.entries(registry).map(([type, reg]) => [
+        type,
+        ({id}: {id: string}) => (
+          <RegistryNodeRenderer id={id} renderCell={reg.renderCell} />
+        ),
+      ]),
+    );
+  }, [registry]);
+
+  const currentSheetId = useStoreWithCanvas(
+    (s) => s.cells.config.currentSheetId,
+  );
+  const addSheet = useStoreWithCanvas((s) => s.cells.addSheet);
+
+  const canvasSheet = useStoreWithCanvas((s) => {
+    const sheetId = currentSheetId ?? s.cells.config.sheetOrder[0];
+    return sheetId ? s.canvas.config.sheets[sheetId] : undefined;
+  });
+
+  const cellsSheet = useStoreWithCanvas((s) => {
+    const sheetId = currentSheetId ?? s.cells.config.sheetOrder[0];
+    return sheetId ? s.cells.config.sheets[sheetId] : undefined;
+  });
+
+  const cellsData = useStoreWithCanvas((s) => s.cells.config.data);
+
+  const nodes = useMemo(() => {
+    if (!cellsSheet) return [] as Node[];
+
+    // Use all cells from the canonical sheet
+    const list = cellsSheet.cellIds
+      .map((id: string) => {
+        // Get view-specific metadata if it exists
+        const canvasNode = canvasSheet?.nodes[id];
+        const cell = cellsData[id];
+        if (!cell) return null;
+
+        return {
+          id,
+          position: canvasNode?.position ?? {x: 100, y: 100},
+          width: canvasNode?.width ?? 800,
+          height: canvasNode?.height ?? 600,
+          type: cell.type,
+          data: cell.data,
+        };
+      })
+      .filter(Boolean);
+    return list as unknown as Node[];
+  }, [canvasSheet, cellsSheet, cellsData]);
+
+  const edges = useMemo(
+    () => getRenderableEdges(cellsSheet) as Edge[],
+    [cellsSheet],
+  );
+  const viewport = canvasSheet?.meta.viewport ?? {x: 0, y: 0, zoom: 1};
   const applyNodeChanges = useStoreWithCanvas((s) => s.canvas.applyNodeChanges);
-  const applyEdgeChanges = useStoreWithCanvas((s) => s.canvas.applyEdgeChanges);
-  const viewport = useStoreWithCanvas((s) => s.canvas.config.viewport);
   const setViewport = useStoreWithCanvas((s) => s.canvas.setViewport);
-  const addNode = useStoreWithCanvas((s) => s.canvas.addNode);
+  const [internalViewport, setInternalViewport] = useState<Viewport>(viewport);
+
+  // Debounce viewport updates to prevent rapid state saves from React Flow
+  const viewportTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const debouncedSetViewport = useCallback(
+    (viewport: Viewport) => {
+      setInternalViewport(viewport);
+      if (viewportTimeoutRef.current) {
+        clearTimeout(viewportTimeoutRef.current);
+      }
+      viewportTimeoutRef.current = setTimeout(() => {
+        setViewport(viewport);
+      }, 150);
+    },
+    [setViewport],
+  );
 
   const empty = nodes.length === 0;
   const {theme: colorMode} = useTheme();
 
+  // if (!cellsSheet || cellsSheet.type !== 'canvas') {
+  //   return null;
+  // }
+
   return (
-    <div className="h-full w-full">
-      <div className="relative h-full w-full">
+    <div className="flex h-full w-full flex-col">
+      <div className="relative flex-1 overflow-hidden">
         {empty && (
           <div className="absolute inset-0 z-10 flex items-center justify-center">
             <AddNodePopover>
@@ -58,10 +149,11 @@ export const Canvas: React.FC = () => {
           edges={edges}
           nodeTypes={nodeTypes}
           onNodesChange={applyNodeChanges}
-          onEdgesChange={applyEdgeChanges}
-          onViewportChange={setViewport}
-          onConnect={addEdge}
-          viewport={viewport}
+          viewport={internalViewport}
+          onViewportChange={debouncedSetViewport}
+          nodesConnectable={false}
+          edgesReconnectable={false}
+          connectOnClick={false}
           // fitView
         >
           <MiniMap />
@@ -69,7 +161,6 @@ export const Canvas: React.FC = () => {
           <Background variant={BackgroundVariant.Dots} gap={16} size={1} />
         </ReactFlow>
       </div>
-      <CanvasAssistantDrawer />
     </div>
   );
 };

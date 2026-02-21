@@ -1,0 +1,56 @@
+{
+  "name": "@sqlrooms/cells",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "author": "SQLRooms Contributors",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "test": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest",
+    "test:watch": "NODE_OPTIONS='--experimental-vm-modules --no-warnings' jest --watch",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@tanstack/react-table": "^8.21.3",
+    "@sqlrooms/data-table": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
+    "@sqlrooms/duckdb": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "@sqlrooms/vega": "workspace:*",
+    "apache-arrow": "17.0.0",
+    "immer": "^11.0.1",
+    "monaco-editor": "^0.55.1",
+    "lucide-react": "^0.555.0",
+    "react-hook-form": "^7.68.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
+    "zod": "^3.25.73"
+  },
+  "devDependencies": {
+    "ts-jest": "^29.4.4",
+    "zustand": "^5.0.8"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  }
+}

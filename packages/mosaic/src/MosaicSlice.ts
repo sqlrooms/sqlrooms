@@ -1,9 +1,11 @@
+import {createId} from '@paralleldrive/cuid2';
 import {DuckDbSliceState, isWasmDuckDbConnector} from '@sqlrooms/duckdb';
 import {
   BaseRoomStoreState,
   createSlice,
   useBaseRoomStore,
-} from '@sqlrooms/room-shell';
+  type SliceFunctions,
+} from '@sqlrooms/room-store';
 import {
   Connector,
   Coordinator,
@@ -13,10 +15,8 @@ import {
   wasmConnector,
 } from '@uwdata/mosaic-core';
 import {Query} from '@uwdata/mosaic-sql';
-import {createId} from '@paralleldrive/cuid2';
 import {produce} from 'immer';
 import {z} from 'zod';
-import {SliceFunctions} from '../../room-store/dist/BaseRoomStore';
 
 export const MosaicSliceConfig = z.object({});
 export type MosaicSliceConfig = z.infer<typeof MosaicSliceConfig>;

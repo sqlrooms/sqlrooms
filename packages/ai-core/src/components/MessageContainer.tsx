@@ -35,7 +35,7 @@ export const MessageContainer: React.FC<MessageContainerProps> = ({
         <Badge
           variant="secondary"
           className={cn(
-            'absolute left-2 top-[-12px] flex items-center gap-1 border text-xs',
+            'absolute top-[-12px] left-2 flex items-center gap-1 border text-xs',
             'border-destructive bg-background',
             // isSuccess ? borderColor : 'border-red-500',
           )}

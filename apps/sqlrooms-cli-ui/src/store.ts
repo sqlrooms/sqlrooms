@@ -8,7 +8,23 @@ import {
   createDefaultAiInstructions,
   createDefaultAiTools,
 } from '@sqlrooms/ai';
+import {
+  CanvasSliceConfig,
+  CanvasSliceState,
+  createCanvasSlice,
+} from '@sqlrooms/canvas';
+import {
+  CellsSliceConfig,
+  CellsSliceState,
+  createCellsSlice,
+  createDefaultCellRegistry,
+} from '@sqlrooms/cells';
 import {createWebSocketDuckDbConnector} from '@sqlrooms/duckdb';
+import {
+  createNotebookSlice,
+  NotebookSliceConfig,
+  NotebookSliceState,
+} from '@sqlrooms/notebook';
 import {
   BaseRoomConfig,
   createRoomShellSlice,
@@ -24,29 +40,30 @@ import {
   SqlEditorSliceConfig,
   SqlEditorSliceState,
 } from '@sqlrooms/sql-editor';
+import {SpinnerPane} from '@sqlrooms/ui';
 import {createVegaChartTool} from '@sqlrooms/vega';
 import {DatabaseIcon} from 'lucide-react';
-import {z} from 'zod';
 import {createElement, Suspense} from 'react';
-import {SpinnerPane} from '@sqlrooms/ui';
+import {z} from 'zod';
 
-import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
-import {fetchRuntimeConfig} from './runtimeConfig';
-import {MainView} from './components/MainView';
 import {DataSourcesPanel} from './components/DataSourcesPanel';
+import {MainView} from './components/MainView';
+import {fetchRuntimeConfig} from './runtimeConfig';
+import {createDuckDbPersistStorage, uploadFileToServer} from './serverApi';
 
-export const RoomPanelTypes = z.enum([
-  'room-details',
-  'data-sources',
-  'view-configuration',
-  MAIN_VIEW,
-] as const);
+export const RoomPanelTypes = z.enum(['data-sources', MAIN_VIEW] as const);
 export type RoomPanelTypes = z.infer<typeof RoomPanelTypes>;
 
 export type RoomState = RoomShellSliceState &
   AiSliceState &
   SqlEditorSliceState &
-  AiSettingsSliceState;
+  AiSettingsSliceState &
+  CellsSliceState &
+  NotebookSliceState &
+  CanvasSliceState & {
+    isAssistantOpen: boolean;
+    setAssistantOpen: (isAssistantOpen: boolean) => void;
+  };
 
 const runtimeConfig = await fetchRuntimeConfig();
 
@@ -64,8 +81,8 @@ connector.loadFile = async (file, desiredTableName, options) => {
   return baseLoadFile(file, desiredTableName, options);
 };
 
-const store = createRoomStore<RoomState>(
-  persistSliceConfigs(
+export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
+  persistSliceConfigs<RoomState>(
     {
       name: 'sqlrooms-cli-app-state',
       sliceConfigSchemas: {
@@ -74,25 +91,31 @@ const store = createRoomStore<RoomState>(
         ai: AiSliceConfig,
         aiSettings: AiSettingsSliceConfig,
         sqlEditor: SqlEditorSliceConfig,
+        cells: CellsSliceConfig,
+        notebook: NotebookSliceConfig,
+        canvas: CanvasSliceConfig,
       },
       storage: createDuckDbPersistStorage(connector, {
         namespace: runtimeConfig.metaNamespace || '__sqlrooms',
       }),
     },
     (set, get, store) => ({
+      isAssistantOpen: false,
+      setAssistantOpen: (isAssistantOpen: boolean) => {
+        set({isAssistantOpen});
+      },
+
       ...createRoomShellSlice({
         connector,
-        config: {
-          dataSources: [],
-        },
+        config: {dataSources: []},
         layout: {
           config: {
             type: LayoutTypes.enum.mosaic,
             nodes: {
               direction: 'row',
               first: RoomPanelTypes.enum['data-sources'],
-              second: MAIN_VIEW,
-              splitPercentage: 30,
+              second: 'main',
+              splitPercentage: 20,
             },
           },
           panels: {
@@ -102,6 +125,12 @@ const store = createRoomStore<RoomState>(
               component: DataSourcesPanel,
               placement: 'sidebar',
             },
+            // [RoomPanelTypes.enum.assistant]: {
+            //   title: 'Assistant',
+            //   icon: () => null,
+            //   component: AssistantPanel,
+            //   placement: 'sidebar',
+            // },
             main: {
               title: 'Main view',
               icon: () => null,
@@ -119,6 +148,20 @@ const store = createRoomStore<RoomState>(
       })(set, get, store),
 
       ...createSqlEditorSlice()(set, get, store),
+
+      ...createCellsSlice({
+        cellRegistry: createDefaultCellRegistry(),
+        supportedSheetTypes: ['notebook', 'canvas'],
+      })(set, get, store),
+
+      ...createNotebookSlice()(set, get, store),
+
+      ...createCanvasSlice({
+        ai: {
+          getApiKey: () => runtimeConfig.apiKey || '',
+          defaultModel: runtimeConfig.llmModel || 'gpt-4o-mini',
+        },
+      })(set, get, store),
 
       ...createAiSettingsSlice({
         config: {providers: {} as AiSettingsSliceConfig['providers']},
@@ -139,6 +182,3 @@ const store = createRoomStore<RoomState>(
     }),
   ),
 );
-
-export const roomStore: any = store.roomStore;
-export const useRoomStore = store.useRoomStore;

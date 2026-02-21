@@ -2,8 +2,8 @@
 
 import {ChangeEvent, FC, useCallback, useEffect, useRef, useState} from 'react';
 
-import {Input} from './input';
 import {cn} from '../lib/utils';
+import {Input} from './input';
 
 /**
  * Component that allows the user to edit a string.
@@ -39,9 +39,12 @@ import {cn} from '../lib/utils';
 export const EditableText: FC<{
   className?: string;
   isReadOnly?: boolean;
+  editTrigger?: 'click' | 'doubleClick';
   value: string;
   placeholder?: string;
   onChange: (text: string) => void;
+  /** Called on each keystroke while editing. */
+  onInputChange?: (text: string) => void;
   autoFocus?: boolean;
   selectOnFocus?: boolean;
   /** When false, the input is removed from tab order while not editing. */
@@ -62,10 +65,12 @@ export const EditableText: FC<{
   className,
   isReadOnly = false,
   defaultEditing = false,
+  editTrigger = 'click',
   isEditing,
   placeholder,
   value,
   onChange,
+  onInputChange,
   onEditingChange,
   autoFocus,
   selectOnFocus = false,
@@ -114,9 +119,11 @@ export const EditableText: FC<{
       if (isReadOnly || !isInternalEditing) {
         return;
       }
-      return setInternalValue(e.target.value);
+      const nextValue = e.target.value;
+      onInputChange?.(nextValue);
+      return setInternalValue(nextValue);
     },
-    [isInternalEditing, isReadOnly],
+    [isInternalEditing, isReadOnly, onInputChange],
   );
 
   const handleSetEditing = useCallback(
@@ -135,11 +142,15 @@ export const EditableText: FC<{
     onChange(internalValueRef.current?.trim());
   }, [handleSetEditing, onChange]);
 
-  const handleClick = useCallback(() => {
-    if (!isInternalEditing) {
-      handleSetEditing(true);
-    }
-  }, [isInternalEditing, handleSetEditing]);
+  const handleClick = useCallback(
+    (event: React.MouseEvent<HTMLInputElement>) => {
+      if (!isInternalEditing) {
+        inputRef.current?.select();
+        handleSetEditing(true);
+      }
+    },
+    [isInternalEditing, handleSetEditing],
+  );
 
   const handleFocus = useCallback(() => {
     if (selectOnFocus && isInternalEditing) {
@@ -192,9 +203,11 @@ export const EditableText: FC<{
     <Input
       ref={inputRef}
       className={cn(
-        'disabled:opacity-1 w-full rounded-sm border-transparent px-1 py-0 focus:border-blue-500 focus:outline-hidden focus:ring-blue-500 disabled:cursor-text',
+        'w-full rounded-sm border-transparent px-1 py-0 disabled:opacity-1',
+        'focus:outline-hidden disabled:cursor-text',
         {
-          'select-none bg-transparent': !isInternalEditing,
+          'focus:border-blue-500 focus:ring-blue-500': isInternalEditing,
+          'bg-transparent select-none': !isInternalEditing,
           truncate: !isInternalEditing,
         },
         className,
@@ -209,7 +222,8 @@ export const EditableText: FC<{
       onFocus={handleFocus}
       onBlur={handleBlur}
       disabled={isReadOnly}
-      onClick={handleClick}
+      onClick={editTrigger === 'click' ? handleClick : undefined}
+      onDoubleClick={editTrigger === 'doubleClick' ? handleClick : undefined}
       placeholder={
         !isInternalEditing ? (placeholder ?? 'Click to edit') : undefined
       }

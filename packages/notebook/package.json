@@ -1,0 +1,47 @@
+{
+  "name": "@sqlrooms/notebook",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "author": "SQLRooms Contributors",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "module": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sqlrooms/sqlrooms.git"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "dev": "tsc -w",
+    "build": "tsc",
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
+    "typedoc": "typedoc"
+  },
+  "peerDependencies": {
+    "react": "^18 || ^19",
+    "react-dom": "^18 || ^19"
+  },
+  "dependencies": {
+    "@paralleldrive/cuid2": "^2.2.2",
+    "@sqlrooms/cells": "workspace:*",
+    "@sqlrooms/db": "workspace:*",
+    "@sqlrooms/room-store": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/utils": "workspace:*",
+    "immer": "^11.0.1",
+    "lucide-react": "^0.555.0",
+    "zod": "^4.1.13"
+  }
+}

@@ -6,6 +6,7 @@ type DuckDbLikeConnector = {
 };
 
 const UI_STATE_KEY = 'default';
+const PERSIST_DEBOUNCE_MS = 300;
 
 function sanitizeIdent(ident: string): string {
   // Minimal guardrail: we only allow typical DuckDB identifier characters.
@@ -44,9 +45,58 @@ export function createDuckDbPersistStorage(
 ): PersistStorage<any> {
   const namespace = options?.namespace || '__sqlrooms';
   let ensured: Promise<void> | null = null;
+  let pendingBody: string | null = null;
+  let pendingTimer: ReturnType<typeof setTimeout> | null = null;
+  let flushInFlight: Promise<void> | null = null;
+  let handlersRegistered = false;
   const ensure = () => {
     ensured = ensured ?? ensureUiStateTable(connector, namespace);
     return ensured;
+  };
+  const clearPendingTimer = () => {
+    if (pendingTimer) {
+      clearTimeout(pendingTimer);
+      pendingTimer = null;
+    }
+  };
+  const flushPending = async () => {
+    if (flushInFlight) return flushInFlight;
+    flushInFlight = (async () => {
+      while (pendingBody) {
+        const body = pendingBody;
+        pendingBody = null;
+        await ensure();
+        const escaped = escapeLiteral(body);
+        const ns = nsRef(namespace);
+        await connector.query(
+          `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
+        );
+      }
+    })().finally(() => {
+      flushInFlight = null;
+    });
+    return flushInFlight;
+  };
+  const scheduleFlush = () => {
+    clearPendingTimer();
+    pendingTimer = setTimeout(() => {
+      pendingTimer = null;
+      void flushPending();
+    }, PERSIST_DEBOUNCE_MS);
+  };
+  const registerFlushHandlers = () => {
+    if (handlersRegistered || typeof window === 'undefined') return;
+    handlersRegistered = true;
+    const flushNow = () => {
+      clearPendingTimer();
+      void flushPending();
+    };
+    window.addEventListener('beforeunload', flushNow);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') {
+        flushNow();
+      }
+    });
   };
 
   return {
@@ -71,16 +121,17 @@ export function createDuckDbPersistStorage(
     },
 
     setItem: async (_name: string, value: StorageValue<any>): Promise<void> => {
-      await ensure();
-      const body = JSON.stringify(value.state ?? value);
-      const escaped = escapeLiteral(body);
-      const ns = nsRef(namespace);
-      await connector.query(
-        `INSERT OR REPLACE INTO ${ns}.ui_state (key, payload_json, updated_at) VALUES ('${UI_STATE_KEY}', CAST('${escaped}' AS JSON), now())`,
-      );
+      pendingBody = JSON.stringify(value.state ?? value);
+      registerFlushHandlers();
+      scheduleFlush();
     },
 
     removeItem: async (_name: string): Promise<void> => {
+      clearPendingTimer();
+      pendingBody = null;
+      if (flushInFlight) {
+        await flushInFlight;
+      }
       await ensure();
       const ns = nsRef(namespace);
       await connector.query(

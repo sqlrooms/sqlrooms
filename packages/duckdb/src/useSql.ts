@@ -159,7 +159,11 @@ export type DuckDbQueryResult<T> = UseSqlQueryResult<T>;
  * @param options Configuration object containing the query and execution control
  * @returns Object containing the validated query result, loading state, and any error
  */
-export function useSql<Row>(options: {query: string; enabled?: boolean}): {
+export function useSql<Row>(options: {
+  query: string;
+  enabled?: boolean;
+  version?: number;
+}): {
   data: UseSqlQueryResult<Row> | undefined;
   error: Error | null;
   isLoading: boolean;
@@ -170,6 +174,7 @@ export function useSql<Schema extends z.ZodType>(
   options: {
     query: string;
     enabled?: boolean;
+    version?: number;
   },
 ): {
   data: UseSqlQueryResult<z.infer<Schema>> | undefined;
@@ -184,14 +189,20 @@ export function useSql<
   Row extends arrow.TypeMap,
   Schema extends z.ZodType = z.ZodType,
 >(
-  zodSchemaOrOptions: Schema | {query: string; enabled?: boolean},
-  maybeOptions?: {query: string; enabled?: boolean},
+  zodSchemaOrOptions:
+    | Schema
+    | {query: string; enabled?: boolean; version?: number},
+  maybeOptions?: {query: string; enabled?: boolean; version?: number},
 ) {
   // Determine if we're using the schema overload
   const hasZodSchema = maybeOptions !== undefined;
   const options = hasZodSchema
     ? maybeOptions
-    : (zodSchemaOrOptions as {query: string; enabled?: boolean});
+    : (zodSchemaOrOptions as {
+        query: string;
+        enabled?: boolean;
+        version?: number;
+      });
   const schema = hasZodSchema ? (zodSchemaOrOptions as Schema) : undefined;
 
   const [data, setData] = useState<UseSqlQueryResult<Row> | undefined>(
@@ -214,7 +225,7 @@ export function useSql<
       setError(null);
 
       try {
-        const queryHandle = await executeSql(options.query);
+        const queryHandle = await executeSql(options.query, options.version);
         if (!queryHandle || !isMounted) {
           return;
         }
@@ -249,7 +260,7 @@ export function useSql<
     return () => {
       isMounted = false;
     };
-  }, [options.query, options.enabled, executeSql]);
+  }, [options.query, options.enabled, executeSql, options.version]);
 
   return {
     data,

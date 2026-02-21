@@ -1,0 +1,34 @@
+{
+  "name": "notebook-example",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "zod": "^3.25.73",
+    "lucide-react": "0.501.0",
+    "zustand": "5.0.5",
+    "@sqlrooms/cells": "workspace:*",
+    "@sqlrooms/notebook": "workspace:*",
+    "@sqlrooms/room-shell": "workspace:*",
+    "@sqlrooms/ui": "workspace:*",
+    "@sqlrooms/sql-editor": "workspace:*",
+    "@sqlrooms/dropzone": "workspace:*",
+    "@sqlrooms/utils": "workspace:*"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.18",
+    "@types/react": "^19.1.13",
+    "@types/react-dom": "^19.1.9",
+    "@vitejs/plugin-react": "^5.0.3",
+    "tailwindcss": "^4.1.18",
+    "typescript": "5.9.2",
+    "vite": "^7.1.9"
+  }
+}

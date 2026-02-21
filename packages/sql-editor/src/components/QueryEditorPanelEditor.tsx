@@ -48,14 +48,21 @@ export const QueryEditorPanelEditor: React.FC<{
   const handleEditorMount = useCallback(
     (editor: EditorInstance, monaco: MonacoInstance) => {
       editorRef.current[queryId] = editor;
-      // Add keyboard shortcut for running query
-      editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Enter, () => {
-        const model = editor.getModel();
-        const selection = editor.getSelection();
-        if (model && selection && !selection.isEmpty()) {
-          runQuery(model.getValueInRange(selection));
-        } else {
-          runQuery(editor.getValue());
+      // Use onKeyDown instead of addCommand to scope the shortcut
+      // to THIS specific editor instance. Monaco's addCommand registers
+      // globally, so the last editor mounted wins when multiple editors
+      // are on the page.
+      editor.onKeyDown((e) => {
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === monaco.KeyCode.Enter) {
+          e.preventDefault();
+          e.stopPropagation();
+          const model = editor.getModel();
+          const selection = editor.getSelection();
+          if (model && selection && !selection.isEmpty()) {
+            runQuery(model.getValueInRange(selection));
+          } else {
+            runQuery(editor.getValue());
+          }
         }
       });
     },

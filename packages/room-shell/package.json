@@ -26,6 +26,7 @@
     "typedoc": "typedoc"
   },
   "dependencies": {
+    "@sqlrooms/db": "workspace:*",
     "@sqlrooms/data-table": "workspace:*",
     "@sqlrooms/duckdb": "workspace:*",
     "@sqlrooms/layout": "workspace:*",

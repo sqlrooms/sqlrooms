@@ -1,4 +1,5 @@
 import logging
+import random
 from hashlib import sha256
 from functools import partial
 from typing import Optional
@@ -8,6 +9,27 @@ import pyarrow as pa
 import time
 
 logger = logging.getLogger(__name__)
+
+# Transaction conflict retry configuration
+MAX_CONFLICT_RETRIES = 5
+BASE_BACKOFF_MS = 10
+MAX_BACKOFF_MS = 500
+JITTER_FACTOR = 0.3
+
+
+def _calculate_backoff(attempt: int) -> float:
+    """
+    Calculate exponential backoff with jitter in seconds.
+
+    Args:
+        attempt: Zero-based attempt number (0 = first retry)
+
+    Returns:
+        Backoff duration in seconds
+    """
+    base_delay = min(BASE_BACKOFF_MS * (2**attempt), MAX_BACKOFF_MS)
+    jitter = base_delay * JITTER_FACTOR * random.random()
+    return (base_delay + jitter) / 1000.0
 
 
 def get_key(sql, command):
@@ -82,8 +104,16 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
     )
 
     def _is_conflict_error(exc: Exception) -> bool:
-        msg = str(exc)
-        return "Transaction conflict" in msg
+        msg = str(exc).lower()
+        # Match various DuckDB MVCC conflict patterns:
+        # - "Transaction conflict" - general conflict
+        # - "Conflict on update" - update conflicts
+        # - "write-write conflict" - catalog/DDL conflicts
+        return (
+            "transaction conflict" in msg
+            or "conflict on" in msg
+            or "write-write conflict" in msg
+        )
 
     def _execute_once(con):
         command = query["type"]
@@ -106,13 +136,19 @@ async def run_duckdb(cache, query, query_id: Optional[str] = None):
             try:
                 return _execute_once(con)
             except Exception as e:
-                if attempts < 1 and _is_conflict_error(e):
-                    attempts += 1
+                if attempts < MAX_CONFLICT_RETRIES and _is_conflict_error(e):
+                    backoff = _calculate_backoff(attempts)
                     logger.warning(
-                        f"Transaction conflict detected; retrying once. Error: {e}"
+                        f"Transaction conflict detected (attempt {attempts + 1}/{MAX_CONFLICT_RETRIES}); "
+                        f"retrying in {backoff*1000:.1f}ms. Error: {e}"
                     )
-                    time.sleep(0.01)
+                    attempts += 1
+                    time.sleep(backoff)
                     continue
+                if _is_conflict_error(e):
+                    logger.error(
+                        f"Transaction conflict persisted after {MAX_CONFLICT_RETRIES} retries. Error: {e}"
+                    )
                 raise
 
     return await db_async.run_db_task(_execute_with_cursor, query_id=query_id)

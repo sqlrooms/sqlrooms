@@ -1,4 +1,4 @@
-import { JsonMonacoEditor } from '@sqlrooms/monaco-editor';
+import {JsonMonacoEditor} from '@sqlrooms/monaco-editor';
 import {
   Button,
   Popover,
@@ -10,8 +10,8 @@ import {
   TabsTrigger,
   useDisclosure,
 } from '@sqlrooms/ui';
-import { TriangleAlertIcon } from 'lucide-react';
-import React, { memo, useMemo } from 'react';
+import {TriangleAlertIcon} from 'lucide-react';
+import React, {memo, useMemo} from 'react';
 
 type TabKey = 'error' | 'details';
 
@@ -23,7 +23,12 @@ interface ToolErrorMessageContentProps {
 }
 
 const ToolErrorMessageContent = memo(
-  ({ title, errorText, details, editorHeightPx }: ToolErrorMessageContentProps) => {
+  ({
+    title,
+    errorText,
+    details,
+    editorHeightPx,
+  }: ToolErrorMessageContentProps) => {
     const hasErrorText = errorText.length > 0;
     const hasDetails = details != null;
 
@@ -44,33 +49,33 @@ const ToolErrorMessageContent = memo(
           )}
         </TabsList>
 
-          <TabsContent value="error" className="mt-0">
-            <div className="max-h-[300px] overflow-auto whitespace-pre-wrap font-mono text-xs">
-              {errorText}
-            </div>
-          </TabsContent>
+        <TabsContent value="error" className="mt-0">
+          <div className="max-h-[300px] overflow-auto whitespace-pre-wrap font-mono text-xs">
+            {errorText}
+          </div>
+        </TabsContent>
 
-          <TabsContent value="details" className="mt-0">
-            <div
-              className="w-full overflow-hidden rounded-md border"
-              style={{ height: editorHeightPx }}
-            >
-              <JsonMonacoEditor
-                className="h-full"
-                value={details}
-                readOnly
-                options={{
-                  lineNumbers: 'off',
-                  minimap: { enabled: false },
-                  scrollBeyondLastLine: false,
-                  wordWrap: 'on',
-                }}
-              />
-            </div>
-          </TabsContent>
+        <TabsContent value="details" className="mt-0">
+          <div
+            className="w-full overflow-hidden rounded-md border"
+            style={{height: editorHeightPx}}
+          >
+            <JsonMonacoEditor
+              className="h-full"
+              value={details}
+              readOnly
+              options={{
+                lineNumbers: 'off',
+                minimap: {enabled: false},
+                scrollBeyondLastLine: false,
+                wordWrap: 'on',
+              }}
+            />
+          </div>
+        </TabsContent>
       </Tabs>
     );
-  }
+  },
 );
 
 ToolErrorMessageContent.displayName = 'ToolErrorMessageContent';
@@ -96,7 +101,7 @@ export function ToolErrorMessage({
 
   const errorText = useMemo(
     () => (error != null ? String(error) : ''),
-    [error]
+    [error],
   );
 
   return (

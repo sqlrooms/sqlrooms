@@ -1,5 +1,6 @@
 import {Editor, EditorProps, OnChange, OnMount} from '@monaco-editor/react';
 import {Spinner, cn, useTheme} from '@sqlrooms/ui';
+import type * as Monaco from 'monaco-editor';
 import React, {useEffect, useMemo, useRef, useSyncExternalStore} from 'react';
 import {
   getCssColor,
@@ -7,7 +8,6 @@ import {
   getMenuColors,
   getMonospaceFont,
 } from '../utils/color-utils';
-import type * as Monaco from 'monaco-editor';
 
 // Rendering issue fix for white rectangle appearing above text in Monaco.
 // Monaco creates a hidden textarea for IME input. If Monaco CSS loads late,

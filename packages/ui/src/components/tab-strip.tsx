@@ -85,6 +85,7 @@ interface TabStripContextValue {
   onSelect?: (tabId: string) => void;
   onCreate?: () => void;
   onRename?: (tabId: string, newName: string) => void;
+  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderSearchItemActions?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
@@ -126,6 +127,7 @@ interface SortableTabProps {
   onStartEditing: (tabId: string) => void;
   onStopEditing: () => void;
   onInlineRename: (tabId: string, newName: string) => void;
+  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   renderTabLabel?: (tab: TabDescriptor) => React.ReactNode;
 }
@@ -142,6 +144,7 @@ function SortableTab({
   onStartEditing,
   onStopEditing,
   onInlineRename,
+  renderTabTitle,
   renderTabMenu,
   renderTabLabel,
 }: SortableTabProps) {
@@ -361,6 +364,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
     editingTabId,
     scrollContainerRef,
     onOpenTabsChange,
+    renderTabTitle,
     renderTabMenu,
     renderTabLabel,
     preventCloseLastTab,
@@ -429,6 +433,7 @@ function TabStripTabs({className, tabClassName}: TabStripTabsProps) {
               onStartEditing={handleStartEditing}
               onStopEditing={handleStopEditing}
               onInlineRename={handleInlineRename}
+              renderTabTitle={renderTabTitle}
               renderTabMenu={renderTabMenu}
               renderTabLabel={renderTabLabel}
             />
@@ -810,6 +815,8 @@ export interface TabStripProps {
   onCreate?: () => void;
   /** Called when a tab is renamed inline. */
   onRename?: (tabId: string, newName: string) => void;
+  /** Render function for the tab's title. */
+  renderTabTitle?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for the tab's dropdown menu. Use TabStrip.MenuItem and TabStrip.MenuSeparator. */
   renderTabMenu?: (tab: TabDescriptor) => React.ReactNode;
   /** Render function for search dropdown item actions. Use TabStrip.SearchItemAction. */
@@ -852,6 +859,7 @@ function TabStripRoot({
   onSelect,
   onCreate,
   onRename,
+  renderTabTitle,
   renderTabMenu,
   renderSearchItemActions,
   renderTabLabel,
@@ -932,6 +940,8 @@ function TabStripRoot({
         behavior: 'smooth',
         block: 'nearest',
         inline: 'nearest',
+        // @ts-expect-error - scrollMode is not standardized yet
+        scrollMode: 'if-needed',
       });
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1029,6 +1039,7 @@ function TabStripRoot({
     onSelect,
     onCreate,
     onRename,
+    renderTabTitle,
     renderTabMenu,
     renderSearchItemActions,
     renderTabLabel,
