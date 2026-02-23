@@ -8,6 +8,7 @@
     "python/**",
     "docs/**",
     "examples/app-builder/app-scaffolds/**",
+    "apps/sqlrooms-cli-ui/app-scaffolds/get-started/**",
     "submodules/**"
   ],
   "exclude": [
