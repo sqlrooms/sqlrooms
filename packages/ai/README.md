@@ -42,7 +42,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
           {
             type: 'url',
             tableName: 'earthquakes',
-            url: 'https://raw.githubusercontent.com/keplergl/kepler.gl-data/refs/heads/master/earthquakes/data.csv',
+            url: 'https://huggingface.co/datasets/sqlrooms/earthquakes/resolve/main/earthquakes.parquet',
           },
         ],
       },
