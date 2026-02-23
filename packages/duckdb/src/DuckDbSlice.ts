@@ -262,7 +262,7 @@ export function createDuckDbSlice({
   connector = createWasmDuckDbConnector(),
 }: CreateDuckDbSliceProps = {}): StateCreator<DuckDbSliceState> {
   return createSlice<DuckDbSliceState, BaseRoomStoreState & DuckDbSliceState>(
-    (set, get) => {
+    (set, get, store) => {
       return {
         db: {
           connector, // Will be initialized during init

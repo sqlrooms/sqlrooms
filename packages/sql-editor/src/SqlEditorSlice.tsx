@@ -187,7 +187,7 @@ export function createSqlEditorSlice({
   return createSlice<
     SqlEditorSliceState,
     BaseRoomStoreState & DuckDbSliceState & SqlEditorSliceState
-  >((set, get) => {
+  >((set, get, store) => {
     return {
       sqlEditor: {
         initialize: async () => {
@@ -625,7 +625,8 @@ function createSqlEditorCommands(): RoomCommand<SqlEditorCommandStoreState>[] {
         const state = getState();
         const selectedQueryId = state.sqlEditor.config.selectedQueryId;
         return (
-          state.sqlEditor.queryResultsById[selectedQueryId]?.status === 'loading'
+          state.sqlEditor.queryResultsById[selectedQueryId]?.status ===
+          'loading'
         );
       },
       execute: ({getState}) => {
