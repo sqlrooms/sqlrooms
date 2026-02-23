@@ -50,6 +50,7 @@ import {
 import {DatabaseIcon} from 'lucide-react';
 import {createElement, Suspense} from 'react';
 import {z} from 'zod';
+import {scaffolds} from '../app-scaffolds/scaffolds.generated.json';
 
 import {DataSourcesPanel} from './components/DataSourcesPanel';
 import {MainView} from './components/MainView';
@@ -239,11 +240,11 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
 
       ...createNotebookSlice()(set, get, store),
 
-      ...createCanvasSlice({})(set, get, store),
+      ...createCanvasSlice()(set, get, store),
 
       ...createWebContainerSlice({
         config: {
-          filesTree: {},
+          filesTree: (scaffolds as Record<string, any>)['get-started'] ?? {},
           activeFilePath: '/src/App.jsx',
         },
       })(set, get, store),

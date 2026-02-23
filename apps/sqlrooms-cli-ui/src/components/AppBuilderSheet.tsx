@@ -1,7 +1,8 @@
+import {useCellsStore} from '@sqlrooms/cells';
 import {Button} from '@sqlrooms/ui';
+import {WebContainer} from '@sqlrooms/webcontainer';
 import type {FileSystemTree} from '@webcontainer/api';
 import React from 'react';
-import {useCellsStore} from '@sqlrooms/cells';
 import {useRoomStore} from '../store';
 
 const TEMPLATE_OPTIONS = [
@@ -99,37 +100,38 @@ export const AppBuilderSheet: React.FC = () => {
 
   if (appState) {
     return (
-      <div className="flex h-full flex-col gap-2 p-4">
-        <h3 className="text-sm font-medium">App Builder</h3>
-        <p className="text-muted-foreground text-sm">
-          App state is stored in project UI state and connected to this tab.
-        </p>
-        <p className="text-muted-foreground text-xs">
-          sheetId: {currentSheetId}
-        </p>
-        <div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() =>
-              currentSheetId &&
-              loadArtifactRuntime(currentSheetId, appState.files || {})
-            }
-          >
-            Run app
-          </Button>
+      <div className="flex h-full flex-col">
+        <div className="border-b p-2">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h3 className="text-sm font-medium">App Builder</h3>
+              <p className="text-muted-foreground text-xs">
+                Stored in project state (`ui_state`) for sheet {currentSheetId}
+              </p>
+            </div>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() =>
+                currentSheetId &&
+                loadArtifactRuntime(currentSheetId, appState.files || {})
+              }
+            >
+              Run app
+            </Button>
+          </div>
+          {status && (
+            <p className="text-muted-foreground mt-1 text-xs">{status}</p>
+          )}
         </div>
-        {webcontainerStatus.type === 'ready' && webcontainerStatus.url ? (
-          <iframe
-            className="mt-2 h-[60vh] w-full rounded border bg-white"
-            src={webcontainerStatus.url}
-          />
-        ) : (
+        <div className="min-h-0 flex-1">
+          <WebContainer.Workbench />
+        </div>
+        {webcontainerStatus.type !== 'ready' ? (
           <p className="text-muted-foreground text-xs">
             Runtime status: {webcontainerStatus.type}
           </p>
-        )}
-        {status && <p className="text-muted-foreground text-xs">{status}</p>}
+        ) : null}
       </div>
     );
   }
