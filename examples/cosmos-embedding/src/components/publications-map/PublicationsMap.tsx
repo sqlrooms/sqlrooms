@@ -1,6 +1,9 @@
 import {FC, useState, useMemo, useEffect} from 'react';
-import {GraphConfigInterface} from '@cosmograph/cosmos';
-import {CosmosGraph, CosmosGraphControls} from '@sqlrooms/cosmos';
+import {
+  CosmosGraph,
+  CosmosGraphControls,
+  GraphConfigInterface,
+} from '@sqlrooms/cosmos';
 import {usePublicationsData} from './hooks/usePublicationsData';
 import {Legend} from './components/Legend';
 import {PublicationTooltip} from './components/PublicationTooltip';
@@ -71,7 +74,7 @@ export const PublicationsMap: FC = () => {
           );
         }}
       >
-        <CosmosGraphControls className="absolute left-0 top-0" />
+        <CosmosGraphControls className="absolute top-0 left-0" />
       </CosmosGraph>
       <Legend
         uniqueFields={uniqueFields}
