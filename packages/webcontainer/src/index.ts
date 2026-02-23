@@ -3,13 +3,12 @@
  * @packageDocumentation
  */
 
+export {WebContainer} from './components/WebContainer';
 export {
-  WebContainerSliceConfig,
   createDefaultWebContainerSliceConfig,
   createWebContainerSlice,
+  useStoreWithWebContainer,
+  WebContainerSliceConfig,
 } from './WebContainerSlice';
 
-export type {
-  WebContainerSliceConfig as WebContainerSliceConfigType,
-  WebContainerSliceState,
-} from './WebContainerSlice';
+export type {WebContainerSliceState} from './WebContainerSlice';

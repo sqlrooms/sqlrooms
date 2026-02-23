@@ -1,12 +1,15 @@
+import {cn} from '@sqlrooms/ui';
 import {Terminal} from '@xterm/xterm';
 import '@xterm/xterm/css/xterm.css';
 import {SquareTerminalIcon} from 'lucide-react';
 import {useEffect, useRef} from 'react';
-import {useRoomStore} from '../store/store';
+import {useStoreWithWebContainer} from '../WebContainerSlice';
 
-export const TerminalView = () => {
-  const serverStatus = useRoomStore((s) => s.webcontainer.serverStatus);
-  const output = useRoomStore((s) => s.webcontainer.output);
+export function TerminalView({className}: {className?: string}) {
+  const serverStatus = useStoreWithWebContainer(
+    (s) => s.webcontainer.serverStatus,
+  );
+  const output = useStoreWithWebContainer((s) => s.webcontainer.output);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const terminalRef = useRef<Terminal | null>(null);
@@ -26,7 +29,6 @@ export const TerminalView = () => {
     term.open(containerRef.current);
     terminalRef.current = term;
 
-    // Seed existing output if any
     if (output && output.length > 0) {
       term.write(output);
       lastIndexRef.current = output.length;
@@ -44,7 +46,6 @@ export const TerminalView = () => {
     if (!term) {
       return;
     }
-    // If output shrank (e.g. reset), clear and re-render
     if (output.length < lastIndexRef.current) {
       term.clear();
       term.write(output);
@@ -62,8 +63,8 @@ export const TerminalView = () => {
   }, [output]);
 
   return (
-    <div className="relative h-full w-full p-2">
-      <div className="flex h-full flex-col gap-21 overflow-hidden">
+    <div className={cn('relative h-full w-full p-2', className)}>
+      <div className="flex h-full flex-col gap-2 overflow-hidden">
         <div className="text-foreground flex w-full justify-between text-xs font-bold">
           <div className="flex items-center gap-2 text-sm text-gray-500">
             <SquareTerminalIcon className="h-5 w-5 text-gray-500" />
@@ -77,4 +78,4 @@ export const TerminalView = () => {
       </div>
     </div>
   );
-};
+}

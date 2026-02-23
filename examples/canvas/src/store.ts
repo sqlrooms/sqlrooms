@@ -5,10 +5,10 @@ import {
   createCanvasSlice,
 } from '@sqlrooms/canvas';
 import {
+  CellsSliceConfig,
+  CellsSliceState,
   createCellsSlice,
   createDefaultCellRegistry,
-  CellsSliceState,
-  CellsSliceConfig,
 } from '@sqlrooms/cells';
 import {
   BaseRoomConfig,
@@ -94,12 +94,7 @@ export const {roomStore, useRoomStore} = createRoomStore<RoomState>(
         cellRegistry: createDefaultCellRegistry(),
       })(set, get, store),
 
-      ...createCanvasSlice({
-        ai: {
-          getApiKey: () => get().app.config.apiKey,
-          defaultModel: 'gpt-4.1-mini',
-        },
-      })(set, get, store),
+      ...createCanvasSlice()(set, get, store),
 
       // App slice with config
       app: {

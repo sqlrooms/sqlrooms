@@ -132,9 +132,9 @@ export function createDefaultCanvasConfig(
   return {...base, ...props};
 }
 
-export function createCanvasSlice(props: {
-  config?: Partial<CanvasSliceConfig>;
-}) {
+export function createCanvasSlice(
+  props: {config?: Partial<CanvasSliceConfig>} = {},
+) {
   type CanvasRootState = BaseRoomStoreState &
     DuckDbSliceState &
     CanvasSliceState &

@@ -1,4 +1,8 @@
-import {createSlice, StateCreator} from '@sqlrooms/room-store';
+import {
+  createSlice,
+  StateCreator,
+  useBaseRoomStore,
+} from '@sqlrooms/room-store';
 import {FileSystemTree, WebContainer} from '@webcontainer/api';
 import {produce} from 'immer';
 import z from 'zod';
@@ -55,6 +59,7 @@ export type WebContainerSliceState = {
      * @returns The exit code of the start dev server command
      */
     startDevServer: () => Promise<void>;
+    resolveProjectRoot: () => Promise<string>;
     /**
      * Get the most recent content for a file. If the file is open, returns the in-memory
      * (possibly unsaved) content. Otherwise, loads the content from the webcontainer FS.
@@ -169,27 +174,41 @@ export function createWebContainerSlice(props?: {
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
+        const cwd = await get().webcontainer.resolveProjectRoot();
         // Install dependencies
         set((state) =>
           produce(state, (draft) => {
             draft.webcontainer.serverStatus = {type: 'install-deps'};
           }),
         );
-        const installProcess = await instance.spawn('npm', ['install']);
-        installProcess.output.pipeTo(
-          new WritableStream({
-            write(data) {
-              set((state) => ({
-                webcontainer: {
-                  ...state.webcontainer,
-                  output: state.webcontainer.output + data,
+        for (const manager of ['npm', 'pnpm', 'yarn']) {
+          try {
+            const installArgs =
+              manager === 'yarn' ? ['install'] : ['install', '--no-fund'];
+            const installProcess = await instance.spawn(manager, installArgs, {
+              cwd,
+            });
+            installProcess.output.pipeTo(
+              new WritableStream({
+                write(data) {
+                  set((state) => ({
+                    webcontainer: {
+                      ...state.webcontainer,
+                      output: state.webcontainer.output + data,
+                    },
+                  }));
                 },
-              }));
-            },
-          }),
-        );
-        // Wait for install command to exit
-        return installProcess.exit;
+              }),
+            );
+            const exitCode = await installProcess.exit;
+            if (exitCode === 0) {
+              return 0;
+            }
+          } catch (_e) {
+            // Try next package manager.
+          }
+        }
+        return 1;
       },
 
       async startDevServer() {
@@ -197,8 +216,24 @@ export function createWebContainerSlice(props?: {
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
+        const cwd = await get().webcontainer.resolveProjectRoot();
+        let started = false;
         // Run `npm run dev` to start the Vite dev server
-        await instance.spawn('npm', ['run', 'dev']);
+        for (const manager of ['npm', 'pnpm', 'yarn']) {
+          try {
+            const args = manager === 'yarn' ? ['dev'] : ['run', 'dev'];
+            await instance.spawn(manager, args, {cwd});
+            started = true;
+            break;
+          } catch (_e) {
+            // Try next package manager.
+          }
+        }
+        if (!started) {
+          throw new Error(
+            'Unable to start dev server: no supported package manager found',
+          );
+        }
         set((state) =>
           produce(state, (draft) => {
             draft.webcontainer.serverStatus = {type: 'starting-dev'};
@@ -226,6 +261,25 @@ export function createWebContainerSlice(props?: {
         });
       },
 
+      async resolveProjectRoot() {
+        const instance = get().webcontainer.instance;
+        if (!instance) {
+          throw new Error('WebContainer instance not found');
+        }
+        const candidates = ['/', '/project', '/workspace', '/app'];
+        for (const dir of candidates) {
+          try {
+            await instance.fs.readFile(`${dir}/package.json`, 'utf-8');
+            return dir;
+          } catch (_e) {
+            // keep checking candidates
+          }
+        }
+        throw new Error(
+          'package.json not found in mounted WebContainer filesystem',
+        );
+      },
+
       async openFile(path, content) {
         const state = get();
         const existing = state.webcontainer.config.openedFiles.find(
@@ -245,11 +299,18 @@ export function createWebContainerSlice(props?: {
         }
         set((s) =>
           produce(s, (draft) => {
-            draft.webcontainer.config.openedFiles.push({
-              path,
-              content: fileContent ?? '',
-              dirty: false,
-            });
+            // Guard against async races: the file may have been opened while
+            // content was being loaded.
+            const alreadyOpen = draft.webcontainer.config.openedFiles.some(
+              (f) => f.path === path,
+            );
+            if (!alreadyOpen) {
+              draft.webcontainer.config.openedFiles.push({
+                path,
+                content: fileContent ?? '',
+                dirty: false,
+              });
+            }
             draft.webcontainer.config.activeFilePath = path;
           }),
         );
@@ -346,19 +407,56 @@ export function createWebContainerSlice(props?: {
 
       async applyFilesTree({filesTree, activeFilePath}) {
         const instance = get().webcontainer.instance;
+        const pathExistsInTree = (path: string): boolean => {
+          const clean = path.replace(/^\/+/, '');
+          if (!clean) return false;
+          const parts = clean.split('/').filter(Boolean);
+          let cursor: any = filesTree;
+          for (let i = 0; i < parts.length; i++) {
+            const part = parts[i]!;
+            const entry = cursor?.[part];
+            if (!entry) return false;
+            const isLeaf = i === parts.length - 1;
+            if (isLeaf) {
+              return Boolean(entry.file);
+            }
+            if (!entry.directory) return false;
+            cursor = entry.directory;
+          }
+          return false;
+        };
+
+        const prev = get().webcontainer.config;
+        const preservedOpened = prev.openedFiles.filter((f) =>
+          pathExistsInTree(f.path),
+        );
+        const nextActiveFromRequest =
+          activeFilePath && pathExistsInTree(activeFilePath)
+            ? activeFilePath
+            : null;
+        const nextActiveFromPrev =
+          prev.activeFilePath && pathExistsInTree(prev.activeFilePath)
+            ? prev.activeFilePath
+            : null;
+        const nextActive =
+          nextActiveFromRequest ??
+          nextActiveFromPrev ??
+          preservedOpened[0]?.path ??
+          '/src/App.jsx';
+
         set((s) =>
           produce(s, (draft) => {
             draft.webcontainer.config.filesTree = filesTree;
-            draft.webcontainer.config.openedFiles = [];
-            draft.webcontainer.config.activeFilePath =
-              activeFilePath ?? draft.webcontainer.config.activeFilePath;
+            draft.webcontainer.config.openedFiles = preservedOpened;
+            draft.webcontainer.config.activeFilePath = nextActive;
           }),
         );
 
         if (instance) {
           await instance.mount(filesTree);
-          const path = activeFilePath ?? '/src/App.jsx';
-          await get().webcontainer.openFile(path);
+          if (pathExistsInTree(nextActive)) {
+            await get().webcontainer.openFile(nextActive);
+          }
           return;
         }
       },
@@ -368,6 +466,7 @@ export function createWebContainerSlice(props?: {
         if (!instance) {
           throw new Error('WebContainer instance not found');
         }
+        const cwd = await get().webcontainer.resolveProjectRoot();
 
         const startedAt = Date.now();
         let stdout = '';
@@ -385,7 +484,7 @@ export function createWebContainerSlice(props?: {
           }),
         );
 
-        const proc = await instance.spawn(command, args);
+        const proc = await instance.spawn(command, args, {cwd});
         if (captureOutput) {
           await proc.output.pipeTo(
             new WritableStream({
@@ -455,4 +554,12 @@ export function createWebContainerSlice(props?: {
       },
     },
   }));
+}
+
+export function useStoreWithWebContainer<T>(
+  selector: (state: WebContainerSliceState) => T,
+): T {
+  return useBaseRoomStore<WebContainerSliceState, T>((state) =>
+    selector(state),
+  );
 }
