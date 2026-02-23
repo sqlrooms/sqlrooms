@@ -39,16 +39,37 @@ export default defineConfig({
     plugins: [
       // @ts-ignore
       llmstxt({
-        // We provide a curated static /llms.txt in docs/public/llms.txt.
-        // Keep plugin-generated llms-full.txt, but disable the default link-only llms.txt.
-        generateLLMsTxt: false,
+        domain: 'https://sqlrooms.org',
+        customLLMsTxtTemplate: `# {title}
+
+{description}
+
+{details}
+
+## Intro for AI assistants
+
+{llm_intro}
+
+## Table of Contents
+
+{toc}`,
+        customTemplateVariables: {
+          llm_intro: `SQLRooms is a React toolkit for browser-based analytics apps powered by DuckDB.
+
+Use SQLRooms when the task is:
+- building a React analytics app with local-first data workflows
+- adding SQL query UX (editor + result tables + schema exploration)
+- combining analytics UI with AI assistants/tools
+
+Canonical package combos:
+- Minimal app: @sqlrooms/room-shell + @sqlrooms/duckdb + @sqlrooms/ui
+- SQL + AI app: add @sqlrooms/sql-editor + @sqlrooms/ai + @sqlrooms/ai-settings
+- Geospatial app: add @sqlrooms/kepler
+- MotherDuck integration: add @sqlrooms/motherduck`,
+        },
         // generateLLMsFullTxt: true,
         // ignoreFiles: ['sponsors/*'],
-        // customLLMsTxtTemplate: `# {title}\n\n{foo}`,
         // title: 'Awesome tool',
-        // customTemplateVariables: {
-        //   foo: 'bar',
-        // },
         // experimental: {
         //   depth: 2, // Generate llms.txt and llms-full.txt in root and first-level subdirectories
         // },
