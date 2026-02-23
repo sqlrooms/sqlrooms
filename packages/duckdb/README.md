@@ -147,6 +147,8 @@ function ArrowTableSchemaExample() {
 ### Using the Store for Direct Database Operations
 
 ```tsx
+import {useRoomStore} from './store';
+
 function DatabaseManager() {
   const createTableFromQuery = useRoomStore(
     (state) => state.db.createTableFromQuery,
@@ -225,6 +227,7 @@ const tableExists = await checkTableExists(qualifiedTable);
 
 ```tsx
 import {loadCSV, loadJSON, loadParquet, loadObjects} from '@sqlrooms/duckdb';
+import {useRoomStore} from './store';
 
 function DataLoader() {
   const getConnector = useRoomStore((state) => state.db.getConnector);
@@ -272,6 +275,9 @@ function DataLoader() {
 ### Using the Connector Directly
 
 ```tsx
+import * as arrow from 'apache-arrow';
+import {useRoomStore} from './store';
+
 function AdvancedDataLoader() {
   const connector = useRoomStore((state) => state.db.connector);
 
@@ -322,9 +328,11 @@ function ExportButton() {
 ### Basic direct usage
 
 ```tsx
+import {roomStore} from './store';
+
 async function executeCustomQuery() {
-  // Grab the connector directly (no React hook necessary inside plain TS)
-  const connector = useRoomStore((state) => state.db.connector);
+  // Plain TS/JS usage: read connector from the store API directly.
+  const connector = roomStore.getState().db.connector;
 
   // QueryHandle is promise-like – await it directly
   const result = await connector.query('SELECT COUNT(*) AS count FROM users');
@@ -338,12 +346,14 @@ async function executeCustomQuery() {
 ### Cancellation examples
 
 ```tsx
+import {roomStore} from './store';
+
 async function cancelExample() {
-  const connector = useRoomStore((state) => state.db.connector);
+  const connector = roomStore.getState().db.connector;
 
   // 1. Manual cancel via the handle
   const query = connector.query('SELECT * FROM large_table');
-  setTimeout(() => h.cancel(), 2000); // cancel after 2 s
+  setTimeout(() => query.cancel(), 2000); // cancel after 2 s
   await query; // throws if cancelled
 
   // 2. Composable cancellation – many queries, one controller
